@@ -1,22 +1,29 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+import operator
+
+import numpy as np
+from numpy.testing.utils import assert_array_compare
+from scipy import stats
+
+from ...tools.testing import assert_equal
 from .. import kde
 from .. import bootstrap
 
-from ...tools.testing import assert_equal
-from numpy.testing.utils import assert_array_compare
-import operator
-from scipy import stats
-import numpy as np
 
 def assert_array_less_equal(a1, a2, *args, **kwargs):
     return assert_array_compare(operator.__le__, a1, a2, *args, **kwargs)
 
+
 def adjust_bw1(fitted, fct):
     return 0.1*fitted.exog.std(ddof=1)/(fitted.npts**0.2)
 
+
 def adjust_bw2(fitted, fct):
     return fitted.exog.std(ddof=1)/(fitted.npts**0.2)
+
 
 class TestPDFBootstrap(object):
     @classmethod
@@ -33,7 +40,8 @@ class TestPDFBootstrap(object):
         """
         Estimated grid values should be within the range found in bootstrapping
         """
-        grid, est = bootstrap.bootstrap_grid(self.ks, self.nb_samples, CIs=(.95, .99))
+        grid, est = bootstrap.bootstrap_grid(self.ks, self.nb_samples,
+                                             CIs=(.95, .99))
         assert_equal(est.shape, self.values.shape + (2, 2))
         assert_array_less_equal(est[:, 0, 0], self.values)
         assert_array_less_equal(est[:, 1, 0], self.values)
@@ -51,9 +59,11 @@ class TestPDFBootstrap(object):
 
     def test_points_between(self):
         """
-        Estimated point values should be within the range found in bootstrapping
+        Estimated point values should be within the range found in
+        bootstrapping
         """
-        est = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples, CIs=(.95, .99))
+        est = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples,
+                                  CIs=(.95, .99))
         assert_equal(est.shape, self.eval_points.shape + (2, 2))
         assert_array_less_equal(est[:, 0, 0], self.point_values)
         assert_array_less_equal(est[:, 1, 0], self.point_values)
@@ -62,7 +72,8 @@ class TestPDFBootstrap(object):
 
     def test_full_points_between(self):
         """
-        Estimated point values should be within the range found in bootstrapping
+        Estimated point values should be within the range found in
+        bootstrapping
         """
         est = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples)
         assert_equal(est.shape, self.eval_points.shape + (self.nb_samples,))
@@ -73,8 +84,10 @@ class TestPDFBootstrap(object):
         """
         The grid bootstrapping with smaller bandwidth should be mostly larger
         """
-        _, est1 = bootstrap.bootstrap_grid(self.ks, self.nb_samples, CIs=(.95,), adjust_bw=adjust_bw1)
-        _, est2 = bootstrap.bootstrap_grid(self.ks, self.nb_samples, CIs=(.95,), adjust_bw=adjust_bw2)
+        _, est1 = bootstrap.bootstrap_grid(self.ks, self.nb_samples,
+                                           CIs=(.95,), adjust_bw=adjust_bw1)
+        _, est2 = bootstrap.bootstrap_grid(self.ks, self.nb_samples,
+                                           CIs=(.95,), adjust_bw=adjust_bw2)
         larger1 = sum(est1[:, 0, 0] <= est2[:, 0, 0]) / est1.shape[0]
         assert larger1 > 0.5
         larger2 = sum(est2[:, 0, 1] <= est1[:, 0, 1]) / est1.shape[0]
@@ -84,8 +97,10 @@ class TestPDFBootstrap(object):
         """
         The point bootstrapping with smaller bandwidth should be mostly larger
         """
-        est1 = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples, CIs=(.95,), adjust_bw=adjust_bw1)
-        est2 = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples, CIs=(.95,), adjust_bw=adjust_bw2)
+        est1 = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples,
+                                   CIs=(.95,), adjust_bw=adjust_bw1)
+        est2 = bootstrap.bootstrap(self.ks, self.eval_points, self.nb_samples,
+                                   CIs=(.95,), adjust_bw=adjust_bw2)
         larger1 = sum(est1[:, 0, 0] <= est2[:, 0, 0]) / est1.shape[0]
         assert larger1 > 0.5
         larger2 = sum(est2[:, 0, 1] <= est1[:, 0, 1]) / est1.shape[0]

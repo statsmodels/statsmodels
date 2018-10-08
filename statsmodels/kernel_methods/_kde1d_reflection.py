@@ -1,9 +1,13 @@
 """
-This module implements the Reflection1D KDE estimation method, using DCT to speed up computation on grids.
+This module implements the Reflection1D KDE estimation method, using DCT to
+speed up computation on grids.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, finite
 from ._kde1d_methods import KDE1DMethod, dctdensity, dctdensity_from_binned
 
@@ -28,7 +32,8 @@ class Reflection1D(KDE1DMethod):
         z = \frac{x-X}{h}
 
 
-    See the :py:mod:`pyqt_fit.kde1d_methods` for a description of the various symbols.
+    See the :py:mod:`pyqt_fit.kde1d_methods` for a description of the various
+    symbols.
 
     When computing grids, if the bandwidth is constant, the result is computing
     using CDT.
@@ -63,7 +68,8 @@ class Reflection1D(KDE1DMethod):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
@@ -152,12 +158,16 @@ class Reflection1D(KDE1DMethod):
         terms = kernel.cdf(z)
 
         if L > -np.inf:
-            terms -= kernel.cdf((L - exog) / bw)  # Remove the truncated part on the left
-            terms += kernel.cdf(z1 - (2 * L / bw))  # Add the reflected part
-            terms -= kernel.cdf((exog - L) / bw)  # Remove the truncated part from the reflection
+            # Remove the truncated part on the left
+            terms -= kernel.cdf((L - exog) / bw)
+            # Add the reflected part
+            terms += kernel.cdf(z1 - (2 * L / bw))
+            # Remove the truncated part from the reflection
+            terms -= kernel.cdf((exog - L) / bw)
 
         if U < np.inf:
-            terms += kernel.cdf(z1 - (2 * U / bw))  # Add the reflected part
+            # Add the reflected part
+            terms += kernel.cdf(z1 - (2 * U / bw))
 
         terms *= self.weights
         terms.sum(axis=-1, out=out)
@@ -200,12 +210,13 @@ class Reflection1D(KDE1DMethod):
 
         weights = self.weights
 
-        return dctdensity(exog, self.kernel.dct, bw, lower, upper, N, weights, self.total_weights)
+        return dctdensity(exog, self.kernel.dct, bw, lower, upper, N, weights,
+                          self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
         """
-        Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
-        data.
+        Evaluate the PDF from data already binned. The binning might have been
+        high-dimensional but must be of the same data.
 
         Parameters
         ----------
@@ -214,19 +225,23 @@ class Reflection1D(KDE1DMethod):
         bins: ndarray
             Array of the same shape as the mesh with the values per bin
         normed: bool
-            If true, the result will be normed w.r.t. the total weight of the exog
+            If true, the result will be normed w.r.t. the total weight of the
+            exog
         dim: int
             Dimension along which the estimation must be done
 
         Returns
         -------
         ndarray
-            Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
+            Array of same size as bins, but with the estimated of the PDF for
+            each line along the dimension `dim`
         """
         if self.adjust.ndim:
-            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
-        return dctdensity_from_binned(mesh, binned, self.kernel.dct, self.bandwidth*self.adjust,
-                                      normed, self.total_weights, dim=dim)
+            raise ValueError("Error, cannot use binned data with non-constant "
+                             "adjustment.")
+        return dctdensity_from_binned(mesh, binned, self.kernel.dct,
+                                      self.bandwidth*self.adjust, normed,
+                                      self.total_weights, dim=dim)
 
     def grid_size(self, N=None):
         """

@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from scipy.interpolate import interp2d
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,10 +15,12 @@ def interpolate2d(ax1, ax2, values, test_values):
         res[i] = interp(test_values[i, 0], test_values[i, 1])
     return res
 
+
 def draw_triangulation(xs, ys, values):
     trs = Triangulation(20 * xs, ys)
     trs.x = xs
     plt.tripcolor(trs, values, shading='gouraud')
+
 
 def run():
     ax1 = np.r_[0:2 * np.pi:124j]
@@ -43,8 +49,10 @@ def run():
     plt.title('Interpolated grid')
 
     plt.figure()
-    draw_triangulation(grid[0].flatten(), grid[1].flatten(), grid_vals.flatten())
+    draw_triangulation(grid[0].flatten(), grid[1].flatten(),
+                       grid_vals.flatten())
     plt.title('Original Grid')
+
 
 if __name__ == '__main__':
     run()

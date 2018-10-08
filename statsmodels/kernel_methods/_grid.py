@@ -1,6 +1,10 @@
-from __future__ import division, print_function, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 from numpy.lib.stride_tricks import broadcast_arrays
+
 from ..compat.python import range, zip
 
 
@@ -28,7 +32,8 @@ class Grid(object):
         should have one more element than the bin for that dimension. These
         represent the edges of the bins.
     """
-    def __init__(self, grid_axes, bounds=None, bin_type=None, edges=None, dtype=None):
+    def __init__(self, grid_axes, bounds=None, bin_type=None, edges=None,
+                 dtype=None):
         self._interval = None
         if isinstance(grid_axes, Grid):
             if bounds is None:
@@ -50,8 +55,9 @@ class Grid(object):
             dtype = np.find_common_type([ax.dtype for ax in grid_axes], [])
         for d in range(ndim):
             if grid_axes[d].ndim != 1:
-                raise ValueError("Error, the axis of a grid must be 1D arrays or "
-                                 "have exacltly one dimension with more than 1 element")
+                raise ValueError("Error, the axis of a grid must be 1D arrays "
+                                 "or have exacltly one dimension with more "
+                                 "than 1 element")
             grid_axes[d] = grid_axes[d].astype(dtype)
         self._grid = grid_axes
         self._ndim = ndim
@@ -62,9 +68,11 @@ class Grid(object):
         if len(bin_type) == 1:
             bin_type = bin_type * ndim
         elif len(bin_type) != ndim:
-            raise ValueError("Error, there must be as many bin_type as dimensions")
+            raise ValueError("Error, there must be as many bin_type as "
+                             "dimensions")
         if any(b not in 'crbd' for b in bin_type):
-            raise ValueError("Error, bin type must be one of 'b', 'r', 'c' or 'd'")
+            raise ValueError("Error, bin type must be one of 'b', 'r', 'c' or "
+                             "'d'")
         self._bin_type = bin_type
         self._shape = tuple(len(ax) for ax in grid_axes)
         if edges is not None:
@@ -77,7 +85,8 @@ class Grid(object):
             if bin_type[d] == 'd':
                 expected_bounds[d] = [ax[0], ax[-1]]
             else:
-                expected_bounds[d] = [(3 * ax[0] - ax[1]) / 2, (3 * ax[-1] - ax[-2]) / 2]
+                expected_bounds[d] = [(3 * ax[0] - ax[1]) / 2,
+                                      (3 * ax[-1] - ax[-2]) / 2]
 
         if bounds is None:
             bounds = expected_bounds
@@ -86,14 +95,18 @@ class Grid(object):
             if bounds.ndim == 1:
                 bounds = bounds[None, :]
             if (bounds[:, 0] >= bounds[:, 1]).any():
-                raise ValueError("The lower bounds must be strictly smaller than the upper bounds")
+                raise ValueError("The lower bounds must be strictly smaller "
+                                 "than the upper bounds")
             if bounds.shape != expected_bounds.shape:
-                raise ValueError("Bounds must be a (D,2) array with D the dimension of the grid")
+                raise ValueError("Bounds must be a (D,2) array with D the "
+                                 "dimension of the grid")
         self._bounds = bounds
 
     def __repr__(self):
-        dims = 'x'.join(str(s) + bt for s, bt in zip(self.shape, self.bin_type))
-        lims = '[{}]'.format(" ; ".join('{0:g} - {1:g}'.format(b[0], b[1]) for b in self.bounds))
+        dims = 'x'.join(str(s) + bt
+                        for s, bt in zip(self.shape, self.bin_type))
+        lims = '[{}]'.format(" ; ".join('{0:g} - {1:g}'.format(b[0], b[1])
+                                        for b in self.bounds))
         return "<Grid {0}, {1}, dtype={2}>".format(dims, lims, self.dtype)
 
     def copy(self):
@@ -111,7 +124,8 @@ class Grid(object):
         Parameters
         ----------
         grid: list of ndarray
-            This is the result of using `ogrid` or `meshgrid` with `sparse` set to `True`.
+            This is the result of using `ogrid` or `meshgrid` with `sparse` set
+            to `True`.
 
         Other arguments are passed to the constructor.
         """
@@ -146,7 +160,8 @@ class Grid(object):
     @staticmethod
     def fromArrays(grid, *args, **kwords):
         """
-        Create a grid from a list of grids, a list of arrays or a full array C or Fortram-style.
+        Create a grid from a list of grids, a list of arrays or a full array C
+        or Fortram-style.
         """
         try:
             grid = np.asarray(grid).squeeze()
@@ -191,17 +206,20 @@ class Grid(object):
         """
         bounds = np.atleast_2d(bounds)
         if bounds.shape[1] != 2:
-            raise ValueError("Bounds must be a (D,2) array for a D-dimensional grid")
+            raise ValueError("Bounds must be a (D,2) array for a "
+                             "D-dimensional grid")
         ndim = bounds.shape[0]
         if len(bin_type) == 1:
             bin_type = bin_type * ndim
         if any(b not in 'crbd' for b in bin_type):
-            raise ValueError("A bin type must be one of 'c', 'r' , 'b' and 'd'")
+            raise ValueError("A bin type must be one of "
+                             "'c', 'r' , 'b' and 'd'")
         shape = np.asarray(shape, dtype=int)
         if not shape.shape:
             shape = shape * np.ones((ndim,), dtype=int)
         elif shape.shape != (ndim,):
-            raise ValueError("Shape must be either a single integer, or an integer per dimension")
+            raise ValueError("Shape must be either a single integer, or an "
+                             "integer per dimension")
         grid = [None]*ndim
         for d in range(ndim):
             if bin_type[d] == 'd':
@@ -242,7 +260,8 @@ class Grid(object):
 
         Notes
         -----
-        If bin_type is specified with a single letter, all dimensions will be given the new type.
+        If bin_type is specified with a single letter, all dimensions will be
+        given the new type.
         """
         return self._bin_type
 
@@ -250,11 +269,13 @@ class Grid(object):
     def bin_type(self, bin_type):
         bin_type = str(bin_type)
         if any(c not in 'brcd' for c in bin_type):
-            raise ValueError("Error, the letters in 'bin_type' must be one of 'brcd'")
+            raise ValueError("Error, the letters in 'bin_type' must be one of "
+                             "'brcd'")
         if len(bin_type) == 1:
             bin_type = bin_type * self.ndim
         if len(bin_type) != self.ndim:
-            raise ValueError("Error, 'bin_type' must have either one letter or one letter per dimension")
+            raise ValueError("Error, 'bin_type' must have either one letter "
+                             "or one letter per dimension")
         self._bin_type = bin_type
 
     @property
@@ -272,7 +293,9 @@ class Grid(object):
         """
         if self._edges is None:
             edges = [np.empty((s + 1,), dtype=self.dtype) for s in self._shape]
-            for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_type)):
+            for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds,
+                                                      self.grid,
+                                                      self.bin_type)):
                 if bn == 'd':
                     es[:] = np.arange(len(ax) + 1) - 0.5
                 else:
@@ -346,18 +369,21 @@ class Grid(object):
         """
         if self.ndim == 1:
             return self.bin_sizes()[0]
-        bins = np.meshgrid(*self.bin_sizes(), indexing='ij', copy=False, sparse=True)
+        bins = np.meshgrid(*self.bin_sizes(), indexing='ij', copy=False,
+                           sparse=True)
         return np.prod(bins)
 
     def full(self, order='F'):
         """
         Return a full representation of the grid.
 
-        If order is 'C', then the first index is the dimension, otherwise the last index is.
+        If order is 'C', then the first index is the dimension, otherwise the
+        last index is.
         """
         if self._ndim == 1:
             return self._grid[0]
-        m = broadcast_arrays(*np.meshgrid(*self._grid, indexing='ij', sparse='True', copy='False'))
+        m = broadcast_arrays(*np.meshgrid(*self._grid, indexing='ij',
+                                          sparse='True', copy='False'))
         if order is 'C':
             return np.asarray(m)
         return np.concatenate([mm[..., None] for mm in m], axis=-1)
@@ -474,7 +500,8 @@ class Grid(object):
         if any((g1 != g2).any() for (g1, g2) in zip(self.grid, other.grid)):
             return False
         if self._edges is not None or other._edges is not None:
-            if any((g1 != g2).any() for (g1, g2) in zip(self.edges, other.edges)):
+            if any((g1 != g2).any()
+                   for (g1, g2) in zip(self.edges, other.edges)):
                 return False
         return True
 
@@ -499,9 +526,11 @@ class Grid(object):
             return False
         if not np.allclose(self.bounds, other.bounds, rtol, atol):
             return False
-        if any(not np.allclose(g1, g2, rtol, atol) for (g1, g2) in zip(self.grid, other.grid)):
+        if any(not np.allclose(g1, g2, rtol, atol)
+               for (g1, g2) in zip(self.grid, other.grid)):
             return False
         if self._edges is not None or other._edges is not None:
-            if any(not np.allclose(g1, g2, rtol, atol) for (g1, g2) in zip(self.edges, other.edges)):
+            if any(not np.allclose(g1, g2, rtol, atol)
+                   for (g1, g2) in zip(self.edges, other.edges)):
                 return False
         return True

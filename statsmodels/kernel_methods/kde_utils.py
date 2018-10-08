@@ -14,6 +14,8 @@ except ImportError:
     from inspect import getargspec
 
 import numpy as np
+from numpy import finfo, asarray, asfarray, zeros
+from scipy import sqrt
 
 from ..compat.python import string_types, range
 from ._grid import Grid  # noqa
@@ -29,6 +31,8 @@ elif hasattr(np, 'float96'):
 else:
     large_float = np.float64
 
+_epsilon = sqrt(finfo(float).eps)
+
 
 def finite(val):
     return val is not None and np.isfinite(val)
@@ -36,7 +40,8 @@ def finite(val):
 
 def atleast_2df(*arys):
     """
-    Return at least a 2D array, fortran style (e.g. adding dimensions at the end)
+    Return at least a 2D array, fortran style (e.g. adding dimensions at the
+    end)
     """
     res = []
     for ary in arys:
@@ -95,7 +100,8 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
             need_transpose = True
         else:
             raise ValueError("Error, the input array is of dimension {0} "
-                             "(expected: {1})".format(input_shape[-1], input_dim))
+                             "(expected: {1})"
+                             .format(input_shape[-1], input_dim))
     # Allocate the output
     if out is None:
         # Compute the output shape
@@ -125,48 +131,56 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
 
 def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
-    Decorator to create a function taking a single array-like argument and return a numpy array with the same number of
-    points.
+    Decorator to create a function taking a single array-like argument and
+    return a numpy array with the same number of points.
 
-    The function will always get an input and output with the last index corresponding to the dimension of the problem.
+    The function will always get an input and output with the last index
+    corresponding to the dimension of the problem.
 
     Parameters
     ----------
     input_dim: int
         Number of dimensions of the input. The behavior depends on the value:
-            > 0 : There is a dimension, and its size is known. The dimension should be the first or last index. If it is
-                  on the first, the arrays are transposed before being sent to the function.
-            else: The last index is the dimension, but it may be any number. A 1D array will be considered n points in
-                  1D.
+            > 0 : There is a dimension, and its size is known. The dimension
+                  should be the first or last index. If it is on the first, the
+                  arrays are transposed before being sent to the function.
+            else: The last index is the dimension, but it may be any number. A
+                  1D array will be considered n points in 1D.
 
     output_dim: int
-        Dimension of the output. If more than 1, the last index of the output array is the dimension. It cannot be 0 or
-        less.
+        Dimension of the output. If more than 1, the last index of the output
+        array is the dimension. It cannot be 0 or less.
 
     out_dtype: dtype or None
         Expected types of the output array.
-        If the output array is created by this function, dtype specifies its type. If dtype is None, the output array is
-        given the same as the input array, unless it is an integer, in which case the output will be a float64.
+        If the output array is created by this function, dtype specifies its
+        type. If dtype is None, the output array is given the same as the input
+        array, unless it is an integer, in which case the output will be a
+        float64.
 
     in_dtype: dtype or None
-        If not None, the input array will be converted to this type before being passed on.
+        If not None, the input array will be converted to this type before
+        being passed on.
 
     Notes
     -----
-    If input_dim is not 0, the function will always receive a 2D array with the second index for the dimension.
+    If input_dim is not 0, the function will always receive a 2D array with the
+    second index for the dimension.
     """
     if out_dtype is not None:
         out_dtype = np.dtype(out_dtype)
     if in_dtype is not None:
         in_dtype = np.dtype(in_dtype)
     if output_dim <= 0:
-        raise ValueError("Error, the number of output dimension must be strictly more than 0.")
+        raise ValueError("Error, the number of output dimension must be "
+                         "strictly more than 0.")
 
     def decorator(fct):
         @functools.wraps(fct)
         def f(z, out=None):
-            z, write_out, out = _process_trans_args(z, out, input_dim, output_dim,
-                                                    in_dtype, out_dtype)
+            z, write_out, out = _process_trans_args(z, out, input_dim,
+                                                    output_dim, in_dtype,
+                                                    out_dtype)
             fct(z, out=write_out)
             return out
         return f
@@ -193,17 +207,20 @@ def _process_trans1d_args(z, out, in_dtype, out_dtype):
 
 def numpy_trans1d(out_dtype=None, in_dtype=None):
     """
-    This decorator helps provide a uniform interface to 1D numpy transformation functions.
+    This decorator helps provide a uniform interface to 1D numpy transformation
+    functions.
 
-    The returned function takes any array-like argument and transform it as a 1D ndarray sent to the decorated function.
-    If the `out` argument is not provided, it will be allocated with the same size and shape as the first argument. And
-    as with the first argument, it will be reshaped as a 1D ndarray before being sent to the function.
+    The returned function takes any array-like argument and transform it as a
+    1D ndarray sent to the decorated function. If the `out` argument is not
+    provided, it will be allocated with the same size and shape as the first
+    argument. And as with the first argument, it will be reshaped as a 1D
+    ndarray before being sent to the function.
 
     Examples
     --------
 
-    The following example illustrate how a 2D array will be passed as 1D, and the output allocated as the input
-    argument:
+    The following example illustrate how a 2D array will be passed as 1D, and
+    the output allocated as the input argument:
 
     >>> @numpy_trans1d()
     ... def broadsum(z, out):
@@ -220,7 +237,8 @@ def numpy_trans1d(out_dtype=None, in_dtype=None):
     def decorator(fct):
         @functools.wraps(fct)
         def f(z, out=None):
-            z, out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            z, out, write_out = _process_trans1d_args(z, out, in_dtype,
+                                                      out_dtype)
             fct(z, write_out)
             return out
         return f
@@ -229,40 +247,49 @@ def numpy_trans1d(out_dtype=None, in_dtype=None):
 
 def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
-    Decorator to create a method taking a single array-like argument and return a numpy array with the same number of
-    points.
+    Decorator to create a method taking a single array-like argument and return
+    a numpy array with the same number of points.
 
-    The function will always get an input and output with the last index corresponding to the dimension of the problem.
+    The function will always get an input and output with the last index
+    corresponding to the dimension of the problem.
 
     Parameters
     ----------
     input_dim: int or str
         Number of dimensions of the input. The behavior depends on the value:
-            > 0 : There is a dimension, and its size is known. The dimension should be the first or last index. If it is
-                  on the first, the arrays are transposed before being sent to the function.
-            else: The last index is the dimension, but it may be any number. A 1D array will be considered n points in
-                  1D.
-        If a string, it should be the name of an attribute containing the input dimension.
+            > 0 : There is a dimension, and its size is known. The dimension
+                  should be the first or last index. If it is on the first, the
+                  arrays are transposed before being sent to the function.
+            else: The last index is the dimension, but it may be any number. A
+                  1D array will be considered n points in 1D.
+        If a string, it should be the name of an attribute containing the input
+        dimension.
 
     output_dim: int or str
-        Dimension of the output. If more than 1, the last index of the output array is the dimension. If cannot be 0 or
-        less.
-        If a string, it should be the name of an attribute containing the output dimension
+        Dimension of the output. If more than 1, the last index of the output
+        array is the dimension. If cannot be 0 or less.
+        If a string, it should be the name of an attribute containing the
+        output dimension
 
     out_dtype: dtype or None
         Expected types of the output array.
-        If the output array is created by this function, dtype specifies its type. If dtype is None, the output array is
-        given the same as the input array, unless it is an integer, in which case the output will be a float64.
+        If the output array is created by this function, dtype specifies its
+        type. If dtype is None, the output array is given the same as the input
+        array, unless it is an integer, in which case the output will be a
+        float64.
 
     in_dtype: dtype or None
-        If not None, the input array will be converted to this type before being passed on.
+        If not None, the input array will be converted to this type before
+        being passed on.
 
     Notes
     -----
-    If input_dim is not 0, the function will always receive a 2D array with the second index for the dimension.
+    If input_dim is not 0, the function will always receive a 2D array with the
+    second index for the dimension.
     """
     if output_dim <= 0:
-        raise ValueError("Error, the number of output dimension must be strictly more than 0.")
+        raise ValueError("Error, the number of output dimension must be "
+                         "strictly more than 0.")
     # Resolve how to get input dimension
     if isinstance(input_dim, string_types):
         def get_input_dim(self):
@@ -286,8 +313,10 @@ def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     def decorator(fct):
         @functools.wraps(fct)
         def f(self, z, out=None):
-            z, write_out, out = _process_trans_args(z, out, get_input_dim(self), get_output_dim(self),
-                                                    in_dtype, out_dtype)
+            z, write_out, out = _process_trans_args(
+                z, out, get_input_dim(self), get_output_dim(self),
+                in_dtype, out_dtype
+            )
             fct(self, z, out=write_out)
             return out
         return f
@@ -306,7 +335,8 @@ def numpy_trans1d_method(out_dtype=None, in_dtype=None):
     def decorator(fct):
         @functools.wraps(fct)
         def f(self, z, out=None):
-            z, real_out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            z, real_out, write_out = _process_trans1d_args(z, out, in_dtype,
+                                                           out_dtype)
             fct(self, z, out=write_out)
             return real_out
         return f
@@ -384,29 +414,30 @@ class AxesType(object):
             return self._types != other._types
         return self._types != other
 
-#
-from scipy import sqrt
-from numpy import finfo, asarray, asfarray, zeros
-
-_epsilon = sqrt(finfo(float).eps)
-
 
 def approx_jacobian(x, func, epsilon, *args):
     """
     Approximate the Jacobian matrix of callable function func
 
-    :param ndarray x: The state vector at which the Jacobian matrix is desired
-    :param callable func: A vector-valued function of the form f(x,*args)
-    :param ndarray epsilon: The peturbation used to determine the partial derivatives
-    :param tuple args: Additional arguments passed to func
+    Parameters
+    ----------
+    x: ndarray
+        The state vector at which the Jacobian matrix is desired
+    func: callable
+        A vector-valued function of the form f(x,*args)
+    epsilon: ndarray
+        The peturbation used to determine the partial derivatives
+    args: tuple
+        Additional arguments passed to func
 
-    :returns: An array of dimensions (lenf, lenx) where lenf is the length
-         of the outputs of func, and lenx is the number of
+    Returns
+    -------
+    An array of dimensions (lenf, lenx) where lenf is the length of the outputs
+    of func, and lenx is the number of
 
-    .. note::
-
-         The approximation is done using forward differences
-
+    Notes
+    -----
+    The approximation is done using forward differences
     """
     x0 = asarray(x)
     x0 = asfarray(x0, dtype=x0.dtype)

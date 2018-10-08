@@ -1,19 +1,25 @@
 """
-This module implements the Transform1D KDE estimation method, which transform the bounded domain
-into an unbounded one and back.
+This module implements the Transform1D KDE estimation method, which transform
+the bounded domain into an unbounded one and back.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, namedtuple, numpy_trans1d
 from ._kde1d_methods import KDE1DMethod
 from ._kde_methods import KDEMethod, filter_exog, invert_cdf
 from ._kde1d_reflection import Reflection1D
 
-_Transform_doc = "Named tuple storing the three function needed to transform an axis"
-_Transform_field_docs = ["Map coordinates from the original axis to the transformed axis.",
-                         "Map coordinates from the transformed axis back to the original one.",
-                         "Derivative of the inverse transform function."]
+
+_Transform_doc = ("Named tuple storing the three function needed to transform "
+                  "an axis")
+_Transform_field_docs = [
+    "Map coordinates from the original axis to the transformed axis.",
+    "Map coordinates from the transformed axis back to the original one.",
+    "Derivative of the inverse transform function."]
 Transform = namedtuple('Transform', ['__call__', 'inv', 'Dinv'],
                        doc=_Transform_doc,
                        field_docs=_Transform_field_docs)
@@ -21,6 +27,7 @@ Transform = namedtuple('Transform', ['__call__', 'inv', 'Dinv'],
 
 def _inverse(x, out=None):
     return np.divide(1, x, out)
+
 
 #: Transform object for a log-transform mapping [0, +oo] to [-oo, +oo]
 LogTransform = Transform(np.log, np.exp, np.exp)
@@ -73,8 +80,9 @@ def create_transform(obj, inv=None, Dinv=None):
     Parameters
     ----------
     obj: fun
-        This can be either simple a function, or a function-object with an 'inv' and/or 'Dinv' attributes
-        containing the inverse function and its derivative (respectively)
+        This can be either simple a function, or a function-object with an
+        'inv' and/or 'Dinv' attributes containing the inverse function and
+        its derivative (respectively)
     inv: fun
         If provided, inverse of the main function
     Dinv: fun
@@ -87,8 +95,9 @@ def create_transform(obj, inv=None, Dinv=None):
 
     Notes
     -----
-    The inverse function must be provided, either as argument or as attribute to the object. The derivative of the
-    inverse will be estimated numerically if not provided.
+    The inverse function must be provided, either as argument or as attribute
+    to the object. The derivative of the inverse will be estimated numerically
+    if not provided.
 
     All the functions should accept an ``out`` argument to store the result.
     """
@@ -98,7 +107,8 @@ def create_transform(obj, inv=None, Dinv=None):
     if inv is None:
         if not hasattr(obj, 'inv'):
             raise AttributeError("Error, transform object must have a 'inv' "
-                                 "attribute or you must specify the 'inv' argument")
+                                 "attribute or you must specify the 'inv' "
+                                 "argument")
         inv = obj.inv
     if Dinv is None:
         if hasattr(obj, 'Dinv'):
@@ -164,8 +174,8 @@ class Transform1D(KDE1DMethod):
         trans:
             Either a simple function, or a function object with
             attributes `inv` and `Dinv` to use in case they are not provided as
-            arguments. The helper :py:func:`create_transform` will provide numeric
-            approximation of the derivative if required.
+            arguments. The helper :py:func:`create_transform` will provide
+            numeric approximation of the derivative if required.
         method:
             instance of KDE1DMethod used in the transformed domain.
             Default is :py:class:`Reflection`
@@ -241,20 +251,24 @@ class Transform1D(KDE1DMethod):
         """
         exog = np.atleast_1d(exog)
         if exog.ndim != 1:
-            raise ValueError("Error, exog must be a 1D array (nb dimensions: {})".format(exog.ndim))
+            raise ValueError("Error, exog must be a 1D array (nb dimensions: "
+                             "{})".format(exog.ndim))
         weights = np.asarray(weights).squeeze()
         adjust = np.asarray(adjust).squeeze()
         if weights.ndim != 0 and weights.shape != exog.shape:
-            raise ValueError("Error, weights must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, weights must be either a single number, "
+                             "or an array the same shape as exog")
         if adjust.ndim != 0 and adjust.shape != exog.shape:
-            raise ValueError("Error, adjust must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, adjust must be either a single number, "
+                             "or an array the same shape as exog")
         self._exog = exog
         self.method.update_inputs(self.trans(exog), weights, adjust)
 
     @property
     def to_bin(self):
         """
-        Return the exog data, transformed into the domain in which they should be binned.
+        Return the exog data, transformed into the domain in which they should
+        be binned.
         """
         return self.method.exog
 
@@ -316,7 +330,8 @@ class Transform1D(KDE1DMethod):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         trans = self.trans
         pts = trans(points)
@@ -448,7 +463,8 @@ class Transform1D(KDE1DMethod):
         mesh : :py:class:`Grid`
             Grid on which the survival function has bin evaluated
         values : ndarray
-            Values of the inverse survival function for each position of the grid.
+            Values of the inverse survival function for each position of the
+            grid.
         """
         xs, ys = self.method.sf_grid(N, cut)
         xs.transform(self.trans.inv)
@@ -502,7 +518,8 @@ class Transform1D(KDE1DMethod):
 
         Notes
         -----
-        This method computes the icdf in the transformed axis, and transform the result back.
+        This method computes the icdf in the transformed axis, and transform
+        the result back.
         """
         xs, ys = self.method.icdf_grid(N, cut)
         self.trans.inv(ys, out=ys)
@@ -526,11 +543,13 @@ class Transform1D(KDE1DMethod):
         Returns
         -------
         ndarray
-            Returns the ``out`` variable, updated with the inverse survival function.
+            Returns the ``out`` variable, updated with the inverse survival
+            function.
 
         Notes
         -----
-        This method computes the isf in the transformed axis, and transform the result back.
+        This method computes the isf in the transformed axis, and transform the
+        result back.
         """
         out = self.method.isf(points, out)
         self.trans.inv(out, out=out)
@@ -557,7 +576,8 @@ class Transform1D(KDE1DMethod):
 
         Notes
         -----
-        This method computes the isf in the transformed axis, and transform the result back.
+        This method computes the isf in the transformed axis, and transform
+        the result back.
         """
         xs, ys = self.method.isf_grid(N, cut)
         self.trans.inv(ys, out=ys)
@@ -601,6 +621,7 @@ def _add_fwd_attr(cls, to_fwd, attr):
         delattr(getattr(self, to_fwd), attr)
 
     setattr(cls, attr, property(getter, setter, deleter, doc=doc))
+
 
 for attr in Transform1D._fwd_attrs:
     _add_fwd_attr(Transform1D, 'method', attr)

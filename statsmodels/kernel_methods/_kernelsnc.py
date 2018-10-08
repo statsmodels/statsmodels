@@ -3,27 +3,33 @@
 
 This module contains kernels for non-continuous data.
 
-Unlike with continuous kernels, these ones require explicitely the evaluation point and the bandwidth.
+Unlike with continuous kernels, these ones require explicitely the evaluation
+point and the bandwidth.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
 
 
 class AitchisonAitken(object):
     r"""
-    The Aitchison-Aitken kernel, used for unordered discrete random variables [KM2]_.
+    The Aitchison-Aitken kernel, used for unordered discrete random variables
+    [KM2]_.
 
-    See p.18 of [KM3]_ for details.  The value of the kernel L if :math:`X_{i}=x`
-    is :math:`1-\lambda`, otherwise it is :math:`\frac{\lambda}{c-1}`.
-    Here :math:`c` is the number of levels plus one of the RV.
+    See p.18 of [KM3]_ for details.  The value of the kernel L if
+    :math:`X_{i}=x` is :math:`1-\lambda`, otherwise it is
+    :math:`\frac{\lambda}{c-1}`. Here :math:`c` is the number of levels plus
+    one of the RV.
 
     References
     ----------
-    .. [KM2] J. Aitchison and C.G.G. Aitken, "Multivariate binary discrimination
-           by the kernel method", Biometrika, vol. 63, pp. 413-420, 1976.
+    .. [KM2] J. Aitchison and C.G.G. Aitken, "Multivariate binary
+             discrimination by the kernel method", Biometrika,
+             Vol. 63, pp. 413-420, 1976.
     .. [KM3] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
-           and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
+             and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
     def for_ndim(self, ndim):
         assert ndim == 1, "Error, this kernel only works in 1D"
@@ -44,7 +50,8 @@ class AitchisonAitken(object):
 
         Returns
         -------
-        The number of categories to add on either direction to ensure no weight is lost.
+        The number of categories to add on either direction to ensure no weight
+        is lost.
         """
         return 0
 
@@ -61,13 +68,13 @@ class AitchisonAitken(object):
         bw: float
             Bandwidth
         num_levels: int
-            Number of levels possible. The levels will be from 0 to num_levels-1
+            Number of levels possible. The levels will range from 0 to
+            num_levels-1.
 
         Returns
         -------
-        ndarray
-            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension,
-            the outer product will be performed
+        Result of the pdf on x from Xi. If x and Xi are arrays on different
+        dimension, the outer product will be performed
         """
         x = np.asfarray(x)
         bw = float(bw)
@@ -127,7 +134,8 @@ class WangRyzin(object):
 
         Returns
         -------
-        The number of categories to add on either direction to ensure no weight is lost.
+        The number of categories to add on either direction to ensure no weight
+        is lost.
         """
         return int(np.ceil(np.log(epsilon) / np.log(bw) - 1))
 
@@ -144,13 +152,13 @@ class WangRyzin(object):
         bw: float or 1-D array of shape (K,)
             Bandwidth
         num_levels: int
-            Number of levels possible. The levels will be from 0  to num_levels-1
+            Number of levels possible. The levels will range from 0 to
+            num_levels-1.
 
         Returns
         -------
-        ndarray
-            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension,
-            the outer product will be performed
+        Result of the pdf on x from Xi. If x and Xi are arrays on different
+        dimension, the outer product will be performed.
         """
         x = np.asfarray(x)
         bw = float(bw)
@@ -171,5 +179,6 @@ class WangRyzin(object):
         selector = [slice(None)] * mesh.ndim
         for i, level in enumerate(mesh.grid[dim]):
             selector[dim] = i
-            result[selector] += factor * np.sum(bw ** abs(grid - level) * bins, axis=dim)
+            result[selector] += factor * np.sum(bw ** abs(grid - level) * bins,
+                                                axis=dim)
         return result

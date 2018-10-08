@@ -1,9 +1,13 @@
 """
-This module implements the Renormalization KDE estimation method, which is a 0-order correction at the boundaries.
+This module implements the Renormalization KDE estimation method, which is a
+0-order correction at the boundaries.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, finite, Grid
 from ._kde1d_cyclic import Cyclic1D
 from ._kde1d_methods import KDE1DMethod, fftdensity
@@ -51,7 +55,8 @@ class Renormalization(Cyclic1D):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         if not self.bounded:
             return Cyclic1D.pdf(self, points, out)
@@ -61,13 +66,13 @@ class Renormalization(Cyclic1D):
 
         bw = self.bandwidth * self.adjust
 
-        l = (points - self.lower) / bw
-        u = (points - self.upper) / bw
+        lower = (points - self.lower) / bw
+        upper = (points - self.upper) / bw
         z = (points - exog) / bw
 
         kernel = self.kernel
 
-        a1 = (kernel.cdf(l) - kernel.cdf(u))
+        a1 = (kernel.cdf(lower) - kernel.cdf(upper))
 
         terms = kernel(z) * ((self.weights / bw) / a1)
 
@@ -162,8 +167,9 @@ class Renormalization(Cyclic1D):
         R = upper - lower
         kernel = self.kernel
 
-        # Compute the FFT with enough margin to avoid side effects
-        # here we assume that bw << est_R / 8 otherwise the FFT approximation is bad anyway
+        # Compute the FFT with enough margin to avoid side effects here we
+        # assume that bw << est_R / 8 otherwise the FFT approximation is bad
+        # anyway
         shift_N = N // 8
         comp_N = N + N // 4
         comp_lower = lower - R / 8
@@ -171,16 +177,18 @@ class Renormalization(Cyclic1D):
 
         weights = self.weights
 
-        mesh, density = fftdensity(exog, kernel.rfft, bw, comp_lower, comp_upper, comp_N, weights, self.total_weights)
+        mesh, density = fftdensity(exog, kernel.rfft, bw, comp_lower,
+                                   comp_upper, comp_N, weights,
+                                   self.total_weights)
 
         mesh = mesh.full()
         mesh = mesh[shift_N:shift_N + N]
         density = density[shift_N:shift_N + N]
 
         # Apply renormalization
-        l = (mesh - lower) / bw
-        u = (mesh - upper) / bw
-        a1 = (kernel.cdf(l) - kernel.cdf(u))
+        lower = (mesh - lower) / bw
+        upper = (mesh - upper) / bw
+        a1 = (kernel.cdf(lower) - kernel.cdf(upper))
 
         density /= a1
 

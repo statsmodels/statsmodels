@@ -2,9 +2,12 @@
 This module implements the Linear Combination KDE estimation method, which is a
 1st order approximation of the KDE at the boundaries.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, finite, Grid
 from ._kde1d_cyclic import Cyclic1D
 from ._kde1d_methods import KDE1DMethod, fftdensity
@@ -30,7 +33,8 @@ class _LinearCombinationKernel(Kernel1D):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         out = self._kernel(x, out)
         out *= x
@@ -47,8 +51,8 @@ class LinearCombination(Cyclic1D):
 
     .. math::
 
-        \hat{K}(x;X,h,L,U) \triangleq \frac{a_2(l,u) - a_1(-u, -l) z}{a_2(l,u)a_0(l,u)
-        - a_1(-u,-l)^2} K(z)
+        \hat{K}(x;X,h,L,U) \triangleq \frac{a_2(l,u) -
+        a_1(-u, -l) z}{a_2(l,u)a_0(l,u) - a_1(-u,-l)^2} K(z)
 
     where:
 
@@ -82,7 +86,8 @@ class LinearCombination(Cyclic1D):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
@@ -92,15 +97,15 @@ class LinearCombination(Cyclic1D):
 
         bw = self.bandwidth * self.adjust
 
-        l = (self.lower - points) / bw
-        u = (self.upper - points) / bw
+        lower = (self.lower - points) / bw
+        upper = (self.upper - points) / bw
         z = (points - exog) / bw
 
         kernel = self.kernel
 
-        a0 = kernel.cdf(u) - kernel.cdf(l)
-        a1 = kernel.pm1(-l) - kernel.pm1(-u)
-        a2 = kernel.pm2(u) - kernel.pm2(l)
+        a0 = kernel.cdf(upper) - kernel.cdf(lower)
+        a1 = kernel.pm1(-lower) - kernel.pm1(-upper)
+        a2 = kernel.pm2(upper) - kernel.pm2(lower)
 
         denom = a2 * a0 - a1 * a1
         upper = a2 - a1 * z
@@ -200,15 +205,18 @@ class LinearCombination(Cyclic1D):
         est_R = est_upper - est_lower
 
         # Compute the FFT with enough margin to avoid side effects
-        # here we assume that bw << est_R / 8 otherwise the FFT approximation is bad anyway
+        # Here we assume that bw << est_R / 8 otherwise the FFT approximation
+        # is bad anyway
         shift_N = N // 8
         comp_N = N + N // 4
         comp_lower = est_lower - est_R / 8
         comp_upper = est_upper + est_R / 8
         total_weights = self.total_weights
 
-        mesh, density = fftdensity(exog, kernel.rfft, bw, comp_lower, comp_upper, comp_N, weights, total_weights)
-        _, z_density = fftdensity(exog, kernel.rfft_xfx, bw, comp_lower, comp_upper, comp_N, weights, total_weights)
+        mesh, density = fftdensity(exog, kernel.rfft, bw, comp_lower,
+                                   comp_upper, comp_N, weights, total_weights)
+        _, z_density = fftdensity(exog, kernel.rfft_xfx, bw, comp_lower,
+                                  comp_upper, comp_N, weights, total_weights)
 
         grid = mesh.full()
         grid = grid[shift_N:shift_N + N]
@@ -216,11 +224,11 @@ class LinearCombination(Cyclic1D):
         z_density = z_density[shift_N:shift_N + N]
 
         # Apply linear combination approximation
-        l = (lower - grid) / bw
-        u = (upper - grid) / bw
-        a0 = kernel.cdf(u) - kernel.cdf(l)
-        a1 = kernel.pm1(-l) - kernel.pm1(-u)
-        a2 = kernel.pm2(u) - kernel.pm2(l)
+        lower = (lower - grid) / bw
+        upper = (upper - grid) / bw
+        a0 = kernel.cdf(upper) - kernel.cdf(lower)
+        a1 = kernel.pm1(-lower) - kernel.pm1(-upper)
+        a2 = kernel.pm2(upper) - kernel.pm2(lower)
 
         density *= a2
         density -= a1 * z_density

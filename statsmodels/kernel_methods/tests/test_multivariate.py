@@ -1,9 +1,13 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from . import kde_utils
-from ...tools.testing import assert_equal, assert_allclose
-from .. import kde, kde_methods
 import numpy as np
+
+from ...tools.testing import assert_equal, assert_allclose
+from . import kde_utils
+from .. import kde, kde_methods
+
 
 class KDETester(object):
     def createKDE(self, data, methods, **args):
@@ -41,7 +45,8 @@ class KDETester(object):
             name = "{0}_{1}".format(m1.instance.name, m2.instance.name)
             for j in range(len(self.sizes)):
                 k = self.createKDE(self.vs[j], [m1, m2])
-                yield self.method_works, k, [m1, m2], '{0}_{1}'.format(name, j)
+                yield (self.method_works, k, [m1, m2],
+                       '{0}_{1}'.format(name, j))
 
     def test_grid_methods(self):
         for i in range(self.nb_methods):
@@ -50,7 +55,8 @@ class KDETester(object):
             name = "{0}_{1}".format(m1.instance.name, m2.instance.name)
             for j in range(len(self.sizes)):
                 k = self.createKDE(self.vs[j], [m1, m2])
-                yield self.grid_method_works, k, [m1, m2], '{0}_{1}'.format(name, j)
+                yield (self.grid_method_works, k, [m1, m2],
+                       '{0}_{1}'.format(name, j))
 
     def test_weights_methods(self):
         for i in range(self.nb_methods):
@@ -60,7 +66,8 @@ class KDETester(object):
             for j in range(len(self.sizes)):
                 k = self.createKDE(self.vs[j], [m1, m2])
                 k.weights = self.weights[j]
-                yield self.method_works, k, [m1, m2], '{0}_{1}'.format(name, j)
+                yield (self.method_works, k, [m1, m2],
+                       '{0}_{1}'.format(name, j))
 
     def test_weights_grid_methods(self):
         for i in range(self.nb_methods):
@@ -70,7 +77,9 @@ class KDETester(object):
             for j in range(len(self.sizes)):
                 k = self.createKDE(self.vs[j], [m1, m2])
                 k.weights = self.weights[j]
-                yield self.grid_method_works, k, [m1, m2], '{0}_{1}'.format(name, j)
+                yield (self.grid_method_works, k, [m1, m2],
+                       '{0}_{1}'.format(name, j))
+
 
 class TestMultivariate(KDETester):
     @classmethod
@@ -105,7 +114,8 @@ class TestMultivariate(KDETester):
             else:
                 high = est.exog[:, 1].max() + 5*est.bandwidth[1]
             bounds[1] = [low, high]
-        grid = kde_utils.Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
+        grid = kde_utils.Grid.fromBounds(bounds, bin_type=bt, shape=128,
+                                         dtype=float)
         values = est(grid.linear()).reshape(grid.shape)
         tot = grid.integrate(values)
         # Note: the precision is quite bad as we use small number of values!

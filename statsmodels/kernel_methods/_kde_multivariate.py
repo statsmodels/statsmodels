@@ -3,11 +3,15 @@
 
 This module contains the multi-variate KDE meta-method.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
-import numpy as np
-from ..compat.python import range
 from copy import copy as shallow_copy
+
+import numpy as np
+
+from ..compat.python import range
 from . import kernels
 from . import _kdenc_methods, _kde1d_reflection
 from .kde_utils import numpy_trans_method, AxesType, namedtuple
@@ -84,8 +88,9 @@ class Multivariate(KDEMethod):
         """
         Kernels for earch dimension.
 
-        Before fitting, this should be a dictionnary, associating for some dimensions the kernel you want. Any dimension
-        non-present in this dictionnary will be given a default kernel depending on its axis type.
+        Before fitting, this should be a dictionary, associating for some
+        dimensions the kernel you want. Any dimension non-present in this
+        dictionary will be given a default kernel depending on its axis type.
         """
         return self._kernels
 
@@ -136,7 +141,8 @@ class Multivariate(KDEMethod):
         except TypeError:
             val = np.atleast_1d(val).astype(float)
             if val.shape != (self.npts,):
-                raise ValueError("Error, adjust must be a single value or a value per point")
+                raise ValueError("Error, adjust must be a single value or a "
+                                 "value per point")
             self._adjust = val
         if self._methods:
             for m in self._methods:
@@ -203,8 +209,8 @@ class Multivariate(KDEMethod):
         """
         Methods for each axes.
 
-        Before fitting, this should be a dictionnary specifying the methods for the axes that won't use the default
-        ones.
+        Before fitting, this should be a dictionnary specifying the methods for
+        the axes that won't use the default ones.
 
         After fitting, this is a list of methods, one per axis.
         """
@@ -216,7 +222,8 @@ class Multivariate(KDEMethod):
         else:
             axis_type = AxesType(kde.axis_type)
         if len(axis_type) != kde.ndim:
-            raise ValueError("You must specify exacltly one axis type, or as many as there are axis")
+            raise ValueError("You must specify exacltly one axis type, or as "
+                             "many as there are axis")
         methods, kernels = self.get_methods(axis_type)
         ndim = kde.ndim
         if ndim == 1:
@@ -321,7 +328,8 @@ class Multivariate(KDEMethod):
     @property
     def to_bin(self):
         """
-        Property holding the data to be binned. It is different from :py:attr:`exog` if any method provide this.
+        Property holding the data to be binned. It is different from
+        :py:attr:`exog` if any method provide this.
         """
         if self._bin_data is not None:
             if self._bin_data is True:
@@ -334,22 +342,26 @@ class Multivariate(KDEMethod):
 
     def update_inputs(self, exog, weights=1., adjust=1.):
         """
-        Update the inputs from a constistent set of data, weights and adjustments
+        Update the inputs from a consistent set of data, weights and
+        adjustments
         """
         exog = np.atleast_2d(exog)
         if exog.ndim > 2 or exog.shape[1] != self.ndim:
-            raise ValueError("Error, wrong number of dimensions for exog, this cannot be changed after fitting!")
+            raise ValueError("Error, wrong number of dimensions for exog, "
+                             "this cannot be changed after fitting!")
         npts, ndim = exog.shape
         weights = np.asarray(weights, dtype=float).squeeze()
         if weights.ndim > 1:
             raise ValueError("Error, weights must be at most a 1D array")
         if weights.ndim == 1 and weights.shape != (npts,):
-            raise ValueError("Error, weights must be a single value or have as many values as points in exog")
+            raise ValueError("Error, weights must be a single value or have "
+                             "as many values as points in exog")
         adjust = np.asarray(adjust, dtype=float).squeeze()
         if adjust.ndim > 1:
             raise ValueError("Error, adjust must be at most a 1D array")
         if adjust.ndim == 1 and adjust.shape != (npts,):
-            raise ValueError("Error, adjust must be a single value or have as many values as points in exog")
+            raise ValueError("Error, adjust must be a single value or have as "
+                             "many values as points in exog")
         self._exog = exog
         self._weights = weights
         self._adjust = adjust
@@ -378,7 +390,8 @@ class Multivariate(KDEMethod):
         Parameters
         ----------
         N: int or tuple of int
-            Number of bins on each dimension. If a single number is used, this is valid for each dimension.
+            Number of bins on each dimension. If a single number is used, this
+            is valid for each dimension.
         cut: float or tuple of float
             If defined, override the cutting value for each dimension. If a
             tuple is defined, each non-None value override a specific
@@ -403,12 +416,12 @@ class Multivariate(KDEMethod):
         for d in range(self.ndim):
             m = self.methods[d]
             if m.transform_axis is not None:
-                l, u = m.transform_axis(bounds[d])
+                lower, upper = m.transform_axis(bounds[d])
             else:
-                l, u = bounds[d]
-            if l == -np.inf:
+                lower, upper = bounds[d]
+            if lower == -np.inf:
                 bounds[d, 0] = to_bin[:, d].min() - cut[d] * m.bandwidth
-            if u == np.inf:
+            if upper == np.inf:
                 bounds[d, 1] = to_bin[:, d].max() + cut[d] * m.bandwidth
 
         N = self.grid_size(N)

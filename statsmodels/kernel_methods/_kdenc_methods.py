@@ -3,19 +3,24 @@
 
 This modules contains a set of methods to compute KDEs on non-continuous data.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
+from copy import copy as shallow_copy
+
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, finite
 from .fast_linbin import fast_linbin as fast_bin
-from copy import copy as shallow_copy
 from ._kde_methods import KDEMethod, filter_exog
 from . import kernels
 
 
 def _compute_bandwidth(kde):
     """
-    Compute the bandwidth and covariance for the estimated model, based of its exog attribute
+    Compute the bandwidth and covariance for the estimated model, based of its
+    exog attribute
     """
     if kde.bandwidth is not None:
         if callable(kde.bandwidth):
@@ -49,7 +54,8 @@ class Unordered(KDEMethod):
     @axis_type.setter
     def axis_type(self, value):
         if value != 'u':
-            raise ValueError('Error, this method can only be used for discrete unordered axis')
+            raise ValueError("Error, this method can only be used for "
+                             "discrete unordered axis")
 
     @property
     def bin_type(self):
@@ -62,7 +68,8 @@ class Unordered(KDEMethod):
     @property
     def epsilon(self):
         """
-        Precision required for the computation of the bounds and number of levels.
+        Precision required for the computation of the bounds and number of
+        levels.
 
         This is used to compute the upper and lower bound while fitting the
         KDE, if they are not already provided.
@@ -80,9 +87,11 @@ class Unordered(KDEMethod):
 
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim != 1:
-            raise ValueError("Error, this method only accepts one variable problem")
+            raise ValueError("Error, this method only accepts one variable "
+                             "problem")
         if kde.axis_type != self.axis_type:
-            raise ValueError("Error, this method only accepts an unordered discrete axis")
+            raise ValueError("Error, this method only accepts an unordered "
+                             "discrete axis")
         kde = filter_exog(kde, self.bin_type)
         fitted = self.copy()
         fitted._fitted = True
@@ -120,7 +129,10 @@ class Unordered(KDEMethod):
             self._adjust = np.asarray(float(val))
         except TypeError:
             val = np.atleast_1d(val).astype(float)
-            assert val.shape == (self.npts,), "Adjust must be a single values or a 1D array with value per input point"
+            assert val.shape == (self.npts,), (
+                "Adjust must be a single values or a 1D array with value per "
+                "input point"
+            )
             self._adjust = val
 
     @adjust.deleter
@@ -146,7 +158,8 @@ class Unordered(KDEMethod):
         """
         Selected bandwidth.
 
-        Unlike the bandwidth for the KDE, this must be an actual value and not a method.
+        Unlike the bandwidth for the KDE, this must be an actual value and not
+        a method.
         """
         return self._bw
 
@@ -162,13 +175,16 @@ class Unordered(KDEMethod):
         """
         exog = np.atleast_1d(exog)
         if exog.ndim != 1:
-            raise ValueError("Error, exog must be a 1D array (nb dimensions: {})".format(exog.ndim))
+            raise ValueError("Error, exog must be a 1D array (nb dimensions: "
+                             "{})".format(exog.ndim))
         weights = np.asarray(weights)
         adjust = np.asarray(adjust)
         if weights.ndim != 0 and weights.shape != exog.shape:
-            raise ValueError("Error, weights must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, weights must be either a single number, "
+                             "or an array the same shape as exog")
         if adjust.ndim != 0 and adjust.shape != exog.shape:
-            raise ValueError("Error, adjust must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, adjust must be either a single number, "
+                             "or an array the same shape as exog")
         self._exog = exog
         self._weights = weights
         self._adjust = adjust
@@ -184,7 +200,8 @@ class Unordered(KDEMethod):
 
         Notes
         -----
-        At that point, you are not allowed to change the number of exogenous points.
+        At that point, you are not allowed to change the number of exogenous
+        points.
         """
         return self._exog
 
@@ -276,9 +293,10 @@ class Unordered(KDEMethod):
         ----------
         """
         if self.adjust.ndim:
-            raise NotImplemented("This method cannot handle adjustments")
+            raise NotImplementedError("This method cannot handle adjustments")
         points = points[:, None]
-        kpdf = self.kernel.pdf(points, self.exog, self.bandwidth, self.num_levels)
+        kpdf = self.kernel.pdf(points, self.exog, self.bandwidth,
+                               self.num_levels)
         kpdf *= self.weights
         kpdf.sum(axis=-1, out=out)
         out /= self.total_weights
@@ -289,13 +307,15 @@ class Unordered(KDEMethod):
 
     def grid(self, N=None, cut=None):
         """
-        Create a grid with all the values, in this implementation N and cut are ignored and are present only for
-        compatibility with the continuous version.
+        Create a grid with all the values, in this implementation N and cut
+        are ignored and are present only for compatibility with the continuous
+        version.
         """
         if self.adjust.ndim:
-            raise NotImplemented("This method cannot handle adjustments")
+            raise NotImplementedError("This method cannot handle adjustments")
         weights = self.weights
-        mesh, bins = fast_bin(self._exog, [self.lower, self.upper], self.num_levels, weights=weights, bin_type='d')
+        mesh, bins = fast_bin(self._exog, [self.lower, self.upper],
+                              self.num_levels, weights=weights, bin_type='d')
         return mesh, self.from_binned(mesh, bins, True)
 
     def cut(self):
@@ -329,7 +349,8 @@ class Ordered(Unordered):
     @axis_type.setter
     def axis_type(self, value):
         if value != 'o':
-            raise ValueError('Error, this method can only be used for discrete ordered axis')
+            raise ValueError("Error, this method can only be used for "
+                             "discrete ordered axis")
 
     @property
     def bin_type(self):

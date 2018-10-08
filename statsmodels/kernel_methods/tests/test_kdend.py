@@ -1,8 +1,11 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 from . import kde_utils
 from ...tools.testing import assert_equal, assert_allclose
 from .. import kde
+
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -33,47 +36,52 @@ class KDETester(object):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
-                yield self.grid_method_works, k, m, '{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       '{0}_{1}'.format(k.method, i))
 
     def test_weights_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
 
     def test_weights_grid_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
 
-    #def test_adjust_methods(self):
-        #for m in self.methods:
-            #k = self.createKDE(self.vs[0], m)
-            #k.adjust = self.adjust[0]
-            #yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+    # def test_adjust_methods(self):
+    #     for m in self.methods:
+    #         k = self.createKDE(self.vs[0], m)
+    #         k.adjust = self.adjust[0]
+    #         yield (self.method_works, k, m,
+    #                'adjust_{0}_{1}'.format(k.method, 0))
 
-    #def test_adjust_grid_methods(self):
-        #for m in self.methods:
-            #k = self.createKDE(self.vs[0], m)
-            #k.adjust = self.adjust[0]
-            #yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+    # def test_adjust_grid_methods(self):
+    #     for m in self.methods:
+    #         k = self.createKDE(self.vs[0], m)
+    #         k.adjust = self.adjust[0]
+    #         yield (self.grid_method_works, k, m,
+    #                'adjust_{0}_{1}'.format(k.method, 0))
 
-    #def kernel_works_(self, k):
-        #self.kernel_works(k, 'default')
+    # def kernel_works_(self, k):
+    #     self.kernel_works(k, 'default')
 
-    #def test_kernels(self):
-        #for k in kde_utils.kernels1d:
-            #yield self.kernel_works_, k
+    # def test_kernels(self):
+    #     for k in kde_utils.kernels1d:
+    #         yield self.kernel_works_, k
 
-    #def grid_kernel_works_(self, k):
-        #self.grid_kernel_works(k, 'default')
+    # def grid_kernel_works_(self, k):
+    #     self.grid_kernel_works(k, 'default')
 
-    #def test_grid_kernels(self):
-        #for k in kde_utils.kernels1d:
-            #yield self.grid_kernel_works_, k
+    # def test_grid_kernels(self):
+    #     for k in kde_utils.kernels1d:
+    #         yield self.grid_kernel_works_, k
 
 
 class TestKDE2D(KDETester):

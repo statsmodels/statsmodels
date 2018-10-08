@@ -1,8 +1,11 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 from . import kde_utils
 from .. import kde
 from .. import bandwidths
+
 
 class TestCV(object):
     def createKDE(self, data, method, **args):
@@ -40,7 +43,8 @@ class TestCV(object):
 
     def imse(self, k, name):
         imse_args = dict(use_grid=True, folding=5)
-        k.bandwidth = bandwidths.crossvalidation(bandwidths.CV_IMSE, **imse_args)
+        k.bandwidth = bandwidths.crossvalidation(bandwidths.CV_IMSE,
+                                                 **imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 

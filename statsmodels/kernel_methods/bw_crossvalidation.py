@@ -1,7 +1,11 @@
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
-from ..compat.python import range
 from scipy import optimize
+
+from ..compat.python import range
 from ._grid_interpolation import GridInterpolator
 
 
@@ -14,7 +18,8 @@ class LeaveOneOut(object):
     data: tuple of ndarray
         Data to process.
     is_sel: tuple of bool
-        Of same length as data, indicate for each array if they are to be filtered or not.
+        Of same length as data, indicate for each array if they are to be
+        filtered or not.
     npts: int
         Number of points in the dataset
     """
@@ -34,24 +39,27 @@ class LeaveOneOut(object):
         n = self.npts
         for i in range(n):
             sel[i] = False
-            yield (i, tuple(d[sel] if is_sel[i] else d for i, d in enumerate(data)))
+            yield (i, tuple(d[sel] if is_sel[i] else d
+                   for i, d in enumerate(data)))
             sel[i] = True
 
 
 class LeaveOneOutSampling(object):
     """
-    Implement a heureustic for the LeaveOneOut method in which only a sampling of the data are left out.
+    Implement a heureustic for the LeaveOneOut method in which only a sampling
+    of the data are left out.
 
     Parameters
     ----------
     data: tuple of ndarray
         Data to process.
     is_sel: tuple of bool
-        Of same length as data, indicate for each array if they are to be filtered or not.
+        Of same length as data, indicate for each array if they are to be
+        filtered or not.
     npts: int
         Number of points in the dataset
     sampling: int
-        Number of points to sample. Must be striclty less than npts.
+        Number of points to sample. Must be strictly less than npts.
     """
     def __init__(self, data, is_sel, npts, sampling):
         self.data = data
@@ -71,21 +79,24 @@ class LeaveOneOutSampling(object):
         sel = np.ones((n,), dtype=bool)
         for k in self.ks:
             sel[k] = False
-            yield (k, tuple(d[sel] if is_sel[i] else d for i, d in enumerate(data)))
+            yield (k, tuple(d[sel] if is_sel[i] else d
+                   for i, d in enumerate(data)))
             sel[k] = True
 
 
 class LeaveKOutFolding(object):
     """
-    Implement a variation on Leave-One-Out where the dataset is tiled into k folds. At each iteration, one fold is used
-    for testing, while the others are used for fitting.
+    Implement a variation on Leave-One-Out where the dataset is tiled into k
+    folds. At each iteration, one fold is used for testing, while the others
+    are used for fitting.
 
     Parameters
     ----------
     data: tuple of ndarray
         Data to process.
     is_sel: tuple of bool
-        Of same length as data, indicate for each array if they are to be filtered or not.
+        Of same length as data, indicate for each array if they are to be
+        filtered or not.
     npts: int
         Number of points in the dataset
     folding: int
@@ -128,7 +139,8 @@ class LeaveKOutFolding(object):
         sel = np.ones((n,), dtype=bool)
         for f in self.folds:
             sel[f] = False
-            yield (f, tuple(d[sel] if is_sel[i] else d for i, d in enumerate(data)))
+            yield (f, tuple(d[sel] if is_sel[i] else d
+                   for i, d in enumerate(data)))
             sel[f] = True
 
 
@@ -136,30 +148,39 @@ def leave_some_out(exog, *data, **kwords):
     '''
     This function selected between the various LeaveOut objects.
 
-    Each object will take a list of arrays. The first array must be the exogeneous dataset. Other arrays are either
-    "scalar" or arrays. If they are scalars, they will be passed along at each yield, if they are arrays, they must have
-    the same length as the exogeneous dataset and they will be filtered in the same way.
+    Each object will take a list of arrays. The first array must be the
+    exogenous dataset. Other arrays are either "scalar" or arrays. If they are
+    scalars, they will be passed along at each yield, if they are arrays, they
+    must have the same length as the exogenous dataset and they will be
+    filtered in the same way.
 
-    The object can be iterated on and return a tuples whose first element is the index(es) of the element(s) left out,
-    and the second element is a tuple of same size of `data` with what is to be used for the arrays.
+    The object can be iterated on and return a tuples whose first element is
+    the index(es) of the element(s) left out, and the second element is a tuple
+    of same size of `data` with what is to be used for the arrays.
 
-    If no parameter is specified beside the data, then an exhaustive leave-one-out is performed. 'sampling' and
-    'folding' parameters are exclusive and cannot be both specified.
+    If no parameter is specified beside the data, then an exhaustive
+    leave-one-out is performed. 'sampling' and 'folding' parameters are
+    exclusive and cannot be both specified.
 
     Parameters
     ----------
     exog: ndarray
-        1D or 2D array with the data to fit. The first dimension is the number of points in the dataset.
+        1D or 2D array with the data to fit. The first dimension is the number
+        of points in the dataset.
     *data: tuple
-        Other arrays or values to select for. If the value doesn't have the same length as exog, then it will be sent
-        as-is all the times. Otherwise, it will be selected like exog.
+        Other arrays or values to select for. If the value doesn't have the
+        same length as exog, then it will be sent as-is all the times.
+        Otherwise, it will be selected like exog.
     sampling: int
-        Instead of an exhaustive leave-one-out, a random sub-sample is iterated over
+        Instead of an exhaustive leave-one-out, a random sub-sample is iterated
+        over
     folding: int
-        The exogeneous dataset is split into k groups of same length. For each iteration, (k-1) groups are used for
-        fitting and the last one is used for testing.
+        The exogeneous dataset is split into k groups of same length. For each
+        iteration, (k-1) groups are used for fitting and the last one is used
+        for testing.
     repeats: int
-        Together with `folding`, `repeat` indicates we will use more than one folding.
+        Together with `folding`, `repeat` indicates we will use more than one
+        folding.
     '''
     sampling = kwords.get('sampling', None)
     folding = kwords.get('folding', None)
@@ -193,7 +214,8 @@ class CVFunc(object):
     initial_method: callable or value
         Initial value for the bandwidth
     grid_size: int or tuple of int
-        Size of the grid to use to compute the square of the estimated distribution
+        Size of the grid to use to compute the square of the estimated
+        distribution
     use_grid: bool
         If True, instead of evaluating the function at the points needed for
         the cross-validation, the points will be estimated by linear
@@ -220,7 +242,8 @@ class CVFunc(object):
     use_grid: bool
         Copy of the `use_grid` argument
     """
-    def __init__(self, model, initial_method=None, grid_size=None, use_grid=False, **lso_args):
+    def __init__(self, model, initial_method=None, grid_size=None,
+                 use_grid=False, **lso_args):
         from . import bandwidths
         test_model = model.copy()
         if initial_method is None:
@@ -233,7 +256,8 @@ class CVFunc(object):
         LSO_model.bandwidth = test_est.bandwidth
         LSO_est = LSO_model.fit()
 
-        self.LSO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
+        self.LSO = leave_some_out(test_est.exog, test_est.weights,
+                                  test_est.adjust, **lso_args)
         bw = np.asarray(test_est.bandwidth)
         self._is_cov = bw.ndim == 2
         if self._is_cov:
@@ -305,7 +329,8 @@ class CV_IMSE(CVFunc):
     initial_method : callable or value
         Initial value for the bandwidth
     grid_size : int or tuple of int
-        Size of the grid to use to compute the square of the estimated distribution
+        Size of the grid to use to compute the square of the estimated
+        distribution
     use_grid : bool
         If True, instead of evaluating the function at the points needed for
         the cross-validation, the points will be estimated by linear
@@ -353,7 +378,8 @@ class CV_LogLikelihood(CVFunc):
     initial_method : callable or value
         Initial value for the bandwidth
     grid_size : int or tuple of int
-        Size of the grid to use to compute the square of the estimated distribution
+        Size of the grid to use to compute the square of the estimated
+        distribution
     use_grid : bool
         If True, instead of evaluating the function at the points needed for
         the cross-validation, the points will be estimated by linear
@@ -439,7 +465,8 @@ class crossvalidation(object):
 
     def __call__(self, model):
         func = self.func(model, *self.func_args, **self.func_kwargs)
-        res = optimize.minimize(func, x0=func.init_bandwidth, tol=1e-3, method='Nelder-Mead')
+        res = optimize.minimize(func, x0=func.init_bandwidth, tol=1e-3,
+                                method='Nelder-Mead')
         if not res.success:
             print("Error, could not find minimum: '{0}'".format(res.message))
             return func.init_bandwidth

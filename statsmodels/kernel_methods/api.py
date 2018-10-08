@@ -1,6 +1,16 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-__all__ = ['kde', 'KDE', 'bandwidths', 'kde_methods', 'kernels', 'Grid', 'kde_utils']
+__all__ = [
+    'kde',
+    'KDE',
+    'bandwidths',
+    'kde_methods',
+    'kernels',
+    'Grid',
+    'kde_utils',
+]
 
 from . import kde
 from .kde import KDE

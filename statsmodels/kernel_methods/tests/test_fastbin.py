@@ -1,11 +1,15 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from .. import fast_linbin as linbin
+from itertools import product
+
+from scipy import stats
+import numpy as np
 
 from ...tools.testing import (assert_equal, assert_allclose, assert_raises)
-from scipy import stats
-from itertools import product
-import numpy as np
+from .. import fast_linbin as linbin
+
 
 class TestContinuousBinning1D(object):
     @classmethod
@@ -94,6 +98,7 @@ class TestContinuousBinning1D(object):
             yield self.bad_out1, fct
             yield self.bad_out2, fct
 
+
 class TestContinuousBinningnD(object):
     @classmethod
     def setup_class(cls):
@@ -110,7 +115,10 @@ class TestContinuousBinningnD(object):
         size = data.shape[0]
         bounds = self.bounds*d
         if bin_type == 'b':
-            sel = np.all([(data[:, i] >= bounds[i][0]) & (data[:, i] < bounds[i][1]) for i in range(d)], axis=0)
+            sel = np.all([
+                (data[:, i] >= bounds[i][0]) & (data[:, i] < bounds[i][1])
+                for i in range(d)
+            ], axis=0)
             if weighted:
                 weights = self.weights
                 size = weights[sel].sum()
@@ -128,8 +136,9 @@ class TestContinuousBinningnD(object):
         assert_allclose(bins.sum(), size, rtol=1e-8)
 
     def test_validity(self):
-        for fct, s, t, d in product([linbin.fast_bin_nd, linbin.fast_linbin_nd],
-                                    self.sizes, self.bin_type, [2, 3, 4]):
+        for fct, s, t, d in product(
+                [linbin.fast_bin_nd, linbin.fast_linbin_nd], self.sizes,
+                self.bin_type, [2, 3, 4]):
             s = (s,)*d
             yield self.validity, fct, d, s, t, True
             yield self.validity, fct, d, s, t, False
@@ -190,6 +199,7 @@ class TestContinuousBinningnD(object):
             yield self.bad_args, "bad_bounds3", fct
             yield self.bad_args, "bad_out1", fct
             yield self.bad_args, "bad_out2", fct
+
 
 class TestDiscreteBinning(object):
     @classmethod

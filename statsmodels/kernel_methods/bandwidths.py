@@ -3,11 +3,15 @@ Module containing the methods to compute the bandwidth of the KDE.
 
 :Author: Barbier de Reuille, Pierre
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 from scipy import fftpack, optimize, linalg
-from .kde_utils import large_float, finite, atleast_2df, AxesType
+
 from ..compat.python import range
+from .kde_utils import large_float, finite, atleast_2df, AxesType
 
 
 def _spread(X):
@@ -38,7 +42,9 @@ def full_variance(factor, exog):
     if d == 1:
         spread = _spread(exog)
     else:
-        spread = np.atleast_2d(linalg.sqrtm(np.cov(exog, rowvar=0, bias=False)))
+        spread = np.atleast_2d(
+            linalg.sqrtm(np.cov(exog, rowvar=0, bias=False))
+        )
     return spread * factor
 
 
@@ -138,19 +144,19 @@ def scotts_full(model):
     return full_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
 
 
-def _botev_fixed_point(t, M, I, a2):
-    l = 7
-    I = large_float(I)
+def _botev_fixed_point(t, M, k, a2):
+    order = 7
+    k = large_float(k)
     M = large_float(M)
     a2 = large_float(a2)
-    f = 2 * np.pi ** (2 * l) * np.sum(I ** l * a2 *
-                                      np.exp(-I * np.pi ** 2 * t))
-    for s in range(l, 1, -1):
+    f = 2 * np.pi ** (2 * order) * np.sum(k ** order * a2 *
+                                          np.exp(-k * np.pi ** 2 * t))
+    for s in range(order, 1, -1):
         K0 = np.prod(np.arange(1, 2 * s, 2)) / np.sqrt(2 * np.pi)
         const = (1 + (1 / 2) ** (s + 1 / 2)) / 3
         time = (2 * const * K0 / M / f) ** (2 / (3 + 2 * s))
         f = 2 * np.pi ** (2 * s) * \
-            np.sum(I ** s * a2 * np.exp(-I * np.pi ** 2 * time))
+            np.sum(k ** s * a2 * np.exp(-k * np.pi ** 2 * time))
     return t - (2 * M * np.sqrt(np.pi) * f) ** (-2 / 5)
 
 
@@ -196,17 +202,18 @@ class botev(object):
         if not weights.shape:
             weights = None
         M = len(data)
-        DataHist, bins = np.histogram(data, bins=N, range=(lower, upper), weights=weights)
+        DataHist, bins = np.histogram(data, bins=N, range=(lower, upper),
+                                      weights=weights)
         DataHist = DataHist / M
         DCTData = fftpack.dct(DataHist, norm=None)
 
-        I = np.arange(1, N, dtype=int) ** 2
+        k = np.arange(1, N, dtype=int) ** 2
         SqDCTData = (DCTData[1:] / 2) ** 2
         guess = 0.1
 
         try:
             t_star = optimize.brentq(_botev_fixed_point, 0, guess,
-                                     args=(M, I, SqDCTData))
+                                     args=(M, k, SqDCTData))
         except ValueError:
             t_star = .28 * N ** (-.4)
 
@@ -215,7 +222,8 @@ class botev(object):
 
 class KDE1DAdaptor(object):
     """
-    Adaptor class to view a nD KDE estimator as a 1D estimator for a given dimension
+    Adaptor class to view a nD KDE estimator as a 1D estimator for a given
+    dimension
     """
     def __init__(self, kde, axis=None):
         self._axis = axis
@@ -256,7 +264,7 @@ def _add_fwd_list_attr(cls, attr):
         value = getattr(self._kde, attr)
         try:
             return getattr(self._kde, attr)[self._axis]
-        except:
+        except AttributeError:
             return value
     setattr(cls, attr, property(getter))
 
@@ -266,8 +274,10 @@ def _add_fwd_attr(cls, attr):
         return getattr(self._kde, attr)
     setattr(cls, attr, property(getter))
 
+
 for attr in KDE1DAdaptor._list_attributes:
     _add_fwd_list_attr(KDE1DAdaptor, attr)
+
 
 for attr in KDE1DAdaptor._constant_attributes:
     _add_fwd_attr(KDE1DAdaptor, attr)
@@ -328,7 +338,8 @@ class Multivariate(object):
     @property
     def bandwidths(self):
         """
-        Dictionnary holding explicit methods or values for specific axes, by index.
+        Dictionnary holding explicit methods or values for specific axes, by
+        index.
         """
         return self._bandwidths
 
@@ -366,4 +377,6 @@ class Multivariate(object):
                 res[d] = float(bw)
         return res
 
-from .bw_crossvalidation import crossvalidation, CVFunc, CV_IMSE, CV_LogLikelihood, leave_some_out  # NoQA
+
+from .bw_crossvalidation import (crossvalidation, CVFunc, CV_IMSE,  # NOQA
+                                 CV_LogLikelihood, leave_some_out)  # NOQA

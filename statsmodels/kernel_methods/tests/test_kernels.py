@@ -1,13 +1,21 @@
-from __future__ import division, absolute_import, print_function
-
-from .. import kernels
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 from scipy import stats, integrate
 import numpy as np
-from . import kde_utils
+
 from ...tools.testing import assert_allclose, assert_equal, assert_raises
+from .. import kernels
+
+from . import kde_utils
 from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
+
+
+tol = 1e-8
+nd_tol = 1e-5
+
 
 class RefKernel1D(kernels.Kernel1D):
     """
@@ -37,8 +45,6 @@ class RefKernelnD(kernels.KernelnD):
     def pdf(self, z, out=None):
         return self.real_kernel.pdf(z, out)
 
-tol = 1e-8
-nd_tol = 1e-5
 
 class TestKernels1D(object):
     @classmethod
@@ -191,6 +197,7 @@ class TestKernels1D(object):
     def test_rfftfreq_bad(self):
         assert_raises(ValueError, kernels.rfftfreq, 1.2)
 
+
 class TestNormal1d(object):
     @classmethod
     def setup_class(cls, lower=-np.inf):
@@ -226,6 +233,7 @@ class TestNormal1d(object):
 
     def test_pm2(self):
         self.python_attr('pm2')
+
 
 class TestKernelsnd(object):
     @classmethod
@@ -271,13 +279,16 @@ class TestKernelsnd(object):
         acc = tol*kernel.precision_factor
         assert_allclose(ker.cdf([-np.inf, -np.inf]), 0, rtol=acc, atol=acc)
         assert_allclose(ker.cdf([np.inf, np.inf]), 1, rtol=acc, atol=acc)
-        assert_allclose(ker.cdf([0, 0]), ref_ker.cdf([0, 0]), rtol=acc, atol=acc)
+        assert_allclose(ker.cdf([0, 0]), ref_ker.cdf([0, 0]),
+                        rtol=acc, atol=acc)
 
     def cdf3d(self, kernel):
         ker = kernel.cls().for_ndim(3)
         acc = tol*kernel.precision_factor
-        assert_allclose(ker.cdf([-np.inf, -np.inf, -np.inf]), 0, rtol=acc, atol=acc)
-        assert_allclose(ker.cdf([np.inf, np.inf, np.inf]), 1, rtol=acc, atol=acc)
+        assert_allclose(ker.cdf([-np.inf, -np.inf, -np.inf]), 0,
+                        rtol=acc, atol=acc)
+        assert_allclose(ker.cdf([np.inf, np.inf, np.inf]), 1,
+                        rtol=acc, atol=acc)
 
     def rfft2d(self, kernel):
         ker = kernel.cls().for_ndim(2)
@@ -331,6 +342,7 @@ class TestKernelsnd(object):
             yield self.dct2d, k
             yield self.dct3d, k
 
+
 class TestKernelnc(object):
     @classmethod
     def setup_class(cls):
@@ -338,7 +350,8 @@ class TestKernelnc(object):
         cls.ds = dist.rvs(10)
         cls.xs = np.arange(0, cls.ds.max()+1)[:, None]
         cls.num_levels = cls.ds.max()+1
-        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels], cls.num_levels, bin_type='d')
+        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels],
+                                         cls.num_levels, bin_type='d')
 
     def pdf(self, kernel):
         k = kernel.cls()

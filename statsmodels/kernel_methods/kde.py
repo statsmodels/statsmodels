@@ -45,13 +45,17 @@ If the domain of the density estimation is bounded to the interval
 where :math:`\hat{K}` is a modified kernel that depends on the exact method
 used. Currently, only 1D KDE supports bounded domains.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
+from copy import copy as shallow_copy
+
 import numpy as np
+
 from .kde_utils import atleast_2df, AxesType
 from . import kernels, bandwidths  # noqa
 from ._kde_multivariate import Multivariate
-from copy import copy as shallow_copy
 
 # default_method = kde1d_methods.Reflection
 # default_method = kdend_methods.KDEnDMethod
@@ -67,25 +71,28 @@ class KDE(object):
     exog: ndarray
         2D array DxN with the N input points in D dimension.
     lower: float or list of float
-        Lower bound(s) of the domain. If a single value is given, it will be used
-        for all dimensions. Otherwise, there must be a value per dimension.
+        Lower bound(s) of the domain. If a single value is given, it will be
+        used for all dimensions. Otherwise, there must be a value per
+        dimension.
     upper: float or list of float
-        Upper bound(s) of the domain. If a single value is given, it will be used
-        for all dimensions. Otherwise, there must be a value per dimension.
+        Upper bound(s) of the domain. If a single value is given, it will be
+        used for all dimensions. Otherwise, there must be a value per
+        dimension.
     method: `kde_methods.KDEMethod` or None
         This is the method used to estimate the KDE. It should be a class
         inheriting `kde_methods.KDEMethod` or an instance of such a class. If
         None, the method specified by the `default_method` module variable will
         be used.
     bandwidth: float or list of float or callable
-        If a callable, it should accept a single argument (the model for which the
-        bandwidth is estimated) and return a float or list of floats.
-        If the value is a float, it will be used for all dimensions. Otherwise, it should
-        return a value per dimension.
+        If a callable, it should accept a single argument (the model for which
+        the bandwidth is estimated) and return a float or list of floats.
+        If the value is a float, it will be used for all dimensions. Otherwise,
+        it should return a value per dimension.
     axis_type: `kde_utils.AxesType` or str
         Type of each axis. If a string, it should have either a single
         character, or a character per dimension. The acceptable characters are
-        'c' for continuous, 'o' for discrete ordered and 'u' for discrete unordered.
+        'c' for continuous, 'o' for discrete ordered and 'u' for discrete
+        unordered.
     weights: float or ndarray of float
         Weights to use for the data points. If a single value is specified, it
         is equivalent to specify 1. for each data point.
@@ -109,8 +116,9 @@ class KDE(object):
     account for. However, check on the method's documentation to make sure if
     there aren't other parameters.
     """
-    def __init__(self, exog, lower=-np.inf, upper=np.inf, method=None, bandwidth=None,
-                 axis_type=AxesType(), weights=1., adjust=1., kernel=None):
+    def __init__(self, exog, lower=-np.inf, upper=np.inf, method=None,
+                 bandwidth=None, axis_type=AxesType(), weights=1., adjust=1.,
+                 kernel=None):
         self._exog = None
         self.exog = exog
         self.lower = lower
@@ -263,7 +271,8 @@ class KDE(object):
     def weights(self, value):
         value = np.asarray(value, dtype=float)
         if value.ndim > 1:
-            raise ValueError("Error, the weights must be a scalar or a 1D array")
+            raise ValueError("Error, the weights must be a scalar or a 1D "
+                             "array")
         if value.ndim == 0:
             del self.weights
         else:
@@ -279,7 +288,8 @@ class KDE(object):
     @property
     def adjust(self):
         """
-        Multiplicating factor to apply to the bandwidth: it can be a single value or a 1D array.
+        Multiplicating factor to apply to the bandwidth: it can be a single
+        value or a 1D array.
         """
         return self._adjust
 
@@ -327,7 +337,8 @@ class KDE(object):
 
     def fit(self, **kwargs):
         """
-        Compute the bandwidths and find the proper KDE method for the current dataset.
+        Compute the bandwidths and find the proper KDE method for the current
+        dataset.
 
         Parameters
         ----------
@@ -344,8 +355,8 @@ class KDE(object):
         -----
         The returned object doesn't maintain any reference to the
         :py:class:`KDE` object, which can therefore be modified freely.
-        However, the data are not (always) copied either, so modifying the data in place
-        may modify the returned object.
+        However, the data are not (always) copied either, so modifying the data
+        in place may modify the returned object.
         """
         if kwargs:
             k = self.copy()
@@ -353,7 +364,8 @@ class KDE(object):
                 if hasattr(k, "set_" + name):
                     setattr(k, name, kwargs[name])
                 else:
-                    raise AttributeError("Cannot set attribute: {0}".format(name))
+                    raise AttributeError("Cannot set attribute: {0}"
+                                         .format(name))
             return k.method.fit(k)
         return self.method.fit(self)
 

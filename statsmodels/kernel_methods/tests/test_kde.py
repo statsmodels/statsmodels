@@ -1,8 +1,11 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import numpy as np
 
 from .. import kde, kde_methods, kernels
 from ...tools.testing import assert_equal, assert_raises
-import numpy as np
 
 
 class TestConstruction(object):
@@ -10,7 +13,8 @@ class TestConstruction(object):
         kde.KDE([1, 2, 3])
 
     def test_long(self):
-        kde.KDE([1, 2, 3], lower=1, upper=2, adjust=[3, 2, 1], weights=4., bandwidth=0.5)
+        kde.KDE([1, 2, 3], lower=1, upper=2, adjust=[3, 2, 1], weights=4.,
+                bandwidth=0.5)
 
     def test_fit(self):
         k = kde.KDE([1, 2, 3], bandwidth=0.5)

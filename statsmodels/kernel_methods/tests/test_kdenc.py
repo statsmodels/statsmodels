@@ -1,9 +1,13 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from . import kde_utils
+import numpy as np
+
 from ...tools.testing import assert_allclose
 from .. import kde
-import numpy as np
+from . import kde_utils
+
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -19,27 +23,32 @@ class KDETester(object):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
-                yield self.method_works, k, m, '{0}_{1}'.format(k.method, i)
+                yield (self.method_works, k, m,
+                       '{0}_{1}'.format(k.method, i))
 
     def test_grid_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
-                yield self.grid_method_works, k, m, '{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       '{0}_{1}'.format(k.method, i))
 
     def test_weights_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
 
     def test_weights_grid_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
+
 
 class TestNonContinuous(KDETester):
     @classmethod

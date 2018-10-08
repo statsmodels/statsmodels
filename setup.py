@@ -152,7 +152,7 @@ exts = dict(
     _cy_kernels={'source': 'statsmodels/kernel_methods/_cy_kernels.pyx',
                  'include_dirs': ['statsmodels/src'],
                  'depends': ['statsmodels/src/erf.h']},
-    _cy_fast_linbin={'source': 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},
+    _cy_fast_linbin={'source': 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},  # noqa: E501
     _cy_grid_interpolation={'source': 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx'},  # noqa: E501
 )
 

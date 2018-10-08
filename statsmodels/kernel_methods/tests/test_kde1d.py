@@ -1,9 +1,12 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from .. import kde, kde_methods, bandwidths
 import numpy as np
 from numpy.random import randn
 from scipy import integrate
+
+from .. import kde, kde_methods, bandwidths
 from . import kde_utils as kde_utils
 from ...tools.testing import assert_allclose, assert_equal, assert_raises
 from ..kde_utils import GridInterpolator
@@ -49,7 +52,8 @@ class TestBandwidth(object):
         rati = bws[:, 0] / self.ss
         assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
         rati = bws[:, 0] / bws[0]
-        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
+        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6,
+                        atol=1e-6)
 
     def test_variance_methods(self):
         yield self.methods, bandwidths.silverman
@@ -61,7 +65,8 @@ class TestBandwidth(object):
         rati = bws / self.ss
         assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
         rati = bws / bws[0]
-        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
+        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6,
+                        atol=1e-6)
 
 
 class KDETester(object):
@@ -93,33 +98,38 @@ class KDETester(object):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
-                yield self.grid_method_works, k, m, '{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       '{0}_{1}'.format(k.method, i))
 
     def test_weights_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
 
     def test_weights_grid_methods(self):
         for m in self.methods:
             for i in range(len(self.sizes)):
                 k = self.createKDE(self.vs[i], m)
                 k.weights = self.weights[i]
-                yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+                yield (self.grid_method_works, k, m,
+                       'weights_{0}_{1}'.format(k.method, i))
 
     def test_adjust_methods(self):
         for m in self.methods:
             k = self.createKDE(self.vs[0], m)
             k.adjust = self.adjust[0]
-            yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+            yield (self.method_works, k, m,
+                   'adjust_{0}_{1}'.format(k.method, 0))
 
     def test_adjust_grid_methods(self):
         for m in self.methods:
             k = self.createKDE(self.vs[0], m)
             k.adjust = self.adjust[0]
-            yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+            yield (self.grid_method_works, k, m,
+                   'adjust_{0}_{1}'.format(k.method, 0))
 
     def kernel_works_(self, k):
         self.kernel_works(k, 'default')
@@ -206,7 +216,8 @@ class TestKDE1D(KDETester):
         est = k.fit()
         xs, ys = est.grid()
         tot = xs.integrate(ys)
-        acc = max(method.grid_accuracy, method.normed_accuracy) * ker.precision_factor
+        acc = (max(method.grid_accuracy, method.normed_accuracy) *
+               ker.precision_factor)
         assert_allclose(tot, 1, rtol=acc, atol=acc)
         assert_equal(type(est.kernel), type(k.kernel.for_ndim(1)))
 
@@ -293,7 +304,8 @@ class TestKDE1D(KDETester):
 
     def bad_update_inputs1(self, k, m, name):
         est = k.fit()
-        assert_raises(ValueError, est.update_inputs,
+        assert_raises(
+            ValueError, est.update_inputs,
             self.vs[1][:-5],
             weights=self.weights[1],
             adjust=self.adjust[1][:-5]
@@ -301,7 +313,8 @@ class TestKDE1D(KDETester):
 
     def bad_update_inputs2(self, k, m, name):
         est = k.fit()
-        assert_raises(ValueError, est.update_inputs,
+        assert_raises(
+            ValueError, est.update_inputs,
             self.vs[1][:-5],
             weights=self.weights[1][:-5],
             adjust=self.adjust[1]
@@ -309,7 +322,8 @@ class TestKDE1D(KDETester):
 
     def bad_update_inputs3(self, k, m, name):
         est = k.fit()
-        assert_raises(ValueError, est.update_inputs,
+        assert_raises(
+            ValueError, est.update_inputs,
             [[1, 2], [2, 3], [3, 4]],
             weights=self.weights[1][:-5],
             adjust=self.adjust[1]
@@ -366,13 +380,15 @@ class TestSF(KDETester):
         xs = kde_methods.generate_grid1d(est, N=32)
         sf = est.sf(xs.linear())
         cdf = est.cdf(xs.linear())
-        np.testing.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
+        np.testing.assert_allclose(sf, 1 - cdf, method.accuracy,
+                                   method.accuracy)
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
         xs, sf = est.sf_grid()
         _, cdf = est.cdf_grid()
-        np.testing.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
+        np.testing.assert_allclose(sf, 1 - cdf, method.accuracy,
+                                   method.accuracy)
 
     def kernel_works(self, ker, name):
         pass
@@ -478,7 +494,8 @@ class TestHazard(KDETester):
         sf[sf < 0] = 0  # Some methods can produce negative sf
         h_ref /= sf
         sel = sf > np.sqrt(method.accuracy)
-        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy, method.accuracy)
+        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy,
+                                   method.accuracy)
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
@@ -489,7 +506,8 @@ class TestHazard(KDETester):
         h_ref /= sf
         sel = sf > np.sqrt(method.accuracy)
         # Only tests for sf big enough or error is too large
-        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy, method.accuracy)
+        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy,
+                                   method.accuracy)
 
     def kernel_works(self, ker, name):
         pass
@@ -519,7 +537,8 @@ class TestCumHazard(KDETester):
         sf[sf < 0] = 0  # Some methods can produce negative sf
         h_ref = -np.log(sf)
         sel = sf > np.sqrt(method.accuracy)
-        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy, method.accuracy)
+        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy,
+                                   method.accuracy)
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
@@ -529,7 +548,8 @@ class TestCumHazard(KDETester):
         h_ref = -np.log(sf)
         sel = sf > np.sqrt(method.accuracy)
         # Only tests for sf big enough or error is too large
-        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy, method.accuracy)
+        np.testing.assert_allclose(h_comp[sel], h_ref[sel], method.accuracy,
+                                   method.accuracy)
 
     def kernel_works(self, ker, name):
         pass

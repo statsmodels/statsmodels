@@ -25,7 +25,8 @@ def _array_arg(value, value_name, ndim, dtype=float):
     if value.ndim == 0:
         return value * np.ones((ndim,), dtype=dtype)
     if value.shape != (ndim,):
-        raise ValueError("Error, '{0}' must be a scalar or a 1D array with {1} elements".format(value_name, ndim))
+        raise ValueError("Error, '{0}' must be a scalar or a 1D array with "
+                         "{1} elements".format(value_name, ndim))
     return value
 
 
@@ -35,24 +36,28 @@ def filter_exog(kde, bin_type):
 
     Parameters
     ----------
-    kde: object with the fields exog, lower, upper, weights and adjust and a copy method
-        This object must behave as a KDE object for those fields.
+    kde: object
+        This object must behave as a KDE object with exog, lower, upper,
+        weights and adjust properties as well as a copy method
     bin_type: str
         String of length D with the bin types for each dimension
 
     Returns
     -------
-    Either the kde object itself, or a copy with modified exog, weights and adjust properties
+    Either the kde object itself, or a copy with modified exog, weights and
+    adjust properties
     """
     if any(b not in 'crbd' for b in bin_type):
-        raise ValueError("bin_type must be one of 'c', 'r', 'b' or 'd'. Current value: {}".format(bin_type))
+        raise ValueError("bin_type must be one of 'c', 'r', 'b' or 'd'. "
+                         "Current value: {}".format(bin_type))
     exog = atleast_2df(kde.exog)
     sel = np.ones(exog.shape[0], dtype=bool)
     ndim = exog.shape[1]
     lower = np.atleast_1d(kde.lower)
     upper = np.atleast_1d(kde.upper)
     if lower.shape != (exog.shape[1],) or upper.shape != (exog.shape[1],):
-        raise ValueError('Lower and upper bound must be at most a 1D array with one value per dimension.')
+        raise ValueError("Lower and upper bound must be at most a 1D array "
+                         "with one value per dimension.")
     if len(bin_type) == 1:
         bin_type = bin_type * ndim
     for i in range(ndim):
@@ -64,11 +69,13 @@ def filter_exog(kde, bin_type):
     k.exog = exog[sel]
     if kde.weights.shape:
         if kde.weights.shape != (exog.shape[0],):
-            raise ValueError("The weights must be either a single value or an array of shape (npts,)")
+            raise ValueError("The weights must be either a single value or an "
+                             "array of shape (npts,)")
         k.weights = kde.weights[sel]
     if kde.adjust.shape:
         if kde.weights.shape != (exog.shape[0],):
-            raise ValueError("The adjustments must be either a single value or an array of shape (npts,)")
+            raise ValueError("The adjustments must be either a single value "
+                             "or an array of shape (npts,)")
         k.adjust = kde.adjust[sel]
     return k
 
@@ -112,7 +119,8 @@ class KDEMethod(object):
     """
     This is the base class for KDE methods.
 
-    Although inheriting from it is not required, it is recommended as it will provide quite a few useful services.
+    Although inheriting from it is not required, it is recommended as it will
+    provide quite a few useful services.
 
     Notes
     -----
@@ -156,7 +164,8 @@ class KDEMethod(object):
     def exog(self, value):
         value = atleast_2df(value).astype(float)
         if value.shape != self._exog.shape:
-            raise ValueError("Bad input change, you cannot change it after fitting")
+            raise ValueError("Bad input change, you cannot change it after "
+                             "fitting")
         self._exog = value.reshape(self._exog.shape)
 
     @property
@@ -224,8 +233,8 @@ class KDEMethod(object):
     def weights(self):
         """
         Weigths associated to each data point. It can be either a single value,
-        or a 1D-array with a value per data point. If a single value is provided,
-        the weights will always be set to 1.
+        or a 1D-array with a value per data point. If a single value is
+        provided, the weights will always be set to 1.
         """
         return self._weights
 
@@ -282,9 +291,11 @@ class KDEMethod(object):
     @property
     def lower(self):
         r"""
-        Lower bound of the density domain. If deleted, becomes :math:`-\infty` on all dimension.
+        Lower bound of the density domain. If deleted, becomes :math:`-\infty`
+        on all dimension.
 
-        Note that for discrete dimensions, the lower bounds will also be reset to 0.
+        Note that for discrete dimensions, the lower bounds will also be reset
+        to 0.
         """
         return self._lower
 
@@ -299,9 +310,11 @@ class KDEMethod(object):
     @property
     def upper(self):
         r"""
-        Upper bound of the density domain. If deleted, becomes :math:`\infty` on all dimensions
+        Upper bound of the density domain. If deleted, becomes :math:`\infty`
+        on all dimensions
 
-        Note that for discrete dimensions, if the upper dimension is 0, it will be set to the maximum observed element.
+        Note that for discrete dimensions, if the upper dimension is 0, it will
+        be set to the maximum observed element.
         """
         return self._upper
 

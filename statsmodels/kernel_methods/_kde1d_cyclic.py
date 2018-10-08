@@ -1,9 +1,13 @@
 """
-This module implements the Cyclic1D KDE estimation method, using FFT to speed up computation on grids.
+This module implements the Cyclic1D KDE estimation method, using FFT to speed
+up computation on grids.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import numpy as np
+
 from .kde_utils import numpy_trans1d_method, finite
 from ._kde1d_methods import KDE1DMethod, fftdensity, fftdensity_from_binned
 
@@ -60,13 +64,14 @@ class Cyclic1D(KDE1DMethod):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
         if not self.closed:
-            raise ValueError("Cyclic boundary conditions can only be used with "
-                             "closed or un-bounded domains.")
+            raise ValueError("Cyclic boundary conditions can only be used "
+                             "with closed or un-bounded domains.")
 
         exog = self.exog
         points = points[..., np.newaxis]
@@ -124,8 +129,8 @@ class Cyclic1D(KDE1DMethod):
         if not self.bounded:
             return KDE1DMethod.cdf(self, points, out)
         if not self.closed:
-            raise ValueError("Cyclic boundary conditions can only be used with "
-                             "closed or unbounded domains.")
+            raise ValueError("Cyclic boundary conditions can only be used "
+                             "with closed or unbounded domains.")
 
         exog = self.exog
         points = np.atleast_1d(points)[..., np.newaxis]
@@ -147,12 +152,16 @@ class Cyclic1D(KDE1DMethod):
         kernel = self.kernel
 
         terms = kernel.cdf(z)
-        terms -= kernel.cdf((L - exog) / bw)  # Remove the parts left of the lower bound
+        # Remove the parts left of the lower bound
+        terms -= kernel.cdf((L - exog) / bw)
 
-        terms += kernel.cdf(z + span)  # Repeat on the left
-        terms -= kernel.cdf((L - exog) / bw + span)  # Remove parts left of lower bounds
+        # Repeat on the left
+        terms += kernel.cdf(z + span)
+        # Remove parts left of lower bounds
+        terms -= kernel.cdf((L - exog) / bw + span)
 
-        terms += kernel.cdf(z - span)  # Repeat on the right
+        # Repeat on the right
+        terms += kernel.cdf(z - span)
 
         terms *= self.weights
         terms.sum(axis=-1, out=out)
@@ -191,12 +200,13 @@ class Cyclic1D(KDE1DMethod):
         if not finite(lower):
             lower = np.min(exog) - cut * self.bandwidth
 
-        return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N, self.weights, self.total_weights)
+        return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N,
+                          self.weights, self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
         """
-        Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
-        data.
+        Evaluate the PDF from data already binned. The binning might have been
+        high-dimensional but must be of the same data.
 
         Parameters
         ----------
@@ -205,19 +215,23 @@ class Cyclic1D(KDE1DMethod):
         bins: ndarray
             Array of the same shape as the mesh with the values per bin
         normed: bool
-            If true, the result will be normed w.r.t. the total weight of the exog
+            If true, the result will be normed w.r.t. the total weight of the
+            exog
         dim: int
             Dimension along which the estimation must be done
 
         Returns
         -------
         ndarray
-            Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
+            Array of same size as bins, but with the estimated of the PDF for
+            each line along the dimension `dim`
         """
         if self.adjust.ndim:
-            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
-        return fftdensity_from_binned(mesh, binned, self.kernel.rfft, self.adjust*self.bandwidth,
-                                      normed, self.total_weights, dim)
+            raise ValueError("Error, cannot use binned data with non-constant "
+                             "adjustment.")
+        return fftdensity_from_binned(mesh, binned, self.kernel.rfft,
+                                      self.adjust*self.bandwidth, normed,
+                                      self.total_weights, dim)
 
     def grid_size(self, N=None):
         """

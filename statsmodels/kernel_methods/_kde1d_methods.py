@@ -32,13 +32,17 @@ References:
 .. [1] Jones, M. C. 1993. Simple boundary correction for kernel density
     estimation. Statistics and Computing 3: 135--146.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
+from copy import copy as shallow_copy
+
 import numpy as np
 from scipy import fftpack, integrate
+
 from .kde_utils import make_ufunc, numpy_trans1d_method, finite, AxesType, Grid
 from .fast_linbin import fast_linbin as fast_bin
-from copy import copy as shallow_copy
 from ._kde_methods import KDEMethod, filter_exog, invert_cdf
 from . import kernels
 
@@ -93,7 +97,8 @@ def _compute_bandwidth(kde, default):
     return bw
 
 
-def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1., dim=-1):
+def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1.,
+             dim=-1):
     """
     Convolve a set of weighted point with a function
 
@@ -108,7 +113,8 @@ def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1., dim=
     out: ndarray
         Array of same size as `point`, in which the result will be stored.
     scaling: float or ndarray
-        Scaling of the convolution function. It may be an array the same size as exog.
+        Scaling of the convolution function. It may be an array the same size
+        as exog.
     weights: float or ndarray
         Weights for the exog points.
     factor: float
@@ -117,13 +123,16 @@ def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1., dim=
     Returns
     -------
     ndarray
-        Convolution of the exog points by the scaled function evaluation on the point
+        Convolution of the exog points by the scaled function evaluation on the
+        point
 
     Notes
     -----
 
-    The basic idea is to evaluate the convolution of of a function on the exog on a point. Anything can be an array if
-    you are careful to choose your dimensions. Just remember than the list of exog values will be the last dimension.
+    The basic idea is to evaluate the convolution of of a function on the exog
+    on a point. Anything can be an array if you are careful to choose your
+    dimensions. Just remember than the list of exog values will be the last
+    dimension.
     """
     z = (point - exog) / scaling
 
@@ -170,7 +179,8 @@ class KDE1DMethod(KDEMethod):
     @axis_type.setter
     def axis_type(self, value):
         if value != 'c':
-            raise ValueError('Error, this method can only be used for 1D continuous axis')
+            raise ValueError("Error, this method can only be used for 1D "
+                             "continuous axis")
 
     @property
     def bin_type(self):
@@ -201,7 +211,8 @@ class KDE1DMethod(KDEMethod):
         dimension of the problem.
         """
         if kde.ndim != 1:
-            raise ValueError("Error, this is a 1D method, expecting a 1D problem")
+            raise ValueError("Error, this is a 1D method, expecting a 1D "
+                             "problem")
         if np.any(kde.axis_type != self.axis_type):
             raise ValueError("Error, incompatible method for the type of axis")
 
@@ -224,7 +235,8 @@ class KDE1DMethod(KDEMethod):
         elif hasattr(self, '_kernel') and self._kernel is not None:
             fitted._kernel = self._kernel.for_ndim(1)
         else:
-            raise ValueError("No kernel specified and this method doesn't have a default kernel.")
+            raise ValueError("No kernel specified and this method doesn't "
+                             "have a default kernel.")
         fitted._weights = kde.weights
         fitted._adjust = kde.adjust
         fitted._total_weights = kde.total_weights
@@ -234,7 +246,8 @@ class KDE1DMethod(KDEMethod):
     def exog(self, value):
         value = np.atleast_1d(value).astype(float)
         if value.shape != (self.npts,):
-            raise ValueError("Bad shape: to change the number of points use update_inputs")
+            raise ValueError("Bad shape: to change the number of points use "
+                             "update_inputs")
         self._exog = value
 
     def copy(self):
@@ -262,13 +275,16 @@ class KDE1DMethod(KDEMethod):
         """
         exog = np.atleast_1d(exog)
         if exog.ndim != 1:
-            raise ValueError("Error, exog must be a 1D array (nb dimensions: {})".format(exog.ndim))
+            raise ValueError(("Error, exog must be a 1D array (nb dimensions: "
+                              "{})").format(exog.ndim))
         weights = np.asarray(weights)
         adjust = np.asarray(adjust)
         if weights.ndim != 0 and weights.shape != exog.shape:
-            raise ValueError("Error, weights must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, weights must be either a single number, "
+                             "or an array the same shape as exog")
         if adjust.ndim != 0 and adjust.shape != exog.shape:
-            raise ValueError("Error, adjust must be either a single number, or an array the same shape as exog")
+            raise ValueError("Error, adjust must be either a single number, "
+                             "or an array the same shape as exog")
         self._exog = exog
         self._weights = weights
         self._adjust = adjust
@@ -333,10 +349,12 @@ class KDE1DMethod(KDEMethod):
         -------
         out: ndarray
             Returns the PDF for each point. The default is to use the formula
-            for unbounded pdf computation using the :py:func:`convolve` function.
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
         """
         return convolve(self.exog, points[..., None], self.kernel.pdf, out,
-                        self.bandwidth * self.adjust, self.weights, self.total_weights)
+                        self.bandwidth * self.adjust, self.weights,
+                        self.total_weights)
 
     def __call__(self, points, out=None):
         """
@@ -412,8 +430,8 @@ class KDE1DMethod(KDEMethod):
 
         Notes
         -----
-        This method first approximates the result using linear interpolation on the CDF and refine the result
-        numerically using the Newton method.
+        This method first approximates the result using linear interpolation
+        on the CDF and refine the result numerically using the Newton method.
         """
         return invert_cdf(points, out, self.pdf, self.cdf, self.cdf_grid(),
                           self.lower, self.upper)
@@ -467,7 +485,8 @@ class KDE1DMethod(KDEMethod):
         Returns
         -------
         ndarray
-            Returns the ``out`` variable, updated with the inverse survival function.
+            Returns the ``out`` variable, updated with the inverse survival
+            function.
 
         Notes
         -----
@@ -525,7 +544,8 @@ class KDE1DMethod(KDEMethod):
         Returns
         -------
         ndarray
-            Returns the ``out`` variable, updated with the cumulative hazard function
+            Returns the ``out`` variable, updated with the cumulative hazard
+            function
 
         Notes
         -----
@@ -581,8 +601,8 @@ class KDE1DMethod(KDEMethod):
 
     def from_binned(self, mesh, bins, normed=False, dim=-1):
         """
-        Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
-        data.
+        Evaluate the PDF from data already binned. The binning might have been
+        high-dimensional but must be of the same data.
 
         Parameters
         ----------
@@ -591,17 +611,20 @@ class KDE1DMethod(KDEMethod):
         bins: ndarray
             Array of the same shape as the mesh with the values per bin
         normed: bool
-            If true, the result will be normed w.r.t. the total weight of the exog
+            If true, the result will be normed w.r.t. the total weight of the
+            exog
         dim: int
             Dimension along which the estimation must be done
 
         Returns
         -------
         ndarray
-            Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
+            Array of same size as bins, but with the estimated of the PDF for
+            each line along the dimension `dim`
         """
         if self.adjust.ndim:
-            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
+            raise ValueError("Error, cannot use binned data with non-constant "
+                             "adjustment.")
         result = np.empty_like(bins)
         if dim < 0:
             dim = mesh.ndim + dim
@@ -650,8 +673,8 @@ class KDE1DMethod(KDEMethod):
 
         Notes
         -----
-        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated using
-        :py:func:`generate_grid1d`
+        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated
+        using :py:func:`generate_grid1d`
         """
         N = self.grid_size(N)
         if N <= 2 ** 11:
@@ -712,7 +735,8 @@ class KDE1DMethod(KDEMethod):
         mesh : :py:class:`Grid`
             Grid on which the survival function has bin evaluated
         values : ndarray
-            Values of the inverse survival function for each position of the grid.
+            Values of the inverse survival function for each position of the
+            grid.
 
         Notes
         -----
@@ -874,7 +898,8 @@ class KDE1DMethod(KDEMethod):
         return N
 
 
-def fftdensity_from_binned(mesh, bins, kernel_rfft, bw, normed=False, total_weights=None, dim=-1):
+def fftdensity_from_binned(mesh, bins, kernel_rfft, bw, normed=False,
+                           total_weights=None, dim=-1):
     """
     Parameters
     ----------
@@ -948,12 +973,14 @@ def fftdensity(exog, kernel_rfft, bw, lower, upper, N, weights, total_weights):
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='c')
+    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights,
+                              bin_type='c')
     DataHist /= total_weights
     return mesh, fftdensity_from_binned(mesh, DataHist, kernel_rfft, bw)
 
 
-def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weights=None, dim=-1):
+def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False,
+                           total_weights=None, dim=-1):
     """
     Parameters
     ----------
@@ -1028,7 +1055,8 @@ def dctdensity(exog, kernel_dct, bw, lower, upper, N, weights, total_weights):
     No checks are made to ensure the consistency of the input!
     """
     # Histogram the data to get a crude first approximation of the density
-    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='r')
+    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights,
+                              bin_type='r')
 
     DataHist /= total_weights
     return mesh, dctdensity_from_binned(mesh, DataHist, kernel_dct, bw)

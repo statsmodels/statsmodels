@@ -3,15 +3,20 @@ r"""
 
 Module providing a set of kernels for use within the kernel_methods package.
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from copy import copy as shallowcopy
+
 import numpy as np
-from scipy.special import erf
 from scipy import fftpack, integrate, linalg
 from scipy.integrate import nquad
+from scipy.special import erf
+
+from ..compat.python import range, long
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
-from copy import copy as shallowcopy
-from ..compat.python import range, long
 
 
 S2PI = np.sqrt(2 * np.pi)
@@ -22,7 +27,8 @@ S2 = np.sqrt(2)
 def rfftfreq(n, d=1.0):
     """
     Return the Discrete Fourier Transform sample frequencies
-    (for usage with rfft, irfft).
+
+    For usage with rfft, irfft.
 
     The returned float array `f` contains the frequency bin centers in cycles
     per unit of the sample spacing (with zero at the start).  For instance, if
@@ -93,16 +99,19 @@ def rfftnsize(Ns):
 def rfftnfreq(Ns, dx=None, sparse=True):
     """
     Return the Discrete Fourier Transform sample frequencies
-    (for usage with :py:func:`numpy.fft.rfftn`, :py:func:`numpy.fft.irfftn`).
 
-    See :py:func:`scipy.fftpack.rfftfreq` and :py:func:`numpy.fft.rfftn` for details.
+    For usage with :py:func:`numpy.fft.rfftn`, :py:func:`numpy.fft.irfftn`.
+
+    See :py:func:`scipy.fftpack.rfftfreq` and :py:func:`numpy.fft.rfftn` for
+    details.
 
     Parameters
     ----------
     Ns: list of int
         Number of samples for each dimension
     dx: None, 1D or 2D array
-        If not None, this must be of same length as Ns and is the space between samples along that axis
+        If not None, this must be of same length as Ns and is the space between
+        samples along that axis
     sparse: bool
         If True (default), returns a sparse grid if dx is not a matrix itself
 
@@ -123,7 +132,8 @@ def rfftnfreq(Ns, dx=None, sparse=True):
         if dx.ndim == 1 and dx.shape != (ndim,):
             raise ValueError("If 1D, dx must be of same length as Ns")
         elif dx.ndim == 2 and dx.shape != (ndim, ndim):
-            raise ValueError("If 2D, dx must be of a square matrix with as many dimensions as Ns")
+            raise ValueError("If 2D, dx must be of a square matrix with as "
+                             "many dimensions as Ns")
     trans = None
     if dx.ndim == 2:
         trans = linalg.inv(dx)
@@ -140,8 +150,10 @@ def rfftnfreq(Ns, dx=None, sparse=True):
 
 def fftsamples(N, dx=1.0):
     """
-    Returns the array of sample positions needed to comput the FFT with N samples.
-    (for usage with :py:func:`scipy.fftpack.fft`, :py:func:`numpy.fft.rfft`).
+    Returns the array of sample positions needed to comput the FFT with N
+    samples.
+
+    For usage with :py:func:`scipy.fftpack.fft`, :py:func:`numpy.fft.rfft`.
 
     Parameters
     ----------
@@ -165,15 +177,18 @@ def fftsamples(N, dx=1.0):
 
 def fftnsamples(Ns, dx=None, sparse=True):
     """
-    Returns the array of sample positions needed to comput the FFT with N samples.
-    (for usage with :py:func:`numpy.fft.fftn`, :py:func:`numpy.fft.rfftn`).
+    Returns the array of sample positions needed to comput the FFT with N
+    samples.
+
+    For usage with :py:func:`numpy.fft.fftn`, :py:func:`numpy.fft.rfftn`.
 
     Parameters
     ----------
     N: list of int
         Number of samples for the FFT for each dimension
     dx: float or None
-        Distance between sample points for each dimension. If None, dx = 1.0 for each dimension.
+        Distance between sample points for each dimension. If None, dx = 1.0
+        for each dimension.
     sparse: bool
         If True (default), returns a sparse grid
 
@@ -190,7 +205,8 @@ def fftnsamples(Ns, dx=None, sparse=True):
         if dx.ndim == 1 and dx.shape != (ndim,):
             raise ValueError("If 1D, dx must be of same length as Ns")
         elif dx.ndim == 2 and dx.shape != (ndim, ndim):
-            raise ValueError("If 2D, dx must be of a square matrix with as many dimensions as Ns")
+            raise ValueError("If 2D, dx must be of a square matrix with as "
+                             "many dimensions as Ns")
 
     trans = None
     if dx.ndim == 2:
@@ -206,7 +222,8 @@ def fftnsamples(Ns, dx=None, sparse=True):
 def dctfreq(N, dx=1.0):
     """
     Return the Discrete Cosine Transform sample frequencies
-    (for usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`).
+
+    For usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`.
 
     Parameters
     ----------
@@ -227,14 +244,16 @@ def dctfreq(N, dx=1.0):
 def dctnfreq(Ns, dx=None, sparse=True):
     """
     Return the Discrete Cosine Transform sample frequencies
-    (for usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`).
+
+    For usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`.
 
     Parameters
     ----------
     Ns: list of int
         Number of samples for each dimension
     dx: None of list of float
-        If not None, this must be of same length as Ns and is the space between samples along that axis
+        If not None, this must be of same length as Ns and is the space between
+        samples along that axis
     sparse: bool
         If True, return a sparse grid
 
@@ -259,8 +278,10 @@ def dctnfreq(Ns, dx=None, sparse=True):
 
 def dctsamples(N, dx=1.0):
     """
-    Returns the array of sample positions needed to comput the DCT with N samples.
-    (for usage with :py:func:`scipy.fftpack.dct`)
+    Returns the array of sample positions needed to comput the DCT with N
+    samples.
+
+    For usage with :py:func:`scipy.fftpack.dct`.
 
     Parameters
     ----------
@@ -279,15 +300,18 @@ def dctsamples(N, dx=1.0):
 
 def dctnsamples(Ns, dx=None, sparse=True):
     """
-    Returns the array of sample positions needed to comput the DCT with N samples.
-    (for usage with :py:func:`scipy.fftpack.dctn`)
+    Returns the array of sample positions needed to comput the DCT with N
+    samples.
+
+    For usage with :py:func:`scipy.fftpack.dctn`.
 
     Parameters
     ----------
     N: list of int
         Number of samples for the DCT for each dimension
     dx: float or None
-        Distance between sample points for each dimension. If None, dx = 1.0 for each dimension.
+        Distance between sample points for each dimension. If None, dx = 1.0
+        for each dimension.
     sparse: bool
         If true, returns a sparse grid
 
@@ -330,11 +354,14 @@ class Kernel1D(object):
       to give a uniform meaning to the bandwidth.
     """
 
-    #: Interval containing most of the kernel: :math:`\int_{-c}^c p(x) dx \approx 1`
+    # Interval containing most of the kernel:
+    # :math:`\int_{-c}^c p(x) dx \approx 1`
     cut = 3.
-    #: Lower bound of the kernel domain: :math:`\int_{-\infty}^l p(x) dx = 0`
+    # Lower bound of the kernel domain:
+    # :math:`\int_{-\infty}^l p(x) dx = 0`
     lower = -np.inf
-    #: Upper bound of the kernel domain: :math:`\int_u^{-\infty} p(x) dx = 0`
+    # Upper bound of the kernel domain:
+    # :math:`\int_u^{-\infty} p(x) dx = 0`
     upper = np.inf
 
     @property
@@ -353,15 +380,19 @@ class Kernel1D(object):
 
     def pdf(self, z, out=None):
         r"""
-        Returns the density of the kernel on the points `z`. This is the funtion :math:`K(z)` itself.
+        Returns the density of the kernel on the points `z`.
+
+        This is the funtion :math:`K(z)` itself.
 
         Parameters
         ----------
         z : ndarray
-            Array of points to evaluate the function on. The method should accept any shape of array.
+            Array of points to evaluate the function on. The method should
+            accept any shape of array.
         out: ndarray
-            If provided, it will be of the same shape as `z` and the result should be stored in it.
-            Ideally, it should be used for as many intermediate computation as possible.
+            If provided, it will be of the same shape as `z` and the result
+            should be stored in it. Ideally, it should be used for as many
+            intermediate computation as possible.
         """
         raise NotImplementedError()
 
@@ -455,8 +486,8 @@ class Kernel1D(object):
 
     def rfft(self, N, dx, out=None):
         """
-        FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
-        frequency range to be explored.
+        FFT of the kernel on the points of ``z``. The points will always be
+        provided as a regular grid spanning the frequency range to be explored.
         """
         samples = fftsamples(N, dx)
         pdf = self.pdf(samples)
@@ -468,7 +499,8 @@ class Kernel1D(object):
 
     def rfft_xfx(self, N, dx, out=None):
         """
-        FFT of the function :math:`x k(x)`. The points are given as for the fft function.
+        FFT of the function :math:`x k(x)`. The points are given as for the
+        fft function.
         """
         samples = fftsamples(N, dx)
         pdf = self.pdf(samples)
@@ -481,8 +513,8 @@ class Kernel1D(object):
 
     def dct(self, N, dx, out=None):
         r"""
-        DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
-        frequency range to be explored.
+        DCT of the kernel on the points of ``z``. The points will always be
+        provided as a regular grid spanning the frequency range to be explored.
         """
         samples = dctsamples(N, dx)
         out = self.pdf(samples, out=out)
@@ -527,8 +559,8 @@ class Kernel1D(object):
         Notes
         -----
 
-        The computation of the convolution is, by default, very expensive. Most kernels should define this methods in
-        addition to the PDF.
+        The computation of the convolution is, by default, very expensive. Most
+        kernels should define this methods in addition to the PDF.
         """
         if not hasattr(self, '_convolve_kernel'):
             self._convolve_kernel = from1DPDF(self._convolution)
@@ -553,7 +585,8 @@ class from1DPDF(Kernel1D):
 
 class normal1d(Kernel1D):
     """
-    1D normal density kernel with extra integrals for 1D bounded kernel estimation.
+    1D normal density kernel with extra integrals for 1D bounded kernel
+    estimation.
     """
     cut = 5.
 
@@ -647,8 +680,8 @@ class normal1d(Kernel1D):
 
         .. math::
 
-            \text{cdf}(z) \triangleq \int_{-\infty}^z \phi(z)
-                dz = \frac{1}{2}\text{erf}\left(\frac{z}{\sqrt{2}}\right) + \frac{1}{2}
+            \text{cdf}(z) \triangleq \int_{-\infty}^z \phi(z) dz =
+            \frac{1}{2}\text{erf}\left(\frac{z}{\sqrt{2}}\right) + \frac{1}{2}
         """
         return _cy_kernels.norm1d_cdf(z, out)
 
@@ -696,8 +729,8 @@ class normal1d(Kernel1D):
         .. math::
 
             \text{pm2}(z) \triangleq \int_{-\infty}^z z^2\phi(z) dz
-                = \frac{1}{2}\text{erf}\left(\frac{z}{2}\right) - \frac{z}{\sqrt{2\pi}}
-                e^{-\frac{z^2}{2}} + \frac{1}{2}
+                = \frac{1}{2}\text{erf}\left(\frac{z}{2}\right) -
+                \frac{z}{\sqrt{2\pi}} e^{-\frac{z^2}{2}} + \frac{1}{2}
         """
         return _cy_kernels.norm1d_pm2(z, out)
 
@@ -725,13 +758,14 @@ class KernelnD(object):
     """
     This class is the base class for nD kernels.
 
-    It provides various services, such as numerical approximations for the CDF, FFT and DCT for the kernel.
+    It provides various services, such as numerical approximations for the CDF,
+    FFT and DCT for the kernel.
     """
-    #: Interval containing most of the kernel
+    # Interval containing most of the kernel
     cut = 3.
-    #: Lower bound of the kernel domain for each axis
+    # Lower bound of the kernel domain for each axis
     lower = -np.inf
-    #: Upper bound of the kernel domain for each axis
+    # Upper bound of the kernel domain for each axis
     upper = np.inf
 
     def __init__(self, ndim=2):
@@ -750,8 +784,8 @@ class KernelnD(object):
 
         Notes
         -----
-        The default version copies the object, and changed the :py:attr:`ndim` attribute. If this is not sufficient, you
-        need to override this method.
+        The default version copies the object, and changed the :py:attr:`ndim`
+        attribute. If this is not sufficient, you need to override this method.
         """
         if ndim == self.ndim:
             return self
@@ -761,16 +795,20 @@ class KernelnD(object):
 
     def pdf(self, y, out=None):
         r"""
-        Returns the density of the kernel on the points `z`. This is the funtion :math:`K(z)` itself.
+        Returns the density of the kernel on the points `z`.
+
+        This is the funtion :math:`K(z)` itself.
 
         Parameters
         ----------
         z: ndarray
-            Array of points to evaluate the function on. This should be at least a 2D array, with the last dimension
-            corresponding to the dimension of the problem.
+            Array of points to evaluate the function on. This should be at
+            least a 2D array, with the last dimension corresponding to the
+            dimension of the problem.
         out: ndarray
-            If provided, it will be of the same shape as `z` and the result should be stored in it. Ideally, it should
-            be used for as many intermediate computation as possible.
+            If provided, it will be of the same shape as `z` and the result
+            should be stored in it. Ideally, it should be used for as many
+            intermediate computation as possible.
         """
         raise NotImplementedError()
 
@@ -810,8 +848,8 @@ class KernelnD(object):
 
     def rfft(self, N, dx, out=None):
         """
-        FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
-        frequency range to be explored.
+        FFT of the kernel on the points of ``z``. The points will always be
+        provided as a regular grid spanning the frequency range to be explored.
         """
         dx = np.asarray(dx)
         samples = fftnsamples(N, dx, sparse=False)
@@ -828,8 +866,8 @@ class KernelnD(object):
 
     def dct(self, N, dx, out=None):
         """
-        DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
-        frequency range to be explored.
+        DCT of the kernel on the points of ``z``. The points will always be
+        provided as a regular grid spanning the frequency range to be explored.
         """
         dx = np.asarray(dx)
         samples = dctnsamples(N, dx, sparse=False)
@@ -888,8 +926,19 @@ class normal(KernelnD):
         """
         Return the probability density of the function.
 
-        :param ndarray xs: Array of shape (...,D) where D is the dimension of the kernel
-        :returns: an array of shape (...) with the density on each point of ``xs``
+        Parameters
+        ----------
+        xs: ndarray
+            Array of shape (...,D) where D is the dimension of the kernel
+        out: ndarray
+            If provided, it will be of the same shape as ``xs`` and the result
+            should be stored in it. Ideally, it should be used for as many
+            intermediate computation as possible.
+
+        Returns
+        -------
+        out: ndarray
+            An array of shape (...) with the density on each point of ``xs``
         """
         xs = np.atleast_2d(xs)
         if out is None:
@@ -932,12 +981,15 @@ class normal(KernelnD):
 
     __call__ = pdf
 
-from ._kernels1d import *  # noqa
-from ._kernelsnd import *  # noqa
-from ._kernelsnc import *  # noqa
+
+from ._kernels1d import tricube, normal_order4  # noqa
+from ._kernels1d import Epanechnikov, Epanechnikov_order4  # noqa
+# from ._kernelsnd import *  # noqa
+from ._kernelsnc import AitchisonAitken, WangRyzin  # noqa
 
 """ List of 1D kernels """
-kernels1D = [normal1d, tricube, Epanechnikov, Epanechnikov_order4, normal_order4]
+kernels1D = [normal1d, tricube, Epanechnikov, Epanechnikov_order4,
+             normal_order4]
 """ List of nD kernels """
 kernelsnD = [normal]
 """ List of non-continuous kernels """
