@@ -471,7 +471,7 @@ class DescrStatsW(object):
         t2, pv2, df2 = self.ttest_mean(upp, alternative='smaller')
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
-    def ztest_mean(self, value=0, alternative='two-sided'):
+    def ztest_mean(self, value=0, sigma=None, alternative='two-sided'):
         '''z-test of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
@@ -483,6 +483,9 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
+        sigma : None or float
+            if sigma is None, then the std is calculated based on the sample.
+            if sigma is float, the std is specified to sigma.
         alternative : string
             The alternative hypothesis, H1, has to be one of the following
 
@@ -527,7 +530,18 @@ class DescrStatsW(object):
         >>> sm.stats.DescrStatsW(x1, np.array(w1)*21./20).ztest_mean(0.5)
         (2.5819888974716116, 0.0098232745075192366)
         '''
-        tstat = (self.mean - value) / self.std_mean
+        if sigma:
+            if self.ddof != 0:
+                sigma = sigma * np.sqrt((self.sum_weights - self.ddof)
+                                    / self.sum_weights)
+
+            std_mean = sigma / np.sqrt(self.sum_weights)
+            # not using `self.sum_weights - 1` because the std is specified, not
+            # calculated based on the sample
+        else:
+            std_mean = self.std_mean
+
+        tstat = (self.mean - value) / std_mean
         #TODO: use outsourced
         if alternative == 'two-sided':
             pvalue = stats.norm.sf(np.abs(tstat))*2
