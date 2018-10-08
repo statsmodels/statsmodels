@@ -40,9 +40,13 @@ If you need to modify the labeling and the coloring you can give a function to
 create the labels and one with the graphical properties starting from the key
 tuple
 '''
+def props(key):
+    return {'color': 'r' if 'a' in key else 'gray'}
+
+def labelizer(key):
+    return {('a',): 'first', ('b',): 'second', ('c',): 'third'}[key]
+
 data = {'a': 10, 'b': 15, 'c': 16}
-props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-labelizer = lambda k: {('a',): 'first', ('b',): 'second', ('c',): 'third'}[k]
 mosaic(data, title='colored dictionary', properties=props, labelizer=labelizer)
 plt.show()
 
