@@ -26,7 +26,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         total number of trials
     alpha : float in (0, 1)
         significance level, default 0.05
-    method : string in ['normal']
+    method : string in ['normal', 'agresti_coull', 'beta', 'wilson', 'binom_test']
         method to use for confidence interval,
         currently available methods :
 
