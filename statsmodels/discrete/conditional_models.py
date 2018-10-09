@@ -106,7 +106,8 @@ class ConditionalLogit(base.LikelihoodModel):
 
     def _denom_grad(self, grp, params):
 
-        exb = np.exp(np.dot(self._exog_grp[grp], params))
+        ex = self._exog_grp[grp]
+        exb = np.exp(np.dot(ex, params))
 
         memo = {}
 
@@ -125,7 +126,7 @@ class ConditionalLogit(base.LikelihoodModel):
             h = exb[t-1]
             a, b = s(t-1, k)
             c, e = s(t-1, k-1)
-            d = c * h * self._exog_grp[grp][t-1, :]
+            d = c * h * ex[t-1, :]
 
             u, v = a + c * h, b + d + e * h
             memo[(t, k)] = (u, v)
