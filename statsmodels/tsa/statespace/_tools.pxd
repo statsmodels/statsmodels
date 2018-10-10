@@ -10,6 +10,18 @@ License: Simplified-BSD
 
 cimport numpy as np
 
+from numpy cimport float32_t, float64_t, complex64_t, complex128_t
+
+ctypedef fused dot_t:
+    float32_t
+    float64_t
+    complex64_t
+    complex128_t
+
+
+cdef dot_t blas_dot(int nrows, dot_t* left, int ncols, dot_t* right)
+
+
 cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, object nobs=*)
 
 cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, object nobs=*)

@@ -27,6 +27,8 @@ from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
+from statsmodels.tsa.statespace._tools cimport blas_dot
+
 from statsmodels.tsa.statespace._kalman_filter cimport (
     MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST, FILTER_CONCENTRATED)
 
@@ -77,7 +79,6 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
         # `forecast` $= Z_{t,i} a_{t,i} + d_{t,i}$
         # Note: $Z_{t,i}$ is a row vector starting at [i,0,t] and ending at
         # [i,k_states,t]
-        # Note: zdot and cdot are broken, so have to use gemv for those
 
         # #### Forecast error for time t
         # `forecast_error` $\equiv v_t = y_t -$ `forecast`
@@ -86,7 +87,6 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
         # #### Forecast error covariance matrix for time t
         # $F_{t,i} \equiv Z_{t,i} P_{t,i} Z_{t,i}' + H_{t,i}$
         # TODO what about Kalman convergence?
-        # Note: zdot and cdot are broken, so have to use gemv for those
         if not kfilter.converged:
             forecast_error_cov = {{prefix}}forecast_error_cov(kfilter, model, i)
         else:
@@ -138,6 +138,7 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
 
     return 0
 
+
 cdef void {{prefix}}forecast_error({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i):
     cdef:
         int inc = 1
@@ -150,22 +151,15 @@ cdef void {{prefix}}forecast_error({{prefix}}KalmanFilter kfilter, {{prefix}}Sta
         k_states = model._k_posdef
 
     # `forecast` $= Z_{t,i} a_{t,i} + d_{t,i}$
-    {{if combined_prefix == 'd'}}
     kfilter._forecast[i] = (
         model._obs_intercept[i] +
-        blas.{{prefix}}dot(&k_states, &model._design[i], &model._k_endog,
-                                      kfilter._filtered_state, &inc)
+        blas_dot(k_states, &model._design[i],
+                 model._k_endog, kfilter._filtered_state)
     )
-    {{else}}
-    blas.{{prefix}}gemv("N", &inc, &k_states,
-                   &alpha, kfilter._filtered_state, &inc,
-                           &model._design[i], &model._k_endog,
-                   &beta, kfilter._tmp0, &inc)
-    kfilter._forecast[i] = model._obs_intercept[i] + kfilter._tmp0[0]
-    {{endif}}
 
     # `forecast_error` $\equiv v_t = y_t -$ `forecast`
     kfilter._forecast_error[i] = model._obs[i] - kfilter._forecast[i]
+
 
 cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i):
     cdef:
@@ -189,29 +183,12 @@ cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter
           &beta, &kfilter._M[i*kfilter.k_states], &inc)
 
     # $F_{t,i} \equiv Z_{t,i} P_{t,i} Z_{t,i}' + H_{t,i}$
-    {{if combined_prefix == 'd'}}
-    # blas.{{prefix}}symv("U", &model._k_states,
-    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
-    #               &model._design[i], &model._k_endog,
-    #       &beta, &kfilter._M[i*kfilter.k_states], &inc)
-
     forecast_error_cov = (
         model._obs_cov[i + i*model._k_endog] +
-        blas.{{prefix}}dot(&k_states, &model._design[i], &model._k_endog,
-                                      &kfilter._M[i*kfilter.k_states], &inc)
+        blas_dot(k_states, &model._design[i],
+                 model._k_endog, &kfilter._M[i*kfilter.k_states])
     )
-    {{else}}
-    # blas.{{prefix}}gemv("N", &model._k_states, &k_states,
-    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
-    #               &model._design[i], &model._k_endog,
-    #       &beta, &kfilter._M[i*kfilter.k_states], &inc)
 
-    blas.{{prefix}}gemv("N", &inc, &k_states,
-                   &alpha, &kfilter._M[i*kfilter.k_states], &inc,
-                           &model._design[i], &model._k_endog,
-                   &beta, kfilter._tmp0, &inc)
-    forecast_error_cov = model._obs_cov[i + i*model._k_endog] + kfilter._tmp0[0]
-    {{endif}}
     kfilter._forecast_error_cov[i + i*kfilter.k_endog] = forecast_error_cov
     return forecast_error_cov
 

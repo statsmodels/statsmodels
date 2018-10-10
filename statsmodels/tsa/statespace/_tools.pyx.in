@@ -1106,3 +1106,42 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
             selected_cov[i] = 0
 
 {{endfor}}
+
+
+# -----------------------------------------------------------------
+# Statsmodels-internal wrappers for blas/lapack functions
+
+
+cdef dot_t blas_dot(int nrows, dot_t* left, int ncols, dot_t* right):
+    cdef:
+        # Parameters to simplify more general gemv call into just dot product
+        int inc = 1
+        dot_t alpha = 1
+        dot_t beta = 0
+        dot_t tmp
+
+    if dot_t is float64_t:
+        tmp = blas.ddot(&nrows,
+                        left, &ncols,
+                        right, &inc)
+
+    elif dot_t is float32_t:
+        tmp = blas.sdot(&nrows,
+                        left, &ncols,
+                        right, &inc)
+
+    elif dot_t is complex64_t:
+        # Note: zdot and cdot are broken, so have to use gemv for those
+        blas.cgemv("N", &inc, &nrows,
+                   &alpha, right, &inc,
+                   left, &ncols,
+                   &beta, &tmp, &inc)
+
+    elif dot_t is complex128_t:
+        # Note: zdot and cdot are broken, so have to use gemv for those
+        blas.zgemv("N", &inc, &nrows,
+                   &alpha, right, &inc,
+                   left, &ncols,
+                   &beta, &tmp, &inc)
+
+    return tmp

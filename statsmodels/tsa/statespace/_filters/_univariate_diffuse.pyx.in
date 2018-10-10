@@ -27,6 +27,8 @@ from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
+from statsmodels.tsa.statespace._tools cimport blas_dot
+
 from statsmodels.tsa.statespace._kalman_filter cimport (
     FILTER_CONCENTRATED, MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST)
 
@@ -217,28 +219,11 @@ cdef {{cython_type}} {{prefix}}forecast_error_diffuse_cov({{prefix}}KalmanFilter
           &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
 
     # $F_{t,i,\infty} \equiv Z_{t,i} P_{t,i,\infty} Z_{t,i}'$
-    {{if combined_prefix == 'd'}}
-    # blas.{{prefix}}symv("U", &model._k_states,
-    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
-    #               &model._design[i], &model._k_endog,
-    #       &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
-
     forecast_error_diffuse_cov = (
-        blas.{{prefix}}dot(&k_states, &model._design[i], &model._k_endog,
-                                      &kfilter._M_inf[i * kfilter.k_states], &inc)
+        blas_dot(k_states, &model._design[i],
+                 model._k_endog, &kfilter._M_inf[i * kfilter.k_states])
     )
-    {{else}}
-    # blas.{{prefix}}gemv("N", &model._k_states, &k_states,
-    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
-    #               &model._design[i], &model._k_endog,
-    #       &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
 
-    blas.{{prefix}}gemv("N", &inc, &k_states,
-                   &alpha, &kfilter._M_inf[i * kfilter.k_states], &inc,
-                           &model._design[i], &model._k_endog,
-                   &beta, kfilter._tmp0, &inc)
-    forecast_error_diffuse_cov = kfilter._tmp0[0]
-    {{endif}}
     kfilter._forecast_error_diffuse_cov[i + i*kfilter.k_endog] = forecast_error_diffuse_cov
     return forecast_error_diffuse_cov
 

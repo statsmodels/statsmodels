@@ -50,6 +50,8 @@ cimport numpy as np
 from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 
+from statsmodels.tsa.statespace._tools cimport blas_dot
+
 from statsmodels.tsa.statespace._kalman_smoother cimport (
     SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_STATE_AUTOCOV,
     SMOOTHER_DISTURBANCE, SMOOTHER_DISTURBANCE_COV
@@ -179,18 +181,10 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
         # Store values for measurement disturbance smoothing
         # np.dot(K0.T, rt)
         if smoother.smoother_output & SMOOTHER_DISTURBANCE:
-            # Note: zdot and cdot are broken, so have to use gemv for those
-            {{if combined_prefix == 'd'}}
             smoother._smoothed_measurement_disturbance[i] = (
-                blas.{{prefix}}dot(&model._k_states, kfilter._tmpK0, &inc,
-                                                     smoother._scaled_smoothed_estimator, &inc)
+                blas_dot(model._k_states, kfilter._tmpK0,
+                         1, smoother._scaled_smoothed_estimator)
             )
-            {{else}}
-            blas.{{prefix}}gemv("N", &inc, &model._k_states,
-                           &alpha, smoother._scaled_smoothed_estimator, &inc,
-                                   kfilter._tmpK0, &inc,
-                           &beta, &smoother._smoothed_measurement_disturbance[i], &inc)
-            {{endif}}
 
         # Store values for measurement disturbance covariance smoothing
         # np.dot(np.dot(K0.T, Nt), K0)
@@ -199,18 +193,11 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
                                      &alpha, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states,
                                              kfilter._tmpK0, &inc,
                                      &beta, smoother._tmp0, &inc)
-            # Note: zdot and cdot are broken, so have to use gemv for those
-            {{if combined_prefix == 'd'}}
+
             smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = (
-                blas.{{prefix}}dot(&model._k_states, kfilter._tmpK0, &inc,
-                                                      smoother._tmp0, &inc)
+                blas_dot(model._k_states, kfilter._tmpK0,
+                         1, smoother._tmp0)
             )
-            {{else}}
-            blas.{{prefix}}gemv("N", &inc, &model._k_states,
-                           &alpha, smoother._tmp0, &inc,
-                                   kfilter._tmpK0, &inc,
-                           &beta, &smoother._smoothed_measurement_disturbance_cov[i*kfilter.k_endog + i], &inc)
-            {{endif}}
 
         # F_{\infty, i, i, t} > 0
         if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:

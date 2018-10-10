@@ -45,6 +45,8 @@ cimport numpy as np
 from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 
+from statsmodels.tsa.statespace._tools cimport blas_dot
+
 from statsmodels.tsa.statespace._kalman_smoother cimport (
     SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_STATE_AUTOCOV,
     SMOOTHER_DISTURBANCE, SMOOTHER_DISTURBANCE_COV
@@ -113,18 +115,10 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
         # and store K_{t,i}' r_{t,i} for later (otherwise r_{t,i} will not be
         # available)
         if smoother.smoother_output & SMOOTHER_DISTURBANCE:
-            # Note: zdot and cdot are broken, so have to use gemv for those
-            {{if combined_prefix == 'd'}}
             smoother._smoothed_measurement_disturbance[i] = (
-                blas.{{prefix}}dot(&model._k_states, &kfilter._kalman_gain[i*kfilter.k_states], &inc,
-                                                       smoother._scaled_smoothed_estimator, &inc)
+                blas_dot(model._k_states, &kfilter._kalman_gain[i*kfilter.k_states],
+                         1, smoother._scaled_smoothed_estimator)
             )
-            {{else}}
-            blas.{{prefix}}gemv("N", &inc, &model._k_states,
-                           &alpha, smoother._scaled_smoothed_estimator, &inc,
-                                   &kfilter._kalman_gain[i*kfilter.k_states], &inc,
-                           &beta, &smoother._smoothed_measurement_disturbance[i], &inc)
-            {{endif}}
 
         # If we want smoothed disturbance covs, then we need to calculate
         # and store K_{t,i}' N_{t,i} K_{t,i} for later (otherwise N_{t,i} will not be
@@ -134,18 +128,11 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
                                      &alpha, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states,
                                              &kfilter._kalman_gain[i*kfilter.k_states], &inc,
                                      &beta, smoother._tmpL, &inc)
-            # Note: zdot and cdot are broken, so have to use gemv for those
-            {{if combined_prefix == 'd'}}
+
             smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = (
-                blas.{{prefix}}dot(&model._k_states, &kfilter._kalman_gain[i*kfilter.k_states], &inc,
-                                                      smoother._tmpL, &inc)
+                blas_dot(model._k_states, &kfilter._kalman_gain[i*kfilter.k_states],
+                         1, smoother._tmpL)
             )
-            {{else}}
-            blas.{{prefix}}gemv("N", &inc, &model._k_states,
-                           &alpha, smoother._tmpL, &inc,
-                                   &kfilter._kalman_gain[i*kfilter.k_states], &inc,
-                           &beta, &smoother._smoothed_measurement_disturbance_cov[i*kfilter.k_endog + i], &inc)
-            {{endif}}
 
         # $L_{t,i} = (I_m - K_{t,i} Z_{t,i})$  
         # $(m \times m) = (m \times m) - (m \times 1) (1 \times m)$
