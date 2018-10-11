@@ -1,5 +1,5 @@
 """
-Conditional logistic regression
+Conditional logistic and Poisson regression
 """
 
 import numpy as np
@@ -9,19 +9,12 @@ import statsmodels.base.wrapper as wrap
 import collections
 import warnings
 
-class ConditionalLogit(base.LikelihoodModel):
-    """
-    Fit a conditional logistic regression model to grouped data.
 
-    Every group is implicitly given an intercept, but the model is fit using
-    a conditional likelihood in which the intercepts are not present.  Thus,
-    intercept estimates are not given, but the other parameter estimates can
-    be interpreted as being adjusted for any group-level confounders.
-    """
-
+class conditionalModel(base.LikelihoodModel):
     def __init__(self, endog, exog, groups, missing='none', **kwargs):
 
-        super(ConditionalLogit, self).__init__(endog, exog, missing=missing, **kwargs)
+        super(conditionalModel, self).__init__(
+            endog, exog, missing=missing, **kwargs)
 
         self.k_params = exog.shape[1]
 
@@ -37,6 +30,7 @@ class ConditionalLogit(base.LikelihoodModel):
         self._endog_grp = []
         self._exog_grp = []
         self._groupsize = []
+        self._sumy = []
         self.nobs = 0
         drops = [0, 0]
         for g, ix in row_ix.items():
@@ -49,9 +43,11 @@ class ConditionalLogit(base.LikelihoodModel):
             self._endog_grp.append(y)
             self._groupsize.append(len(y))
             self._exog_grp.append(exog[ix, :])
+            self._sumy.append(np.sum(y))
 
         if drops[0] > 0:
-            msg = "Dropped %d groups and %d observations for having no within-group variance" % tuple(drops)
+            msg = "Dropped %d groups and %d observations for having no within-group variance" % tuple(
+                drops)
             warnings.warn(msg)
 
         # Number of groups
@@ -63,6 +59,87 @@ class ConditionalLogit(base.LikelihoodModel):
         for g in range(self._n_groups):
             self._xy.append(np.dot(self._endog_grp[g], self._exog_grp[g]))
             self._n1.append(np.sum(self._endog_grp[g]))
+
+    def hessian(self, params):
+
+        from statsmodels.tools.numdiff import approx_fprime
+        hess = approx_fprime(params, self.score)
+        hess = np.atleast_2d(hess)
+        return hess
+
+    def fit(self,
+            start_params=None,
+            method='BFGS',
+            maxiter=100,
+            full_output=True,
+            disp=False,
+            fargs=(),
+            callback=None,
+            retall=False,
+            skip_hessian=False,
+            **kwargs):
+
+        rslt = super(conditionalModel, self).fit(
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=disp,
+            skip_hessian=skip_hessian)
+
+        crslt = ConditionalResults(self, rslt.params, rslt.cov_params(), 1)
+        crslt.method = method
+        crslt.nobs = self.nobs
+        crslt.n_groups = self._n_groups
+        crslt._group_stats = [
+            "%d" % min(self._groupsize),
+            "%d" % max(self._groupsize),
+            "%.1f" % np.mean(self._groupsize)
+        ]
+        return ConditionalResultsWrapper(crslt)
+
+    # Override to allow groups to be passed as a variable name.
+    @classmethod
+    def from_formula(cls,
+                     formula,
+                     data,
+                     subset=None,
+                     drop_cols=None,
+                     *args,
+                     **kwargs):
+
+        try:
+            groups = kwargs["groups"]
+            del kwargs["groups"]
+        except KeyError:
+            raise ValueError("'groups' is a required argument")
+
+        if isinstance(groups, str):
+            groups = data[groups]
+
+        if not "0+" in formula.replace(" ", ""):
+            warnings.warn("Conditional models should not include an intercept")
+
+        model = super(conditionalModel, cls).from_formula(
+            formula, data=data, groups=groups, *args, **kwargs)
+
+        return model
+
+
+class ConditionalLogit(conditionalModel):
+    """
+    Fit a conditional logistic regression model to grouped data.
+
+    Every group is implicitly given an intercept, but the model is fit using
+    a conditional likelihood in which the intercepts are not present.  Thus,
+    intercept estimates are not given, but the other parameter estimates can
+    be interpreted as being adjusted for any group-level confounders.
+    """
+
+    def __init__(self, endog, exog, groups, missing='none', **kwargs):
+
+        super(ConditionalLogit, self).__init__(
+            endog, exog, groups, missing=missing, **kwargs)
 
     def loglike(self, params):
 
@@ -97,7 +174,7 @@ class ConditionalLogit(base.LikelihoodModel):
             except KeyError:
                 pass
 
-            v = f(t-1, k) + f(t-1, k-1) * exb[t-1]
+            v = f(t - 1, k) + f(t - 1, k - 1) * exb[t - 1]
             memo[(t, k)] = v
 
             return v
@@ -123,10 +200,10 @@ class ConditionalLogit(base.LikelihoodModel):
             except KeyError:
                 pass
 
-            h = exb[t-1]
-            a, b = s(t-1, k)
-            c, e = s(t-1, k-1)
-            d = c * h * ex[t-1, :]
+            h = exb[t - 1]
+            a, b = s(t - 1, k)
+            c, e = s(t - 1, k - 1)
+            d = c * h * ex[t - 1, :]
 
             u, v = a + c * h, b + d + e * h
             memo[(t, k)] = (u, v)
@@ -144,66 +221,57 @@ class ConditionalLogit(base.LikelihoodModel):
         d, h = self._denom_grad(grp, params)
         return self._xy[grp] - h / d
 
-    def hessian(self, params):
 
-        from statsmodels.tools.numdiff import approx_fprime
-        hess = approx_fprime(params, self.score)
-        hess = np.atleast_2d(hess)
-        return hess
+class ConditionalPoisson(conditionalModel):
+    """
+    Fit a conditional Poisson regression model to grouped data.
 
-    def fit(self, start_params=None, method='BFGS', maxiter=100,
-            full_output=True, disp=False, fargs=(), callback=None,
-            retall=False, skip_hessian=False, **kwargs):
+    Every group is implicitly given an intercept, but the model is fit using
+    a conditional likelihood in which the intercepts are not present.  Thus,
+    intercept estimates are not given, but the other parameter estimates can
+    be interpreted as being adjusted for any group-level confounders.
+    """
 
-        rslt = super(ConditionalLogit, self).fit(start_params=start_params,
-                     method=method, maxiter=maxiter, full_output=full_output,
-                     disp=disp, skip_hessian=skip_hessian)
+    def loglike(self, params):
 
-        crslt = ConditionalLogitResults(self, rslt.params, rslt.cov_params(), 1)
-        crslt.method = method
-        crslt.nobs = self.nobs
-        crslt.n_groups = self._n_groups
-        crslt._group_stats = ["%d" % min(self._groupsize),
-                              "%d" % max(self._groupsize),
-                              "%.1f" % np.mean(self._groupsize)]
-        return ConditionalLogitResultsWrapper(crslt)
+        ll = 0.0
 
+        for i in range(len(self._endog_grp)):
 
-    # Override to allow groups to be passed as a variable name.
-    @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     *args, **kwargs):
+            xb = np.dot(self._exog_grp[i], params)
+            exb = np.exp(xb)
+            y = self._endog_grp[i]
+            ll += np.dot(y, xb)
+            s = exb.sum()
+            ll -= self._sumy[i] * np.log(s)
 
-        try:
-            groups = kwargs["groups"]
-            del kwargs["groups"]
-        except KeyError:
-            raise ValueError("'groups' is a required argument")
+        return ll
 
-        if isinstance(groups, str):
-            groups = data[groups]
+    def score(self, params):
 
-        if not "0+" in formula.replace(" ", ""):
-            warnings.warn("ConditionalLogit should not include an intercept")
+        score = 0.0
 
-        model = super(ConditionalLogit, cls).from_formula(
-                      formula, data=data, groups=groups, *args,
-                      **kwargs)
+        for i in range(len(self._endog_grp)):
 
-        return model
+            x = self._exog_grp[i]
+            xb = np.dot(x, params)
+            exb = np.exp(xb)
+            s = exb.sum()
+            y = self._endog_grp[i]
+            score += np.dot(y, x)
+            score -= self._sumy[i] * np.dot(exb, x) / s
+
+        return score
 
 
-class ConditionalLogitResults(base.LikelihoodModelResults):
-
-
+class ConditionalResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
 
-        super(ConditionalLogitResults, self).__init__(
-              model,
-              params,
-              normalized_cov_params=normalized_cov_params,
-              scale=scale)
-
+        super(ConditionalResults, self).__init__(
+            model,
+            params,
+            normalized_cov_params=normalized_cov_params,
+            scale=scale)
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
@@ -234,20 +302,22 @@ class ConditionalLogitResults(base.LikelihoodModelResults):
 
         """
 
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Log-Likelihood:', None),
-                    ('Method:', [self.method]),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ]
+        top_left = [
+            ('Dep. Variable:', None),
+            ('Model:', None),
+            ('Log-Likelihood:', None),
+            ('Method:', [self.method]),
+            ('Date:', None),
+            ('Time:', None),
+        ]
 
-        top_right = [('No. Observations:', None),
-                     ('No. groups:', [self.n_groups]),
-                     ('Min group size:', [self._group_stats[0]]),
-                     ('Max group size:', [self._group_stats[1]]),
-                     ('Mean group size:', [self._group_stats[2]]),
-                     ]
+        top_right = [
+            ('No. Observations:', None),
+            ('No. groups:', [self.n_groups]),
+            ('Min group size:', [self._group_stats[0]]),
+            ('Max group size:', [self._group_stats[1]]),
+            ('Mean group size:', [self._group_stats[2]]),
+        ]
 
         if title is None:
             title = "Conditional Logit Model Regression Results"
@@ -255,14 +325,21 @@ class ConditionalLogitResults(base.LikelihoodModelResults):
         # create summary tables
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,  # [],
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,  # [],
+            yname=yname,
+            xname=xname,
+            title=title)
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t)
 
         return smry
 
 
-class ConditionalLogitResultsWrapper(lm.RegressionResultsWrapper):
+class ConditionalResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(ConditionalLogitResultsWrapper, ConditionalLogitResults)
+
+
+wrap.populate_wrapper(ConditionalResultsWrapper, ConditionalResults)
