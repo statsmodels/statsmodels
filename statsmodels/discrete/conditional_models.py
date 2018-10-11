@@ -46,8 +46,8 @@ class conditionalModel(base.LikelihoodModel):
             self._sumy.append(np.sum(y))
 
         if drops[0] > 0:
-            msg = "Dropped %d groups and %d observations for having no within-group variance" % tuple(
-                drops)
+            msg = ("Dropped %d groups and %d observations for having " +
+                   "no within-group variance" % tuple(drops))
             warnings.warn(msg)
 
         # Number of groups
@@ -117,7 +117,7 @@ class conditionalModel(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = data[groups]
 
-        if not "0+" in formula.replace(" ", ""):
+        if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
         model = super(conditionalModel, cls).from_formula(
