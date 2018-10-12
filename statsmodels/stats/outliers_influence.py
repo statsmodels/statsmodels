@@ -17,6 +17,7 @@ from statsmodels.tools.tools import maybe_unwrap_results
 
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 
+
 # outliers test convenience wrapper
 
 def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
@@ -65,20 +66,24 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     The unadjusted p-value is stats.t.sf(abs(resid), df) where
     df = df_resid - 1.
     """
-    from scipy import stats # lazy import
+    from scipy import stats  # lazy import
     if labels is None:
         labels = getattr(model_results.model.data, 'row_labels', None)
+
     infl = getattr(model_results, 'get_influence', None)
     if infl is None:
         results = maybe_unwrap_results(model_results)
         raise AttributeError("model_results object %s does not have a "
-                "get_influence method." % results.__class__.__name__)
+                             "get_influence method."
+                             % results.__class__.__name__)
+
     resid = infl().resid_studentized_external
     if order:
         idx = np.abs(resid).argsort()[::-1]
         resid = resid[idx]
         if labels is not None:
             labels = np.asarray(labels)[idx]
+
     df = model_results.df_resid - 1
     unadj_p = stats.t.sf(np.abs(resid), df) * 2
     adj_p = multipletests(unadj_p, alpha=alpha, method=method)
@@ -97,14 +102,14 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
                          index=np.asarray(labels)[mask])
     return data
 
-#influence measures
+
+# influence measures
 
 def reset_ramsey(res, degree=5):
     '''Ramsey's RESET specification test for linear models
 
     This is a general specification test, for additional non-linear effects
     in a model.
-
 
     Notes
     -----
@@ -116,7 +121,6 @@ def reset_ramsey(res, degree=5):
     indicates that there might be additional non-linear effects in the model
     and that the linear model is mis-specified.
 
-
     References
     ----------
     http://en.wikipedia.org/wiki/Ramsey_RESET_test
@@ -125,7 +129,7 @@ def reset_ramsey(res, degree=5):
     order = degree + 1
     k_vars = res.model.exog.shape[1]
     #vander without constant and x:
-    y_fitted_vander = np.vander(res.fittedvalues, order)[:, :-2] #drop constant
+    y_fitted_vander = np.vander(res.fittedvalues, order)[:, :-2]  # drop constant
     exog = np.column_stack((res.model.exog, y_fitted_vander))
     res_aux = OLS(res.model.endog, exog).fit()
     #r_matrix = np.eye(degree, exog.shape[1], k_vars)
@@ -200,7 +204,7 @@ class _BaseInfluenceMixin(object):
         return res
 
     plot_influence.__doc__ = _plot_influence_doc.format({
-    'extra_params_doc' : ""})
+    'extra_params_doc': ""})
 
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
         from statsmodels.graphics import utils
@@ -225,7 +229,7 @@ class _BaseInfluenceMixin(object):
                                  lzip(-psize, psize), "large",
                                  ax)
 
-        font = {"fontsize" : 16, "color" : "black"}
+        font = {"fontsize": 16, "color": "black"}
         ax.set_ylabel(ylabel, **font)
         ax.set_xlabel("Observation", **font)
         ax.set_title(title, **font)
@@ -305,9 +309,6 @@ class MLEInfluence(_BaseInfluenceMixin):
     of the corresponding attribute of the results class.
     By default resid_pearson is used as resid.
 
-
-
-
     **Attributes**
 
     hat_matrix_diag (hii) : This is the generalized leverage computed as the
@@ -331,11 +332,6 @@ class MLEInfluence(_BaseInfluenceMixin):
     params_one : is the one step parameter estimate computed as ``params``
         from the full sample minus ``d_params``.
 
-
-
-
-
-
     Notes
     -----
     MLEInfluence produces the same results as GLMInfluence (verified for GLM
@@ -352,7 +348,6 @@ class MLEInfluence(_BaseInfluenceMixin):
     This class will need changes to support different kinds of models, e.g.
     extra parameters in discrete.NegativeBinomial or two-part models like
     ZeroInflatedPoisson.
-
 
     """
 
@@ -442,7 +437,6 @@ class MLEInfluence(_BaseInfluenceMixin):
         cooks_d2 /= self.k_vars
         from scipy import stats
         #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         # TODO use chi2   # use_f option
         pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
 
@@ -522,15 +516,14 @@ class MLEInfluence(_BaseInfluenceMixin):
         beta_labels = ['dfb_' + i for i in data.xnames]
 
         # grab the results
-        summary_data = DataFrame(dict(
-                            cooks_d = self.cooks_distance[0],
-                            standard_resid = self.resid_studentized,
-                            hat_diag = self.hat_matrix_diag,
-                            dffits_internal = self.d_fittedvalues_scaled),
-                            index = row_labels)
-        #NOTE: if we don't give columns, order of above will be arbitrary
+        summary_data = DataFrame(dict(cooks_d=self.cooks_distance[0],
+                                      standard_resid=self.resid_studentized,
+                                      hat_diag=self.hat_matrix_diag,
+                                      dffits_internal=self.d_fittedvalues_scaled),
+                                 index=row_labels)
+        # NOTE: if we don't give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
-                            index=row_labels)
+                           index=row_labels)
 
         return dfbeta.join(summary_data)
 
@@ -696,13 +689,12 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         '''
         hii = self.hat_matrix_diag
-        #Eubank p.93, 94
+        # Eubank p.93, 94
         cooks_d2 = self.resid_studentized**2 / self.k_vars
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
         #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
 
         return cooks_d2, pvals
@@ -715,7 +707,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         uses original results, no nobs loop
 
         '''
-        #TODO: do I want to use different sigma estimate in
+        # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
         # -> move definition of sigma_error to the __init__
         hii = self.hat_matrix_diag
@@ -744,7 +736,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         `Wikipedia <http://en.wikipedia.org/wiki/DFFITS>`_
 
         '''
-        #TODO: do I want to use different sigma estimate in
+        # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
         # -> move definition of sigma_error to the __init__
         hii = self.hat_matrix_diag
@@ -798,8 +790,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         '''
         return np.asarray(self._res_looo['det_cov_params'])
 
-
-
     @cache_readonly
     def cov_ratio(self):
         '''(cached attribute) covariance ratio between LOOO and original
@@ -825,7 +815,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         where hii is the diagonal of the hat matrix
 
         '''
-        #TODO:check if correct outside of ols
+        # TODO:check if correct outside of ols
         return self.scale * (1 - self.hat_matrix_diag)
 
     @cache_readonly
@@ -839,10 +829,8 @@ class OLSInfluence(_BaseInfluenceMixin):
         '''
         return np.sqrt(self.resid_var)
 
-
     def _ols_xnoti(self, drop_idx, endog_idx='endog', store=True):
         '''regression results from LOVO auxiliary regression with cache
-
 
         The result instances are stored, which could use a large amount of
         memory if the datasets are large. There are too many combinations to
@@ -872,7 +860,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             x_i = self.results.model.endog
 
         else:
-            #nested dictionary
+            # nested dictionary
             try:
                 self.aux_regression_exog[endog_idx][drop_idx]
             except KeyError:
@@ -948,7 +936,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
         return dict(params=params, mse_resid=mse_resid,
-                       det_cov_params=det_cov_params)
+                    det_cov_params=det_cov_params)
 
     def summary_frame(self):
         """
@@ -984,18 +972,16 @@ class OLSInfluence(_BaseInfluenceMixin):
         beta_labels = ['dfb_' + i for i in data.xnames]
 
         # grab the results
-        summary_data = DataFrame(dict(
-                            cooks_d = self.cooks_distance[0],
-                            standard_resid = self.resid_studentized_internal,
-                            hat_diag = self.hat_matrix_diag,
-                            dffits_internal = self.dffits_internal[0],
-                            student_resid = self.resid_studentized_external,
-                            dffits = self.dffits[0],
-                                        ),
-                            index = row_labels)
-        #NOTE: if we don't give columns, order of above will be arbitrary
+        summary_data = DataFrame(dict(cooks_d=self.cooks_distance[0],
+                                      standard_resid=self.resid_studentized_internal,
+                                      hat_diag=self.hat_matrix_diag,
+                                      dffits_internal=self.dffits_internal[0],
+                                      student_resid=self.resid_studentized_external,
+                                      dffits=self.dffits[0]),
+                                 index=row_labels)
+        # NOTE: if we don't give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
-                            index=row_labels)
+                           index=row_labels)
 
         return dfbeta.join(summary_data)
 
@@ -1014,23 +1000,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         Notes
         -----
         This also attaches table_data to the instance.
-
-
-
         '''
-        #print self.dfbetas
-
-#        table_raw = [ np.arange(self.nobs),
-#                      self.endog,
-#                      self.fittedvalues,
-#                      self.cooks_distance(),
-#                      self.resid_studentized_internal,
-#                      self.hat_matrix_diag,
-#                      self.dffits_internal,
-#                      self.resid_studentized_external,
-#                      self.dffits,
-#                      self.dfbetas
-#                      ]
         table_raw = [ ('obs', np.arange(self.nobs)),
                       ('endog', self.endog),
                       ('fitted\nvalue', self.results.fittedvalues),
@@ -1080,7 +1050,7 @@ def summary_table(res, alpha=0.05):
     infl = OLSInfluence(res)
 
     #standard error for predicted mean
-    #Note: using hat_matrix only works for fitted values
+    # Note: using hat_matrix only works for fitted values
     predict_mean_se = np.sqrt(infl.hat_matrix_diag*res.mse_resid)
 
     tppf = stats.t.isf(alpha/2., res.df_resid)
@@ -1089,34 +1059,37 @@ def summary_table(res, alpha=0.05):
                         res.fittedvalues + tppf * predict_mean_se])
 
 
-    #standard error for predicted observation
+    # standard error for predicted observation
     tmp = wls_prediction_std(res, alpha=alpha)
     predict_se, predict_ci_low, predict_ci_upp = tmp
 
     predict_ci = np.column_stack((predict_ci_low, predict_ci_upp))
 
-    #standard deviation of residual
+    # standard deviation of residual
     resid_se = np.sqrt(res.mse_resid * (1 - infl.hat_matrix_diag))
 
-    table_sm = np.column_stack([
-                                  np.arange(res.nobs) + 1,
-                                  res.model.endog,
-                                  res.fittedvalues,
-                                  predict_mean_se,
-                                  predict_mean_ci[:,0],
-                                  predict_mean_ci[:,1],
-                                  predict_ci[:,0],
-                                  predict_ci[:,1],
-                                  res.resid,
-                                  resid_se,
-                                  infl.resid_studentized_internal,
-                                  infl.cooks_distance[0]
-                                  ])
+    table_sm = np.column_stack([np.arange(res.nobs) + 1,
+                                res.model.endog,
+                                res.fittedvalues,
+                                predict_mean_se,
+                                predict_mean_ci[:, 0],
+                                predict_mean_ci[:, 1],
+                                predict_ci[:, 0],
+                                predict_ci[:, 1],
+                                res.resid,
+                                resid_se,
+                                infl.resid_studentized_internal,
+                                infl.cooks_distance[0]
+                                ])
 
 
     #colnames, data = lzip(*table_raw) #unzip
     data = table_sm
-    ss2 = ['Obs', 'Dep Var\nPopulation', 'Predicted\nValue', 'Std Error\nMean Predict', 'Mean ci\n95% low', 'Mean ci\n95% upp', 'Predict ci\n95% low', 'Predict ci\n95% upp', 'Residual', 'Std Error\nResidual', 'Student\nResidual', "Cook's\nD"]
+    ss2 = ['Obs', 'Dep Var\nPopulation',
+           'Predicted\nValue', 'Std Error\nMean Predict',
+           'Mean ci\n95% low', 'Mean ci\n95% upp',
+           'Predict ci\n95% low', 'Predict ci\n95% upp',
+           'Residual', 'Std Error\nResidual', 'Student\nResidual', "Cook's\nD"]
     colnames = ss2
     #self.table_data = data
     #data = np.column_stack(data)
@@ -1128,7 +1101,7 @@ def summary_table(res, alpha=0.05):
     fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
     #fmt_html['data_fmts'] = fmt['data_fmts']
     st = SimpleTable(data, headers=colnames, txt_fmt=fmt,
-                       html_fmt=fmt_html)
+                     html_fmt=fmt_html)
 
     return st, data, ss2
 
@@ -1150,9 +1123,6 @@ class GLMInfluence(MLEInfluence):
     other arguments are only to override default behavior and are used instead
     of the corresponding attribute of the results class.
     By default resid_pearson is used as resid.
-
-
-
 
     **Attributes**
 
@@ -1238,13 +1208,12 @@ class GLMInfluence(MLEInfluence):
 
         """
         hii = self.hat_matrix_diag
-        #Eubank p.93, 94
+        # Eubank p.93, 94
         cooks_d2 = self.resid_studentized**2 / self.k_vars
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
         #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
 
         return cooks_d2, pvals
@@ -1360,4 +1329,4 @@ class GLMInfluence(MLEInfluence):
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
         return dict(params=params, scale=scale, mse_resid=scale,  # alias for now
-                       det_cov_params=det_cov_params)
+                    det_cov_params=det_cov_params)

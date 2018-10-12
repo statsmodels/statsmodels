@@ -102,7 +102,6 @@ def notyet_atst():
     ##################################
 
 
-
 class TestDiagnosticG(object):
 
     @classmethod
@@ -165,9 +164,8 @@ class TestDiagnosticG(object):
         assert_almost_equal(cov, cov_hac_10, decimal=14)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
-
     def test_het_goldfeldquandt(self):
-        #TODO: test options missing
+        # TODO: test options missing
 
         #> gq = gqtest(fm, alternative='greater')
         #> mkhtest_f(gq, 'het_gq_greater', 'f')
@@ -231,8 +229,6 @@ class TestDiagnosticG(object):
 
         bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_t_est(bp, bptest, decimal=(12, 12))
-
-
 
     def test_het_white(self):
         res = self.res
@@ -380,7 +376,6 @@ class TestDiagnosticG(object):
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 13))
         compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 13))
 
-
     def test_harvey_collier(self):
 
         #> hc = harvtest(fm, order.by = NULL, data = list())
@@ -397,7 +392,6 @@ class TestDiagnosticG(object):
 
         hc = smsdia.linear_harvey_collier(self.res)
         compare_t_est(hc, harvey_collier, decimal=(12, 12))
-
 
     def test_rainbow(self):
         #rainbow test
@@ -432,7 +426,6 @@ class TestDiagnosticG(object):
         rb = smsdia.linear_rainbow(self.res, frac=0.4)
         compare_t_est(rb, raintest_fraction_04, decimal=(13, 14))
 
-
     def test_compare_lr(self):
         res = self.res
         res3 = self.res3 #nested within res
@@ -454,7 +447,6 @@ class TestDiagnosticG(object):
         wt = res.compare_f_test(res3)
         assert_almost_equal(wt[0], waldtest['fvalue'], decimal=11)
         assert_almost_equal(wt[1], waldtest['pvalue'], decimal=11)
-
 
     def test_compare_nonnested(self):
         res = self.res
@@ -497,7 +489,6 @@ class TestDiagnosticG(object):
                   ('M2 + fit(M1)-exp(fit(M2))',  0.000634664704814,
                    0.0000462387010349, 13.72583, 1.319536115230356e-30)]
 
-
     def test_cusum_ols(self):
         #R library(strucchange)
         #> sc = sctest(ginv ~ ggdp + lint, type="OLS-CUSUM")
@@ -520,7 +511,6 @@ class TestDiagnosticG(object):
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
                             decimal=13)
         #TODO: breaks_hansen doesn't return pvalues
-
 
     def test_recursive_residuals(self):
 
@@ -629,25 +619,24 @@ class TestDiagnosticG(object):
         ad3 = smsdia.normal_ad(res.resid[:20])
         compare_t_est(ad3, adr3, decimal=(11, 12))
 
-
     def test_influence(self):
+        # TODO: consider moving to test_influence?
         res = self.res
 
-        #this test is slow
+        # this test is slow; TODO: mark?
         infl = oi.OLSInfluence(res)
 
         path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
         with open(path, 'r') as fp:
             lsdiag = json.load(fp)
 
-        #basic
+        # basic
         assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
                             res.cov_params(), decimal=14)
         assert_almost_equal(np.array(lsdiag['cov.unscaled']).reshape(3, 3),
                             res.normalized_cov_params, decimal=14)
 
-        c0, c1 = infl.cooks_distance #TODO: what's c1
-
+        c0, c1 = infl.cooks_distance  # TODO: what's c1
 
         assert_almost_equal(c0, lsdiag['cooks'], decimal=14)
         assert_almost_equal(infl.hat_matrix_diag, lsdiag['hat'], decimal=14)
@@ -661,14 +650,13 @@ class TestDiagnosticG(object):
         assert_almost_equal(infl.resid_studentized_external,
                             lsdiag['stud.res'], decimal=14)
 
-        import pandas
-        fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
-        infl_r = pandas.read_csv(fn, index_col=0)
-        conv = lambda s: 1 if s=='TRUE' else 0
-        fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
+        path = os.path.join(cur_dir, "results", "influence_measures_R.csv")
+        infl_r = pd.read_csv(path, index_col=0)
         #not used yet:
-        #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-        #                                converters=dict(zip(lrange(7),[conv]*7)))
+        #conv = lambda s: 1 if s == 'TRUE' else 0
+        #path = os.path.join(cur_dir, "results", "influence_measures_bool_R.csv")
+        #infl_bool_r  = pd.read_csv(path, index_col=0,
+        #                           converters=dict(zip(lrange(7),[conv]*7)))
         infl_r2 = np.asarray(infl_r)
         assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
         assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
@@ -731,224 +719,6 @@ def grangertest():
 
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
-
-
-def test_outlier_influence_funcs(reset_randomstate):
-    #smoke test
-    x = add_constant(np.random.randn(10, 2))
-    y = x.sum(1) + np.random.randn(10)
-    res = OLS(y, x).fit()
-    out_05 = oi.summary_table(res)
-    # GH3344 : Check alpha has an effect
-    out_01 = oi.summary_table(res, alpha=0.01)
-    assert_(np.all(out_01[1][:, 6] <= out_05[1][:, 6]))
-    assert_(np.all(out_01[1][:, 7] >= out_05[1][:, 7]))
-
-    res2 = OLS(y, x[:,0]).fit()
-    oi.summary_table(res2, alpha=0.05)
-    infl = res2.get_influence()
-    infl.summary_table()
-
-
-def test_influence_wrapped():
-    from pandas import DataFrame
-    from pandas.util.testing import assert_series_equal
-
-    d = macrodata.load_pandas().data
-    #growth rates
-    gs_l_realinv = 400 * np.log(d['realinv']).diff().dropna()
-    gs_l_realgdp = 400 * np.log(d['realgdp']).diff().dropna()
-    lint = d['realint'][:-1]
-
-    # re-index these because they won't conform to lint
-    gs_l_realgdp.index = lint.index
-    gs_l_realinv.index = lint.index
-
-    data = dict(const=np.ones_like(lint), lint=lint, lrealgdp=gs_l_realgdp)
-    #order is important
-    exog = DataFrame(data, columns=['const','lrealgdp','lint'])
-
-    res = OLS(gs_l_realinv, exog).fit()
-
-    #basic
-    # already tested
-    #assert_almost_equal(lsdiag['cov.scaled'],
-    #                    res.cov_params().values.ravel(), decimal=14)
-    #assert_almost_equal(lsdiag['cov.unscaled'],
-    #                    res.normalized_cov_params.values.ravel(), decimal=14)
-
-    infl = oi.OLSInfluence(res)
-
-    # smoke test just to make sure it works, results separately tested
-    df = infl.summary_frame()
-    assert_(isinstance(df, DataFrame))
-
-    #this test is slow
-    path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-    with open(path, "r") as fp:
-        lsdiag = json.load(fp)
-
-    c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
-
-
-    #NOTE: we get a hard-cored 5 decimals with pandas testing
-    assert_almost_equal(c0, lsdiag['cooks'], 14)
-    assert_almost_equal(infl.hat_matrix_diag, (lsdiag['hat']), 14)
-    assert_almost_equal(infl.resid_studentized_internal,
-                        lsdiag['std.res'], 14)
-
-    #slow:
-    dffits, dffth = infl.dffits
-    assert_almost_equal(dffits, lsdiag['dfits'], 14)
-    assert_almost_equal(infl.resid_studentized_external,
-                        lsdiag['stud.res'], 14)
-
-    import pandas
-    fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
-    infl_r = pandas.read_csv(fn, index_col=0)
-    conv = lambda s: 1 if s=='TRUE' else 0
-    fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
-    #not used yet:
-    #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-    #                                converters=dict(zip(lrange(7),[conv]*7)))
-    infl_r2 = np.asarray(infl_r)
-    #TODO: finish wrapping this stuff
-    assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
-    assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
-
-
-def test_influence_dtype():
-    # see #2148  bug when endog is integer
-    y = np.ones(20)
-    np.random.seed(123)
-    x = np.random.randn(20, 3)
-    res1 = OLS(y, x).fit()
-
-    res2 = OLS(y*1., x).fit()
-    cr1 = res1.get_influence().cov_ratio
-    cr2 = res2.get_influence().cov_ratio
-    assert_allclose(cr1, cr2, rtol=1e-14)
-    # regression test for values
-    cr3 = np.array(
-      [ 1.22239215,  1.31551021,  1.52671069,  1.05003921,  0.89099323,
-        1.57405066,  1.03230092,  0.95844196,  1.15531836,  1.21963623,
-        0.87699564,  1.16707748,  1.10481391,  0.98839447,  1.08999334,
-        1.35680102,  1.46227715,  1.45966708,  1.13659521,  1.22799038])
-    assert_almost_equal(cr1, cr3, decimal=8)
-
-
-def get_duncan_data():
-    # results from R with NA -> 1. Just testing interface here because
-    # outlier_test is just a wrapper
-    labels = ['accountant', 'pilot', 'architect', 'author', 'chemist',
-              'minister', 'professor', 'dentist', 'reporter', 'engineer',
-              'undertaker', 'lawyer', 'physician', 'welfare.worker', 'teacher',
-              'conductor', 'contractor', 'factory.owner', 'store.manager',
-              'banker', 'bookkeeper', 'mail.carrier', 'insurance.agent',
-              'store.clerk', 'carpenter', 'electrician', 'RR.engineer',
-              'machinist', 'auto.repairman', 'plumber', 'gas.stn.attendant',
-              'coal.miner', 'streetcar.motorman', 'taxi.driver',
-              'truck.driver', 'machine.operator', 'barber', 'bartender',
-              'shoe.shiner', 'cook', 'soda.clerk', 'watchman', 'janitor',
-              'policeman', 'waiter']
-    #Duncan's prestige data from car
-    exog = [[1.0, 62.0, 86.0], [1.0, 72.0, 76.0], [1.0, 75.0, 92.0],
-            [1.0, 55.0, 90.0], [1.0, 64.0, 86.0], [1.0, 21.0, 84.0],
-            [1.0, 64.0, 93.0], [1.0, 80.0, 100.0], [1.0, 67.0, 87.0],
-            [1.0, 72.0, 86.0], [1.0, 42.0, 74.0], [1.0, 76.0, 98.0],
-            [1.0, 76.0, 97.0], [1.0, 41.0, 84.0], [1.0, 48.0, 91.0],
-            [1.0, 76.0, 34.0], [1.0, 53.0, 45.0], [1.0, 60.0, 56.0],
-            [1.0, 42.0, 44.0], [1.0, 78.0, 82.0], [1.0, 29.0, 72.0],
-            [1.0, 48.0, 55.0], [1.0, 55.0, 71.0], [1.0, 29.0, 50.0],
-            [1.0, 21.0, 23.0], [1.0, 47.0, 39.0], [1.0, 81.0, 28.0],
-            [1.0, 36.0, 32.0], [1.0, 22.0, 22.0], [1.0, 44.0, 25.0],
-            [1.0, 15.0, 29.0], [1.0, 7.0, 7.0], [1.0, 42.0, 26.0],
-            [1.0, 9.0, 19.0], [1.0, 21.0, 15.0], [1.0, 21.0, 20.0],
-            [1.0, 16.0, 26.0], [1.0, 16.0, 28.0], [1.0, 9.0, 17.0],
-            [1.0, 14.0, 22.0], [1.0, 12.0, 30.0], [1.0, 17.0, 25.0],
-            [1.0, 7.0, 20.0], [1.0, 34.0, 47.0], [1.0, 8.0, 32.0]]
-    endog = [ 82.,  83.,  90.,  76.,  90.,  87.,  93.,  90.,  52.,  88.,  57.,
-        89.,  97.,  59.,  73.,  38.,  76.,  81.,  45.,  92.,  39.,  34.,
-        41.,  16.,  33.,  53.,  67.,  57.,  26.,  29.,  10.,  15.,  19.,
-        10.,  13.,  24.,  20.,   7.,   3.,  16.,   6.,  11.,   8.,  41.,
-        10.]
-
-    return endog, exog, labels
-
-
-def test_outlier_test():
-    endog, exog, labels = get_duncan_data()
-    ndarray_mod = OLS(endog, exog).fit()
-    rstudent =  [3.1345185839, -2.3970223990,  2.0438046359, -1.9309187757,
-                 1.8870465798, -1.7604905300, -1.7040324156,  1.6024285876,
-                 -1.4332485037, -1.1044851583,  1.0688582315,  1.0185271840,
-                 -0.9024219332, -0.9023876471, -0.8830953936,  0.8265782334,
-                 0.8089220547,  0.7682770197,  0.7319491074, -0.6665962829,
-                 0.5227352794, -0.5135016547,  0.5083881518,  0.4999224372,
-                 -0.4980818221, -0.4759717075, -0.4293565820, -0.4114056499,
-                 -0.3779540862,  0.3556874030,  0.3409200462,  0.3062248646,
-                 0.3038999429, -0.3030815773, -0.1873387893,  0.1738050251,
-                 0.1424246593, -0.1292266025,  0.1272066463, -0.0798902878,
-                 0.0788467222,  0.0722556991,  0.0505098280,  0.0233215136,
-                 0.0007112055]
-    unadj_p = [0.003177202, 0.021170298, 0.047432955, 0.060427645, 0.066248120,
-               0.085783008, 0.095943909, 0.116738318, 0.159368890, 0.275822623,
-               0.291386358, 0.314400295, 0.372104049, 0.372122040, 0.382333561,
-               0.413260793, 0.423229432, 0.446725370, 0.468363101, 0.508764039,
-               0.603971990, 0.610356737, 0.613905871, 0.619802317, 0.621087703,
-               0.636621083, 0.669911674, 0.682917818, 0.707414459, 0.723898263,
-               0.734904667, 0.760983108, 0.762741124, 0.763360242, 0.852319039,
-               0.862874018, 0.887442197, 0.897810225, 0.899398691, 0.936713197,
-               0.937538115, 0.942749758, 0.959961394, 0.981506948, 0.999435989]
-    bonf_p = [0.1429741, 0.9526634, 2.1344830, 2.7192440, 2.9811654, 3.8602354,
-            4.3174759, 5.2532243, 7.1716001, 12.4120180, 13.1123861, 14.1480133,
-            16.7446822, 16.7454918, 17.2050103, 18.5967357, 19.0453245,
-            20.1026416, 21.0763395, 22.8943818, 27.1787396, 27.4660532,
-            27.6257642, 27.8911043, 27.9489466, 28.6479487, 30.1460253,
-            30.7313018, 31.8336506, 32.5754218, 33.0707100, 34.2442399,
-            34.3233506, 34.3512109, 38.3543568, 38.8293308, 39.9348989,
-            40.4014601, 40.4729411, 42.1520939, 42.1892152, 42.4237391,
-            43.1982627, 44.1678127, 44.9746195]
-    bonf_p = np.array(bonf_p)
-    bonf_p[bonf_p > 1] = 1
-    sorted_labels = ["minister", "reporter", "contractor", "insurance.agent",
-            "machinist", "store.clerk", "conductor", "factory.owner",
-            "mail.carrier", "streetcar.motorman", "carpenter", "coal.miner",
-            "bartender", "bookkeeper", "soda.clerk", "chemist", "RR.engineer",
-            "professor", "electrician", "gas.stn.attendant", "auto.repairman",
-            "watchman", "banker", "machine.operator", "dentist", "waiter",
-            "shoe.shiner", "welfare.worker", "plumber", "physician", "pilot",
-            "engineer", "accountant", "lawyer", "undertaker", "barber",
-            "store.manager", "truck.driver", "cook", "janitor", "policeman",
-            "architect", "teacher", "taxi.driver", "author"]
-
-    res2 = np.c_[rstudent, unadj_p, bonf_p]
-    res = oi.outlier_test(ndarray_mod, method='b', labels=labels, order=True)
-    np.testing.assert_almost_equal(res.values, res2, 7)
-    np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
-
-    data = pd.DataFrame(np.column_stack((endog, exog)),
-                        columns='y const var1 var2'.split(),
-                        index=labels)
-
-    # check `order` with pandas bug in #3971
-    res_pd = OLS.from_formula('y ~ const + var1 + var2 - 0', data).fit()
-
-    res_outl2 = oi.outlier_test(res_pd, method='b', order=True)
-    assert_almost_equal(res_outl2.values, res2, 7)
-    assert_equal(res_outl2.index.tolist(), sorted_labels)
-
-    res_outl1 = res_pd.outlier_test(method='b')
-    res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
-    assert_almost_equal(res_outl1.values, res2, 7)
-    assert_equal(res_outl1.index.tolist(), sorted_labels)
-    assert_array_equal(res_outl2.index, res_outl1.index)
-
-    # additional keywords in method
-    res_outl3 = res_pd.outlier_test(method='b', order=True)
-    assert_equal(res_outl3.index.tolist(), sorted_labels)
-    res_outl4 = res_pd.outlier_test(method='b', order=True, cutoff=0.15)
-    assert_equal(res_outl4.index.tolist(), sorted_labels[:1])
 
 
 if __name__ == '__main__':
