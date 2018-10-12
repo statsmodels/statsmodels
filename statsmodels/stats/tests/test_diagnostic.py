@@ -102,7 +102,6 @@ def notyet_atst():
     ##################################
 
 
-
 class TestDiagnosticG(object):
 
     @classmethod
@@ -165,9 +164,8 @@ class TestDiagnosticG(object):
         assert_almost_equal(cov, cov_hac_10, decimal=14)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
-
     def test_het_goldfeldquandt(self):
-        #TODO: test options missing
+        # TODO: test options missing
 
         #> gq = gqtest(fm, alternative='greater')
         #> mkhtest_f(gq, 'het_gq_greater', 'f')
@@ -231,8 +229,6 @@ class TestDiagnosticG(object):
 
         bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_t_est(bp, bptest, decimal=(12, 12))
-
-
 
     def test_het_white(self):
         res = self.res
@@ -380,7 +376,6 @@ class TestDiagnosticG(object):
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 13))
         compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 13))
 
-
     def test_harvey_collier(self):
 
         #> hc = harvtest(fm, order.by = NULL, data = list())
@@ -397,7 +392,6 @@ class TestDiagnosticG(object):
 
         hc = smsdia.linear_harvey_collier(self.res)
         compare_t_est(hc, harvey_collier, decimal=(12, 12))
-
 
     def test_rainbow(self):
         #rainbow test
@@ -432,7 +426,6 @@ class TestDiagnosticG(object):
         rb = smsdia.linear_rainbow(self.res, frac=0.4)
         compare_t_est(rb, raintest_fraction_04, decimal=(13, 14))
 
-
     def test_compare_lr(self):
         res = self.res
         res3 = self.res3 #nested within res
@@ -454,7 +447,6 @@ class TestDiagnosticG(object):
         wt = res.compare_f_test(res3)
         assert_almost_equal(wt[0], waldtest['fvalue'], decimal=11)
         assert_almost_equal(wt[1], waldtest['pvalue'], decimal=11)
-
 
     def test_compare_nonnested(self):
         res = self.res
@@ -497,7 +489,6 @@ class TestDiagnosticG(object):
                   ('M2 + fit(M1)-exp(fit(M2))',  0.000634664704814,
                    0.0000462387010349, 13.72583, 1.319536115230356e-30)]
 
-
     def test_cusum_ols(self):
         #R library(strucchange)
         #> sc = sctest(ginv ~ ggdp + lint, type="OLS-CUSUM")
@@ -520,7 +511,6 @@ class TestDiagnosticG(object):
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
                             decimal=13)
         #TODO: breaks_hansen doesn't return pvalues
-
 
     def test_recursive_residuals(self):
 
@@ -629,25 +619,24 @@ class TestDiagnosticG(object):
         ad3 = smsdia.normal_ad(res.resid[:20])
         compare_t_est(ad3, adr3, decimal=(11, 12))
 
-
     def test_influence(self):
+        # TODO: consider moving to test_influence?
         res = self.res
 
-        #this test is slow
+        # this test is slow; TODO: mark?
         infl = oi.OLSInfluence(res)
 
         path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
         with open(path, 'r') as fp:
             lsdiag = json.load(fp)
 
-        #basic
+        # basic
         assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
                             res.cov_params(), decimal=14)
         assert_almost_equal(np.array(lsdiag['cov.unscaled']).reshape(3, 3),
                             res.normalized_cov_params, decimal=14)
 
-        c0, c1 = infl.cooks_distance #TODO: what's c1
-
+        c0, c1 = infl.cooks_distance  # TODO: what's c1
 
         assert_almost_equal(c0, lsdiag['cooks'], decimal=14)
         assert_almost_equal(infl.hat_matrix_diag, lsdiag['hat'], decimal=14)
@@ -661,14 +650,13 @@ class TestDiagnosticG(object):
         assert_almost_equal(infl.resid_studentized_external,
                             lsdiag['stud.res'], decimal=14)
 
-        import pandas
-        fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
-        infl_r = pandas.read_csv(fn, index_col=0)
-        conv = lambda s: 1 if s=='TRUE' else 0
-        fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
+        path = os.path.join(cur_dir, "results", "influence_measures_R.csv")
+        infl_r = pd.read_csv(path, index_col=0)
         #not used yet:
-        #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-        #                                converters=dict(zip(lrange(7),[conv]*7)))
+        #conv = lambda s: 1 if s == 'TRUE' else 0
+        #path = os.path.join(cur_dir, "results", "influence_measures_bool_R.csv")
+        #infl_bool_r  = pd.read_csv(path, index_col=0,
+        #                           converters=dict(zip(lrange(7),[conv]*7)))
         infl_r2 = np.asarray(infl_r)
         assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
         assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
