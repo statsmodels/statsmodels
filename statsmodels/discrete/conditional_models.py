@@ -47,7 +47,7 @@ class conditionalModel(base.LikelihoodModel):
 
         if drops[0] > 0:
             msg = ("Dropped %d groups and %d observations for having " +
-                   "no within-group variance" % tuple(drops))
+                   "no within-group variance") % tuple(drops)
             warnings.warn(msg)
 
         # Number of groups
