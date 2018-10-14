@@ -79,6 +79,8 @@ from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 cimport statsmodels.tsa.statespace._tools as tools
+from statsmodels.tsa.statespace._tools cimport blas_dot
+
 
 {{for prefix, types in TYPES.items()}}
 from statsmodels.tsa.statespace._representation cimport {{prefix}}Statespace
@@ -1114,20 +1116,17 @@ cdef class {{prefix}}KalmanFilter(object):
 
     cdef int check_diffuse(self):
         cdef:
-            int inc = 1
-            {{cython_type}} alpha = 1.0
-            {{cython_type}} beta = 0.0
             {{cython_type}} scalar
 
         if self.t == self.nobs_diffuse:
+            scalar = blas_dot(self.k_states2, self._input_diffuse_state_cov,
+                              1, self._input_diffuse_state_cov)
             {{if combined_prefix == 'd'}}
-            if blas.{{prefix}}dot(&self.k_states2, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc) > self.tolerance_diffuse:
-                self.nobs_diffuse = self.nobs_diffuse + 1
+            if scalar > self.tolerance_diffuse:
             {{else}}
-            blas.{{prefix}}gemv("N", &inc, &self.k_states2, &alpha, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc, &beta, self._tmp00, &inc)
-            if {{combined_prefix}}abs(self._tmp00[0]) > self.tolerance_diffuse:
-                self.nobs_diffuse = self.nobs_diffuse + 1
+            if {{combined_prefix}}abs(scalar) > self.tolerance_diffuse:
             {{endif}}
+                self.nobs_diffuse = self.nobs_diffuse + 1
 
         return self.t < self.nobs_diffuse
 
