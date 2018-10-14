@@ -407,7 +407,6 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
     """
     # Constants
     cdef:
-        int inc = 1
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
@@ -721,7 +720,6 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
     """
     # Constants
     cdef:
-        int inc = 1
         {{cython_type}} alpha = 1.0
         int k_endog2 = k_endog**2
         int info, i
@@ -857,7 +855,7 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs, inc = 1
+    cdef int i, j, k, nobs
 
     nobs = m
     # Construct the non-missing index
