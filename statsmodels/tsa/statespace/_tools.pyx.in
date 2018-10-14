@@ -799,7 +799,7 @@ cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing,
     missing is a pointer to an n x 1 array
     n is the dimension of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -821,7 +821,7 @@ cdef int _{{prefix}}reorder_missing_submatrix({{cython_type}} * a, int * missing
     missing is a pointer to an n x 1 array
     n is the dimension of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, k, nobs
 
     _{{prefix}}reorder_missing_rows(a, missing, n, n)
     _{{prefix}}reorder_missing_cols(a, missing, n, n)
@@ -833,7 +833,7 @@ cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -855,7 +855,7 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, k, nobs
 
     nobs = m
     # Construct the non-missing index
@@ -895,7 +895,7 @@ cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [:
 
 
 cpdef int {{prefix}}reorder_missing_vector({{cython_type}} [::1, :] A, int [::1, :] missing) except *:
-    cdef int i, k, t, n, T, nobs
+    cdef int t, n, T
 
     n, T = A.shape[0:2]
 
@@ -912,7 +912,7 @@ cdef int _{{prefix}}copy_missing_diagonal({{cython_type}} * a, {{cython_type}} *
     missing is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs
+    cdef int i, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -934,7 +934,7 @@ cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} 
     missing is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs
+    cdef int i, j, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -954,7 +954,7 @@ cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, 
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, j, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -974,7 +974,7 @@ cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, 
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i, j, nobs
 
     nobs = m
     # Construct the non-missing index
