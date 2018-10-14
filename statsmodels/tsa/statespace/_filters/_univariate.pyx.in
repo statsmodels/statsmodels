@@ -143,8 +143,8 @@ cdef void {{prefix}}forecast_error({{prefix}}KalmanFilter kfilter, {{prefix}}Sta
     cdef:
         int inc = 1
         {{cython_type}} alpha = 1
-        {{cython_type}} beta = 0
         int k_states = model._k_states
+
     # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
@@ -287,9 +287,6 @@ cdef int {{prefix}}prediction_univariate({{prefix}}KalmanFilter kfilter, {{prefi
     cdef:
         int inc = 1
         int i, j
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
-        {{cython_type}} gamma = -1.0
 
     # #### Predicted state for time t+1
     # $a_{t+1} = T_t a_{t,n} + c_t$

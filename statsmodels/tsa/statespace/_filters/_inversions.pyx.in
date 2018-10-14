@@ -365,8 +365,6 @@ cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{prefix
     cdef:
         int info
         int inc = 1
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
 
     if not kfilter.converged:
         # Perform the Cholesky decomposition and get the determinant

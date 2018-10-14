@@ -229,14 +229,6 @@ cdef {{cython_type}} {{prefix}}forecast_error_diffuse_cov({{prefix}}KalmanFilter
 
 
 cdef int {{prefix}}prediction_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
-    # Constants
-    cdef:
-        int inc = 1
-        int i, j
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
-        {{cython_type}} gamma = -1.0
-
     {{prefix}}predicted_state(kfilter, model)
     {{prefix}}predicted_state_cov(kfilter, model)
     {{prefix}}predicted_diffuse_state_cov(kfilter, model)

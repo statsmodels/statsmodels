@@ -53,7 +53,6 @@ if prefix == 's':
 cdef int {{prefix}}forecast_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef int i, j
     cdef int inc = 1, design_t = 0
-    cdef {{cython_type}} alpha = 1
 
     # #### Forecast for time t  
     # `forecast` $= Z_t a_t + d_t$
@@ -280,9 +279,6 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
     # Constants
     cdef:
         {{cython_type}} loglikelihood
-        int inc = 1
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
 
     loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + {{combined_prefix}}log(determinant))
 
@@ -296,9 +292,6 @@ cdef {{cython_type}} {{prefix}}scale_conventional({{prefix}}KalmanFilter kfilter
     # Constants
     cdef:
         {{cython_type}} scale
-        int inc = 1
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
 
     scale = blas_dot(model._k_endog, kfilter._forecast_error, 1, kfilter._tmp2)
 
