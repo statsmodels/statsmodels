@@ -17,6 +17,7 @@ from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
 
 from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
+from statsmodels.tsa.tests.results import arma_acov_results
 
 arlist = [[1.],
           [1, -0.9],  # ma representation will need many terms to get high precision
@@ -40,7 +41,7 @@ def test_arma_acovf():
     rep1 = arma_acovf([1, -phi], [1], N)
     # rep 2: manually
     rep2 = [1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)]
-    assert_almost_equal(rep1, rep2, 7)  # 7 is max precision here
+    assert_allclose(rep1, rep2)
 
 
 def test_arma_acovf_persistent():
@@ -59,8 +60,7 @@ def test_arma_acovf_persistent():
     corrs = .9995**np.arange(10)
     expected = sig2*corrs
     assert_equal(res.ndim, 1)
-    assert_allclose(res, expected, atol=1e-6)
-    # atol=7 breaks at .999, worked at .995
+    assert_allclose(res, expected)
 
 
 def test_arma_acf():
@@ -73,7 +73,25 @@ def test_arma_acf():
     # rep 2: manually
     acovf = np.array([1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)])
     rep2 = acovf / (1. / (1 - phi ** 2))
-    assert_almost_equal(rep1, rep2, 8)  # 8 is max precision here
+    assert_allclose(rep1, rep2)
+
+    # Test other cases, against R's ARMAacf
+    bd_example_3_3_2 = arma_acf([1, -1, 0.25], [1, 1])
+    assert_allclose(bd_example_3_3_2, arma_acov_results.bd_example_3_3_2)
+    example_1 = arma_acf([1, -1, 0.25], [1, 1, 0.2])
+    assert_allclose(example_1, arma_acov_results.custom_example_1)
+    example_2 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3])
+    assert_allclose(example_2, arma_acov_results.custom_example_2)
+    example_3 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35])
+    assert_allclose(example_3, arma_acov_results.custom_example_3)
+    example_4 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35, -0.1])
+    assert_allclose(example_4, arma_acov_results.custom_example_4)
+    example_5 = arma_acf([1, -1, 0.25, -0.1], [1, 1, 0.2])
+    assert_allclose(example_5, arma_acov_results.custom_example_5)
+    example_6 = arma_acf([1, -1, 0.25, -0.1, 0.05], [1, 1, 0.2])
+    assert_allclose(example_6, arma_acov_results.custom_example_6)
+    example_7 = arma_acf([1, -1, 0.25, -0.1, 0.05, -0.02], [1, 1, 0.2])
+    assert_allclose(example_7, arma_acov_results.custom_example_7)
 
 
 def _manual_arma_generate_sample(ar, ma, eta):
@@ -155,8 +173,8 @@ def test_armafft():
             arma = ArmaFft(ar, ma, 20)
             ac1 = arma.invpowerspd(1024)[:10]
             ac2 = arma.acovf(10)[:10]
-            assert_almost_equal(ac1, ac2, decimal=7,
-                                err_msg='acovf not equal for %s, %s' % (ar, ma))
+            assert_allclose(ac1, ac2, atol=1e-15,
+                            err_msg='acovf not equal for %s, %s' % (ar, ma))
 
 
 def test_lpol2index_index2lpol():
