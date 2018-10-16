@@ -2921,7 +2921,6 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-        self.table = to_include
         # OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
         # data = np.column_stack(list(to_include.values()))
