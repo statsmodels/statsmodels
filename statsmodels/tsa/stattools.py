@@ -1005,9 +1005,9 @@ def innovations_algo(acov, nobs=None, rtol=None):
     rtol = 0.0 if rtol is None else rtol
     if not isinstance(rtol, float):
         raise ValueError('rtol must be a non-negative float or None.')
-    n = acov.shape[0] if nobs is None else int(nobs)
-    if n != nobs or nobs < 1:
+    if nobs is not None and (nobs != int(nobs) or nobs < 1):
         raise ValueError('nobs must be a positive integer')
+    n = acov.shape[0] if nobs is None else int(nobs)
     max_lag = int(np.max(np.argwhere(acov != 0)))
 
     v = np.zeros(n + 1)
