@@ -117,6 +117,9 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1):
     q = len(ma) - 1
     m = max(p, q) + 1
 
+    if sigma2 < 0:
+        raise ValueError('Must have positive innovation variance.')
+
     # Get the moving average representation coefficients that we need
     ma_coeffs = arma2ma(ar, ma, lags=m)
 
