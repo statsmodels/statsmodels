@@ -75,7 +75,9 @@ def test_arma_acf():
     rep2 = acovf / (1. / (1 - phi ** 2))
     assert_allclose(rep1, rep2)
 
-    # Test other cases, against R's ARMAacf
+
+def test_arma_acf_compare_R_ARMAacf():
+    # Test specific cases against output from R's ARMAacf
     bd_example_3_3_2 = arma_acf([1, -1, 0.25], [1, 1])
     assert_allclose(bd_example_3_3_2, results_arma_acf.bd_example_3_3_2)
     example_1 = arma_acf([1, -1, 0.25], [1, 1, 0.2])
