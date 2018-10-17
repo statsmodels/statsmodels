@@ -1093,7 +1093,7 @@ def innovations_filter(endog, theta):
             hat = (theta[i, :i] * u[:i][::-1]).sum()
         else:
             hat = (theta[i] * u[i - k:i][::-1]).sum()
-        u[i] = endog[i] + hat
+        u[i] = endog[i] - hat
     if is_pandas:
         u = pd.Series(u, index=orig_endog.index.copy())
     return u
