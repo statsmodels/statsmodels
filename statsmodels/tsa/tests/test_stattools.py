@@ -759,7 +759,7 @@ def test_innovations_filter_brockwell_davis():
     resid = innovations_filter(endog, theta)
     expected = [endog[0]]
     for i in range(1, 4):
-        expected.append(endog[i] + theta[i, 0] * expected[-1])
+        expected.append(endog[i] - theta[i, 0] * expected[-1])
     expected = np.array(expected)
     assert_allclose(resid, expected)
 
