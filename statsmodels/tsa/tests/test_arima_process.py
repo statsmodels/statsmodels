@@ -96,6 +96,35 @@ def test_arma_acf_compare_R_ARMAacf():
     assert_allclose(example_7, results_arma_acf.custom_example_7)
 
 
+def test_arma_acov_compare_theoretical_arma_acov():
+    # Test against the older version of this function, which used a different
+    # approach that nicely shows the theoretical relationship
+    # See GH:5324 when this was removed for full version of the function
+    # including documentation and inline comments
+
+    def arma_acovf_historical(ar, ma, nobs=10):
+        if np.abs(np.sum(ar) - 1) > 0.9:
+            nobs_ir = max(1000, 2 * nobs)
+        else:
+            nobs_ir = max(100, 2 * nobs)
+        ir = arma_impulse_response(ar, ma, leads=nobs_ir)
+        while ir[-1] > 5 * 1e-5:
+            nobs_ir *= 10
+            ir = arma_impulse_response(ar, ma, leads=nobs_ir)
+        if nobs_ir > 50000 and nobs < 1001:
+            end = len(ir)
+            acovf = np.array([np.dot(ir[:end-nobs-t], ir[t:end-nobs])
+                              for t in range(nobs)])
+        else:
+            acovf = np.correlate(ir, ir, 'full')[len(ir) - 1:]
+        return acovf[:nobs]
+
+    assert_allclose(arma_acovf([1, -0.5], [1, 0.2]),
+                    arma_acovf_historical([1, -0.5], [1, 0.2]))
+    assert_allclose(arma_acovf([1, -0.99], [1, 0.2]),
+                    arma_acovf_historical([1, -0.99], [1, 0.2]))
+
+
 def _manual_arma_generate_sample(ar, ma, eta):
     T = len(eta)
     ar = ar[::-1]
