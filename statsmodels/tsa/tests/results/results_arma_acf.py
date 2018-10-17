@@ -1,3 +1,9 @@
+"""
+ARMA autocorrelation results (from R's ARMAacf function)
+
+These numbers are printed out when running the R script results/test_arma_acf.R
+"""
+
 bd_example_3_3_2 = [
     1.00000000000, 0.87500000000, 0.62500000000, 0.40625000000, 0.25000000000,
     0.14843750000, 0.08593750000, 0.04882812500, 0.02734375000, 0.01513671875]

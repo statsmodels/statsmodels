@@ -17,7 +17,7 @@ from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
 
 from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
-from statsmodels.tsa.tests.results import arma_acov_results
+from statsmodels.tsa.tests.results import results_arma_acf
 
 arlist = [[1.],
           [1, -0.9],  # ma representation will need many terms to get high precision
@@ -77,21 +77,21 @@ def test_arma_acf():
 
     # Test other cases, against R's ARMAacf
     bd_example_3_3_2 = arma_acf([1, -1, 0.25], [1, 1])
-    assert_allclose(bd_example_3_3_2, arma_acov_results.bd_example_3_3_2)
+    assert_allclose(bd_example_3_3_2, results_arma_acf.bd_example_3_3_2)
     example_1 = arma_acf([1, -1, 0.25], [1, 1, 0.2])
-    assert_allclose(example_1, arma_acov_results.custom_example_1)
+    assert_allclose(example_1, results_arma_acf.custom_example_1)
     example_2 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3])
-    assert_allclose(example_2, arma_acov_results.custom_example_2)
+    assert_allclose(example_2, results_arma_acf.custom_example_2)
     example_3 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35])
-    assert_allclose(example_3, arma_acov_results.custom_example_3)
+    assert_allclose(example_3, results_arma_acf.custom_example_3)
     example_4 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35, -0.1])
-    assert_allclose(example_4, arma_acov_results.custom_example_4)
+    assert_allclose(example_4, results_arma_acf.custom_example_4)
     example_5 = arma_acf([1, -1, 0.25, -0.1], [1, 1, 0.2])
-    assert_allclose(example_5, arma_acov_results.custom_example_5)
+    assert_allclose(example_5, results_arma_acf.custom_example_5)
     example_6 = arma_acf([1, -1, 0.25, -0.1, 0.05], [1, 1, 0.2])
-    assert_allclose(example_6, arma_acov_results.custom_example_6)
+    assert_allclose(example_6, results_arma_acf.custom_example_6)
     example_7 = arma_acf([1, -1, 0.25, -0.1, 0.05, -0.02], [1, 1, 0.2])
-    assert_allclose(example_7, arma_acov_results.custom_example_7)
+    assert_allclose(example_7, results_arma_acf.custom_example_7)
 
 
 def _manual_arma_generate_sample(ar, ma, eta):
