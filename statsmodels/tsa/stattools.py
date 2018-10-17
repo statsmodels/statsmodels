@@ -1020,7 +1020,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
             for j in range(max(i - max_lag, 0), k):
                 sub += theta[k, k - j] * theta[i, i - j] * v[j]
             theta[i, i - k] = 1. / v[k] * (acov[i - k] - sub)
-            v[i] = acov[0]
+        v[i] = acov[0]
         for j in range(max(i - max_lag, 0), i):
             v[i] -= theta[i, i - j] ** 2 * v[j]
         # Break if v has converged
