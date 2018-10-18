@@ -91,7 +91,7 @@ class MultivariateGAMCV(BaseCV):
         y_train = self.y[train_index]
         y_test = self.y[test_index]
 
-        gam = self.gam(y_train, train_smoothers, alpha=self.alphas)
+        gam = self.gam(y_train, smoother=train_smoothers, alpha=self.alphas)
         gam_res = gam.fit(**kwargs)
         y_est = gam_res.predict(test_smoothers.basis_)
 
