@@ -54,13 +54,33 @@ class PenalizedMixin(object):
         self._null_drop_keys = getattr(self, '_null_drop_keys', [])
         self._null_drop_keys.extend(['penal'])
 
+    def _handle_scale(self, params, **kwds):
+
+        #if kwds['scale'] is not None:
+        #    raise
+        scale = kwds.get('scale', None)
+
+        if scale is None:
+            # special handling for GLM
+            if hasattr(self, 'scaletype'):
+                mu = self.predict(params)
+                scale = self.estimate_scale(mu)
+            else:
+                #raise
+                scale = 1
+                pass
+
+        return scale
+
+
     def loglike(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
         llf = super(PenalizedMixin, self).loglike(params, **kwds)
         if pen_weight != 0:
-            llf -= pen_weight * self.penal.func(params)
+            scale = self._handle_scale(params, **kwds)
+            llf -= 1/scale * pen_weight * self.penal.func(params)
 
         return llf
 
@@ -72,7 +92,8 @@ class PenalizedMixin(object):
         nobs_llf = float(llf.shape[0])
 
         if pen_weight != 0:
-            llf -= pen_weight / nobs_llf * self.penal.func(params)
+            scale = self._handle_scale(params, **kwds)
+            llf -= 1/scale * pen_weight / nobs_llf * self.penal.func(params)
 
         return llf
 
@@ -98,18 +119,20 @@ class PenalizedMixin(object):
 
         sc = super(PenalizedMixin, self).score(params, **kwds)
         if pen_weight != 0:
-            sc -= pen_weight * self.penal.grad(params)
+            scale = self._handle_scale(params, **kwds)
+            sc -= 1/scale * pen_weight * self.penal.grad(params)
 
         return sc
 
-    def score_obs(self, params, pen_weight=None, **kwargs):
+    def score_obs(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        sc = super(PenalizedMixin, self).score_obs(params, **kwargs)
+        sc = super(PenalizedMixin, self).score_obs(params, **kwds)
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
-            sc -= pen_weight / nobs_sc  * self.penal.grad(params)
+            scale = self._handle_scale(params, **kwds)
+            sc -= 1/scale * pen_weight / nobs_sc  * self.penal.grad(params)
 
         return sc
 
@@ -130,11 +153,12 @@ class PenalizedMixin(object):
 
         hess = super(PenalizedMixin, self).hessian(params, **kwds)
         if pen_weight != 0:
+            scale = self._handle_scale(params, **kwds)
             h = self.penal.deriv2(params)
             if h.ndim == 1:
-                hess -= np.diag(pen_weight * h)
+                hess -= 1/scale * np.diag(pen_weight * h)
             else:
-                hess -= pen_weight * h
+                hess -= 1/scale * pen_weight * h
 
         return hess
 

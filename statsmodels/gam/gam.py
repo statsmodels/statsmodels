@@ -7,13 +7,15 @@ import numpy as np
 import scipy as sp
 from statsmodels.discrete.discrete_model import Logit
 from scipy.stats import chi2
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper, lm, _check_convergence
+from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
+    GLMResultsWrapper, lm, _check_convergence)
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
 
 
 ## this class will be later removed and taken from another push
-class PenalizedMixin(object):
+class PenalizedMixin2(object):
     """Mixin class for Maximum Penalized Likelihood
     TODO: missing **kwds or explicit keywords
     TODO: do we really need `pen_weight` keyword in likelihood methods?
@@ -203,7 +205,7 @@ class GLMGAMResults(GLMResults):
 class GLMGam(PenalizedMixin, GLM):
     _results_class = GLMGAMResults
 
-    def __init__(self, endog, smoother, alpha, family=None, offset=None, exposure=None,
+    def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None, offset=None, exposure=None,
                  missing='none', **kwargs):
 
         import collections
@@ -214,6 +216,7 @@ class GLMGam(PenalizedMixin, GLM):
         self.alpha = alpha
 
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
+        kwargs.pop('penal', None)
         super(GLMGam, self).__init__(endog, exog=smoother.basis_, family=family, offset=offset, exposure=exposure,
                                      missing=missing, penal=penal, **kwargs)
         return
@@ -223,7 +226,9 @@ class GLMGam(PenalizedMixin, GLM):
             full_output=True, disp=False, max_start_irls=3, **kwargs):
 
         if method.lower() == 'pirls':
-            return self._fit_pirls(self.endog, self.smoother, self.alpha)
+            return self._fit_pirls(self.endog, self.smoother, self.alpha,
+                                   cov_type=cov_type, cov_kwds=cov_kwds,
+                                   **kwargs)
         else:
             return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
                                            scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
@@ -287,9 +292,10 @@ class GLMGam(PenalizedMixin, GLM):
             lin_pred = np.dot(wlsexog, wls_results.params).ravel() + self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
+            #self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
 
-            self.scale = self.estimate_scale(mu)
+
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
@@ -299,7 +305,7 @@ class GLMGam(PenalizedMixin, GLM):
             if converged:
                 break
         self.mu = mu
-
+        self.scale = self.estimate_scale(mu)
         glm_results = GLMGAMResults(self, wls_results.params,
                                     wls_results.normalized_cov_params,
                                     self.scale,
