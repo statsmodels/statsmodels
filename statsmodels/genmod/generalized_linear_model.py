@@ -1058,6 +1058,8 @@ class GLM(base.LikelihoodModel):
         self.scaletype = scale
 
         if method.lower() == "irls":
+            if cov_type.lower() == 'eim':
+                cov_type='nonrobust'
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
@@ -1112,6 +1114,13 @@ class GLM(base.LikelihoodModel):
             cov_p = None
         else:
             cov_p = rslt.normalized_cov_params / scale
+
+        if cov_type.lower() == 'eim':
+            oim = False
+            cov_type = 'nonrobust'
+        else:
+            oim = True
+        cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
 
         results_class = getattr(self, '_results_class', GLMResults)
         glm_results = results_class(self, rslt.params,
