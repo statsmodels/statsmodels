@@ -178,7 +178,7 @@ class TheilGLS(GLS):
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
 
-    def fit(self, pen_weight=1., cov_type='sandwich'):
+    def fit(self, pen_weight=1., cov_type='sandwich', use_t=True):
         """Estimate parameters and return results instance
 
         Parameters
@@ -256,7 +256,7 @@ class TheilGLS(GLS):
         self.xpxi = xpxi
         self.sigma2_e = sigma2_e
         lfit = TheilRegressionResults(self, params,
-                       normalized_cov_params=normalized_cov_params)
+                       normalized_cov_params=normalized_cov_params, use_t=use_t)
 
         lfit.penalization_factor = lambd
         return lfit
