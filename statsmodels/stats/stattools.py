@@ -23,8 +23,7 @@ def durbin_watson(resids, axis=0):
     Returns
     --------
     dw : float, array-like
-
-    The Durbin-Watson statistic.
+        The Durbin-Watson statistic.
 
     Notes
     -----
