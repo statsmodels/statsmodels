@@ -38,7 +38,10 @@ from . import _prediction as pred
 from statsmodels.genmod._prediction import PredictionResults
 
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             DomainWarning)
+                                             DomainWarning,
+                                             HessianInversionWarning)
+
+from numpy.linalg.linalg import LinAlgError
 
 __all__ = ['GLM', 'PredictionResults']
 
@@ -1122,7 +1125,14 @@ class GLM(base.LikelihoodModel):
             cov_type = 'nonrobust'
         else:
             oim = True
-        cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+
+        try:
+            cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+        except LinAlgError:
+            from warnings import warn
+            warn('Inverting hessian failed, no bse or cov_params '
+                 'available', HessianInversionWarning)
+            cov_p = None
 
         results_class = getattr(self, '_results_class', GLMResults)
         glm_results = results_class(self, rslt.params,
