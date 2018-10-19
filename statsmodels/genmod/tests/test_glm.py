@@ -60,7 +60,8 @@ class CheckModelResultsMixin(object):
 
     decimal_bse = DECIMAL_4
     def test_standard_errors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, self.decimal_bse)
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=10**(-self.decimal_bse), rtol=1e-5)
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
