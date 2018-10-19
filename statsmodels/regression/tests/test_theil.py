@@ -61,7 +61,7 @@ class TestTheilTextile(object):
 
         cov_r = np.array([[0.15**2, -0.01], [-0.01, 0.15**2]])
         mod = TheilGLS(endog, exog, r_matrix, q_matrix=r_mean, sigma_prior=cov_r)
-        cls.res1 = mod.fit(cov_type='data-prior')
+        cls.res1 = mod.fit(cov_type='data-prior', use_t=True)
         #cls.res1._cache['scale'] = 0.0001852252884817586 # from tg_mixed
         cls.res1._cache['scale'] = 0.00018334123641580062 # from OLS
         from .results import results_theil_textile as resmodule

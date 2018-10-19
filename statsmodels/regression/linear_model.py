@@ -1495,7 +1495,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 'covariance matrix of the errors is correctly ' +
                 'specified.'}
             if use_t is None:
-                self.use_t = True  # TODO: class default
+                use_t = True  # TODO: class default
+            self.use_t = use_t
         else:
             if cov_kwds is None:
                 cov_kwds = {}
