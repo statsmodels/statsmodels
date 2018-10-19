@@ -215,3 +215,84 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         res1 = res1.model.fit(pen_weight=pw, cov_type='HC0')
         assert_allclose(np.asarray(res1.cov_params()),
                         res2.Ve * self.covp_corrfact, rtol=1e-4)
+
+
+class TestGAM6Pirls(object):
+
+    @classmethod
+    def setup_class(cls):
+        s_scale = 0.0263073404164214
+
+        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
+        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
+                          alpha= 1 / s_scale )
+        cls.res1 = gam_cc.fit()
+
+    def test_fitted(self):
+        res1 = self.res1
+        pred = res1.get_prediction()
+        self.rtol_fitted = 1e-7
+        pls6_fittedvalues = np.array([
+            2.45008146537851, 3.14145063965465, 5.24130119353225,
+            6.63476330674223, 7.99704341866374, 13.9351103077006,
+            14.5508371638833, 14.785647621276, 15.1176070735895,
+            14.8053514054347, 13.790412967255, 13.790412967255,
+            11.2997845518655, 9.51681958051473, 8.4811626302547])
+        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+
+
+class TestGAM6Bfgs(object):
+
+    @classmethod
+    def setup_class(cls):
+        s_scale = 0.0263073404164214
+
+        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
+        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
+                          alpha=1 / s_scale / 2)
+        cls.res1 = gam_cc.fit(method='bfgs')
+
+    def test_fitted(self):
+        res1 = self.res1
+        pred = res1.get_prediction()
+        self.rtol_fitted = 1e-5
+        pls6_fittedvalues = np.array([
+            2.45008146537851, 3.14145063965465, 5.24130119353225,
+            6.63476330674223, 7.99704341866374, 13.9351103077006,
+            14.5508371638833, 14.785647621276, 15.1176070735895,
+            14.8053514054347, 13.790412967255, 13.790412967255,
+            11.2997845518655, 9.51681958051473, 8.4811626302547])
+        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+
+
+class TestGAM6Bfgs0(object):
+
+    @classmethod
+    def setup_class(cls):
+        s_scale = 0.0263073404164214
+
+        cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
+        gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
+                          alpha=0)
+        cls.res1 = gam_cc.fit(method='bfgs')
+
+    def test_fitted(self):
+        res1 = self.res1
+        pred = res1.get_prediction()
+        self.rtol_fitted = 1e-5
+        pls6_fittedvalues = np.array([
+            2.63203377595747, 3.41285892739456, 5.78168657308338,
+            7.35344779586831, 8.89178704316853, 15.7035642157176,
+            16.4510219628328, 16.7474993878412, 17.3397025587698,
+            17.1062522298643, 16.1786066072489, 16.1786066072489,
+            13.7402485937614, 11.9531909618517, 10.9073964111009])
+        assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+        assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)

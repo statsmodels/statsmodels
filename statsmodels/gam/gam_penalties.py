@@ -94,10 +94,13 @@ class UnivariateGamPenalty(Penalty):
         2) der2  is the second derivative of the splines basis
         '''
 
-        # The second derivative of the estimated regression function
-        f = np.dot(self.univariate_smoother.der2_basis_, params)
-
-        return self.alpha * np.sum(f ** 2) / self.n_samples
+        if self.univariate_smoother.der2_basis_ is not None:
+            # The second derivative of the estimated regression function
+            f = np.dot(self.univariate_smoother.der2_basis_, params)
+            return self.alpha * np.sum(f ** 2) / self.n_samples
+        else:
+            f = params.dot(self.univariate_smoother.cov_der2_.dot(params))
+            return self.alpha * f / self.n_samples
 
     def grad(self, params):
         '''
