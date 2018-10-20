@@ -1,5 +1,5 @@
 # Source to configure conda CI builds
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
 chmod +x miniconda.sh
 ./miniconda.sh -b -p /home/travis/miniconda
 export PATH=/home/travis/miniconda/bin:$PATH

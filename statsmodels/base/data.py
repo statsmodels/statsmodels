@@ -242,6 +242,7 @@ class ModelData(object):
                     raise ValueError("Shape mismatch between endog/exog "
                                      "and extra arrays given to model.")
                 # for going back and updated endog/exog
+                nan_mask = getattr(nan_mask, 'values', nan_mask)
                 updated_row_mask = combined_nans[~nan_mask]
                 nan_mask |= combined_nans  # for updating extra arrays only
             if combined_2d:
