@@ -351,7 +351,8 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
         self.der2_basis_ = der2_basis
         self.cov_der2_ = cov_der2
 
-        super(UnivariateGenericSmoother, self).__init__(x, variable_name)
+        super(UnivariateGenericSmoother, self).__init__(x,
+            variable_name=variable_name)
 
         return
 
@@ -362,7 +363,8 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
-        super(UnivariatePolynomialSmoother, self).__init__(x, variable_name)
+        super(UnivariatePolynomialSmoother, self).__init__(x,
+            variable_name=variable_name)
 
         return
 
@@ -391,7 +393,8 @@ class UnivariateBSplines(UnivariateGamSmoother):
     def __init__(self, x, degree, df, variable_name='x'):
         self.degree = degree
         self.df = df
-        super(UnivariateBSplines, self).__init__(x, variable_name)
+        super(UnivariateBSplines, self).__init__(x,
+                                                 variable_name=variable_name)
 
         return
 
@@ -404,7 +407,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
 
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
-    def __init__(self, x, variables_name=None):
+    def __init__(self, x, variable_names=None):
 
         if x.ndim == 1:
             self.x = x.copy()
@@ -414,10 +417,10 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
         self.n_samples, self.k_variables = self.x.shape
 
-        if variables_name is None:
-            self.variables_name = ['x' + str(i) for i in range(self.k_variables)]
+        if variable_names is None:
+            self.variable_names = ['x' + str(i) for i in range(self.k_variables)]
         else:
-            self.variables_name = variables_name
+            self.variable_names = variable_names
 
         self.smoothers_ = self._make_smoothers_list()
         self.basis_ = np.hstack(smoother.basis_ for smoother in self.smoothers_)
@@ -443,7 +446,7 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 class GenericSmoothers(MultivariateGamSmoother):
     def __init__(self, x, smoothers):
         self.smoothers_ = smoothers
-        super(GenericSmoothers, self).__init__(x, variables_name=None)
+        super(GenericSmoothers, self).__init__(x, variable_names=None)
         return
 
     def _make_smoothers_list(self):
@@ -451,31 +454,32 @@ class GenericSmoothers(MultivariateGamSmoother):
 
 
 class PolynomialSmoother(MultivariateGamSmoother):
-    def __init__(self, x, degrees, variables_name=None):
+    def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
-        super(PolynomialSmoother, self).__init__(x, variables_name)
+        super(PolynomialSmoother, self).__init__(x,
+                                                 variable_names=variable_names)
         return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
             smoothers.append(UnivariatePolynomialSmoother(self.x[:, v], degree=self.degrees[v],
-                                                          variable_name=self.variables_name[v]))
+                                                          variable_name=self.variable_names[v]))
         return smoothers
 
 
 class BSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, degree, variables_name=None):
+    def __init__(self, x, df, degree, variable_names=None):
         self.degrees = degree
         self.dfs = df
-        super(BSplines, self).__init__(x, variables_name)
+        super(BSplines, self).__init__(x, variable_names=variable_names)
         return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
             smoothers.append(UnivariateBSplines(self.x[:, v], degree=self.degrees[v], df=self.dfs[v],
-                                                variable_name=self.variables_name[v]))
+                                                variable_name=self.variable_names[v]))
 
         return smoothers
 
@@ -491,7 +495,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         self.df = df
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicSplines, self).__init__(x, variable_name)
+        super(UnivariateCubicSplines, self).__init__(x,
+            variable_name=variable_name)
 
         return
 
@@ -529,16 +534,16 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
 
 class CubicSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, variables_name=None):
+    def __init__(self, x, df, variable_names=None):
         self.dfs = df
-        super(CubicSplines, self).__init__(x, variables_name)
+        super(CubicSplines, self).__init__(x, variable_names=variable_names)
         return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
             smoothers.append(UnivariateCubicSplines(self.x[:, v], df=self.dfs[v],
-                                                    variable_name=self.variables_name[v]))
+                                                    variable_name=self.variable_names[v]))
 
         return smoothers
 
@@ -612,11 +617,11 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 
 class CyclicCubicSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, constraints=None, variables_name=None):
+    def __init__(self, x, df, constraints=None, variable_names=None):
         self.dfs = df
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        super(CyclicCubicSplines, self).__init__(x, variables_name)
+        super(CyclicCubicSplines, self).__init__(x, variable_names=variable_names)
         return
 
     def _make_smoothers_list(self):
@@ -624,7 +629,7 @@ class CyclicCubicSplines(MultivariateGamSmoother):
         for v in range(self.k_variables):
             smoothers.append(UnivariateCubicCyclicSplines(self.x[:, v], df=self.dfs[v],
                                                           constraints=self.constraints,
-                                                          variable_name=self.variables_name[v]))
+                                                          variable_name=self.variable_names[v]))
 
         return smoothers
 
