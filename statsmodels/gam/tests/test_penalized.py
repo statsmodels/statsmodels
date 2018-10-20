@@ -140,6 +140,43 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         assert_allclose(np.asarray(res1.cov_params()),
                         res2.Ve * self.covp_corrfact, rtol=1e-4)
 
+class TestGAM5Pirls(CheckGAMMixin):
+
+    cov_type = 'nonrobust'
+
+    @classmethod
+    def setup_class(cls):
+        s_scale = 0.0263073404164214
+
+        x = data_mcycle['times'].values
+        endog = data_mcycle['accel']
+        cc = CyclicCubicSplines(x, df=[6], constraints='center')
+        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale )
+        cls.res1 = gam_cc.fit()
+        cls.res2 = results_pls.pls5
+
+        cls.rtol_fitted = 1e-12
+        cls.covp_corrfact = 1.0025464444310588
+
+
+class TestGAM5Bfgs(CheckGAMMixin):
+
+    cov_type = 'nonrobust'
+
+    @classmethod
+    def setup_class(cls):
+        s_scale = 0.0263073404164214
+
+        x = data_mcycle['times'].values
+        endog = data_mcycle['accel']
+        cc = CyclicCubicSplines(x, df=[6], constraints='center')
+        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale / 2 )
+        cls.res1 = gam_cc.fit(method='bfgs')
+        cls.res2 = results_pls.pls5
+
+        cls.rtol_fitted = 1e-5
+        cls.covp_corrfact = 1.0025464444310588
+
 
 class TestGAM6Pirls(object):
 

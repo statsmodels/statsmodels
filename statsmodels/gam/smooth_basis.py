@@ -10,12 +10,11 @@ from __future__ import division
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
 
-from patsy import dmatrix
 import numpy as np
-from patsy.util import have_pandas
+import pandas as pd
+from patsy import dmatrix
 
-if have_pandas:
-    import pandas
+from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 
 ### Obtain b splines from patsy ###
@@ -287,10 +286,10 @@ class BS(object):
         basis = _eval_bspline_basis(x, self._all_knots, self._degree)
         if not include_intercept:
             basis = basis[:, 1:]
-        if have_pandas:
-            if isinstance(x, (pandas.Series, pandas.DataFrame)):
-                basis = pandas.DataFrame(basis)
-                basis.index = x.index
+
+        if isinstance(x, (pd.Series, pd.DataFrame)):
+            basis = pd.DataFrame(basis)
+            basis.index = x.index
         return basis
 
 
@@ -310,12 +309,32 @@ class BS(object):
 # plt.show()
 
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
-    def __init__(self, x, variable_name='x'):
+    def __init__(self, x, constraints=None, variable_name='x'):
         self.x = x
         self.variable_name = variable_name
         self.n_samples, self.k_variables = len(x), 1
 
-        self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = self._smooth_basis_for_single_variable()
+        base4 = self._smooth_basis_for_single_variable()
+        if constraints == 'center':
+            constraints = base4[0].mean(0)[None, :]
+        if constraints is not None:
+            ctransf = transf_constraints(constraints)
+            self.ctransf = ctransf
+        else:
+            self.ctransf = None
+
+        self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = base4
+        if self.ctransf is not None:
+            # transform attributes that are not None
+            if base4[0] is not None:
+                self.basis_ = base4[0].dot(ctransf)
+            if base4[1] is not None:
+                self.der_basis_ = base4[1].dot(ctransf)
+            if base4[2] is not None:
+                self.der2_basis_ = base4[2].dot(ctransf)
+            if base4[3] is not None:
+                self.cov_der2_ = ctransf.T.dot(base4[3]).dot(ctransf)
+
         self.dim_basis = self.basis_.shape[1]
         return
 
@@ -325,7 +344,8 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
 
 class UnivariateGenericSmoother(UnivariateGamSmoother):
-    def __init__(self, x, basis, der_basis, der2_basis, cov_der2, variable_name='x'):
+    def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
+                 variable_name='x'):
         self.basis_ = basis
         self.der_basis_ = der_basis
         self.der2_basis_ = der2_basis
@@ -528,12 +548,13 @@ from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 
 class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
-    def __init__(self, x, df, variable_name='x'):
+    def __init__(self, x, df, constraints=None, variable_name='x'):
         self.degree = 3
         self.df = df
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicCyclicSplines, self).__init__(x, variable_name)
+        super(UnivariateCubicCyclicSplines, self).__init__(x,
+            constraints=constraints, variable_name=variable_name)
 
         return
 
@@ -591,8 +612,10 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 
 class CyclicCubicSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, variables_name=None):
+    def __init__(self, x, df, constraints=None, variables_name=None):
         self.dfs = df
+        # TODO: move attaching constraints to super call
+        self.constraints = constraints
         super(CyclicCubicSplines, self).__init__(x, variables_name)
         return
 
@@ -600,6 +623,7 @@ class CyclicCubicSplines(MultivariateGamSmoother):
         smoothers = []
         for v in range(self.k_variables):
             smoothers.append(UnivariateCubicCyclicSplines(self.x[:, v], df=self.dfs[v],
+                                                          constraints=self.constraints,
                                                           variable_name=self.variables_name[v]))
 
         return smoothers
