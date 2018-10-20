@@ -28,9 +28,6 @@ from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 from .results import results_pls
 
-# temporary location
-
-
 
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
@@ -54,11 +51,6 @@ file_path = os.path.join(cur_dir, "results", "motorcycle.csv")
 data_mcycle = pd.read_csv(file_path)
 
 
-# In[12]:
-
-
-
-
 class CheckGAMMixin(object):
 
     @classmethod
@@ -74,7 +66,6 @@ class CheckGAMMixin(object):
         restriction = matrix_sqrt(penalty_matrix)
         return exog, penalty_matrix, restriction
 
-
     def test_params(self):
         res1 = self.res1
         res2 = self.res2
@@ -87,7 +78,6 @@ class CheckGAMMixin(object):
         res2 = self.res2
         assert_allclose(res1.fittedvalues, res2.fitted_values,
                         rtol=self.rtol_fitted)
-
 
 
 class TestTheilPLS5(CheckGAMMixin):
@@ -109,7 +99,6 @@ class TestTheilPLS5(CheckGAMMixin):
 
         cls.rtol_fitted = 1e-7
         cls.covp_corrfact = 0.99786932844203202
-
 
     def test_cov_robust(self):
         res1 = self.res1
