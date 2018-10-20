@@ -390,11 +390,11 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 
 
 class UnivariateBSplines(UnivariateGamSmoother):
-    def __init__(self, x, degree, df, variable_name='x'):
+    def __init__(self, x, degree, df, constraints=None, variable_name='x'):
         self.degree = degree
         self.df = df
         super(UnivariateBSplines, self).__init__(x,
-                                                 variable_name=variable_name)
+            constraints=constraints, variable_name=variable_name)
 
         return
 
@@ -469,9 +469,11 @@ class PolynomialSmoother(MultivariateGamSmoother):
 
 
 class BSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, degree, variable_names=None):
+    def __init__(self, x, df, degree, constraints=None, variable_names=None):
         self.degrees = degree
         self.dfs = df
+        # TODO: move attaching constraints to super call
+        self.constraints = constraints
         super(BSplines, self).__init__(x, variable_names=variable_names)
         return
 
@@ -479,6 +481,7 @@ class BSplines(MultivariateGamSmoother):
         smoothers = []
         for v in range(self.k_variables):
             smoothers.append(UnivariateBSplines(self.x[:, v], degree=self.degrees[v], df=self.dfs[v],
+                                                constraints=self.constraints,
                                                 variable_name=self.variable_names[v]))
 
         return smoothers
