@@ -805,7 +805,7 @@ class GLM(base.LikelihoodModel):
         resid = np.power(self.endog - mu, 2) * self.iweights
         return np.sum(resid / self.family.variance(mu)) / self.df_resid
 
-    def estimate_tweedie_power(self, mu, method='brentq', low=1.01, high=5.):
+    def estimate_tweedie_power(self, mu, method='brentq', **kwargs):
         """
         Tweedie specific function to estimate scale and the variance parameter.
         The variance parameter is also referred to as p, xi, or shape.
@@ -815,10 +815,9 @@ class GLM(base.LikelihoodModel):
         mu : array-like
             Fitted mean response variable
         method : str, defaults to 'brentq'
-            Method to search for optimized `p`. 'brentq' will use the Pearson
-            estimate solved with the `brentq` scipy optimizer. 'ols' will use
-            Taylor's reggresion estimator. 'glm-gamma' will use Perry's gamma
-            regression estimator which is a gamma-glm.
+            Method to search for optimized `p`. 'brentq' uses the Pearson
+            estimate solved with the `brentq` scipy optimizer. `glm-gamma` fits
+            a GLM with a Gamma distribution. `ols` fits an OLS model.
 
         If the 'brentq' method is specified, the following additional arguments
         are accepted:
@@ -845,30 +844,33 @@ class GLM(base.LikelihoodModel):
             low = kwargs.get('low', 1.01)
             high = kwargs.get('high', 1.99)
 
+            def psi_p(power, scale):
+                psi = ((self.endog - mu) ** 2 / (scale * (mu ** power)) - 1)
+                psi *= np.log(mu) * self.iweights
+                return psi.sum()
+
+            def estimate_x2_scale(mu, p):
+                resid = np.power(self.endog - mu, 2) * self.iweights
+                return np.sum(resid / np.power(mu, p)) / self.df_resid
+
             def difference(p):
-                scale = ((self.freq_weights * (self.endog - mu) ** 2 /
-                          mu ** p).sum() / self.df_resid)
-                scale /= self.var_weights
+                scale = estimate_x2_scale(mu, p)
 
-                def psi_p(power):
-                    psi = ((self.endog - mu) ** 2 / (scale * mu ** power) - 1)
-                    psi *= np.log(mu) * self.freq_weights
-                    return psi.sum()
-
-                new_p = brentq(psi_p, -100, 100.)
+                new_p = brentq(psi_p, -100, 100., args=(scale, ))
                 return np.abs(new_p - p)
 
-            power = minimize_scalar(difference, bounds=(low, high)).x
+            power = minimize_scalar(difference, bounds=(low, high),
+                                    method='bounded', tol=1e-20).x
 
-        elif method == 'perry':
+        elif method == 'glm-gamma':
             y = np.power(self.endog - mu, 2)
             x = np.column_stack((np.ones(len(self.endog)), np.log(mu)))
-            model = GLM(y, x, freq_weights=weights,
+            model = GLM(y, x, var_weights=weights,
                         family=families.Gamma(families.links.log))
             res = model.fit()
             scale, power = res.params
 
-        elif method == 'taylor':
+        elif method == 'ols':
             from statsmodels.regression.linear_model import WLS
 
             y = np.log(np.power(self.endog - mu, 2))
@@ -877,8 +879,8 @@ class GLM(base.LikelihoodModel):
             res = model.fit()
             scale, power = res.params
         else:
-            raise NotImplementedError("Only brentq, taylor, and perry can "
-                                      "currently be used")
+            raise NotImplementedError("Only `brentq`, `glm-gamma`, and `perry`"
+                                      " can currently be used")
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
@@ -1487,7 +1489,6 @@ class GLMResults(base.LikelihoodModelResults):
     --------
     statsmodels.base.model.LikelihoodModelResults
     """
-
     def __init__(self, model, params, normalized_cov_params, scale,
                  cov_type='nonrobust', cov_kwds=None, use_t=None):
         super(GLMResults, self).__init__(
