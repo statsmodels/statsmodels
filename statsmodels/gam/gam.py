@@ -205,8 +205,16 @@ class GLMGAMResults(GLMResults):
 class GLMGam(PenalizedMixin, GLM):
     _results_class = GLMGAMResults
 
-    def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None, offset=None, exposure=None,
-                 missing='none', **kwargs):
+    def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None,
+                 offset=None, exposure=None, missing='none', **kwargs):
+
+        if exog is not None:
+            exog_linear = np.asarray(exog)
+            k_exog_linear = exog_linear.shape[1]
+        else:
+            exog_linear = None
+            k_exog_linear = 0
+        self.k_exog_linear = k_exog_linear
 
         import collections
         if not isinstance(alpha, collections.Iterable):
@@ -214,19 +222,25 @@ class GLMGam(PenalizedMixin, GLM):
 
         self.smoother = smoother
         self.alpha = alpha
-
-        penal = MultivariateGamPenalty(smoother, alpha=alpha)
+        penal = MultivariateGamPenalty(smoother, alpha=alpha,
+                                       start_idx=k_exog_linear,
+                                       )
         kwargs.pop('penal', None)
-        super(GLMGam, self).__init__(endog, exog=smoother.basis_, family=family, offset=offset, exposure=exposure,
-                                     missing=missing, penal=penal, **kwargs)
-        return
+        if exog_linear is not None:
+            exog = np.column_stack((exog_linear, smoother.basis_))
+        else:
+            exog = smoother.basis_
+        super(GLMGam, self).__init__(endog, exog=exog, family=family,
+                                     offset=offset, exposure=exposure,
+                                     penal=penal, missing=missing, **kwargs)
+
 
     def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
 
         if method.lower() == 'pirls':
-            return self._fit_pirls(self.endog, self.smoother, self.alpha,
+            return self._fit_pirls(self.alpha,
                                    cov_type=cov_type, cov_kwds=cov_kwds,
                                    **kwargs)
         else:
@@ -236,13 +250,21 @@ class GLMGam(PenalizedMixin, GLM):
         return
 
     # pag 165 4.3 # pag 136 PIRLS
-    def _fit_pirls(self, y, smoother, alpha, start_params=None, maxiter=100, tol=1e-8,
+    def _fit_pirls(self, alpha, start_params=None, maxiter=100, tol=1e-8,
                    scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
 
         # alpha = alpha * len(y) * self.scale / 100 # TODO: we need to rescale alpha
-        endog = y
-        wlsexog = smoother.basis_
-        spl_s = smoother.penalty_matrices_
+        endog = self.endog
+        wlsexog = self.exog #smoother.basis_
+        spl_s = self.smoother.penalty_matrices_
+        if self.k_exog_linear > 0:
+            if not isinstance(spl_s, list):
+                spl_s = [spl_s]
+            if not isinstance(alpha, list):
+                alpha = [alpha]
+            # assumes spl_s and alpha are lists
+            spl_s = [np.zeros((self.k_exog_linear, self.k_exog_linear))] + spl_s
+            alpha = [0] + alpha
 
         n_samples, n_columns = wlsexog.shape
 
