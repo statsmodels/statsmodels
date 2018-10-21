@@ -18,10 +18,9 @@ _valid_components = ['level', 'stochastic_level', 'trend', 'stochastic_trend',
                       'AR', 'MA']
 _stationary_components = ['irregular', 'AR', 'MA']
 _non_stationary_components = ['level', 'stochastic_level',
-                        'trend', 'stochastic_trend']#, 'freq_seasonal',
-                              #'stochastic_freq_seasonal']
+                        'trend', 'stochastic_trend']
 _stochastic_components = ['stochastic_level', 'stochastic_trend',
-                          'irregular']#, 'stochastic_freq_seasonal']
+                          'irregular']
 
 
 # Construct the model
@@ -29,9 +28,24 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
     """
     Univariate time-varying coefficient regression models
 
-    A model in which the coefficients of the exogonous covariates are
-    described by a univariate unobserved components model. At present
-    only local level and trend models are available for the coefficinets.
+    This class supports a variety of time varying parameter regression models.
+    Two particularly common kinds are where the time varying coefficients are
+    assumed to follow a random walk and where they are assumed to follow an
+    ARMA process.
+
+    The random walk case was studied in detail in Cooley, T. F. and E. C.
+    Prescott (1973), "An Adaptive Regression Model", International Economic
+    Review. The ARMA case was studied in Harvey A.C., Phillips G.D.A. (1982)
+    The Estimation of Regression Models with Time-Varying Parameters. In:
+    Deistler M., Fürst E., Schwödiauer G. (eds) Games, Economic Dynamics, and
+    Time Series Analysis. Physica, Heidelberg.
+
+    This class aims to support both these models and extend them to the
+    case where the coefficients of the exogonous covariates are
+    described by a general univariate unobserved components model. At present 
+    the available models for the coefficients include a local level (random 
+    walk), local linear trend (also modelled with a random walk), irregular or
+    AMRA errors and seasonality modelled by a trigonometric model.
     Ulitmately it is intendeperiodd to add the full suite of components that
     are standard in unobserved components models:
 
