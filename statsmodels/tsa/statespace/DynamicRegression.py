@@ -26,7 +26,7 @@ _stochastic_components = ['stochastic_level', 'stochastic_trend',
 
 # Construct the model
 class DynamicRegression(MLEModel):
-    """
+    r"""
     Univariate time-varying coefficient regression models
 
     This class supports a variety of time varying parameter regression models.
