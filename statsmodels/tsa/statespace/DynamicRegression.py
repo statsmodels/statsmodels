@@ -35,6 +35,47 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
     Ulitmately it is intendeperiodd to add the full suite of components that
     are standard in unobserved components models:
 
+
+    At present this implements a dynamic regression model of the form:
+
+    $d_t = \sum\limits_x \beta_{x}n_{x,t} + \epsilon_t$
+
+    $\epsilon_t \sim N(0,\sigma_{\epsilon}^2)$
+
+    x and \beta can be vectors to support multiple exogenous regressors.
+
+    Each exogenous regressor in $\beta$ evolves according to a univariate unobserved components model of the form:
+
+    $\beta_{x,t} = \mu_{x,t} + \rho_{x_t} + \gamma_{x,t}$, $\forall x$ 
+
+    $\mu_{x,t}$ models a local level/trend:
+
+    $\mu_{x,t} = \mu_{x,t-1} + \nu_{x,t-1} + \eta_{x,t}$
+
+    $\nu_{x,t} = \nu_{x,t-1} \zeta_{x,t}$
+
+    where $\eta_{x,t} \sim N(0,\sigma_{\eta}^2)$ and $\zeta_{x,t} \sim N(0,\sigma_{\zeta}^2)$
+
+    $\rho_{x,t}$ models an irregular/ARMA error:
+
+    $\rho_{x,t} = \sum\limits_{i=1}^p \phi_{x,i} \rho_{x,t-i} +  \sum\limits_{i=1}^q \theta_{x,i} \xi_{t-1}$
+
+    where $\xi_{x,t} \sim N(0,\sigma_{\xi}^2)$ 
+
+    $\gamma_{x,t}$ models a seasonal effect by a trigonometric representation:
+
+    $\gamma_{x,t} = \sum\limits_{j=1}^{[s/2]} \gamma_{j,x,t}$
+
+    where:
+
+    $\gamma_{j,x,t+1} = \gamma_{j,x,t} \textrm{cos}(\lambda_j) + \gamma_{j,x,t}^\ast \textrm{sin}(\lambda_j) + \omega_{x,t}$
+
+    $\gamma_{j,x,t+1}^\ast = - \gamma_{j,x,t} \textrm{sin}(\lambda_j) + \gamma_{j,x,t}^\ast \textrm{cos}(\lambda_j) + \omega_{x,t}^*$
+
+    $\lambda_j = \frac{2\pi j}{s}$ for $j = 1,..., [s/2]$
+
+    $\omega_{x,t} \sim N(0,\sigma_{\omega}^2)$ and $\omega_{x,t}^* \sim N(0,\sigma_{\omega}^2)$
+
     Parameters
     ----------
     exog : array_like or None, optional
@@ -42,15 +83,44 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
     exog_models : dict or list of dicts, optional
         Either a dict, a list containing a single dict, or a list of dict
         s, one for each exogonous regressor.
-        Admisble keys are the supported component types: 'irregular',
-        'level', and 'trend'. If a key is included in the dict and
-        it's value is not False, then it is included in the model. If the
-        corresponding value is "deterministic" then the state
-        corresponding to that component will not have a disturbance term.
-    dynamic : bool
-        Whether or not the regression coefficient updates over time. If
-        False then the states corresponding to the regression
-        coefficients have 0 variance.
+        Admisble keys are the supported component types:
+
+        'irregular' : bool
+            Whether or not to include an irregular component. Default is False.
+        'level' : bool
+            Whether or not to include a level component. Default is False. Can also
+            be a string specification of the level / trend component; see Notes
+            for available model specification strings.
+        'stochastic_level' : bool
+            Whether or not to inclue a stochastic level. Default is True. If True
+            replaces 'level'.
+        'trend' : bool
+            Whether or not to include a trend component. Default is False. If True,
+            `level` must also be True.
+        'stochastic_trend' : bool
+            Whether or not to include a stochastic trend component. Default is False.
+            If True replaces 'trend'
+        'freq_seasonal': dict
+            Whether (and how) to model seasonal component(s) with trig. functions.
+            Must be a dictionary with a key, value pair for
+            'period' -- integer and may have a key, value pair for
+            'harmonics' -- integer. If 'harmonics' is not specified in any of the
+            dictionaries, it defaults to the floor of period/2.
+        'stochastic_freq_seasonal': dict
+            Whether (and how) to model a stochastic seasonal component
+             with trig. functions.
+            Must be a dictionary with a key, value pair for
+            'period' -- integer and may have a key, value pair for
+            'harmonics' -- integer. If 'harmonics' is not specified in any of the
+            dictionaries, it defaults to the floor of period/2.
+            If True replaces 'freq_seasonal'
+        'AR' : int
+            The order of the autoregressive component. Default is False
+        'MA' : int
+            The order of the moving average component. Default is False
+        
+        
+
     """
     def __init__(self, endog, exog, exog_models={"level": True}):
         # Get k_exog from size of exog data
@@ -197,6 +267,23 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         self.set_param_indices()
     
     def set_param_indices(self):
+        """
+        Set AR_param_indices, MA_param_indices and state_cov_param_indices
+
+        Returns
+        -------
+        state_cov_param_indices : list
+            Holds the indices of elements of the params vector that correspond
+            to state_covariance terms.
+        AR_params_indices : list
+            Holds one slice of indices of the params vector for each exog_model
+            , each of which contains the idices of the AR parameter for that
+            model
+        MA_params_indices : list
+            Holds one slice of indices of the params vector for each exog_model
+            , each of which contains the idices of the MA parameter for that
+            model
+        """
         AR_param_indices = []
         MA_param_indices = []
         state_cov_param_indices = []
