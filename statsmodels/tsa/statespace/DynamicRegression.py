@@ -637,22 +637,6 @@ class DynamicRegression(MLEModel):
 class DynamicRegressionResults(MLEResults):
     """
     Class to hold results from fitting an unobserved components model.
-
-    Parameters
-    ----------
-    model : UnobservedComponents instance
-        The fitted model instance
-
-    Attributes
-    ----------
-    specification : dictionary
-        Dictionary including all attributes from the unobserved components
-        model instance.
-
-    See Also
-    --------
-    statsmodels.tsa.statespace.kalman_filter.FilterResults
-    statsmodels.tsa.statespace.mlemodel.MLEResults
     """
 
     def __init__(self, model, params, filter_results, cov_type='opg',
