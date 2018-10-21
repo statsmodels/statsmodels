@@ -136,7 +136,7 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, multivariate_smoother, alpha, wts=None):
+    def __init__(self, multivariate_smoother, alpha, wts=None, start_idx=0):
 
         if len(multivariate_smoother.smoothers_) != len(alpha):
             raise ValueError('all the input values should be list of the same length. len(smoothers_)=',
@@ -147,6 +147,8 @@ class MultivariateGamPenalty(Penalty):
         self.k_variables = self.multivariate_smoother.k_variables
         self.n_samples = self.multivariate_smoother.n_samples
         self.alpha = alpha
+        self.start_idx = start_idx
+        self.k_params = start_idx + self.dim_basis
 
         # TODO: Review this
         if wts is None:
@@ -154,9 +156,9 @@ class MultivariateGamPenalty(Penalty):
         else:
             self.wts = wts
 
-        self.mask = [np.array([False] * self.dim_basis)
+        self.mask = [np.array([False] * self.k_params)
                      for _ in range(self.k_variables)]
-        param_count = 0
+        param_count = start_idx
         for i, smoother in enumerate(self.multivariate_smoother.smoothers_):
             # the mask[i] contains a vector of length k_columns. The index
             # corresponding to the i-th input variable are set to True.
@@ -180,7 +182,7 @@ class MultivariateGamPenalty(Penalty):
         return cost
 
     def grad(self, params):
-        grad = []
+        grad = [np.zeros(self.start_idx)]
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
             grad.append(self.gp[i].grad(params_i))
@@ -188,7 +190,7 @@ class MultivariateGamPenalty(Penalty):
         return np.concatenate(grad)
 
     def deriv2(self, params):
-        deriv2 = np.empty(shape=(0, 0))
+        deriv2 = np.zeros((self.start_idx, self.start_idx))
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
             deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
