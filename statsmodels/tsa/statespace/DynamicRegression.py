@@ -9,7 +9,8 @@ from scipy.linalg import block_diag
 import statsmodels.api as sm
 import pandas as pd
 import warnings
-import pdb
+import statsmodels.base.wrapper as wrap
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (constrain_stationary_univariate,
                     unconstrain_stationary_univariate)
 
@@ -24,7 +25,7 @@ _stochastic_components = ['stochastic_level', 'stochastic_trend',
 
 
 # Construct the model
-class DynamicRegression(sm.tsa.statespace.MLEModel):
+class DynamicRegression(MLEModel):
     """
     Univariate time-varying coefficient regression models
 
@@ -178,7 +179,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                 mod['stochastic_freq_seasonal'] = False
             # each model must have a local level if it has a trend
             if (mod['stochastic_trend'
-                    ] or mod['trend']) and not (mod['stochastic_level'] 
+                    ] or mod['trend']) and not (mod['stochastic_level']
                                                 or mod['level']):
                 warnings.warn("A local level term is required with trend" +
                               "for exog" +
@@ -708,4 +709,4 @@ class DynamicRegressionResultsWrapper(MLEResultsWrapper):
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
 wrap.populate_wrapper(DynamicRegressionResultsWrapper,  # noqa:E305
-                      DynamicRegressionResultsResults)
+                      DynamicRegressionResults)
