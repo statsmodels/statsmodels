@@ -11,14 +11,14 @@ import pandas as pd
 import warnings
 import pdb
 from .tools import (constrain_stationary_univariate,
-    unconstrain_stationary_univariate)
+                    unconstrain_stationary_univariate)
 
 _valid_components = ['level', 'stochastic_level', 'trend', 'stochastic_trend',
                      'freq_seasonal', 'stochastic_freq_seasonal', 'irregular',
-                      'AR', 'MA']
+                     'AR', 'MA']
 _stationary_components = ['irregular', 'AR', 'MA']
 _non_stationary_components = ['level', 'stochastic_level',
-                        'trend', 'stochastic_trend']
+                              'trend', 'stochastic_trend']
 _stochastic_components = ['stochastic_level', 'stochastic_trend',
                           'irregular']
 
@@ -42,8 +42,8 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
 
     This class aims to support both these models and extend them to the
     case where the coefficients of the exogonous covariates are
-    described by a general univariate unobserved components model. At present 
-    the available models for the coefficients include a local level (random 
+    described by a general univariate unobserved components model. At present
+    the available models for the coefficients include a local level (random
     walk), local linear trend (also modelled with a random walk), irregular or
     AMRA errors and seasonality modelled by a trigonometric model.
     Ulitmately it is intendeperiodd to add the full suite of components that
@@ -58,9 +58,10 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
 
     x and \beta can be vectors to support multiple exogenous regressors.
 
-    Each exogenous regressor in $\beta$ evolves according to a univariate unobserved components model of the form:
+    Each exogenous regressor in $\beta$ evolves according to a univariate
+    unobserved components model of the form:
 
-    $\beta_{x,t} = \mu_{x,t} + \rho_{x_t} + \gamma_{x,t}$, $\forall x$ 
+    $\beta_{x,t} = \mu_{x,t} + \rho_{x_t} + \gamma_{x,t}$, $\forall x$
 
     $\mu_{x,t}$ models a local level/trend:
 
@@ -74,7 +75,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
 
     $\rho_{x,t} = \sum\limits_{i=1}^p \phi_{x,i} \rho_{x,t-i} +  \sum\limits_{i=1}^q \theta_{x,i} \xi_{t-1}$
 
-    where $\xi_{x,t} \sim N(0,\sigma_{\xi}^2)$ 
+    where $\xi_{x,t} \sim N(0,\sigma_{\xi}^2)$
 
     $\gamma_{x,t}$ models a seasonal effect by a trigonometric representation:
 
@@ -95,46 +96,41 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
     exog : array_like or None, optional
         Exogenous variables.
     exog_models : dict or list of dicts, optional
-        Either a dict, a list containing a single dict, or a list of dict
-        s, one for each exogonous regressor.
-        Admisble keys are the supported component types:
+        Either a dict, a list containing a single dict, or a list of dicts,
+        one for each exogonous regressor. Admisble keys are the supported
+        component types:
 
         'irregular' : bool
             Whether or not to include an irregular component. Default is False.
         'level' : bool
-            Whether or not to include a level component. Default is False. Can also
-            be a string specification of the level / trend component; see Notes
-            for available model specification strings.
+            Whether or not to include a level component. Default is False.
         'stochastic_level' : bool
-            Whether or not to inclue a stochastic level. Default is True. If True
-            replaces 'level'.
+            Whether or not to inclue a stochastic level. Default is True. If
+            True replaces 'level'.
         'trend' : bool
-            Whether or not to include a trend component. Default is False. If True,
-            `level` must also be True.
+            Whether or not to include a trend component. Default is False. If
+            True, `level` must also be True.
         'stochastic_trend' : bool
-            Whether or not to include a stochastic trend component. Default is False.
-            If True replaces 'trend'
+            Whether or not to include a stochastic trend component. Default is
+            False. If True replaces 'trend'
         'freq_seasonal': dict
-            Whether (and how) to model seasonal component(s) with trig. functions.
-            Must be a dictionary with a key, value pair for
+            Whether (and how) to model seasonal component(s) with trig.
+            functions. Must be a dictionary with a key, value pair for
             'period' -- integer and may have a key, value pair for
-            'harmonics' -- integer. If 'harmonics' is not specified in any of the
-            dictionaries, it defaults to the floor of period/2.
+            'harmonics' -- integer. If 'harmonics' is not specified in any of
+            the dictionaries, it defaults to the floor of period/2.
         'stochastic_freq_seasonal': dict
             Whether (and how) to model a stochastic seasonal component
              with trig. functions.
             Must be a dictionary with a key, value pair for
             'period' -- integer and may have a key, value pair for
-            'harmonics' -- integer. If 'harmonics' is not specified in any of the
-            dictionaries, it defaults to the floor of period/2.
+            'harmonics' -- integer. If 'harmonics' is not specified in any of
+            the dictionaries, it defaults to the floor of period/2.
             If True replaces 'freq_seasonal'
         'AR' : int
             The order of the autoregressive component. Default is False
         'MA' : int
             The order of the moving average component. Default is False
-        
-        
-
     """
     def __init__(self, endog, exog, exog_models={"level": True}):
         # Get k_exog from size of exog data
@@ -181,10 +177,12 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
             if 'stochastic_freq_seasonal' not in mod.keys():
                 mod['stochastic_freq_seasonal'] = False
             # each model must have a local level if it has a trend
-            if (mod['stochastic_trend'] or mod['trend']
-                    ) and not (mod['stochastic_level'] or mod['level']):
+            if (mod['stochastic_trend'
+                    ] or mod['trend']) and not (mod['stochastic_level'] 
+                                                or mod['level']):
                 warnings.warn("A local level term is required with trend" +
-                              "for exog" + f"{idx} . Adding stochastic local level.",
+                              "for exog" +
+                              f"{idx} . Adding stochastic local level.",
                               Warning)
                 mod['stochastic_level'] = True
             # Remove supurfluous level states
@@ -229,7 +227,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         k_MA = 0
         for mod in self.exog_models:
             # collect states needed to represent non-stationary components
-            components += [mod[key] if key in _non_stationary_components 
+            components += [mod[key] if key in _non_stationary_components
                            else False for key in mod.keys()]
             if mod['freq_seasonal'] or mod["stochastic_freq_seasonal"]:
                 if mod['freq_seasonal']:
@@ -241,10 +239,10 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                                        int(np.floor(seas['period'] / 2)))
                 components.append(n_harmonics*2)
             # count states needed to represent stationary components
-            r += max(mod['AR'],mod['MA'] + int(mod['irregular']))
+            r += max(mod['AR'], mod['MA'] + int(mod['irregular']))
             k_AR += int(mod['AR'])
             k_MA += int(mod['MA'])
-            stochastic += [mod[key] if key in _stochastic_components 
+            stochastic += [mod[key] if key in _stochastic_components
                            else False for key in mod.keys()]
             if mod["stochastic_freq_seasonal"]:
                 stochastic.append(2)
@@ -279,7 +277,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         self.data.param_names = self.param_names
         # get param indicies
         self.set_param_indices()
-    
+
     def set_param_indices(self):
         """
         Set AR_param_indices, MA_param_indices and state_cov_param_indices
@@ -306,8 +304,8 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         for idx, mod in enumerate(self.exog_models):
             for key in _valid_components:
                 if key == "stochastic_freq_seasonal":
-                    state_cov_param_indices = (state_cov_param_indices + 
-                                               [param_idx,param_idx+1])
+                    state_cov_param_indices = (state_cov_param_indices +
+                                               [param_idx, param_idx+1])
                     param_idx += 2
                 if key == "AR":
                     AR_param_indices.append(slice(param_idx,
@@ -326,15 +324,15 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
 
     @property
     def param_names(self):
-        param_names=['sigma2.obs']
+        param_names = ['sigma2.obs']
         for idx, mod in enumerate(self.exog_models):
             for key in _valid_components:
                 if key == "AR":
-                    AR_names = ['sigma2.exog' +str(idx) + '.AR' + str(i)
+                    AR_names = ['sigma2.exog' + str(idx) + '.AR' + str(i)
                                 for i in range(mod[key])]
                     param_names = param_names + AR_names
                 elif key == "MA":
-                    MA_names = ['sigma2.exog' +str(idx) + '.MA' + str(i)
+                    MA_names = ['sigma2.exog' + str(idx) + '.MA' + str(i)
                                 for i in range(mod[key])]
                     param_names = param_names + MA_names
                 elif key == "stochastic_freq_seasonal":
@@ -367,13 +365,6 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         # Basic design matrix
         design = np.zeros((0, self.nobs))
         for idx, mod in enumerate(self.exog_models):
-            # collect states needed to represent non-stationary components
-            #components = [mod[key] if key in _non_stationary_components 
-            #               else False for key in mod.keys()]
-            # count states needed to represent stationary components
-            r = max(mod['AR'],mod['MA'] + int(mod['irregular']))
-            #k_components = sum(components) + r
-            #k_components = sum([bool(component) for component in mod.values()])
             d = self.exog_design(mod)
             k_components = len(d)
             exog = self.exog[:, idx]
@@ -397,13 +388,13 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         if mod["freq_seasonal"]:
             seas = mod["freq_seasonal"]
             n_harmonics = seas.get('harmonics',
-                                    int(np.floor(seas['period'] / 2)))
-            d = np.r_[d, np.tile([1,0],n_harmonics)]
+                                   int(np.floor(seas['period'] / 2)))
+            d = np.r_[d, np.tile([1, 0], n_harmonics)]
         if mod["stochastic_freq_seasonal"]:
             seas = mod["stochastic_freq_seasonal"]
             n_harmonics = seas.get('harmonics',
-                                    int(np.floor(seas['period'] / 2)))
-            d = np.r_[d, np.tile([1,0],n_harmonics)]
+                                   int(np.floor(seas['period'] / 2)))
+            d = np.r_[d, np.tile([1, 0], n_harmonics)]
         if mod["irregular"]:
             d = np.r_[d, np.ones(1)]
         if mod["AR"] or mod['MA']:
@@ -428,7 +419,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                 t = np.array([[1, 1], [0, 1]])
                 k_components += 2
             else:
-                t = np.empty((0,0))
+                t = np.empty((0, 0))
             if (mod['freq_seasonal'] or mod['stochastic_freq_seasonal']):
                 if mod['freq_seasonal']:
                     key = 'freq_seasonal'
@@ -438,22 +429,22 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                 n_harmonics = seas.get('harmonics',
                                        int(np.floor(seas['period'] / 2)))
                 blocks = tuple(self.sin_cos_block(seas['period'],
-                                             j) for j in range(n_harmonics))
+                               j) for j in range(n_harmonics))
                 t_seas = block_diag(*blocks)
-                t = block_diag(t,t_seas)
+                t = block_diag(t, t_seas)
                 k_components += n_harmonics*2
             if mod["AR"] or mod["MA"]:
-                r = max(mod["AR"],mod["MA"]+1)
-                t_arma = np.c_[np.zeros((r,1)),
+                r = max(mod["AR"], mod["MA"]+1)
+                t_arma = np.c_[np.zeros((r, 1)),
                                np.r_[np.eye(r-1),
-                                     np.zeros((1,r-1))]]
-                t = block_diag(t,t_arma)
+                                     np.zeros((1, r-1))]]
+                t = block_diag(t, t_arma)
 
                 row_slice = slice(start + k_components,
                                   start + k_components + mod["AR"])
                 col_slice = slice(start + k_components,
                                   start + k_components + 1)
-                self.AR_transition_indices.append((row_slice,col_slice))
+                self.AR_transition_indices.append((row_slice, col_slice))
 
                 k_components += r
             elif mod['irregular']:
@@ -464,7 +455,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
             start = end
         return transition
 
-    def sin_cos_block(self,s,j):
+    def sin_cos_block(self, s, j):
         lambda_s = 2 * np.pi / s
         cos_lambda_block = np.cos(lambda_s * j)
         sin_lambda_block = np.sin(lambda_s * j)
@@ -483,7 +474,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         for mod in self.exog_models:
             k_components = 0
             col = 0
-            s = np.empty((0,0))
+            s = np.empty((0, 0))
             if mod['stochastic_level']:
                 s = block_diag(s, np.ones((1, 1)))
                 k_components += 1
@@ -496,25 +487,25 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                 seas = mod['stochastic_freq_seasonal']
                 n_harmonics = seas.get('harmonics',
                                        int(np.floor(seas['period'] / 2)))
-                s = block_diag(s, np.tile(np.eye(2),n_harmonics).transpose())
+                s = block_diag(s, np.tile(np.eye(2), n_harmonics).transpose())
                 k_components += n_harmonics*2
                 col += 2
             if mod["AR"] or mod["MA"]:
-                r = max(mod["AR"],mod["MA"]+1)
-                s = block_diag(s, 
+                r = max(mod["AR"], mod["MA"]+1)
+                s = block_diag(s,
                                np.r_[np.ones((1, 1)),
-                                     np.zeros((r-1,1))]
+                                     np.zeros((r-1, 1))]
                                )
                 row_slice = slice(start_r + k_components + 1,
-                                    start_r + k_components + 1 + mod['MA'])
-                col_slice= slice(start_c + col,start_c + col + 1)
-                self.MA_selection_indices.append((row_slice,col_slice))
+                                  start_r + k_components + 1 + mod['MA'])
+                col_slice = slice(start_c + col, start_c + col + 1)
+                self.MA_selection_indices.append((row_slice, col_slice))
                 k_components += r
                 col += 1
             elif mod['irregular']:
                 s = block_diag(s, np.zeros((1, 1)))
                 k_components += 1
-                col +=1
+                col += 1
             end_r = start_r + k_components
             end_c = start_c + col
             selection[start_r:end_r, start_c:end_c] = s
@@ -551,12 +542,16 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
             AR_params = params[indices]
             if AR_params:
                 transition_indices = self.AR_transition_indices[idx]
-                self.ssm.transition[transition_indices] = np.expand_dims(np.expand_dims(AR_params,1),2)
+                self.ssm.transition[transition_indices
+                                    ] = np.expand_dims(np.expand_dims(AR_params,
+                                                                      1), 2)
         for idx, indices in enumerate(self.MA_param_indices):
             MA_params = params[indices]
             if MA_params:
                 selection_indices = self.MA_selection_indices[idx]
-                self.ssm.selection[selection_indices] = np.expand_dims(np.expand_dims(MA_params,1),2)
+                self.ssm.selection[selection_indices
+                                   ] = np.expand_dims(np.expand_dims(MA_params,
+                                                                     1), 2)
 
     def transform_params(self, unconstrained):
         """
@@ -637,6 +632,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         return {'fit': (DynamicRegressionResults,
                         DynamicRegressionResultsWrapper)}
 
+
 class DynamicRegressionResults(MLEResults):
     """
     Class to hold results from fitting an unobserved components model.
@@ -663,7 +659,6 @@ class DynamicRegressionResults(MLEResults):
         super(DynamicRegressionResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
-
     def plot_dynamic_regression(self, which="smoothed", figsize=None,
                                 fitted=True, coefficients=True):
         """
@@ -678,7 +673,8 @@ class DynamicRegressionResults(MLEResults):
         results : MLEresults object
             results object returned from fit method
         which : string or None
-            If "filtered" plot the filtered results, otherwise use smoother results
+            If "filtered" plot the filtered results, otherwise use smoother
+            results
         figsize : tuple of two numbers or None
             figsize passed to pandas plot methods to determine the size of each
             plot
@@ -702,6 +698,7 @@ class DynamicRegressionResults(MLEResults):
                                 for mod in self.model.exog_models)
                                 )@state
             pd.DataFrame(design.transpose()).plot(figsize=figsize)
+
 
 class DynamicRegressionResultsWrapper(MLEResultsWrapper):
     _attrs = {}
