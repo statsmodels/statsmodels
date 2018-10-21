@@ -97,20 +97,20 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
             if 'stochastic_freq_seasonal' not in mod.keys():
                 mod['stochastic_freq_seasonal'] = False
             # each model must have a local level if it has a trend
-            if (mod['stochastic_trend'] or  mod['trend']
-                ) and not (mod['stochastic_level'] or  mod['level']):
+            if (mod['stochastic_trend'] or mod['trend']
+                    ) and not (mod['stochastic_level'] or mod['level']):
                 warnings.warn("A local level term is required with trend" +
                               "for exog" + f"{idx} . Adding stochastic local level.",
                               Warning)
                 mod['stochastic_level'] = True
             # Remove supurfluous level states
-            if (mod['stochastic_level'] and  mod['level']):
+            if (mod['stochastic_level'] and mod['level']):
                 warnings.warn("level is supurfluous with stochastic_level" +
                               ", removing deterministic level",
                               Warning)
                 mod['level'] = False
             # Remove supurfluous trend states
-            if (mod['stochastic_trend'] and  mod['trend']):
+            if (mod['stochastic_trend'] and mod['trend']):
                 warnings.warn("trend is supurfluous with stochastic_trend" +
                               ", removing deterministic trend",
                               Warning)
@@ -320,7 +320,7 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
         for mod in self.exog_models:
             k_components = 0
             if (mod['level'] or mod['stochastic_level']) and not (
-                mod['trend'] or mod['stochastic_trend']):
+                 mod['trend'] or mod['stochastic_trend']):
                 t = np.ones((1, 1))
                 k_components += 1
             elif (mod['level'] or mod['stochastic_level']):
@@ -531,43 +531,83 @@ class DynamicRegression(sm.tsa.statespace.MLEModel):
                 unconstrained[ARMA_params_idx] = ARMA_params
         return unconstrained
 
+    @property
+    def _res_classes(self):
+        return {'fit': (DynamicRegressionResults,
+                        DynamicRegressionResultsWrapper)}
 
-
-def plot_dynamic_regression(results, which="smoothed", figsize=None,
-                            fitted=True, coefficients=True):
+class DynamicRegressionResults(MLEResults):
     """
-    Plot the fitted values and/or estimates of time-varying regression
-    coefficients
-    This should be replaced with a customer Results object that has
-    properties to access the various components of the state vector
-    and plotting methods.
+    Class to hold results from fitting an unobserved components model.
 
     Parameters
     ----------
-    results : MLEresults object
-        results object returned from fit method
-    which : string or None
-        If "filtered" plot the filtered results, otherwise use smoother results
-    figsize : tuple of two numbers or None
-        figsize passed to pandas plot methods to determine the size of each
-        plot
-    fitted : bool
-        if True display the fitted values
-    coefficients : bool
-        if True display the estimated coefficients
+    model : UnobservedComponents instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the unobserved components
+        model instance.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    if which == "filtered":
-        state = results.filtered_state
-        fitted_values = results.filter_results.forecasts[0]
-    else:
-        state = results.smoothed_state
-        fitted_values = results.smoother_results.smoothed_forecasts[0]
-    endog = results.model.endog
-    if fitted:
-        pd.DataFrame({"endog": endog[:, 0], "fitted_values": fitted_values}
-                     ).plot(figsize=figsize)
-    if coefficients:
-        design = block_diag(*tuple(results.model.exog_design(mod)
-                            for mod in results.model.exog_models)
-                            )@state
-        pd.DataFrame(design.transpose()).plot(figsize=figsize)
+
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 **kwargs):
+        super(DynamicRegressionResults, self).__init__(
+            model, params, filter_results, cov_type, **kwargs)
+
+
+    def plot_dynamic_regression(self, which="smoothed", figsize=None,
+                                fitted=True, coefficients=True):
+        """
+        Plot the fitted values and/or estimates of time-varying regression
+        coefficients
+        This should be replaced with a customer Results object that has
+        properties to access the various components of the state vector
+        and plotting methods.
+
+        Parameters
+        ----------
+        results : MLEresults object
+            results object returned from fit method
+        which : string or None
+            If "filtered" plot the filtered results, otherwise use smoother results
+        figsize : tuple of two numbers or None
+            figsize passed to pandas plot methods to determine the size of each
+            plot
+        fitted : bool
+            if True display the fitted values
+        coefficients : bool
+            if True display the estimated coefficients
+        """
+        if which == "filtered":
+            state = self.filtered_state
+            fitted_values = self.filter_results.forecasts[0]
+        else:
+            state = self.smoothed_state
+            fitted_values = self.smoother_results.smoothed_forecasts[0]
+        endog = self.model.endog
+        if fitted:
+            pd.DataFrame({"endog": endog[:, 0], "fitted_values": fitted_values}
+                         ).plot(figsize=figsize)
+        if coefficients:
+            design = block_diag(*tuple(self.model.exog_design(mod)
+                                for mod in self.model.exog_models)
+                                )@state
+            pd.DataFrame(design.transpose()).plot(figsize=figsize)
+
+class DynamicRegressionResultsWrapper(MLEResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(DynamicRegressionResultsWrapper,  # noqa:E305
+                      DynamicRegressionResultsResults)
