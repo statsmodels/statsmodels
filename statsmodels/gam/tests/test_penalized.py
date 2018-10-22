@@ -29,6 +29,8 @@ from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 from .results import results_pls
 
 
+
+
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
 
@@ -49,6 +51,10 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 file_path = os.path.join(cur_dir, "results", "motorcycle.csv")
 data_mcycle = pd.read_csv(file_path)
+
+file_path = os.path.join(cur_dir, "results", "autos.csv")
+df_autos_ = pd.read_csv(file_path)
+df_autos = df_autos_[['city_mpg', 'fuel', 'drive', 'weight', 'hp']].dropna()
 
 
 class CheckGAMMixin(object):
@@ -339,3 +345,52 @@ class TestGAM6ExogPirls(object):
         exog = self.res1.model.exog
         assert_allclose(exog[:10], pls6_exog,
                         rtol=1e-13)
+
+
+class TestGAMMPG(object):
+
+    @classmethod
+    def setup_class(cls):
+
+        sp = np.array([6.46225497484073, 0.81532465890585])
+        s_scale = np.array([2.95973613706629e-07, 0.000126203730141359])
+
+        x_spline = df_autos[['weight', 'hp']].values
+        exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints='center')
+        # TODO alpha needs to be list
+        gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
+                        alpha=(1 / s_scale * sp).tolist())
+        cls.res1a = gam_cc.fit()
+        gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
+                        alpha=(1 / s_scale * sp / 2 ).tolist())
+        cls.res1b = gam_cc.fit(method='newton')
+
+    def test_exog(self):
+        file_path = os.path.join(cur_dir, "results", "autos_exog.csv")
+        df_exog = pd.read_csv(file_path)
+        res2_exog = df_exog.values
+        for res1 in [self.res1a, self.res1b]:
+            exog = res1.model.exog
+            # exog contains zeros
+            assert_allclose(exog, res2_exog, atol=1e-14)
+
+    def test_fitted(self):
+        file_path = os.path.join(cur_dir, "results", "autos_predict.csv")
+        df_pred = pd.read_csv(file_path, index_col="Row.names")
+        df_pred.index = df_pred.index - 1
+        res2_fittedvalues = df_pred["fit"].values
+        res2_se_mean = df_pred["se_fit"].values
+        for res1 in [self.res1a, self.res1b]:
+            pred = res1.get_prediction()
+            self.rtol_fitted = 1e-5
+
+            assert_allclose(res1.fittedvalues, res2_fittedvalues,
+                            rtol=1e-10)
+            assert_allclose(pred.predicted_mean, res2_fittedvalues,
+                            rtol=1e-10)
+
+            # TODO: no edf, edf corrected df_resid
+            # scale estimate differs
+            corr_fact = np.sqrt(191.669417019567 / 190)
+            assert_allclose(pred.se_mean, res2_se_mean * corr_fact, rtol=1e-10)
