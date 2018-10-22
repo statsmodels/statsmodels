@@ -310,7 +310,8 @@ class GLMGam(PenalizedMixin, GLM):
                         - self._offset_exposure)
 
             # this defines the augmented matrix point 2a on page 136
-            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights, alpha)
+            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights,
+                                        np.array(2.) * alpha)
             lin_pred = np.dot(wlsexog, wls_results.params).ravel() + self._offset_exposure
             mu = self.family.fitted(lin_pred)
 

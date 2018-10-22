@@ -157,7 +157,7 @@ class TestGAM5Pirls(CheckGAMMixin):
         x = data_mcycle['times'].values
         endog = data_mcycle['accel']
         cc = CyclicCubicSplines(x, df=[6], constraints='center')
-        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale )
+        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
         cls.res2 = results_pls.pls5
 
@@ -192,7 +192,7 @@ class TestGAM6Pirls(object):
 
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
         gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                          alpha= 1 / s_scale )
+                          alpha= 1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
 
     def test_fitted(self):
@@ -328,7 +328,7 @@ class TestGAM6ExogPirls(object):
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6],
                                 constraints='center')
         gam_cc = GLMGam(data_mcycle['accel'], np.ones((nobs, 1)),
-                        smoother=cc, alpha=1 / s_scale)
+                        smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit(method='pirls')
 
     def test_fitted(self):
@@ -360,7 +360,7 @@ class TestGAMMPG(object):
         cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints='center')
         # TODO alpha needs to be list
         gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
-                        alpha=(1 / s_scale * sp).tolist())
+                        alpha=(1 / s_scale * sp / 2).tolist())
         cls.res1a = gam_cc.fit()
         gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
                         alpha=(1 / s_scale * sp / 2 ).tolist())

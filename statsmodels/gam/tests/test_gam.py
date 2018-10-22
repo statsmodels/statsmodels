@@ -316,7 +316,7 @@ def test_multivariate_gam_1d_data():
     y_mgcv = data_from_r.y_est
 
     # alpha is by manually adjustment to reduce discrepancy in fittedvalues
-    alpha = [0.0168 * 0.0251]
+    alpha = [0.0168 * 0.0251 / 2]
     gp = MultivariateGamPenalty(bsplines, alpha=alpha)
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
@@ -514,7 +514,7 @@ def test_cyclic_cubic_splines():
 
     dfs = [10, 10]
     ccs = CyclicCubicSplines(x, df=dfs)
-    alpha = [0.05, 0.0005]  # TODO: if alpha changes in pirls this should be updated
+    alpha = [0.05 / 2, 0.0005 / 2]  # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
     # gam_res = gam._fit_pirls(y, ccs, alpha=alpha)
@@ -593,7 +593,7 @@ def test_glm_pirls_compatibility():
 
     n = 500
     x1 = np.linspace(-3, 3, n)
-    x2 = np.linspace(0, 1, n)
+    x2 = np.linspace(0, 1, n)**2
 
     x = np.vstack([x1, x2]).T
     y1 = np.sin(x1) / x1
@@ -606,10 +606,11 @@ def test_glm_pirls_compatibility():
     # TODO: Once alpha is rescaled in _fit_pirls we should have alphas == alphas_glm
     alphas = [5.75] * 2 #[1.5] * 2
     alphas_glm = [1.2] * 2 # alphas# [8] * 2
-    cs = BSplines(x, df=[10, 10], degree=[3, 3])
+    # using constraints avoids singular exog.
+    cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints='center')
 
     gam_pirls = GLMGam(y, smoother=cs, alpha=alphas)
-    gam_glm = GLMGam(y, smoother=cs, alpha=alphas_glm)
+    gam_glm = GLMGam(y, smoother=cs, alpha=alphas)#_glm)
 
     gam_res_glm = gam_glm.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=20000, maxfun=10000)
@@ -627,8 +628,8 @@ def test_glm_pirls_compatibility():
     # plt.plot(y_est_glm)
     # plt.plot(y, '.')
     # plt.show()
-    assert_allclose(gam_res_glm.params, gam_res_pirls.params, atol=0.25)
-    assert_allclose(y_est_glm, y_est_pirls, atol=0.1)
+    assert_allclose(gam_res_glm.params, gam_res_pirls.params, atol=1e-5)
+    assert_allclose(y_est_glm, y_est_pirls, atol=1e-5)
 
 
 def test_zero_penalty():
