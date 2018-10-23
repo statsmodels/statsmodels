@@ -95,7 +95,8 @@ def compute_all_knots(x, df, degree):
     upper_bound = np.max(x)
     knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
     inner_knots = _R_compat_quantile(x, knot_quantiles)
-    all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
+    all_knots = np.concatenate(([lower_bound, upper_bound] * order,
+                                inner_knots))
     return all_knots, lower_bound, upper_bound, inner_knots
 
 
@@ -133,9 +134,9 @@ def make_poly_basis(x, degree, intercept=True):
 
 
 class BS(object):
-    """bs(x, df=None, knots=None, degree=3, include_intercept=False, lower_bound=None, upper_bound=None)
-    Generates a B-spline basis for ``x``, allowing non-linear fits. The usual
-    usage is something like::
+    """Generates a B-spline basis for ``x``
+
+    The usual usage is something like::
       y ~ 1 + bs(x, 4)
     to fit ``y`` as a smooth function of ``x``, with 4 degrees of freedom
     given to the smooth.
@@ -299,7 +300,8 @@ class BS(object):
 # degree = 3
 # from patsy.mgcv_cubic_splines import cc, cr, te
 # all_knots, lower, upper, inner  = compute_all_knots(x, df, degree)
-# result = cc(x, df=df, knots=all_knots, lower_bound=lower, upper_bound=upper, constraints=None)
+# result = cc(x, df=df, knots=all_knots, lower_bound=lower, upper_bound=upper,
+#             constraints=None)
 #
 # import matplotlib.pyplot as plt
 #
@@ -336,7 +338,6 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
                 self.cov_der2_ = ctransf.T.dot(base4[3]).dot(ctransf)
 
         self.dim_basis = self.basis_.shape[1]
-        return
 
     @abstractmethod
     def _smooth_basis_for_single_variable(self):
@@ -354,8 +355,6 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
         super(UnivariateGenericSmoother, self).__init__(x,
             variable_name=variable_name)
 
-        return
-
     def _smooth_basis_for_single_variable(self):
         return self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_
 
@@ -365,8 +364,6 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
         self.degree = degree
         super(UnivariatePolynomialSmoother, self).__init__(x,
             variable_name=variable_name)
-
-        return
 
     def _smooth_basis_for_single_variable(self):
         # TODO: unclear description
@@ -396,8 +393,6 @@ class UnivariateBSplines(UnivariateGamSmoother):
         super(UnivariateBSplines, self).__init__(x,
             constraints=constraints, variable_name=variable_name)
 
-        return
-
     def _smooth_basis_for_single_variable(self):
         basis, der_basis, der2_basis = make_bsplines_basis(self.x, self.df,
                                                            self.degree)
@@ -418,14 +413,17 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
         self.n_samples, self.k_variables = self.x.shape
 
         if variable_names is None:
-            self.variable_names = ['x' + str(i) for i in range(self.k_variables)]
+            self.variable_names = ['x' + str(i)
+                                   for i in range(self.k_variables)]
         else:
             self.variable_names = variable_names
 
         self.smoothers_ = self._make_smoothers_list()
-        self.basis_ = np.hstack(smoother.basis_ for smoother in self.smoothers_)
+        self.basis_ = np.hstack(smoother.basis_
+                                for smoother in self.smoothers_)
         self.dim_basis = self.basis_.shape[1]
-        self.penalty_matrices_ = [smoother.cov_der2_ for smoother in self.smoothers_]
+        self.penalty_matrices_ = [smoother.cov_der2_
+                                  for smoother in self.smoothers_]
 
         self.mask = []
         last_column = 0
@@ -435,19 +433,15 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
             last_column = last_column + smoother.dim_basis
             self.mask.append(mask)
 
-        return
-
     @abstractmethod
     def _make_smoothers_list(self):
-
-        return
+        pass
 
 
 class GenericSmoothers(MultivariateGamSmoother):
     def __init__(self, x, smoothers):
         self.smoothers_ = smoothers
         super(GenericSmoothers, self).__init__(x, variable_names=None)
-        return
 
     def _make_smoothers_list(self):
         return self.smoothers_
@@ -458,13 +452,14 @@ class PolynomialSmoother(MultivariateGamSmoother):
         self.degrees = degrees
         super(PolynomialSmoother, self).__init__(x,
                                                  variable_names=variable_names)
-        return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariatePolynomialSmoother(self.x[:, v], degree=self.degrees[v],
-                                                          variable_name=self.variable_names[v]))
+            uv_smoother = UnivariatePolynomialSmoother(self.x[:, v],
+                            degree=self.degrees[v],
+                            variable_name=self.variable_names[v])
+            smoothers.append(uv_smoother)
         return smoothers
 
 
@@ -475,14 +470,15 @@ class BSplines(MultivariateGamSmoother):
         # TODO: move attaching constraints to super call
         self.constraints = constraints
         super(BSplines, self).__init__(x, variable_names=variable_names)
-        return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariateBSplines(self.x[:, v], degree=self.degrees[v], df=self.dfs[v],
-                                                constraints=self.constraints,
-                                                variable_name=self.variable_names[v]))
+            uv_smoother = UnivariateBSplines(self.x[:, v],
+                            degree=self.degrees[v], df=self.dfs[v],
+                            constraints=self.constraints,
+                            variable_name=self.variable_names[v])
+            smoothers.append(uv_smoother)
 
         return smoothers
 
@@ -501,8 +497,6 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         super(UnivariateCubicSplines, self).__init__(x,
             variable_name=variable_name)
 
-        return
-
     def _smooth_basis_for_single_variable(self):
 
         basis = self._splines_x()
@@ -512,7 +506,9 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
     def _rk(self, x, z):
         p1 = ((z - 1 / 2) ** 2 - 1 / 12) * ((x - 1 / 2) ** 2 - 1 / 12) / 4
-        p2 = ((np.abs(z - x) - 1 / 2) ** 4 - 1 / 2 * (np.abs(z - x) - 1 / 2) ** 2 + 7 / 240) / 24.
+        p2 = ((np.abs(z - x) - 1 / 2) ** 4 -
+              1 / 2 * (np.abs(z - x) - 1 / 2) ** 2 +
+              7 / 240) / 24.
         return p1 - p2
 
     def _splines_x(self):
@@ -540,13 +536,13 @@ class CubicSplines(MultivariateGamSmoother):
     def __init__(self, x, df, variable_names=None):
         self.dfs = df
         super(CubicSplines, self).__init__(x, variable_names=variable_names)
-        return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariateCubicSplines(self.x[:, v], df=self.dfs[v],
-                                                    variable_name=self.variable_names[v]))
+            uv_smoother = UnivariateCubicSplines(self.x[:, v], df=self.dfs[v],
+                            variable_name=self.variable_names[v])
+            smoothers.append(uv_smoother)
 
         return smoothers
 
@@ -564,12 +560,12 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         super(UnivariateCubicCyclicSplines, self).__init__(x,
             constraints=constraints, variable_name=variable_name)
 
-        return
-
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
-        n_inner_knots = self.df - 2 + 1  # +n_constraints # TODO: from CubicRegressionSplines class
-        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots, inner_knots=None,
+        n_inner_knots = self.df - 2 + 1  # +n_constraints
+        # TODO: from CubicRegressionSplines class
+        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
+                                          inner_knots=None,
                                           lower_bound=None, upper_bound=None)
 
         b, d = self._get_b_and_d(all_knots)
@@ -580,7 +576,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
     def _get_b_and_d(self, knots):
         """Returns mapping of cyclic cubic spline values to 2nd derivatives.
 
-        .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006, pp 146-147
+        .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006,
+           pp 146-147
 
         :param knots: The 1-d array knots used for cubic spline parametrization,
          must be sorted in ascending order.
@@ -624,15 +621,16 @@ class CyclicCubicSplines(MultivariateGamSmoother):
         self.dfs = df
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        super(CyclicCubicSplines, self).__init__(x, variable_names=variable_names)
-        return
+        super(CyclicCubicSplines, self).__init__(x,
+                                                 variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariateCubicCyclicSplines(self.x[:, v], df=self.dfs[v],
-                                                          constraints=self.constraints,
-                                                          variable_name=self.variable_names[v]))
+            uv_smoother = UnivariateCubicCyclicSplines(self.x[:, v],
+                            df=self.dfs[v], constraints=self.constraints,
+                            variable_name=self.variable_names[v])
+            smoothers.append(uv_smoother)
 
         return smoothers
 
@@ -641,15 +639,18 @@ class CyclicCubicSplines(MultivariateGamSmoother):
 #
 #     def __init__(self, x, df=10):
 #         import warnings
-#         warnings.warn("This class is still not tested and it is probably not working properly. "
+#         warnings.warn("This class is still not tested and it is probably"
+#                       " not working properly. "
 #                       "I suggest to use another smoother", Warning)
 #
 #         super(CubicRegressionSplines, self).__init__(x, df)
 #
 #         self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
-#         n_inner_knots = df - 2 + 1 # +n_constraints # TODO: ACcording to CubicRegressionSplines class this should be
-#                                                     #  n_inner_knots = df - 2
-#         all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots, inner_knots=None,
+#         n_inner_knots = df - 2 + 1 # +n_constraints
+#         # TODO: ACcording to CubicRegressionSplines class this should be
+#         #  n_inner_knots = df - 2
+#         all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots,
+#                                           inner_knots=None,
 #                                           lower_bound=None, upper_bound=None)
 #
 #         b, d = self._get_b_and_d(all_knots)
