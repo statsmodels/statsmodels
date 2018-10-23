@@ -9,14 +9,15 @@ from numpy.testing import assert_allclose
 import pandas as pd
 from scipy.linalg import block_diag
 
-from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother, PolynomialSmoother,
-                                          BSplines, GenericSmoothers, UnivariateCubicSplines,
-                                          CyclicCubicSplines)
-from statsmodels.gam.gam import (GLMGam, LogitGam, make_augmented_matrix, get_sqrt, penalized_wls)
-from statsmodels.gam.gam_cross_validation.gam_cross_validation import (MultivariateGAMCV,
-                                                                       MultivariateGAMCVPath,
-                                                                       _split_train_test_smoothers)
-from statsmodels.gam.gam_penalties import UnivariateGamPenalty, MultivariateGamPenalty
+from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
+    PolynomialSmoother, BSplines, GenericSmoothers, UnivariateCubicSplines,
+    CyclicCubicSplines)
+from statsmodels.gam.gam import (GLMGam, LogitGam, make_augmented_matrix,
+                                 get_sqrt, penalized_wls)
+from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
+    MultivariateGAMCV, MultivariateGAMCVPath, _split_train_test_smoothers)
+from statsmodels.gam.gam_penalties import (UnivariateGamPenalty,
+                                           MultivariateGamPenalty)
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families.family import Gaussian
@@ -26,13 +27,21 @@ sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
 
 def polynomial_sample_data():
-    """
-    A polynomial of degree 4
-    poly -> ax^4 + bx^3 + cx^2 + dx + e
-    second der -> 12ax^2 + 6bx + 2c
-    integral from -1 to 1 of second der^2 -> (288 a^2)/5 + 32 a c + 8 (3 b^2 + c^2)
-    the gradient of the integral is -> [576*a/5 + 32 * c, 48*b, 32*a + 16*c, 0, 0]
-    :return:
+    """A polynomial of degree 4
+
+    poly = ax^4 + bx^3 + cx^2 + dx + e
+    second der = 12ax^2 + 6bx + 2c
+    integral from -1 to 1 of second der^2 is
+        (288 a^2)/5 + 32 a c + 8 (3 b^2 + c^2)
+    the gradient of the integral is der
+        [576*a/5 + 32 * c, 48*b, 32*a + 16*c, 0, 0]
+
+    Returns
+    -------
+    poly : smoother instance
+    y : ndarray
+        generated function values, demeaned
+
     """
     n = 10000
     x = np.linspace(-1, 1, n)
@@ -100,10 +109,8 @@ def test_gam_penalty():
 
 
 def test_gam_gradient():
-    """
-    test the gam gradient for the example polynomial
-    :return:
-    """
+    # test the gam gradient for the example polynomial
+    np.random.seed(1)
     pol, y = polynomial_sample_data()
 
     alpha = 1
@@ -118,14 +125,10 @@ def test_gam_gradient():
 
         assert_allclose(gam_grad, grd, rtol=1.e-2, atol=1.e-2)
 
-    return
-
 
 def test_gam_hessian():
-    """
-    test the deriv2 method of the gam penalty
-    :return:
-    """
+    # test the deriv2 method of the gam penalty
+    np.random.seed(1)
     pol, y = polynomial_sample_data()
     univ_pol = pol.smoothers_[0]
     alpha = 1
@@ -138,11 +141,11 @@ def test_gam_hessian():
         hess = np.flipud(hess)
         hess = np.fliplr(hess)
         assert_allclose(gam_der2, hess, atol=1.e-13, rtol=1.e-3)
-    return
 
 
 def test_approximation():
-    # np.random.seed(1)
+    # TODO: SMOKE assert is commented out
+    np.random.seed(1)
     poly, y = polynomial_sample_data()
     alpha = 1
     for i in range(10):
@@ -153,7 +156,6 @@ def test_approximation():
         gam_loglike = glm_gam.loglike(params)
 
         # assert_allclose(gam_loglike, err, rtol=0.1)
-    return
 
 
 def test_gam_glm():
@@ -192,7 +194,6 @@ def test_gam_glm():
     # plt.show()
 
     assert_allclose(y_gam, y_mgcv, atol=1.e-1)
-    return
 
 
 def test_gam_discrete():
@@ -230,15 +231,13 @@ def test_gam_discrete():
 
     assert_allclose(y_gam, y_mgcv, rtol=1.e-10, atol=1.e-1)
 
-    return
 
-
-def multivariate_sample_data():
+def multivariate_sample_data(seed=1):
     n = 1000
     x1 = np.linspace(-1, 1, n)
     x2 = np.linspace(-10, 10, n)
     x = np.vstack([x1, x2]).T
-
+    np.random.seed(seed)
     y = x1 * x1 * x1 + x2 + np.random.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
@@ -250,6 +249,7 @@ def multivariate_sample_data():
 def test_multivariate_penalty():
     alphas = [1, 2]
     wts = [1, 1]
+    np.random.seed(1)
     x, y, pol = multivariate_sample_data()
 
     univ_pol1 = UnivariatePolynomialSmoother(x[:, 0], degree=pol.degrees[0])
@@ -257,7 +257,8 @@ def test_multivariate_penalty():
 
     gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
     gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
-    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas, wts=wts)
+    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
+                                 wts=wts)
 
     for i in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers_[0].dim_basis)
@@ -280,8 +281,6 @@ def test_multivariate_penalty():
         h = mgp.deriv2(params)
         assert_allclose(h, h12)
 
-    return
-
 
 def test_generic_smoother():
     x, y, poly = multivariate_sample_data()
@@ -296,8 +295,6 @@ def test_generic_smoother():
     gam_poly_res = gam_poly.fit()
 
     assert_allclose(gam_gs_res.params, gam_poly_res.params)
-
-    return
 
 
 def test_multivariate_gam_1d_data():
@@ -334,6 +331,7 @@ def test_multivariate_gam_1d_data():
 
     assert_allclose(y_gam, y_mgcv, atol=1e-2)
 
+
 def test_multivariate_gam_cv():
     # SMOKE test
     # no test is performed. It only checks that there isn't any runtime error
@@ -359,10 +357,9 @@ def test_multivariate_gam_cv():
     cv = KFold(3)
 
     gp = MultivariateGamPenalty(bsplines, alpha=alphas)
-    gam_cv = MultivariateGAMCV(smoothers=bsplines, alphas=alphas, gam=GLMGam, cost=cost, y=y, cv=cv)
+    gam_cv = MultivariateGAMCV(smoothers=bsplines, alphas=alphas, gam=GLMGam,
+                               cost=cost, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
-
-    return
 
 
 def test_multivariate_gam_cv_path():
@@ -391,7 +388,8 @@ def test_multivariate_gam_cv_path():
     cv = KFold(k_folds=k, shuffle=True)
 
     # TODO: penal=?
-    gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam, cost=sample_metric, y=y, cv=cv)
+    gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam,
+                                   cost=sample_metric, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv_)
@@ -409,8 +407,6 @@ def test_multivariate_gam_cv_path():
     # This is because MGCV does not support KFOLD CV
     assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
 
-    return
-
 
 def test_train_test_smoothers():
     n = 6
@@ -420,7 +416,9 @@ def test_train_test_smoothers():
     poly = PolynomialSmoother(x, degrees=[3, 3])
     train_index = list(range(3))
     test_index = list(range(3, 6))
-    train_smoother, test_smoother = _split_train_test_smoothers(poly.x, poly, train_index, test_index)
+    train_smoother, test_smoother = _split_train_test_smoothers(poly.x, poly,
+                                                                train_index,
+                                                                test_index)
 
     expected_train_basis = [[0., 0., 0., 6., 36., 216.],
                             [1., 1., 1., 7., 49., 343.],
@@ -432,11 +430,10 @@ def test_train_test_smoothers():
                            [5., 25., 125., 11., 121., 1331.]]
     assert_allclose(test_smoother.basis_, expected_test_basis)
 
-    return
-
 
 def test_get_sqrt():
     n = 1000
+    np.random.seed(1)
     x = np.random.normal(0, 1, (n, 3))
     x2 = np.dot(x.T, x)
 
@@ -445,10 +442,9 @@ def test_get_sqrt():
     x2_reconstruction = np.dot(sqrt_x2, sqrt_x2)
     assert_allclose(x2_reconstruction, x2)
 
-    return
-
 
 def test_make_augmented_matrix():
+    np.random.seed(1)
     n = 500
     x = np.random.uniform(-1, 1, (n, 3))
     s = np.dot(x.T, x)
@@ -481,10 +477,9 @@ def test_make_augmented_matrix():
     expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
     assert_allclose(aug_w, expected_aug_w)
 
-    return
-
 
 def test_penalized_wls():
+    np.random.seed(1)
     n = 20
     p = 3
     x = np.random.normal(0, 1, (n, 3))
@@ -499,12 +494,11 @@ def test_penalized_wls():
 
     assert_allclose(ls_res.params, pen_wls_res.params)
 
-    return
-
 
 def test_cyclic_cubic_splines():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "cubic_cyclic_splines_from_mgcv.csv")
+    file_path = os.path.join(cur_dir, "results",
+                             "cubic_cyclic_splines_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
 
     x = data_from_r[['x0', 'x2']].as_matrix()
@@ -514,7 +508,8 @@ def test_cyclic_cubic_splines():
 
     dfs = [10, 10]
     ccs = CyclicCubicSplines(x, df=dfs)
-    alpha = [0.05 / 2, 0.0005 / 2]  # TODO: if alpha changes in pirls this should be updated
+    alpha = [0.05 / 2, 0.0005 / 2]
+    # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
     # gam_res = gam._fit_pirls(y, ccs, alpha=alpha)
@@ -541,8 +536,6 @@ def test_cyclic_cubic_splines():
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
-
-    return
 
 
 def test_multivariate_cubic_splines():
@@ -585,8 +578,6 @@ def test_multivariate_cubic_splines():
 
     assert_allclose(y_est, y0, atol=0.04)
 
-    return
-
 
 def test_glm_pirls_compatibility():
     np.random.seed(0)
@@ -603,7 +594,7 @@ def test_glm_pirls_compatibility():
     y -= y.mean()
     y0 -= y0.mean()
 
-    # TODO: Once alpha is rescaled in _fit_pirls we should have alphas == alphas_glm
+    # TODO: we have now alphas == alphas_glm
     alphas = [5.75] * 2 #[1.5] * 2
     alphas_glm = [1.2] * 2 # alphas# [8] * 2
     # using constraints avoids singular exog.
@@ -654,6 +645,7 @@ def test_spl_s():
                [0, 0, -0.001133333, 0.001666667, 0.002733333, 0.000200000],
                [0, 0, -0.001000000, -0.001133333, 0.000200000, 0.001400000]]
 
+    np.random.seed(1)
     x = np.random.normal(0, 1, 10)
     xk = np.array([0.2, .4, .6, .8])
     cs = UnivariateCubicSplines(x, df=4)
@@ -683,11 +675,9 @@ def test_partial_values2():
     y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
 
     assert_allclose(y_est, y_partial_est, atol=0.05)
-
-    print(se)
-    assert se.min() < 100 # TODO: sometimes the SE reported by partial_values is very large. This should be double checked
-
-    return
+    assert se.min() < 100
+    # TODO: sometimes the SE reported by partial_values is very large.
+    # This should be double checked
 
 
 def test_partial_values():
@@ -718,11 +708,9 @@ def test_partial_values():
     bug_fact = np.sqrt(res_glm_gam.scale) * 0.976  # 0.106
     assert_allclose(se, se_from_mgcv * bug_fact, rtol=0, atol=0.008)
 
-    return
-
 
 def test_partial_plot():
-    # TODO: No test is performed.
+    # TODO: SMOKE No test is performed.
     # Generate a plot to visualize analyze the result.
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -748,8 +736,6 @@ def test_partial_plot():
     # plt.plot(x, y, '.')
     # plt.show()
 
-    return
-
 
 def test_cov_params():
 
@@ -768,17 +754,19 @@ def test_cov_params():
     glm = GLM(y, bsplines.basis_)
     res_glm = glm.fit()
 
-    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(), rtol=0.0025)
+    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),
+                    rtol=0.0025)
 
     alpha = 1e-13
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
 
-    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(), atol=1e-10)
+    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),
+                    atol=1e-10)
 
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
                               disp=0, maxiter=5000, maxfun=5000)
 
-    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(), rtol=1e-4,
-                    atol=1e-8)
+    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),
+                    rtol=1e-4, atol=1e-8)
