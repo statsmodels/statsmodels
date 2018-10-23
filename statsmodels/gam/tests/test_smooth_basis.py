@@ -1,4 +1,10 @@
-__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+# -*- coding: utf-8 -*-
+"""
+unit test for spline and other smoother classes
+
+Author: Luca Puggini
+
+"""
 
 import numpy as np
 from patsy.state import stateful_transform
