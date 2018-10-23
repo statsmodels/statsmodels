@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+unit test for GAM
 
-# coding: utf-8
+Author: Josef Perktold
 
+"""
 
 import os
 

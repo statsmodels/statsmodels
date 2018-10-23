@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Generalized Additive Models
+
+Author: Luca Puggini
+Author: Josef Perktold
+
+created on 08/07/2015
+"""
+
 from __future__ import division
-
-__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
-__date__ = '08/07/15'
-
 import numpy as np
 import scipy as sp
 from statsmodels.discrete.discrete_model import Logit
@@ -14,141 +20,29 @@ from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
 
 
-## this class will be later removed and taken from another push
-class PenalizedMixin2(object):
-    """Mixin class for Maximum Penalized Likelihood
-    TODO: missing **kwds or explicit keywords
-    TODO: do we really need `pen_weight` keyword in likelihood methods?
+class GLMGAMResults(GLMResults):
+    """Results class for generalized additive models, GAM.
+
+    This inherits from GLMResults.
+
+    Warning: not all inherited methods might take correctly account of the
+    penalization
+
     """
 
-    def __init__(self, *args, **kwds):
-        super(PenalizedMixin, self).__init__(*args, **kwds)
-        penal = kwds.pop('penal', None)
-        # I keep the following instead of adding default in pop for future changes
-        if penal is None:
-            print("Define a penalty")
-
-        else:
-            self.penal = penal
-
-        # TODO: define pen_weight as average pen_weight? i.e. per observation
-        # I would have prefered len(self.endog) * kwds.get('pen_weight', 1)
-        # or use pen_weight_factor in signature
-        self.pen_weight = kwds.get('pen_weight', len(self.endog))
-
-        self._init_keys.extend(['penal', 'pen_weight'])
-
-    def loglike(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-
-        llf = super(PenalizedMixin, self).loglike(params)
-        if pen_weight != 0:
-            llf -= pen_weight * self.penal.func(params)
-
-        return llf
-
-    def loglikeobs(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-
-        llf = super(PenalizedMixin, self).loglikeobs(params)
-        nobs_llf = float(llf.shape[0])
-
-        if pen_weight != 0:
-            llf -= pen_weight / nobs_llf * self.penal.func(params)
-
-        return llf
-
-    def score(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-
-        sc = super(PenalizedMixin, self).score(params)
-        if pen_weight != 0:
-            sc -= pen_weight * self.penal.grad(params)
-
-        return sc
-
-    def scoreobs(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-
-        sc = super(PenalizedMixin, self).scoreobs(params)
-        nobs_sc = float(sc.shape[0])
-        if pen_weight != 0:
-            sc -= pen_weight / nobs_sc * self.penal.grad(params)
-
-        return sc
-
-    def hessian_(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-            loglike = self.loglike
-        else:
-            loglike = lambda p: self.loglike(p, pen_weight=pen_weight)
-
-        from statsmodels.tools.numdiff import approx_hess
-        return approx_hess(params, loglike)
-
-    def hessian(self, params, pen_weight=None):
-        if pen_weight is None:
-            pen_weight = self.pen_weight
-
-        hess = super(PenalizedMixin, self).hessian(params)
-        if pen_weight != 0:
-            h = self.penal.deriv2(params)
-            if h.ndim == 1:
-                hess -= np.diag(pen_weight * h)
-            else:
-                hess -= pen_weight * h
-
-        return hess
-
-    def fit(self, method=None, trim=None, **kwds):
-        # If method is None, then we choose a default method ourselves
-
-        # TODO: temporary hack, need extra fit kwds
-        # we need to rule out fit methods in a model that will not work with
-        # penalization
-        if hasattr(self, 'family'):  # assume this identifies GLM
-            kwds.update({'max_start_irls': 0})
-
-        # currently we use `bfgs` by default
-        if method is None:
-            method = 'bfgs'
-
-        if trim is None:
-            trim = False  # see below infinite recursion in `fit_constrained
-
-        res = super(PenalizedMixin, self).fit(method=method, **kwds)
-
-        if trim is False:
-            # note boolean check for "is False" not evaluates to False
-            return res
-        else:
-            # TODO: make it penal function dependent
-            # temporary standin, only works for Poisson and GLM,
-            # and is computationally inefficient
-            drop_index = np.nonzero(np.abs(res.params) < 1e-4)[0]
-            keep_index = np.nonzero(np.abs(res.params) > 1e-4)[0]
-            rmat = np.eye(len(res.params))[drop_index]
-
-            # calling fit_constrained raise
-            # "RuntimeError: maximum recursion depth exceeded in __instancecheck__"
-            # fit_constrained is calling fit, recursive endless loop
-            if drop_index.any():
-                # todo : trim kwyword doesn't work, why not?
-                # res_aux = self.fit_constrained(rmat, trim=False)
-                res_aux = self._fit_zeros(keep_index, **kwds)
-                return res_aux
-            else:
-                return res
-
-
-class GLMGAMResults(GLMResults):
-
     def partial_values(self, smoother, variable):
+        """contribution of a smooth term to the linear prediction
+
+        Returns
+        -------
+        predicted : nd_array
+            predicted value of linear term.
+            This is not the expected response if the link function is not
+            linear.
+        se_pred : nd_array
+            standard error of linear prediction
+
+        """
         mask = smoother.mask[variable]
         y = np.dot(smoother.basis_[:, mask], self.params[mask])
         # select the submatrix corresponding to a single variable
@@ -187,6 +81,11 @@ class GLMGAMResults(GLMResults):
         return  # TODO
 
     def significance_test(self, basis=None, y=None, alpha=None):
+        """hypothesis test that a smooth component is zero.
+
+        not verified and not yet correct.
+
+        """
         # TODO: this is not working
         n_samples, k_var = basis.shape
         r = np.linalg.qr(basis, 'r')
@@ -204,6 +103,15 @@ class GLMGAMResults(GLMResults):
 
 
 class GLMGam(PenalizedMixin, GLM):
+    """Model class for generalized additive models, GAM.
+
+    This inherits from `GLM`.
+
+    Warning: not all inherited methods might take correctly account of the
+    penalization
+
+    """
+
     _results_class = GLMGAMResults
 
     def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None,
@@ -224,8 +132,7 @@ class GLMGam(PenalizedMixin, GLM):
         self.smoother = smoother
         self.alpha = alpha
         penal = MultivariateGamPenalty(smoother, alpha=alpha,
-                                       start_idx=k_exog_linear,
-                                       )
+                                       start_idx=k_exog_linear)
         kwargs.pop('penal', None)
         if exog_linear is not None:
             exog = np.column_stack((exog_linear, smoother.basis_))
@@ -235,10 +142,23 @@ class GLMGam(PenalizedMixin, GLM):
                                      offset=offset, exposure=exposure,
                                      penal=penal, missing=missing, **kwargs)
 
-
     def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
+        """estimate parameters and create instance of GLMGAMResults class
+
+        Parameters
+        ----------
+        most parameters are the same as for GLM
+        method : optimization method
+            The special optimization method is "pirls" which uses a penalized
+            version of IRLS. Other methods are gradient optimizers as used in
+            base.model.LikelihoodModel.
+
+        Returns
+        -------
+        res : instance of GLMGAMResults
+        """
 
         if method.lower() == 'pirls':
             res = self._fit_pirls(self.alpha,
@@ -327,7 +247,7 @@ class GLMGam(PenalizedMixin, GLM):
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
-            #self.scale = self.estimate_scale(mu)
+            # self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
 
 
@@ -356,6 +276,16 @@ class GLMGam(PenalizedMixin, GLM):
 
 
 class LogitGam(PenalizedMixin, Logit):
+    """Generalized Additive model for discrete Logit
+
+    This subclasses discrete_model Logit.
+
+    Warning: not all inherited methods might take correctly account of the
+    penalization
+
+    not verified yet.
+
+    """
     def __init__(self, endog, smoother, alpha, *args, **kwargs):
         import collections
         if not isinstance(alpha, collections.Iterable):
@@ -369,10 +299,10 @@ class LogitGam(PenalizedMixin, Logit):
         super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal,
                                        *args, **kwargs)
 
-    pass
-
 
 def penalized_wls(x, y, s, weights, alpha):
+    """weighted least squares with quadratic penalty
+    """
     aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, s, weights, alpha)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     wls_results.params = wls_results.params.ravel()
