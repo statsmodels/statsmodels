@@ -155,7 +155,8 @@ class GLMGAMResults(GLMResults):
         partial_cov_params = self.cov_params()[mask, :]
         partial_cov_params = partial_cov_params[:, mask]
 
-        # var = np.diag(smoother.basis_[:, mask].dot(partial_cov_params).dot(smoother.basis_[:, mask].T))
+        # var = np.diag(smoother.basis_[:, mask].dot(
+        #       partial_cov_params).dot(smoother.basis_[:, mask].T))
         exog = smoother.basis_[:, mask]
         covb = partial_cov_params
         var = (exog * np.dot(covb, exog.T).T).sum(1)
@@ -183,7 +184,7 @@ class GLMGAMResults(GLMResults):
 
         plt.xlabel(smoother.smoothers_[variable].variable_name)
 
-        return
+        return  # TODO
 
     def significance_test(self, basis=None, y=None, alpha=None):
         # TODO: this is not working
@@ -240,30 +241,38 @@ class GLMGam(PenalizedMixin, GLM):
             full_output=True, disp=False, max_start_irls=3, **kwargs):
 
         if method.lower() == 'pirls':
-            return self._fit_pirls(self.alpha,
-                                   cov_type=cov_type, cov_kwds=cov_kwds,
-                                   **kwargs)
+            res = self._fit_pirls(self.alpha,
+                                  cov_type=cov_type, cov_kwds=cov_kwds,
+                                  **kwargs)
         else:
-            return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
-                                           scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
-                                           full_output=full_output, disp=disp, max_start_irls=max_start_irls, **kwargs)
-        return
+            res = super(GLMGam, self).fit(start_params=start_params,
+                                          maxiter=maxiter, method=method,
+                                          tol=tol, scale=scale,
+                                          cov_type=cov_type, cov_kwds=cov_kwds,
+                                          use_t=use_t,
+                                          full_output=full_output, disp=disp,
+                                          max_start_irls=max_start_irls,
+                                          **kwargs)
+        return res
 
     # pag 165 4.3 # pag 136 PIRLS
     def _fit_pirls(self, alpha, start_params=None, maxiter=100, tol=1e-8,
-                   scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
+                   scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
+                   weights=None):
 
-        # alpha = alpha * len(y) * self.scale / 100 # TODO: we need to rescale alpha
+        # alpha = alpha * len(y) * self.scale / 100
+        # TODO: we need to rescale alpha
         endog = self.endog
+        k_exog_linear = self.k_exog_linear
         wlsexog = self.exog #smoother.basis_
         spl_s = self.smoother.penalty_matrices_
-        if self.k_exog_linear > 0:
+        if k_exog_linear > 0:
             if not isinstance(spl_s, list):
                 spl_s = [spl_s]
             if not isinstance(alpha, list):
                 alpha = [alpha]
             # assumes spl_s and alpha are lists
-            spl_s = [np.zeros((self.k_exog_linear, self.k_exog_linear))] + spl_s
+            spl_s = [np.zeros((k_exog_linear, k_exog_linear))] + spl_s
             alpha = [0] + alpha
 
         n_samples, n_columns = wlsexog.shape
@@ -302,17 +311,20 @@ class GLMGam(PenalizedMixin, GLM):
 
         for iteration in range(maxiter):
 
-            # TODO: is this equivalent to point 1 of page 136: w = 1 / (V(mu) * g'(mu))  ?
+            # TODO: is this equivalent to point 1 of page 136:
+            # w = 1 / (V(mu) * g'(mu))  ?
             self.weights = self.data_weights * self.family.weights(mu)
 
-            # TODO: is this equivalent to point 1 of page 136:  z = g(mu)(y - mu) + X beta  ?
+            # TODO: is this equivalent to point 1 of page 136:
+            # z = g(mu)(y - mu) + X beta  ?
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (endog - mu)
                         - self._offset_exposure)
 
             # this defines the augmented matrix point 2a on page 136
             wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights,
                                         np.array(2.) * alpha)
-            lin_pred = np.dot(wlsexog, wls_results.params).ravel() + self._offset_exposure
+            lin_pred = np.dot(wlsexog, wls_results.params).ravel()
+            lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
             #self.scale = self.estimate_scale(mu)
@@ -354,7 +366,8 @@ class LogitGam(PenalizedMixin, Logit):
         self.pen_weight = 1  # TODO: pen weight should not be defined here!!
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
 
-        super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal, *args, **kwargs)
+        super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal,
+                                       *args, **kwargs)
 
     pass
 
@@ -372,7 +385,8 @@ def make_augmented_matrix(x, y, s, w, alphas):
     import collections
 
     if isinstance(alphas, collections.Iterable):
-        alpha_s = sp.linalg.block_diag(*[s[i] * alphas[i] for i in range(len(alphas))])
+        alpha_s = sp.linalg.block_diag(*[s[i] * alphas[i]
+                                         for i in range(len(alphas))])
     else:
         alpha_s = alphas * s
 
