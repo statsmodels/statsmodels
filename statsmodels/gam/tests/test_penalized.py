@@ -21,14 +21,13 @@ from statsmodels.sandbox.regression.penalized import TheilGLS
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
 
-from statsmodels.gam.smooth_basis import BSplines, CubicSplines, CyclicCubicSplines
-from statsmodels.gam.gam import GLMGam, get_sqrt
+from statsmodels.gam.smooth_basis import (BSplines, CubicSplines,
+                                          CyclicCubicSplines)
+from statsmodels.gam.gam import GLMGam
 
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 from .results import results_pls
-
-
 
 
 class PoissonPenalized(PenalizedMixin, Poisson):
