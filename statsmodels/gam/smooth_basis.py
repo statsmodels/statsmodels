@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  5 16:32:00 2015
+Spline and other smoother classes for Generalized Additive Models
 
-@author: Luca Puggini <lucapuggio@gmail.com>
+Author: Luca Puggini
+Author: Josef Perktold
+
+Created on Fri Jun  5 16:32:00 2015
 """
 
 from __future__ import division
@@ -311,6 +314,8 @@ class BS(object):
 # plt.show()
 
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
+    """Base Class for single component smoothers for GAM
+    """
     def __init__(self, x, constraints=None, variable_name='x'):
         self.x = x
         self.variable_name = variable_name
@@ -345,6 +350,8 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
 
 class UnivariateGenericSmoother(UnivariateGamSmoother):
+    """Generic single component smoother for GAM
+    """
     def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
                  variable_name='x'):
         self.basis_ = basis
@@ -360,6 +367,8 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
 
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
+    """polynomial single component smoother for GAM
+    """
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
         super(UnivariatePolynomialSmoother, self).__init__(x,
@@ -387,6 +396,8 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 
 
 class UnivariateBSplines(UnivariateGamSmoother):
+    """B-Spline single component smoother for GAM
+    """
     def __init__(self, x, degree, df, constraints=None, variable_name='x'):
         self.degree = degree
         self.df = df
@@ -402,6 +413,8 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
 
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
+    """Base class for additive smoothers for GAM
+    """
     def __init__(self, x, variable_names=None):
 
         if x.ndim == 1:
@@ -439,6 +452,8 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
 
 class GenericSmoothers(MultivariateGamSmoother):
+    """generic class for additive smoothers for GAM
+    """
     def __init__(self, x, smoothers):
         self.smoothers_ = smoothers
         super(GenericSmoothers, self).__init__(x, variable_names=None)
@@ -448,6 +463,8 @@ class GenericSmoothers(MultivariateGamSmoother):
 
 
 class PolynomialSmoother(MultivariateGamSmoother):
+    """additive polynomial smoothers for GAM
+    """
     def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
         super(PolynomialSmoother, self).__init__(x,
@@ -464,6 +481,8 @@ class PolynomialSmoother(MultivariateGamSmoother):
 
 
 class BSplines(MultivariateGamSmoother):
+    """additive smoothers using B-Splines for GAM
+    """
     def __init__(self, x, df, degree, constraints=None, variable_names=None):
         self.degrees = degree
         self.dfs = df
@@ -484,7 +503,8 @@ class BSplines(MultivariateGamSmoother):
 
 
 class UnivariateCubicSplines(UnivariateGamSmoother):
-    """
+    """Cubic Spline single component smoother for GAM
+
     Cubic splines as described in the wood's book in chapter 3
     """
 
@@ -552,6 +572,8 @@ from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 
 class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
+    """cyclic cubic regression spline single component smoother for GAM
+    """
     def __init__(self, x, df, constraints=None, variable_name='x'):
         self.degree = 3
         self.df = df
@@ -617,6 +639,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 
 class CyclicCubicSplines(MultivariateGamSmoother):
+    """additive smoothers using cyclic cubic regression splines for GAM
+    """
     def __init__(self, x, df, constraints=None, variable_names=None):
         self.dfs = df
         # TODO: move attaching constraints to super call

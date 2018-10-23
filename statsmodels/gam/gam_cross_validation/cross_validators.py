@@ -1,6 +1,12 @@
-from __future__ import division
+# -*- coding: utf-8 -*-
+"""
+Cross-validation iterators for GAM
 
-__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+Author: Luca Puggini
+
+"""
+
+from __future__ import division
 
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
@@ -9,8 +15,8 @@ import numpy as np
 
 class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
-    The BaseCrossValidator class is a base class for all the iterators that split the data in train and test as for
-    example KFolds or LeavePOut
+    The BaseCrossValidator class is a base class for all the iterators that
+    split the data in train and test as for example KFolds or LeavePOut
     """
     def __init__(self):
 

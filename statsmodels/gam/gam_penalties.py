@@ -1,53 +1,15 @@
-__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+# -*- coding: utf-8 -*-
+"""
+Penalty classes for Generalized Additive Models
+
+Author: Luca Puggini
+Author: Josef Perktold
+
+"""
 
 import numpy as np
 from scipy.linalg import block_diag
-
-
-## this class will be later removed and taken from another push
-class Penalty(object):
-    """
-    A class for representing a scalar-value penalty.
-    Parameters
-    wts : array-like
-        A vector of weights that determines the weight of the penalty
-        for each parameter.
-    Notes
-    -----
-    The class has a member called `alpha` that scales the weights.
-    """
-
-    def __init__(self, wts):
-        self.wts = wts
-        self.alpha = 1.
-
-    def func(self, params):
-        """
-        A penalty function on a vector of parameters.
-        Parameters
-        ----------
-        params : array-like
-            A vector of parameters.
-        Returns
-        -------
-        A scalar penaty value; greater values imply greater
-        penalization.
-        """
-        raise NotImplementedError
-
-    def grad(self, params):
-        """
-        The gradient of a penalty function.
-        Parameters
-        ----------
-        params : array-like
-            A vector of parameters
-        Returns
-        -------
-        The gradient of the penalty with respect to each element in
-        `params`.
-        """
-        raise NotImplementedError
+from statsmodels.base._penalties import Penalty
 
 
 class UnivariateGamPenalty(Penalty):
@@ -59,9 +21,10 @@ class UnivariateGamPenalty(Penalty):
     alpha : float
         the penalty term
 
-    wts: TODO: I do not know!
+    weights: TODO: I do not know!
 
-    cov_der2: the covariance matrix of the second derivative of the basis matrix
+    cov_der2: the covariance matrix of the second derivative of the basis
+        matrix
 
     der2: The second derivative of the basis function
 
@@ -70,7 +33,7 @@ class UnivariateGamPenalty(Penalty):
     alpha : float
         the penalty term
 
-    wts: TODO: I do not know!
+    weights: TODO: I do not know!
 
     cov_der2: the covariance matrix of the second derivative of the basis matrix
 
@@ -78,21 +41,21 @@ class UnivariateGamPenalty(Penalty):
 
     n_samples: The number of samples used during the estimation
 
-
-
     """
 
-    def __init__(self, univariate_smoother, wts=1, alpha=1):
-        self.wts = wts  # should we keep wts????
+    def __init__(self, univariate_smoother, weights=1, alpha=1):
+        self.weights = weights  # should we keep weights????
         self.alpha = alpha
         self.univariate_smoother = univariate_smoother
-        self.n_samples, self.n_columns = self.univariate_smoother.n_samples, self.univariate_smoother.dim_basis
+        self.n_samples = self.univariate_smoother.n_samples
+        self.n_columns = self.univariate_smoother.dim_basis
 
     def func(self, params):
-        '''
+        """evaluate penalization at params
+
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
-        '''
+        """
 
         if self.univariate_smoother.der2_basis_ is not None:
             # The second derivative of the estimated regression function
@@ -102,17 +65,24 @@ class UnivariateGamPenalty(Penalty):
             f = params.dot(self.univariate_smoother.cov_der2_.dot(params))
             return self.alpha * f / self.n_samples
 
-    def grad(self, params):
-        '''
+    def deriv(self, params):
+        """evaluate derivative of penalty with respect to params
+
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         3) cov_der2 is obtained as np.dot(der2.T, der2)
-        '''
+        """
 
-        return 2 * self.alpha * np.dot(self.univariate_smoother.cov_der2_, params) / self.n_samples
+        d = 2 * self.alpha * np.dot(self.univariate_smoother.cov_der2_, params)
+        d /= self.n_samples
+        return d
 
     def deriv2(self, params):
-        return 2 * self.alpha * self.univariate_smoother.cov_der2_ / self.n_samples
+        """evaluate second derivative of penalty with respect to params
+        """
+        d2 = 2 * self.alpha * self.univariate_smoother.cov_der2_
+        d2 /= self.n_samples
+        return  d2
 
 
 class MultivariateGamPenalty(Penalty):
@@ -120,27 +90,27 @@ class MultivariateGamPenalty(Penalty):
     GAM penalty for multivariate regression
 
     Parameters
-    -----------
-    cov_der2: list of matrices
-     is a list of squared matrix of shape (size_base, size_base)
-
-    der2: list of matrices
-     is a list of matrix of shape (n_samples, size_base)
-
+    ----------
+    multivariate_smoother : instance of multivariate smoother
     alpha: array-like
-     list of doubles. Each one representing the penalty
-          for each function
-
-    wts: array-like
-     is a list of doubles of the same length of alpha
+        list of doubles. Each one representing the penalty
+        for each function
+    weights: array-like
+        is a list of doubles of the same length of alpha
+    start_idx : int
+        number of parameters that come before the smooth terms. If the model has
+        a linear component, then the parameters for the smooth components start
+        at ``start_index``.
 
     """
 
-    def __init__(self, multivariate_smoother, alpha, wts=None, start_idx=0):
+    def __init__(self, multivariate_smoother, alpha, weights=None, start_idx=0):
 
         if len(multivariate_smoother.smoothers_) != len(alpha):
-            raise ValueError('all the input values should be list of the same length. len(smoothers_)=',
-                             len(multivariate_smoother.smoothers_), ' len(alphas)=', len(alpha))
+            raise ValueError('all the input values should be list of the same '
+                             'length. len(smoothers_)=',
+                             len(multivariate_smoother.smoothers_),
+                             ' len(alphas)=', len(alpha))
 
         self.multivariate_smoother = multivariate_smoother
         self.dim_basis = self.multivariate_smoother.dim_basis
@@ -151,10 +121,10 @@ class MultivariateGamPenalty(Penalty):
         self.k_params = start_idx + self.dim_basis
 
         # TODO: Review this
-        if wts is None:
-            self.wts = [1] * len(alpha)
+        if weights is None:
+            self.weights = [1] * len(alpha)
         else:
-            self.wts = wts
+            self.weights = weights
 
         self.mask = [np.array([False] * self.k_params)
                      for _ in range(self.k_variables)]
@@ -167,8 +137,9 @@ class MultivariateGamPenalty(Penalty):
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = UnivariateGamPenalty(wts=self.wts[i], alpha=self.alpha[i],
-                                      univariate_smoother=self.multivariate_smoother.smoothers_[i])
+            gp = UnivariateGamPenalty(weights=self.weights[i],
+                alpha=self.alpha[i],
+                univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 
         return
@@ -181,7 +152,7 @@ class MultivariateGamPenalty(Penalty):
 
         return cost
 
-    def grad(self, params):
+    def deriv(self, params):
         grad = [np.zeros(self.start_idx)]
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
