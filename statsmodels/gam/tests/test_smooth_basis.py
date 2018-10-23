@@ -2,9 +2,10 @@ __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 import numpy as np
 from patsy.state import stateful_transform
-from statsmodels.gam.smooth_basis import (make_bsplines_basis, BS, UnivariatePolynomialSmoother,
+from statsmodels.gam.smooth_basis import (make_bsplines_basis, BS,
+                                          UnivariatePolynomialSmoother,
                                           PolynomialSmoother)
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 
 def test_make_basis():
@@ -15,10 +16,9 @@ def test_make_basis():
     result = bs(x, df=df, degree=degree, include_intercept=True)
     basis, der1, der2 = result
     basis_old, der1_old, der2_old = make_bsplines_basis(x, df, degree)
-    assert ((basis == basis_old).all())
-    assert ((der1 == der1_old).all())
-    assert ((der2 == der2_old).all())
-    return
+    assert_equal(basis, basis_old)
+    assert_equal(der1, der1_old)
+    assert_equal(der2, der2_old)
 
 
 def test_univariate_polynomial_smoother():
@@ -26,7 +26,7 @@ def test_univariate_polynomial_smoother():
     # test_univariate_polynomial_smoother()
     # test_make_basis()
     pol = UnivariatePolynomialSmoother(x, degree=3)
-    assert pol.basis_.shape == (5, 3)
+    assert_equal(pol.basis_.shape, (5, 3))
     assert_allclose(pol.basis_[:, 2], x.ravel() ** 3)
 
 
@@ -35,4 +35,5 @@ def test_multivariate_polynomial_basis():
     degrees = [3, 4]
     mps = PolynomialSmoother(x, degrees)
     for i, deg in enumerate(degrees):
-        assert_allclose(mps.smoothers_[i].basis_, UnivariatePolynomialSmoother(x[:, i], degree=deg).basis_)
+        uv_basis = UnivariatePolynomialSmoother(x[:, i], degree=deg).basis_
+        assert_allclose(mps.smoothers_[i].basis_, uv_basis)
