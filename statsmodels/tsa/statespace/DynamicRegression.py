@@ -25,7 +25,7 @@ _stochastic_components = ['stochastic_level', 'stochastic_trend',
 
 
 # Construct the model
-class DynamicRegression(MLEModel):
+class DynamicRegression(sm.tsa.statespace.MLEModel):
     r"""
     Univariate time-varying coefficient regression models
 
@@ -167,8 +167,11 @@ class DynamicRegression(MLEModel):
                 mod['MA'] = False
             if 'level' not in mod.keys():
                 mod['level'] = False
-            if 'stochastic_level' not in mod.keys():
+            if ('stochastic_level' not in mod.keys() and
+                'level' not in mod.keys()):
                 mod['stochastic_level'] = True
+            elif 'stochastic_level' not in mod.keys():
+                mod['stochastic_level'] = False
             if 'trend' not in mod.keys():
                 mod['trend'] = False
             if 'stochastic_trend' not in mod.keys():
@@ -304,19 +307,21 @@ class DynamicRegression(MLEModel):
         param_idx = 1
         for idx, mod in enumerate(self.exog_models):
             for key in _valid_components:
-                if key == "stochastic_freq_seasonal":
-                    state_cov_param_indices = (state_cov_param_indices +
-                                               [param_idx, param_idx+1])
-                    param_idx += 2
                 if key == "AR":
                     AR_param_indices.append(slice(param_idx,
                                                   param_idx + mod['AR']))
                     param_idx += mod['AR']
-                if key == "MA":
+                elif key == "MA":
                     MA_param_indices.append(slice(param_idx,
                                                   param_idx + mod['MA']))
                     param_idx += mod['MA']
-                if key in _stochastic_components and mod[key]:
+                elif (key == "stochastic_freq_seasonal" and
+                      mod[key]):
+                    state_cov_param_indices = (state_cov_param_indices +
+                                               [param_idx, param_idx+1])
+                    param_idx += 2
+                
+                elif key in _stochastic_components and mod[key]:
                     state_cov_param_indices.append(param_idx)
                     param_idx += 1
         self.AR_param_indices = AR_param_indices
@@ -336,12 +341,13 @@ class DynamicRegression(MLEModel):
                     MA_names = ['sigma2.exog' + str(idx) + '.MA' + str(i)
                                 for i in range(mod[key])]
                     param_names = param_names + MA_names
-                elif key == "stochastic_freq_seasonal":
+                elif (key == "stochastic_freq_seasonal" and
+                      mod[key]):
                     seas = mod[key]
                     seas_names = ['sigma2.exog' + str(idx) + "freq_seas",
                                   'sigma2.exog' + str(idx) + "freq_seas*"]
                     param_names = param_names + seas_names
-                elif mod[key]:
+                elif key in _stochastic_components and mod[key]:
                     param_name = 'sigma2.exog' + str(idx) + '.' + key
                     param_names.append(param_name)
         return param_names
@@ -637,6 +643,22 @@ class DynamicRegression(MLEModel):
 class DynamicRegressionResults(MLEResults):
     """
     Class to hold results from fitting an unobserved components model.
+
+    Parameters
+    ----------
+    model : UnobservedComponents instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the unobserved components
+        model instance.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
     """
 
     def __init__(self, model, params, filter_results, cov_type='opg',
