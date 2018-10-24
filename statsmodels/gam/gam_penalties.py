@@ -50,39 +50,53 @@ class UnivariateGamPenalty(Penalty):
         self.n_samples = self.univariate_smoother.n_samples
         self.n_columns = self.univariate_smoother.dim_basis
 
-    def func(self, params):
+    def func(self, params, alpha=None):
         """evaluate penalization at params
 
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         """
+        if alpha is None:
+            alpha = self.alpha
 
         if self.univariate_smoother.der2_basis_ is not None:
             # The second derivative of the estimated regression function
             f = np.dot(self.univariate_smoother.der2_basis_, params)
-            return self.alpha * np.sum(f ** 2) / self.n_samples
+            return alpha * np.sum(f ** 2) / self.n_samples
         else:
             f = params.dot(self.univariate_smoother.cov_der2_.dot(params))
-            return self.alpha * f / self.n_samples
+            return alpha * f / self.n_samples
 
-    def deriv(self, params):
+    def deriv(self, params, alpha=None):
         """evaluate derivative of penalty with respect to params
 
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         """
+        if alpha is None:
+            alpha = self.alpha
 
-        d = 2 * self.alpha * np.dot(self.univariate_smoother.cov_der2_, params)
+        d = 2 * alpha * np.dot(self.univariate_smoother.cov_der2_, params)
         d /= self.n_samples
         return d
 
-    def deriv2(self, params):
+    def deriv2(self, params, alpha=None):
         """evaluate second derivative of penalty with respect to params
         """
-        d2 = 2 * self.alpha * self.univariate_smoother.cov_der2_
+        if alpha is None:
+            alpha = self.alpha
+
+        d2 = 2 * alpha * self.univariate_smoother.cov_der2_
         d2 /= self.n_samples
         return  d2
+
+
+    def penalty_matrix(self, alpha=None):
+        if alpha is None:
+            alpha = self.alpha
+
+        return alpha * self.univariate_smoother.cov_der2_
 
 
 class MultivariateGamPenalty(Penalty):
@@ -120,9 +134,10 @@ class MultivariateGamPenalty(Penalty):
         self.start_idx = start_idx
         self.k_params = start_idx + self.dim_basis
 
-        # TODO: Review this
+        # TODO: Review this,
         if weights is None:
-            self.weights = [1] * len(alpha)
+            # weights should hanve length params
+            self.weights = np.ones(self.k_params)
         else:
             self.weights = weights
 
@@ -142,28 +157,45 @@ class MultivariateGamPenalty(Penalty):
                 univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 
-        return
+    def func(self, params, alpha=None):
+        if alpha is None:
+            alpha = [None] * self.k_variables
 
-    def func(self, params):
         cost = 0
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
-            cost += self.gp[i].func(params_i)
+            cost += self.gp[i].func(params_i, alpha=alpha[i])
 
         return cost
 
-    def deriv(self, params):
+    def deriv(self, params, alpha=None):
+        if alpha is None:
+            alpha = [None] * self.k_variables
+
         grad = [np.zeros(self.start_idx)]
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
-            grad.append(self.gp[i].grad(params_i))
+            grad.append(self.gp[i].deriv(params_i, alpha=alpha[i]))
 
         return np.concatenate(grad)
 
-    def deriv2(self, params):
-        deriv2 = np.zeros((self.start_idx, self.start_idx))
+    def deriv2(self, params, alpha=None):
+        if alpha is None:
+            alpha = [None] * self.k_variables
+
+        deriv2 = [np.zeros((self.start_idx, self.start_idx))]
         for i in range(self.k_variables):
             params_i = params[self.mask[i]]
-            deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
+            deriv2.append(self.gp[i].deriv2(params_i, alpha=alpha[i]))
 
-        return deriv2
+        return block_diag(*deriv2)
+
+    def penalty_matrix(self, alpha=None):
+        if alpha is None:
+            alpha = self.alpha
+
+        s_all = [np.zeros((self.start_idx, self.start_idx))]
+        for i in range(self.k_variables):
+            s_all.append(self.gp[i].penalty_matrix(alpha=alpha[i]))
+
+        return block_diag(*s_all)
