@@ -14,11 +14,12 @@ from numpy.testing import assert_allclose
 import pandas as pd
 from scipy.linalg import block_diag
 
+from statsmodels.tools.linalg import matrix_sqrt
 from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
     PolynomialSmoother, BSplines, GenericSmoothers, UnivariateCubicSplines,
     CyclicCubicSplines)
 from statsmodels.gam.gam import (GLMGam, LogitGam, make_augmented_matrix,
-                                 get_sqrt, penalized_wls)
+                                 penalized_wls)
 from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
     MultivariateGAMCV, MultivariateGAMCVPath, _split_train_test_smoothers)
 from statsmodels.gam.gam_penalties import (UnivariateGamPenalty,
@@ -442,9 +443,9 @@ def test_get_sqrt():
     x = np.random.normal(0, 1, (n, 3))
     x2 = np.dot(x.T, x)
 
-    sqrt_x2 = get_sqrt(x2)
+    sqrt_x2 = matrix_sqrt(x2)
 
-    x2_reconstruction = np.dot(sqrt_x2, sqrt_x2)
+    x2_reconstruction = np.dot(sqrt_x2.T, sqrt_x2)
     assert_allclose(x2_reconstruction, x2)
 
 
@@ -457,23 +458,23 @@ def test_make_augmented_matrix():
     w = np.random.uniform(0, 1, n)
     n_samples, n_columns = x.shape
 
+    # matrix_sqrt removes redundant rows,
+    # if alpha is zero, then no aumentation is needed
     alpha = 0
-    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
-    expected_aug_x = np.vstack([x, np.zeros(shape=(n_columns, n_columns))])
+    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, alpha * s, w)
+    expected_aug_x = x
     assert_allclose(aug_x, expected_aug_x)
-    expected_aug_y = np.zeros(shape=(n_samples + n_columns,))
+    expected_aug_y = y
     expected_aug_y[:n_samples] = y
     assert_allclose(aug_y, expected_aug_y)
-    expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
+    expected_aug_w = np.sqrt(w)
     assert_allclose(aug_w, expected_aug_w)
 
-    from statsmodels.gam.gam import get_sqrt
     alpha = 1
-    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
-    rs = get_sqrt(alpha * s)
+    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w)
+    rs = matrix_sqrt(alpha * s)
     # rs = sp.linalg.cholesky(alpha * s)
     assert_allclose(np.dot(rs.T, rs), alpha * s)
-    x1 = np.vstack([x, rs])  # augmented x
     expected_aug_x = np.vstack([x, rs])
     assert_allclose(aug_x, expected_aug_x)
     expected_aug_y = np.zeros(shape=(n_samples + n_columns,))
@@ -494,7 +495,7 @@ def test_penalized_wls():
     weights = np.ones(shape=(n,))
     s = np.random.normal(0, 1, (p, p))
 
-    pen_wls_res = penalized_wls(x, y, s, weights, alpha=0)
+    pen_wls_res = penalized_wls(x, y, 0 * s, weights)
     ls_res = lm.OLS(y, x).fit()
 
     assert_allclose(ls_res.params, pen_wls_res.params)
