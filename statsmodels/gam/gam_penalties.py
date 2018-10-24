@@ -35,7 +35,8 @@ class UnivariateGamPenalty(Penalty):
 
     weights: TODO: I do not know!
 
-    cov_der2: the covariance matrix of the second derivative of the basis matrix
+    cov_der2: the covariance matrix of the second derivative of the basis
+        matrix
 
     der2: The second derivative of the basis function
 
@@ -110,19 +111,23 @@ class MultivariateGamPenalty(Penalty):
         list of doubles. Each one representing the penalty
         for each function
     weights: array-like
-        is a list of doubles of the same length of alpha
+        currently not used
+        is a list of doubles of the same length as alpha or a list
+        of ndarrays where each component has the length equal to the number
+        of columns in that component
     start_idx : int
-        number of parameters that come before the smooth terms. If the model has
-        a linear component, then the parameters for the smooth components start
-        at ``start_index``.
+        number of parameters that come before the smooth terms. If the model
+        has a linear component, then the parameters for the smooth components
+        start at ``start_index``.
 
     """
 
-    def __init__(self, multivariate_smoother, alpha, weights=None, start_idx=0):
+    def __init__(self, multivariate_smoother, alpha, weights=None,
+                 start_idx=0):
 
         if len(multivariate_smoother.smoothers_) != len(alpha):
-            raise ValueError('all the input values should be list of the same '
-                             'length. len(smoothers_)=',
+            raise ValueError('all the input values should be list of the same'
+                             ' length. len(smoothers_)=',
                              len(multivariate_smoother.smoothers_),
                              ' len(alphas)=', len(alpha))
 
@@ -136,9 +141,12 @@ class MultivariateGamPenalty(Penalty):
 
         # TODO: Review this,
         if weights is None:
-            # weights should hanve length params
-            self.weights = np.ones(self.k_params)
+            # weights should hanve total length as params
+            # but it can also be scalar in individual
+            self.weights = [1. for _ in range(self.k_variables)]
         else:
+            import warnings
+            warnings.warn('weights is currently ignored')
             self.weights = weights
 
         self.mask = [np.array([False] * self.k_params)
@@ -152,9 +160,9 @@ class MultivariateGamPenalty(Penalty):
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = UnivariateGamPenalty(weights=self.weights[i],
-                alpha=self.alpha[i],
-                univariate_smoother=self.multivariate_smoother.smoothers_[i])
+            gp = UnivariateGamPenalty(self.multivariate_smoother.smoothers_[i],
+                                      weights=self.weights[i],
+                                      alpha=self.alpha[i])
             self.gp.append(gp)
 
     def func(self, params, alpha=None):

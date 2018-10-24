@@ -450,6 +450,11 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     def _make_smoothers_list(self):
         pass
 
+    def transform(self, x_new):
+        exog = np.hstack(self.smoothers_[i].transform(x_new[:, i])
+                         for i in range(self.k_variables))
+        return exog
+
 
 class GenericSmoothers(MultivariateGamSmoother):
     """generic class for additive smoothers for GAM
@@ -531,13 +536,15 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
               7 / 240) / 24.
         return p1 - p2
 
-    def _splines_x(self):
+    def _splines_x(self, x=None):
+        if x is None:
+            x = self.x
         n_columns = len(self.knots) + 2
-        n_samples = self.x.shape[0]
+        n_samples = x.shape[0]
         basis = np.ones(shape=(n_samples, n_columns))
-        basis[:, 1] = self.x
+        basis[:, 1] = x
         # for loop equivalent to outer(x, xk, fun=rk)
-        for i, xi in enumerate(self.x):
+        for i, xi in enumerate(x):
             for j, xkj in enumerate(self.knots):
                 s_ij = self._rk(xi, xkj)
                 basis[i, j + 2] = s_ij
@@ -550,6 +557,10 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
             for j, x2 in enumerate(self.knots):
                 s[i + 2, j + 2] = self._rk(x1, x2)
         return s
+
+
+    def transform(self, x_new):
+        return self._splines_x(x_new)
 
 
 class CubicSplines(MultivariateGamSmoother):
@@ -584,6 +595,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
+        self.design_info = basis.design_info
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
         all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
@@ -636,6 +648,12 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     def _get_s(self, b, d):
         return d.T.dot(np.linalg.inv(b)).dot(d)
+
+    def transform(self, x_new):
+        exog = dmatrix(self.design_info, {"x": x_new})
+        if self.ctransf is not None:
+            exog = exog.dot(self.ctransf)
+        return exog
 
 
 class CyclicCubicSplines(MultivariateGamSmoother):
