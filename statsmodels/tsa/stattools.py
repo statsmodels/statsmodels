@@ -1005,9 +1005,9 @@ def innovations_algo(acov, nobs=None, rtol=None):
     rtol = 0.0 if rtol is None else rtol
     if not isinstance(rtol, float):
         raise ValueError('rtol must be a non-negative float or None.')
-    n = acov.shape[0] if nobs is None else int(nobs)
-    if n != nobs or nobs < 1:
+    if nobs is not None and (nobs != int(nobs) or nobs < 1):
         raise ValueError('nobs must be a positive integer')
+    n = acov.shape[0] if nobs is None else int(nobs)
     max_lag = int(np.max(np.argwhere(acov != 0)))
 
     v = np.zeros(n + 1)
@@ -1020,7 +1020,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
             for j in range(max(i - max_lag, 0), k):
                 sub += theta[k, k - j] * theta[i, i - j] * v[j]
             theta[i, i - k] = 1. / v[k] * (acov[i - k] - sub)
-            v[i] = acov[0]
+        v[i] = acov[0]
         for j in range(max(i - max_lag, 0), i):
             v[i] -= theta[i, i - j] ** 2 * v[j]
         # Break if v has converged
@@ -1093,7 +1093,7 @@ def innovations_filter(endog, theta):
             hat = (theta[i, :i] * u[:i][::-1]).sum()
         else:
             hat = (theta[i] * u[i - k:i][::-1]).sum()
-        u[i] = endog[i] + hat
+        u[i] = endog[i] - hat
     if is_pandas:
         u = pd.Series(u, index=orig_endog.index.copy())
     return u
