@@ -459,7 +459,7 @@ def test_make_augmented_matrix():
     n_samples, n_columns = x.shape
 
     # matrix_sqrt removes redundant rows,
-    # if alpha is zero, then no aumentation is needed
+    # if alpha is zero, then no augmentation is needed
     alpha = 0
     aug_x, aug_y, aug_w = make_augmented_matrix(x, y, alpha * s, w)
     expected_aug_x = x
@@ -677,7 +677,7 @@ def test_partial_values2():
     glm = GLM(y, bsplines.basis_)
 
 
-    y_est = res_glm_gam.predict(bsplines.basis_)
+    y_est = res_glm_gam.predict(bsplines.basis_, transform=False)
     y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
 
     assert_allclose(y_est, y_partial_est, atol=0.05)
