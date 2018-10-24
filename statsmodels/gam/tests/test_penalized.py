@@ -186,6 +186,15 @@ class TestGAM5Bfgs(CheckGAMMixin):
         cls.rtol_fitted = 1e-5
         cls.covp_corrfact = 1.0025464444310588
 
+    def test_predict(self):
+        res1 = self.res1
+        res2 = self.res2
+        predicted = res1.predict(None, res1.model.smoother.x[2:4])
+        assert_allclose(predicted, res1.fittedvalues[2:4],
+                        rtol=1e-13)
+        assert_allclose(predicted, res2.fitted_values[2:4],
+                        rtol=self.rtol_fitted)
+
 
 class TestGAM6Pirls(object):
 
@@ -211,6 +220,10 @@ class TestGAM6Pirls(object):
         assert_allclose(res1.fittedvalues[:15], pls6_fittedvalues,
                         rtol=self.rtol_fitted)
         assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
+                        rtol=self.rtol_fitted)
+
+        predicted = res1.predict(None, res1.model.smoother.x[2:4])
+        assert_allclose(predicted, pls6_fittedvalues[2:4],
                         rtol=self.rtol_fitted)
 
 
