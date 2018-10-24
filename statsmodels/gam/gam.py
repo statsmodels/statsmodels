@@ -18,6 +18,7 @@ from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
+from statsmodels.tools.linalg import matrix_sqrt
 
 
 class GLMGAMResults(GLMResults):
@@ -125,13 +126,9 @@ class GLMGam(PenalizedMixin, GLM):
             k_exog_linear = 0
         self.k_exog_linear = k_exog_linear
 
-        import collections
-        if not isinstance(alpha, collections.Iterable):
-            alpha = np.array([alpha] * len(smoother.smoothers_))
-
         self.smoother = smoother
-        self.alpha = alpha
-        penal = MultivariateGamPenalty(smoother, alpha=alpha,
+        self.alpha = self._check_alpha(alpha)
+        penal = MultivariateGamPenalty(smoother, alpha=self.alpha,
                                        start_idx=k_exog_linear)
         kwargs.pop('penal', None)
         if exog_linear is not None:
@@ -141,6 +138,15 @@ class GLMGam(PenalizedMixin, GLM):
         super(GLMGam, self).__init__(endog, exog=exog, family=family,
                                      offset=offset, exposure=exposure,
                                      penal=penal, missing=missing, **kwargs)
+
+    def _check_alpha(self, alpha):
+        import collections
+        if not isinstance(alpha, collections.Iterable):
+            alpha = [alpha] * len(self.smoother.smoothers_)
+        elif not isinstance(alpha, list):
+            # we want alpha to be a list
+            alpha = list(alpha)
+        return alpha
 
     def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
@@ -159,6 +165,8 @@ class GLMGam(PenalizedMixin, GLM):
         -------
         res : instance of GLMGAMResults
         """
+        # TODO: alpha not allowed yet, but is in `_fit_pirls`
+        # alpha = self._check_alpha()
 
         if method.lower() == 'pirls':
             res = self._fit_pirls(self.alpha,
@@ -185,15 +193,7 @@ class GLMGam(PenalizedMixin, GLM):
         endog = self.endog
         k_exog_linear = self.k_exog_linear
         wlsexog = self.exog #smoother.basis_
-        spl_s = self.smoother.penalty_matrices_
-        if k_exog_linear > 0:
-            if not isinstance(spl_s, list):
-                spl_s = [spl_s]
-            if not isinstance(alpha, list):
-                alpha = [alpha]
-            # assumes spl_s and alpha are lists
-            spl_s = [np.zeros((k_exog_linear, k_exog_linear))] + spl_s
-            alpha = [0] + alpha
+        spl_s = self.penal.penalty_matrix(alpha=alpha)
 
         n_samples, n_columns = wlsexog.shape
 
@@ -241,8 +241,8 @@ class GLMGam(PenalizedMixin, GLM):
                         - self._offset_exposure)
 
             # this defines the augmented matrix point 2a on page 136
-            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights,
-                                        np.array(2.) * alpha)
+            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights)
+                                        #np.array(2.) * alpha)
             lin_pred = np.dot(wlsexog, wls_results.params).ravel()
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
@@ -300,45 +300,31 @@ class LogitGam(PenalizedMixin, Logit):
                                        *args, **kwargs)
 
 
-def penalized_wls(x, y, s, weights, alpha):
+def penalized_wls(x, y, s, weights):
     """weighted least squares with quadratic penalty
     """
-    aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, s, weights, alpha)
+    # TODO: I don't understand why I need 2 * s
+    aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     wls_results.params = wls_results.params.ravel()
 
     return wls_results
 
 
-def make_augmented_matrix(x, y, s, w, alphas):
+def make_augmented_matrix(x, y, s, w):
     n_samples, n_columns = x.shape
-    import collections
 
-    if isinstance(alphas, collections.Iterable):
-        alpha_s = sp.linalg.block_diag(*[s[i] * alphas[i]
-                                         for i in range(len(alphas))])
-    else:
-        alpha_s = alphas * s
-
-    rs = get_sqrt(alpha_s)
+    # TODO: needs full because of broadcasting with weights
+    # check what weights should be doing
+    rs = matrix_sqrt(s)#, full=True)
     x1 = np.vstack([x, rs])  # augmented x
     n_samp1es_x1 = x1.shape[0]
 
     y1 = np.array([0.] * n_samp1es_x1)  # augmented y
     y1[:n_samples] = y
 
-    id1 = np.array([1.] * n_columns)
+    id1 = np.array([1.] * rs.shape[0])
     w1 = np.concatenate([w, id1])
     w1 = np.sqrt(w1)
 
     return x1, y1, w1
-
-
-def get_sqrt(x):
-    u, s, v = np.linalg.svd(x)
-    s[s < 0] = 0
-
-    sqrt_s = np.sqrt(s)
-
-    b = np.dot(u, np.dot(np.diag(sqrt_s), v))
-    return b
