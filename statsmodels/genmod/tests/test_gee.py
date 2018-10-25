@@ -14,7 +14,7 @@ import os
 import numpy as np
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_, dec)
+                           assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
@@ -727,6 +727,42 @@ class TestGEE(object):
         assert_almost_equal(mdf2.params, cf, decimal=6)
         assert_almost_equal(mdf2.standard_errors(), se,
                             decimal=6)
+
+        smry = mdf2.cov_struct.summary()
+        assert_allclose(smry.Variance, np.r_[1.043878, 0.611656, 1.421205], atol=1e-5, rtol=1e-5)
+
+
+    def test_nested_pandas(self):
+
+        np.random.seed(4234)
+        n = 10000
+
+        # Outer groups
+        groups = np.kron(np.arange(n // 100), np.ones(100)).astype(np.int)
+
+        # Inner groups
+        groups1 = np.kron(np.arange(n // 50), np.ones(50)).astype(np.int)
+        groups2 = np.kron(np.arange(n // 10), np.ones(10)).astype(np.int)
+
+        # Group effects
+        groups_e = np.random.normal(size=n // 100)
+        groups1_e = 2 * np.random.normal(size=n // 50)
+        groups2_e = 3 * np.random.normal(size=n // 10)
+
+        y = groups_e[groups] + groups1_e[groups1] + groups2_e[groups2]
+        y += 0.5 * np.random.normal(size=n)
+
+        df = pd.DataFrame({"y": y, "TheGroups": groups, "groups1": groups1, "groups2": groups2})
+
+        model = sm.GEE.from_formula("y ~ 1", groups="TheGroups",
+                                    dep_data="0 + groups1 + groups2",
+                                    cov_struct=sm.cov_struct.Nested(),
+                                    data=df)
+        result = model.fit()
+
+        # The true variances are 1, 4, 9, 0.25
+        smry = result.cov_struct.summary()
+        assert_allclose(smry.Variance, np.r_[1.437299, 4.421543, 8.905295, 0.258480], atol=1e-5, rtol=1e-5)
 
     def test_ordinal(self):
 

@@ -28,6 +28,7 @@ from statsmodels.compat.python import range, lzip, zip
 import numpy as np
 from scipy import stats
 import pandas as pd
+import patsy
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -643,12 +644,23 @@ class GEE(base.Model):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with two exceptions. `dep_data`
+            is processed as described below.  The ``eval_env`` keyword is
+            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
+            object or an integer indicating the depth of the namespace to use.
+            For example, the default ``eval_env=0`` uses the calling namespace.
+            If you wish to use a "clean" environment set ``eval_env=-1``.
+
+        Optional arguments
+        ------------------
+        dep_data : string or array-like
+            Data used for estimating the dependence structure.  See
+            specific dependence structure classes (e.g. Nested) for
+            details.  If `dep_data` is a string, it is interpreted as
+            a formula that is applied to `data`. If it is an array, it
+            must be an array of strings corresponding to column names in
+            `data`.  Otherwise it must be an array-like with the same
+            number of rows as data.
 
         Returns
         -------
@@ -666,7 +678,9 @@ class GEE(base.Model):
         the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
+        groups_name = "Groups"
         if type(groups) == str:
+            groups_name = groups
             groups = data[groups]
 
         if type(time) == str:
@@ -678,11 +692,26 @@ class GEE(base.Model):
         if type(exposure) == str:
             exposure = data[exposure]
 
+        dep_data = kwargs.get("dep_data")
+        dep_data_names = None
+        if dep_data is not None:
+            if type(dep_data) is str:
+                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data_names = dep_data.columns.tolist()
+            else:
+                dep_data_names = list(dep_data)
+                dep_data = data[dep_data]
+            kwargs["dep_data"] = np.asarray(dep_data)
+
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
+
+        if dep_data_names is not None:
+            model._dep_data_names = dep_data_names
+        model._groups_name = groups_name
 
         return model
 

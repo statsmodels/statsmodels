@@ -345,7 +345,7 @@ class Nested(CovStruct):
 
     The variance components are estimated using least squares
     regression of the products r*r', for standardized residuals r and
-    r' in the same group, on a vector of indicators defining which
+    r' in the same group, on a matrix of indicators defining which
     variance components are shared by r and r'.
     """
 
@@ -481,12 +481,21 @@ class Nested(CovStruct):
         dependence structure.
         """
 
-        msg = "Variance estimates\n------------------\n"
-        for k in range(len(self.vcomp_coeff)):
-            msg += "Component %d: %.3f\n" % (k + 1, self.vcomp_coeff[k])
-        msg += "Residual: %.3f\n" % (self.scale -
-                                     np.sum(self.vcomp_coeff))
-        return msg
+        dep_names = ["Groups"]
+        if hasattr(self.model, "_dep_data_names"):
+            dep_names.extend(self.model._dep_data_names)
+        else:
+            dep_names.extend(["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)])
+        if hasattr(self.model, "_groups_name"):
+            dep_names[0] = self.model._groups_name
+        dep_names.append("Residual")
+
+        vc = self.vcomp_coeff.tolist()
+        vc.append(self.scale - np.sum(vc))
+
+        smry = pd.DataFrame({"Variance": vc}, index=dep_names)
+
+        return smry
 
 
 class Stationary(CovStruct):
