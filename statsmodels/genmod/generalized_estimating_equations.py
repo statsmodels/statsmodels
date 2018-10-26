@@ -679,23 +679,23 @@ class GEE(base.Model):
         """ % {'missing_param_doc': base._missing_param_doc}
 
         groups_name = "Groups"
-        if type(groups) == str:
+        if isinstance(groups, str):
             groups_name = groups
             groups = data[groups]
 
-        if type(time) == str:
+        if isinstance(time, str):
             time = data[time]
 
-        if type(offset) == str:
+        if isinstance(offset, str):
             offset = data[offset]
 
-        if type(exposure) == str:
+        if isinstance(exposure, str):
             exposure = data[exposure]
 
         dep_data = kwargs.get("dep_data")
         dep_data_names = None
         if dep_data is not None:
-            if type(dep_data) is str:
+            if isinstance(dep_data, str):
                 dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
                 dep_data_names = dep_data.columns.tolist()
             else:
@@ -2320,7 +2320,7 @@ class NominalGEE(GEE):
                 jrow += 1
 
         # exog names
-        if type(self.exog_orig) == pd.DataFrame:
+        if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
@@ -2331,7 +2331,7 @@ class NominalGEE(GEE):
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if isinstance(self.endog_orig, pd.Series):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
