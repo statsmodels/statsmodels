@@ -73,21 +73,22 @@ def anova_single(model, **kwargs):
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
 
-    table = DataFrame(np.zeros((n_rows, 5)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
-    if typ in [1,"I"]:
+    if typ in [1, "I"]:
         return anova1_lm_single(model, endog, exog, nobs, design_info, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
         return anova2_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [3, "III"]:
         return anova3_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [4, "IV"]:
-        raise NotImplemented("Type IV not yet implemented")
-    else: # pragma: no cover
+        raise NotImplementedError("Type IV not yet implemented")
+    else:  # pragma: no cover
         raise ValueError("Type %s not understood" % str(typ))
+
 
 def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
