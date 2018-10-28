@@ -127,7 +127,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
     with open(path, 'rb') as f:
         lines = deque(f)
 

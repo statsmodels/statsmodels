@@ -169,7 +169,7 @@ def _var_acf(coefs, sig_u):
 
 
 def forecast_cov(ma_coefs, sigma_u, steps):
-    """
+    r"""
     Compute theoretical forecast error variance matrices
 
     Parameters
@@ -956,7 +956,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        r"""Compute long-run effect of unit impulse
 
         .. math::
 
@@ -1042,7 +1042,7 @@ class VARProcess(object):
 
     # TODO: use `mse` module-level function?
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1956,7 +1956,7 @@ class VARResults(VARProcess):
                                     nlags, adjusted)
 
     def plot_acorr(self, nlags=10, resid=True, linewidth=8):
-        """
+        r"""
         Plot autocorrelation of sample (endog) or residuals
 
         Sample (Y) or Residual autocorrelations are plotted together with the
