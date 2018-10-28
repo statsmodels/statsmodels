@@ -21,26 +21,16 @@ if [ "$LINT" == true ]; then
         statsmodels/interface/ \
         statsmodels/duration/__init__.py \
         statsmodels/graphics/tsaplots.py \
-        statsmodels/graphics/functional.py \
-        statsmodels/graphics/tests/test_functional.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
-        statsmodels/iolib/tests/test_pickle.py \
-        statsmodels/regression/mixed_linear_model.py \
-        statsmodels/regression/recursive_ls.py \
         statsmodels/regression/tests/test_lme.py \
-        statsmodels/tools/linalg.py \
         statsmodels/tools/web.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/base/tests/test_datetools.py \
-        statsmodels/tsa/kalmanf/ \
-        statsmodels/tsa/regime_switching \
         statsmodels/tsa/vector_ar/dynamic.py \
-        statsmodels/tsa/vector_ar/hypothesis_test_results.py \
-        statsmodels/tsa/statespace/*.py \
-        statsmodels/tsa/statespace/tests/results/ \
+        statsmodels/tsa/statespace/tests/results/results_var_R.py \
         statsmodels/tsa/statespace/tests/test_var.py \
         statsmodels/conftest.py \
         setup.py
