@@ -3,13 +3,13 @@
 Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
-
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
-
+from numpy.testing import (assert_almost_equal, assert_array_almost_equal,
+                           assert_allclose)
 from statsmodels.sandbox.distributions.multivariate import (
                 mvstdtprob, mvstdnormcdf)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
+
 
 class Test_MVN_MVT_prob(object):
     #test for block integratal, cdf, of multivariate t and normal
@@ -25,7 +25,6 @@ class Test_MVN_MVT_prob(object):
         corr2 = cls.corr_equal.copy()
         corr2[2,1] = -0.5
         cls.corr2 = corr2
-
 
     def test_mvn_mvt_1(self):
         a, b = self.a, self.b
@@ -71,9 +70,9 @@ class Test_MVN_MVT_prob(object):
         probmvt_R = 0.9522146
         quadkwds = {'epsabs': 1e-08}
         probmvt = mvstdtprob(a2, b, corr2, df, quadkwds=quadkwds)
-        assert_almost_equal(probmvt_R, probmvt, 4)
+        assert_allclose(probmvt_R, probmvt, atol=0.0005)
         probmvn = mvstdnormcdf(a2, b, corr2, maxpts=100000, abseps=1e-5)
-        assert_almost_equal(probmvn_R, probmvn, 4)
+        assert_allclose(probmvn_R, probmvn, atol=0.0001)
 
     def test_mvn_mvt_4(self):
         a, bl = self.a, self.b
