@@ -31,7 +31,7 @@ class GLMGAMResults(GLMResults):
 
     """
 
-    def predict(self, exog=None, x=None, transform=True, **kwds):
+    def _tranform_predict_exog(self, exog=None, x=None, transform=False):
         if transform is False:
             ex = exog
         else:
@@ -43,7 +43,16 @@ class GLMGAMResults(GLMResults):
                     ex = np.column_stack((exog, exog_smooth))
             else:
                 ex = exog
+
+        return ex
+
+    def predict(self, exog=None, x=None, transform=True, **kwds):
+        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
         return super(GLMGAMResults, self).predict(ex, **kwds)
+
+    def get_prediction(self, exog=None, x=None, transform=True, **kwds):
+        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
+        return super(GLMGAMResults, self).get_prediction(ex, **kwds)
 
     def partial_values(self, smoother, variable):
         """contribution of a smooth term to the linear prediction

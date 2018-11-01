@@ -318,20 +318,26 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
     """
     def __init__(self, x, constraints=None, variable_name='x'):
         self.x = x
+        self.constraints = constraints
         self.variable_name = variable_name
         self.n_samples, self.k_variables = len(x), 1
 
         base4 = self._smooth_basis_for_single_variable()
         if constraints == 'center':
             constraints = base4[0].mean(0)[None, :]
-        if constraints is not None:
+
+        if constraints is not None and not isinstance(constraints, str):
             ctransf = transf_constraints(constraints)
             self.ctransf = ctransf
         else:
-            self.ctransf = None
+            # subclasses might set ctransf directly
+            # only used if constraints is None
+            if not hasattr(self, 'ctransf'):
+                self.ctransf = None
 
         self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = base4
         if self.ctransf is not None:
+            ctransf = self.ctransf
             # transform attributes that are not None
             if base4[0] is not None:
                 self.basis_ = base4[0].dot(ctransf)
@@ -415,7 +421,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     """Base class for additive smoothers for GAM
     """
-    def __init__(self, x, variable_names=None):
+    def __init__(self, x, variable_names=None, **kwargs):
 
         if x.ndim == 1:
             self.x = x.copy()
@@ -513,19 +519,63 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
     Cubic splines as described in the wood's book in chapter 3
     """
 
-    def __init__(self, x, df, variable_name='x'):
+    def __init__(self, x, df, constraints=None, transform='domain',
+                 variable_name='x'):
 
         self.degree = 3
         self.df = df
-        self.x = x
+        self.transform_data_method = transform
+
+        self.x = x = self.transform_data(x, initialize=True)
         self.knots = _equally_spaced_knots(x, df)
         super(UnivariateCubicSplines, self).__init__(x,
-            variable_name=variable_name)
+              constraints=constraints, variable_name=variable_name)
+
+    def transform_data(self, x, initialize=False):
+        tm = self.transform_data_method
+        if tm is None:
+            return x
+
+        if initialize is True:
+            if tm == 'domain':
+                self.domain_low = x.min(0)
+                self.domain_upp = x.max(0)
+            elif isinstance(tm, tuple):
+                self.domain_low = tm[0]
+                self.domain_upp = tm[1]
+                self.transform_data_method = 'domain'
+            else:
+                raise ValueError("transform should be None, 'domain' "
+                                 "or a tuple")
+            self.domain_diff = self.domain_upp - self.domain_low
+
+        if self.transform_data_method == 'domain':
+            x = (x - self.domain_low) / self.domain_diff
+            return x
+        else:
+            raise ValueError("incorrect transform_data_method")
 
     def _smooth_basis_for_single_variable(self):
 
-        basis = self._splines_x()
-        s = self._splines_s()
+        basis = self._splines_x()[:, :-1]
+        # demean except for constant, does not affect derivatives
+        if not self.constraints == 'none':
+            self.transf_mean = basis[:, 1:].mean(0)
+            basis[:, 1:] -= self.transf_mean
+        else:
+            self.transf_mean = np.zeros(basis.shape[1])
+        s = self._splines_s()[:-1, :-1]
+        if not self.constraints == 'none':
+            ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
+        else:
+            ctransf = np.eye(basis.shape[1])
+        # use np.eye to avoid rescaling
+        # ctransf = np.eye(basis.shape[1])
+
+        if self.constraints == 'no-const':
+            ctransf = ctransf[1:]
+
+        self.ctransf = ctransf
 
         return basis, None, None, s
 
@@ -558,20 +608,31 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
                 s[i + 2, j + 2] = self._rk(x1, x2)
         return s
 
-
     def transform(self, x_new):
-        return self._splines_x(x_new)
+        x_new = self.transform_data(x_new, initialize=False)
+        exog = self._splines_x(x_new)
+        exog[:, 1:] -= self.transf_mean
+        if self.ctransf is not None:
+            exog = exog.dot(self.ctransf)
+        return exog
 
 
 class CubicSplines(MultivariateGamSmoother):
-    def __init__(self, x, df, variable_names=None):
+    def __init__(self, x, df, constraints='center', transform='domain',
+                 variable_names=None):
         self.dfs = df
-        super(CubicSplines, self).__init__(x, variable_names=variable_names)
+        self.constraints = constraints
+        self.transform = transform
+        super(CubicSplines, self).__init__(x, constraints=constraints,
+                                           variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            uv_smoother = UnivariateCubicSplines(self.x[:, v], df=self.dfs[v],
+            uv_smoother = UnivariateCubicSplines(
+                            self.x[:, v], df=self.dfs[v],
+                            constraints=self.constraints,
+                            transform=self.transform,
                             variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 
@@ -591,7 +652,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
         super(UnivariateCubicCyclicSplines, self).__init__(x,
-            constraints=constraints, variable_name=variable_name)
+              constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
