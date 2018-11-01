@@ -88,13 +88,13 @@ def cost_function(params, pol, y, alpha):
     lin_pred = np.dot(pol.basis_, params)
     gaussian = Gaussian()
     expval = gaussian.link.inverse(lin_pred)
-    loglike = gaussian.loglike(expval, y)
+    loglike = gaussian.loglike(y, expval)
 
     # this is the vale of the GAM penalty. For the example polynomial
     itg = integral(params)
 
     # return the cost function of the GAM for the given polynomial
-    return loglike + alpha * itg, loglike, itg
+    return loglike - alpha * itg, loglike, itg
 
 
 def test_gam_penalty():
@@ -107,7 +107,7 @@ def test_gam_penalty():
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
-    for i in range(10):
+    for _ in range(10):
         params = np.random.randint(-2, 2, 4)
         gp_score = gp.func(params)
         itg = integral(params)
@@ -123,7 +123,7 @@ def test_gam_gradient():
     smoother = pol.smoothers_[0]
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
 
-    for i in range(10):
+    for _ in range(10):
         params = np.random.uniform(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
         gam_grad = gp.grad(params)
@@ -140,7 +140,7 @@ def test_gam_hessian():
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
-    for i in range(10):
+    for _ in range(10):
         params = np.random.randint(-2, 2, 5)
         gam_der2 = gp.deriv2(params)
         hess = hessian(params)
@@ -150,18 +150,17 @@ def test_gam_hessian():
 
 
 def test_approximation():
-    # TODO: SMOKE assert is commented out
     np.random.seed(1)
     poly, y = polynomial_sample_data()
     alpha = 1
-    for i in range(10):
+    for _ in range(10):
         params = np.random.uniform(-1, 1, 4)
         cost, err, itg = cost_function(params, poly, y, alpha)
         glm_gam = GLMGam(y, smoother=poly, alpha=alpha)
-        res_glm_gam = glm_gam.fit(maxiter=1, method='nm')
-        gam_loglike = glm_gam.loglike(params)
-
-        # assert_allclose(gam_loglike, err, rtol=0.1)
+        # TODO: why do we need pen_weight=1
+        gam_loglike = glm_gam.loglike(params, scale=1, pen_weight=1)
+        assert_allclose(err - itg, cost, rtol=1e-10)
+        assert_allclose(gam_loglike, cost, rtol=0.1)
 
 
 def test_gam_glm():
@@ -550,24 +549,24 @@ def test_multivariate_cubic_splines():
 
     n = 500
     x1 = np.linspace(-3, 3, n)
-    x2 = np.linspace(0, 1, n)
+    x2 = np.linspace(0, 1, n)**2
 
     x = np.vstack([x1, x2]).T
     y1 = np.sin(x1) / x1
     y2 = x2 * x2
     y0 = y1 + y2
-    y = y0 + np.random.normal(0, .3, n)
+    # need small enough noise variance to get good estimate for this test
+    y = y0 + np.random.normal(0, .3 / 2, n)
     y -= y.mean()
     y0 -= y0.mean()
 
-    alphas = [1.5] * 2
-    cs = CubicSplines(x, df=[10, 10])
+    alphas = [1e-3, 1e-3]
+    cs = CubicSplines(x, df=[10, 10], constraints='center')
 
-    gam = GLMGam(y, smoother=cs, alpha=alphas)
-    # gam_res = gam.fit(y, cs, alpha=alphas, method='pirls')
-    gam_res = gam.fit()
+    gam = GLMGam(y, exog=np.ones((n, 1)), smoother=cs, alpha=alphas)
+    gam_res = gam.fit(method='pirls')
 
-    y_est = np.dot(cs.basis_, gam_res.params)
+    y_est = gam_res.fittedvalues
     y_est -= y_est.mean()
 
     # cut the tails
