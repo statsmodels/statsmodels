@@ -40,7 +40,7 @@ def _R_compat_quantile(x, probs):
 
 
 ## from patsy splines.py
-def _eval_bspline_basis(x, knots, degree):
+def _eval_bspline_basis(x, knots, degree, deriv='all'):
     try:
         from scipy.interpolate import splev
     except ImportError:  # pragma: no cover
@@ -77,18 +77,30 @@ def _eval_bspline_basis(x, knots, degree):
     # Note: the order of a spline is the same as its degree + 1.
     # Note: there are (len(knots) - order) basis functions.
     n_bases = len(knots) - (degree + 1)
-    basis = np.empty((x.shape[0], n_bases), dtype=float)
-    der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
-    der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
+    if deriv in ['all', 0]:
+        basis = np.empty((x.shape[0], n_bases), dtype=float)
+        ret = basis
+    if deriv in ['all', 1]:
+        der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
+        ret = der1_basis
+    if deriv in ['all', 2]:
+        der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
+        ret = der2_basis
 
     for i in range(n_bases):
         coefs = np.zeros((n_bases,))
         coefs[i] = 1
-        basis[:, i] = splev(x, (knots, coefs, degree))
-        der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
-        der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
+        if deriv in ['all', 0]:
+            basis[:, i] = splev(x, (knots, coefs, degree))
+        if deriv in ['all', 1]:
+            der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
+        if deriv in ['all', 2]:
+            der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
 
-    return basis, der1_basis, der2_basis
+    if deriv =='all':
+        return basis, der1_basis, der2_basis
+    else:
+        return ret
 
 
 def compute_all_knots(x, df, degree):
@@ -109,6 +121,101 @@ def make_bsplines_basis(x, df, degree):
     all_knots, _, _, _ = compute_all_knots(x, df, degree)
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
     return basis, der_basis, der2_basis
+
+
+def get_knots_bsplines(x=None, df=None, knots=None, degree=3, spacing='quantile',
+                       lower_bound=None, upper_bound=None, all_knots=None):
+    """knots for use in B-splines
+
+    There are two main options for the knot placement
+
+    - quantile spacing with multiplicity of boundary knots
+    - equal spacing extended to boundary or exterior knots
+
+    The first corresponds to splines as used by patsy. the second is the
+    knot spacing for P-Splines.
+
+    """
+    # based on patsy memorize_finish
+    if all_knots is not None:
+        return all_knots
+
+    x_min = x.min()
+    x_max = x.max()
+
+    if degree < 0:
+        raise ValueError("degree must be greater than 0 (not %r)"
+                         % (degree,))
+    if int(degree) != degree:
+        raise ValueError("degree must be an integer (not %r)"
+                         % (degree,))
+
+    # These are guaranteed to all be 1d vectors by the code above
+    #x = np.concatenate(tmp["xs"])
+    if df is None and knots is None:
+        raise ValueError("must specify either df or knots")
+    order = degree + 1
+    if df is not None:
+        n_inner_knots = df - order
+        if n_inner_knots < 0:
+            raise ValueError("df=%r is too small for degree=%r; must be >= %s"
+                             % (df, degree,
+                                # We know that n_inner_knots is negative;
+                                # if df were that much larger, it would
+                                # have been zero, and things would work.
+                                df - n_inner_knots))
+        if knots is not None:
+            if len(knots) != n_inner_knots:
+                raise ValueError("df=%s with degree=%r implies %s knots, "
+                                 "but %s knots were provided"
+                                 % (df, degree,
+                                    n_inner_knots, len(knots)))
+        elif spacing == 'quantile':
+            # Need to compute inner knots
+            knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+            inner_knots = _R_compat_quantile(x, knot_quantiles)
+        elif spacing == 'equal':
+            # Need to compute inner knots
+            grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+            inner_knots = x_min + grid * (x_max - x_min)
+            diff_knots = inner_knots[1] - inner_knots[0]
+        else:
+            raise ValueError("incorrect option for spacing")
+    if knots is not None:
+        inner_knots = knots
+    if lower_bound is None:
+        lower_bound = np.min(x)
+    if upper_bound is None:
+        upper_bound = np.max(x)
+
+    if lower_bound > upper_bound:
+        raise ValueError("lower_bound > upper_bound (%r > %r)"
+                         % (lower_bound, upper_bound))
+    inner_knots = np.asarray(inner_knots)
+    if inner_knots.ndim > 1:
+        raise ValueError("knots must be 1 dimensional")
+    if np.any(inner_knots < lower_bound):
+        raise ValueError("some knot values (%s) fall below lower bound "
+                         "(%r)"
+                         % (inner_knots[inner_knots < lower_bound],
+                            lower_bound))
+    if np.any(inner_knots > upper_bound):
+        raise ValueError("some knot values (%s) fall above upper bound "
+                         "(%r)"
+                         % (inner_knots[inner_knots > upper_bound],
+                            upper_bound))
+
+    if spacing is "equal":
+        diffs = np.arange(1, order + 1) * diff_knots
+        lower_knots = inner_knots[0] - diffs[::-1]
+        upper_knots = inner_knots[-1] + diffs
+        all_knots = np.concatenate((lower_knots, inner_knots, upper_knots))
+    else:
+        all_knots = np.concatenate(([lower_bound, upper_bound] * order,
+                                inner_knots))
+    all_knots.sort()
+
+    return all_knots
 
 
 # TODO: this function should be deleted
@@ -404,18 +511,28 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 class UnivariateBSplines(UnivariateGamSmoother):
     """B-Spline single component smoother for GAM
     """
-    def __init__(self, x, degree, df, constraints=None, variable_name='x'):
+    def __init__(self, x, degree, df, constraints=None, variable_name='x',
+                 **knot_kwds):
         self.degree = degree
         self.df = df
+        self.knots = get_knots_bsplines(x, degree=degree, df=df, **knot_kwds)
         super(UnivariateBSplines, self).__init__(x,
             constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
-        basis, der_basis, der2_basis = make_bsplines_basis(self.x, self.df,
+        basis, der_basis, der2_basis = _eval_bspline_basis(self.x, self.knots,
                                                            self.degree)
         cov_der2 = np.dot(der2_basis.T, der2_basis)
 
         return basis, der_basis, der2_basis, cov_der2
+
+    def transform(self, x_new, deriv=0):
+        exog = _eval_bspline_basis(self.x, self.knots, self.degree,
+                                   deriv=deriv)
+        if self.ctransf is not None:
+            exog = exog.dot(self.ctransf)
+        return exog
+
 
 
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
@@ -494,9 +611,11 @@ class PolynomialSmoother(MultivariateGamSmoother):
 class BSplines(MultivariateGamSmoother):
     """additive smoothers using B-Splines for GAM
     """
-    def __init__(self, x, df, degree, constraints=None, variable_names=None):
+    def __init__(self, x, df, degree, constraints=None, variable_names=None,
+                 knot_kwds=None):
         self.degrees = degree
         self.dfs = df
+        self.knot_kwds = knot_kwds
         # TODO: move attaching constraints to super call
         self.constraints = constraints
         super(BSplines, self).__init__(x, variable_names=variable_names)
@@ -504,10 +623,12 @@ class BSplines(MultivariateGamSmoother):
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
+            #if self.knot_kwds:
+            kwds = self.knot_kwds[v] if self.knot_kwds else {}
             uv_smoother = UnivariateBSplines(self.x[:, v],
                             degree=self.degrees[v], df=self.dfs[v],
                             constraints=self.constraints,
-                            variable_name=self.variable_names[v])
+                            variable_name=self.variable_names[v], **kwds)
             smoothers.append(uv_smoother)
 
         return smoothers
