@@ -94,7 +94,7 @@ def _clean_order(order):
     Takes something like (1 1 0)(0 1 1) and returns a arma order, sarma
     order tuple. Also accepts (1 1 0) and return arma order and (0, 0, 0)
     """
-    order = re.findall("\([0-9 ]*?\)", order)
+    order = re.findall(r"\([0-9 ]*?\)", order)
 
     def clean(x):
         return tuple(map(int, re.sub("[()]", "", x).split(" ")))
