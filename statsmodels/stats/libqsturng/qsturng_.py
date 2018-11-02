@@ -531,6 +531,7 @@ def _interpolate_p(p, r, v):
         y0 = _func(A[(p0, v)], p0, r, v) + 1.
     except:
         print(p,r,v)
+        raise
     y1 = _func(A[(p1, v)], p1, r, v) + 1.
     y2 = _func(A[(p2, v)], p2, r, v) + 1.
 
