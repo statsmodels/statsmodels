@@ -67,6 +67,7 @@ class GLMGAMResults(GLMResults):
             standard error of linear prediction
 
         """
+        smoother = self.model.smoother
         mask = smoother.mask[variable]
         y = np.dot(smoother.basis_[:, mask], self.params[mask])
         # select the submatrix corresponding to a single variable

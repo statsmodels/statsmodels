@@ -40,7 +40,7 @@ def _R_compat_quantile(x, probs):
 
 
 ## from patsy splines.py
-def _eval_bspline_basis(x, knots, degree, deriv='all'):
+def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     try:
         from scipy.interpolate import splev
     except ImportError:  # pragma: no cover
@@ -76,7 +76,9 @@ def _eval_bspline_basis(x, knots, degree, deriv='all'):
     # function for coefficients that are zero).
     # Note: the order of a spline is the same as its degree + 1.
     # Note: there are (len(knots) - order) basis functions.
-    n_bases = len(knots) - (degree + 1)
+
+    k_const = 1 - int(include_intercept)
+    n_bases = len(knots) - (degree + 1) - k_const
     if deriv in ['all', 0]:
         basis = np.empty((x.shape[0], n_bases), dtype=float)
         ret = basis
@@ -88,14 +90,16 @@ def _eval_bspline_basis(x, knots, degree, deriv='all'):
         ret = der2_basis
 
     for i in range(n_bases):
-        coefs = np.zeros((n_bases,))
-        coefs[i] = 1
+        coefs = np.zeros((n_bases + k_const,))
+        # we are skipping the first column of the basis to drop constant
+        coefs[i + k_const] = 1
+        ii = i
         if deriv in ['all', 0]:
-            basis[:, i] = splev(x, (knots, coefs, degree))
+            basis[:, ii] = splev(x, (knots, coefs, degree))
         if deriv in ['all', 1]:
-            der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
+            der1_basis[:, ii] = splev(x, (knots, coefs, degree), der=1)
         if deriv in ['all', 2]:
-            der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
+            der2_basis[:, ii] = splev(x, (knots, coefs, degree), der=2)
 
     if deriv =='all':
         return basis, der1_basis, der2_basis
@@ -511,34 +515,37 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 class UnivariateBSplines(UnivariateGamSmoother):
     """B-Spline single component smoother for GAM
     """
-    def __init__(self, x, degree, df, constraints=None, variable_name='x',
-                 **knot_kwds):
+    def __init__(self, x, degree, df, include_intercept=False,
+                 constraints=None, variable_name='x', **knot_kwds):
         self.degree = degree
         self.df = df
+        self.include_intercept = include_intercept
         self.knots = get_knots_bsplines(x, degree=degree, df=df, **knot_kwds)
         super(UnivariateBSplines, self).__init__(x,
             constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
-        basis, der_basis, der2_basis = _eval_bspline_basis(self.x, self.knots,
-                                                           self.degree)
+        basis, der_basis, der2_basis = _eval_bspline_basis(
+            self.x, self.knots, self.degree,
+            include_intercept=self.include_intercept)
         cov_der2 = np.dot(der2_basis.T, der2_basis)
 
         return basis, der_basis, der2_basis, cov_der2
 
     def transform(self, x_new, deriv=0):
         exog = _eval_bspline_basis(self.x, self.knots, self.degree,
-                                   deriv=deriv)
+                                   deriv=deriv,
+                                   include_intercept=self.include_intercept)
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog
 
 
-
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     """Base class for additive smoothers for GAM
     """
-    def __init__(self, x, variable_names=None, **kwargs):
+    def __init__(self, x, variable_names=None, include_intercept=False,
+                 **kwargs):
 
         if x.ndim == 1:
             self.x = x.copy()
@@ -547,6 +554,10 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
             self.x = x
 
         self.n_samples, self.k_variables = self.x.shape
+        if isinstance(include_intercept, bool):
+            self.include_intercept = [include_intercept] * self.k_variables
+        else:
+            self.include_intercept = include_intercept
 
         if variable_names is None:
             self.variable_names = ['x' + str(i)
@@ -611,14 +622,17 @@ class PolynomialSmoother(MultivariateGamSmoother):
 class BSplines(MultivariateGamSmoother):
     """additive smoothers using B-Splines for GAM
     """
-    def __init__(self, x, df, degree, constraints=None, variable_names=None,
-                 knot_kwds=None):
+    def __init__(self, x, df, degree, include_intercept=False,
+                 constraints=None, variable_names=None, knot_kwds=None):
         self.degrees = degree
         self.dfs = df
         self.knot_kwds = knot_kwds
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        super(BSplines, self).__init__(x, variable_names=variable_names)
+
+        super(BSplines, self).__init__(x, include_intercept=include_intercept,
+                                       variable_names=variable_names)
+
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -627,6 +641,7 @@ class BSplines(MultivariateGamSmoother):
             kwds = self.knot_kwds[v] if self.knot_kwds else {}
             uv_smoother = UnivariateBSplines(self.x[:, v],
                             degree=self.degrees[v], df=self.dfs[v],
+                            include_intercept=self.include_intercept[v],
                             constraints=self.constraints,
                             variable_name=self.variable_names[v], **kwds)
             smoothers.append(uv_smoother)

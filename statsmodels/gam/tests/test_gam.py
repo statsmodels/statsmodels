@@ -173,7 +173,7 @@ def test_gam_glm():
 
     df = [10]
     degree = [5]
-    bsplines = BSplines(x, degree=degree, df=df)
+    bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
@@ -211,7 +211,7 @@ def test_gam_discrete():
 
     df = [10]
     degree = [5]
-    bsplines = BSplines(x, degree=degree, df=df)
+    bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
 
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
@@ -312,7 +312,7 @@ def test_multivariate_gam_1d_data():
 
     df = [10]
     degree = [4] #[5]
-    bsplines = BSplines(x, degree=degree, df=df)#, constraints='center')
+    bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
@@ -321,12 +321,12 @@ def test_multivariate_gam_1d_data():
     alpha = [0.0168 * 0.0251 / 2]
     gp = MultivariateGamPenalty(bsplines, alpha=alpha)
 
-    glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
+    glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
 #     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
 #                               disp=1, maxiter=10000, maxfun=5000)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=1, maxiter=10000)
-    y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
+    y_gam = res_glm_gam.fittedvalues
 
     # plt.plot(x, y_gam, '.', label='gam')
     # plt.plot(x, y_mgcv, '.', label='mgcv')
@@ -334,7 +334,7 @@ def test_multivariate_gam_1d_data():
     # plt.legend()
     # plt.show()
 
-    assert_allclose(y_gam, y_mgcv, atol=1e-2)
+    assert_allclose(y_gam, y_mgcv, atol=0.01)
 
 
 def test_multivariate_gam_cv():
@@ -385,7 +385,7 @@ def test_multivariate_gam_cv_path():
     df = [10]
     degree = [6]
 
-    bsplines = BSplines(x, degree=degree, df=df)
+    bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
 
     gam = GLMGam
     alphas = [np.linspace(0, 2, 10)]
@@ -667,16 +667,23 @@ def test_partial_values2():
     x = x - x.mean()
     y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
     y -= y.mean()
-
-    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
     alpha = 0.0
+    # BUG: mask is incorrect if exog is not None, start_idx missing
+    # bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
+    # glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
+    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, include_intercept=[True, False])
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
     glm = GLM(y, bsplines.basis_)
 
+    # case with constant column in exog is currently wrong
+    # ex = np.column_stack((np.zeros((len(y), 1)), bsplines.smoothers_[0].basis_,
+    #                       np.zeros_like(bsplines.smoothers_[1].basis_) ))
+    ex = np.column_stack((bsplines.smoothers_[0].basis_,
+                          np.zeros_like(bsplines.smoothers_[1].basis_) ))
 
-    y_est = res_glm_gam.predict(bsplines.basis_, transform=False)
+    y_est = res_glm_gam.predict(ex, transform=False)
     y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
 
     assert_allclose(y_est, y_partial_est, atol=0.05)
@@ -697,7 +704,7 @@ def test_partial_values():
     se_from_mgcv = data_from_r.y_est_se
     df = [10]
     degree = [6]
-    bsplines = BSplines(x, degree=degree, df=df)
+    bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
 
     # TODO: alpha found by trial and error to pass assert
     alpha = 0.025 /115
