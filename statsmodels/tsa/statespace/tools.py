@@ -714,7 +714,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
 def constrain_stationary_multivariate_python(unconstrained, error_variance,
                                              transform_variance=False,
                                              prefix=None):
-    """
+    r"""
     Transform unconstrained parameters used by the optimizer to constrained
     parameters used in likelihood evaluation for a vector autoregression.
 
@@ -1259,7 +1259,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
 
 def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
                                                  order=None, k_endog=None):
-    """
+    r"""
     Transform matrices corresponding to a stationary (or invertible) process
     to matrices with singular values less than one.
 

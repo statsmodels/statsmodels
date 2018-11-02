@@ -1055,9 +1055,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglike` method.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both *args and **kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        *args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         params = np.array(params, ndmin=1)
 
@@ -1178,9 +1178,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both *args and **kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        *args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         transformed, method, approx_complex_step, approx_centered, kwargs = (
             _handle_args(MLEModel._hessian_param_names,

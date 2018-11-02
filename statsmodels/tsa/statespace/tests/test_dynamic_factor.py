@@ -27,8 +27,8 @@ output_results = pd.read_csv(current_path + os.sep + output_path)
 class CheckDynamicFactor(object):
     @classmethod
     def setup_class(cls, true, k_factors, factor_order, cov_type='approx',
-                 included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
-                 demean=False, filter=True, **kwargs):
+                    included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
+                    demean=False, filter=True, **kwargs):
         cls.true = true
         # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
@@ -45,8 +45,8 @@ class CheckDynamicFactor(object):
             endog -= dta.iloc[1:][included_vars].mean()
 
         cls.model = dynamic_factor.DynamicFactor(endog, k_factors=k_factors,
-                                                  factor_order=factor_order,
-                                                  **kwargs)
+                                                 factor_order=factor_order,
+                                                 **kwargs)
 
         if filter:
             cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
@@ -258,7 +258,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
         true = results_dynamic_factor.lutkepohl_dfm_exog1.copy()
         true['predict'] = output_results.iloc[1:][['predict_dfm_exog1_1', 'predict_dfm_exog1_2', 'predict_dfm_exog1_3']]
         true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_exog1_1', 'dyn_predict_dfm_exog1_2', 'dyn_predict_dfm_exog1_3']]
-        exog = np.ones((75,1))
+        exog = np.ones((75, 1))
         super(TestDynamicFactor_exog1, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_predict(self):
@@ -284,7 +284,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         true = results_dynamic_factor.lutkepohl_dfm_exog2.copy()
         true['predict'] = output_results.iloc[1:][['predict_dfm_exog2_1', 'predict_dfm_exog2_2', 'predict_dfm_exog2_3']]
         true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_exog2_1', 'dyn_predict_dfm_exog2_2', 'dyn_predict_dfm_exog2_3']]
-        exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
+        exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestDynamicFactor_exog2, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_bse_approx(self):
@@ -454,7 +454,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert_equal(re.search('Results for error equation e\(%s\)' % name, table) is None, False)
+            assert_equal(re.search(r'Results for error equation e\(%s\)' % name, table) is None, False)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split('\n')), 8)
@@ -462,7 +462,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
-                assert_equal(re.search('L1.e\(%s\) +%s' % (name, forg(params[offset + j], prec=4)), table) is None, False)
+                assert_equal(re.search(r'L1.e\(%s\) +%s' % (name, forg(params[offset + j], prec=4)), table) is None, False)
 
         # Check the Error covariance matrix output
         table = tables[2 + self.model.k_endog + self.model.k_factors + self.model.k_endog]
@@ -523,7 +523,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
         true = results_dynamic_factor.lutkepohl_dfm_scalar.copy()
         true['predict'] = output_results.iloc[1:][['predict_dfm_scalar_1', 'predict_dfm_scalar_2', 'predict_dfm_scalar_3']]
         true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2', 'dyn_predict_dfm_scalar_3']]
-        exog = np.ones((75,1))
+        exog = np.ones((75, 1))
         super(TestDynamicFactor_scalar_error, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog, error_cov_type='scalar')
 
     def test_bse_approx(self):
@@ -570,7 +570,7 @@ class TestSUR(CheckDynamicFactor):
         true = results_dynamic_factor.lutkepohl_sur.copy()
         true['predict'] = output_results.iloc[1:][['predict_sur_1', 'predict_sur_2', 'predict_sur_3']]
         true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
-        exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
+        exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_cov_type='unstructured')
 
     def test_bse_approx(self):
@@ -597,7 +597,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
         true['predict'] = output_results.iloc[1:][['predict_sur_auto_1', 'predict_sur_auto_2']]
         true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
-        exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
+        exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_order=1, error_var=True, error_cov_type='diagonal', included_vars=['dln_inv', 'dln_inc'])
 
     def test_bse_approx(self):
@@ -618,7 +618,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
 
 def test_misspecification():
     # Tests for model specification and misspecification exceptions
-    endog = np.arange(20).reshape(10,2)
+    endog = np.arange(20).reshape(10, 2)
 
     # Too few endog
     assert_raises(ValueError, dynamic_factor.DynamicFactor, endog[:,0], k_factors=0, factor_order=0)
@@ -627,7 +627,7 @@ def test_misspecification():
     assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=2, factor_order=1)
 
     # Bad error_cov_type specification
-    assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=1, factor_order=1, order=(1,0), error_cov_type='')
+    assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=1, factor_order=1, order=(1, 0), error_cov_type='')
 
 
 def test_miscellaneous():
