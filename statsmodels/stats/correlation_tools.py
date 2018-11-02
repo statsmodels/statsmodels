@@ -771,7 +771,7 @@ def cov_nearest_factor_homog(cov, rank):
 
 
 def corr_thresholded(data, minabs=None, max_elt=1e7):
-    """
+    r"""
     Construct a sparse matrix containing the thresholded row-wise
     correlation matrix from a data array.
 
