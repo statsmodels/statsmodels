@@ -414,7 +414,7 @@ def hqic(llf, nobs, df_modelwc):
 # IC based on residual sigma
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Akaike information criterion
+    r"""Akaike information criterion
 
     Parameters
     ----------
