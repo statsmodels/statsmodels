@@ -32,16 +32,16 @@ from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
-_armax_notes = """
+_armax_notes = r"""
     Notes
     -----
     If exogenous variables are given, then the model that is fit is
 
     .. math::
 
-       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
+       \phi(L)(y_t - X_t\beta) = \theta(L)\epsilon_t
 
-    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    where :math:`\phi` and :math:`\theta` are polynomials in the lag
     operator, :math:`L`. This is the regression model with ARMA errors,
     or ARMAX model. This specification is used, whether or not the model
     is fit using conditional sum of square or maximum-likelihood, using
@@ -1935,7 +1935,7 @@ class ARIMAResults(ARMAResults):
         if plot_insample:
             import re
             k_diff = self.k_diff
-            label = re.sub("D\d*\.", "", self.model.endog_names)
+            label = re.sub(r"D\d*\.", "", self.model.endog_names)
             levels = unintegrate(self.model.endog,
                                  self.model._first_unintegrate)
             ax.plot(x[:end + 1 - start],
