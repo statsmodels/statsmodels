@@ -403,7 +403,7 @@ class PHReg(model.LikelihoodModel):
             offset = data[offset]
 
         import re
-        terms = re.split("[+\-~]", formula)
+        terms = re.split(r"[+\-~]", formula)
         for term in terms:
             term = term.strip()
             if term in ("0", "1"):
@@ -458,7 +458,7 @@ class PHReg(model.LikelihoodModel):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters
