@@ -1,13 +1,12 @@
 """
 Tools for working with dates
 """
-from statsmodels.compat.python import (lrange, lzip, lmap, string_types, long,
-                                       callable, asstr, reduce, zip, map)
+from statsmodels.compat.python import (lrange, lzip, lmap,
+                                       asstr, reduce, zip, map)
 import re
 import datetime
 
-from pandas import (Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex,
-                    to_datetime)
+from pandas import to_datetime
 import numpy as np
 
 _quarter_to_day = {
@@ -30,7 +29,7 @@ _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                _months_with_days)))
 
 # regex patterns
-_y_pattern = '^\d?\d?\d?\d$'
+_y_pattern = r'^\d?\d?\d?\d$'
 
 _q_pattern = '''
 ^               # beginning of string
