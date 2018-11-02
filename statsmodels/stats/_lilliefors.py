@@ -164,9 +164,7 @@ def get_lilliefors_table(dist='norm'):
                                [ 37,  39,  41,  45,  52,  61],
                                [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
 
-
         # also build a table for larger sample sizes
-
         def f(n):
             return np.array([0.736, 0.768, 0.805, 0.886, 1.031]) / np.sqrt(n)
 
