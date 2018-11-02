@@ -18,8 +18,6 @@ from statsmodels.stats.correlation_tools import (
 
 import warnings
 
-# ignore PendingDeprecationWarning due to matrix conversion in SciPy
-pytestmark = pytest.mark.filterwarnings('ignore:matrix subclass')
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
