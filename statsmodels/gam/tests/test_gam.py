@@ -684,7 +684,7 @@ def test_partial_values2():
                           np.zeros_like(bsplines.smoothers_[1].basis_) ))
 
     y_est = res_glm_gam.predict(ex, transform=False)
-    y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
+    y_partial_est, se = res_glm_gam.partial_values(0)
 
     assert_allclose(y_est, y_partial_est, atol=0.05)
     assert se.min() < 100
@@ -713,7 +713,7 @@ def test_partial_values():
     # TODO: if IRLS is used res_glm_gam has not partial_values.
 
     univ_bsplines = bsplines.smoothers_[0]
-    hat_y, se = res_glm_gam.partial_values(bsplines, 0)
+    hat_y, se = res_glm_gam.partial_values(0)
 
     assert_allclose(hat_y, data_from_r["y_est"], rtol=0, atol=0.008)
     # TODO: bug missing scale
