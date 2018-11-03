@@ -23,14 +23,15 @@ class CovStruct(object):
     Base class for correlation and covariance structures.
 
     An implementation of this class takes the residuals from a
-    regression model that has been fit to grouped data and uses
+    regression model that has been fit to grouped data, and uses
     them to estimate the within-group dependence structure of the
     random errors in the model.
 
     The current state of the covariance structure is represented
-    through the value of the class variable `dep_params`.  The
-    default state of a newly-created instance should always be the
-    identity correlation matrix.
+    through the value of the `dep_params`  attribute.
+
+    The default state of a newly-created instance should always be
+    the identity correlation matrix.
     """
 
     def __init__(self, cov_nearest_method="clipped"):
@@ -42,7 +43,8 @@ class CovStruct(object):
         # adjusted.
         self.cov_adjust = []
 
-        # Method for projecting the covariance matrix if it not SPD.
+        # Method for projecting the covariance matrix if it is not
+        # PSD.
         self.cov_nearest_method = cov_nearest_method
 
     def initialize(self, model):
@@ -59,7 +61,7 @@ class CovStruct(object):
 
     def update(self, params):
         """
-        Updates the association parameter values based on the current
+        Update the association parameter values based on the current
         regression coefficients.
 
         Parameters
