@@ -31,6 +31,7 @@ class GLMGAMResults(GLMResults):
 
     """
 
+
     def _tranform_predict_exog(self, exog=None, x=None, transform=False):
         if transform is False:
             ex = exog
@@ -54,8 +55,15 @@ class GLMGAMResults(GLMResults):
         ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
         return super(GLMGAMResults, self).get_prediction(ex, **kwds)
 
-    def partial_values(self, smoother, variable):
+    def partial_values(self, index, include_constant=True):
         """contribution of a smooth term to the linear prediction
+
+        Warning: This will be replaced by a predict method
+
+        Parameters
+        ----------
+        idx : int
+            index of the smooth term within list of smooth terms
 
         Returns
         -------
@@ -67,43 +75,62 @@ class GLMGAMResults(GLMResults):
             standard error of linear prediction
 
         """
+        variable = index
         smoother = self.model.smoother
         mask = smoother.mask[variable]
-        y = np.dot(smoother.basis_[:, mask], self.params[mask])
-        # select the submatrix corresponding to a single variable
-        partial_cov_params = self.cov_params()[mask, :]
-        partial_cov_params = partial_cov_params[:, mask]
 
-        # var = np.diag(smoother.basis_[:, mask].dot(
-        #       partial_cov_params).dot(smoother.basis_[:, mask].T))
-        exog = smoother.basis_[:, mask]
+        start_idx = self.model.k_exog_linear
+        idx = start_idx + np.nonzero(mask)[0]
+
+        # smoother has only smooth parts, not exog_linear
+        exog_part = smoother.basis_[:, mask]
+
+        const_idx = self.model.data.const_idx
+        if include_constant and const_idx is not None:
+            idx = np.concatenate(([const_idx], idx))
+            exog_part = self.model.exog[:, idx]
+
+        linpred = np.dot(exog_part, self.params[idx])
+        # select the submatrix corresponding to a single variable
+        partial_cov_params = self.cov_params(column=idx)
+
         covb = partial_cov_params
-        var = (exog * np.dot(covb, exog.T).T).sum(1)
+        var = (exog_part * np.dot(covb, exog_part.T).T).sum(1)
         se = np.sqrt(var)
 
-        return y, se
+        return linpred, se
 
-    def plot_partial(self, smoother, variable, plot_se=True):
+    def plot_partial(self, variable, plot_se=True, cpr=False,
+                     include_constant=True, ax=None):
         """just to try a method in overridden Results class
         """
-        import matplotlib.pyplot as plt
-        y_est, se = self.partial_values(smoother, variable)
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
+        _import_mpl()
 
+        y_est, se = self.partial_values(variable,
+                                        include_constant=include_constant)
+        smoother = self.model.smoother
         x = smoother.smoothers_[variable].x
         sort_index = np.argsort(x)
         x = x[sort_index]
         y_est = y_est[sort_index]
         se = se[sort_index]
 
-        plt.figure()
-        plt.plot(x, y_est, c='blue')
+
+        fig, ax = create_mpl_ax(ax)
+        ax.plot(x, y_est, c='blue', lw=2)
         if plot_se:
-            plt.plot(smoother.x, y_est + 1.96 * se, '.', c='blue')
-            plt.plot(smoother.x, y_est - 1.96 * se, '.', c='blue')
+            ax.plot(x, y_est + 1.96 * se, '-', c='blue')
+            ax.plot(x, y_est - 1.96 * se, '-', c='blue')
+        if cpr:
+            # TODO: resid_response doesn't make sense with nonlinear link
+            # use resid_working ?
+            cpr_ = y_est + self.resid_working
+            ax.plot(x, cpr_, '.', lw=2)
 
-        plt.xlabel(smoother.smoothers_[variable].variable_name)
+        ax.set_xlabel(smoother.smoothers_[variable].variable_name)
 
-        return  # TODO
+        return fig
 
     def significance_test(self, basis=None, y=None, alpha=None):
         """hypothesis test that a smooth component is zero.

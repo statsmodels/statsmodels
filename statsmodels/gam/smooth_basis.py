@@ -460,6 +460,7 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
                 self.cov_der2_ = ctransf.T.dot(base4[3]).dot(ctransf)
 
         self.dim_basis = self.basis_.shape[1]
+        self.col_names = [self.variable_name + str(i) for i in range(self.dim_basis)]
 
     @abstractmethod
     def _smooth_basis_for_single_variable(self):
@@ -571,6 +572,9 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
         self.dim_basis = self.basis_.shape[1]
         self.penalty_matrices_ = [smoother.cov_der2_
                                   for smoother in self.smoothers_]
+        self.col_names = []
+        for smoother in self.smoothers_:
+            self.col_names.extend(smoother.col_names)
 
         self.mask = []
         last_column = 0
