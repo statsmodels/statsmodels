@@ -132,26 +132,60 @@ class GLMGAMResults(GLMResults):
 
         return fig
 
-    def significance_test(self, basis=None, y=None, alpha=None):
+    def test_significance(self, smooth_index):
         """hypothesis test that a smooth component is zero.
 
-        not verified and not yet correct.
-
+        this uses wald_test to compute the hypothesis test
         """
-        # TODO: this is not working
-        n_samples, k_var = basis.shape
-        r = np.linalg.qr(basis, 'r')
 
-        vf = r.dot(self.normalized_cov_params).dot(r.T)
-        vf_inv = np.linalg.pinv(vf)
-        tr = self.params.T.dot(r.T).dot(vf_inv).dot(r).dot(self.params)
+        variable = smooth_index
+        smoother = self.model.smoother
+        start_idx = self.model.k_exog_linear
 
-        rank = 1
-        p_val = 1 - chi2.cdf(tr, df=rank)
-        print('tr=', tr, 'pval=', p_val, 'rank=', rank, "scale=", self.scale)
-        print('expected values: tr=', 8.141, 'pval=', 0.0861, 'rank=', 3.997)
+        k_params = len(self.params)
+        # a bit messy, we need first index plus length of smooth term
+        mask = smoother.mask[variable]
+        k_constraints = mask.sum()
+        idx = start_idx + np.nonzero(mask)[0][0]
+        constraints = np.eye(k_constraints, k_params, idx)
 
-        return tr, p_val, rank
+        return self.wald_test(constraints)
+
+    def get_hat_matrix_diag(self, observed=True, _axis=1):
+        """
+        Compute the diagonal of the hat matrix
+
+        Parameters
+        ----------
+        observed : bool
+            If true, then observed hessian is used in the hat matrix
+            computation. If false, then the expected hessian is used.
+            In the case of a canonical link function both are the same.
+
+        Returns
+        -------
+        hat_matrix_diag : ndarray
+            The diagonal of the hat matrix computed from the observed
+            or expected hessian.
+        """
+        weights = self.model.hessian_factor(self.params, observed=observed)
+        wexog = np.sqrt(weights)[:, None] * self.model.exog
+        # Note we needed to add a factor 2 in penalized_wls
+        # pencov = 2 * self.model.penal.penalty_matrix(alpha=self.alpha)
+
+        # we can use inverse hessian directly instead of computing it from
+        # WLS/IRLS as in GLM
+
+        # TODO: does `normalized_cov_params * scale` work in all cases?
+        # avoids recomputing hessian
+        hess_inv = self.normalized_cov_params * self.scale
+        # hess_inv = np.linalg.inv(-self.model.hessian(self.params))
+        hd = (wexog * hess_inv.dot(wexog.T).T).sum(axis=_axis)
+        return hd
+
+    @property
+    def edf(self):
+        return self.get_hat_matrix_diag(_axis=0)
 
 
 class GLMGam(PenalizedMixin, GLM):
