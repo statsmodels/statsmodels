@@ -28,6 +28,7 @@ from statsmodels.compat.python import range, lzip, zip
 import numpy as np
 from scipy import stats
 import pandas as pd
+import patsy
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -643,12 +644,23 @@ class GEE(base.Model):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with two exceptions. `dep_data`
+            is processed as described below.  The ``eval_env`` keyword is
+            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
+            object or an integer indicating the depth of the namespace to use.
+            For example, the default ``eval_env=0`` uses the calling namespace.
+            If you wish to use a "clean" environment set ``eval_env=-1``.
+
+        Optional arguments
+        ------------------
+        dep_data : string or array-like
+            Data used for estimating the dependence structure.  See
+            specific dependence structure classes (e.g. Nested) for
+            details.  If `dep_data` is a string, it is interpreted as
+            a formula that is applied to `data`. If it is an array, it
+            must be an array of strings corresponding to column names in
+            `data`.  Otherwise it must be an array-like with the same
+            number of rows as data.
 
         Returns
         -------
@@ -666,23 +678,40 @@ class GEE(base.Model):
         the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
-        if type(groups) == str:
+        groups_name = "Groups"
+        if isinstance(groups, str):
+            groups_name = groups
             groups = data[groups]
 
-        if type(time) == str:
+        if isinstance(time, str):
             time = data[time]
 
-        if type(offset) == str:
+        if isinstance(offset, str):
             offset = data[offset]
 
-        if type(exposure) == str:
+        if isinstance(exposure, str):
             exposure = data[exposure]
+
+        dep_data = kwargs.get("dep_data")
+        dep_data_names = None
+        if dep_data is not None:
+            if isinstance(dep_data, str):
+                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data_names = dep_data.columns.tolist()
+            else:
+                dep_data_names = list(dep_data)
+                dep_data = data[dep_data]
+            kwargs["dep_data"] = np.asarray(dep_data)
 
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
+
+        if dep_data_names is not None:
+            model._dep_data_names = dep_data_names
+        model._groups_name = groups_name
 
         return model
 
@@ -2291,7 +2320,7 @@ class NominalGEE(GEE):
                 jrow += 1
 
         # exog names
-        if type(self.exog_orig) == pd.DataFrame:
+        if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
@@ -2302,7 +2331,7 @@ class NominalGEE(GEE):
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if isinstance(self.endog_orig, pd.Series):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
