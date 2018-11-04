@@ -486,6 +486,13 @@ class ProcessMLE(base.LikelihoodModel):
 
         return score
 
+
+    def hessian(self, params):
+
+        hess = approx_fprime(params, self.score)
+        return hess
+
+
     def fit(self, start_params=None, method=None, maxiter=None,
             full_output=True, disp=True, fargs=(), callback=None,
             retall=False, skip_hessian=False, **kwargs):
@@ -535,7 +542,7 @@ class ProcessMLE(base.LikelihoodModel):
             if np.isfinite(f.x).all():
                 start_params = f.x
 
-        hess = approx_fprime(f.x, self.score)
+        hess = self.hessian(f.x)
         try:
             cov_params = -np.linalg.inv(hess)
         except Exception:
@@ -648,6 +655,10 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         self.df_resid = model.endog.shape[0] - len(mlefit.params)
 
+        self.k_exog = self.model.exog.shape[1]
+        self.k_scale = self.model.exog_scale.shape[1]
+        self.k_smooth = self.model.exog_smooth.shape[1]
+
     def predict(self, exog=None, transform=True, *args, **kwargs):
 
         if not transform:
@@ -693,11 +704,9 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
 
         df = pd.DataFrame()
-        pm = self.model.exog.shape[1]
-        pv = self.model.exog_scale.shape[1]
-        ps = self.model.exog_smooth.shape[1]
 
-        df["Type"] = ["Mean"] * pm + ["Scale"] * pv + ["Smooth"] * ps
+        df["Type"] = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
+                      ["Smooth"] * self.k_smooth)
         df["coef"] = self.params
 
         try:
