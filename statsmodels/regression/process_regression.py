@@ -623,12 +623,9 @@ class ProcessMLE(base.LikelihoodModel):
         """
 
         if exog is None:
-            if hasattr(self.data, "frame"):
-                exog = self.data.frame
-            else:
-                exog = self.exog
-
-        if hasattr(self.data, "design_info"):
+            exog = self.exog
+        elif hasattr(self.data, "design_info"):
+            # Run the provided data through the formula if present
             exog = patsy.dmatrix(self.data.design_info, exog)
 
         if len(params) > exog.shape[1]:
