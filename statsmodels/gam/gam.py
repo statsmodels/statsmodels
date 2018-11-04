@@ -16,6 +16,7 @@ from scipy.stats import chi2
 from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
     GLMResultsWrapper, lm, _check_convergence)
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
 from statsmodels.tools.linalg import matrix_sqrt
@@ -30,6 +31,29 @@ class GLMGAMResults(GLMResults):
     penalization
 
     """
+
+    def __init__(self, model, params, normalized_cov_params, scale, **kwds):
+
+        # this is a messy way to compute edf and update scale
+        # need several attributes to compute edf
+        self.model = model
+        self.params = params
+        self.normalized_cov_params = normalized_cov_params
+        self.scale = scale
+        edf = self.edf.sum()
+        self.df_model = edf - 1 #assume constant
+        # need to use nobs or wnobs attribute
+        self.df_resid = self.df_resid = self.model.endog.shape[0] - edf
+
+        # we are setting the model df for the case when super is using it
+        # df in model will be stale/incorrect state when alpah/pen_weight changes
+        self.model.df_model = self.df_model
+        self.model.df_resid = self.df_resid
+        mu = self.fittedvalues
+        self.scale = scale = self.model.estimate_scale(mu)
+        super(GLMGAMResults, self).__init__(model, params,
+                                            normalized_cov_params, scale,
+                                            **kwds)
 
 
     def _tranform_predict_exog(self, exog=None, x=None, transform=False):
@@ -148,8 +172,9 @@ class GLMGAMResults(GLMResults):
         k_constraints = mask.sum()
         idx = start_idx + np.nonzero(mask)[0][0]
         constraints = np.eye(k_constraints, k_params, idx)
+        df_constraints = self.edf[idx : idx + k_constraints].sum()
 
-        return self.wald_test(constraints)
+        return self.wald_test(constraints, df_constraints=df_constraints)
 
     def get_hat_matrix_diag(self, observed=True, _axis=1):
         """
@@ -183,9 +208,26 @@ class GLMGAMResults(GLMResults):
         hd = (wexog * hess_inv.dot(wexog.T).T).sum(axis=_axis)
         return hd
 
-    @property
+    @cache_readonly
     def edf(self):
         return self.get_hat_matrix_diag(_axis=0)
+
+
+    @cache_readonly
+    def hat_matrix_trace(self):
+        return self.hat_matrix_diag.sum()
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        return self.get_hat_matrix_diag(observed=True)
+
+    @cache_readonly
+    def gcv(self):
+        return self.scale / (1. - self.hat_matrix_trace / self.nobs)**2
+
+    @cache_readonly
+    def cv(self):
+        return ((self.resid_pearson / (1. - self.hat_matrix_diag))**2).sum() / self.nobs
 
 
 class GLMGam(PenalizedMixin, GLM):
@@ -291,7 +333,8 @@ class GLMGam(PenalizedMixin, GLM):
         if not hasattr(self, '_offset_exposure'):
             self._offset_exposure = 0
 
-        self.scaletype = 'dev'
+        self.scaletype = scale
+        #self.scaletype = 'dev'
         # during iteration
         self.scale = 1
 
