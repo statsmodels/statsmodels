@@ -1,3 +1,12 @@
+"""
+Covariance models and estimators for GEE.
+
+Some details for the covariance calculations can be found in the Stata
+docs:
+
+http://www.stata.com/manuals13/xtxtgee.pdf
+"""
+
 from statsmodels.compat.python import iterkeys, itervalues, zip, range
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
@@ -8,28 +17,21 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning, OutputWarning,
                                              NotImplementedWarning)
 import warnings
 
-"""
-Some details for the covariance calculations can be found in the Stata
-docs:
-
-http://www.stata.com/manuals13/xtxtgee.pdf
-"""
-
 
 class CovStruct(object):
     """
-    A base class for correlation and covariance structures of grouped
-    data.
+    Base class for correlation and covariance structures.
 
-    Each implementation of this class takes the residuals from a
-    regression model that has been fitted to grouped data, and uses
+    An implementation of this class takes the residuals from a
+    regression model that has been fit to grouped data, and uses
     them to estimate the within-group dependence structure of the
     random errors in the model.
 
-    The state of the covariance structure is represented through the
-    value of the class variable `dep_params`.  The default state of a
-    newly-created instance should correspond to the identity
-    correlation matrix.
+    The current state of the covariance structure is represented
+    through the value of the `dep_params`  attribute.
+
+    The default state of a newly-created instance should always be
+    the identity correlation matrix.
     """
 
     def __init__(self, cov_nearest_method="clipped"):
@@ -41,7 +43,8 @@ class CovStruct(object):
         # adjusted.
         self.cov_adjust = []
 
-        # Method for projecting the covariance matrix if it not SPD.
+        # Method for projecting the covariance matrix if it is not
+        # PSD.
         self.cov_nearest_method = cov_nearest_method
 
     def initialize(self, model):
@@ -58,7 +61,7 @@ class CovStruct(object):
 
     def update(self, params):
         """
-        Updates the association parameter values based on the current
+        Update the association parameter values based on the current
         regression coefficients.
 
         Parameters
@@ -303,8 +306,8 @@ class Nested(CovStruct):
     A nested working dependence structure.
 
     A working dependence structure that captures a nested hierarchy of
-    groups, each level of which contributes to the random error term
-    of the model.
+    groups.  Each level of grouping contributes to the random error
+    structure of the model.
 
     When using this working covariance structure, `dep_data` of the
     GEE instance should contain a n_obs x k matrix of 0/1 indicators,
@@ -396,8 +399,8 @@ class Nested(CovStruct):
             # This is used to construct the working correlation
             # matrix.
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            ilabel[ix1, ix2] = ncm + 1
-            ilabel[ix2, ix1] = ncm + 1
+            ilabel[(ix1, ix2)] = ncm + 1
+            ilabel[(ix2, ix1)] = ncm + 1
             ilabels.append(ilabel)
 
             # This is used to estimate the variance components.
@@ -585,11 +588,12 @@ class Stationary(CovStruct):
             vd = np.bincount(dx, minlength=self.max_lag + 1)
 
             ii = np.flatnonzero(vd > 0)
-            dn[ii] += 1
             if len(ii) > 0:
+                dn[ii] += 1
                 dep_params[ii] += vs[ii] / vd[ii]
 
-        dep_params /= dn
+        i0 = np.flatnonzero(dn > 0)
+        dep_params[i0] /= dn[i0]
         self.dep_params = dep_params[1:] / dep_params[0]
 
     def covariance_matrix(self, endog_expval, index):
