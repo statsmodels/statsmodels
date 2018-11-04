@@ -80,7 +80,7 @@ class CheckGAMMixin(object):
         res2 = self.res2
         assert_allclose(res1.params, res2.params, rtol=1e-5)
         assert_allclose(np.asarray(res1.cov_params()),
-                        res2.Vp * self.covp_corrfact, rtol=1e-4)
+                        res2.Vp * self.covp_corrfact, rtol=1e-6) #4)
 
     def test_fitted(self):
         res1 = self.res1
@@ -138,6 +138,8 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         cls.res2 = results_pls.pls5
 
         cls.rtol_fitted = 1e-5
+        # edf is currently not available with PenalizedMixin
+        # need correction for difference in scale denominator
         cls.covp_corrfact = 1.0025464444310588
 
     def _test_cov_robust(self):
@@ -165,7 +167,9 @@ class TestGAM5Pirls(CheckGAMMixin):
         cls.res2 = results_pls.pls5
 
         cls.rtol_fitted = 1e-12
-        cls.covp_corrfact = 1.0025464444310588
+        # cls.covp_corrfact = 1.0025464444310588  # without edf
+        # edf is implemented
+        cls.covp_corrfact = 1
 
 
 class TestGAM5Bfgs(CheckGAMMixin):
@@ -184,7 +188,9 @@ class TestGAM5Bfgs(CheckGAMMixin):
         cls.res2 = results_pls.pls5
 
         cls.rtol_fitted = 1e-5
-        cls.covp_corrfact = 1.0025464444310588
+        # cls.covp_corrfact = 1.0025464444310588  # without edf
+        # edf is implemented
+        cls.covp_corrfact = 1
 
     def test_predict(self):
         res1 = self.res1
@@ -408,5 +414,7 @@ class TestGAMMPG(object):
 
             # TODO: no edf, edf corrected df_resid
             # scale estimate differs
-            corr_fact = np.sqrt(191.669417019567 / 190)
+            # corr_fact = np.sqrt(191.669417019567 / 190)  # without edf
+            # edf is implemented
+            corr_fact = 1
             assert_allclose(pred.se_mean, res2_se_mean * corr_fact, rtol=1e-10)
