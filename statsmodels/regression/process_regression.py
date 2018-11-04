@@ -486,12 +486,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         return score
 
-
     def hessian(self, params):
 
         hess = approx_fprime(params, self.score)
         return hess
-
 
     def fit(self, start_params=None, method=None, maxiter=None,
             full_output=True, disp=True, fargs=(), callback=None,
@@ -516,7 +514,8 @@ class ProcessMLE(base.LikelihoodModel):
 
             jac = None
             if meth not in ("powell",):
-                jac = lambda x: -self.score(x)
+                def jac(x):
+                    return -self.score(x)
 
             if maxiter is not None:
                 if np.isscalar(maxiter):
