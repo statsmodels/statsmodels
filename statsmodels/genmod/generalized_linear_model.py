@@ -794,7 +794,7 @@ class GLM(base.LikelihoodModel):
                 return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu, self.var_weights,
-                                             self.freq_weights, self.scale) /
+                                             self.freq_weights, 1.) /
                         (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
