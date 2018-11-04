@@ -11,11 +11,17 @@ import warnings
 
 
 class conditionalModel(base.LikelihoodModel):
-    def __init__(self, endog, exog, groups, missing='none', **kwargs):
+
+    def __init__(self, endog, exog, missing='none', **kwargs):
+
+        if "groups" not in kwargs:
+            raise ValueError("groups is a required argument")
+        groups = kwargs["groups"]
 
         super(conditionalModel, self).__init__(
             endog, exog, missing=missing, **kwargs)
 
+        exog = self.exog
         self.k_params = exog.shape[1]
 
         # Get the row indices for each group
@@ -27,9 +33,14 @@ class conditionalModel(base.LikelihoodModel):
 
         # Split the data into groups and remove groups with no variation
         endog, exog = np.asarray(endog), np.asarray(exog)
+        offset = kwargs.get("offset")
         self._endog_grp = []
         self._exog_grp = []
         self._groupsize = []
+        if offset is not None:
+            offset = np.asarray(offset)
+            self._offset_grp = []
+        self._offset = []
         self._sumy = []
         self.nobs = 0
         drops = [0, 0]
@@ -41,6 +52,8 @@ class conditionalModel(base.LikelihoodModel):
                 continue
             self.nobs += len(y)
             self._endog_grp.append(y)
+            if offset is not None:
+                self._offset_grp.append(offset[ix])
             self._groupsize.append(len(y))
             self._exog_grp.append(exog[ix, :])
             self._sumy.append(np.sum(y))
@@ -49,6 +62,12 @@ class conditionalModel(base.LikelihoodModel):
             msg = ("Dropped %d groups and %d observations for having " +
                    "no within-group variance") % tuple(drops)
             warnings.warn(msg)
+
+        # This can be pre-computed
+        if offset is not None:
+            self._endofs = []
+            for k, ofs in enumerate(self._offset_grp):
+                self._endofs.append(np.dot(self._endog_grp[k], ofs))
 
         # Number of groups
         self._n_groups = len(self._endog_grp)
@@ -98,6 +117,29 @@ class conditionalModel(base.LikelihoodModel):
         ]
         return ConditionalResultsWrapper(crslt)
 
+    def fit_regularized(self,
+                       method="elastic_net",
+                       alpha=0.,
+                       start_params=None,
+                       refit=False,
+                       **kwargs):
+
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
+
+        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
+
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              refit=refit,
+                              **defaults)
+
+
     # Override to allow groups to be passed as a variable name.
     @classmethod
     def from_formula(cls,
@@ -136,10 +178,10 @@ class ConditionalLogit(conditionalModel):
     be interpreted as being adjusted for any group-level confounders.
     """
 
-    def __init__(self, endog, exog, groups, missing='none', **kwargs):
+    def __init__(self, endog, exog, missing='none', **kwargs):
 
         super(ConditionalLogit, self).__init__(
-            endog, exog, groups, missing=missing, **kwargs)
+            endog, exog, missing=missing, **kwargs)
 
     def loglike(self, params):
 
@@ -157,10 +199,15 @@ class ConditionalLogit(conditionalModel):
 
         return score
 
-    def _denom(self, grp, params):
+    def _denom(self, grp, params, ofs=None):
 
-        exb = np.exp(np.dot(self._exog_grp[grp], params))
+        if ofs is None:
+            ofs = 0
 
+        exb = np.exp(np.dot(self._exog_grp[grp], params) + ofs)
+
+        # In the recursions, f may be called multiple times with the
+        # same arguments, so we memoize the results.
         memo = {}
 
         def f(t, k):
@@ -181,11 +228,16 @@ class ConditionalLogit(conditionalModel):
 
         return f(self._groupsize[grp], self._n1[grp])
 
-    def _denom_grad(self, grp, params):
+    def _denom_grad(self, grp, params, ofs=None):
+
+        if ofs is None:
+            ofs = 0
 
         ex = self._exog_grp[grp]
-        exb = np.exp(np.dot(ex, params))
+        exb = np.exp(np.dot(ex, params) + ofs)
 
+        # s may be called multiple times in the recursions with the
+        # same arguments, so memoize the results.
         memo = {}
 
         def s(t, k):
@@ -214,11 +266,26 @@ class ConditionalLogit(conditionalModel):
 
     def loglike_grp(self, grp, params):
 
-        return np.dot(self._xy[grp], params) - np.log(self._denom(grp, params))
+        ofs = None
+        if hasattr(self, 'offset'):
+            ofs = self._offset_grp[grp]
+
+        llg = np.dot(self._xy[grp], params)
+
+        if ofs is not None:
+            llg += self._endofs[grp]
+
+        llg -= np.log(self._denom(grp, params, ofs))
+
+        return llg
 
     def score_grp(self, grp, params):
 
-        d, h = self._denom_grad(grp, params)
+        ofs = 0
+        if hasattr(self, 'offset'):
+            ofs = self._offset_grp[grp]
+
+        d, h = self._denom_grad(grp, params, ofs)
         return self._xy[grp] - h / d
 
 

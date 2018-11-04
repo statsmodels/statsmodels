@@ -14,7 +14,7 @@ def test_logit_1d():
     x = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
     x = x[:, None]
 
-    model = ConditionalLogit(y, x, g)
+    model = ConditionalLogit(y, x, groups=g)
 
     # Check the gradient for the denominator of the partial likelihood
     for x in -1, 0, 1, 2:
@@ -47,7 +47,7 @@ def test_logit_2d():
     x[:, 0] = x1
     x[:, 1] = x2
 
-    model = ConditionalLogit(y, x, g)
+    model = ConditionalLogit(y, x, groups=g)
 
     # Check the gradient for the denominator of the partial likelihood
     for x in -1, 0, 1, 2:
@@ -85,9 +85,9 @@ def test_formula():
 
         x = np.hstack((x1[:, None], x2[:, None]))
         if j == 0:
-            model1 = ConditionalLogit(y, x, g)
+            model1 = ConditionalLogit(y, x, groups=g)
         else:
-            model1 = ConditionalPoisson(y, x, g)
+            model1 = ConditionalPoisson(y, x, groups=g)
         result1 = model1.fit()
 
         df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "g": g})
@@ -113,7 +113,7 @@ def test_poisson_1d():
     x = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
     x = x[:, None]
 
-    model = ConditionalPoisson(y, x, g)
+    model = ConditionalPoisson(y, x, groups=g)
 
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
@@ -139,7 +139,7 @@ def test_poisson_2d():
     x[:, 0] = x1
     x[:, 1] = x2
 
-    model = ConditionalPoisson(y, x, g)
+    model = ConditionalPoisson(y, x, groups=g)
 
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
@@ -155,3 +155,36 @@ def test_poisson_2d():
     assert_allclose(result.bse, np.r_[.3874942, .1686712], rtol=1e-5)
 
     result.summary()
+
+
+def test_lasso_logistic():
+
+    np.random.seed(3423948)
+
+    n = 200
+    groups = np.arange(10)
+    groups = np.kron(groups, np.ones(n // 10))
+    group_effects = np.random.normal(size=10)
+    group_effects = np.kron(group_effects, np.ones(n // 10))
+
+    x = np.random.normal(size=(n, 4))
+    params = np.r_[0, 0, 1, 0]
+    lin_pred = np.dot(x, params) + group_effects
+
+    mean = 1 / (1 + np.exp(-lin_pred))
+    y = (np.random.uniform(size=n) < mean).astype(np.int)
+
+    model0 = ConditionalLogit(y, x, groups=groups)
+    result0 = model0.fit()
+
+    # Should be the same as model0
+    model1 = ConditionalLogit(y, x, groups=groups)
+    result1 = model1.fit_regularized(L1_wt=0, alpha=0)
+
+    assert_allclose(result0.params, result1.params, rtol=1e-3)
+
+    model2 = ConditionalLogit(y, x, groups=groups)
+    result2 = model2.fit_regularized(L1_wt=1, alpha=0.05)
+
+    # Regression test
+    assert_allclose(result2.params, np.r_[0, 0, 0.55235152, 0], rtol=1e-4)
