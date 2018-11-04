@@ -123,6 +123,29 @@ class conditionalModel(base.LikelihoodModel):
                         start_params=None,
                         refit=False,
                         **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method :
+            Only the `elastic_net` approach is currently implemented.
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        start_params : array-like
+            Starting values for `params`.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+
+        Returns
+        -------
+        An array of parameter estimates.
+        """
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
@@ -300,11 +323,17 @@ class ConditionalPoisson(conditionalModel):
 
     def loglike(self, params):
 
+        ofs = None
+        if hasattr(self, 'offset'):
+            ofs = self._offset_grp
+
         ll = 0.0
 
         for i in range(len(self._endog_grp)):
 
             xb = np.dot(self._exog_grp[i], params)
+            if ofs is not None:
+                xb += ofs[i]
             exb = np.exp(xb)
             y = self._endog_grp[i]
             ll += np.dot(y, xb)
@@ -315,12 +344,18 @@ class ConditionalPoisson(conditionalModel):
 
     def score(self, params):
 
+        ofs = None
+        if hasattr(self, 'offset'):
+            ofs = self._offset_grp
+
         score = 0.0
 
         for i in range(len(self._endog_grp)):
 
             x = self._exog_grp[i]
             xb = np.dot(x, params)
+            if ofs is not None:
+                xb += ofs[i]
             exb = np.exp(xb)
             s = exb.sum()
             y = self._endog_grp[i]
