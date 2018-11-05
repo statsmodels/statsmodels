@@ -72,7 +72,7 @@ class Power(object):
 
     Formulas
     --------
-    V(mu) = numpy.fabs(mu)**power
+    V(mu) = numpy.abs(mu)**power
 
     Notes
     -----
@@ -99,7 +99,7 @@ class Power(object):
         variance : array
             numpy.fabs(mu)**self.power
         """
-        return np.power(np.fabs(mu), self.power)
+        return np.power(np.abs(mu), self.power)
 
     def deriv(self, mu):
         """
@@ -108,7 +108,7 @@ class Power(object):
         May be undefined at zero.
         """
 
-        der = self.power * np.fabs(mu) ** (self.power - 1)
+        der = self.power * np.abs(mu) ** (self.power - 1)
         ii = np.flatnonzero(mu < 0)
         der[ii] *= -1
         return der
