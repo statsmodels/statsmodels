@@ -60,7 +60,7 @@ class UnivariateGamPenalty(Penalty):
         if alpha is None:
             alpha = self.alpha
 
-        if self.univariate_smoother.der2_basis_ is not None:
+        if 0: #self.univariate_smoother.der2_basis_ is not None:
             # The second derivative of the estimated regression function
             f = np.dot(self.univariate_smoother.der2_basis_, params)
             return alpha * np.sum(f ** 2) / self.n_samples

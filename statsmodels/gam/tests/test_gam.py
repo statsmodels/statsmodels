@@ -172,15 +172,16 @@ def test_gam_glm():
     y = data_from_r.y.as_matrix()
 
     df = [10]
-    degree = [5]
+    degree = [3]
     bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
-    y_mgcv = data_from_r.y_est
+    y_mgcv = np.asarray(data_from_r.y_est)
 
     # alpha = 1000
     alpha = 0.03
     alpha = 0.0001
+    alpha = 0.1
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
@@ -190,7 +191,9 @@ def test_gam_glm():
 
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
                               disp=1, maxiter=10000, maxfun=5000)
-    y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
+    y_gam0 = np.dot(bsplines.basis_, res_glm_gam.params)
+    y_gam = np.asarray(res_glm_gam.fittedvalues)
+    assert_allclose(y_gam, y_gam0, rtol=1e-10)
 
     # plt.plot(x, y_gam, '.', label='gam')
     # plt.plot(x, y_mgcv, '.', label='mgcv')
@@ -198,7 +201,7 @@ def test_gam_glm():
     # plt.legend()
     # plt.show()
 
-    assert_allclose(y_gam, y_mgcv, atol=1.e-1)
+    assert_allclose(y_gam, y_mgcv, atol=1.e-2)
 
 
 def test_gam_discrete():
@@ -311,14 +314,14 @@ def test_multivariate_gam_1d_data():
     y = data_from_r.y
 
     df = [10]
-    degree = [4] #[5]
+    degree = [3] #[5]
     bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
 
     # alpha is by manually adjustment to reduce discrepancy in fittedvalues
-    alpha = [0.0168 * 0.0251 / 2]
+    alpha = [0.0168 * 0.0251 / 2 * 500]
     gp = MultivariateGamPenalty(bsplines, alpha=alpha)
 
     glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
@@ -624,8 +627,9 @@ def test_glm_pirls_compatibility():
     # plt.plot(y_est_glm)
     # plt.plot(y, '.')
     # plt.show()
-    assert_allclose(gam_res_glm.params, gam_res_pirls.params, atol=1e-5)
-    assert_allclose(y_est_glm, y_est_pirls, atol=1e-5)
+    assert_allclose(gam_res_glm.params, gam_res_pirls.params, atol=5e-5, 
+                    rtol=5e-5)
+    assert_allclose(y_est_glm, y_est_pirls, atol=5e-5)
 
 
 def test_zero_penalty():
@@ -707,7 +711,7 @@ def test_partial_values():
     bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
 
     # TODO: alpha found by trial and error to pass assert
-    alpha = 0.025 /115
+    alpha = 0.025 /115 * 500
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
     # TODO: if IRLS is used res_glm_gam has not partial_values.

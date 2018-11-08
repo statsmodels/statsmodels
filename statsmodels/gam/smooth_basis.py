@@ -222,6 +222,38 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3, spacing='quantile'
     return all_knots
 
 
+def _get_integration_points(knots, k_points=3):
+    """add points to each subinterval defined by knots
+
+    inserts k_points between each two consecutive knots
+    """
+    k_points = k_points + 1
+    knots = np.unique(knots)
+    dxi = np.arange(k_points) / k_points
+    dxk = np.diff(knots)
+    dx = dxk[:, None] * dxi
+    x = np.concatenate(((knots[:-1, None] + dx).ravel(), [knots[-1]]))
+    return x
+
+
+def get_covder2(smoother, k_points=4, integration_points=None, skip_ctransf=False,
+                deriv=2):
+    """approximation to integral of cross product of second derivative of smoother
+
+    This uses scipy.integrate simps to compute an approximation to the integral of
+    the smoother derivative cross-product at knots plus k_points in between knots.
+    """
+    from scipy.integrate import simps
+    knots = smoother.knots
+    x = _get_integration_points(knots, k_points=3)
+    if integration_points is None:
+        d2 = smoother.transform(x, deriv=deriv, skip_ctransf=skip_ctransf)
+    else:
+        x = integration_points
+    covd2 = simps(d2[:, :, None] * d2[:, None, :], x, axis=0)
+    return covd2
+
+
 # TODO: this function should be deleted
 def make_poly_basis(x, degree, intercept=True):
     '''
@@ -517,11 +549,14 @@ class UnivariateBSplines(UnivariateGamSmoother):
     """B-Spline single component smoother for GAM
     """
     def __init__(self, x, degree, df, include_intercept=False,
-                 constraints=None, variable_name='x', **knot_kwds):
+                 constraints=None, variable_name='x',
+                 covder2_kwds=None, **knot_kwds):
         self.degree = degree
         self.df = df
         self.include_intercept = include_intercept
         self.knots = get_knots_bsplines(x, degree=degree, df=df, **knot_kwds)
+        self.covder2_kwds = (covder2_kwds if covder2_kwds is not None
+                             else {})
         super(UnivariateBSplines, self).__init__(x,
             constraints=constraints, variable_name=variable_name)
 
@@ -529,15 +564,24 @@ class UnivariateBSplines(UnivariateGamSmoother):
         basis, der_basis, der2_basis = _eval_bspline_basis(
             self.x, self.knots, self.degree,
             include_intercept=self.include_intercept)
-        cov_der2 = np.dot(der2_basis.T, der2_basis)
+        #cov_der2 = np.dot(der2_basis.T, der2_basis)
+
+        cov_der2 = get_covder2(self, skip_ctransf=True,
+                               **self.covder2_kwds)
 
         return basis, der_basis, der2_basis, cov_der2
 
-    def transform(self, x_new, deriv=0):
-        exog = _eval_bspline_basis(self.x, self.knots, self.degree,
+    def transform(self, x_new, deriv=0, skip_ctransf=False):
+
+        if x_new is None:
+            x_new = self.x
+        exog = _eval_bspline_basis(x_new, self.knots, self.degree,
                                    deriv=deriv,
                                    include_intercept=self.include_intercept)
-        if self.ctransf is not None:
+
+        # ctransf does not exist yet when cov_der2 is computed
+        ctransf = getattr(self, 'ctransf', None)
+        if ctransf is not None and not skip_ctransf:
             exog = exog.dot(self.ctransf)
         return exog
 
