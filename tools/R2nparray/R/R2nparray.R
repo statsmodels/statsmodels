@@ -63,7 +63,7 @@ convert.data.frame <- function(X, name='default', strict=TRUE){
 convert.numeric <- function(X, name='default', strict=TRUE) {
     if (length(X) > 1){
         head = paste(name, '= np.array([\n')
-        mid = strwrap(paste(X, collapse=', '), width=76, prefix='    ')
+        mid = strwrap(paste(X, collapse=', '), width=79, indent=3, exdent=4)
         mid = paste(mid, collapse='\n')
         tail = "\n    ])"
         if (is.matrix(X)) {
