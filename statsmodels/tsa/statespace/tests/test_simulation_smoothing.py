@@ -644,6 +644,19 @@ def test_simulation_smoothing_state_intercept_diffuse():
     intercept = 100
     endog = np.ones(nobs) * intercept
 
+    # Test without missing values
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)
+
+    # Test with missing values
+    endog[5] = np.nan
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
                           measurement_error=True,
                           initialization='diffuse')
