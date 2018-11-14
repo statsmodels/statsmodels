@@ -22,6 +22,16 @@ def forg(x, prec=3):
                          .format(prec=prec))
 
 
+def d_or_f(x, width=6):
+    if np.isnan(x):
+        return (width - 3) * ' ' + 'NaN'
+
+    if x // 1 == x:
+        return "%#6d" % x
+    else:
+        return "%#8.2f" % x
+
+
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
             returns='text', model_info=None):
     """
@@ -312,11 +322,11 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('Time:', lambda: time_of_day),
           ('Number of Obs:', lambda: [results.nobs]),
           #('No. of Observations:', lambda: ["%#6d" % results.nobs]),
-          ('No. Observations:', lambda: [num_to_str(results.nobs)]),
+          ('No. Observations:', lambda: [d_or_f(results.nobs)]),
           #('Df model:', lambda: [results.df_model]),
-          ('Df Model:', lambda: [num_to_str(results.df_model)]),
+          ('Df Model:', lambda: [d_or_f(results.df_model)]),
           #TODO: check when we have non-integer df
-          ('Df Residuals:', lambda: [num_to_str(results.df_resid)]),
+          ('Df Residuals:', lambda: [d_or_f(results.df_resid)]),
           # ('Df resid:', lambda: [results.df_resid]),
           # ('df resid:', lambda: [results.df_resid]), #check capitalization
           ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception

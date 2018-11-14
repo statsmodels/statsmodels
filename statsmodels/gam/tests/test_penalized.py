@@ -31,7 +31,7 @@ from statsmodels.gam.gam import GLMGam
 
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
-from .results import results_pls
+from .results import results_pls, results_mpg_bs
 
 
 class PoissonPenalized(PenalizedMixin, Poisson):
@@ -80,7 +80,14 @@ class CheckGAMMixin(object):
         res2 = self.res2
         assert_allclose(res1.params, res2.params, rtol=1e-5)
         assert_allclose(np.asarray(res1.cov_params()),
-                        res2.Vp * self.covp_corrfact, rtol=1e-6) #4)
+                        res2.Vp * self.covp_corrfact, rtol=1e-6, atol=1e-9)
+
+        assert_allclose(res1.scale, res2.scale * self.covp_corrfact,
+                        rtol=1e-8)
+
+        assert_allclose(np.asarray(res1.bse),
+                        res2.se * np.sqrt(self.covp_corrfact),
+                        rtol=1e-6, atol=1e-9)
 
     def test_fitted(self):
         res1 = self.res1
@@ -418,3 +425,64 @@ class TestGAMMPG(object):
             # edf is implemented
             corr_fact = 1
             assert_allclose(pred.se_mean, res2_se_mean * corr_fact, rtol=1e-10)
+
+
+class TestGAMMPGBS(CheckGAMMixin):
+    # This has matching results from mgcv
+
+    @classmethod
+    def setup_class(cls):
+
+        sp = np.array([0.830689464223685, 425.361212061649])
+        cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
+
+        x_spline = df_autos[['weight', 'hp']].values
+        cls.exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
+                      variable_names=['weight', 'hp'],
+                      constraints='center',
+                      include_intercept=True)
+        # TODO alpha needs to be list
+        alpha0 = 1 / s_scale * sp / 2
+        gam_bs = GLMGam(df_autos['city_mpg'], exog=cls.exog, smoother=bs,
+                        alpha=(alpha0).tolist())
+        cls.res1a = gam_bs.fit(use_t=True)
+
+        cls.res1b = gam_bs.fit(method='newton', use_t=True)
+        cls.res1 = cls.res1a._results
+        cls.res2 = results_mpg_bs.mpg_bs
+
+        cls.rtol_fitted = 1e-8
+        cls.covp_corrfact = 1  # not needed
+
+    @classmethod
+    def _init(cls):
+        pass
+
+    def test_edf(self):
+
+        res1 = self.res1
+        res2 = self.res2
+        assert_allclose(res1.edf, res2.edf_all, rtol=1e-6)
+        hat = res1.get_hat_matrix_diag()
+        assert_allclose(hat, res2.hat, rtol=1e-6)
+
+    def test_smooth(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        pen_matrix = res1.model.penal.penalty_matrix()
+        #pen_matrices = res1.model.penal.penalty_matrices_
+        smoothers = res1.model.smoother.smoothers_
+        pen_matrix0 = smoothers[0].cov_der2_
+        assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale,
+                        rtol=1e-6)
+
+    def test_predict(self):
+        res1 = self.res1
+        res2 = self.res2
+        predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
+        assert_allclose(predicted, res1.fittedvalues[2:4],
+                        rtol=1e-13)
+        assert_allclose(predicted, res2.fitted_values[2:4],
+                        rtol=self.rtol_fitted)
