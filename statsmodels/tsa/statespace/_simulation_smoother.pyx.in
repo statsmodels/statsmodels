@@ -378,10 +378,12 @@ cdef class {{prefix}}SimulationSmoother(object):
             raise RuntimeError("Statespace model not initialized.")
         blas.{{prefix}}copy(&k_states, &self.model.initial_state[0], &inc, &self.simulated_model.initial_state[0], &inc)
         blas.{{prefix}}copy(&k_states2, &self.model.initial_state_cov[0,0], &inc, &self.simulated_model.initial_state_cov[0,0], &inc)
+        blas.{{prefix}}copy(&k_states2, &self.model.initial_diffuse_state_cov[0,0], &inc, &self.simulated_model.initial_diffuse_state_cov[0,0], &inc)
 
         if self.has_missing:
             blas.{{prefix}}copy(&k_states, &self.model.initial_state[0], &inc, &self.secondary_simulated_model.initial_state[0], &inc)
             blas.{{prefix}}copy(&k_states2, &self.model.initial_state_cov[0,0], &inc, &self.secondary_simulated_model.initial_state_cov[0,0], &inc)
+            blas.{{prefix}}copy(&k_states2, &self.model.initial_diffuse_state_cov[0,0], &inc, &self.secondary_simulated_model.initial_diffuse_state_cov[0,0], &inc)
 
         # 0. Kalman filter initialization: get alpha_1^+ ~ N(a_1, P_1)
         # Usually, this means transforming the N(0,1) random variate
