@@ -1829,7 +1829,7 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue, constraint.shape[0]]
+            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
