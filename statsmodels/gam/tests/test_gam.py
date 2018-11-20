@@ -469,7 +469,7 @@ def test_make_augmented_matrix():
     expected_aug_y = y
     expected_aug_y[:n_samples] = y
     assert_allclose(aug_y, expected_aug_y)
-    expected_aug_w = np.sqrt(w)
+    expected_aug_w = w
     assert_allclose(aug_w, expected_aug_w)
 
     alpha = 1
@@ -482,7 +482,7 @@ def test_make_augmented_matrix():
     expected_aug_y = np.zeros(shape=(n_samples + n_columns,))
     expected_aug_y[:n_samples] = y
     assert_allclose(aug_y, expected_aug_y)
-    expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
+    expected_aug_w = np.concatenate((w, [1] * n_columns), axis=0)
     assert_allclose(aug_w, expected_aug_w)
 
 
