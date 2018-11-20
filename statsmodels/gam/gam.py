@@ -15,6 +15,7 @@ from statsmodels.discrete.discrete_model import Logit
 from scipy.stats import chi2
 from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
     GLMResultsWrapper, lm, _check_convergence)
+import statsmodels.regression._tools as reg_tools
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base._penalized import PenalizedMixin
@@ -296,9 +297,10 @@ class GLMGam(PenalizedMixin, GLM):
         # alpha = self._check_alpha()
 
         if method.lower() == 'pirls':
-            res = self._fit_pirls(self.alpha,
+            res = self._fit_pirls(self.alpha, start_params=start_params,
+                                  maxiter=maxiter, tol=tol, scale=scale,
                                   cov_type=cov_type, cov_kwds=cov_kwds,
-                                  **kwargs)
+                                  use_t=use_t, **kwargs)
         else:
             res = super(GLMGam, self).fit(start_params=start_params,
                                           maxiter=maxiter, method=method,
@@ -434,6 +436,8 @@ def penalized_wls(x, y, s, weights):
     # TODO: I don't understand why I need 2 * s
     aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
+    # MinimalWLS does not return normalized_cov_params
+    # wls_results = reg_tools._MinimalWLS(aug_y, aug_x, aug_weights).fit()
     wls_results.params = wls_results.params.ravel()
 
     return wls_results
@@ -453,6 +457,5 @@ def make_augmented_matrix(x, y, s, w):
 
     id1 = np.array([1.] * rs.shape[0])
     w1 = np.concatenate([w, id1])
-    w1 = np.sqrt(w1)
 
     return x1, y1, w1
