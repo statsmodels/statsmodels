@@ -10,12 +10,9 @@ import os
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-#import matplotlib.pyplot as plt
 import pandas as pd
 
 import patsy
-import patsy.splines as bspl
-import patsy.mgcv_cubic_splines as cspl
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
@@ -136,7 +133,7 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         pen = smpen.L2ContraintsPenalty(restriction=restriction)
         mod = GLMPenalized(endog, exog, family=family.Gaussian(),
                            penal=pen)
-        # scaling of penweith in R mgcv
+        # scaling of penweight in R mgcv
         s_scale_r = 0.02630734
         # set pen_weight to correspond to R mgcv example
         cls.pw = mod.pen_weight = 1 / s_scale_r / 2
@@ -158,6 +155,7 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
         assert_allclose(np.asarray(res1.cov_params()),
                         res2.Ve * self.covp_corrfact, rtol=1e-4)
 
+
 class TestGAM5Pirls(CheckGAMMixin):
 
     cov_type = 'nonrobust'
@@ -169,7 +167,7 @@ class TestGAM5Pirls(CheckGAMMixin):
         x = data_mcycle['times'].values
         endog = data_mcycle['accel']
         cc = CyclicCubicSplines(x, df=[6], constraints='center')
-        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale / 2)
+        gam_cc = GLMGam(endog, smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
         cls.res2 = results_pls.pls5
 
@@ -190,7 +188,7 @@ class TestGAM5Bfgs(CheckGAMMixin):
         x = data_mcycle['times'].values
         endog = data_mcycle['accel']
         cc = CyclicCubicSplines(x, df=[6], constraints='center')
-        gam_cc = GLMGam(endog, smoother=cc, alpha= 1 / s_scale / 2 )
+        gam_cc = GLMGam(endog, smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit(method='bfgs')
         cls.res2 = results_pls.pls5
 
@@ -217,7 +215,7 @@ class TestGAM6Pirls(object):
 
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
         gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                          alpha= 1 / s_scale / 2)
+                        alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit()
 
     def test_fitted(self):
@@ -248,7 +246,7 @@ class TestGAM6Bfgs(object):
 
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
         gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                          alpha=1 / s_scale / 2)
+                        alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit(method='bfgs')
 
     def test_fitted(self):
@@ -275,7 +273,7 @@ class TestGAM6Bfgs0(object):
 
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
         gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,
-                          alpha=0)
+                        alpha=0)
         cls.res1 = gam_cc.fit(method='bfgs')
 
     def test_fitted(self):
@@ -293,15 +291,16 @@ class TestGAM6Bfgs0(object):
         assert_allclose(pred.predicted_mean[:15], pls6_fittedvalues,
                         rtol=self.rtol_fitted)
 
+
 pls6_fittedvalues = np.array([
-            2.45008146537851, 3.14145063965465, 5.24130119353225,
-            6.63476330674223, 7.99704341866374, 13.9351103077006,
-            14.5508371638833, 14.785647621276, 15.1176070735895,
-            14.8053514054347, 13.790412967255, 13.790412967255,
-            11.2997845518655, 9.51681958051473, 8.4811626302547])
+    2.45008146537851, 3.14145063965465, 5.24130119353225,
+    6.63476330674223, 7.99704341866374, 13.9351103077006,
+    14.5508371638833, 14.785647621276, 15.1176070735895,
+    14.8053514054347, 13.790412967255, 13.790412967255,
+    11.2997845518655, 9.51681958051473, 8.4811626302547])
 
 pls6_exog = np.array([
-     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -0.334312615555276, -0.302733562622373,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -0.334312615555276, -0.302733562622373,
     -0.200049479196403, -0.12607681525989, -0.0487229716135211,
     0.397628373646056, 0.475396222437879, 0.51311526571058,
     0.685638355361239, 0.745083051531164, -0.633518318499726,
@@ -348,6 +347,7 @@ class TestGAM6ExogBfgs(object):
         assert_allclose(exog[:10], pls6_exog,
                         rtol=1e-13)
 
+
 class TestGAM6ExogPirls(object):
 
     @classmethod
@@ -392,7 +392,7 @@ class TestGAMMPG(object):
                         alpha=(1 / s_scale * sp / 2).tolist())
         cls.res1a = gam_cc.fit()
         gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
-                        alpha=(1 / s_scale * sp / 2 ).tolist())
+                        alpha=(1 / s_scale * sp / 2).tolist())
         cls.res1b = gam_cc.fit(method='newton')
 
     def test_exog(self):
@@ -503,7 +503,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         # TODO alpha needs to be list
         alpha0 = 1 / s_scale * sp / 2
         gam_bs = GLMGam(df_autos['city_mpg'], exog=cls.exog, smoother=bs,
-                          family=family.Poisson(), alpha=alpha0)
+                        family=family.Poisson(), alpha=alpha0)
 
         xnames = cls.exog.design_info.column_names + gam_bs.smoother.col_names
         gam_bs.exog_names[:] = xnames
@@ -557,7 +557,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res1 = self.res1
         res2 = self.res2
         wtt = res1.wald_test_terms(skip_single=True,
-            combine_terms=['fuel', 'drive', 'weight', 'hp'])
+                                   combine_terms=['fuel', 'drive',
+                                                  'weight', 'hp'])
         # mgcv has term test for linear part
         assert_allclose(wtt.statistic[:2], res2.pTerms_chi_sq, rtol=1e-7)
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)

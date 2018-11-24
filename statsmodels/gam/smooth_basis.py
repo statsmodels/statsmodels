@@ -9,19 +9,19 @@ Created on Fri Jun  5 16:32:00 2015
 """
 
 from __future__ import division
-## import usefull only for development ##
+# import useful only for development
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
 
 import numpy as np
 import pandas as pd
 from patsy import dmatrix
+from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 
-### Obtain b splines from patsy ###
-
+# Obtain b splines from patsy
 
 def _equally_spaced_knots(x, df):
     n_knots = df - 2
@@ -39,7 +39,7 @@ def _R_compat_quantile(x, probs):
     return quantiles.reshape(probs.shape, order="C")
 
 
-## from patsy splines.py
+# from patsy splines.py
 def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     try:
         from scipy.interpolate import splev
@@ -101,7 +101,7 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
         if deriv in ['all', 2]:
             der2_basis[:, ii] = splev(x, (knots, coefs, degree), der=2)
 
-    if deriv =='all':
+    if deriv == 'all':
         return basis, der1_basis, der2_basis
     else:
         return ret
@@ -155,7 +155,7 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3, spacing='quantile'
                          % (degree,))
 
     # These are guaranteed to all be 1d vectors by the code above
-    #x = np.concatenate(tmp["xs"])
+    # x = np.concatenate(tmp["xs"])
     if df is None and knots is None:
         raise ValueError("must specify either df or knots")
     order = degree + 1
@@ -216,7 +216,7 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3, spacing='quantile'
         all_knots = np.concatenate((lower_knots, inner_knots, upper_knots))
     else:
         all_knots = np.concatenate(([lower_bound, upper_bound] * order,
-                                inner_knots))
+                                    inner_knots))
     all_knots.sort()
 
     return all_knots
@@ -236,12 +236,14 @@ def _get_integration_points(knots, k_points=3):
     return x
 
 
-def get_covder2(smoother, k_points=4, integration_points=None, skip_ctransf=False,
-                deriv=2):
-    """approximation to integral of cross product of second derivative of smoother
+def get_covder2(smoother, k_points=4, integration_points=None,
+                skip_ctransf=False, deriv=2):
+    """
+    Approximate integral of cross product of second derivative of smoother
 
-    This uses scipy.integrate simps to compute an approximation to the integral of
-    the smoother derivative cross-product at knots plus k_points in between knots.
+    This uses scipy.integrate simps to compute an approximation to the
+    integral of the smoother derivative cross-product at knots plus k_points
+    in between knots.
     """
     from scipy.integrate import simps
     knots = smoother.knots
@@ -492,7 +494,8 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
                 self.cov_der2_ = ctransf.T.dot(base4[3]).dot(ctransf)
 
         self.dim_basis = self.basis_.shape[1]
-        self.col_names = [self.variable_name + str(i) for i in range(self.dim_basis)]
+        self.col_names = [self.variable_name + str(i)
+                          for i in range(self.dim_basis)]
 
     @abstractmethod
     def _smooth_basis_for_single_variable(self):
@@ -509,8 +512,8 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
         self.der2_basis_ = der2_basis
         self.cov_der2_ = cov_der2
 
-        super(UnivariateGenericSmoother, self).__init__(x,
-            variable_name=variable_name)
+        super(UnivariateGenericSmoother, self).__init__(
+            x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         return self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_
@@ -564,7 +567,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
         basis, der_basis, der2_basis = _eval_bspline_basis(
             self.x, self.knots, self.degree,
             include_intercept=self.include_intercept)
-        #cov_der2 = np.dot(der2_basis.T, der2_basis)
+        # cov_der2 = np.dot(der2_basis.T, der2_basis)
 
         cov_der2 = get_covder2(self, skip_ctransf=True,
                                **self.covder2_kwds)
@@ -685,7 +688,6 @@ class BSplines(MultivariateGamSmoother):
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            #if self.knot_kwds:
             kwds = self.knot_kwds[v] if self.knot_kwds else {}
             uv_smoother = UnivariateBSplines(self.x[:, v],
                             degree=self.degrees[v], df=self.dfs[v],
@@ -823,10 +825,6 @@ class CubicSplines(MultivariateGamSmoother):
         return smoothers
 
 
-# TODO: this class is not tested yet
-from patsy.mgcv_cubic_splines import _get_all_sorted_knots
-
-
 class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
     """cyclic cubic regression spline single component smoother for GAM
     """
@@ -858,10 +856,18 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006,
            pp 146-147
 
-        :param knots: The 1-d array knots used for cubic spline parametrization,
-         must be sorted in ascending order.
-        :return: A 2-d array mapping cyclic cubic spline values at
-         knots to second derivatives.
+        Parameters
+        ----------
+        knots : ndarray
+            The 1-d array knots used for cubic spline parametrization,
+            must be sorted in ascending order.
+
+        Returns
+        -------
+        b, d: ndarrays
+            arrays for mapping cyclic cubic spline values at knots to
+            second derivatives.
+            penalty matrix is equal to ``s = d.T.dot(b^-1).dot(d)``
         """
         h = knots[1:] - knots[:-1]
         n = knots.size - 1

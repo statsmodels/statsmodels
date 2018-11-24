@@ -41,12 +41,12 @@ class GLMGAMResults(GLMResults):
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
         edf = self.edf.sum()
-        self.df_model = edf - 1 #assume constant
+        self.df_model = edf - 1  # assume constant
         # need to use nobs or wnobs attribute
         self.df_resid = self.df_resid = self.model.endog.shape[0] - edf
 
         # we are setting the model df for the case when super is using it
-        # df in model will be stale/incorrect state when alpah/pen_weight changes
+        # df in model will be incorrect state when alpha/pen_weight changes
         self.model.df_model = self.df_model
         self.model.df_resid = self.df_resid
         mu = self.fittedvalues
@@ -54,7 +54,6 @@ class GLMGAMResults(GLMResults):
         super(GLMGAMResults, self).__init__(model, params,
                                             normalized_cov_params, scale,
                                             **kwds)
-
 
     def _tranform_predict_exog(self, exog=None, x=None, transform=False):
         if transform is False:
@@ -140,7 +139,6 @@ class GLMGAMResults(GLMResults):
         y_est = y_est[sort_index]
         se = se[sort_index]
 
-
         fig, ax = create_mpl_ax(ax)
         ax.plot(x, y_est, c='blue', lw=2)
         if plot_se:
@@ -212,7 +210,6 @@ class GLMGAMResults(GLMResults):
     def edf(self):
         return self.get_hat_matrix_diag(_axis=0)
 
-
     @cache_readonly
     def hat_matrix_trace(self):
         return self.hat_matrix_diag.sum()
@@ -227,7 +224,9 @@ class GLMGAMResults(GLMResults):
 
     @cache_readonly
     def cv(self):
-        return ((self.resid_pearson / (1. - self.hat_matrix_diag))**2).sum() / self.nobs
+        cv_ = ((self.resid_pearson / (1. - self.hat_matrix_diag))**2).sum()
+        cv_ /= self.nobs
+        return cv_
 
 
 class GLMGam(PenalizedMixin, GLM):
@@ -321,7 +320,7 @@ class GLMGam(PenalizedMixin, GLM):
         # TODO: we need to rescale alpha
         endog = self.endog
         k_exog_linear = self.k_exog_linear
-        wlsexog = self.exog #smoother.basis_
+        wlsexog = self.exog  # smoother.basis_
         spl_s = self.penal.penalty_matrix(alpha=alpha)
 
         n_samples, n_columns = wlsexog.shape
@@ -336,7 +335,8 @@ class GLMGam(PenalizedMixin, GLM):
             self._offset_exposure = 0
 
         self.scaletype = scale
-        #self.scaletype = 'dev'
+        # TODO: check default scale types
+        # self.scaletype = 'dev'
         # during iteration
         self.scale = 1
 
@@ -372,14 +372,12 @@ class GLMGam(PenalizedMixin, GLM):
 
             # this defines the augmented matrix point 2a on page 136
             wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights)
-                                        #np.array(2.) * alpha)
             lin_pred = np.dot(wlsexog, wls_results.params).ravel()
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
             # self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
-
 
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
@@ -403,7 +401,6 @@ class GLMGam(PenalizedMixin, GLM):
         glm_results.converged = converged
 
         return GLMResultsWrapper(glm_results)
-
 
     def select_penweight(self, criterion='aic', start_params=None,
                          start_model_params=None,
@@ -489,7 +486,7 @@ class GLMGam(PenalizedMixin, GLM):
             opt = fit_res[0]
         elif method == 'basinhopping':
             kwds = dict(minimizer_kwargs={'method': 'Nelder-Mead',
-                        'options':{'maxiter':100, 'maxfev':500}},
+                        'options': {'maxiter': 100, 'maxfev': 500}},
                         niter=10)
             kwds.update(fit_kwds)
             fit_res = optimize.basinhopping(fun, start_params, **kwds)
@@ -549,7 +546,7 @@ def make_augmented_matrix(x, y, s, w):
 
     # TODO: needs full because of broadcasting with weights
     # check what weights should be doing
-    rs = matrix_sqrt(s)#, full=True)
+    rs = matrix_sqrt(s)
     x1 = np.vstack([x, rs])  # augmented x
     n_samp1es_x1 = x1.shape[0]
 

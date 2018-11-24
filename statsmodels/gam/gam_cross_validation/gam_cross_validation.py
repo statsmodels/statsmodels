@@ -17,7 +17,7 @@ from statsmodels.gam.smooth_basis import (GenericSmoothers,
 try:
     import matplotlib.pyplot as plt
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 
