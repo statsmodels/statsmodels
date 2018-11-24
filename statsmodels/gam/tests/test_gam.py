@@ -314,7 +314,7 @@ def test_multivariate_gam_1d_data():
     y = data_from_r.y
 
     df = [10]
-    degree = [3] #[5]
+    degree = [3]
     bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
@@ -324,7 +324,8 @@ def test_multivariate_gam_1d_data():
     alpha = [0.0168 * 0.0251 / 2 * 500]
     gp = MultivariateGamPenalty(bsplines, alpha=alpha)
 
-    glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
+    glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines,
+                     alpha=alpha)
 #     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
 #                               disp=1, maxiter=10000, maxfun=5000)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
@@ -603,13 +604,13 @@ def test_glm_pirls_compatibility():
     y0 -= y0.mean()
 
     # TODO: we have now alphas == alphas_glm
-    alphas = [5.75] * 2 #[1.5] * 2
-    alphas_glm = [1.2] * 2 # alphas# [8] * 2
+    alphas = [5.75] * 2
+    alphas_glm = [1.2] * 2
     # using constraints avoids singular exog.
     cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints='center')
 
     gam_pirls = GLMGam(y, smoother=cs, alpha=alphas)
-    gam_glm = GLMGam(y, smoother=cs, alpha=alphas)#_glm)
+    gam_glm = GLMGam(y, smoother=cs, alpha=alphas)
 
     gam_res_glm = gam_glm.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=20000, maxfun=10000)
@@ -674,8 +675,10 @@ def test_partial_values2():
     alpha = 0.0
     # BUG: mask is incorrect if exog is not None, start_idx missing
     # bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
-    # glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines, alpha=alpha)
-    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, include_intercept=[True, False])
+    # glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines,
+    #                  alpha=alpha)
+    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2,
+                        include_intercept=[True, False])
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
@@ -685,7 +688,7 @@ def test_partial_values2():
     # ex = np.column_stack((np.zeros((len(y), 1)), bsplines.smoothers_[0].basis_,
     #                       np.zeros_like(bsplines.smoothers_[1].basis_) ))
     ex = np.column_stack((bsplines.smoothers_[0].basis_,
-                          np.zeros_like(bsplines.smoothers_[1].basis_) ))
+                          np.zeros_like(bsplines.smoothers_[1].basis_)))
 
     y_est = res_glm_gam.predict(ex, transform=False)
     y_partial_est, se = res_glm_gam.partial_values(0)
@@ -711,7 +714,7 @@ def test_partial_values():
     bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
 
     # TODO: alpha found by trial and error to pass assert
-    alpha = 0.025 /115 * 500
+    alpha = 0.025 / 115 * 500
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
     # TODO: if IRLS is used res_glm_gam has not partial_values.
