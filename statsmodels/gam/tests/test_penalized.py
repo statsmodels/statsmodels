@@ -562,3 +562,9 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         assert_allclose(wtt.statistic[:2], res2.pTerms_chi_sq, rtol=1e-7)
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
         assert_equal(wtt.df_constraints[:2], res2.pTerms_df)
+
+    def test_select_alpha(self):
+        res1 = self.res1
+        alpha_mgcv = res1.model.alpha
+        res_s = res1.model.select_penweight()
+        assert_allclose(res_s[0], alpha_mgcv, rtol=5e-5)
