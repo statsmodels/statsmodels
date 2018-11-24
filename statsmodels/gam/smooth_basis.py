@@ -680,6 +680,8 @@ class BSplines(MultivariateGamSmoother):
         self.knot_kwds = knot_kwds
         # TODO: move attaching constraints to super call
         self.constraints = constraints
+        if constraints == 'center':
+            include_intercept = True
 
         super(BSplines, self).__init__(x, include_intercept=include_intercept,
                                        variable_names=variable_names)

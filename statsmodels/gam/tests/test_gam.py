@@ -593,7 +593,7 @@ def test_glm_pirls_compatibility():
 
     n = 500
     x1 = np.linspace(-3, 3, n)
-    x2 = np.linspace(0, 1, n)**2
+    x2 = np.random.rand(n)
 
     x = np.vstack([x1, x2]).T
     y1 = np.sin(x1) / x1
