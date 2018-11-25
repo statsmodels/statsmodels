@@ -7,24 +7,9 @@ Author: Luca Puggini
 """
 
 import numpy as np
-from patsy.state import stateful_transform
-from statsmodels.gam.smooth_basis import (make_bsplines_basis, BS,
-                                          UnivariatePolynomialSmoother,
-                                          PolynomialSmoother)
 from numpy.testing import assert_allclose, assert_equal
-
-
-def test_make_basis():
-    bs = stateful_transform(BS)
-    df = 10
-    degree = 4
-    x = np.logspace(-1, 1, 100)
-    result = bs(x, df=df, degree=degree, include_intercept=True)
-    basis, der1, der2 = result
-    basis_old, der1_old, der2_old = make_bsplines_basis(x, df, degree)
-    assert_equal(basis, basis_old)
-    assert_equal(der1, der1_old)
-    assert_equal(der2, der2_old)
+from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
+                                          PolynomialSmoother)
 
 
 def test_univariate_polynomial_smoother():
