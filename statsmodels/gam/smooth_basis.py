@@ -364,7 +364,7 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
         super(UnivariatePolynomialSmoother, self).__init__(x,
-            variable_name=variable_name)
+                variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         # TODO: unclear description
@@ -400,7 +400,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
         self.covder2_kwds = (covder2_kwds if covder2_kwds is not None
                              else {})
         super(UnivariateBSplines, self).__init__(x,
-            constraints=constraints, variable_name=variable_name)
+                constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis, der_basis, der2_basis = _eval_bspline_basis(
@@ -444,7 +444,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         self.x = x = self.transform_data(x, initialize=True)
         self.knots = _equally_spaced_knots(x, df)
         super(UnivariateCubicSplines, self).__init__(x,
-              constraints=constraints, variable_name=variable_name)
+                constraints=constraints, variable_name=variable_name)
 
     def transform_data(self, x, initialize=False):
         tm = self.transform_data_method
@@ -541,7 +541,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
         super(UnivariateCubicCyclicSplines, self).__init__(x,
-              constraints=constraints, variable_name=variable_name)
+                constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
@@ -614,7 +614,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return exog
 
 
-class MultivariateGamSmoother(with_metaclass(ABCMeta)):
+class AdditiveGamSmoother(with_metaclass(ABCMeta)):
     """Base class for additive smoothers for GAM
     """
     def __init__(self, x, variable_names=None, include_intercept=False,
@@ -640,10 +640,10 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
         self.smoothers = self._make_smoothers_list()
         self.basis = np.hstack(smoother.basis
-                                for smoother in self.smoothers)
+                               for smoother in self.smoothers)
         self.dim_basis = self.basis.shape[1]
         self.penalty_matrices = [smoother.cov_der2
-                                  for smoother in self.smoothers]
+                                 for smoother in self.smoothers]
         self.col_names = []
         for smoother in self.smoothers:
             self.col_names.extend(smoother.col_names)
@@ -666,7 +666,7 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
         return exog
 
 
-class GenericSmoothers(MultivariateGamSmoother):
+class GenericSmoothers(AdditiveGamSmoother):
     """generic class for additive smoothers for GAM
     """
     def __init__(self, x, smoothers):
@@ -677,7 +677,7 @@ class GenericSmoothers(MultivariateGamSmoother):
         return self.smoothers
 
 
-class PolynomialSmoother(MultivariateGamSmoother):
+class PolynomialSmoother(AdditiveGamSmoother):
     """additive polynomial smoothers for GAM
     """
     def __init__(self, x, degrees, variable_names=None):
@@ -695,7 +695,7 @@ class PolynomialSmoother(MultivariateGamSmoother):
         return smoothers
 
 
-class BSplines(MultivariateGamSmoother):
+class BSplines(AdditiveGamSmoother):
     """additive smoothers using B-Splines for GAM
     """
     def __init__(self, x, df, degree, include_intercept=False,
@@ -726,7 +726,7 @@ class BSplines(MultivariateGamSmoother):
         return smoothers
 
 
-class CubicSplines(MultivariateGamSmoother):
+class CubicSplines(AdditiveGamSmoother):
     def __init__(self, x, df, constraints='center', transform='domain',
                  variable_names=None):
         self.dfs = df
@@ -748,7 +748,7 @@ class CubicSplines(MultivariateGamSmoother):
         return smoothers
 
 
-class CyclicCubicSplines(MultivariateGamSmoother):
+class CyclicCubicSplines(AdditiveGamSmoother):
     """additive smoothers using cyclic cubic regression splines for GAM
     """
     def __init__(self, x, df, constraints=None, variable_names=None):
