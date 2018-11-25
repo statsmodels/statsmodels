@@ -459,7 +459,7 @@ def test_make_augmented_matrix():
     s = np.dot(x.T, x)
     y = np.array(list(range(n)))
     w = np.random.uniform(0, 1, n)
-    n_samples, n_columns = x.shape
+    nobs, n_columns = x.shape
 
     # matrix_sqrt removes redundant rows,
     # if alpha is zero, then no augmentation is needed
@@ -468,7 +468,7 @@ def test_make_augmented_matrix():
     expected_aug_x = x
     assert_allclose(aug_x, expected_aug_x)
     expected_aug_y = y
-    expected_aug_y[:n_samples] = y
+    expected_aug_y[:nobs] = y
     assert_allclose(aug_y, expected_aug_y)
     expected_aug_w = w
     assert_allclose(aug_w, expected_aug_w)
@@ -480,8 +480,8 @@ def test_make_augmented_matrix():
     assert_allclose(np.dot(rs.T, rs), alpha * s)
     expected_aug_x = np.vstack([x, rs])
     assert_allclose(aug_x, expected_aug_x)
-    expected_aug_y = np.zeros(shape=(n_samples + n_columns,))
-    expected_aug_y[:n_samples] = y
+    expected_aug_y = np.zeros(shape=(nobs + n_columns,))
+    expected_aug_y[:nobs] = y
     assert_allclose(aug_y, expected_aug_y)
     expected_aug_w = np.concatenate((w, [1] * n_columns), axis=0)
     assert_allclose(aug_w, expected_aug_w)

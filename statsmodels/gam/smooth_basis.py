@@ -268,10 +268,10 @@ def make_poly_basis(x, degree, intercept=True):
     else:
         start = 1
 
-    n_samples = len(x)
-    basis = np.zeros(shape=(n_samples, degree + 1 - start))
-    der_basis = np.zeros(shape=(n_samples, degree + 1 - start))
-    der2_basis = np.zeros(shape=(n_samples, degree + 1 - start))
+    nobs = len(x)
+    basis = np.zeros(shape=(nobs, degree + 1 - start))
+    der_basis = np.zeros(shape=(nobs, degree + 1 - start))
+    der2_basis = np.zeros(shape=(nobs, degree + 1 - start))
 
     for i in range(start, degree + 1):
         basis[:, i - start] = x ** i
@@ -304,7 +304,7 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
         self.x = x
         self.constraints = constraints
         self.variable_name = variable_name
-        self.n_samples, self.k_variables = len(x), 1
+        self.nobs, self.k_variables = len(x), 1
 
         base4 = self._smooth_basis_for_single_variable()
         if constraints == 'center':
@@ -373,9 +373,9 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
         and its first and second derivative
         """
 
-        basis = np.zeros(shape=(self.n_samples, self.degree))
-        der_basis = np.zeros(shape=(self.n_samples, self.degree))
-        der2_basis = np.zeros(shape=(self.n_samples, self.degree))
+        basis = np.zeros(shape=(self.nobs, self.degree))
+        der_basis = np.zeros(shape=(self.nobs, self.degree))
+        der2_basis = np.zeros(shape=(self.nobs, self.degree))
         for i in range(self.degree):
             dg = i + 1
             basis[:, i] = self.x ** dg
@@ -505,8 +505,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         if x is None:
             x = self.x
         n_columns = len(self.knots) + 2
-        n_samples = x.shape[0]
-        basis = np.ones(shape=(n_samples, n_columns))
+        nobs = x.shape[0]
+        basis = np.ones(shape=(nobs, n_columns))
         basis[:, 1] = x
         # for loop equivalent to outer(x, xk, fun=rk)
         for i, xi in enumerate(x):
@@ -626,7 +626,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         else:
             self.x = x
 
-        self.n_samples, self.k_variables = self.x.shape
+        self.nobs, self.k_variables = self.x.shape
         if isinstance(include_intercept, bool):
             self.include_intercept = [include_intercept] * self.k_variables
         else:
