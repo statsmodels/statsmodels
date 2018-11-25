@@ -85,7 +85,7 @@ def hessian(params):
 
 def cost_function(params, pol, y, alpha):
     # this should be the MSE or log likelihood value
-    lin_pred = np.dot(pol.basis_, params)
+    lin_pred = np.dot(pol.basis, params)
     gaussian = Gaussian()
     expval = gaussian.link.inverse(lin_pred)
     loglike = gaussian.loglike(y, expval)
@@ -103,7 +103,7 @@ def test_gam_penalty():
     :return:
     """
     pol, y = polynomial_sample_data()
-    univ_pol = pol.smoothers_[0]
+    univ_pol = pol.smoothers[0]
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
@@ -120,7 +120,7 @@ def test_gam_gradient():
     pol, y = polynomial_sample_data()
 
     alpha = 1
-    smoother = pol.smoothers_[0]
+    smoother = pol.smoothers[0]
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
 
     for _ in range(10):
@@ -136,7 +136,7 @@ def test_gam_hessian():
     # test the deriv2 method of the gam penalty
     np.random.seed(1)
     pol, y = polynomial_sample_data()
-    univ_pol = pol.smoothers_[0]
+    univ_pol = pol.smoothers[0]
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
@@ -191,7 +191,7 @@ def test_gam_glm():
 
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
                               disp=1, maxiter=10000, maxfun=5000)
-    y_gam0 = np.dot(bsplines.basis_, res_glm_gam.params)
+    y_gam0 = np.dot(bsplines.basis, res_glm_gam.params)
     y_gam = np.asarray(res_glm_gam.fittedvalues)
     assert_allclose(y_gam, y_gam0, rtol=1e-10)
 
@@ -222,11 +222,11 @@ def test_gam_discrete():
 
     alpha = 0.00002
     # gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=bsplines)
-    # lg_gam = LogitGam(y, bsplines.basis_, penal=gp)
+    # lg_gam = LogitGam(y, bsplines.basis, penal=gp)
     #
     lg_gam = LogitGam(y, bsplines, alpha=alpha)
     res_lg_gam = lg_gam.fit(maxiter=10000)
-    y_gam = np.dot(bsplines.basis_, res_lg_gam.params)
+    y_gam = np.dot(bsplines.basis, res_lg_gam.params)
     y_gam = sigmoid(y_gam)
     y_mgcv = sigmoid(y_mgcv)
 
@@ -269,8 +269,8 @@ def test_multivariate_penalty():
                                  weights=weights)
 
     for i in range(10):
-        params1 = np.random.randint(-3, 3, pol.smoothers_[0].dim_basis)
-        params2 = np.random.randint(-3, 3, pol.smoothers_[1].dim_basis)
+        params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
+        params2 = np.random.randint(-3, 3, pol.smoothers[1].dim_basis)
         params = np.concatenate([params1, params2])
         c1 = gp1.func(params1)
         c2 = gp2.func(params2)
@@ -295,7 +295,7 @@ def test_generic_smoother():
     alphas = [0.4, 0.7]
     weights = [1, 1]
 
-    gs = GenericSmoothers(poly.x, poly.smoothers_)
+    gs = GenericSmoothers(poly.x, poly.smoothers)
     gam_gs = GLMGam(y, smoother=gs, alpha=alphas)
     gam_gs_res = gam_gs.fit()
 
@@ -401,10 +401,10 @@ def test_multivariate_gam_cv_path():
                                    cost=sample_metric, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
 
-    glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv_)
+    glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
     res_glm_gam = glm_gam.fit(method='irls', max_start_irls=0,
                               disp=1, maxiter=10000, maxfun=5000)
-    y_est = res_glm_gam.predict(bsplines.basis_)
+    y_est = res_glm_gam.predict(bsplines.basis)
 
     # plt.plot(x, y, '.', label='y')
     # plt.plot(x, y_est, '.', label='y est')
@@ -432,12 +432,12 @@ def test_train_test_smoothers():
     expected_train_basis = [[0., 0., 0., 6., 36., 216.],
                             [1., 1., 1., 7., 49., 343.],
                             [2., 4., 8., 8., 64., 512.]]
-    assert_allclose(train_smoother.basis_, expected_train_basis)
+    assert_allclose(train_smoother.basis, expected_train_basis)
 
     expected_test_basis = [[3., 9., 27., 9., 81., 729.],
                            [4., 16., 64., 10., 100., 1000.],
                            [5., 25., 125., 11., 121., 1331.]]
-    assert_allclose(test_smoother.basis_, expected_test_basis)
+    assert_allclose(test_smoother.basis, expected_test_basis)
 
 
 def test_get_sqrt():
@@ -524,11 +524,11 @@ def test_cyclic_cubic_splines():
     # gam_res = gam._fit_pirls(y, ccs, alpha=alpha)
     gam_res = gam.fit(method='pirls')
 
-    s0 = np.dot(ccs.basis_[:, ccs.mask[0]],
+    s0 = np.dot(ccs.basis[:, ccs.mask[0]],
                 gam_res.params[ccs.mask[0]])
     s0 -= s0.mean()  # TODO: Mean has to be removed
 
-    s1 = np.dot(ccs.basis_[:, ccs.mask[1]],
+    s1 = np.dot(ccs.basis[:, ccs.mask[1]],
                 gam_res.params[ccs.mask[1]])
     s1 -= s1.mean()  # TODO: Mean has to be removed
 
@@ -619,9 +619,9 @@ def test_glm_pirls_compatibility():
                               disp=1, maxiter=20000, maxfun=10000)
     gam_res_pirls = gam_pirls.fit()
 
-    y_est_glm = np.dot(cs.basis_, gam_res_glm.params)
+    y_est_glm = np.dot(cs.basis, gam_res_glm.params)
     y_est_glm -= y_est_glm.mean()
-    y_est_pirls = np.dot(cs.basis_, gam_res_pirls.params)
+    y_est_pirls = np.dot(cs.basis, gam_res_pirls.params)
     y_est_pirls -= y_est_pirls.mean()
 
     # plt.plot(y_est_pirls)
@@ -640,7 +640,7 @@ def test_zero_penalty():
     gam_gs_res = gam_gs.fit()
     y_est_gam = gam_gs_res.predict()
 
-    glm = GLM(y, poly.basis_).fit()
+    glm = GLM(y, poly.basis).fit()
     y_est = glm.predict()
 
     assert_allclose(y_est, y_est_gam)
@@ -682,13 +682,13 @@ def test_partial_values2():
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
-    glm = GLM(y, bsplines.basis_)
+    glm = GLM(y, bsplines.basis)
 
     # case with constant column in exog is currently wrong
-    # ex = np.column_stack((np.zeros((len(y), 1)), bsplines.smoothers_[0].basis_,
-    #                       np.zeros_like(bsplines.smoothers_[1].basis_) ))
-    ex = np.column_stack((bsplines.smoothers_[0].basis_,
-                          np.zeros_like(bsplines.smoothers_[1].basis_)))
+    # ex = np.column_stack((np.zeros((len(y), 1)), bsplines.smoothers[0].basis,
+    #                       np.zeros_like(bsplines.smoothers[1].basis) ))
+    ex = np.column_stack((bsplines.smoothers[0].basis,
+                          np.zeros_like(bsplines.smoothers[1].basis)))
 
     y_est = res_glm_gam.predict(ex, transform=False)
     y_partial_est, se = res_glm_gam.partial_values(0)
@@ -719,7 +719,7 @@ def test_partial_values():
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
     # TODO: if IRLS is used res_glm_gam has not partial_values.
 
-    univ_bsplines = bsplines.smoothers_[0]
+    univ_bsplines = bsplines.smoothers[0]
     hat_y, se = res_glm_gam.partial_values(0)
 
     assert_allclose(hat_y, data_from_r["y_est"], rtol=0, atol=0.008)
@@ -770,7 +770,7 @@ def test_cov_params():
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
-    glm = GLM(y, bsplines.basis_)
+    glm = GLM(y, bsplines.basis)
     res_glm = glm.fit()
 
     assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),

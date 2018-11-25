@@ -106,7 +106,7 @@ class GLMGAMResults(GLMResults):
         idx = start_idx + np.nonzero(mask)[0]
 
         # smoother has only smooth parts, not exog_linear
-        exog_part = smoother.basis_[:, mask]
+        exog_part = smoother.basis[:, mask]
 
         const_idx = self.model.data.const_idx
         if include_constant and const_idx is not None:
@@ -133,7 +133,7 @@ class GLMGAMResults(GLMResults):
         y_est, se = self.partial_values(variable,
                                         include_constant=include_constant)
         smoother = self.model.smoother
-        x = smoother.smoothers_[variable].x
+        x = smoother.smoothers[variable].x
         sort_index = np.argsort(x)
         x = x[sort_index]
         y_est = y_est[sort_index]
@@ -150,7 +150,7 @@ class GLMGAMResults(GLMResults):
             cpr_ = y_est + self.resid_working
             ax.plot(x, cpr_, '.', lw=2)
 
-        ax.set_xlabel(smoother.smoothers_[variable].variable_name)
+        ax.set_xlabel(smoother.smoothers[variable].variable_name)
 
         return fig
 
@@ -259,9 +259,9 @@ class GLMGam(PenalizedMixin, GLM):
                                        start_idx=k_exog_linear)
         kwargs.pop('penal', None)
         if exog_linear is not None:
-            exog = np.column_stack((exog_linear, smoother.basis_))
+            exog = np.column_stack((exog_linear, smoother.basis))
         else:
-            exog = smoother.basis_
+            exog = smoother.basis
         super(GLMGam, self).__init__(endog, exog=exog, family=family,
                                      offset=offset, exposure=exposure,
                                      penal=penal, missing=missing, **kwargs)
@@ -269,7 +269,7 @@ class GLMGam(PenalizedMixin, GLM):
     def _check_alpha(self, alpha):
         import collections
         if not isinstance(alpha, collections.Iterable):
-            alpha = [alpha] * len(self.smoother.smoothers_)
+            alpha = [alpha] * len(self.smoother.smoothers)
         elif not isinstance(alpha, list):
             # we want alpha to be a list
             alpha = list(alpha)
@@ -320,7 +320,7 @@ class GLMGam(PenalizedMixin, GLM):
         # TODO: we need to rescale alpha
         endog = self.endog
         k_exog_linear = self.k_exog_linear
-        wlsexog = self.exog  # smoother.basis_
+        wlsexog = self.exog  # smoother.basis
         spl_s = self.penal.penalty_matrix(alpha=alpha)
 
         n_samples, n_columns = wlsexog.shape
@@ -517,14 +517,14 @@ class LogitGam(PenalizedMixin, Logit):
     def __init__(self, endog, smoother, alpha, *args, **kwargs):
         import collections
         if not isinstance(alpha, collections.Iterable):
-            alpha = np.array([alpha] * len(smoother.smoothers_))
+            alpha = np.array([alpha] * len(smoother.smoothers))
 
         self.smoother = smoother
         self.alpha = alpha
         self.pen_weight = 1  # TODO: pen weight should not be defined here!!
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
 
-        super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal,
+        super(LogitGam, self).__init__(endog, smoother.basis, penal=penal,
                                        *args, **kwargs)
 
 

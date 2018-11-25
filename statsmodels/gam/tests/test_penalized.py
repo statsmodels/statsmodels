@@ -64,11 +64,11 @@ class CheckGAMMixin(object):
         # TODO: CyclicCubicSplines raises when using pandas
         cc_h = CyclicCubicSplines(np.asarray(data_mcycle['times']), df=[6])
 
-        constraints = np.atleast_2d(cc_h.basis_.mean(0))
+        constraints = np.atleast_2d(cc_h.basis.mean(0))
         transf = transf_constraints(constraints)
 
-        exog = cc_h.basis_.dot(transf)
-        penalty_matrix = transf.T.dot(cc_h.penalty_matrices_[0]).dot(transf)
+        exog = cc_h.basis.dot(transf)
+        penalty_matrix = transf.T.dot(cc_h.penalty_matrices[0]).dot(transf)
         restriction = matrix_sqrt(penalty_matrix)
         return exog, penalty_matrix, restriction
 
@@ -469,8 +469,8 @@ class TestGAMMPGBS(CheckGAMMixin):
     def test_smooth(self):
         res1 = self.res1
         res2 = self.res2
-        smoothers = res1.model.smoother.smoothers_
-        pen_matrix0 = smoothers[0].cov_der2_
+        smoothers = res1.model.smoother.smoothers
+        pen_matrix0 = smoothers[0].cov_der2
         assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale,
                         rtol=1e-6)
 
@@ -534,8 +534,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res1 = self.res1
         res2 = self.res2
 
-        smoothers = res1.model.smoother.smoothers_
-        pen_matrix0 = smoothers[0].cov_der2_
+        smoothers = res1.model.smoother.smoothers
+        pen_matrix0 = smoothers[0].cov_der2
         assert_allclose(pen_matrix0, res2.smooth0.S * res2.smooth0.S_scale,
                         rtol=1e-6)
 

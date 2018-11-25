@@ -17,8 +17,8 @@ def test_univariate_polynomial_smoother():
     # test_univariate_polynomial_smoother()
     # test_make_basis()
     pol = UnivariatePolynomialSmoother(x, degree=3)
-    assert_equal(pol.basis_.shape, (5, 3))
-    assert_allclose(pol.basis_[:, 2], x.ravel() ** 3)
+    assert_equal(pol.basis.shape, (5, 3))
+    assert_allclose(pol.basis[:, 2], x.ravel() ** 3)
 
 
 def test_multivariate_polynomial_basis():
@@ -26,5 +26,5 @@ def test_multivariate_polynomial_basis():
     degrees = [3, 4]
     mps = PolynomialSmoother(x, degrees)
     for i, deg in enumerate(degrees):
-        uv_basis = UnivariatePolynomialSmoother(x[:, i], degree=deg).basis_
-        assert_allclose(mps.smoothers_[i].basis_, uv_basis)
+        uv_basis = UnivariatePolynomialSmoother(x[:, i], degree=deg).basis
+        assert_allclose(mps.smoothers[i].basis, uv_basis)

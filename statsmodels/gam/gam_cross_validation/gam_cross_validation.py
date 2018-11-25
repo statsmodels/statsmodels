@@ -54,11 +54,11 @@ class BaseCV(with_metaclass(ABCMeta)):
 def _split_train_test_smoothers(x, smoothers, train_index, test_index):
     train_smoothers = []
     test_smoothers = []
-    for i, smoother in enumerate(smoothers.smoothers_):
-        train_basis = smoother.basis_[train_index]
-        train_der_basis = smoother.der_basis_[train_index]
-        train_der2_basis = smoother.der2_basis_[train_index]
-        train_cov_der2 = smoother.cov_der2_
+    for i, smoother in enumerate(smoothers.smoothers):
+        train_basis = smoother.basis[train_index]
+        train_der_basis = smoother.der_basis[train_index]
+        train_der2_basis = smoother.der2_basis[train_index]
+        train_cov_der2 = smoother.cov_der2
         # TODO: Double check this part. cov_der2 is calculated with all the data
         train_x = smoother.x[train_index]
 
@@ -66,10 +66,10 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
             train_der_basis, train_der2_basis, train_cov_der2,
             smoother.variable_name + ' train'))
 
-        test_basis = smoother.basis_[test_index]
-        test_der_basis = smoother.der_basis_[test_index]
-        test_der2_basis = smoother.der2_basis_[test_index]
-        test_cov_der2 = smoother.cov_der2_
+        test_basis = smoother.basis[test_index]
+        test_der_basis = smoother.der_basis[test_index]
+        test_der2_basis = smoother.der2_basis[test_index]
+        test_cov_der2 = smoother.cov_der2
         # TODO: Double check this part. cov_der2 is calculated with all the data
         test_x = smoother.x[test_index]
 
@@ -93,10 +93,10 @@ class MultivariateGAMCV(BaseCV):
         self.smoothers = smoothers
         self.alphas = alphas
         self.cv = cv
-        super(MultivariateGAMCV, self).__init__(cv, self.smoothers.basis_, y)
+        super(MultivariateGAMCV, self).__init__(cv, self.smoothers.basis, y)
 
     def _error(self, train_index, test_index, **kwargs):
-        full_basis_train = self.smoothers.basis_[train_index]
+        full_basis_train = self.smoothers.basis[train_index]
         train_smoothers, test_smoothers = _split_train_test_smoothers(
             self.smoothers.x, self.smoothers, train_index, test_index)
 
@@ -105,7 +105,7 @@ class MultivariateGAMCV(BaseCV):
 
         gam = self.gam(y_train, smoother=train_smoothers, alpha=self.alphas)
         gam_res = gam.fit(**kwargs)
-        y_est = gam_res.predict(test_smoothers.basis_, transform=False)
+        y_est = gam_res.predict(test_smoothers.basis, transform=False)
 
         return self.cost(y_test, y_est)
 
@@ -113,27 +113,27 @@ class MultivariateGAMCV(BaseCV):
 class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     """
     Base class for cross validation over a grid of parameters.
-    The best parameter is saved in alpha_cv_
+    The best parameter is saved in alpha_cv
     """
 
     def __init__(self, alphas):
         self.alphas = alphas
-        self.alpha_cv_ = None
-        self.cv_error_ = None
-        self.cv_std_ = None
+        self.alpha_cv = None
+        self.cv_error = None
+        self.cv_std = None
 
     def plot_path(self):
         if have_matplotlib:
-            plt.plot(self.alphas, self.cv_error_, c='black')
-            plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_,
+            plt.plot(self.alphas, self.cv_error, c='black')
+            plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std,
                      c='blue')
-            plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_,
+            plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std,
                      c='blue')
 
-            plt.plot(self.alphas, self.cv_error_, 'o', c='black')
-            plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, 'o',
+            plt.plot(self.alphas, self.cv_error, 'o', c='black')
+            plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, 'o',
                      c='blue')
-            plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, 'o',
+            plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, 'o',
                      c='blue')
 
             return
@@ -150,9 +150,9 @@ class MultivariateGAMCVPath:
         self.alphas_grid = list(itertools.product(*self.alphas))
         self.y = y
         self.cv = cv
-        self.cv_error_ = np.zeros(shape=(len(self.alphas_grid, )))
-        self.cv_std_ = np.zeros(shape=(len(self.alphas_grid, )))
-        self.alpha_cv_ = None
+        self.cv_error = np.zeros(shape=(len(self.alphas_grid, )))
+        self.cv_std = np.zeros(shape=(len(self.alphas_grid, )))
+        self.alpha_cv = None
 
     def fit(self, **kwargs):
         for i, alphas_i in enumerate(self.alphas_grid):
@@ -163,8 +163,8 @@ class MultivariateGAMCVPath:
                                        y=self.y,
                                        cv=self.cv)
             cv_err = gam_cv.fit(**kwargs)
-            self.cv_error_[i] = cv_err.mean()
-            self.cv_std_[i] = cv_err.std()
+            self.cv_error[i] = cv_err.mean()
+            self.cv_std[i] = cv_err.std()
 
-        self.alpha_cv_ = self.alphas_grid[np.argmin(self.cv_error_)]
+        self.alpha_cv = self.alphas_grid[np.argmin(self.cv_error)]
         return self

@@ -319,20 +319,20 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
             if not hasattr(self, 'ctransf'):
                 self.ctransf = None
 
-        self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = base4
+        self.basis, self.der_basis, self.der2_basis, self.cov_der2 = base4
         if self.ctransf is not None:
             ctransf = self.ctransf
             # transform attributes that are not None
             if base4[0] is not None:
-                self.basis_ = base4[0].dot(ctransf)
+                self.basis = base4[0].dot(ctransf)
             if base4[1] is not None:
-                self.der_basis_ = base4[1].dot(ctransf)
+                self.der_basis = base4[1].dot(ctransf)
             if base4[2] is not None:
-                self.der2_basis_ = base4[2].dot(ctransf)
+                self.der2_basis = base4[2].dot(ctransf)
             if base4[3] is not None:
-                self.cov_der2_ = ctransf.T.dot(base4[3]).dot(ctransf)
+                self.cov_der2 = ctransf.T.dot(base4[3]).dot(ctransf)
 
-        self.dim_basis = self.basis_.shape[1]
+        self.dim_basis = self.basis.shape[1]
         self.col_names = [self.variable_name + str(i)
                           for i in range(self.dim_basis)]
 
@@ -346,16 +346,16 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
     """
     def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
                  variable_name='x'):
-        self.basis_ = basis
-        self.der_basis_ = der_basis
-        self.der2_basis_ = der2_basis
-        self.cov_der2_ = cov_der2
+        self.basis = basis
+        self.der_basis = der_basis
+        self.der2_basis = der2_basis
+        self.cov_der2 = cov_der2
 
         super(UnivariateGenericSmoother, self).__init__(
             x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
-        return self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_
+        return self.basis, self.der_basis, self.der2_basis, self.cov_der2
 
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
@@ -638,19 +638,19 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
         else:
             self.variable_names = variable_names
 
-        self.smoothers_ = self._make_smoothers_list()
-        self.basis_ = np.hstack(smoother.basis_
-                                for smoother in self.smoothers_)
-        self.dim_basis = self.basis_.shape[1]
-        self.penalty_matrices_ = [smoother.cov_der2_
-                                  for smoother in self.smoothers_]
+        self.smoothers = self._make_smoothers_list()
+        self.basis = np.hstack(smoother.basis
+                                for smoother in self.smoothers)
+        self.dim_basis = self.basis.shape[1]
+        self.penalty_matrices = [smoother.cov_der2
+                                  for smoother in self.smoothers]
         self.col_names = []
-        for smoother in self.smoothers_:
+        for smoother in self.smoothers:
             self.col_names.extend(smoother.col_names)
 
         self.mask = []
         last_column = 0
-        for smoother in self.smoothers_:
+        for smoother in self.smoothers:
             mask = np.array([False] * self.dim_basis)
             mask[last_column:smoother.dim_basis + last_column] = True
             last_column = last_column + smoother.dim_basis
@@ -661,7 +661,7 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
         pass
 
     def transform(self, x_new):
-        exog = np.hstack(self.smoothers_[i].transform(x_new[:, i])
+        exog = np.hstack(self.smoothers[i].transform(x_new[:, i])
                          for i in range(self.k_variables))
         return exog
 
@@ -670,11 +670,11 @@ class GenericSmoothers(MultivariateGamSmoother):
     """generic class for additive smoothers for GAM
     """
     def __init__(self, x, smoothers):
-        self.smoothers_ = smoothers
+        self.smoothers = smoothers
         super(GenericSmoothers, self).__init__(x, variable_names=None)
 
     def _make_smoothers_list(self):
-        return self.smoothers_
+        return self.smoothers
 
 
 class PolynomialSmoother(MultivariateGamSmoother):
@@ -779,7 +779,7 @@ class CyclicCubicSplines(MultivariateGamSmoother):
 #
 #         super(CubicRegressionSplines, self).__init__(x, df)
 #
-#         self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
+#         self.basis = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
 #         n_inner_knots = df - 2 + 1 # +n_constraints
 #         # TODO: ACcording to CubicRegressionSplines class this should be
 #         #  n_inner_knots = df - 2
@@ -790,7 +790,7 @@ class CyclicCubicSplines(MultivariateGamSmoother):
 #         b, d = self._get_b_and_d(all_knots)
 #         self.s = self._get_s(b, d)
 #
-#         self.dim_basis = self.basis_.shape[1]
+#         self.dim_basis = self.basis.shape[1]
 #
 #     def _get_b_and_d(self, knots):
 #
