@@ -61,12 +61,12 @@ class UnivariateGamPenalty(Penalty):
             alpha = self.alpha
 
         # TODO cleanup
-        if 0:  # self.univariate_smoother.der2_basis_ is not None:
+        if 0:  # self.univariate_smoother.der2_basis is not None:
             # The second derivative of the estimated regression function
-            f = np.dot(self.univariate_smoother.der2_basis_, params)
+            f = np.dot(self.univariate_smoother.der2_basis, params)
             return alpha * np.sum(f ** 2) / self.n_samples
         else:
-            f = params.dot(self.univariate_smoother.cov_der2_.dot(params))
+            f = params.dot(self.univariate_smoother.cov_der2.dot(params))
             return alpha * f / self.n_samples
 
     def deriv(self, params, alpha=None):
@@ -79,7 +79,7 @@ class UnivariateGamPenalty(Penalty):
         if alpha is None:
             alpha = self.alpha
 
-        d = 2 * alpha * np.dot(self.univariate_smoother.cov_der2_, params)
+        d = 2 * alpha * np.dot(self.univariate_smoother.cov_der2, params)
         d /= self.n_samples
         return d
 
@@ -89,7 +89,7 @@ class UnivariateGamPenalty(Penalty):
         if alpha is None:
             alpha = self.alpha
 
-        d2 = 2 * alpha * self.univariate_smoother.cov_der2_
+        d2 = 2 * alpha * self.univariate_smoother.cov_der2
         d2 /= self.n_samples
         return  d2
 
@@ -97,7 +97,7 @@ class UnivariateGamPenalty(Penalty):
         if alpha is None:
             alpha = self.alpha
 
-        return alpha * self.univariate_smoother.cov_der2_
+        return alpha * self.univariate_smoother.cov_der2
 
 
 class MultivariateGamPenalty(Penalty):
@@ -125,10 +125,10 @@ class MultivariateGamPenalty(Penalty):
     def __init__(self, multivariate_smoother, alpha, weights=None,
                  start_idx=0):
 
-        if len(multivariate_smoother.smoothers_) != len(alpha):
+        if len(multivariate_smoother.smoothers) != len(alpha):
             raise ValueError('all the input values should be list of the same'
-                             ' length. len(smoothers_)=',
-                             len(multivariate_smoother.smoothers_),
+                             ' length. len(smoothers)=',
+                             len(multivariate_smoother.smoothers),
                              ' len(alphas)=', len(alpha))
 
         self.multivariate_smoother = multivariate_smoother
@@ -152,7 +152,7 @@ class MultivariateGamPenalty(Penalty):
         self.mask = [np.array([False] * self.k_params)
                      for _ in range(self.k_variables)]
         param_count = start_idx
-        for i, smoother in enumerate(self.multivariate_smoother.smoothers_):
+        for i, smoother in enumerate(self.multivariate_smoother.smoothers):
             # the mask[i] contains a vector of length k_columns. The index
             # corresponding to the i-th input variable are set to True.
             self.mask[i][param_count: param_count + smoother.dim_basis] = True
@@ -160,7 +160,7 @@ class MultivariateGamPenalty(Penalty):
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = UnivariateGamPenalty(self.multivariate_smoother.smoothers_[i],
+            gp = UnivariateGamPenalty(self.multivariate_smoother.smoothers[i],
                                       weights=self.weights[i],
                                       alpha=self.alpha[i])
             self.gp.append(gp)
