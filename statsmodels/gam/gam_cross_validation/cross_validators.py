@@ -52,22 +52,22 @@ class KFold(BaseCrossValidator):
         All the folds have size trunc(n/k), the last one has the complementary
         """
 
-        self.n_samples = None
+        self.nobs = None
         self.k_folds = k_folds
         self.shuffle = shuffle
         return
 
     def split(self, X, y=None, label=None):
 
-        n_samples = X.shape[0]
-        index = np.array(range(n_samples))
+        nobs = X.shape[0]
+        index = np.array(range(nobs))
 
         if self.shuffle:
             np.random.shuffle(index)
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:
-            test_index = np.array([False]*n_samples)
+            test_index = np.array([False]*nobs)
             test_index[fold] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index

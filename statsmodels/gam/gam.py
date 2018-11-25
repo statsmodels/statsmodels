@@ -323,11 +323,11 @@ class GLMGam(PenalizedMixin, GLM):
         wlsexog = self.exog  # smoother.basis
         spl_s = self.penal.penalty_matrix(alpha=alpha)
 
-        n_samples, n_columns = wlsexog.shape
+        nobs, n_columns = wlsexog.shape
 
         # TODO what are these values?
         if weights is None:
-            self.data_weights = np.array([1.] * n_samples)
+            self.data_weights = np.array([1.] * nobs)
         else:
             self.data_weights = weights
 
@@ -542,7 +542,7 @@ def penalized_wls(x, y, s, weights):
 
 
 def make_augmented_matrix(x, y, s, w):
-    n_samples, n_columns = x.shape
+    nobs, n_columns = x.shape
 
     # TODO: needs full because of broadcasting with weights
     # check what weights should be doing
@@ -551,7 +551,7 @@ def make_augmented_matrix(x, y, s, w):
     n_samp1es_x1 = x1.shape[0]
 
     y1 = np.array([0.] * n_samp1es_x1)  # augmented y
-    y1[:n_samples] = y
+    y1[:nobs] = y
 
     id1 = np.array([1.] * rs.shape[0])
     w1 = np.concatenate([w, id1])

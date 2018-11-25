@@ -40,7 +40,7 @@ class UnivariateGamPenalty(Penalty):
 
     der2: The second derivative of the basis function
 
-    n_samples: The number of samples used during the estimation
+    nobs: The number of samples used during the estimation
 
     """
 
@@ -48,7 +48,7 @@ class UnivariateGamPenalty(Penalty):
         self.weights = weights  # should we keep weights????
         self.alpha = alpha
         self.univariate_smoother = univariate_smoother
-        self.n_samples = self.univariate_smoother.n_samples
+        self.nobs = self.univariate_smoother.nobs
         self.n_columns = self.univariate_smoother.dim_basis
 
     def func(self, params, alpha=None):
@@ -64,10 +64,10 @@ class UnivariateGamPenalty(Penalty):
         if 0:  # self.univariate_smoother.der2_basis is not None:
             # The second derivative of the estimated regression function
             f = np.dot(self.univariate_smoother.der2_basis, params)
-            return alpha * np.sum(f ** 2) / self.n_samples
+            return alpha * np.sum(f ** 2) / self.nobs
         else:
             f = params.dot(self.univariate_smoother.cov_der2.dot(params))
-            return alpha * f / self.n_samples
+            return alpha * f / self.nobs
 
     def deriv(self, params, alpha=None):
         """evaluate derivative of penalty with respect to params
@@ -80,7 +80,7 @@ class UnivariateGamPenalty(Penalty):
             alpha = self.alpha
 
         d = 2 * alpha * np.dot(self.univariate_smoother.cov_der2, params)
-        d /= self.n_samples
+        d /= self.nobs
         return d
 
     def deriv2(self, params, alpha=None):
@@ -90,7 +90,7 @@ class UnivariateGamPenalty(Penalty):
             alpha = self.alpha
 
         d2 = 2 * alpha * self.univariate_smoother.cov_der2
-        d2 /= self.n_samples
+        d2 /= self.nobs
         return  d2
 
     def penalty_matrix(self, alpha=None):
@@ -134,7 +134,7 @@ class MultivariateGamPenalty(Penalty):
         self.multivariate_smoother = multivariate_smoother
         self.dim_basis = self.multivariate_smoother.dim_basis
         self.k_variables = self.multivariate_smoother.k_variables
-        self.n_samples = self.multivariate_smoother.n_samples
+        self.nobs = self.multivariate_smoother.nobs
         self.alpha = alpha
         self.start_idx = start_idx
         self.k_params = start_idx + self.dim_basis
