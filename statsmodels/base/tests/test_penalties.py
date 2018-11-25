@@ -28,7 +28,7 @@ class CheckPenalty(object):
         pen = self.pen
         x = self.params
 
-        ps = np.array([pen.grad(np.atleast_1d(xi)) for xi in x])
+        ps = np.array([pen.deriv(np.atleast_1d(xi)) for xi in x])
         psn = np.array([approx_fprime(np.atleast_1d(xi), pen.func) for xi in x])
         assert_allclose(ps, psn, rtol=1e-7, atol=1e-8)
 
@@ -108,3 +108,12 @@ class TestL2(CheckPenalty):
         x0 = np.linspace(-0.2, 0.2, 11)
         cls.params = np.column_stack((x0, x0))
         cls.pen = smpen.L2()
+
+
+class TestNonePenalty(CheckPenalty):
+
+    @classmethod
+    def setup_class(cls):
+        x0 = np.linspace(-0.2, 0.2, 11)
+        cls.params = np.column_stack((x0, x0))
+        cls.pen = smpen.NonePenalty()

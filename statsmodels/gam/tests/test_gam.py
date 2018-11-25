@@ -126,7 +126,7 @@ def test_gam_gradient():
     for _ in range(10):
         params = np.random.uniform(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
-        gam_grad = gp.grad(params)
+        gam_grad = gp.deriv(params)
         grd = grad(params)
 
         assert_allclose(gam_grad, grd, rtol=1.e-2, atol=1.e-2)
@@ -277,10 +277,10 @@ def test_multivariate_penalty():
         c = mgp.func(params)
         assert_allclose(c, c1 + c2, atol=1.e-10, rtol=1.e-10)
 
-        d1 = gp1.grad(params1)
-        d2 = gp2.grad(params2)
+        d1 = gp1.deriv(params1)
+        d2 = gp2.deriv(params2)
         d12 = np.concatenate([d1, d2])
-        d = mgp.grad(params)
+        d = mgp.deriv(params)
         assert_allclose(d, d12)
 
         h1 = gp1.deriv2(params1)

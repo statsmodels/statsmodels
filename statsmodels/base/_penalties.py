@@ -126,7 +126,7 @@ class NonePenalty(Penalty):
     def deriv(self, params):
         return np.zeros(params.shape)
 
-    def hessian(self, params):
+    def deriv2(self, params):
         # returns diagonal of hessian
         return np.zeros(params.shape[0])
 
@@ -271,7 +271,7 @@ class SCAD(Penalty):
 
         return (self.weights * res).sum(0)
 
-    def grad(self, params):
+    def deriv(self, params):
 
         # 3 segments in absolute value
         tau = self.tau
@@ -357,7 +357,7 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         weights = self.weights
         self.weights = 1.
-        deriv_c0 = super(SCADSmoothed, self).grad(c0)
+        deriv_c0 = super(SCADSmoothed, self).deriv(c0)
         value_c0 = super(SCADSmoothed, self).func(c0)
         self.weights = weights
 
@@ -388,7 +388,7 @@ class SCADSmoothed(SCAD):
 
         return (weights * value).sum(0)
 
-    def grad(self, params):
+    def deriv(self, params):
         # workaround for Null model
         weights = self._null_weights(params)
         if self.restriction is not None and np.size(params) > 1:
@@ -396,7 +396,7 @@ class SCADSmoothed(SCAD):
         # need to temporarily override weights for call to super
         self_weights = self.weights
         self.weights = 1.
-        value = super(SCADSmoothed, self).grad(params)
+        value = super(SCADSmoothed, self).deriv(params)
         self.weights = self_weights
 
         #change the segment corrsponding to quadratic approximation

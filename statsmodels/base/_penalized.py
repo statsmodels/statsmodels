@@ -120,7 +120,7 @@ class PenalizedMixin(object):
         sc = super(PenalizedMixin, self).score(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            sc -= 1/scale * pen_weight * self.penal.grad(params)
+            sc -= 1/scale * pen_weight * self.penal.deriv(params)
 
         return sc
 
@@ -132,7 +132,7 @@ class PenalizedMixin(object):
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
-            sc -= 1/scale * pen_weight / nobs_sc  * self.penal.grad(params)
+            sc -= 1/scale * pen_weight / nobs_sc  * self.penal.deriv(params)
 
         return sc
 
