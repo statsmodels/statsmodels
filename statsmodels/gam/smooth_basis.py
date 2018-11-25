@@ -281,167 +281,6 @@ def make_poly_basis(x, degree, intercept=True):
     return basis, der_basis, der2_basis
 
 
-class BS(object):
-    """Generates a B-spline basis for ``x``
-
-    The usual usage is something like::
-      y ~ 1 + bs(x, 4)
-    to fit ``y`` as a smooth function of ``x``, with 4 degrees of freedom
-    given to the smooth.
-    :arg df: The number of degrees of freedom to use for this spline. The
-      return value will have this many columns. You must specify at least one
-      of ``df`` and ``knots``.
-    :arg knots: The interior knots to use for the spline. If unspecified, then
-      equally spaced quantiles of the input data are used. You must specify at
-      least one of ``df`` and ``knots``.
-    :arg degree: The degree of the spline to use.
-    :arg include_intercept: If ``True``, then the resulting
-      spline basis will span the intercept term (i.e., the constant
-      function). If ``False`` (the default) then this will not be the case,
-      which is useful for avoiding overspecification in models that include
-      multiple spline terms and/or an intercept term.
-    :arg lower_bound: The lower exterior knot location.
-    :arg upper_bound: The upper exterior knot location.
-    A spline with ``degree=0`` is piecewise constant with breakpoints at each
-    knot, and the default knot positions are quantiles of the input. So if you
-    find yourself in the situation of wanting to quantize a continuous
-    variable into ``num_bins`` equal-sized bins with a constant effect across
-    each bin, you can use ``bs(x, num_bins - 1, degree=0)``. (The ``- 1`` is
-    because one degree of freedom will be taken by the intercept;
-    alternatively, you could leave the intercept term out of your model and
-    use ``bs(x, num_bins, degree=0, include_intercept=True)``.
-    A spline with ``degree=1`` is piecewise linear with breakpoints at each
-    knot.
-    The default is ``degree=3``, which gives a cubic b-spline.
-    This is a stateful transform (for details see
-    :ref:`stateful-transforms`). If ``knots``, ``lower_bound``, or
-    ``upper_bound`` are not specified, they will be calculated from the data
-    and then the chosen values will be remembered and re-used for prediction
-    from the fitted model.
-    Using this function requires scipy be installed.
-    .. note:: This function is very similar to the R function of the same
-      name. In cases where both return output at all (e.g., R's ``bs`` will
-      raise an error if ``degree=0``, while patsy's will not), they should
-      produce identical output given identical input and parameter settings.
-    .. warning:: I'm not sure on what the proper handling of points outside
-      the lower/upper bounds is, so for now attempting to evaluate a spline
-      basis at such points produces an error. Patches gratefully accepted.
-    .. versionadded:: 0.2.0
-    """
-
-    def __init__(self):
-        self._tmp = {}
-        self._degree = None
-        self._all_knots = None
-
-    def memorize_chunk(self, x, df=None, knots=None, degree=3,
-                       include_intercept=False,
-                       lower_bound=None, upper_bound=None):
-        args = {"df": df,
-                "knots": knots,
-                "degree": degree,
-                "include_intercept": include_intercept,
-                "lower_bound": lower_bound,
-                "upper_bound": upper_bound,
-                }
-        self._tmp["args"] = args
-        # XX: check whether we need x values before saving them
-        x = np.atleast_1d(x)
-        if x.ndim == 2 and x.shape[1] == 1:
-            x = x[:, 0]
-        if x.ndim > 1:
-            raise ValueError("input to 'bs' must be 1-d, "
-                             "or a 2-d column vector")
-        # There's no better way to compute exact quantiles than memorizing
-        # all data.
-        self._tmp.setdefault("xs", []).append(x)
-
-    def memorize_finish(self):
-        tmp = self._tmp
-        args = tmp["args"]
-        del self._tmp
-
-        if args["degree"] < 0:
-            raise ValueError("degree must be greater than 0 (not %r)"
-                             % (args["degree"],))
-        if int(args["degree"]) != args["degree"]:
-            raise ValueError("degree must be an integer (not %r)"
-                             % (self._degree,))
-
-        # These are guaranteed to all be 1d vectors by the code above
-        x = np.concatenate(tmp["xs"])
-        if args["df"] is None and args["knots"] is None:
-            raise ValueError("must specify either df or knots")
-        order = args["degree"] + 1
-        if args["df"] is not None:
-            n_inner_knots = args["df"] - order
-            if not args["include_intercept"]:
-                n_inner_knots += 1
-            if n_inner_knots < 0:
-                raise ValueError("df=%r is too small for degree=%r and "
-                                 "include_intercept=%r; must be >= %s"
-                                 % (args["df"], args["degree"],
-                                    args["include_intercept"],
-                                    # We know that n_inner_knots is negative;
-                                    # if df were that much larger, it would
-                                    # have been zero, and things would work.
-                                    args["df"] - n_inner_knots))
-            if args["knots"] is not None:
-                if len(args["knots"]) != n_inner_knots:
-                    raise ValueError("df=%s with degree=%r implies %s knots, "
-                                     "but %s knots were provided"
-                                     % (args["df"], args["degree"],
-                                        n_inner_knots, len(args["knots"])))
-            else:
-                # Need to compute inner knots
-                knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
-                inner_knots = _R_compat_quantile(x, knot_quantiles)
-        if args["knots"] is not None:
-            inner_knots = args["knots"]
-        if args["lower_bound"] is not None:
-            lower_bound = args["lower_bound"]
-        else:
-            lower_bound = np.min(x)
-        if args["upper_bound"] is not None:
-            upper_bound = args["upper_bound"]
-        else:
-            upper_bound = np.max(x)
-        if lower_bound > upper_bound:
-            raise ValueError("lower_bound > upper_bound (%r > %r)"
-                             % (lower_bound, upper_bound))
-        inner_knots = np.asarray(inner_knots)
-        if inner_knots.ndim > 1:
-            raise ValueError("knots must be 1 dimensional")
-        if np.any(inner_knots < lower_bound):
-            raise ValueError("some knot values (%s) fall below lower bound "
-                             "(%r)"
-                             % (inner_knots[inner_knots < lower_bound],
-                                lower_bound))
-        if np.any(inner_knots > upper_bound):
-            raise ValueError("some knot values (%s) fall above upper bound "
-                             "(%r)"
-                             % (inner_knots[inner_knots > upper_bound],
-                                upper_bound))
-        all_knots = np.concatenate(([lower_bound, upper_bound] * order,
-                                    inner_knots))
-        all_knots.sort()
-
-        self._degree = args["degree"]
-        self._all_knots = all_knots
-
-    def transform(self, x, df=None, knots=None, degree=3,
-                  include_intercept=False,
-                  lower_bound=None, upper_bound=None):
-        basis = _eval_bspline_basis(x, self._all_knots, self._degree)
-        if not include_intercept:
-            basis = basis[:, 1:]
-
-        if isinstance(x, (pd.Series, pd.DataFrame)):
-            basis = pd.DataFrame(basis)
-            basis.index = x.index
-        return basis
-
-
 # TODO: try to include other kinds of splines from patsy
 # x = np.linspace(0, 1, 30)
 # df = 10
@@ -589,6 +428,192 @@ class UnivariateBSplines(UnivariateGamSmoother):
         return exog
 
 
+class UnivariateCubicSplines(UnivariateGamSmoother):
+    """Cubic Spline single component smoother for GAM
+
+    Cubic splines as described in the wood's book in chapter 3
+    """
+
+    def __init__(self, x, df, constraints=None, transform='domain',
+                 variable_name='x'):
+
+        self.degree = 3
+        self.df = df
+        self.transform_data_method = transform
+
+        self.x = x = self.transform_data(x, initialize=True)
+        self.knots = _equally_spaced_knots(x, df)
+        super(UnivariateCubicSplines, self).__init__(x,
+              constraints=constraints, variable_name=variable_name)
+
+    def transform_data(self, x, initialize=False):
+        tm = self.transform_data_method
+        if tm is None:
+            return x
+
+        if initialize is True:
+            if tm == 'domain':
+                self.domain_low = x.min(0)
+                self.domain_upp = x.max(0)
+            elif isinstance(tm, tuple):
+                self.domain_low = tm[0]
+                self.domain_upp = tm[1]
+                self.transform_data_method = 'domain'
+            else:
+                raise ValueError("transform should be None, 'domain' "
+                                 "or a tuple")
+            self.domain_diff = self.domain_upp - self.domain_low
+
+        if self.transform_data_method == 'domain':
+            x = (x - self.domain_low) / self.domain_diff
+            return x
+        else:
+            raise ValueError("incorrect transform_data_method")
+
+    def _smooth_basis_for_single_variable(self):
+
+        basis = self._splines_x()[:, :-1]
+        # demean except for constant, does not affect derivatives
+        if not self.constraints == 'none':
+            self.transf_mean = basis[:, 1:].mean(0)
+            basis[:, 1:] -= self.transf_mean
+        else:
+            self.transf_mean = np.zeros(basis.shape[1])
+        s = self._splines_s()[:-1, :-1]
+        if not self.constraints == 'none':
+            ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
+        else:
+            ctransf = np.eye(basis.shape[1])
+        # use np.eye to avoid rescaling
+        # ctransf = np.eye(basis.shape[1])
+
+        if self.constraints == 'no-const':
+            ctransf = ctransf[1:]
+
+        self.ctransf = ctransf
+
+        return basis, None, None, s
+
+    def _rk(self, x, z):
+        p1 = ((z - 1 / 2) ** 2 - 1 / 12) * ((x - 1 / 2) ** 2 - 1 / 12) / 4
+        p2 = ((np.abs(z - x) - 1 / 2) ** 4 -
+              1 / 2 * (np.abs(z - x) - 1 / 2) ** 2 +
+              7 / 240) / 24.
+        return p1 - p2
+
+    def _splines_x(self, x=None):
+        if x is None:
+            x = self.x
+        n_columns = len(self.knots) + 2
+        n_samples = x.shape[0]
+        basis = np.ones(shape=(n_samples, n_columns))
+        basis[:, 1] = x
+        # for loop equivalent to outer(x, xk, fun=rk)
+        for i, xi in enumerate(x):
+            for j, xkj in enumerate(self.knots):
+                s_ij = self._rk(xi, xkj)
+                basis[i, j + 2] = s_ij
+        return basis
+
+    def _splines_s(self):
+        q = len(self.knots) + 2
+        s = np.zeros(shape=(q, q))
+        for i, x1 in enumerate(self.knots):
+            for j, x2 in enumerate(self.knots):
+                s[i + 2, j + 2] = self._rk(x1, x2)
+        return s
+
+    def transform(self, x_new):
+        x_new = self.transform_data(x_new, initialize=False)
+        exog = self._splines_x(x_new)
+        exog[:, 1:] -= self.transf_mean
+        if self.ctransf is not None:
+            exog = exog.dot(self.ctransf)
+        return exog
+
+
+class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
+    """cyclic cubic regression spline single component smoother for GAM
+    """
+    def __init__(self, x, df, constraints=None, variable_name='x'):
+        self.degree = 3
+        self.df = df
+        self.x = x
+        self.knots = _equally_spaced_knots(x, df)
+        super(UnivariateCubicCyclicSplines, self).__init__(x,
+              constraints=constraints, variable_name=variable_name)
+
+    def _smooth_basis_for_single_variable(self):
+        basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
+        self.design_info = basis.design_info
+        n_inner_knots = self.df - 2 + 1  # +n_constraints
+        # TODO: from CubicRegressionSplines class
+        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
+                                          inner_knots=None,
+                                          lower_bound=None, upper_bound=None)
+
+        b, d = self._get_b_and_d(all_knots)
+        s = self._get_s(b, d)
+
+        return basis, None, None, s
+
+    def _get_b_and_d(self, knots):
+        """Returns mapping of cyclic cubic spline values to 2nd derivatives.
+
+        .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006,
+           pp 146-147
+
+        Parameters
+        ----------
+        knots : ndarray
+            The 1-d array knots used for cubic spline parametrization,
+            must be sorted in ascending order.
+
+        Returns
+        -------
+        b, d: ndarrays
+            arrays for mapping cyclic cubic spline values at knots to
+            second derivatives.
+            penalty matrix is equal to ``s = d.T.dot(b^-1).dot(d)``
+        """
+        h = knots[1:] - knots[:-1]
+        n = knots.size - 1
+
+        # b and d are defined such that the penalty matrix is equivalent to:
+        # s = d.T.dot(b^-1).dot(d)
+        # reference in particular to pag 146 of Wood's book
+        b = np.zeros((n, n))  # the b matrix on page 146 of Wood's book
+        d = np.zeros((n, n))  # the d matrix on page 146 of Wood's book
+
+        b[0, 0] = (h[n - 1] + h[0]) / 3.
+        b[0, n - 1] = h[n - 1] / 6.
+        b[n - 1, 0] = h[n - 1] / 6.
+
+        d[0, 0] = -1. / h[0] - 1. / h[n - 1]
+        d[0, n - 1] = 1. / h[n - 1]
+        d[n - 1, 0] = 1. / h[n - 1]
+
+        for i in range(1, n):
+            b[i, i] = (h[i - 1] + h[i]) / 3.
+            b[i, i - 1] = h[i - 1] / 6.
+            b[i - 1, i] = h[i - 1] / 6.
+
+            d[i, i] = -1. / h[i - 1] - 1. / h[i]
+            d[i, i - 1] = 1. / h[i - 1]
+            d[i - 1, i] = 1. / h[i - 1]
+
+        return b, d
+
+    def _get_s(self, b, d):
+        return d.T.dot(np.linalg.inv(b)).dot(d)
+
+    def transform(self, x_new):
+        exog = dmatrix(self.design_info, {"x": x_new})
+        if self.ctransf is not None:
+            exog = exog.dot(self.ctransf)
+        return exog
+
+
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     """Base class for additive smoothers for GAM
     """
@@ -701,110 +726,6 @@ class BSplines(MultivariateGamSmoother):
         return smoothers
 
 
-class UnivariateCubicSplines(UnivariateGamSmoother):
-    """Cubic Spline single component smoother for GAM
-
-    Cubic splines as described in the wood's book in chapter 3
-    """
-
-    def __init__(self, x, df, constraints=None, transform='domain',
-                 variable_name='x'):
-
-        self.degree = 3
-        self.df = df
-        self.transform_data_method = transform
-
-        self.x = x = self.transform_data(x, initialize=True)
-        self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicSplines, self).__init__(x,
-              constraints=constraints, variable_name=variable_name)
-
-    def transform_data(self, x, initialize=False):
-        tm = self.transform_data_method
-        if tm is None:
-            return x
-
-        if initialize is True:
-            if tm == 'domain':
-                self.domain_low = x.min(0)
-                self.domain_upp = x.max(0)
-            elif isinstance(tm, tuple):
-                self.domain_low = tm[0]
-                self.domain_upp = tm[1]
-                self.transform_data_method = 'domain'
-            else:
-                raise ValueError("transform should be None, 'domain' "
-                                 "or a tuple")
-            self.domain_diff = self.domain_upp - self.domain_low
-
-        if self.transform_data_method == 'domain':
-            x = (x - self.domain_low) / self.domain_diff
-            return x
-        else:
-            raise ValueError("incorrect transform_data_method")
-
-    def _smooth_basis_for_single_variable(self):
-
-        basis = self._splines_x()[:, :-1]
-        # demean except for constant, does not affect derivatives
-        if not self.constraints == 'none':
-            self.transf_mean = basis[:, 1:].mean(0)
-            basis[:, 1:] -= self.transf_mean
-        else:
-            self.transf_mean = np.zeros(basis.shape[1])
-        s = self._splines_s()[:-1, :-1]
-        if not self.constraints == 'none':
-            ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
-        else:
-            ctransf = np.eye(basis.shape[1])
-        # use np.eye to avoid rescaling
-        # ctransf = np.eye(basis.shape[1])
-
-        if self.constraints == 'no-const':
-            ctransf = ctransf[1:]
-
-        self.ctransf = ctransf
-
-        return basis, None, None, s
-
-    def _rk(self, x, z):
-        p1 = ((z - 1 / 2) ** 2 - 1 / 12) * ((x - 1 / 2) ** 2 - 1 / 12) / 4
-        p2 = ((np.abs(z - x) - 1 / 2) ** 4 -
-              1 / 2 * (np.abs(z - x) - 1 / 2) ** 2 +
-              7 / 240) / 24.
-        return p1 - p2
-
-    def _splines_x(self, x=None):
-        if x is None:
-            x = self.x
-        n_columns = len(self.knots) + 2
-        n_samples = x.shape[0]
-        basis = np.ones(shape=(n_samples, n_columns))
-        basis[:, 1] = x
-        # for loop equivalent to outer(x, xk, fun=rk)
-        for i, xi in enumerate(x):
-            for j, xkj in enumerate(self.knots):
-                s_ij = self._rk(xi, xkj)
-                basis[i, j + 2] = s_ij
-        return basis
-
-    def _splines_s(self):
-        q = len(self.knots) + 2
-        s = np.zeros(shape=(q, q))
-        for i, x1 in enumerate(self.knots):
-            for j, x2 in enumerate(self.knots):
-                s[i + 2, j + 2] = self._rk(x1, x2)
-        return s
-
-    def transform(self, x_new):
-        x_new = self.transform_data(x_new, initialize=False)
-        exog = self._splines_x(x_new)
-        exog[:, 1:] -= self.transf_mean
-        if self.ctransf is not None:
-            exog = exog.dot(self.ctransf)
-        return exog
-
-
 class CubicSplines(MultivariateGamSmoother):
     def __init__(self, x, df, constraints='center', transform='domain',
                  variable_names=None):
@@ -825,88 +746,6 @@ class CubicSplines(MultivariateGamSmoother):
             smoothers.append(uv_smoother)
 
         return smoothers
-
-
-class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
-    """cyclic cubic regression spline single component smoother for GAM
-    """
-    def __init__(self, x, df, constraints=None, variable_name='x'):
-        self.degree = 3
-        self.df = df
-        self.x = x
-        self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicCyclicSplines, self).__init__(x,
-              constraints=constraints, variable_name=variable_name)
-
-    def _smooth_basis_for_single_variable(self):
-        basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
-        self.design_info = basis.design_info
-        n_inner_knots = self.df - 2 + 1  # +n_constraints
-        # TODO: from CubicRegressionSplines class
-        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
-                                          inner_knots=None,
-                                          lower_bound=None, upper_bound=None)
-
-        b, d = self._get_b_and_d(all_knots)
-        s = self._get_s(b, d)
-
-        return basis, None, None, s
-
-    def _get_b_and_d(self, knots):
-        """Returns mapping of cyclic cubic spline values to 2nd derivatives.
-
-        .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006,
-           pp 146-147
-
-        Parameters
-        ----------
-        knots : ndarray
-            The 1-d array knots used for cubic spline parametrization,
-            must be sorted in ascending order.
-
-        Returns
-        -------
-        b, d: ndarrays
-            arrays for mapping cyclic cubic spline values at knots to
-            second derivatives.
-            penalty matrix is equal to ``s = d.T.dot(b^-1).dot(d)``
-        """
-        h = knots[1:] - knots[:-1]
-        n = knots.size - 1
-
-        # b and d are defined such that the penalty matrix is equivalent to:
-        # s = d.T.dot(b^-1).dot(d)
-        # reference in particular to pag 146 of Wood's book
-        b = np.zeros((n, n))  # the b matrix on page 146 of Wood's book
-        d = np.zeros((n, n))  # the d matrix on page 146 of Wood's book
-
-        b[0, 0] = (h[n - 1] + h[0]) / 3.
-        b[0, n - 1] = h[n - 1] / 6.
-        b[n - 1, 0] = h[n - 1] / 6.
-
-        d[0, 0] = -1. / h[0] - 1. / h[n - 1]
-        d[0, n - 1] = 1. / h[n - 1]
-        d[n - 1, 0] = 1. / h[n - 1]
-
-        for i in range(1, n):
-            b[i, i] = (h[i - 1] + h[i]) / 3.
-            b[i, i - 1] = h[i - 1] / 6.
-            b[i - 1, i] = h[i - 1] / 6.
-
-            d[i, i] = -1. / h[i - 1] - 1. / h[i]
-            d[i, i - 1] = 1. / h[i - 1]
-            d[i - 1, i] = 1. / h[i - 1]
-
-        return b, d
-
-    def _get_s(self, b, d):
-        return d.T.dot(np.linalg.inv(b)).dot(d)
-
-    def transform(self, x_new):
-        exog = dmatrix(self.design_info, {"x": x_new})
-        if self.ctransf is not None:
-            exog = exog.dot(self.ctransf)
-        return exog
 
 
 class CyclicCubicSplines(MultivariateGamSmoother):
