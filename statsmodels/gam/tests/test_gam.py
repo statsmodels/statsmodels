@@ -464,7 +464,7 @@ def test_make_augmented_matrix():
     # matrix_sqrt removes redundant rows,
     # if alpha is zero, then no augmentation is needed
     alpha = 0
-    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, alpha * s, w)
+    aug_y, aug_x, aug_w = make_augmented_matrix(y, x, alpha * s, w)
     expected_aug_x = x
     assert_allclose(aug_x, expected_aug_x)
     expected_aug_y = y
@@ -474,7 +474,7 @@ def test_make_augmented_matrix():
     assert_allclose(aug_w, expected_aug_w)
 
     alpha = 1
-    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w)
+    aug_y, aug_x, aug_w = make_augmented_matrix(y, x, s, w)
     rs = matrix_sqrt(alpha * s)
     # rs = sp.linalg.cholesky(alpha * s)
     assert_allclose(np.dot(rs.T, rs), alpha * s)
@@ -498,7 +498,7 @@ def test_penalized_wls():
     weights = np.ones(shape=(n,))
     s = np.random.normal(0, 1, (p, p))
 
-    pen_wls_res = penalized_wls(x, y, 0 * s, weights)
+    pen_wls_res = penalized_wls(y, x, 0 * s, weights)
     ls_res = lm.OLS(y, x).fit()
 
     assert_allclose(ls_res.params, pen_wls_res.params)
