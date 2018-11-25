@@ -13,38 +13,27 @@ from statsmodels.base._penalties import Penalty
 
 
 class UnivariateGamPenalty(Penalty):
-    __doc__ = """
-    Penalty for Generalized Additive Models class
+    """
+    Penalty for smooth term in Generalized Additive Models
 
     Parameters
     -----------
+    univariate_smoother : instance
+        instance of univariate smoother or spline class
     alpha : float
-        the penalty term
-
-    weights: TODO: I do not know!
-
-    cov_der2: the covariance matrix of the second derivative of the basis
-        matrix
-
-    der2: The second derivative of the basis function
+        default penalty weight, alpha can be provided to each method
+    weights:
+        TODO: not used and verified, might be removed
 
     Attributes
     -----------
-    alpha : float
-        the penalty term
-
-    weights: TODO: I do not know!
-
-    cov_der2: the covariance matrix of the second derivative of the basis
-        matrix
-
-    der2: The second derivative of the basis function
-
-    nobs: The number of samples used during the estimation
+    Parameters are stored, additionally
+    nob s: The number of samples used during the estimation
+    n_columns : number of columns in smoother basis
 
     """
 
-    def __init__(self, univariate_smoother, weights=1, alpha=1):
+    def __init__(self, univariate_smoother, alpha=1, weights=1):
         self.weights = weights  # should we keep weights????
         self.alpha = alpha
         self.univariate_smoother = univariate_smoother
@@ -54,27 +43,38 @@ class UnivariateGamPenalty(Penalty):
     def func(self, params, alpha=None):
         """evaluate penalization at params
 
-        1) params are the coefficients in the regression model
-        2) der2  is the second derivative of the splines basis
+        Parameters
+        ----------
+        params : ndarray
+            coefficients for the spline basis in the regression model
+        alpha : float
+            default penalty weight
+
+        Returns
+        -------
+        func : float
+            value of the penalty evaluated at params
         """
         if alpha is None:
             alpha = self.alpha
 
-        # TODO cleanup
-        if 0:  # self.univariate_smoother.der2_basis is not None:
-            # The second derivative of the estimated regression function
-            f = np.dot(self.univariate_smoother.der2_basis, params)
-            return alpha * np.sum(f ** 2) / self.nobs
-        else:
-            f = params.dot(self.univariate_smoother.cov_der2.dot(params))
-            return alpha * f / self.nobs
+        f = params.dot(self.univariate_smoother.cov_der2.dot(params))
+        return alpha * f / self.nobs
 
     def deriv(self, params, alpha=None):
         """evaluate derivative of penalty with respect to params
 
-        1) params are the coefficients in the regression model
-        2) der2  is the second derivative of the splines basis
-        3) cov_der2 is obtained as np.dot(der2.T, der2)
+        Parameters
+        ----------
+        params : ndarray
+            coefficients for the spline basis in the regression model
+        alpha : float
+            default penalty weight
+
+        Returns
+        -------
+        deriv : ndarray
+            derivative, gradient of the penalty with respect to params
         """
         if alpha is None:
             alpha = self.alpha
@@ -85,6 +85,18 @@ class UnivariateGamPenalty(Penalty):
 
     def deriv2(self, params, alpha=None):
         """evaluate second derivative of penalty with respect to params
+
+        Parameters
+        ----------
+        params : ndarray
+            coefficients for the spline basis in the regression model
+        alpha : float
+            default penalty weight
+
+        Returns
+        -------
+        deriv2 : ndarray, 2-Dim
+            second derivative, hessian of the penalty with respect to params
         """
         if alpha is None:
             alpha = self.alpha
@@ -94,6 +106,21 @@ class UnivariateGamPenalty(Penalty):
         return  d2
 
     def penalty_matrix(self, alpha=None):
+        """penalty matrix for the smooth term of a GAM
+
+        Parameters
+        ----------
+        alpha : list of floats or None
+            penalty weights
+
+        Returns
+        -------
+        penalty matrix
+            square penalty matrix for quadratic penalization. The number
+            of rows and columns are equal to the number of columns in the
+            smooth terms, i.e. the number of parameters for this smooth
+            term in the regression model
+        """
         if alpha is None:
             alpha = self.alpha
 
@@ -101,15 +128,16 @@ class UnivariateGamPenalty(Penalty):
 
 
 class MultivariateGamPenalty(Penalty):
-    __doc__ = """
-    GAM penalty for multivariate regression
+    """
+    Penalty for Generalized Additive Models
 
     Parameters
-    ----------
-    multivariate_smoother : instance of multivariate smoother
-    alpha: array-like
-        list of doubles. Each one representing the penalty
-        for each function
+    -----------
+    multivariate_smoother : instance
+        instance of additive smoother or spline class
+    alpha : list of float
+        default penalty weight, list with length equal to the number of smooth
+        terms. ``alpha`` can also be provided to each method.
     weights: array-like
         currently not used
         is a list of doubles of the same length as alpha or a list
@@ -119,6 +147,16 @@ class MultivariateGamPenalty(Penalty):
         number of parameters that come before the smooth terms. If the model
         has a linear component, then the parameters for the smooth components
         start at ``start_index``.
+
+    Attributes
+    -----------
+    Parameters are stored, additionally
+    nob s: The number of samples used during the estimation
+
+    dim_basis : number of columns of additive smoother. Number of columns
+        in all smoothers.
+    k_variables : number of smooth terms
+    k_params : total number of parameters in the regression model
 
     """
 
@@ -166,6 +204,20 @@ class MultivariateGamPenalty(Penalty):
             self.gp.append(gp)
 
     def func(self, params, alpha=None):
+        """evaluate penalization at params
+
+        Parameters
+        ----------
+        params : ndarray
+            coefficients in the regression model
+        alpha : float or list of floats
+            penalty weights
+
+        Returns
+        -------
+        func : float
+            value of the penalty evaluated at params
+        """
         if alpha is None:
             alpha = [None] * self.k_variables
 
@@ -177,6 +229,20 @@ class MultivariateGamPenalty(Penalty):
         return cost
 
     def deriv(self, params, alpha=None):
+        """evaluate derivative of penalty with respect to params
+
+        Parameters
+        ----------
+        params : ndarray
+            coefficients in the regression model
+        alpha : list of floats or None
+            penalty weights
+
+        Returns
+        -------
+        deriv : ndarray
+            derivative, gradient of the penalty with respect to params
+        """
         if alpha is None:
             alpha = [None] * self.k_variables
 
@@ -188,6 +254,20 @@ class MultivariateGamPenalty(Penalty):
         return np.concatenate(grad)
 
     def deriv2(self, params, alpha=None):
+        """evaluate second derivative of penalty with respect to params
+
+        Parameters
+        ----------
+        params : ndarray
+            coefficients in the regression model
+        alpha : list of floats or None
+            penalty weights
+
+        Returns
+        -------
+        deriv2 : ndarray, 2-Dim
+            second derivative, hessian of the penalty with respect to params
+        """
         if alpha is None:
             alpha = [None] * self.k_variables
 
@@ -199,6 +279,26 @@ class MultivariateGamPenalty(Penalty):
         return block_diag(*deriv2)
 
     def penalty_matrix(self, alpha=None):
+        """penalty matrix for generalized additive model
+
+        Parameters
+        ----------
+        alpha : list of floats or None
+            penalty weights
+
+        Returns
+        -------
+        penalty matrix
+            block diagonal, square penalty matrix for quadratic penalization.
+            The number of rows and columns are equal to the number of
+            parameters in the regression model ``k_params``.
+
+        Notes
+        -----
+        statsmodels does not support backwards compatibility when keywords are
+        used as positional arguments. The order of keywords might change.
+        We might need to add a ``params`` keyword if the need arises.
+        """
         if alpha is None:
             alpha = self.alpha
 

@@ -30,6 +30,25 @@ class GLMGAMResults(GLMResults):
     Warning: not all inherited methods might take correctly account of the
     penalization
 
+    GLMGAMResults inherits from GLMResults
+
+    Extra Attributes
+    ----------------
+    edf : list of effective degrees of freedom for each column of the
+        design matrix.
+
+    hat_matrix_diag : diagonal of hat matrix
+
+    gcv : generalized cross-validation criterion computed as
+        `gcv = scale / (1. - hat_matrix_trace / self.nobs)**2`
+
+    cv : cross-validation criterion computed as
+        cv = ((resid_pearson / (1. - hat_matrix_diag))**2).sum() / self.nobs
+
+    Notes
+    -----
+    status: experimental
+
     """
 
     def __init__(self, model, params, normalized_cov_params, scale, **kwds):
@@ -56,6 +75,24 @@ class GLMGAMResults(GLMResults):
                                             **kwds)
 
     def _tranform_predict_exog(self, exog=None, x=None, transform=False):
+        """Transform original explanatory variables for prediction
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for the linear explanatory variables.
+        x : array_like
+            values for the variables in the smooth terms
+        transform : bool, optional
+            If transform is True, then the basis representation of the smooth
+            term will be constructed from the provided ``x``.
+
+        Returns
+        -------
+        exog_transformed : ndarray
+            design matrix for the prediction
+
+        """
         if transform is False:
             ex = exog
         else:
@@ -71,22 +108,71 @@ class GLMGAMResults(GLMResults):
         return ex
 
     def predict(self, exog=None, x=None, transform=True, **kwds):
+        """"compute prediction
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for the linear explanatory variables
+        x : array_like
+            values for the variables in the smooth terms
+        transform : bool, optional
+            If transform is True, then the basis representation of the smooth
+            term will be constructed from the provided ``x``.
+        kwargs :
+            Some models can take additional arguments or keywords, see the
+            predict method of the model for the details.
+
+        Returns
+        -------
+        prediction : ndarray, pandas.Series or pandas.DataFrame
+            predicted values
+        """
         ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
         return super(GLMGAMResults, self).predict(ex, **kwds)
 
     def get_prediction(self, exog=None, x=None, transform=True, **kwds):
-        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
-        return super(GLMGAMResults, self).get_prediction(ex, **kwds)
+        """compute prediction results
 
-    def partial_values(self, index, include_constant=True):
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        x : array_like
+            values for the variables in the smooth terms
+        transform : bool, optional
+            If transform is True, then the basis representation of the smooth
+            term will be constructed from the provided ``x``.
+        kwargs :
+            Some models can take additional arguments or keywords, see the
+            predict method of the model for the details.
+
+        Returns
+        -------
+        prediction_results : generalized_linear_model.PredictionResults
+            The prediction results instance contains prediction and prediction
+            variance and can on demand calculate confidence intervals and summary
+            tables for the prediction of the mean and of new observations.
+
+        """
+        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
+        return super(GLMGAMResults, self).get_prediction(ex, transform=True,
+                                                         **kwds)
+
+    def partial_values(self, smooth_index, include_constant=True):
         """contribution of a smooth term to the linear prediction
 
         Warning: This will be replaced by a predict method
 
         Parameters
         ----------
-        idx : int
+        smooth_index : int
             index of the smooth term within list of smooth terms
+        include_constant : bool
+            If true, then the estimated intercept is added to the prediction
+            and its standard errors. This avoids that the confidence interval
+            has zero width at the imposed identification constraint, e.g.
+            either at a reference point or at the mean.
 
         Returns
         -------
@@ -98,7 +184,7 @@ class GLMGAMResults(GLMResults):
             standard error of linear prediction
 
         """
-        variable = index
+        variable = smooth_index
         smoother = self.model.smoother
         mask = smoother.mask[variable]
 
@@ -123,13 +209,37 @@ class GLMGAMResults(GLMResults):
 
         return linpred, se
 
-    def plot_partial(self, variable, plot_se=True, cpr=False,
+    def plot_partial(self, smooth_index, plot_se=True, cpr=False,
                      include_constant=True, ax=None):
-        """just to try a method in overridden Results class
+        """plot the contribution of a smooth term to the linear prediction
+
+        Parameters
+        ----------
+        smooth_index : int
+            index of the smooth term within list of smooth terms
+        plot_se : book
+            If plot_se is true, then the confidence interval for the linear
+            prediction will be added to the plot.
+        cpr : bool
+            If cpr (component plus residual) is true, the a scatter plot of
+            the partial residuals will be added to the plot.
+        include_constant : bool
+            If true, then the estimated intercept is added to the prediction
+            and its standard errors. This avoids that the confidence interval
+            has zero width at the imposed identification constraint, e.g.
+            either at a reference point or at the mean.
+        ax : None or matplotlib axis instance
+           If ax is not None, then the plot will be added to it.
+
+        Returns
+        -------
+        fig : matplotlib figure instance
+
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
         _import_mpl()
 
+        variable = smooth_index
         y_est, se = self.partial_values(variable,
                                         include_constant=include_constant)
         smoother = self.model.smoother
@@ -157,7 +267,18 @@ class GLMGAMResults(GLMResults):
     def test_significance(self, smooth_index):
         """hypothesis test that a smooth component is zero.
 
-        this uses wald_test to compute the hypothesis test
+        This calls `wald_test` to compute the hypothesis test, but uses
+        effective degrees of freedom.
+
+        Parameters
+        ----------
+        smooth_index : int
+            index of the smooth term within list of smooth terms
+
+        Returns
+        -------
+        wald_test : ContrastResults instance
+            the results instance created by `wald_test`
         """
 
         variable = smooth_index
@@ -234,8 +355,38 @@ class GLMGam(PenalizedMixin, GLM):
 
     This inherits from `GLM`.
 
-    Warning: not all inherited methods might take correctly account of the
-    penalization
+    Warning: Not all inherited methods might take correctly account of the
+    penalization. Not all options including offset and exposure have been
+    verified yet.
+
+    Parameters
+    ----------
+    endog : array_like
+    exog : array_like or None,
+    smoother : instance of additive smoother class
+        required keyword argument
+    alpha : list of floats
+        penalization weights for smooth terms. The length of the list needs
+        to be the same as the number of smooth terms in the ``smoother``
+    family : instance of GLM family
+        see GLM
+    offset : None or array_like
+        see GLM
+    exposure : None or array_like
+        see GLM
+    missing : 'none'
+        missing value handling is not supported in this class
+    kwargs :
+        extra keywords are used in call to the super classes.
+
+    Notes
+    -----
+    Status: experimental. This has full unit test coverage for the core
+    results with Gaussian and Poisson (without offset and exposure). Other
+    options and additional results might not be correctly supported yet.
+    (Binomial with counts, i.e. with n_trials, is most likely wrong in pirls.
+    User specified var or freq weights are most likely also not correct for
+    all results.)
 
     """
 
@@ -267,6 +418,20 @@ class GLMGam(PenalizedMixin, GLM):
                                      penal=penal, missing=missing, **kwargs)
 
     def _check_alpha(self, alpha):
+        """check and convert alpha to required list format
+
+        Parameters
+        ----------
+        alpha : scalar, list or array-like
+            penalization weight
+
+        Returns
+        ----------
+        alpha : list
+            penalization weight, list with length equal to the number of
+            smooth terms
+
+        """
         import collections
         if not isinstance(alpha, collections.Iterable):
             alpha = [alpha] * len(self.smoother.smoothers)
@@ -315,6 +480,9 @@ class GLMGam(PenalizedMixin, GLM):
     def _fit_pirls(self, alpha, start_params=None, maxiter=100, tol=1e-8,
                    scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
                    weights=None):
+        """fit model with penalized reweighted least squares
+
+        """
 
         # alpha = alpha * len(y) * self.scale / 100
         # TODO: we need to rescale alpha
@@ -371,7 +539,7 @@ class GLMGam(PenalizedMixin, GLM):
                         - self._offset_exposure)
 
             # this defines the augmented matrix point 2a on page 136
-            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights)
+            wls_results = penalized_wls(wlsendog, wlsexog, spl_s, self.weights)
             lin_pred = np.dot(wlsexog, wls_results.params).ravel()
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
@@ -528,11 +696,28 @@ class LogitGam(PenalizedMixin, Logit):
                                        *args, **kwargs)
 
 
-def penalized_wls(x, y, s, weights):
+def penalized_wls(endog, exog, penalty_matrix, weights):
     """weighted least squares with quadratic penalty
+
+    Parameters
+    ----------
+    endog : ndarray
+        response or endogenous variable
+    exog : ndarray
+        design matrix, matrix of exogenous or explanatory variables
+    penalty_matrix : ndarray, 2-Dim square
+        penality matrix for quadratic penalization. Note, the penalty_matrix
+        is multiplied by two to match non-pirls fitting methods.
+    weights : ndarray
+        weights for WLS
+
+    Returns
+    -------
+    results : Results instance of WLS
     """
+    y, x, s = endog, exog, penalty_matrix
     # TODO: I don't understand why I need 2 * s
-    aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, 2 * s, weights)
+    aug_y, aug_x, aug_weights = make_augmented_matrix(y, x, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     # MinimalWLS does not return normalized_cov_params
     # wls_results = reg_tools._MinimalWLS(aug_y, aug_x, aug_weights).fit()
@@ -541,8 +726,31 @@ def penalized_wls(x, y, s, weights):
     return wls_results
 
 
-def make_augmented_matrix(x, y, s, w):
-    nobs, n_columns = x.shape
+def make_augmented_matrix(endog, exog, penalty_matrix, weights):
+    """augment endog, exog and weights with stochastic restriction matrix
+
+    Parameters
+    ----------
+    endog : ndarray
+        response or endogenous variable
+    exog : ndarray
+        design matrix, matrix of exogenous or explanatory variables
+    penalty_matrix : ndarray, 2-Dim square
+        penality matrix for quadratic penalization
+    weights : ndarray
+        weights for WLS
+
+    Returns
+    -------
+    endog_aug : ndarray
+        augmented response variable
+    exog_aug : ndarray
+        augmented design matrix
+    weights_aug : ndarray
+        augmented weights for WLS
+    """
+    y, x, s, = endog, exog, penalty_matrix
+    nobs = x.shape[0]
 
     # TODO: needs full because of broadcasting with weights
     # check what weights should be doing
@@ -554,6 +762,6 @@ def make_augmented_matrix(x, y, s, w):
     y1[:nobs] = y
 
     id1 = np.array([1.] * rs.shape[0])
-    w1 = np.concatenate([w, id1])
+    w1 = np.concatenate([weights, id1])
 
-    return x1, y1, w1
+    return y1, x1, w1
