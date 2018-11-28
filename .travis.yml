@@ -93,6 +93,16 @@ matrix:
     env:
     - PIP_PRE=true
     - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.6.6
+      - NUMPY=1.14
+      - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.7
 
   allow_failures:
   # pre-testing is a little fragile. Make it an FYI.
@@ -100,6 +110,16 @@ matrix:
     env:
     - PIP_PRE=true
     - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.6.6
+      - NUMPY=1.14
+      - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.7
 
 notifications:
   email:
@@ -111,10 +131,12 @@ before_install:
   - if [[ $TRAVIS_PULL_REQUEST == false ]]; then COMMIT_MESSAGE=${TRAVIS_COMMIT_MESSAGE}; fi
   - if echo "$COMMIT_MESSAGE" | grep -E '\[(skip travis|travis skip)\]'; then exit 0 ; fi
   # Show information about CPU running job to understand BLAS issues
-  - sudo lshw -class processor
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo lshw -class processor; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then sysctl -a | grep machdep.cpu; fi
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ( sh -e /etc/init.d/xvfb start )& fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
   # Avoid noise from matplotlib
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
