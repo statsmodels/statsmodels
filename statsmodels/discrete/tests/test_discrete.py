@@ -48,7 +48,21 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-class CheckModelResults(object):
+
+class CheckModelMixin(object):
+    # Assertions about the Model object, as opposed to the Results
+    # Assumes that mixed-in class implements:
+    #   res1
+
+    def test_fit_regularized_invalid_method(self):
+        # GH#5224 check we get ValueError when passing invalid "method" arg
+        model = self.res1.model
+
+        with pytest.raises(ValueError, match=r'is not supported, use either'):
+            model.fit_regularized(method="foo")
+
+
+class CheckModelResults(CheckModelMixin):
     """
     res2 should be the test results from RModelWrap
     or the results as defined in model_results_data
