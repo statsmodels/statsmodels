@@ -414,7 +414,7 @@ class MixedLMParams(object):
 
 
 def _smw_solver(s, A, AtA, Qi, di):
-    """
+    r"""
     Returns a solver for the linear system:
 
     .. math::
@@ -479,7 +479,7 @@ def _smw_solver(s, A, AtA, Qi, di):
 
 
 def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
-    """
+    r"""
     Returns the log determinant of
 
     .. math::
