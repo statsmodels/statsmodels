@@ -5,7 +5,7 @@ results, and doing data cleaning
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
 from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
-from pandas import DataFrame, Series, isnull
+from pandas import DataFrame, Series, isnull, MultiIndex
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
                                           cache_writable)
 import statsmodels.tools.data as data_util
@@ -367,7 +367,11 @@ class ModelData(object):
 
     def _get_names(self, arr):
         if isinstance(arr, DataFrame):
-            return list(arr.columns)
+            if isinstance(arr.columns, MultiIndex):
+                # Flatten MultiIndexes into "simple" column names
+                return [".".join((level for level in c if level)) for c in arr.columns]
+            else:
+                return list(arr.columns)
         elif isinstance(arr, Series):
             if arr.name:
                 return [arr.name]
