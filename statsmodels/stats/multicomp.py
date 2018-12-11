@@ -5,7 +5,8 @@ Created on Fri Mar 30 18:27:25 2012
 Author: Josef Perktold
 """
 
-from statsmodels.sandbox.stats.multicomp import tukeyhsd, MultiComparison
+# from statsmodels.sandbox.stats.multicomp import tukeyhsd, MultiComparison
+from ..sandbox.stats.multicomp import tukeyhsd, MultiComparison
 
 def pairwise_tukeyhsd(endog, groups, alpha=0.05):
     '''calculate all pairwise comparisons with TukeyHSD confidence intervals
@@ -25,7 +26,7 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
     -------
     results : TukeyHSDResults instance
         A results class containing relevant data and some post-hoc
-        calculations
+        calculations, including adjusted p-value
 
     See Also
     --------
@@ -34,5 +35,4 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
     statsmodels.sandbox.stats.multicomp.TukeyHSDResults
 
     '''
-
     return MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
