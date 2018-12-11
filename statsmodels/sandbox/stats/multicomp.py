@@ -176,6 +176,25 @@ def get_tukeyQcrit2(k, df, alpha=0.05):
     return qsturng(1-alpha, k, df)
 
 
+def get_tukeyPval(k, df, q):
+    '''
+    return adjusted p-values for Tukey's HSD
+
+    Parameters
+    ----------
+    k : int in {2, ..., 10}
+        number of tests
+    df : int
+        degrees of freedom of error term
+    q : scalar, array_like; q >= 0
+        quantile value of Studentized Range
+
+    '''
+
+    from statsmodels.stats.libqsturng import psturng
+    return psturng(q, k, df)
+
+
 def Tukeythreegene(first,second,third):
     #Performing the Tukey HSD post-hoc test for three genes
 ##   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
@@ -599,6 +618,7 @@ class TukeyHSDResults(object):
     std_pairs : standard deviation of pairwise mean differences
     q_crit : critical value of studentized range statistic at given alpha
     halfwidths : half widths of simultaneous confidence interval
+    p_adjs : adjusted p-values
 
     Notes
     -----
@@ -610,7 +630,7 @@ class TukeyHSDResults(object):
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None,
                  meandiffs=None, std_pairs=None, confint=None, df_total=None,
-                 reject2=None, variance=None):
+                 reject2=None, variance=None, p_adjs=None):
 
         self._multicomp = mc_object
         self._results_table = results_table
@@ -622,6 +642,7 @@ class TukeyHSDResults(object):
         self.df_total = df_total
         self.reject2 = reject2
         self.variance = variance
+        self.p_adjs = p_adjs
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups =self._multicomp.groups
@@ -969,26 +990,28 @@ class MultiComparison(object):
         gnobs = self.groupstats.groupnobs        #var_ = self.groupstats.groupvarwithin() #possibly an error in varcorrection in this case
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
         #res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs, 4:confint, 5:q_crit,
-        #6:df_total, 7:reject2
+        #6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
 
         resarr = np.array(lzip(self.groupsunique[res[0][0]], self.groupsunique[res[0][1]],
                                   np.round(res[2],4),
+                                  np.round(res[8],4),
                                   np.round(res[4][:, 0],4),
                                   np.round(res[4][:, 1],4),
                                   res[1]),
                        dtype=[('group1', object),
                               ('group2', object),
                               ('meandiff',float),
+                              ('p-adj', float),
                               ('lower',float),
                               ('upper',float),
                               ('reject', np.bool8)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
-        results_table.title = 'Multiple Comparison of Means - Tukey HSD,' + \
+        results_table.title = 'Multiple Comparison of Means - Tukey HSD, ' + \
                               'FWER=%4.2f' % alpha
 
         return TukeyHSDResults(self, results_table, res[5], res[1], res[2],
-                               res[3], res[4], res[6], res[7], var_)
+                               res[3], res[4], res[6], res[7], var_, res[8])
 
 
 
@@ -1278,6 +1301,8 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     if q_crit is None:
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
+    p_tuk = get_tukeyPval(n_means, df_total, st_range)
+
     reject = st_range > q_crit
     crit_int = std_pairs * q_crit
     reject2 = np.abs(meandiffs) > crit_int
@@ -1285,7 +1310,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     confint = np.column_stack((meandiffs - crit_int, meandiffs + crit_int))
 
     return (idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit, \
-           df_total, reject2
+           df_total, reject2, p_tuk
 
 def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     """Compute simultaneous confidence intervals for comparison of means.
