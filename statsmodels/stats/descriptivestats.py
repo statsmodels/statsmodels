@@ -3,6 +3,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
+import pandas as pd
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -310,8 +311,36 @@ class Describe(object):
     #def sign_test_p(samp,mu0=0):
         #return self.sign_test(samp,mu0)[1]
 
+class DescrStats(object):
+    '''descriptive statistics for data.
+
+    Parameters
+    ----------
+    dataset : ndarray or DataFrame
+        dataset for descriptive statistics.
+    '''
+    def __init__(self, data):
+        '''convert data to pandas dataframe and extract the
+         numeric values
+        '''
+        if isinstance(data, pd.DataFrame) is False:
+            self.data = pd.DataFrame(data)
+        else:
+            self.data = data
+        # select only numerics
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        self.data = self.data.select_dtypes(include=numerics)
+        print(self.data)
+
 if __name__ == "__main__":
     #unittest.main()
+
+    data5 = [[25, 'Bob',  True,  1.2],
+             [41, 'John',  False, 0.5],
+             [30, 'Alice', True,  0.3]]
+
+    data = pd.DataFrame(data5)
+    t0 = DescrStats(data5)
 
     data4 = np.array([[1,2,3,4,5,6],
                       [6,5,4,3,2,1],
