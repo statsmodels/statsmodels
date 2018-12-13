@@ -10,5 +10,5 @@ conda install sphinx "ipython<7.0" jupyter nbconvert numpydoc tzlocal "testpath<
 echo pip install colorama doctr pandas-datareader
 pip install colorama doctr pandas-datareader
 # R and dependencies
-echo conda install --channel conda-forge rpy2 r-robustbase r-lme4 r-geepack libiconv --yes --quiet
-conda install --channel conda-forge rpy2 r-robustbase r-lme4 r-geepack libiconv --yes --quiet
+echo conda install --channel conda-forge/label/gcc7 rpy2 r-robustbase r-lme4 r-geepack libiconv --yes --quiet
+conda install --channel conda-forge/label/gcc7 rpy2 r-robustbase r-lme4 r-geepack libiconv --yes --quiet
