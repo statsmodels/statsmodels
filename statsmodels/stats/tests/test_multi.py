@@ -357,7 +357,7 @@ def test_tukeyhsd():
 
     # check p-values (divergence of high values is expected)
     small_pvals_idx = [2, 5, 7, 9]
-    assert_almost_equal(res[small_pvals_idx, 3], myres[8][small_pvals_idx], decimal=4)
+    assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3], rtol=1e-3)
 
 
 def test_local_fdr():
