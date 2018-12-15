@@ -332,6 +332,24 @@ class DescrStats(object):
         self.data = self.data.select_dtypes(include=numerics)
         print(self.data)
 
+    def mean(self):
+        '''mean of the data'''
+        return np.mean(self.data)
+
+    def var(self):
+        '''variance of the data'''
+        return np.var(self.data, axis=0)
+
+    def std(self):
+        '''standard deviation of the data'''
+        return np.std(self.data, axis=0)
+
+    def percentiles(self):
+        '''return percentiles of the data'''
+        return [np.percentile(self.data, per) for per in
+         (1,5,10,25,50,75,90,95,99)]
+
+
 if __name__ == "__main__":
     #unittest.main()
 
