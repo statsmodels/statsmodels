@@ -4,6 +4,7 @@ from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
 import pandas as pd
+from statsmodels.tools.decorators import OneTimeProperty
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -330,25 +331,52 @@ class DescrStats(object):
         # select only numerics
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         self.data = self.data.select_dtypes(include=numerics)
-        print(self.data)
 
+    @OneTimeProperty
+    def obs(self):
+        '''return number of observations'''
+        return self.data.shape[0]
+
+    @OneTimeProperty
     def mean(self):
         '''mean of the data'''
-        return np.mean(self.data)
+        return np.mean(self.data).values
 
+    @OneTimeProperty
     def var(self):
         '''variance of the data'''
-        return np.var(self.data, axis=0)
+        return np.var(self.data, axis=0).values
 
+    @OneTimeProperty
     def std(self):
         '''standard deviation of the data'''
-        return np.std(self.data, axis=0)
+        return np.std(self.data, axis=0).values
 
-    def percentiles(self):
-        '''return percentiles of the data'''
-        return [np.percentile(self.data, per) for per in
-         (1,5,10,25,50,75,90,95,99)]
 
+    def summary_frame(self, stats='basic'):
+        '''collect all the stats and return as a DataFrame
+
+        Parameters
+        -----------
+        stats: str
+            The desired statistics, Accepts 'basic' or 'all' or a list.
+               'basic' = ('obs', 'mean', 'std', 'var')
+
+        Returns
+        -------
+        df : pandas dataframe
+        '''
+        #TODO: Add support for all and list of stats
+        if stats == 'basic':
+            stats = ['obs', 'mean', 'std', 'var']
+            #TODO: Hack around to make this simpler
+            obs = self.obs
+            mean = self.mean
+            std = self.std
+            var = self.var
+
+        return pd.DataFrame(data=[[obs, mean, std, var]],
+                            columns=stats)
 
 if __name__ == "__main__":
     #unittest.main()
@@ -359,6 +387,7 @@ if __name__ == "__main__":
 
     data = pd.DataFrame(data5)
     t0 = DescrStats(data5)
+    df = t0.summary_frame()
 
     data4 = np.array([[1,2,3,4,5,6],
                       [6,5,4,3,2,1],
