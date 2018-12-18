@@ -113,8 +113,6 @@ class TestMICEData(object):
         # There need to be some ints in here for the error to be thrown
         df['intcol'] = np.arange(len(df))
         df['intcol'] = df.intcol.astype('int32')
-        orig = df.copy()
-        mx = pd.notnull(df)
 
         miceData = mice.MICEData(df)
 
