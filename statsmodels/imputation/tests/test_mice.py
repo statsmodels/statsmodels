@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal, assert_allclose, assert_no_warnings
 
 try:
     import matplotlib.pyplot as plt
@@ -106,6 +106,21 @@ class TestMICEData(object):
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
+    def test_settingwithcopywarning(self):
+        # Test that MICEData does not throw a settingwithcopywarning when imputing.
+
+        df = gendat()
+        # There need to be some ints in here for the error to be thrown
+        df['intcol'] = np.arange(len(df))
+        df['intcol'] = df.intcol.astype('int32')
+        orig = df.copy()
+        mx = pd.notnull(df)
+
+        miceData = mice.MICEData(df)
+
+        with pd.option_context('mode.chained_assignment', 'warn'):
+            with assert_no_warnings():
+                miceData.update_all()
 
     def test_next_sample(self):
 
