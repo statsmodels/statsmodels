@@ -10,7 +10,6 @@ import pandas as pd
 
 from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -325,7 +324,7 @@ def isestimable(C, D):
     if C.shape[1] != D.shape[1]:
         raise ValueError('Contrast should have %d columns' % D.shape[1])
     new = np.vstack([C, D])
-    if np_matrix_rank(new) != np_matrix_rank(D):
+    if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(D):
         return False
     return True
 
@@ -406,7 +405,7 @@ def fullrank(X, r=None):
     """
 
     if r is None:
-        r = np_matrix_rank(X)
+        r = np.linalg.matrix_rank(X)
 
     V, D, U = L.svd(X, full_matrices=0)
     order = np.argsort(D)

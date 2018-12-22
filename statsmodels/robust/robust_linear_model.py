@@ -16,21 +16,21 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
 import numpy as np
 import scipy.stats as stats
 
-from statsmodels.tools.decorators import (cache_readonly,
-                                                  resettable_cache)
+from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
 
 __all__ = ['RLM']
+
 
 def _check_convergence(criterion, iteration, tol, maxiter):
     return not (np.any(np.fabs(criterion[iteration] -
                 criterion[iteration-1]) > tol) and iteration < maxiter)
+
 
 class RLM(base.LikelihoodModel):
     __doc__ = """
@@ -126,8 +126,8 @@ class RLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
         self.df_resid = (np.float(self.exog.shape[0] -
-                         np_matrix_rank(self.exog)))
-        self.df_model = np.float(np_matrix_rank(self.exog)-1)
+                         np.linalg.matrix_rank(self.exog)))
+        self.df_model = np.float(np.linalg.matrix_rank(self.exog)-1)
         self.nobs = float(self.endog.shape[0])
 
     def score(self, params):

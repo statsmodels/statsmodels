@@ -17,8 +17,6 @@ Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
 McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
-from statsmodels.compat.numpy import np_matrix_rank
-
 import numpy as np
 from . import families
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -358,7 +356,7 @@ class GLM(base.LikelihoodModel):
                         'params': [np.inf],
                         'deviance': [np.inf]}
 
-        self.df_model = np_matrix_rank(self.exog) - 1
+        self.df_model = np.linalg.matrix_rank(self.exog) - 1
 
         if (self.freq_weights is not None) and \
            (self.freq_weights.shape[0] == self.endog.shape[0]):
