@@ -539,10 +539,10 @@ class TestGEE(object):
         va = Independence()
         mod1 = GEE(endog, exog, group, family=family,
                    cov_struct=va, constraint=(L, R))
-        mod1.fit()
-        assert_almost_equal(mod1.score_test_results["statistic"],
+        res1 = mod1.fit()
+        assert_almost_equal(res1.score_test()["statistic"],
                             1.08126334)
-        assert_almost_equal(mod1.score_test_results["p-value"],
+        assert_almost_equal(res1.score_test()["p-value"],
                             0.2984151086)
 
         # Test under the alternative.
@@ -552,10 +552,10 @@ class TestGEE(object):
         va = Independence()
         mod2 = GEE(endog, exog, group, family=family,
                    cov_struct=va, constraint=(L, R))
-        mod2.fit()
-        assert_almost_equal(mod2.score_test_results["statistic"],
+        res2 = mod2.fit()
+        assert_almost_equal(res2.score_test()["statistic"],
                             3.491110965)
-        assert_almost_equal(mod2.score_test_results["p-value"],
+        assert_almost_equal(res2.score_test()["p-value"],
                             0.0616991659)
 
         # Compare to Wald tests
@@ -575,12 +575,40 @@ class TestGEE(object):
             va = Independence()
             mod1 = GEE(endog, exog, group, family=family,
                        cov_struct=va, constraint=(L, R))
-            mod1.fit()
+            res1 = mod1.fit()
             se = np.sqrt(np.dot(f, np.dot(rslt0.cov_params(), f)))
             wald_z = np.dot(f, rslt0.params) / se
             wald_p = 2 * norm.cdf(-np.abs(wald_z))
-            score_p = mod1.score_test_results["p-value"]
+            score_p = res1.score_test()["p-value"]
             assert_array_less(np.abs(wald_p - score_p), 0.02)
+
+    @pytest.mark.parametrize("cov_struct", [sm.cov_struct.Independence, sm.cov_struct.Exchangeable])
+    def test_scoretest_submodel(self, cov_struct):
+        # Regression tests
+
+        np.random.seed(6432)
+        n = 200  # Must be divisible by 4
+        exog = np.random.normal(size=(n, 4))
+        group = np.kron(np.arange(n / 4), np.ones(4))
+
+        exog_sub = exog[:, [0, 3]]
+        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+
+        L = np.asarray([[0, 1, 0, 0], [0, 0, 1, 0]])
+        R = np.zeros(2)
+        mod_lr = GEE(endog, exog, group, constraint=(L, R), cov_struct=cov_struct())
+        res_lr = mod_lr.fit()
+
+        family = Gaussian()
+        va = Independence()
+        mod_sub = GEE(endog, exog_sub, group, cov_struct=cov_struct())
+        res_sub = mod_sub.fit()
+        mod = GEE(endog, exog, group, cov_struct=cov_struct())
+        score_results = mod.score_test(res_sub)
+        assert_almost_equal(score_results["statistic"],
+            mod_lr.score_test_results["statistic"])
+        assert_almost_equal(score_results["p-value"],
+            mod_lr.score_test_results["p-value"])
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types

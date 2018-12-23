@@ -478,6 +478,11 @@ class GEE(base.Model):
         self.constraint = constraint
         self.update_dep = update_dep
 
+        self._fit_history = {'params': [],
+                             'score': [],
+                             'dep_params': [],
+                             'cov_adjust': []}
+
         groups = np.array(groups)  # in case groups is pandas
         # Pass groups, time, offset, and dep_data so they are
         # processed for missing data along with endog and exog.
@@ -728,6 +733,137 @@ class GEE(base.Model):
         else:
             return [np.array(array[self.group_indices[k], :])
                     for k in self.group_labels]
+
+    def score_test(self, submodel, tol=1e-6):
+        """
+        Perform a score test for the given submodel against this model.
+
+        Parameters
+        ----------
+        submodel : GEEResults instance
+            A fitted GEE model that is a submodel of this model.
+        tol : float
+            A tolerance parameter used when assessing whether
+            the submodel is actually a submodel of this model.
+
+        Returns
+        -------
+        A dictionary with keys "statistic", "p-value", and
+        "df", containing the score test statistic, its chi^2
+        p-value, and the degrees of freedom used to compute the
+        p-value.
+
+        Notes
+        -----
+        The score test can be performed without calling 'fit' on the
+        larger model.  The provided submodel must be obtained from a
+        fitted GEE.
+
+        This method performs the same score test as can be obtained by
+        fitting the GEE with a linear constraint.  The interface for this
+        method is easier to use when testing a submodel whose design
+        matrix is a submatrix of the parent model.  This method is also
+        more convenient to use when the models have been fit using formulas.
+        On the other hand, the approach using constraints may be a better
+        option when the submodel is obtained by imposing linear equality
+        constraints that are not simply equating a subset of the parameters
+        to zero.
+
+        References
+        ----------
+        Xu Guo and Wei Pan (2002). "Small sample performance of the score
+        test in GEE".
+        http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
+        """
+
+        # Check consistency between model and submodel (not a comprehensive
+        # check)
+        submod = submodel.model
+        if self.exog.shape[0] != submod.exog.shape[0]:
+            msg = "Model and submodel have different numbers of cases."
+            warnings.warn(msg)
+        if type(self.family) is not type(submod.family):
+            msg = "Model and submodel have different families."
+            warnings.warn(msg)
+        if type(self.cov_struct) is not type(submod.cov_struct):
+            msg = "Model and submodel have different covariance structures."
+            warnings.warn(msg)
+        if hasattr(self, "weights") != hasattr(submod, "weights"):
+            msg = "Model and submodel should have the same weights."
+            warnings.warn(msg)
+
+        # Get the positions of the submodel variables in the
+        # parent model
+        ii = _score_test_submodel(self, submodel.model, tol)
+        if ii is None:
+            msg = "The provided model is not a submodel."
+            raise ValueError(msg)
+        s = set(ii)
+
+        # The columns in the parent model that are not in the
+        # submodel
+        jj = [j for j in range(self.exog.shape[1]) if j not in s]
+
+        # Embed the submodel params into a params vector for the
+        # parent model
+        params_ex = np.zeros(self.exog.shape[1])
+        params_ex[ii] = submodel.params
+
+        # Attempt to preserve the state of the parent model
+        cov_struct_save = self.cov_struct
+        import copy
+        cached_means_save = copy.deepcopy(self.cached_means)
+
+        # Get the score vector of the submodel params in
+        # the parent model
+        self.cov_struct = submodel.cov_struct
+        self.update_cached_means(params_ex)
+        _, score = self._update_mean_params()
+        if score is None:
+            msg = "Singular matrix encountered in GEE score test"
+            warnings.warn(msg, ConvergenceWarning)
+            return None
+
+        if not hasattr(self, "ddof_scale"):
+            self.ddof_scale = self.exog.shape[1]
+
+        if not hasattr(self, "scaling_factor"):
+            self.scaling_factor = 1
+
+        _, ncov1, cmat = self._covmat()
+        scale = self.estimate_scale()
+        cmat = cmat / scale ** 2
+        score2 = score[jj] / scale
+
+        amat = np.linalg.inv(ncov1)
+
+        bmat_11 = cmat[ii, :][:, ii]
+        bmat_22 = cmat[jj, :][:, jj]
+        bmat_12 = cmat[ii, :][:, jj]
+
+        amat_11 = amat[ii, :][:, ii]
+        amat_12 = amat[ii, :][:, jj]
+
+        score_cov = bmat_22 - np.dot(amat_12.T,
+                                     np.linalg.solve(amat_11, bmat_12))
+        score_cov -= np.dot(bmat_12.T,
+                            np.linalg.solve(amat_11, amat_12))
+        score_cov += np.dot(amat_12.T,
+                            np.dot(np.linalg.solve(amat_11, bmat_11),
+                                   np.linalg.solve(amat_11, amat_12)))
+
+        # Attempt to restore state
+        self.cov_struct = cov_struct_save
+        self.cached_means = cached_means_save
+
+        from scipy.stats.distributions import chi2
+        score_statistic = np.dot(score2,
+                                 np.linalg.solve(score_cov, score2))
+        score_df = len(score2)
+        score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
+        return {"statistic": score_statistic,
+                "df": score_df,
+                "p-value": score_pvalue}
 
     def estimate_scale(self):
         """
@@ -1281,7 +1417,6 @@ class GEE(base.Model):
         scale = self.estimate_scale()
         cmat = cmat / scale ** 2
         score2 = score[red_p:] / scale
-
         amat = np.linalg.inv(ncov1)
 
         bmat_11 = cmat[0:red_p, 0:red_p]
@@ -1532,6 +1667,29 @@ class GEEResults(base.LikelihoodModelResults):
         values from the model.
         """
         return self.model.endog - self.fittedvalues
+
+    def score_test(self):
+        """
+        Return the results of a score test for a linear constraint.
+
+        Returns
+        -------
+        Adictionary containing the p-value, the test statistic,
+        and the degrees of freedom for the score test.
+
+        Notes
+        -----
+        See also GEE.score_test for an alternative way to perform a score
+        test based on a submodel.  The GEE.score_test approach is generally
+        easier to use, but slightly less general.
+        """
+
+        if not hasattr(self.model, "score_test_results"):
+            msg = "score_test on results instance only available when "
+            msg += " model was fit with constraints"
+            raise ValueError(msg)
+
+        return self.model.score_test_results
 
     @cache_readonly
     def resid_split(self):
@@ -2225,6 +2383,28 @@ class OrdinalGEEResults(GEEResults):
         ax.set_ylim(0, 1)
 
         return fig
+
+
+def _score_test_submodel(par, sub, tol):
+    """
+    Identify the indices in the parent model exog corresponding
+    to the columns of the submodel exog.
+    """
+
+    x1 = par.exog
+    x2 = sub.exog
+
+    cp = np.dot(x1.T, x2)
+    s1 = np.sqrt(np.sum(x1**2, 0))
+    s2 = np.sqrt(np.sum(x2**2, 0))
+    cp /= np.outer(s1, s2)
+
+    ii = np.argmax(cp, 0)
+
+    if np.abs(x1[:, ii] - x2).max() > tol:
+        return None
+
+    return ii
 
 
 class OrdinalGEEResultsWrapper(GEEResultsWrapper):
