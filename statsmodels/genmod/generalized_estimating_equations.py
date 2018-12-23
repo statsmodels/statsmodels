@@ -1682,6 +1682,12 @@ class GEEResults(base.LikelihoodModelResults):
         See also GEE.score_test for an alternative way to perform a score
         test based on a submodel.  The GEE.score_test approach is generally
         easier to use, but slightly less general.
+
+        References
+        ----------
+        Xu Guo and Wei Pan (2002). "Small sample performance of the score
+        test in GEE".
+        http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
         """
 
         if not hasattr(self.model, "score_test_results"):
