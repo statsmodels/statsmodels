@@ -13,8 +13,9 @@ License: BSD-3
 '''
 
 from statsmodels.compat.python import range
+
 import numpy as np
-from scipy.misc import comb
+from scipy.special import comb
 
 
 ## start moment helpers

@@ -398,7 +398,3 @@ class TestKDEMultivariateConditional(KDETestBase):
                                                           randomize=False,
                                                           n_sub=100))
         npt.assert_equal(dens.bw, bw_user)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

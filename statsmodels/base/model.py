@@ -13,7 +13,6 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
     HessianInversionWarning
 from statsmodels.formula import handle_formula_data
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
 
@@ -165,7 +164,7 @@ class Model(object):
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.subset(cols).design_info
+                design_info = design_info.subset(cols)
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -761,7 +760,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     # this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
-            self.score = approx_fprime
+            self.score = lambda x: approx_fprime(x, self.loglike)
             if not self.hessian:
                 pass
         else:   # can use approx_hess_p if we have a gradient
@@ -772,7 +771,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         # and should contain any preprocessing that needs to be done for a model
         if self.exog is not None:
             # assume constant
-            er = np_matrix_rank(self.exog)
+            er = np.linalg.matrix_rank(self.exog)
             self.df_model = float(er - 1)
             self.df_resid = float(self.exog.shape[0] - er)
         else:
@@ -2213,13 +2212,17 @@ class ResultMixin(object):
         """
         results = []
         print(self.model.__class__)
-        hascloneattr = True if hasattr(self, 'cloneattr') else False
+        hascloneattr = True if hasattr(self.model, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
+            if self.exog is not None:
+                exog_resamp = self.exog[rvsind, :]
+            else:
+                exog_resamp = None
             fitmod = self.model.__class__(self.endog[rvsind],
-                                          self.exog[rvsind, :])
+                                          exog=exog_resamp)
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))

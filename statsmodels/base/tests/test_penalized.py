@@ -165,8 +165,6 @@ class TestPenalizedGLMPoissonNoPenal(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
-
-
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
@@ -355,7 +353,6 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         cls.atol = 1e-12
         cls.k_params = cls.k_nonzero
 
-
     def test_cov_type(self):
         res1 = self.res1
         res2 = self.res2
@@ -526,7 +523,6 @@ class TestPenalizedGLMBinomCountNoPenal(CheckPenalizedBinomCount):
         cls.atol = 1e-10
         cls.k_params = 4
 
-
     def test_deriv(self):
         res1 = self.res1
         res2 = self.res2
@@ -692,7 +688,6 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         modp = TheilGLS(y, x, r_matrix=restriction)
         # the corresponding Theil penweight seems to be 2 * nobs / sigma2_e
         cls.res2 = modp.fit(pen_weight=120.74564413221599 * 1000)
-
 
         pen = smpen.L2ContraintsPenalty(restriction=restriction)
         mod = GLMPenalized(y, x, family=family.Gaussian(),

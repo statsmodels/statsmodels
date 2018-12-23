@@ -9,7 +9,7 @@ All of the models can handle missing data. For performance reasons, the default 
 .. ipython:: python
 
    import statsmodels.api as sm
-   data = sm.datasets.longley.load()
+   data = sm.datasets.longley.load(as_pandas=False)
    data.exog = sm.add_constant(data.exog)
    # add in some missing data
    missing_idx = np.array([False] * len(data.endog))

@@ -230,12 +230,10 @@ _arima_plot_predict = ("""
 
 
 def cumsum_n(x, n):
-    if n:
-        n -= 1
+    for _ in range(n):
         x = np.cumsum(x)
-        return cumsum_n(x, n)
-    else:
-        return x
+
+    return x
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
@@ -1414,8 +1412,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.arroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1427,8 +1423,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.maroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly

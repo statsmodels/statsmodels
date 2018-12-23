@@ -254,7 +254,7 @@ class TestHoltWinters(object):
         # assert_almost_equal(fit5.forecast(1), [60.60], 2)
         # assert_almost_equal(fit6.forecast(1), [61.47], 2)
 
-    @pytest.mark.xpass(reason='Optimizer does not converge')
+    @pytest.mark.xfail(reason='Optimizer does not converge')
     def test_hw_seasonal_buggy(self):
         fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     seasonal='add').fit(use_boxcox=True)
@@ -327,7 +327,7 @@ def test_invalid_start_param_length():
         mod.fit(start_params=np.array([0.5]))
 
 
-def test_basin_hopping():
+def test_basin_hopping(reset_randomstate):
     mod = ExponentialSmoothing(housing_data, trend='add')
     res = mod.fit()
     res2 = mod.fit(use_basinhopping=True)

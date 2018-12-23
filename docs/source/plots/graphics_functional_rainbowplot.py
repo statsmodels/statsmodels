@@ -13,7 +13,7 @@ Author: Ralf Gommers
 import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-data = sm.datasets.elnino.load()
+data = sm.datasets.elnino.load(as_pandas=False)
 
 #Create a rainbow plot:
 

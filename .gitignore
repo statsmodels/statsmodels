@@ -2,7 +2,6 @@
 # setup.py working directory
 build
 # setup.py dist directory
-./dist
 dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild
@@ -47,9 +46,9 @@ marks.bzr
 *.svn/
 *.log.py
 # Egg metadata
-./*.egg-info
+*.egg-info
 # The shelf plugin uses this dir
-./.shelf
+.shelf
 # Mac droppings
 .DS_Store
 help
@@ -60,8 +59,6 @@ coverage_html_report/
 
 # Project specific
 statsmodels/version.py
-cythonize.dat
-cythonize_exclusions.dat
 statsmodels.egg-info/
 iterate.dat
 hash_dict.pickle
@@ -90,3 +87,7 @@ statsmodels/tsa/statespace/_smoothers/_classical.pyx
 #pytest
 .cache
 .pytest_cache
+
+# Temporary copies for packaging
+statsmodels/setup.cfg
+statsmodels/LICENSE.txt

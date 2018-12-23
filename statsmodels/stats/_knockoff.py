@@ -25,7 +25,6 @@ http://statweb.stanford.edu/~candes/papers/FDR_regression.pdf
 
 import numpy as np
 import pandas as pd
-from statsmodels.compat.numpy import np_new_unique
 from statsmodels.iolib import summary2
 
 
@@ -100,8 +99,8 @@ class RegressionFDR(object):
 
         self.stats = regeffects.stats(self)
 
-        unq, inv, cnt = np_new_unique(self.stats, return_inverse=True,
-                                      return_counts=True)
+        unq, inv, cnt = np.unique(self.stats, return_inverse=True,
+                                  return_counts=True)
 
         # The denominator of the FDR
         cc = np.cumsum(cnt)

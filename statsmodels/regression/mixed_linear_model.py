@@ -157,7 +157,6 @@ from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _dot(x, y):
@@ -414,7 +413,7 @@ class MixedLMParams(object):
 
 
 def _smw_solver(s, A, AtA, Qi, di):
-    """
+    r"""
     Returns a solver for the linear system:
 
     .. math::
@@ -479,7 +478,7 @@ def _smw_solver(s, A, AtA, Qi, di):
 
 
 def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
-    """
+    r"""
     Returns the log determinant of
 
     .. math::
@@ -2177,7 +2176,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         super(MixedLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
-        self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
+        self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
     @cache_readonly
     def fittedvalues(self):

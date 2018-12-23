@@ -1,12 +1,13 @@
-from statsmodels.compat.python import lrange, long
-from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
+from statsmodels.compat.python import long
+from statsmodels.compat.pandas import is_numeric_dtype
 
-import datetime
+import numbers
 
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, RangeIndex, Timestamp, Series, Index)
+                    PeriodIndex, RangeIndex, Timestamp, Series, Index,
+                    Float64Index)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -244,7 +245,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or a location if the underlying index is a RangeIndex
+            or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -377,7 +380,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or is only being used as row labels, or a location if
+            the underlying index is a RangeIndex or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -409,7 +414,32 @@ class TimeSeriesModel(base.LikelihoodModel):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
-                loc = loc[0]  # Require scalar
+                # Require scalar
+                # Pandas may return a slice if there are multiple matching
+                # locations that are monotonic increasing (otherwise it may
+                # return an array of integer locations, see below).
+                if isinstance(loc, slice):
+                    loc = loc.start
+                if isinstance(loc, np.ndarray):
+                    # Pandas may return a mask (boolean array), for e.g.:
+                    # pd.Index(list('abcb')).get_loc('b')
+                    if loc.dtype == bool:
+                        # Return the first True value
+                        # (we know there is at least one True value if we're
+                        # here because otherwise the get_loc call would have
+                        # raised an exception)
+                        loc = np.argmax(loc)
+                    # Finally, Pandas may return an integer array of
+                    # locations that match the given value, for e.g.
+                    # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+                    # (this appears to be slightly undocumented behavior, since
+                    # only int, slice, and mask are mentioned in docs for
+                    # pandas.Index.get_loc as of 0.23.4)
+                    else:
+                        loc = loc[0]
+                if not isinstance(loc, numbers.Integral):
+                    raise
+
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
             except:
@@ -442,7 +472,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Returns
         -------
-        start : int
+        start : integer
             The index / observation location at which to begin prediction.
         end : int
             The index / observation location at which to end in-sample
@@ -457,10 +487,20 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        This method expands on `_get_index_loc` by first trying the given
-        base index (or the model's index if the base index was not given) and
-        then falling back to try again with the model row labels as the base
-        index.
+        The arguments `start` and `end` behave differently, depending on if
+        they are integer or not. If either is an integer, then it is assumed
+        to refer to a *location* in the index, not to an index value. On the
+        other hand, if it is a date string or some other type of object, then
+        it is assumed to refer to an index *value*. In all cases, the returned
+        `start` and `end` values refer to index *locations* (so in the former
+        case, the given location is validated and returned whereas in the
+        latter case a location is found that corresponds to the given index
+        value).
+
+        This difference in behavior is necessary to support `RangeIndex`. This
+        is because integers for a RangeIndex could refer either to index values
+        or to index locations in an ambiguous way (while for `Int64Index`,
+        since we have required them to be full indexes, there is no ambiguity).
 
         """
 

@@ -28,12 +28,6 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
-    have_matplotlib = True
-except:
-    have_matplotlib = False
-
 pdf_output = False
 
 if pdf_output:
@@ -42,14 +36,16 @@ if pdf_output:
 else:
     pdf = None
 
+
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
 
+
 def teardown_module():
-    if have_matplotlib:
-        if pdf_output:
-            pdf.close()
+    if pdf_output:
+        pdf.close()
+
 
 class CheckModelResultsMixin(object):
     '''
@@ -900,7 +896,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plots(close_figures):
 
     np.random.seed(378)
@@ -913,7 +909,6 @@ def test_plots(close_figures):
     model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
 
-    import matplotlib.pyplot as plt
     import pandas as pd
     from statsmodels.graphics.regressionplots import add_lowess
 
@@ -2124,8 +2119,3 @@ def test_non_invertible_hessian_fails_summary():
         mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
         res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
         res.summary()
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -5,16 +5,16 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import warnings
 
 import numpy as np
 from scipy.linalg import solve_sylvester
 import pandas as pd
+
 from statsmodels.tools.data import _is_using_pandas
 from scipy.linalg.blas import find_best_blas_type
 from . import (_initialization, _representation, _kalman_filter,
                _kalman_smoother, _simulation_smoother, _tools)
-
-import warnings
 
 
 compatibility_mode = False
@@ -101,7 +101,7 @@ prefix_copy_index_vector_map = {
 
 
 def set_mode(compatibility=None):
-    if compatibility == True:
+    if compatibility:
         raise NotImplementedError('Compatibility mode is only available in'
                                   ' statsmodels <= 0.9')
 
@@ -266,11 +266,11 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     if k_seasonal_diff is not None:
         while k_seasonal_diff > 0:
             if not pandas:
-                differenced = (
-                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
-                )
+                differenced = (differenced[seasonal_periods:] -
+                               differenced[:-seasonal_periods])
             else:
-                differenced = differenced.diff(seasonal_periods)[seasonal_periods:]
+                sdiffed = differenced.diff(seasonal_periods)
+                differenced = sdiffed[seasonal_periods:]
             k_seasonal_diff -= 1
 
     # Simple differencing
@@ -1619,7 +1619,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     try:
         if not A.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
@@ -1665,7 +1665,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     try:
         if not a.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(missing))
@@ -1722,7 +1722,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     try:
         if not A.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(index), index_rows, index_cols,
@@ -1768,7 +1768,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     try:
         if not a.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(index))

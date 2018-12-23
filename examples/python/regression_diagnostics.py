@@ -72,9 +72,9 @@ np.linalg.cond(results.model.exog)
 # 
 # Breush-Pagan test:
 
-name = ['Lagrange multiplier statistic', 'p-value', 
+name = ['Lagrange multiplier statistic', 'p-value',
         'f-value', 'f p-value']
-test = sms.het_breushpagan(results.resid, results.model.exog)
+test = sms.het_breuschpagan(results.resid, results.model.exog)
 lzip(name, test)
 
 

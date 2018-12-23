@@ -43,10 +43,13 @@ print(res.summary())
 # For convenience, we place the quantile regression results in a Pandas DataFrame, and the OLS results in a dictionary.
 
 quantiles = np.arange(.05, .96, .1)
+
+
 def fit_model(q):
     res = mod.fit(q=q)
     return [q, res.params['Intercept'], res.params['income']] + res.conf_int().loc['income'].tolist()
-    
+
+
 models = [fit_model(x) for x in quantiles]
 models = pd.DataFrame(models, columns=['q', 'a', 'b','lb','ub'])
 

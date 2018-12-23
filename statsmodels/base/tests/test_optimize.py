@@ -1,4 +1,5 @@
 from numpy.testing import assert_
+
 from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
                                         _fit_bfgs, _fit_cg,
                                         _fit_ncg, _fit_powell,
@@ -12,23 +13,21 @@ fit_funcs = {
     'ncg': _fit_ncg,
     'powell': _fit_powell,
     'lbfgs': _fit_lbfgs,
-            }
-
-try:
-    from scipy.optimize import basinhopping
-    fit_funcs.update({'basinhopping': _fit_basinhopping})
-except ImportError:
-    pass
+    'basinhopping': _fit_basinhopping,
+}
 
 
 def dummy_func(x):
     return x**2
 
+
 def dummy_score(x):
     return 2.*x
 
+
 def dummy_hess(x):
     return [[2.]]
+
 
 def test_full_output_false():
     # just a smoke test

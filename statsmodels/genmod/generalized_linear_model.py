@@ -17,8 +17,6 @@ Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
 McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
-from statsmodels.compat.numpy import np_matrix_rank
-
 import numpy as np
 from . import families
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -358,7 +356,7 @@ class GLM(base.LikelihoodModel):
                         'params': [np.inf],
                         'deviance': [np.inf]}
 
-        self.df_model = np_matrix_rank(self.exog) - 1
+        self.df_model = np.linalg.matrix_rank(self.exog) - 1
 
         if (self.freq_weights is not None) and \
            (self.freq_weights.shape[0] == self.endog.shape[0]):
@@ -768,8 +766,9 @@ class GLM(base.LikelihoodModel):
 
         Notes
         -----
-        The default scale for Binomial and Poisson families is 1.  The default
-        for the other families is Pearson's Chi-Square estimate.
+        The default scale for Binomial, Poisson and Negative Binomial
+        families is 1.  The default for the other families is Pearson's
+        Chi-Square estimate.
 
         See also
         --------
@@ -1220,7 +1219,7 @@ class GLM(base.LikelihoodModel):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters

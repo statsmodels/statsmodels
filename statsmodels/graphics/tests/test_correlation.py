@@ -5,14 +5,7 @@ from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 from statsmodels.datasets import randhie
 
 
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except:
-    have_matplotlib = False
-
-
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plot_corr(close_figures):
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)
@@ -24,7 +17,7 @@ def test_plot_corr(close_figures):
     plot_corr(corr_matrix, normcolor=True, title='', cmap='jet')
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plot_corr_grid(close_figures):
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)

@@ -65,8 +65,10 @@ print(res.summary())
 
 from patsy.contrasts import ContrastMatrix
 
+
 def _name_levels(prefix, levels):
     return ["[%s%s]" % (prefix, level) for level in levels]
+
 
 class Simple(object):
     def _simple_contrast(self, levels):

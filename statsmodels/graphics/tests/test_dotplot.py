@@ -9,18 +9,17 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_all(close_figures):
+
+@pytest.mark.matplotlib
+def test_all(close_figures, reset_randomstate):
 
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages

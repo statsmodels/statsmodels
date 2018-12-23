@@ -8,7 +8,6 @@ License: BSD (3-clause)
 
 from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_array_almost_equal
 import statsmodels.api as sm
 from statsmodels.sandbox.tools import pca
 from statsmodels.sandbox.tools.cross_val import LeaveOneOut

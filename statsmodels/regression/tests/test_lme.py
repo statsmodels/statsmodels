@@ -1,18 +1,20 @@
+import os
+import csv
 import warnings
+
 import numpy as np
 import pandas as pd
+from scipy import sparse
+import pytest
+
 from statsmodels.regression.mixed_linear_model import (
     MixedLM, MixedLMParams, _smw_solver, _smw_logdet)
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
-from . import lme_r_results
 from statsmodels.base import _penalties as penalties
-import pytest
-from scipy import sparse
 import statsmodels.tools.numdiff as nd
-import os
-import csv
-import scipy
+
+from . import lme_r_results
 
 # TODO: add tests with unequal group sizes
 
@@ -84,80 +86,79 @@ class TestMixedLM(object):
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
-    def test_compare_numdiff(self):
+    @pytest.mark.parametrize("use_sqrt", [False, True])
+    @pytest.mark.parametrize("reml", [False, True])
+    @pytest.mark.parametrize("profile_fe", [False, True])
+    def test_compare_numdiff(self, use_sqrt, reml, profile_fe):
 
         n_grp = 200
         grpsize = 5
         k_fe = 3
         k_re = 2
 
-        for use_sqrt in False, True:
-            for reml in False, True:
-                for profile_fe in False, True:
+        np.random.seed(3558)
+        exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
+        exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
+        exog_re[:, 0] = 1
+        exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
+        slopes = np.random.normal(size=(n_grp, k_re))
+        slopes[:, -1] *= 2
+        slopes = np.kron(slopes, np.ones((grpsize, 1)))
+        slopes_vc = np.random.normal(size=(n_grp, 3))
+        slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
+        slopes_vc[:, -1] *= 2
+        re_values = (slopes * exog_re).sum(1)
+        vc_values = (slopes_vc * exog_vc).sum(1)
+        err = np.random.normal(size=n_grp * grpsize)
+        endog = exog_fe.sum(1) + re_values + vc_values + err
+        groups = np.kron(range(n_grp), np.ones(grpsize))
 
-                    np.random.seed(3558)
-                    exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
-                    exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
-                    exog_re[:, 0] = 1
-                    exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
-                    slopes = np.random.normal(size=(n_grp, k_re))
-                    slopes[:, -1] *= 2
-                    slopes = np.kron(slopes, np.ones((grpsize, 1)))
-                    slopes_vc = np.random.normal(size=(n_grp, 3))
-                    slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
-                    slopes_vc[:, -1] *= 2
-                    re_values = (slopes * exog_re).sum(1)
-                    vc_values = (slopes_vc * exog_vc).sum(1)
-                    err = np.random.normal(size=n_grp * grpsize)
-                    endog = exog_fe.sum(1) + re_values + vc_values + err
-                    groups = np.kron(range(n_grp), np.ones(grpsize))
+        vc = {"a": {}, "b": {}}
+        for i in range(n_grp):
+            ix = np.flatnonzero(groups == i)
+            vc["a"][i] = exog_vc[ix, 0:2]
+            vc["b"][i] = exog_vc[ix, 2:3]
 
-                    vc = {"a": {}, "b": {}}
-                    for i in range(n_grp):
-                        ix = np.flatnonzero(groups == i)
-                        vc["a"][i] = exog_vc[ix, 0:2]
-                        vc["b"][i] = exog_vc[ix, 2:3]
+        model = MixedLM(
+            endog,
+            exog_fe,
+            groups,
+            exog_re,
+            exog_vc=vc,
+            use_sqrt=use_sqrt)
+        rslt = model.fit(reml=reml)
 
-                    model = MixedLM(
-                        endog,
-                        exog_fe,
-                        groups,
-                        exog_re,
-                        exog_vc=vc,
-                        use_sqrt=use_sqrt)
-                    rslt = model.fit(reml=reml)
+        loglike = loglike_function(
+            model, profile_fe=profile_fe, has_fe=not profile_fe)
 
-                    loglike = loglike_function(
-                        model, profile_fe=profile_fe, has_fe=not profile_fe)
+        # Test the score at several points.
+        for kr in range(5):
+            fe_params = np.random.normal(size=k_fe)
+            cov_re = np.random.normal(size=(k_re, k_re))
+            cov_re = np.dot(cov_re.T, cov_re)
+            vcomp = np.random.normal(size=2)**2
+            params = MixedLMParams.from_components(
+                fe_params, cov_re=cov_re, vcomp=vcomp)
+            params_vec = params.get_packed(
+                has_fe=not profile_fe, use_sqrt=use_sqrt)
 
-                    # Test the score at several points.
-                    for kr in range(5):
-                        fe_params = np.random.normal(size=k_fe)
-                        cov_re = np.random.normal(size=(k_re, k_re))
-                        cov_re = np.dot(cov_re.T, cov_re)
-                        vcomp = np.random.normal(size=2)**2
-                        params = MixedLMParams.from_components(
-                            fe_params, cov_re=cov_re, vcomp=vcomp)
-                        params_vec = params.get_packed(
-                            has_fe=not profile_fe, use_sqrt=use_sqrt)
+            # Check scores
+            gr = -model.score(params, profile_fe=profile_fe)
+            ngr = nd.approx_fprime(params_vec, loglike)
+            assert_allclose(gr, ngr, rtol=1e-3)
 
-                        # Check scores
-                        gr = -model.score(params, profile_fe=profile_fe)
-                        ngr = nd.approx_fprime(params_vec, loglike)
-                        assert_allclose(gr, ngr, rtol=1e-3)
-
-                    # Check Hessian matrices at the MLE (we don't have
-                    # the profile Hessian matrix and we don't care
-                    # about the Hessian for the square root
-                    # transformed parameter).
-                    if (profile_fe is False) and (use_sqrt is False):
-                        hess = -model.hessian(rslt.params_object)
-                        params_vec = rslt.params_object.get_packed(
-                            use_sqrt=False, has_fe=True)
-                        loglike_h = loglike_function(
-                            model, profile_fe=False, has_fe=True)
-                        nhess = nd.approx_hess(params_vec, loglike_h)
-                        assert_allclose(hess, nhess, rtol=1e-3)
+        # Check Hessian matrices at the MLE (we don't have
+        # the profile Hessian matrix and we don't care
+        # about the Hessian for the square root
+        # transformed parameter).
+        if (profile_fe is False) and (use_sqrt is False):
+            hess = -model.hessian(rslt.params_object)
+            params_vec = rslt.params_object.get_packed(
+                use_sqrt=False, has_fe=True)
+            loglike_h = loglike_function(
+                model, profile_fe=False, has_fe=True)
+            nhess = nd.approx_hess(params_vec, loglike_h)
+            assert_allclose(hess, nhess, rtol=1e-3)
 
     def test_default_re(self):
 
@@ -1046,6 +1047,7 @@ def test_summary_col():
     assert_equal(str(out), s)
 
 
+@pytest.mark.slow
 def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.
@@ -1140,69 +1142,76 @@ def test_random_effects_getters():
         assert (refc[g].shape == (p, p))
 
 
-def test_smw_solver():
+def check_smw_solver(p, q, r, s):
+    # Helper to check that _smw_solver results do in fact solve the desired
+    # SMW equation
+    d = q - r
 
-    np.random.seed(23)
+    A = np.random.normal(size=(p, q))
+    AtA = np.dot(A.T, A)
 
-    def tester(p, q, r, s):
+    B = np.zeros((q, q))
+    B[0:r, 0:r] = np.random.normal(size=(r, r))
+    di = np.random.uniform(size=d)
+    B[r:q, r:q] = np.diag(1 / di)
+    Qi = np.linalg.inv(B[0:r, 0:r])
+    s = 0.5
 
-        d = q - r
+    x = np.random.normal(size=p)
+    y2 = np.linalg.solve(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
 
-        A = np.random.normal(size=(p, q))
-        AtA = np.dot(A.T, A)
+    f = _smw_solver(s, A, AtA, Qi, di)
+    y1 = f(x)
+    assert_allclose(y1, y2)
 
-        B = np.zeros((q, q))
-        B[0:r, 0:r] = np.random.normal(size=(r, r))
-        di = np.random.uniform(size=d)
-        B[r:q, r:q] = np.diag(1 / di)
-        Qi = np.linalg.inv(B[0:r, 0:r])
-        s = 0.5
-
-        x = np.random.normal(size=p)
-        y2 = np.linalg.solve(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
-
-        f = _smw_solver(s, A, AtA, Qi, di)
-        y1 = f(x)
-        assert_allclose(y1, y2)
-
-        f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi,
-                        di)
-        y1 = f(x)
-        assert_allclose(y1, y2)
-
-    for p in (5, 10):
-        for q in (4, 8):
-            for r in (2, 3):
-                for s in (0, 0.5):
-                    tester(p, q, r, s)
+    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi,
+                    di)
+    y1 = f(x)
+    assert_allclose(y1, y2)
 
 
-def test_smw_logdet():
+class TestSMWSolver(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(23)
 
-    np.random.seed(23)
+    @pytest.mark.parametrize("p", [5, 10])
+    @pytest.mark.parametrize("q", [4, 8])
+    @pytest.mark.parametrize("r", [2, 3])
+    @pytest.mark.parametrize("s", [0, 0.5])
+    def test_smw_solver(self, p, q, r, s):
+        check_smw_solver(p, q, r, s)
 
-    def tester(p, q, r, s):
 
-        d = q - r
-        A = np.random.normal(size=(p, q))
-        AtA = np.dot(A.T, A)
+def check_smw_logdet(p, q, r, s):
+    # Helper to check that _smw_logdet results match non-optimized equivalent
+    d = q - r
+    A = np.random.normal(size=(p, q))
+    AtA = np.dot(A.T, A)
 
-        B = np.zeros((q, q))
-        c = np.random.normal(size=(r, r))
-        B[0:r, 0:r] = np.dot(c.T, c)
-        di = np.random.uniform(size=d)
-        B[r:q, r:q] = np.diag(1 / di)
-        Qi = np.linalg.inv(B[0:r, 0:r])
-        s = 0.5
+    B = np.zeros((q, q))
+    c = np.random.normal(size=(r, r))
+    B[0:r, 0:r] = np.dot(c.T, c)
+    di = np.random.uniform(size=d)
+    B[r:q, r:q] = np.diag(1 / di)
+    Qi = np.linalg.inv(B[0:r, 0:r])
+    s = 0.5
 
-        _, d2 = np.linalg.slogdet(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
+    _, d2 = np.linalg.slogdet(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
 
-        _, bd = np.linalg.slogdet(B)
-        d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
-        assert_allclose(d1, d2)
+    _, bd = np.linalg.slogdet(B)
+    d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
+    assert_allclose(d1, d2)
 
-    for p in (5, 10):
-        for q in (4, 8):
-            for r in (2, 3):
-                for s in (0, 0.5):
-                    tester(p, q, r, s)
+
+class TestSMWLogdet(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(23)
+
+    @pytest.mark.parametrize("p", [5, 10])
+    @pytest.mark.parametrize("q", [4, 8])
+    @pytest.mark.parametrize("r", [2, 3])
+    @pytest.mark.parametrize("s", [0, 0.5])
+    def test_smw_logdet(self, p, q, r, s):
+        check_smw_logdet(p, q, r, s)

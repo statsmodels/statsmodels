@@ -21,12 +21,6 @@ from statsmodels.tsa.statespace.tests.results import results_sarimax, results_va
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
 # Basic kwargs
 kwargs = {
     'k_states': 1, 'design': [[1]], 'transition': [[1]],
@@ -54,7 +48,7 @@ def get_dummy_mod(fit=True, pandas=False):
             res = mod.fit(disp=-1)
     else:
         res = None
-    
+
     return mod, res
 
 
@@ -341,7 +335,7 @@ def test_transform():
 
     # Test direct transform, untransform
     assert_allclose(mod.transform_params([2, 3]), [2, 3])
-    assert_allclose(mod.untransform_params([2, 3]), [2, 3])    
+    assert_allclose(mod.untransform_params([2, 3]), [2, 3])
 
     # Smoke test for transformation in `filter`, `update`, `loglike`,
     # `loglikeobs`
@@ -470,11 +464,11 @@ def test_summary():
     txt = str(res.summary())
 
     # Test res.summary when the model has dates
-    assert_equal(re.search('Sample:\s+01-01-1980', txt) is not None, True)
-    assert_equal(re.search('\s+- 01-01-1984', txt) is not None, True)
+    assert_equal(re.search(r'Sample:\s+01-01-1980', txt) is not None, True)
+    assert_equal(re.search(r'\s+- 01-01-1984', txt) is not None, True)
 
     # Test res.summary when `model_name` was not provided
-    assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
+    assert_equal(re.search(r'Model:\s+MLEModel', txt) is not None, True)
 
     # Smoke test that summary still works when diagnostic tests fail
     with warnings.catch_warnings():
@@ -736,7 +730,7 @@ def test_diagnostics():
 
 
 def test_diagnostics_nile_eviews():
-    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # Test the diagnostic tests using the Nile dataset. Results are from
     # "Fitting State Space Models with EViews" (Van den Bossche 2011,
     # Journal of Statistical Software).
     # For parameter values, see Figure 2
@@ -766,7 +760,7 @@ def test_diagnostics_nile_eviews():
 
 
 def test_diagnostics_nile_durbinkoopman():
-    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # Test the diagnostic tests using the Nile dataset. Results are from
     # Durbin and Koopman (2012); parameter values reported on page 37; test
     # statistics on page 40
     niledata = nile.data.load_pandas().data
@@ -867,7 +861,7 @@ def test_lutkepohl_information_criteria():
     # (use loglikelihood_burn=1 to mimic conditional MLE used by Stata's var
     # command).
     true = results_var_misc.lutkepohl_var1_lustats
-    mod = varmax.VARMAX(endog, order=(1, 0), trend='nc',
+    mod = varmax.VARMAX(endog, order=(1, 0), trend='n',
                         error_cov_type='unstructured', loglikelihood_burn=1,)
     res = mod.filter(true['params'])
     assert_allclose(res.llf, true['loglike'])

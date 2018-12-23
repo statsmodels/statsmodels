@@ -189,7 +189,7 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
             params = np.r_[params, 4, 5]
 
     # Model
-    mod = VARMAX(endog, order=(1, 0), trend='nc',
+    mod = VARMAX(endog, order=(1, 0), trend='n',
                  measurement_error=measurement_error)
     mod.update(params)
     ssm = mod.ssm

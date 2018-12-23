@@ -169,7 +169,7 @@ def _var_acf(coefs, sig_u):
 
 
 def forecast_cov(ma_coefs, sigma_u, steps):
-    """
+    r"""
     Compute theoretical forecast error variance matrices
 
     Parameters
@@ -617,8 +617,8 @@ class VAR(tsbase.TimeSeriesModel):
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
-                raise Exception("%s not recognized, must be among %s"
-                                % (ic, sorted(selections)))
+                raise ValueError("%s not recognized, must be among %s"
+                                 % (ic, sorted(selections)))
             lags = getattr(selections, ic)
             if verbose:
                 print(selections)
@@ -956,7 +956,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        r"""Compute long-run effect of unit impulse
 
         .. math::
 
@@ -1042,7 +1042,7 @@ class VARProcess(object):
 
     # TODO: use `mse` module-level function?
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1327,6 +1327,11 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
+        import warnings
+        warnings.warn("For consistency with other statmsodels models, "
+                      "starting in version 0.11.0 `VARResults.cov_params` "
+                      "will be a method instead of a property.",
+                      category=FutureWarning)
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
@@ -1792,7 +1797,7 @@ class VARResults(VARProcess):
             df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
-            raise Exception('kind %s not recognized' % kind)
+            raise ValueError('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -1956,7 +1961,7 @@ class VARResults(VARProcess):
                                     nlags, adjusted)
 
     def plot_acorr(self, nlags=10, resid=True, linewidth=8):
-        """
+        r"""
         Plot autocorrelation of sample (endog) or residuals
 
         Sample (Y) or Residual autocorrelations are plotted together with the

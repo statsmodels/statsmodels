@@ -65,7 +65,8 @@ def bghfactor(df):
 
 
 def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
-    '''probability of rectangular area of standard t distribution
+    """
+    Probability of rectangular area of standard t distribution
 
     assumes mean is zero and R is correlation matrix
 
@@ -74,14 +75,12 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
     This function does not calculate the estimate of the combined error
     between the underlying multivariate normal probability calculations
     and the integration.
-
-    '''
-    kwds = dict(args=(a,b,R,df), epsabs=1e-4, epsrel=1e-2, limit=150)
+    """
+    kwds = dict(args=(a, b, R, df), epsabs=1e-4, epsrel=1e-2, limit=150)
     if not quadkwds is None:
         kwds.update(quadkwds)
-    #print kwds
-    res, err = integrate.quad(funbgh2, *chi.ppf([ieps,1-ieps], df),
-                          **kwds)
+    lower, upper = chi.ppf([ieps, 1 - ieps], df)
+    res, err = integrate.quad(funbgh2, lower, upper, **kwds)
     prob = res * bghfactor(df)
     return prob
 

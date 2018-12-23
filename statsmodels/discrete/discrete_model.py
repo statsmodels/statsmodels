@@ -39,7 +39,6 @@ import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
@@ -156,6 +155,25 @@ def _pandas_to_dummies(endog):
     return endog_dummies, ynames, yname
 
 
+def _validate_l1_method(method):
+    """
+    As of 0.10.0, the supported values for `method` in `fit_regularized`
+    are "l1" and "l1_cvxopt_cp".  If an invalid value is passed, raise
+    with a helpful error message
+
+    Parameters
+    ----------
+    method : str
+
+    Raises
+    ------
+    ValueError
+    """
+    if method not in ['l1', 'l1_cvxopt_cp']:
+        raise ValueError('`method` = {method} is not supported, use either '
+                         '"l1" or "l1_cvxopt_cp"'.format(method=method))
+
+
 #### Private Model Classes ####
 
 
@@ -178,7 +196,7 @@ class DiscreteModel(base.LikelihoodModel):
         and should contain any preprocessing that needs to be done for a model.
         """
         # assumes constant
-        rank = np_matrix_rank(self.exog)
+        rank = np.linalg.matrix_rank(self.exog)
         self.df_model = float(rank - 1)
         self.df_resid = float(self.exog.shape[0] - rank)
 
@@ -321,12 +339,9 @@ class DiscreteModel(base.LikelihoodModel):
         (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\beta_k = 0`
 
         """
-        ### Set attributes based on method
-        if method in ['l1', 'l1_cvxopt_cp']:
-            cov_params_func = self.cov_params_func_l1
-        else:
-            raise Exception("argument method == %s, which is not handled"
-                            % method)
+        _validate_l1_method(method)
+        # Set attributes based on method
+        cov_params_func = self.cov_params_func_l1
 
         ### Bundle up extra kwargs for the dictionary kwargs.  These are
         ### passed through super(...).fit() as kwargs and unpacked at
@@ -452,16 +467,16 @@ class BinaryModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         bnryfit = super(BinaryModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1BinaryResults(self, bnryfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -863,16 +878,16 @@ class CountModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1CountResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1CountResults(self, cntfit)
         return L1CountResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -1056,16 +1071,16 @@ class Poisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1PoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1PoissonResults(self, cntfit)
         return L1PoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -1485,6 +1500,8 @@ class GeneralizedPoisson(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        _validate_l1_method(method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1510,12 +1527,7 @@ class GeneralizedPoisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1GeneralizedPoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = L1GeneralizedPoissonResults(self, cntfit)
         return L1GeneralizedPoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -2510,8 +2522,8 @@ class NegativeBinomial(CountModel):
             self.score = self._score_geom
             self.loglikeobs = self._ll_geometric
         else:
-            raise NotImplementedError("Likelihood type must nb1, nb2 or "
-                                      "geometric")
+            raise ValueError('Likelihood type must "nb1", "nb2" '
+                             'or "geometric"')
 
     # Workaround to pickle instance methods
     def __getstate__(self):
@@ -2869,6 +2881,8 @@ class NegativeBinomial(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        _validate_l1_method(method)
+
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
             # don't penalize alpha if alpha is scalar
@@ -2900,12 +2914,8 @@ class NegativeBinomial(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
 
+        discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
@@ -3228,9 +3238,7 @@ class NegativeBinomialP(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
-        if method not in ['l1', 'l1_cvxopt_cp']:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
+        _validate_l1_method(method)
 
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
@@ -3321,7 +3329,7 @@ class NegativeBinomialP(CountModel):
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(counts, size[:,None], prob[:,None])
         else:
-            raise TypeError('keyword \'which\' = %s not recognized' % which)
+            raise ValueError('keyword "which" = %s not recognized' % which)
 
     def convert_params(self, params, mu):
         alpha = params[-1]
@@ -3615,20 +3623,20 @@ class DiscreteResults(base.LikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
-        #boiler plate
+        # boiler plate
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         yname, yname_list = self._get_endog_name(yname, yname_list)
         # for top of table
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
         # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
-                             use_t=self.use_t)
+                              use_t=self.use_t)
 
         if hasattr(self, 'constraints'):
             smry.add_extra_txt(['Model has been estimated subject to linear '
-                          'equality constraints.'])
+                                'equality constraints.'])
 
         #diagnostic table not used yet
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
@@ -3637,7 +3645,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
-            float_format="%.4f"):
+                 float_format="%.4f"):
         """Experimental function to summarize regression results
 
         Parameters
@@ -3662,15 +3670,12 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
-        # Summary
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                xname=xname, yname=yname, title=title)
+                      xname=xname, yname=yname, title=title)
 
         if hasattr(self, 'constraints'):
             smry.add_text('Model has been estimated subject to linear '
@@ -3679,11 +3684,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 
-
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
-                    "one_line_description" : "A results class for count data",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for count data",
+        "extra_attr": ""}
     @cache_readonly
     def resid(self):
         """

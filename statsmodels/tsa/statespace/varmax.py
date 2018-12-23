@@ -12,18 +12,20 @@ from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
+
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tsa.vector_ar import var_model
+import statsmodels.base.wrapper as wrap
+from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+
+from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate,
     prepare_trend_spec, prepare_trend_data
 )
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.vector_ar import var_model
-import statsmodels.base.wrapper as wrap
-from statsmodels.tools.sm_exceptions import (EstimationWarning, ValueWarning)
 
 
 class VARMAX(MLEModel):
@@ -375,7 +377,7 @@ class VARMAX(MLEModel):
 
                 if not invertible:
                     warn('Non-stationary starting moving-average parameters'
-                     ' found. Using zeros as starting parameters.')
+                         ' found. Using zeros as starting parameters.')
                     ma_params *= 0
 
         # 1. Intercept terms
@@ -860,7 +862,8 @@ class VARMAXResults(MLEResults):
 
         # If we had exog, then the last predicted_state has been set to NaN
         # since we didn't have the appropriate exog to create it. Then, if
-        # we are purely forecasting, 
+        # we are forecasting, we now have new exog that we need to put into
+        # the existing state_intercept array (and we will take it out, below)
         if last_intercept is not None:
             self.filter_results.state_intercept[:, -1] = last_intercept
 

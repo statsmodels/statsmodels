@@ -18,7 +18,7 @@ Examples
 
     # Load modules and data
     import statsmodels.api as sm
-    data = sm.datasets.scotland.load()
+    data = sm.datasets.scotland.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog)
 
     # Instantiate a gamma family model with the default link function.

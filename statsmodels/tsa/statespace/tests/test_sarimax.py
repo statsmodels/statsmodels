@@ -8,6 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 import warnings
@@ -25,12 +26,6 @@ realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
 
 coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
-
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
 
 IS_WINDOWS = os.name == 'nt'
 
@@ -658,10 +653,9 @@ class TestFriedmanMLERegression(Friedman):
 
     def test_mle(self):
         result = self.model.fit(disp=-1)
-        assert_allclose(
-            result.params, self.result.params,
-            atol=1e-2, rtol=1e-3
-        )
+        # Use ratio to make atol more meaningful parameter scale differs
+        ratio = result.params / self.result.params
+        assert_allclose(ratio, np.ones(5), atol=1e-2, rtol=1e-3)
 
     def test_bse(self):
         # test defaults
@@ -990,17 +984,13 @@ class SARIMAXCoverageTest(object):
         assert_almost_equal(constrained, true_constrained, 4)
         self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
-    def test_results(self, close_figures):
+    def test_results(self):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
-        # Make sure that no exceptions are thrown during plot_diagnostics
-        if have_matplotlib:
-            fig = self.result.plot_diagnostics()
-
-        # And make sure no expections are thrown calculating any of the
+        # Make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
         self.result.cov_params_approx
@@ -1008,6 +998,12 @@ class SARIMAXCoverageTest(object):
         self.result.cov_params_opg
         self.result.cov_params_robust_oim
         self.result.cov_params_robust_approx
+
+    @pytest.mark.matplotlib
+    def test_plot_diagnostics(self, close_figures):
+        # Make sure that no exceptions are thrown during plot_diagnostics
+        self.result = self.model.filter(self.true_params)
+        self.result.plot_diagnostics()
 
     def test_predict(self):
         result = self.model.filter(self.true_params)
@@ -1717,17 +1713,13 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
-    def test_results(self, close_figures):
+    def test_results(self):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
-        # Make sure that no exceptions are thrown during plot_diagnostics
-        if have_matplotlib:
-            fig = self.result.plot_diagnostics()
-
-        # And make sure no expections are thrown calculating any of the
+        # Make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
         # Known failure due to the complex step inducing non-stationary
@@ -1769,17 +1761,13 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,2,2,4)
         super(Test_seasonal_arma_diff_seasonal_diff, cls).setup_class(47, *args, **kwargs)
 
-    def test_results(self, close_figures):
+    def test_results(self):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
-        # Make sure that no exceptions are thrown during plot_diagnostics
-        if have_matplotlib:
-            fig = self.result.plot_diagnostics()
-
-        # And make sure no expections are thrown calculating any of the
+        # Make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
         # Known failure due to the complex step inducing non-stationary
@@ -2329,6 +2317,7 @@ def check_concentrated_scale(filter_univariate=False):
             assert_allclose(actual, desired, atol=atol)
 
 
+@pytest.mark.slow
 def test_concentrated_scale():
     check_concentrated_scale(filter_univariate=False)
     check_concentrated_scale(filter_univariate=True)

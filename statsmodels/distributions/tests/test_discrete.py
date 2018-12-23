@@ -1,10 +1,7 @@
-import os
 import numpy as np
 import statsmodels.api as sm
 from scipy.stats import poisson, nbinom
-from numpy.testing import (assert_, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import assert_allclose
 
 
 class TestGenpoisson_p(object):
@@ -109,7 +106,3 @@ class TestZiNBP(object):
         nb_logpmf = nbinom.logpmf(2, n, p)
         tnb_logpmf = sm.distributions.zinegbin.logpmf(2, 5, 1, 1, 0.005)
         assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

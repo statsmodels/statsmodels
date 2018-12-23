@@ -36,7 +36,7 @@ class PytestTester(object):
         self.package_path = os.path.dirname(package_path)
         self.package_name = f.f_locals.get('__name__', None)
 
-    def __call__(self, extra_args=None):
+    def __call__(self, extra_args=None, exit=False):
         try:
             import pytest
             if not LooseVersion(pytest.__version__) >= LooseVersion('3.0'):
@@ -44,14 +44,15 @@ class PytestTester(object):
             extra_args = ['--tb=short','--disable-pytest-warnings'] if extra_args is None else extra_args
             cmd = [self.package_path] + extra_args
             print('Running pytest ' + ' '.join(cmd))
-            pytest.main(cmd)
+            status = pytest.main(cmd)
+            if exit:
+                sys.exit(status)
         except ImportError:
             raise ImportError('pytest>=3 required to run the test')
 
 
 test = PytestTester()
 
-try:
-    from .version import version as __version__
-except ImportError:
-    __version__ = 'not-yet-built'
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

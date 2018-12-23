@@ -28,6 +28,7 @@ from statsmodels.compat.python import range, lzip, zip
 import numpy as np
 from scipy import stats
 import pandas as pd
+import patsy
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -643,12 +644,23 @@ class GEE(base.Model):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with two exceptions. `dep_data`
+            is processed as described below.  The ``eval_env`` keyword is
+            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
+            object or an integer indicating the depth of the namespace to use.
+            For example, the default ``eval_env=0`` uses the calling namespace.
+            If you wish to use a "clean" environment set ``eval_env=-1``.
+
+        Optional arguments
+        ------------------
+        dep_data : string or array-like
+            Data used for estimating the dependence structure.  See
+            specific dependence structure classes (e.g. Nested) for
+            details.  If `dep_data` is a string, it is interpreted as
+            a formula that is applied to `data`. If it is an array, it
+            must be an array of strings corresponding to column names in
+            `data`.  Otherwise it must be an array-like with the same
+            number of rows as data.
 
         Returns
         -------
@@ -666,23 +678,40 @@ class GEE(base.Model):
         the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
-        if type(groups) == str:
+        groups_name = "Groups"
+        if isinstance(groups, str):
+            groups_name = groups
             groups = data[groups]
 
-        if type(time) == str:
+        if isinstance(time, str):
             time = data[time]
 
-        if type(offset) == str:
+        if isinstance(offset, str):
             offset = data[offset]
 
-        if type(exposure) == str:
+        if isinstance(exposure, str):
             exposure = data[exposure]
+
+        dep_data = kwargs.get("dep_data")
+        dep_data_names = None
+        if dep_data is not None:
+            if isinstance(dep_data, str):
+                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data_names = dep_data.columns.tolist()
+            else:
+                dep_data_names = list(dep_data)
+                dep_data = data[dep_data]
+            kwargs["dep_data"] = np.asarray(dep_data)
 
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
+
+        if dep_data_names is not None:
+            model._dep_data_names = dep_data_names
+        model._groups_name = groups_name
 
         return model
 
@@ -701,8 +730,11 @@ class GEE(base.Model):
 
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter at the current
-        parameter value.
+        Estimate the dispersion/scale.
+
+        The scale parameter for binomial, Poisson, and multinomial
+        families is fixed at 1, otherwise it is estimated from
+        the data.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson,
@@ -1323,7 +1355,6 @@ class GEE(base.Model):
                                          self, params)
         return margeff
 
-
     def qic(self, params, scale, cov_params):
         """
         Returns quasi-information criteria and quasi-likelihood values.
@@ -1352,30 +1383,26 @@ class GEE(base.Model):
 
         Notes
         -----
-        This method can only be called if the model was fit using the
-        independence covariance structure.
-
         The quasi-likelihood used here is obtained by numerically evaluating
         Wedderburn's integral representation of the quasi-likelihood function.
-        The advantage of this approach is that it works for all families and
-        links.  Most other software packages use analytical expressions for
-        quasi-likelihoods that are based on canonical link functions.  These
-        analytical expressions omit additive constants that only depend on the
-        data.  Therefore the numerical values of our QL and QIC values will
+        This approach is valid for all families and  links.  Many other
+        packages use analytical expressions for quasi-likelihoods that are valid
+        in special cases where the link function is canonical.  These analytical
+        expressions may omit additive constants that only depend on the
+        data.  Therefore, the numerical values of our QL and QIC values will
         differ from the values reported by other packages.  However only the
         differences between two QIC values calculated for different models
         using the same data are meaningful.  Our QIC should produce the same
         QIC differences as other software.
 
-        Reference
-        ---------
-        W. Pan (2001).  Akaike's information criterion in generalized estimating
-        equations.  Biometrics (57)1.
-        """
+        When using the QIC for models with unknown scale parameter, use a common
+        estimate of the scale parameter for all models being compared.
 
-        if not isinstance(self.cov_struct, cov_structs.Independence):
-            msg = "Only the independence correlation structure can be used with QIC"
-            raise ValueError(msg)
+        References
+        ----------
+        .. [*] W. Pan (2001).  Akaike's information criterion in generalized estimating
+               equations.  Biometrics (57) 1.
+        """
 
         varfunc = self.family.variance
 
@@ -2293,7 +2320,7 @@ class NominalGEE(GEE):
                 jrow += 1
 
         # exog names
-        if type(self.exog_orig) == pd.DataFrame:
+        if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
@@ -2304,7 +2331,7 @@ class NominalGEE(GEE):
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if isinstance(self.endog_orig, pd.Series):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out

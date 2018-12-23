@@ -34,7 +34,7 @@ def _check_ar_start(start, k_ar, method, dynamic):
 
 
 def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
-    mu = params[:k_trend] or 0  # only have to worry about constant
+    mu = params[:k_trend] if k_trend else 0  # only have to worry constant
     arparams = params[k_trend:][::-1]  # reverse for dot
 
     # dynamic endogenous variable

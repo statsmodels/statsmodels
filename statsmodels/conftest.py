@@ -1,4 +1,13 @@
+import numpy as np
 import pytest
+
+try:
+    import matplotlib
+
+    matplotlib.use('agg')
+    HAVE_MATPLOTLIB = True
+except ImportError:
+    HAVE_MATPLOTLIB = False
 
 
 def pytest_addoption(parser):
@@ -8,6 +17,8 @@ def pytest_addoption(parser):
                      help="run only slow tests")
     parser.addoption("--skip-examples", action="store_true",
                      help="skip tests of examples")
+    parser.addoption("--skip-matplotlib", action="store_true",
+                     help="skip tests that depend on matplotlib")
 
 
 def pytest_runtest_setup(item):
@@ -19,6 +30,13 @@ def pytest_runtest_setup(item):
 
     if 'example' in item.keywords and item.config.getoption("--skip-examples"):
         pytest.skip("skipping due to --skip-examples")
+
+    if 'matplotlib' in item.keywords and \
+            item.config.getoption("--skip-matplotlib"):
+        pytest.skip("skipping due to --skip-matplotlib")
+
+    if 'matplotlib' in item.keywords and not HAVE_MATPLOTLIB:
+        pytest.skip("skipping since matplotlib is not intalled")
 
 
 def pytest_configure(config):
@@ -68,3 +86,24 @@ def close_figures():
 
     yield close
     close()
+
+
+@pytest.fixture()
+def reset_randomstate():
+    """
+    Fixture that set the global RandomState to the fixed seed 1
+
+    Notes
+    -----
+    Used by passing as an argument to the function that uses the global
+    RandomState
+
+    def test_some_plot(reset_randomstate):
+        <test code>
+
+    Returns the state after the test function exits
+    """
+    state = np.random.get_state()
+    np.random.seed(1)
+    yield
+    np.random.set_state(state)

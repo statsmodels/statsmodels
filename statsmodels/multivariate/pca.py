@@ -229,14 +229,9 @@ class PCA(object):
             self._ncomp = min_dim
 
         self._method = method
-        if self._method == 'eig':
-            self._compute_eig = self._compute_using_eig
-        elif self._method == 'svd':
-            self._compute_eig = self._compute_using_svd
-        elif self._method == 'nipals':
-            self._compute_eig = self._compute_using_nipals
-        else:
-            raise ValueError('method is not known.')
+        # Workaround to avoid instance methods in __dict__
+        if self._method not in ('eig', 'svd', 'nipals'):
+            raise ValueError('method {0} is not known.'.format(method))
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
@@ -408,6 +403,19 @@ class PCA(object):
         else:
             data = adj_data
         return data / np.sqrt(self.weights)
+
+    def _compute_eig(self):
+        """
+        Wrapper for actual eigenvalue method
+
+        This is a workaround to avoid instance methods in __dict__
+        """
+        if self._method == 'eig':
+            return self._compute_using_eig()
+        elif self._method == 'svd':
+            return self._compute_using_svd()
+        else:  # self._method == 'nipals'
+            return self._compute_using_nipals()
 
     def _compute_using_svd(self):
         """SVD method to compute eigenvalues and eigenvecs"""

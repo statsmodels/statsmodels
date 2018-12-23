@@ -34,10 +34,3 @@ def test_combinations():
     actual = list(combinations(lrange(4), 3))
     desired = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
     assert_(actual == desired, '%r not equal %r' % (actual, desired))
-
-
-
-
-if __name__ == '__main__':
-    test_zip_longest()
-    test_combinations()

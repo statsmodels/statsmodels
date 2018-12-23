@@ -3,12 +3,11 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
-#from statsmodels.iolib.summary2d import summary_params_2dflat
-#from summary2d import summary_params_2dflat
+
 
 def forg(x, prec=3):
     if prec == 3:
-    #for 3 decimals
+        # for 3 decimals
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):
             return '%9.3g' % x
         else:
@@ -19,7 +18,8 @@ def forg(x, prec=3):
         else:
             return '%10.4f' % x
     else:
-        raise NotImplementedError
+        raise ValueError("`prec` argument must be either 3 or 4, not {prec}"
+                         .format(prec=prec))
 
 
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
@@ -298,6 +298,11 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     #create dictionary with default
     #use lambdas because some values raise exception if they are not available
     #alternate spellings are commented out to force unique labels
+    def num_to_str(x, width=6):
+        if np.isnan(x):
+            return (width - 3) * ' ' + 'NaN'
+        return "%#6d" % x
+
     default_items = dict([
           ('Dependent Variable:', lambda: [yname]),
           ('Dep. Variable:', lambda: [yname]),
@@ -307,16 +312,16 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('Time:', lambda: time_of_day),
           ('Number of Obs:', lambda: [results.nobs]),
           #('No. of Observations:', lambda: ["%#6d" % results.nobs]),
-          ('No. Observations:', lambda: ["%#6d" % results.nobs]),
+          ('No. Observations:', lambda: [num_to_str(results.nobs)]),
           #('Df model:', lambda: [results.df_model]),
-          ('Df Model:', lambda: ["%#6d" % results.df_model]),
+          ('Df Model:', lambda: [num_to_str(results.df_model)]),
           #TODO: check when we have non-integer df
-          ('Df Residuals:', lambda: ["%#6d" % results.df_resid]),
-          #('Df resid:', lambda: [results.df_resid]),
-          #('df resid:', lambda: [results.df_resid]), #check capitalization
-          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf]) #doesn't exist for RLM - exception
-          #('Method:', lambda: [???]), #no default for this
-          ])
+          ('Df Residuals:', lambda: [num_to_str(results.df_resid)]),
+          # ('Df resid:', lambda: [results.df_resid]),
+          # ('df resid:', lambda: [results.df_resid]), #check capitalization
+          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception
+          # ('Method:', lambda: [???]), # no default for this
+    ])
 
     if title is None:
         title = results.model.__class__.__name__ + 'Regression Results'

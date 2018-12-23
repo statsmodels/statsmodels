@@ -287,7 +287,7 @@ class SimpleTable(list):
         """Return list of Row,
         the raw data as rows of cells.
         """
-        
+
         _Cell = self._Cell
         _Row = self._Row
         rows = []
@@ -298,7 +298,7 @@ class SimpleTable(list):
                 cell.datatype = next(dtypes)
                 cell.row = newrow  # a cell knows its row
             rows.append(newrow)
-         
+
         return rows
 
     def pad(self, s, width, align):
@@ -413,7 +413,7 @@ class SimpleTable(list):
 
         formatted_rows = []
         if center:
-            formatted_rows.append( r'\begin{center}' )
+            formatted_rows.append(r'\begin{center}')
 
         table_dec_above = fmt['table_dec_above'] or ''
         table_dec_below = fmt['table_dec_below'] or ''
@@ -448,7 +448,7 @@ class SimpleTable(list):
             title = r'%%\caption{%s}' % self.title
             formatted_rows.append(title)
         if center:
-            formatted_rows.append( r'\end{center}' )
+            formatted_rows.append(r'\end{center}')
 
         return '\n'.join(formatted_rows)
 
@@ -878,8 +878,14 @@ default_latex_fmt = dict(
     stub=r'\textbf{%s}',
     empty='',
     missing='--',
-    #replacements will be processed in lexicographical order
-    replacements={"#" : "\#", "$" : "\$", "%" : "\%", "&" : "\&", ">" : "$>$", "_" : "\_", "|" : "$|$"} 
+    # replacements will be processed in lexicographical order
+    replacements={"#": r"\#",
+                  "$": r"\$",
+                  "%": r"\%",
+                  "&": r"\&",
+                  ">": r"$>$",
+                  "_": r"\_",
+                  "|": r"$|$"}
 )
 
 default_fmts = dict(

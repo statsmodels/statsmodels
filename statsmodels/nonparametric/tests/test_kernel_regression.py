@@ -307,7 +307,7 @@ class TestKernelReg(KernelRegressionTestBase):
 
         bw_user=[0.23, 434697.22]
         model = nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
-                                 reg_type='lc', var_type='cc', bw=bw_user, 
+                                 reg_type='lc', var_type='cc', bw=bw_user,
                                  defaults=nparam.EstimatorSettings(efficient=True))
         # Bandwidth
         npt.assert_equal(model.bw, bw_user)
@@ -324,12 +324,15 @@ class TestKernelReg(KernelRegressionTestBase):
         bw_user=[0.23, 434697.22]
         model = nparam.KernelCensoredReg(endog=[Y], exog=[C1, C2],
                                          reg_type='ll', var_type='cc',
-                                         bw=bw_user, censor_val=0, 
+                                         bw=bw_user, censor_val=0,
                                  defaults=nparam.EstimatorSettings(efficient=True))
         # Bandwidth
         npt.assert_equal(model.bw, bw_user)
 
 
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+def test_invalid_bw():
+    # GH4873
+    x = np.arange(400)
+    y = x ** 2
+    with pytest.raises(ValueError):
+        nparam.KernelReg(x, y, 'c', bw=[12.5, 1.])

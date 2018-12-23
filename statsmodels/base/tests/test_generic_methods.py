@@ -10,8 +10,8 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.python import range
-from statsmodels.compat.scipy import NumpyVersion
 
 import numpy as np
 import pandas as pd
@@ -77,7 +77,6 @@ class CheckGenericMixin(object):
         cols = ['coef', 'std err', tstring_use_t, pvstring_use_t,
                 'Conf. Int. Low', 'Conf. Int. Upp.']
         assert_array_equal(summf.columns.values, cols)
-
 
     def test_ftest_pvalues(self):
         res = self.results
@@ -219,7 +218,8 @@ class CheckGenericMixin(object):
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10)
+            # atol discussion at gh-5158
+            assert_allclose(res1.resid, res2.resid, rtol=1e-10, atol=1e-12)
 
         ex = self.results.model.exog.mean(0)
         predicted1 = res1.predict(ex, **self.predict_kwds)
@@ -569,7 +569,6 @@ class CheckAnovaMixin(object):
         cls.data = test.data.drop([0,1,2])
         cls.initialize()
 
-
     def test_combined(self):
         res = self.res
         wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
@@ -582,7 +581,6 @@ class CheckAnovaMixin(object):
         c_duration = eye[[1, 4, 5]]
 
         compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
-
 
     def test_categories(self):
         # test only multicolumn terms
@@ -633,7 +631,6 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
-
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
@@ -664,12 +661,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         ex.iloc[0, 1] = np.nan
         predicted1 = self.res.predict(ex)
         predicted2 = self.res.predict(ex[1:])
-        from pandas.util.testing import assert_series_equal
-        try:
-            from pandas.util.testing import assert_index_equal
-        except ImportError:
-            # for old pandas
-            from numpy.testing import assert_array_equal as assert_index_equal
 
         assert_index_equal(predicted1.index, ex.index)
         assert_series_equal(predicted1[1:], predicted2)
@@ -763,7 +754,6 @@ class TestTTestPairwiseOLS(CheckPairwise):
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
 
-
     def test_alpha(self):
         pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
                                        factor_labels='A B C'.split())
@@ -816,6 +806,7 @@ class TestTTestPairwiseOLS3(CheckPairwise):
         cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[2]']
+
 
 class TestTTestPairwiseOLS4(CheckPairwise):
 

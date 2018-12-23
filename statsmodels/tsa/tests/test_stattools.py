@@ -1,4 +1,5 @@
-from statsmodels.compat.python import lrange, PY3
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.python import lrange
 
 import os
 import warnings
@@ -16,8 +17,11 @@ from statsmodels.tools.sm_exceptions import (CollinearityWarning,
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
-                                       arma_order_select_ic, levinson_durbin)
-
+                                       arma_order_select_ic, levinson_durbin,
+                                       levinson_durbin_pacf, pacf_burg,
+                                       innovations_algo, innovations_filter)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -393,9 +397,8 @@ def test_coint_identical_series():
     np.random.seed(123)
     y = scale_e * np.random.randn(nobs)
     warnings.simplefilter('always', CollinearityWarning)
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
-    assert_equal(len(w), 1)
     assert_equal(c[1], 0.0)
     assert_(np.isneginf(c[0]))
 
@@ -619,6 +622,7 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
+
 @pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
@@ -658,3 +662,169 @@ def test_acovf_warns(acovf_data):
 def test_acf_warns(acovf_data):
     with pytest.warns(FutureWarning):
         acf(acovf_data, nlags=40)
+
+
+def test_pacf2acf_ar():
+    pacf = np.zeros(10)
+    pacf[0] = 1
+    pacf[1] = 0.9
+    ar, acf = levinson_durbin_pacf(pacf)
+    assert_allclose(acf, 0.9 ** np.arange(10.))
+    assert_allclose(ar, pacf[1:], atol=1e-8)
+
+    ar, acf = levinson_durbin_pacf(pacf, nlags=5)
+    assert_allclose(acf, 0.9 ** np.arange(6.))
+    assert_allclose(ar, pacf[1:6], atol=1e-8)
+
+
+def test_pacf2acf_levinson_durbin():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    ar, acf = levinson_durbin_pacf(pacf)
+    _, ar_ld, pacf_ld, _, _ = levinson_durbin(acf, 10, isacov=True)
+    assert_allclose(ar, ar_ld, atol=1e-8)
+    assert_allclose(pacf, pacf_ld, atol=1e-8)
+
+    # From R, FitAR, PacfToAR
+    ar_from_r = [-4.1609, -9.2549, -14.4826, -17.6505, -17.5012, -14.2969, -9.5020, -4.9184,
+                 -1.7911, -0.3486]
+    assert_allclose(ar, ar_from_r, atol=1e-4)
+
+
+def test_pacf2acf_errors():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf, nlags=20)
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf[:1])
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros(10))
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros((10, 2)))
+
+
+def test_pacf_burg():
+    rnd = np.random.RandomState(12345)
+    e = rnd.randn(10001)
+    y = e[1:] + 0.5 * e[:-1]
+    pacf, sigma2 = pacf_burg(y, 10)
+    yw_pacf = pacf_yw(y, 10)
+    assert_allclose(pacf, yw_pacf, atol=5e-4)
+    # Internal consistency check between pacf and sigma2
+    ye = y - y.mean()
+    s2y = ye.dot(ye) / 10000
+    pacf[0] = 0
+    sigma2_direct = s2y * np.cumprod(1 - pacf ** 2)
+    assert_allclose(sigma2, sigma2_direct, atol=1e-3)
+
+
+def test_pacf_burg_error():
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty((20,2)), 10)
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty(100), 101)
+
+
+def test_innovations_algo_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, sigma2 = innovations_algo(acovf, nobs=4)
+    exp_theta = np.array([[0], [-.4972], [-.6606], [-.7404]])
+    assert_allclose(theta, exp_theta, rtol=1e-4)
+    assert_allclose(sigma2, [1.81, 1.3625, 1.2155, 1.1436], rtol=1e-4)
+
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    assert_allclose(theta[-1, 0], ma)
+    assert_allclose(sigma2[-1], 1.0)
+
+
+def test_innovations_algo_rtol():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    theta_2, sigma2_2 = innovations_algo(acovf, nobs=500, rtol=1e-8)
+    assert_allclose(theta, theta_2)
+    assert_allclose(sigma2, sigma2_2)
+
+
+def test_innovations_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=2.2)
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=-1)
+    with pytest.raises(ValueError):
+        innovations_algo(np.empty((2, 2)))
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, rtol='none')
+
+
+def test_innovations_filter_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    e = np.random.randn(5)
+    endog = e[1:] + ma * e[:-1]
+    resid = innovations_filter(endog, theta)
+    expected = [endog[0]]
+    for i in range(1, 4):
+        expected.append(endog[i] - theta[i, 0] * expected[-1])
+    expected = np.array(expected)
+    assert_allclose(resid, expected)
+
+
+def test_innovations_filter_pandas():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, _ = innovations_algo(acovf, nobs=10)
+    endog = np.random.randn(10)
+    endog_pd = pd.Series(endog,
+                         index=pd.date_range('2000-01-01', periods=10))
+    resid = innovations_filter(endog, theta)
+    resid_pd = innovations_filter(endog_pd, theta)
+    assert_allclose(resid, resid_pd.values)
+    assert_index_equal(endog_pd.index, resid_pd.index)
+
+
+def test_innovations_filter_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty((2, 2)), theta)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty(4), theta[:-1])
+    with pytest.raises(ValueError):
+        innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
+
+
+def test_innovations_algo_filter_kalman_filter():
+    # Test the innovations algorithm and filter against the Kalman filter
+    # for exact likelihood evaluation of an ARMA process
+    ar_params = np.array([0.5])
+    ma_params = np.array([0.2])
+    # TODO could generalize to sigma2 != 1, if desired, after #5324 is merged
+    # and there is a sigma2 argument to arma_acovf
+    # (but maybe this is not really necessary for the point of this test)
+    sigma2 = 1
+
+    endog = np.random.normal(size=10)
+
+    # Innovations algorithm approach
+    acovf = arma_acovf(np.r_[1, -ar_params], np.r_[1, ma_params],
+                       nobs=len(endog))
+
+    theta, v = innovations_algo(acovf)
+    u = innovations_filter(endog, theta)
+    llf_obs = -0.5 * u**2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
+
+    # Kalman filter apparoach
+    mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
+    res = mod.filter(np.r_[ar_params, ma_params, sigma2])
+
+    # Test that the two approaches are identical
+    assert_allclose(u, res.forecasts_error[0])
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
+    assert_allclose(llf_obs, res.llf_obs)

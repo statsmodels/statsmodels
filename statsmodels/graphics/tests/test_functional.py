@@ -8,13 +8,10 @@ from statsmodels.datasets import elnino
 from statsmodels.graphics.functional import \
             hdrboxplot, banddepth, fboxplot, rainbowplot
 
-
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 data = elnino.load(as_pandas=False)
@@ -22,10 +19,9 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
-    fig, hdr = hdrboxplot(data, labels=labels)
-    print(hdr)
+    _, hdr = hdrboxplot(data, labels=labels, seed=12345)
 
     assert len(hdr.extra_quantiles) == 0
 
@@ -54,18 +50,31 @@ def test_hdr_basic(close_figures):
 
     assert_almost_equal(quant, quant_t, decimal=0)
 
-    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
+    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
+                        axis=1)
     outliers = labels[labels_pos]
     assert_equal([1982, 1983, 1997, 1998], outliers)
     assert_equal(labels[hdr.outliers_idx], outliers)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
+def test_hdr_basic_brute(close_figures):
+    _, hdr = hdrboxplot(data, labels=labels, use_brute=True)
+
+    assert len(hdr.extra_quantiles) == 0
+
+    median_t = [24.247, 25.625, 25.964, 24.999, 23.648, 22.302,
+                21.231, 20.366, 20.168, 20.434, 21.111, 22.299]
+
+    assert_almost_equal(hdr.median, median_t, decimal=2)
+
+
+@pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    fig, res = hdrboxplot(data, labels=labels.tolist(), ax=ax, threshold=1)
+    hdrboxplot(data, labels=labels.tolist(), ax=ax, threshold=1, seed=12345)
 
     ax.set_xlabel("Month of the year")
     ax.set_ylabel("Sea surface temperature (C)")
@@ -74,9 +83,9 @@ def test_hdr_plot(close_figures):
     ax.set_xlim([-0.2, 11.2])
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
-    fig, hdr = hdrboxplot(data, alpha=[0.7])
+    _, hdr = hdrboxplot(data, alpha=[0.7], seed=12345)
     extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
                                 23.0, 22.0, 21.7, 22.1, 22.7, 23.8],
                                [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
@@ -84,9 +93,9 @@ def test_hdr_alpha(close_figures):
     assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
-    fig, hdr = hdrboxplot(data, alpha=[0.4, 0.92])
+    _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], seed=12345)
     extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
                       26.162, 24.833, 23.639, 22.378,
                       22.250, 22.640, 23.472, 24.649],
@@ -99,30 +108,32 @@ def test_hdr_multiple_alpha(close_figures):
                      [23.873, 25.371, 25.667, 24.644,
                       23.177, 21.923, 20.791, 20.015,
                       19.697, 19.951, 20.622, 21.858]]
-    assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t), decimal=0)
+    assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t),
+                        decimal=0)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
-    fig, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93)
-    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
+    _, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93, seed=12345)
+    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
+                        axis=1)
     outliers = labels[labels_pos]
     assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
-    fig, hdr = hdrboxplot(data, bw='cv_ml')
+    _, hdr = hdrboxplot(data, bw='cv_ml', seed=12345)
     median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
                 21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
-    fig, hdr = hdrboxplot(data, ncomp=3)
+    _, hdr = hdrboxplot(data, ncomp=3, seed=12345)
     median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
-                21.32, 20.45, 20.25, 20.53, 21.2 , 22.39]
+                21.32, 20.45, 20.25, 20.53, 21.20, 22.39]
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
@@ -138,14 +149,14 @@ def test_banddepth_BD2():
     expected_depth = [0.5, 5./6, 5./6, 0.5]
     assert_almost_equal(depth, expected_depth)
 
-    ## Plot to visualize why we expect this output
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111)
-    #for ii, yy in enumerate([y1, y2, y3, y4]):
+    # Plot to visualize why we expect this output
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # for ii, yy in enumerate([y1, y2, y3, y4]):
     #    ax.plot(xx, yy, label="y%s" % ii)
 
-    #ax.legend()
-    #plt.close(fig)
+    # ax.legend()
+    # plt.close(fig)
 
 
 def test_banddepth_MBD():
@@ -161,7 +172,7 @@ def test_banddepth_MBD():
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_fboxplot_rainbowplot(close_figures):
     # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):
@@ -174,16 +185,14 @@ def test_fboxplot_rainbowplot(close_figures):
         b2i = (0.15 - 0.1) * np.random.random() + 0.1
 
         func = (1 - ci) * (a1i * np.sin(t) + a2i * np.cos(t)) + \
-               ci * (b1i * np.sin(t) + b2i * np.cos(t))
+            ci * (b1i * np.sin(t) + b2i * np.cos(t))
 
         return func
 
     np.random.seed(1234567)
     # Some basic test data, Model 6 from Sun and Genton.
     t = np.linspace(0, 2 * np.pi, 250)
-    data = []
-    for ii in range(20):
-        data.append(harmfunc(t))
+    data = [harmfunc(t) for _ in range(20)]
 
     # fboxplot test
     fig = plt.figure()

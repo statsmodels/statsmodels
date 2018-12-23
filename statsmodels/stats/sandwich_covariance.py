@@ -18,7 +18,7 @@ pinv(x) scale pinv(x)   used currently in linear_model, with scale is
 1d (or diagonal matrix)
 (x'x)^(-1) x' scale x (x'x)^(-1),  scale in general is (nobs, nobs) so
 pretty large general formulas for scale in cluster case are in [4],
-which can be found (as of 2017-05-20) at 
+which can be found (as of 2017-05-20) at
 http://www.tandfonline.com/doi/abs/10.1198/jbes.2010.07136
 This paper also has the second version.
 

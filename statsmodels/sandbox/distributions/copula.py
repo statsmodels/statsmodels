@@ -40,6 +40,7 @@ def copula_bv_clayton(u, v, theta):
         raise ValueError('theta needs to be strictly positive')
     return np.power(np.power(u, -theta) + np.power(v, -theta) - 1, -theta)
 
+
 def copula_bv_frank(u, v, theta):
     '''Cook, Johnson bivariate copula
     '''
@@ -53,13 +54,20 @@ def copula_bv_frank(u, v, theta):
 def copula_bv_gauss(u, v, rho):
     raise NotImplementedError
 
+
 def copula_bv_t(u, v, rho, df):
     raise NotImplementedError
+
+
+#Archimedean Copulas through generator functions
+#===============================================
+
 
 #not used yet
 class Transforms(object):
     def __init__(self):
         pass
+
 
 class TransfFrank(object):
 
@@ -70,9 +78,25 @@ class TransfFrank(object):
     def inverse(self, phi, theta):
         return -np.log1p(np.exp(-phi) * expm1(-theta)) / theta
 
+    def deriv(self, t, theta):
+        tmp = np.exp(-t*theta)
+        return theta * tmp/(1 + tmp)
+
+    def deriv2(self, t, theta):
+        tmp1 = - t * theta
+        tmp2 = (1. + np.exp(tmp1))
+
+        d2 = theta**2 * (-np.exp(tmp1) / tmp2 + np.exp(2*tmp1) / tmp2**2)
+        return d2
+
+    def is_completly_monotonic(self, theta):
+        #range of theta for which it is copula for d>2 (more than 2 rvs)
+        return theta > 0 & theta < 1
+
+
 class TransfClayton(object):
 
-    def _checkargs(theta):
+    def _checkargs(self, theta):
         return theta > 0
 
     def evaluate(self, t, theta):
@@ -81,12 +105,22 @@ class TransfClayton(object):
     def inverse(self, phi, theta):
         return np.power(1 + phi, -theta)
 
+    def deriv(self, t, theta):
+        return -theta * np.power(t, -theta-1)
+
+    def deriv2(self, t, theta):
+        return theta * (theta + 1) * np.power(t, -theta-2)
+
+    def is_completly_monotonic(self, theta):
+        return theta > 0
+
+
 class TransfGumbel(object):
     '''
     requires theta >=1
     '''
 
-    def _checkargs(theta):
+    def _checkargs(self, theta):
         return theta >= 1
 
     def evaluate(self, t, theta):
@@ -95,12 +129,35 @@ class TransfGumbel(object):
     def inverse(self, phi, theta):
         return np.exp(-np.power(phi, 1. / theta))
 
+    def deriv(self, t, theta):
+        return - theta * (-np.log(t))**(theta - 1) / t
+
+    def deriv2(self, t, theta):
+        tmp1 = np.log(t)
+        d2 = (theta*(-1)**(1 + theta) * tmp1**(theta-1) * (1 - theta) +
+              theta*(-1)**(1 + theta)*tmp1**theta)/(t**2*tmp1)
+        #d2 = (theta * tmp1**(-1 + theta) * (1 - theta) + theta * tmp1**theta
+        #      ) / (t**2 * tmp1)
+
+        return d2
+
+    def is_completly_monotonic(self, theta):
+        return theta > 1
+
+
 class TransfIndep(object):
     def evaluate(self, t):
         return -np.log(t)
 
     def inverse(self, phi):
         return np.exp(-phi)
+
+    def deriv(self, t):
+        return - 1./t
+
+    def deriv2(self, t):
+        return - 1./t**2
+
 
 def copula_bv_archimedean(u, v, transform, args=()):
     '''
@@ -120,10 +177,63 @@ def copula_mv_archimedean(u, transform, args=(), axis=-1):
     return cdfv
 
 
+def copula_power_mv_archimedean(u, transform, alpha, beta, args=(), axis=-1):
+    '''generic multivariate Archimedean copula with additional power transforms
+
+    Nelson p.144, equ. 4.5.2
+    '''
+
+    def phi(u, alpha, beta, args=()):
+        return np.power(transform.evaluate(np.power(u, alpha), *args), beta)
+
+    def phi_inv(t, alpha, beta, args=()):
+        return np.power(transform.evaluate(np.power(t, 1./beta), *args), 1./alpha)
+
+    cdfv = phi_inv(phi(u, *args).sum(axis), *args)
+    return cdfv
+
+
+class CopulaArchimedean(object):
+
+    def __init__(self, transform):
+        self.transform = transform
+
+    def cdf(self, u, args=(), axis=-1):
+        '''evaluate cdf of multivariate Archimedean copula
+        '''
+        phi = self.transform.evaluate
+        phi_inv = self.transform.inverse
+        cdfv = phi_inv(phi(u, *args).sum(axis), *args)
+        return cdfv
+
+    def pdf(self, u, args=(), axis=-1):
+        '''evaluate cdf of multivariate Archimedean copula
+        '''
+        phi = self.transform.evaluate
+        phi_inv = self.transform.inverse
+        phi_d1 = self.transform.deriv
+        phi_d2 = self.transform.deriv2
+
+
+        cdfv = self.cdf(u, args=args, axis=axis)
+
+        pdfv = - np.product(phi_d1(u, *args), axis)
+        pdfv *= phi_d2(cdfv, *args)
+        pdfv /= phi_d1(cdfv, *args)**3
+
+        return pdfv
+
+
+
+
+#Extreme Value Copulas
+#=====================
+
 def copula_bv_ev(u, v, transform, args=()):
     '''generic bivariate extreme value copula
     '''
     return np.exp(np.log(u * v) * (transform(np.log(v)/np.log(u*v), *args)))
+
 
 def transform_tawn(t, a1, a2, theta):
     '''asymmetric logistic model of Tawn 1988
@@ -149,6 +259,7 @@ def transform_tawn(t, a1, a2, theta):
     transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
 
     return transf
+
 
 def transform_joe(t, a1, a2, theta):
     '''asymmetric negative logistic model of Joe 1990
@@ -197,6 +308,7 @@ def transform_tawn2(t, theta, k):
     transf = 1 - (theta + k) * t + theta * t*t + k * t**3
     return transf
 
+
 def transform_bilogistic(t, beta, delta):
     '''bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
 
@@ -209,7 +321,7 @@ def transform_bilogistic(t, beta, delta):
 
     def _check_args(beta, delta):
         cond1 = (beta > 0) and (beta <= 1) and (delta > 0) and (delta <= 1)
-        cond2 = (beta < 0)  and (delta < 0)
+        cond2 = (beta < 0) and (delta < 0)
         return cond1 | cond2
 
     if not np.all(_check_args(beta, delta)):
@@ -223,6 +335,7 @@ def transform_bilogistic(t, beta, delta):
     from scipy.integrate import quad
     transf = quad(_integrant, 0, 1)
     return transf
+
 
 def transform_hr(t, lamda):
     '''model of Huesler Reiss 1989
@@ -245,6 +358,7 @@ def transform_hr(t, lamda):
     from scipy.stats import norm  #use special if I want to avoid stats import
     transf = (1 - t) * norm._cdf(lamda + term) + t * norm._cdf(lamda - term)
     return transf
+
 
 def transform_tev(t, rho, x):
     '''t-EV model of Demarta and McNeil 2005
@@ -269,8 +383,12 @@ def transform_tev(t, rho, x):
     transf = (1 - t) * stats_t._cdf(z, x+1) + t * stats_t._cdf(z, x+1)
     return transf
 
+
+
+#==========================================================================
+
 #define dictionary of copulas by names and aliases
-copulanames = {'indep' : copula_bv_indep,
+copulanamesbv = {'indep' : copula_bv_indep,
                'i' : copula_bv_indep,
                'min' : copula_bv_min,
                'max' : copula_bv_max,
@@ -280,16 +398,17 @@ copulanames = {'indep' : copula_bv_indep,
                'frank' : copula_bv_frank,
                'gauss' : copula_bv_gauss,
                'normal' : copula_bv_gauss,
-               't' : copula_bv_frank}
+               't' : copula_bv_t}
 
-class CopulaBivariate(object):
+
+class CopulaDistributionBivariate(object):
     '''bivariate copula class
 
     Instantiation needs the arguments, cop_args, that are required for copula
     '''
     def __init__(self, marginalcdfs, copula, copargs=()):
-        if copula in copulanames:
-            self.copula = copulanames[copula]
+        if copula in copulanamesbv:
+            self.copula = copulanamesbv[copula]
         else:
             #see if we can call it as a copula function
             try:
@@ -297,6 +416,37 @@ class CopulaBivariate(object):
             except: #blanket since we throw again
                 raise ValueError('copula needs to be a copula name or callable')
             self.copula = copula
+
+        #no checking done on marginals
+        self.marginalcdfs = marginalcdfs
+        self.copargs = copargs
+
+    def cdf(self, xy, args=None):
+        '''xx needs to be iterable, instead of x,y for extension to multivariate
+        '''
+        x, y = xy
+        if args is None:
+            args = self.copargs
+        return self.copula(self.marginalcdfs[0](x), self.marginalcdfs[1](y),
+                           *args)
+
+
+class CopulaDistribution(object):
+    '''bivariate copula class
+
+    Instantiation needs the arguments, cop_args, that are required for copula
+    '''
+    def __init__(self, marginalcdfs, copula, copargs=()):
+        if copula in copulanamesbv:
+            self.copula = copulanamesbv[copula]
+        else:
+            #see if we can call it as a copula function
+            try:
+                tmp = copula(0.5, 0.5, *copargs)
+            except: #blanket since we throw again
+                raise ValueError('copula needs to be a copula name or callable')
+            self.copula = copula
+
 
         #no checking done on marginals
         self.marginalcdfs = marginalcdfs

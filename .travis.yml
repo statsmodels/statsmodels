@@ -6,13 +6,15 @@ dist: trusty
 sudo: required
 language: python
 
+git:
+  depth: 10000
+
 env:
   # Default values for common packages, override as needed
   global:
     - OPTIONAL=
     - COVERAGE=false
     - USEMPL=true
-    - USENUMPYBASE=false
     - MATPLOTLIB=
     - DOCBUILD=false
     - LINT=false
@@ -22,29 +24,34 @@ env:
     - OPENBLAS_NUM_THREADS=1
     - PYTHONHASHSEED=0 # Ensure tests are correctly gathered by xdist
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
+    - BUILD_INIT=tools/ci/travis_conda.sh
+    - DEPEND_ALWAYS="pyyaml joblib pip colorama"
+    - # Doctr deploy key for statsmodels/statsmodels.github.io
+    - secure: "AzwB23FWdilHKVcEJnj57AsoY5yKTWT8cQKzsH2ih9i08wIXvZXP/Ui8XRDygV9tDKfqGVltC7HpBBDE3C4ngeMlis4uuKWlkp0O1757YQe+OdDnimuDZhrh3ILEk7xW3ab5YizjLeyv3iiBW7cNS5z8W3Yu8HeJPkr6Ck30gAA="
+    - SM_CYTHON_COVERAGE=false # Run takes > 1 hour and so not feasible
 
 matrix:
   fast_finish: true
   include:
   # Python 3.7 + cutting edge packages
-  - python: 2.7
+  - python: 3.6 # 3.7 is not available on travis
     env:
     - PYTHON=3.7
     - COVERAGE=true
-  # Python 3.6 + cutting edge packages
-  - python: 2.7
+  # Python 3.6 + legacy blas
+  - python: 3.6
     env:
     - PYTHON=3.6
+    - NUMPY=1.14
     - BLAS="nomkl blas=*=openblas"
-  # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
-  - python: 2.7
+  # Documentation build (on Python 3.6 + cutting edge packages)
+  - python: 3.6
     env:
-    - PYTHON=2.7
-    - NUMPY=1.13
-    - MATPLOTLIB=2.0
-    - COVERAGE=true
+    - PYTHON=3.6
+    - PANDAS=0.23
+    - DOCBUILD=true
   # Python 3.5 + partially updated packages
-  - python: 2.7
+  - python: 3.5
     env:
     - PYTHON=3.5
     - NUMPY=1.13
@@ -52,93 +59,120 @@ matrix:
     - PANDAS=0.22
     - MATPLOTLIB=2.0
     - LINT=true
-  # Python 2.7 + baseline packages
-  - python: 2.7
-    env:
-    - PYTHON=2.7
-    - NUMPY=1.11
-    - USENUMPYBASE=true
-    - BLAS= # Do not specify blas in this config due to conflict
-    - SCIPY=0.18
-    - PANDAS=0.19
-    - MATPLOTLIB=1.5
   # Python 3.4 + baseline packages
-  - python: 2.7
+  - python: 3.4
     env:
     - PYTHON=3.4
     - NUMPY=1.11
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
-  # Documentation build (on Python 3.6 + cutting edge packages)
+  # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
   - python: 2.7
     env:
-    - PYTHON=3.6
-    # (can't use pandas=0.23 with pandas-datareader <= 0.6)
-    - PANDAS=0.22
-    - DOCBUILD=true
-  # No Matplotlib (on Python 2.7 + baseline packages)
+    - PYTHON=2.7
+    - NUMPY=1.13
+    - MATPLOTLIB=2.0
+    - COVERAGE=true
+  # Python 2.7 + baseline packages
   - python: 2.7
     env:
     - PYTHON=2.7
     - NUMPY=1.12
-    - SCIPY=0.18
-    - PANDAS=0.19
+    - BLAS= # Do not specify blas in this config due to conflict
+    - SCIPY=0.19
+    - PANDAS=0.20
     - USEMPL=false
     - LINT=true
+  # Standard pip install
+  - python: 3.6
+    env:
+    - BUILD_INIT=tools/ci/travis_pip.sh
+  # Latest pre-release packages
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.6.6
+      - NUMPY=1.14
+      - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.7
 
+  allow_failures:
+  # pre-testing is a little fragile. Make it an FYI.
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.6.6
+      - NUMPY=1.14
+      - BUILD_INIT=tools/ci/travis_pip.sh
+  - os: osx
+    language: generic
+    env:
+      - PYTHON=3.7
 
 notifications:
   email:
     on_success: always
 
-# Setup anaconda
 before_install:
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b -p /home/travis/miniconda
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - conda config --set always_yes yes
-  - conda update --quiet conda
+  # Skip if commit message contains [skip travis] or [travis skip]
+  - COMMIT_MESSAGE=$(git show -s $TRAVIS_COMMIT_RANGE | awk 'BEGIN{count=0}{if ($1=="Author:") count++; if (count==1) print $0}')
+  - if [[ $TRAVIS_PULL_REQUEST == false ]]; then COMMIT_MESSAGE=${TRAVIS_COMMIT_MESSAGE}; fi
+  - if echo "$COMMIT_MESSAGE" | grep -E '\[(skip travis|travis skip)\]'; then exit 0 ; fi
+  # Show information about CPU running job to understand BLAS issues
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo lshw -class processor; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then sysctl -a | grep machdep.cpu; fi
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ( sh -e /etc/init.d/xvfb start )& fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
   # Avoid noise from matplotlib
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
-  # Build package list to avoid empty package=versions; only needed for versioned packages
-  - PKGS="numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
-  - if [ ${USENUMPYBASE} = true ]; then PKGS="${PKGS} numpy-base=${NUMPY}"; fi
-  - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
-  - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
-  - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
-  - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
-  - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - echo conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
-  - conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
-  - source activate statsmodels-test
-  - pip install 'pytest<4' pytest-xdist nose
-  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
-  - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  # Source recipe to install packages
+  - source $BUILD_INIT
+  - pip install pytest pip pytest-randomly nose
+  - |
+    if [ ${COVERAGE} = true ]; then
+        pip install codecov coverage coveralls pytest-cov
+        if [ -z ${SM_CYTHON_COVERAGE} ] || [ ${SM_CYTHON_COVERAGE} = false ]; then
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_travis --cov=statsmodels --cov-report="
+        else
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels --cov-report="
+        fi
+        echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
+    else
+        export COVERAGE_OPTS=""
+    fi
+  - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
 # Install packages
 install:
-  - python setup.py build_ext --inplace
   - python setup.py develop
 
 script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # docbuild and exit, if required
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
   - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - ./lint.sh
 
 after_success:
-  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/tools/coveragerc/.coveragerc_travis; fi
   - if [ ${COVERAGE} = true ]; then codecov; fi

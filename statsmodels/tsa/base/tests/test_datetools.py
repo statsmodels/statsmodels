@@ -1,9 +1,7 @@
 from datetime import datetime
-from pandas import DatetimeIndex
 import numpy.testing as npt
 from statsmodels.tsa.base.datetools import (
-    date_parser, date_range_str, dates_from_str, dates_from_range)
-from pandas import DatetimeIndex, PeriodIndex
+    date_parser, dates_from_range)
 
 
 def test_regex_matching_month():

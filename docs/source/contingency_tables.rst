@@ -264,7 +264,7 @@ methods and attributes.
 
 .. ipython:: python
 
-    data = sm.datasets.china_smoking.load()
+    data = sm.datasets.china_smoking.load_pandas()
 
     mat = np.asarray(data.data)
     tables = [np.reshape(x.tolist(), (2, 2)) for x in mat]

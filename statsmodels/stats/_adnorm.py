@@ -47,13 +47,13 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
             w = (y-xbar)/s
             z = stats.norm.cdf(w)
             #print z
-        elif hasattr(dist, '__call__'):
+        elif callable(dist):
             params = dist.fit(x)
             #print params
             z = dist.cdf(y, *params)
             print(z)
     else:
-        if hasattr(dist, '__call__'):
+        if callable(dist):
             z = dist.cdf(y, *params)
         else:
             raise ValueError('if fit is false, then dist needs to be callable')

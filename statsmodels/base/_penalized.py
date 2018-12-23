@@ -64,7 +64,6 @@ class PenalizedMixin(object):
 
         return llf
 
-
     def loglikeobs(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight

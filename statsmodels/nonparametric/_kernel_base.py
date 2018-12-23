@@ -119,9 +119,6 @@ class GenericKDE (object):
         -----
         The default values for bw is 'normal_reference'.
         """
-
-        self.bw_func = dict(normal_reference=self._normal_reference,
-                            cv_ml=self._cv_ml, cv_ls=self._cv_ls)
         if bw is None:
             bw = 'normal_reference'
 
@@ -131,7 +128,13 @@ class GenericKDE (object):
         else:
             # The user specified a bandwidth selection method
             self._bw_method = bw
-            bwfunc = self.bw_func[bw]
+            # Workaround to avoid instance methods in __dict__
+            if bw == 'normal_reference':
+                bwfunc = self._normal_reference
+            elif bw == 'cv_ml':
+                bwfunc = self._cv_ml
+            else:  # bw == 'cv_ls'
+                bwfunc = self._cv_ls
             res = bwfunc()
 
         return res
@@ -177,7 +180,7 @@ class GenericKDE (object):
             self._bw_method = 'normal_reference'
         if isinstance(bw, string_types):
             self._bw_method = bw
-        else: 
+        else:
             self._bw_method = "user-specified"
             return bw
 

@@ -1,5 +1,5 @@
 import numpy as np
-import numpy.random as R
+import numpy.random
 from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.stats.contrast import Contrast
 import statsmodels.stats.contrast as smc
@@ -8,8 +8,8 @@ import statsmodels.stats.contrast as smc
 class TestContrast(object):
     @classmethod
     def setup_class(cls):
-        R.seed(54321)
-        cls.X = R.standard_normal((40,10))
+        numpy.random.seed(54321)
+        cls.X = numpy.random.standard_normal((40,10))
 
     def test_contrast1(self):
         term = np.column_stack((self.X[:,0], self.X[:,2]))
@@ -27,7 +27,7 @@ class TestContrast(object):
     def test_contrast3(self):
         P = np.dot(self.X, np.linalg.pinv(self.X))
         resid = np.identity(40) - P
-        noise = np.dot(resid,R.standard_normal((40,5)))
+        noise = np.dot(resid, numpy.random.standard_normal((40, 5)))
         term = np.column_stack((noise, self.X[:,2]))
         c = Contrast(term, self.X)
         assert_equal(c.contrast_matrix.shape, (10,))

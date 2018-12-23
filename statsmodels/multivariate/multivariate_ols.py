@@ -21,7 +21,7 @@ _hypotheses_doc = \
 """hypotheses: A list of tuples
     Hypothesis `L*B*M = C` to be tested where B is the parameters in
     regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
-    
+
       * (name, contrast_L)
       * (name, contrast_L, transform_M)
       * (name, contrast_L, transform_M, constant_C)
@@ -457,7 +457,7 @@ results: _MultivariateOLSResults
 
 Notes
 -----
-Tests hypotheses of the form 
+Tests hypotheses of the form
 
     L * params * M = C
 

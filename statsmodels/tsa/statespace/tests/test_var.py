@@ -11,26 +11,21 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
-import pytest
-import os
-import re
 
-import warnings
-from statsmodels.tsa.statespace import mlemodel, varmax
+from statsmodels.tsa.statespace import varmax
 from .results import results_var_R
-from numpy.testing import assert_equal, assert_raises, assert_allclose
-import pytest
-from statsmodels.iolib.summary import forg
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 results_var_R_output = pd.read_csv(
-    os.path.join(current_path, 'results/results_var_R_output.csv'))
+    os.path.join(current_path, 'results', 'results_var_R_output.csv'))
 
-dta = pd.read_stata(os.path.join(current_path,
-                                 '../../tests/results/lutkepohl2.dta'))
+up2 = os.path.split(os.path.split(current_path)[0])[0]
+dta = pd.read_stata(os.path.join(up2, 'tests', 'results', 'lutkepohl2.dta'))
 dta.index = pd.PeriodIndex(dta.qtr, freq='Q')
 endog = dta[['dln_inv', 'dln_inc', 'dln_consump']].loc['1960Q2':'1978']
 
@@ -80,7 +75,9 @@ def check_irf(test, mod, results, params=None):
         # Orthogonalized, cumulated
         columns = ['%s.irf.cumu.%s.%s' % (test, impulse_to, name)
                    for name in endog.columns]
-        assert_allclose(res.impulse_responses(10, i, orthogonalized=True, cumulative=True),
+        result = res.impulse_responses(10, i,
+                                       orthogonalized=True, cumulative=True)
+        assert_allclose(result,
                         results_var_R_output[columns])
 
 

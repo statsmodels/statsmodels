@@ -35,18 +35,16 @@ sys.stderr = open('/home/skipper/statsmodels/statsmodels/tools/crontab.err',
                   'w')
 
 # Environment for subprocess calls. Needed for cron execution
-env = {'MATPLOTLIBRC' : ('/home/skipper/statsmodels/statsmodels/tools/'),
-       'HOME' : '/home/skipper',
-       'PATH' : ':'.join((os.getenv('PATH', ''), '/home/skipper/.local/bin')),
+env = {'MATPLOTLIBRC': ('/home/skipper/statsmodels/statsmodels/tools/'),
+       'HOME': '/home/skipper',
+       'PATH': ':'.join((os.getenv('PATH', ''), '/home/skipper/.local/bin')),
        # Need this for my openblas setup on my laptop
        # maybe no longer necessary with newer numpy
-       'LD_LIBRARY_PATH' : os.getenv('LD_LIBRARY_PATH', '')}
+       'LD_LIBRARY_PATH': os.getenv('LD_LIBRARY_PATH', '')}
 
 
-######### INITIAL SETUP ##########
-
-#hard-coded "current working directory" ie., you will need file permissions
-#for this folder
+# hard-coded "current working directory" ie., you will need file permissions
+# for this folder
 # follow symbolic links
 script = os.path.realpath(sys.argv[0])
 dname = os.path.abspath(os.path.dirname(script))
@@ -66,7 +64,7 @@ stable_trunk = 'master'
 last_release = 'v0.5.0'
 branches = [stable_trunk]
 # change last_release above and uncomment the below to update for a release
-#branches = [stable_trunk, last_release]
+# branches = [stable_trunk, last_release]
 
 # virtual environment directory
 virtual_dir = 'BUILDENV'
@@ -79,16 +77,15 @@ with open('/home/skipper/statsmodels/gmail.txt') as f:
     pwd = f.readline().strip()
 gmail_pwd = base64.b64decode(pwd)
 
-########### EMAIL #############
+# ------------ EMAIL ------------
 email_name = 'statsmodels.dev' + 'AT' + 'gmail' + '.com'
 email_name = email_name.replace('AT', '@')
 gmail_pwd = gmail_pwd
 to_email = [email_name,
             ('josef.pktd' + 'AT' + 'gmail' + '.com').replace('AT', '@')]
-#to_email = [email_name]
 
 
-########### FUNCTIONS ###############
+# ------------ FUNCTIONS ------------
 
 def create_virtualenv():
     # make a virtualenv for installation if it doesn't exist
@@ -96,7 +93,7 @@ def create_virtualenv():
     if not os.path.exists(virtual_dir):
         retcode = subprocess.call(['/home/skipper/.local/bin/virtualenv',
                                    "--system-site-packages", virtual_dir],
-                                   stderr=sys.stderr, stdout=sys.stdout)
+                                  stderr=sys.stderr, stdout=sys.stdout)
         if retcode != 0:
             msg = """There was a problem creating the virtualenv"""
             raise Exception(msg)
@@ -159,7 +156,7 @@ def getdirs():
     Get current directories of cwd in order to restore to this
     """
     dirs = [i for i in os.listdir(dname)]
-    dirs = filter(lambda x : not os.path.isfile(os.path.join(dname, x)),
+    dirs = filter(lambda x: not os.path.isfile(os.path.join(dname, x)),
                   dirs)
     return dirs
 
@@ -206,7 +203,7 @@ def install_branch(branch):
         raise Exception(msg)
 
     p = subprocess.Popen('git rev-parse HEAD ', shell=True,
-                              stdout=subprocess.PIPE, stderr=sys.stderr)
+                         stdout=subprocess.PIPE, stderr=sys.stderr)
     version = p.communicate()[0][:7]
 
     # build and install
@@ -246,13 +243,13 @@ def build_docs(branch):
         os.chdir(dname)
         msg = """Could not clean the html docs for branch %s""" % branch
         raise Exception(msg)
-    #NOTE: The python call in the below makes sure that it uses the Python
+    # NOTE: The python call in the below makes sure that it uses the Python
     # that is referenced after entering the virtualenv
     sphinx_call = " ".join(['make', 'html', "SPHINXBUILD=' python "
                             "/usr/local/bin/sphinx-build'"])
     activate = os.path.join(virtual_dir, "bin", "activate")
     activate_virtualenv = ". " + activate
-    #NOTE: You have to enter virtualenv in the same call. As soon as the
+    # NOTE: You have to enter virtualenv in the same call. As soon as the
     # child process is done, the env variables from activate are lost.
     # getting the correct env from bin/activate and passing to env is
     # annoying
@@ -300,13 +297,13 @@ def upload_docs(branch):
     os.chdir(dname)
 
 
-#TODO: upload pdf is not tested
-def upload_pdf(branch):
+# TODO: upload pdf is not tested
+def upload_pdf(branch, new_branch_dir):
     if branch == 'master':
         remote_dir = 'devel'
     else:
         remote_dir = 'stable'
-    os.chdir(os.path.join(dname, new_branch_dir, 'statsmodels','docs'))
+    os.chdir(os.path.join(dname, new_branch_dir, 'statsmodels', 'docs'))
     retcode = subprocess.call(['rsync', '-avP', '-e ssh',
                                'build/latex/statsmodels.pdf',
                                sf_account + ':htdocs/' + remote_dir + 'pdf/'])
@@ -341,8 +338,6 @@ def email_me(status='ok'):
     server.close()
 
 
-############### MAIN ###################
-
 def main():
     # get branch, install in virtualenv, build the docs, upload, and cleanup
     msg = ''
@@ -358,15 +353,17 @@ def main():
             else:
                 msg += ('Latest version already available for branch '
                         '{}.\n'.format(branch))
-    #        build_pdf(new_branch_dir)
-    #        upload_pdf(branch, new_branch_dir)
-        except:
+            # TODO: re-enable build_pdf, upload_pdf?
+            # build_pdf(new_branch_dir)
+            # upload_pdf(branch, new_branch_dir)
+        except Exception:
             msg += traceback.format_exc()
 
     if msg == '':  # if it doesn't something went wrong and was caught above
         email_me()
     else:
         email_me(msg)
+
 
 if __name__ == "__main__":
     main()

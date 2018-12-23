@@ -11,10 +11,9 @@ from pandas import Series, DataFrame
 from numpy.testing.utils import assert_array_less
 
 try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except ImportError:
-    have_matplotlib = False
+    pass
 
 pdf_output = False
 
@@ -45,7 +44,7 @@ class TestPlot(object):
 
         self.res = res
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_fit(self, close_figures):
         res = self.res
 
@@ -65,7 +64,7 @@ class TestPlot(object):
 
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
         #just test that they run
         res = self.res
@@ -80,7 +79,7 @@ class TestPlot(object):
    
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_influence(self, close_figures):
         infl = self.res.get_influence()
         fig = influence_plot(self.res)
@@ -107,7 +106,7 @@ class TestPlot(object):
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_leverage_resid2(self, close_figures):
         fig = plot_leverage_resid2(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -134,7 +133,7 @@ class TestPlotPandas(TestPlot):
 
 class TestPlotFormula(TestPlotPandas):
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
@@ -155,14 +154,14 @@ class TestABLine(object):
         cls.y = y
         cls.mod = mod
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:,1], self.y)
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -170,14 +169,14 @@ class TestABLine(object):
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_abline_ab_ax(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
@@ -187,7 +186,7 @@ class TestABLine(object):
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_abline_remove(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
@@ -217,7 +216,7 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot(object):
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
 
         np.random.seed(3446)
@@ -267,7 +266,7 @@ class TestAddedVariablePlot(object):
 
 class TestPartialResidualPlot(object):
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
 
         np.random.seed(3446)
@@ -303,7 +302,7 @@ class TestPartialResidualPlot(object):
 
 class TestCERESPlot(object):
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):
 
         np.random.seed(3446)
@@ -336,7 +335,3 @@ class TestCERESPlot(object):
                 ax.set_title(ti + "\nPoisson regression\n" +
                              effect_str)
                 close_or_save(pdf, fig)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -6,29 +6,35 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.python import long
-
-try: unicode
-except NameError: unicode = str
+import warnings
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from .simulation_smoother import SimulationSmoother
-from .kalman_smoother import SmootherResults
-from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
-import statsmodels.tsa.base.tsa_model as tsbase
-import statsmodels.base.wrapper as wrap
+from statsmodels.compat.python import long
+
+from statsmodels.tools.tools import pinv_extended, Bunch
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
                                        approx_fprime_cs, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
-from statsmodels.tools.tools import pinv_extended, Bunch
-from statsmodels.tools.sm_exceptions import PrecisionWarning
+
+import statsmodels.base.wrapper as wrap
+
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
-import warnings
+
+import statsmodels.tsa.base.tsa_model as tsbase
+
+from .simulation_smoother import SimulationSmoother
+from .kalman_smoother import SmootherResults
+from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
+
+if bytes != str:
+    # PY3
+    unicode = str
 
 
 def _handle_args(names, defaults, *args, **kwargs):
@@ -1986,7 +1992,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # This is a (k_endog x nobs array; don't want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
-        fittedvalues = self.filter_results.forecasts
+        fittedvalues = self.forecasts
         if fittedvalues.shape[0] == 1:
             fittedvalues = fittedvalues[0, :]
         else:
@@ -2041,7 +2047,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # This is a (k_endog x nobs array; don't want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
-        resid = self.filter_results.forecasts_error
+        resid = self.forecasts_error
         if resid.shape[0] == 1:
             resid = resid[0, :]
         else:
@@ -2221,15 +2227,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 # Setup functions to calculate the p-values
                 if use_f:
                     from scipy.stats import f
-                    pval_lower = lambda test_statistics: f.cdf(
+                    pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
                         test_statistics, numer_dof, denom_dof)
-                    pval_upper = lambda test_statistics: f.sf(
+                    pval_upper = lambda test_statistics: f.sf(  # noqa:E731
                         test_statistics, numer_dof, denom_dof)
                 else:
                     from scipy.stats import chi2
-                    pval_lower = lambda test_statistics: chi2.cdf(
+                    pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
                         numer_dof * test_statistics, denom_dof)
-                    pval_upper = lambda test_statistics: chi2.sf(
+                    pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
                         numer_dof * test_statistics, denom_dof)
 
                 # Calculate the one- or two-sided p-values
@@ -2635,8 +2641,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ax = fig.add_subplot(222)
         # temporarily disable Deprecation warning, normed -> density
         # hist needs to use `density` in future when minimum matplotlib has it
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             ax.hist(resid_nonmissing, normed=True, label='Hist')
+
         from scipy.stats import gaussian_kde, norm
         kde = gaussian_kde(resid_nonmissing)
         xlim = (-1.96*2, 1.96*2)
@@ -2712,15 +2719,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Diagnostic tests results
         try:
             het = self.test_heteroskedasticity(method='breakvar')
-        except:
+        except Exception:  # FIXME: catch something specific
             het = np.array([[np.nan]*2])
         try:
             lb = self.test_serial_correlation(method='ljungbox')
-        except:
+        except Exception:  # FIXME: catch something specific
             lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
         try:
             jb = self.test_normality(method='jarquebera')
-        except:
+        except Exception:  # FIXME: catch something specific
             jb = np.array([[np.nan]*4])
 
         # Create the tables
@@ -2748,13 +2755,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
             ('HQIC', ["%#5.3f" % self.hqic])]
-        if self.filter_results.filter_concentrated:
+        if (self.filter_results is not None and
+                self.filter_results.filter_concentrated):
             top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
-        format_str = lambda array: [
+        format_str = lambda array: [  # noqa:E731
             ', '.join(['{0:.2f}'.format(i) for i in array])
         ]
         diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
@@ -2913,7 +2921,6 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-        self.table = to_include
         # OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
         # data = np.column_stack(list(to_include.values()))

@@ -12,7 +12,6 @@ import pytest
 from scipy.stats import norm
 import os
 
-import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.api import GLM
@@ -20,15 +19,7 @@ from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-import pytest
-
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
+from numpy.testing import assert_equal, assert_raises, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -160,7 +151,7 @@ def test_glm(constraints=None):
 
     # Regression coefficients, standard errors, and estimated scale
     assert_allclose(res.params, res_glm.params)
-    assert_allclose(res.bse, res_glm.bse)
+    assert_allclose(res.bse, res_glm.bse, atol=1e-6)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
     # the called the ML estimator and sometimes (e.g. later in section 5)
     # denoted \tilde \sigma_*^2
@@ -265,7 +256,7 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plots(close_figures):
     exog = add_constant(dta[['m1', 'pop']])
     mod = RecursiveLS(endog, exog)

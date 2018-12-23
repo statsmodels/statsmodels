@@ -38,17 +38,6 @@ try:
 except ImportError:
     has_cvxopt = False
 
-try:
-    from scipy.optimize import basinhopping
-    has_basinhopping = True
-except ImportError:
-    has_basinhopping = False
-
-try:
-    from scipy.optimize._trustregion_dogleg import _minimize_dogleg
-    has_dogleg = True
-except ImportError:
-    has_dogleg = False
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -59,7 +48,21 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-class CheckModelResults(object):
+
+class CheckModelMixin(object):
+    # Assertions about the Model object, as opposed to the Results
+    # Assumes that mixed-in class implements:
+    #   res1
+
+    def test_fit_regularized_invalid_method(self):
+        # GH#5224 check we get ValueError when passing invalid "method" arg
+        model = self.res1.model
+
+        with pytest.raises(ValueError, match=r'is not supported, use either'):
+            model.fit_regularized(method="foo")
+
+
+class CheckModelResults(CheckModelMixin):
     """
     res2 should be the test results from RModelWrap
     or the results as defined in model_results_data
@@ -425,22 +428,17 @@ class TestProbitNCG(CheckBinaryResults):
         # converges close enough but warnflag is 2 for precision loss
 
 
-@pytest.mark.skipif(not has_basinhopping, reason='Skipped TestProbitBasinhopping '
-                                                 'since basinhopping solver is '
-                                                 'not available')
 class TestProbitBasinhopping(CheckBinaryResults):
 
     @classmethod
     def setup_class(cls):
-        if not has_basinhopping:
-            pytest.skip("Skipped TestProbitBasinhopping since"
-                            " basinhopping solver is not available")
-        data = sm.datasets.spector.load()
+        data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
+        np.random.seed(1)
         cls.res1 = fit(method="basinhopping", disp=0, niter=5,
                         minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
@@ -462,10 +460,6 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
 
     @classmethod
     def setup_class(cls):
-        if not has_dogleg:
-            pytest.skip("Skipped TestProbitMinimizeDogleg since "
-                            "dogleg method is not available")
-
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -2397,8 +2391,3 @@ def test_unchanging_degrees_of_freedom():
     # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -88,9 +88,9 @@ _init_doc = r"""
     ident : array-like
         Array of labels showing which random terms (columns of
         `exog_vc`) have a common variance.
-    vc_p : float
+    vcp_p : float
         Prior standard deviation for variance component parameters
-        (the prior standard deviation of log(s) is vc_p, where s is
+        (the prior standard deviation of log(s) is vcp_p, where s is
         the standard deviation of a random effect).
     fe_p : float
         Prior standard deviation for fixed effects parameters.
