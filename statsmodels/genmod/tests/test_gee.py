@@ -597,10 +597,8 @@ class TestGEE(object):
         L = np.asarray([[0, 1, 0, 0], [0, 0, 1, 0]])
         R = np.zeros(2)
         mod_lr = GEE(endog, exog, group, constraint=(L, R), cov_struct=cov_struct())
-        res_lr = mod_lr.fit()
+        _ = mod_lr.fit()
 
-        family = Gaussian()
-        va = Independence()
         mod_sub = GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
         mod = GEE(endog, exog, group, cov_struct=cov_struct())
