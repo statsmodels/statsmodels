@@ -782,10 +782,10 @@ class GEE(base.Model):
         if self.exog.shape[0] != submod.exog.shape[0]:
             msg = "Model and submodel have different numbers of cases."
             warnings.warn(msg)
-        if type(self.family) is not type(submod.family):
+        if not isinstance(self.family, type(submod.family)):
             msg = "Model and submodel have different families."
             warnings.warn(msg)
-        if type(self.cov_struct) is not type(submod.cov_struct):
+        if not isinstance(self.cov_struct, type(submod.cov_struct)):
             msg = "Model and submodel have different covariance structures."
             warnings.warn(msg)
         if hasattr(self, "weights") != hasattr(submod, "weights"):
