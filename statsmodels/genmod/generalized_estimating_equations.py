@@ -29,6 +29,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 import patsy
+from numpy.testing import assert_array_equal
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -784,7 +785,7 @@ class GEE(base.Model):
         if not isinstance(self.cov_struct, type(submod.cov_struct)):
             msg = "Model and submodel have different covariance structures."
             warnings.warn(msg)
-        if np.any(self.weights != submod.weights):
+        if not np.equal(self.weights, submod.weights).all():
             msg = "Model and submodel should have the same weights."
             warnings.warn(msg)
 
