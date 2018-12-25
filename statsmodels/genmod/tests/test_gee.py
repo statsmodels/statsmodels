@@ -14,7 +14,8 @@ import os
 import numpy as np
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_)
+                           assert_array_less, assert_raises, assert_warns,
+                           assert_)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
@@ -583,8 +584,7 @@ class TestGEE(object):
             assert_array_less(np.abs(wald_p - score_p), 0.02)
 
     @pytest.mark.parametrize("cov_struct", [sm.cov_struct.Independence, sm.cov_struct.Exchangeable])
-    def test_scoretest_submodel(self, cov_struct):
-        # Regression tests
+    def test_compare_score_test(self, cov_struct):
 
         np.random.seed(6432)
         n = 200  # Must be divisible by 4
@@ -607,6 +607,46 @@ class TestGEE(object):
             mod_lr.score_test_results["statistic"])
         assert_almost_equal(score_results["p-value"],
             mod_lr.score_test_results["p-value"])
+        assert_almost_equal(score_results["df"],
+            mod_lr.score_test_results["df"])
+
+    def test_compare_score_test_warnings(self):
+
+        np.random.seed(6432)
+        n = 200  # Must be divisible by 4
+        exog = np.random.normal(size=(n, 4))
+        group = np.kron(np.arange(n / 4), np.ones(4))
+        exog_sub = exog[:, [0, 3]]
+        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+
+        # Mismatched cov_struct
+        with assert_warns(UserWarning):
+            mod_sub = GEE(endog, exog_sub, group, cov_struct=sm.cov_struct.Exchangeable())
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group, cov_struct=sm.cov_struct.Independence())
+            score_results = mod.compare_score_test(res_sub)
+
+        # Mismatched family
+        with assert_warns(UserWarning):
+            mod_sub = GEE(endog, exog_sub, group, family=sm.families.Gaussian())
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group, family=sm.families.Poisson())
+            score_results = mod.compare_score_test(res_sub)
+
+        # Mismatched size
+        with assert_raises(Exception):
+            mod_sub = GEE(endog, exog_sub, group)
+            res_sub = mod_sub.fit()
+            mod = GEE(endog[0:100], exog[:100, :], group[0:100])
+            score_results = mod.compare_score_test(res_sub)
+
+        # Mismatched weights
+        with assert_warns(UserWarning):
+            w = np.random.uniform(size=n)
+            mod_sub = GEE(endog, exog_sub, group, weights=w)
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group)
+            score_results = mod.compare_score_test(res_sub)
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types

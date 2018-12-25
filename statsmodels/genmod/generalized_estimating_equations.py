@@ -743,15 +743,14 @@ class GEE(base.Model):
         submodel : GEEResults instance
             A fitted GEE model that is a submodel of this model.
         tol : float
-            A tolerance parameter used when assessing whether
-            the submodel is actually a submodel of this model.
+            A tolerance parameter used to match columns of the
+            submodel and the parent model.
 
         Returns
         -------
-        A dictionary with keys "statistic", "p-value", and
-        "df", containing the score test statistic, its chi^2
-        p-value, and the degrees of freedom used to compute the
-        p-value.
+        A dictionary with keys "statistic", "p-value", and "df",
+        containing the score test statistic, its chi^2 p-value,
+        and the degrees of freedom used to compute the p-value.
 
         Notes
         -----
@@ -760,14 +759,11 @@ class GEE(base.Model):
         fitted GEE.
 
         This method performs the same score test as can be obtained by
-        fitting the GEE with a linear constraint.  The interface for this
-        method is easier to use when testing a submodel whose design
-        matrix is a submatrix of the parent model.  This method is also
-        more convenient to use when the models have been fit using formulas.
-        On the other hand, the approach using constraints may be a better
-        option when the submodel is obtained by imposing linear equality
-        constraints that are not simply equating a subset of the parameters
-        to zero.
+        fitting the GEE with a linear constraint and calling `score_test`
+        on the results.  The interface for this method is easier to use
+        when testing a submodel whose design matrix is a submatrix of the
+        parent model.  This method is also more convenient to use when the
+        models have been fit using formulas.
 
         References
         ----------
@@ -781,14 +777,14 @@ class GEE(base.Model):
         submod = submodel.model
         if self.exog.shape[0] != submod.exog.shape[0]:
             msg = "Model and submodel have different numbers of cases."
-            warnings.warn(msg)
+            raise ValueError(msg)
         if not isinstance(self.family, type(submod.family)):
             msg = "Model and submodel have different families."
             warnings.warn(msg)
         if not isinstance(self.cov_struct, type(submod.cov_struct)):
             msg = "Model and submodel have different covariance structures."
             warnings.warn(msg)
-        if hasattr(self, "weights") != hasattr(submod, "weights"):
+        if np.any(self.weights != submod.weights):
             msg = "Model and submodel should have the same weights."
             warnings.warn(msg)
 
@@ -1679,9 +1675,11 @@ class GEEResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        See also GEE.score_test for an alternative way to perform a score
-        test based on a submodel.  The GEE.score_test approach is generally
-        easier to use, but slightly less general.
+        See also GEE.compare_score_test for an alternative way to perform
+        a score test.  GEEResults.score_test is more general, in that it
+        supports testing arbitrary linear equality constraints.   However
+        GEE.compare_score_test might be easier to use when comparing
+        two explicit models.
 
         References
         ----------
