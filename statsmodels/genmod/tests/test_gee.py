@@ -602,7 +602,7 @@ class TestGEE(object):
         mod_sub = GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
         mod = GEE(endog, exog, group, cov_struct=cov_struct())
-        score_results = mod.score_test(res_sub)
+        score_results = mod.compare_score_test(res_sub)
         assert_almost_equal(score_results["statistic"],
             mod_lr.score_test_results["statistic"])
         assert_almost_equal(score_results["p-value"],

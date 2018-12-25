@@ -734,7 +734,7 @@ class GEE(base.Model):
             return [np.array(array[self.group_indices[k], :])
                     for k in self.group_labels]
 
-    def score_test(self, submodel, tol=1e-6):
+    def compare_score_test(self, submodel, tol=1e-6):
         """
         Perform a score test for the given submodel against this model.
 
