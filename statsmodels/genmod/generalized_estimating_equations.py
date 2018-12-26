@@ -29,7 +29,6 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 import patsy
-from numpy.testing import assert_array_equal
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)

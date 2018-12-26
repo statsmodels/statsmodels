@@ -624,21 +624,21 @@ class TestGEE(object):
             mod_sub = GEE(endog, exog_sub, group, cov_struct=sm.cov_struct.Exchangeable())
             res_sub = mod_sub.fit()
             mod = GEE(endog, exog, group, cov_struct=sm.cov_struct.Independence())
-            score_results = mod.compare_score_test(res_sub)
+            _ = mod.compare_score_test(res_sub)
 
         # Mismatched family
         with assert_warns(UserWarning):
             mod_sub = GEE(endog, exog_sub, group, family=sm.families.Gaussian())
             res_sub = mod_sub.fit()
             mod = GEE(endog, exog, group, family=sm.families.Poisson())
-            score_results = mod.compare_score_test(res_sub)
+            _ = mod.compare_score_test(res_sub)
 
         # Mismatched size
         with assert_raises(Exception):
             mod_sub = GEE(endog, exog_sub, group)
             res_sub = mod_sub.fit()
             mod = GEE(endog[0:100], exog[:100, :], group[0:100])
-            score_results = mod.compare_score_test(res_sub)
+            _ = mod.compare_score_test(res_sub)
 
         # Mismatched weights
         with assert_warns(UserWarning):
@@ -646,7 +646,7 @@ class TestGEE(object):
             mod_sub = GEE(endog, exog_sub, group, weights=w)
             res_sub = mod_sub.fit()
             mod = GEE(endog, exog, group)
-            score_results = mod.compare_score_test(res_sub)
+            _ = mod.compare_score_test(res_sub)
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types
