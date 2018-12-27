@@ -40,7 +40,6 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -197,7 +196,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -214,7 +213,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -276,7 +275,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = np_matrix_rank(np.diag(singular_values))
+                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -291,7 +290,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np_matrix_rank(R)
+                self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
