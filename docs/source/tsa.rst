@@ -112,6 +112,9 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 
 .. currentmodule:: statsmodels.tsa
 
+The basic ARIMA model and results classes that should be the starting point for
+for most users are:
+
 .. autosummary::
    :toctree: generated/
 
@@ -119,7 +122,19 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
    arima_model.ARMAResults
    arima_model.ARIMA
    arima_model.ARIMAResults
+
+Some advanced underlying low-level classes and functions that can be used to
+compute the log-likelihood function for ARMA-type models include (note that
+these are rarely needed by end-users):
+
+.. autosummary::
+   :toctree: generated/
+
    kalmanf.kalmanfilter.KalmanFilter
+   innovations.arma_loglike
+   innovations.arma_loglikeobs
+   innovations.arma_score
+   innovations.arma_scoreobs
 
 
 Exponential Smoothing
