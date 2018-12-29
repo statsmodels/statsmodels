@@ -553,11 +553,12 @@ class ProcessMLE(base.LikelihoodModel):
             for i, _ in enumerate(ix):
                 jq = np.sum(jacs[i] * qm)
                 score[pm + pv:pm + pv + ps] += jq * smx[i, :]
-                score[pm + pv:pm + pv + ps] -= 0.5 * np.sum(jacs[i] * cmi) * smx[i, :]
+                score[pm + pv:pm + pv + ps] -= (
+                         0.5 * np.sum(jacs[i] * cmi) * smx[i, :])
 
             # The derivatives with respect to the standard deviation parameters
             sno = no_i[:, None]**2 * exog_noise_i
-            score[pm + pv + ps:] -=  np.dot(cmi.flat[::cm.shape[0] + 1], sno)
+            score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1], sno)
             bm = np.dot(cmi, np.dot(rx, cmi))
             score[pm + pv + ps:] += np.dot(bm.flat[::bm.shape[0] + 1], sno)
 
