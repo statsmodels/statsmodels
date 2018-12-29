@@ -37,30 +37,30 @@ class ProcessCovariance(object):
 
     An implementation of this class is based on a positive definite
     correlation function h that maps real numbers to the interval [0,
-    1], such as the Gaussian (squared exponential) correlation function
-    :math:`\exp(-x^2)`.  It also depends on a positive scaling function
-    `s` and a positive smoothness function `u`.  Following Paciorek et
-    al, the covariance between observations with index `i` and `j` is
-    given by:
+    1], such as the Gaussian (squared exponential) correlation
+    function :math:`\exp(-x^2)`.  It also depends on a positive
+    scaling function `s` and a positive smoothness function `u`.
+    Following Paciorek et al, the covariance between observations with
+    index `i` and `j` is given by:
 
     .. math::
 
       s[i] \cdot s[j] \cdot h(|time[i] - time[j]| / \sqrt{(u[i] + u[j]) /
       2}) \cdot \frac{u[i]^{1/4}u[j]^{1/4}}{\sqrt{(u[i] + u[j])/2}}
 
-    The ProcessMLE class allows linear models with this
-    covariance structure to be fit using maximum likelihood (ML), which
-    is equivalent to generalized least squares (GLS) in this setting.
+    The ProcessMLE class allows linear models with this covariance
+    structure to be fit using maximum likelihood (ML), which is
+    equivalent to generalized least squares (GLS) in this setting.
 
     The mean and covariance parameters of the model are fit jointly.
     The mean, scaling, and smoothing parameters can be linked to
-    covariates.  The mean parameters are linked linearly, and  the
-    scaling and smoothing parameters use an exponential link to preserve
-    positivity.
+    covariates.  The mean parameters are linked linearly, and the
+    scaling and smoothing parameters use an exponential link to
+    preserve positivity.
 
-    The reference of Paciorek et al. below provides more details.  Note
-    that here we only implement the 1-dimensional version of their
-    approach.
+    The reference of Paciorek et al. below provides more details.
+    Note that here we only implement the 1-dimensional version of
+    their approach.
 
     References
     ----------
@@ -171,7 +171,8 @@ class GaussianCovariance(ProcessCovariance):
         return jsc, jsm
 
 
-def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups):
+def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time,
+                groups):
 
     v = [
         len(endog),
@@ -200,17 +201,18 @@ class ProcessMLE(base.LikelihoodModel):
     process.  The data are grouped, with each group consisting of
     observations on an independent Gaussian process.
 
-    The mean structure is linear.  The covariance structure is non-stationary,
-    and is defined parametrically through 'scaling', and 'smoothing' parameters.
-    The covariance between two observations in the same group is a function of
-    the distance between the time values of the two observations.
-    The scaling and smoothing parameters can be linked to covariates.
+    The mean structure is linear.  The covariance structure is
+    non-stationary, and is defined parametrically through 'scaling',
+    and 'smoothing' parameters.  The covariance between two
+    observations in the same group is a function of the distance
+    between the time values of the two observations.  The scaling and
+    smoothing parameters can be linked to covariates.
 
     The observed data are modeled as the sum of the Gaussian process
     realization and independent white noise.  The standard deviation
     of the white noise can be linked to covariates.
 
-    The data should be provided in "long form", with a group label to
+    The data should be provided in 'long form', with a group label to
     indicate which observations belong to the same group.  Observations
     in different groups are always independent.
 
@@ -804,7 +806,6 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
                                      self.smooth_params,
                                      scale_data,
                                      smooth_data)
-
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
 

@@ -8,6 +8,7 @@ import collections
 import statsmodels.tools.numdiff as nd
 from numpy.testing import assert_allclose, assert_equal
 
+
 def model1():
     mn_par = np.r_[1, 0, -1, 0]
     sc_par = np.r_[1, 1]
@@ -15,6 +16,7 @@ def model1():
     no_par = np.r_[0.25, 0.25]
 
     return mn_par, sc_par, sm_par, no_par
+
 
 def setup1(n, get_model):
 
@@ -58,6 +60,7 @@ def setup1(n, get_model):
 
     return y, x_mean, x_sc, x_sm, x_no, time, groups
 
+
 def run_arrays(n, get_model):
 
     y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model)
@@ -65,6 +68,7 @@ def run_arrays(n, get_model):
     preg = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
 
     return preg.fit()
+
 
 def test_arrays():
 
@@ -80,7 +84,8 @@ def test_arrays():
     assert_allclose(f.params, epar, atol=0.3, rtol=0.3)
 
     # Test the fitted covariance matrix
-    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :], mod.exog_smooth[0:5, :])
+    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :],
+                      mod.exog_smooth[0:5, :])
     assert_allclose(cv, cv.T)  # Check symmetry
     a, _ = np.linalg.eig(cv)
     assert_equal(a > 0, True)  # Check PSD
@@ -133,6 +138,7 @@ def run_formula(n, get_model):
 
     return f, df
 
+
 def test_formulas():
 
     np.random.seed(8789)
@@ -140,7 +146,7 @@ def test_formulas():
     f, df = run_formula(1000, model1)
     mod = f.model
 
-    f.summary()  # Smoke test
+    f.summary()  # Smoke test
 
     # Compare the parameter estimates to population values.
     epar = np.concatenate(model1())
@@ -148,9 +154,9 @@ def test_formulas():
 
     # Test the fitted covariance matrix
     exog_scale = pd.DataFrame(mod.exog_scale[0:5, :],
-                    columns=["xsc1", "xsc2"])
+                              columns=["xsc1", "xsc2"])
     exog_smooth = pd.DataFrame(mod.exog_smooth[0:5, :],
-                    columns=["xsm1", "xsm2"])
+                               columns=["xsm1", "xsm2"])
     cv = f.covariance(mod.time[0:5], exog_scale, exog_smooth)
     assert_allclose(cv, cv.T)
     a, _ = np.linalg.eig(cv)
