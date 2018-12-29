@@ -333,24 +333,24 @@ class DescrStats(object):
         self.data = self.data.select_dtypes(include=numerics)
 
     @OneTimeProperty
-    def obs(self):
+    def nobs(self):
         '''return number of observations'''
-        return self.data.shape[0]
+        return self.data.count()
 
     @OneTimeProperty
     def mean(self):
         '''mean of the data'''
-        return np.mean(self.data).values
+        return np.mean(self.data)
 
     @OneTimeProperty
     def var(self):
         '''variance of the data'''
-        return np.var(self.data, axis=0).values
+        return np.var(self.data, axis=0)
 
     @OneTimeProperty
     def std(self):
         '''standard deviation of the data'''
-        return np.std(self.data, axis=0).values
+        return np.std(self.data, axis=0)
 
 
     def summary_frame(self, stats='basic'):
@@ -368,15 +368,15 @@ class DescrStats(object):
         '''
         #TODO: Add support for all and list of stats
         if stats == 'basic':
-            stats = ['obs', 'mean', 'std', 'var']
-            #TODO: Hack around to make this simpler
-            obs = self.obs
+            stats = ['nobs', 'mean', 'std', 'var']
+            nobs = self.nobs
             mean = self.mean
             std = self.std
             var = self.var
 
-        return pd.DataFrame(data=[[obs, mean, std, var]],
-                            columns=stats)
+        df = pd.concat([nobs, mean, std, var], keys=stats, axis=1).T.round(3)
+        df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
+        return df
 
 if __name__ == "__main__":
     #unittest.main()
