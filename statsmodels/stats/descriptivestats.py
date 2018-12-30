@@ -1,10 +1,10 @@
 from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
 import numpy as np
+import pandas as pd
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import nottest
-import pandas as pd
-from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.tools.decorators import nottest, OneTimeProperty
+
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -319,6 +319,23 @@ class DescrStats(object):
     ----------
     dataset : ndarray or DataFrame
         dataset for descriptive statistics.
+
+    Examples
+    --------
+
+    >>> from descriptivestats import DescrStats
+    >>> import numpy as np
+    >>> np.random.seed(0)
+    >>> data = np.random.rand(3,4)
+    >>> stats = DescrStats(data)
+    >>> stats.mean.values
+    array([0.64537702, 0.58150833, 0.61069188, 0.6551837 ])
+    >>> stats.summary_frame()
+          Col 0  Col 1  Col 2  Col 3
+    nobs  3.000  3.000  3.000  3.000
+    mean  0.645  0.582  0.611  0.655
+    std   0.231  0.143  0.145  0.167
+    var   0.053  0.020  0.021  0.028
     '''
     def __init__(self, data):
         '''convert data to pandas dataframe and extract the
@@ -352,6 +369,10 @@ class DescrStats(object):
         '''standard deviation of the data'''
         return np.std(self.data, axis=0)
 
+    @OneTimeProperty
+    def percentiles(self, percent):
+        '''return percentile for a given percent'''
+        return stats.scoreatpercentile(self.data, percent)
 
     def summary_frame(self, stats='basic'):
         '''collect all the stats and return as a DataFrame
@@ -378,6 +399,34 @@ class DescrStats(object):
         df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
         return df
 
+    ## BUG: summary returning NoneType object for some values
+    def summary(self, stats='basic'):
+        '''summarize the descriptive statistics
+
+        Parameters
+        ----------
+        stats: str
+            The desired statistics, Accepts 'basic' or 'all' or a list.
+               'basic' = ('obs', 'mean', 'std', 'var')
+
+        Returns
+        -------
+        smry : SimpleTable
+        '''
+        df = self.summary_frame()
+        data = df.values
+        header = df.columns.tolist()
+        stubs = df.index.tolist()
+        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))
+        title = "Summary Statistics"
+
+        table = SimpleTable(data,
+                            header,
+                            stubs,
+                            title=title,
+                            txt_fmt = part_fmt)
+        return table
+
 if __name__ == "__main__":
     #unittest.main()
 
@@ -388,6 +437,7 @@ if __name__ == "__main__":
     data = pd.DataFrame(data5)
     t0 = DescrStats(data5)
     df = t0.summary_frame()
+    print(t0.summary())
 
     data4 = np.array([[1,2,3,4,5,6],
                       [6,5,4,3,2,1],

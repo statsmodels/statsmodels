@@ -91,7 +91,7 @@ class DescrStatsW(object):
     array([  1.58414212e-12,   3.87842808e-02,   6.02752170e-01])
     44.0
 
-    #if weiqhts are integers, then asrepeats can be used
+    # if weiqhts are integers, then asrepeats can be used
 
     >>> x1r = d1.asrepeats()
     >>> x1r.shape
