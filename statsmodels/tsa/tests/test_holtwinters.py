@@ -241,7 +241,7 @@ class TestHoltWinters(object):
                             [61.34, 37.24, 46.84, 51.01, 64.47, 39.78, 49.64, 53.90],
                             2)
         assert_almost_equal(fit2.forecast(8),
-                            [60.97, 36.99, 46.71, 51.48, 64.46, 39.02, 49.29, 54.32],
+                            [61.69, 37.37, 47.22, 52.03, 65.08, 39.34, 49.72, 54.79],
                             2)
         fit5 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     trend='mul', seasonal='add'
