@@ -766,7 +766,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         l0 = self._l0
         b0 = self._b0
         if seasoning:
-            l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
+            l0 = y[:m].mean() if l0 is None else l0
             if b0 is None and trending:
                 lead, lag = y[m:m + m], y[:m]
                 if trend == 'mul':
