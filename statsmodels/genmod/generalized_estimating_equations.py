@@ -2409,7 +2409,7 @@ def _score_test_submodel(par, sub):
     u, s, vt = np.linalg.svd(x1, 0)
 
     # Get the orthogonal complement of col(x2) in col(x1).
-    a, b, ct = np.linalg.svd(x2, 0)
+    a, _, _ = np.linalg.svd(x2, 0)
     a = u - np.dot(a, np.dot(a.T, u))
     x2c, sb, _ = np.linalg.svd(a, 0)
     x2c = x2c[:, sb > 1e-12]
