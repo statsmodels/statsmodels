@@ -25,7 +25,7 @@ import warnings
 
 
 class ProcessCovariance(object):
-    """
+    r"""
     A covariance model for linear regression with dependent data.
 
     This class represents (possibly) non-stationary covariance models
