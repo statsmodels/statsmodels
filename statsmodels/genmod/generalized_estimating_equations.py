@@ -734,7 +734,7 @@ class GEE(base.Model):
             return [np.array(array[self.group_indices[k], :])
                     for k in self.group_labels]
 
-    def compare_score_test(self, submodel, tol=1e-6):
+    def compare_score_test(self, submodel):
         """
         Perform a score test for the given submodel against this model.
 
@@ -742,9 +742,6 @@ class GEE(base.Model):
         ----------
         submodel : GEEResults instance
             A fitted GEE model that is a submodel of this model.
-        tol : float
-            A tolerance parameter used to match columns of the
-            submodel and the parent model.
 
         Returns
         -------
@@ -760,10 +757,7 @@ class GEE(base.Model):
 
         This method performs the same score test as can be obtained by
         fitting the GEE with a linear constraint and calling `score_test`
-        on the results.  The interface for this method is easier to use
-        when testing a submodel whose design matrix is a submatrix of the
-        parent model.  This method is also more convenient to use when the
-        models have been fit using formulas.
+        on the results.
 
         References
         ----------
@@ -779,10 +773,10 @@ class GEE(base.Model):
             msg = "Model and submodel have different numbers of cases."
             raise ValueError(msg)
         if not isinstance(self.family, type(submod.family)):
-            msg = "Model and submodel have different families."
+            msg = "Model and submodel have different GLM families."
             warnings.warn(msg)
         if not isinstance(self.cov_struct, type(submod.cov_struct)):
-            msg = "Model and submodel have different covariance structures."
+            msg = "Model and submodel have different GEE covariance structures."
             warnings.warn(msg)
         if not np.equal(self.weights, submod.weights).all():
             msg = "Model and submodel should have the same weights."
@@ -790,20 +784,14 @@ class GEE(base.Model):
 
         # Get the positions of the submodel variables in the
         # parent model
-        ii = _score_test_submodel(self, submodel.model, tol)
-        if ii is None:
+        qm, qc = _score_test_submodel(self, submodel.model)
+        if qm is None:
             msg = "The provided model is not a submodel."
             raise ValueError(msg)
-        s = set(ii)
-
-        # The columns in the parent model that are not in the
-        # submodel
-        jj = [j for j in range(self.exog.shape[1]) if j not in s]
 
         # Embed the submodel params into a params vector for the
         # parent model
-        params_ex = np.zeros(self.exog.shape[1])
-        params_ex[ii] = submodel.params
+        params_ex = np.dot(qm, submodel.params)
 
         # Attempt to preserve the state of the parent model
         cov_struct_save = self.cov_struct
@@ -829,16 +817,16 @@ class GEE(base.Model):
         _, ncov1, cmat = self._covmat()
         scale = self.estimate_scale()
         cmat = cmat / scale ** 2
-        score2 = score[jj] / scale
+        score2 = np.dot(qc.T, score) / scale
 
         amat = np.linalg.inv(ncov1)
 
-        bmat_11 = cmat[ii, :][:, ii]
-        bmat_22 = cmat[jj, :][:, jj]
-        bmat_12 = cmat[ii, :][:, jj]
+        bmat_11 = np.dot(qm.T, np.dot(cmat, qm))
+        bmat_22 = np.dot(qc.T, np.dot(cmat, qc))
+        bmat_12 = np.dot(qm.T, np.dot(cmat, qc))
 
-        amat_11 = amat[ii, :][:, ii]
-        amat_12 = amat[ii, :][:, jj]
+        amat_11 = np.dot(qm.T, np.dot(amat, qm))
+        amat_12 = np.dot(qm.T, np.dot(amat, qc))
 
         score_cov = bmat_22 - np.dot(amat_12.T,
                                      np.linalg.solve(amat_11, bmat_12))
@@ -2389,27 +2377,54 @@ class OrdinalGEEResults(GEEResults):
         return fig
 
 
-def _score_test_submodel(par, sub, tol):
+def _score_test_submodel(par, sub):
     """
-    Identify the indices in the parent model exog corresponding
-    to the columns of the submodel exog.
+    Return transformation matrices for design matrices.
+
+    Parameters
+    ----------
+    par : instance
+        The parent model
+    sub : instance
+        The sub-model
+
+    Returns
+    -------
+    qm : array-like
+        Matrix mapping the design matrix of the parent to the design matrix
+        for the sub-model.
+    qc : array-like
+        Matrix mapping the design matrix of the parent to the orthogonal
+        complement of the columnspace of the submodel in the columnspace
+        of the parent.
+
+    Notes
+    -----
+    Returns None, None if the provided submodel is not actually a submodel.
     """
 
     x1 = par.exog
     x2 = sub.exog
 
-    cp = np.dot(x1.T, x2)
-    s1 = np.sqrt(np.sum(x1**2, 0))
-    s2 = np.sqrt(np.sum(x2**2, 0))
-    cp /= np.outer(s1, s2)
+    u, s, vt = np.linalg.svd(x1, 0)
 
-    ii = np.argmax(cp, 0)
+    # Get the orthogonal complement of col(x2) in col(x1).
+    a, b, ct = np.linalg.svd(x2, 0)
+    a = u - np.dot(a, np.dot(a.T, u))
+    x2c, sb, _ = np.linalg.svd(a, 0)
+    x2c = x2c[:, sb > 1e-12]
 
-    if np.abs(x1[:, ii] - x2).max() > tol:
-        return None
+    # x1 * qm = x2
+    qm = np.dot(vt.T, np.dot(u.T, x2) / s[:, None])
 
-    return ii
+    e = np.max(np.abs(x2 - np.dot(x1, qm)))
+    if e > 1e-8:
+        return None, None
 
+    # x1 * qc = x2c
+    qc = np.dot(vt.T, np.dot(u.T, x2c) / s[:, None])
+
+    return qm, qc
 
 class OrdinalGEEResultsWrapper(GEEResultsWrapper):
     pass
