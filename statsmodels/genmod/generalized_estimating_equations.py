@@ -1088,7 +1088,8 @@ class GEE(base.Model):
     def _starting_params(self):
 
         model = GLM(self.endog, self.exog, family=self.family,
-                       offset=self._offset_exposure, weights=self.weights)
+                       offset=self._offset_exposure,
+                       freq_weights=self.weights)
         result = model.fit()
         return result.params
 
