@@ -919,6 +919,7 @@ class Summary(object):
         latex = summary_return(self.tables, return_fmt='latex')
         if not self.extra_txt is None:
             latex = latex + '\n\n' + self.extra_txt.replace('\n', ' \\newline\n ')
+            latex = latex.replace("$$","")
         return latex
 
     def as_csv(self):
