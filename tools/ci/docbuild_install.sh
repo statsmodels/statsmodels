@@ -4,8 +4,8 @@
 echo sudo apt-get install graphviz -qq
 sudo apt-get install graphviz -qq
 # Install required packages and R
-echo conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv --yes --quiet
-conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv --yes --quiet
+echo conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
+conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
 # doctr and pdr
-echo pip install colorama doctr pandas-datareader rpy2
-pip install colorama doctr pandas-datareader rpy2
+echo pip install colorama doctr pandas-datareader simplegeneric
+pip install colorama doctr pandas-datareader simplegeneric
