@@ -399,8 +399,7 @@ class DescrStats(object):
 
         df = pd.concat([nobs, mean, std, var], keys=stats, axis=1).T.round(3)
         df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
-        summary_frame = pd.concat([df, per])
-        
+        summary_frame = pd.concat([df, per])        
         return summary_frame
 
     def summary(self, stats='basic'):
