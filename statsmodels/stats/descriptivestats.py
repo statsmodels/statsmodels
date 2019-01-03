@@ -1,7 +1,7 @@
-from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
 import numpy as np
 import pandas as pd
 from scipy import stats
+from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest, OneTimeProperty
 
@@ -367,7 +367,7 @@ class DescrStats(object):
     def percentiles(self):
         '''return percentile for a given percent'''
         perdict = dict(('perc_%02d' % per, self.data.quantile(per/100)) for per in
-             [1,5,10,25,50,75,90,95,99])
+                       [1, 5, 10, 25, 50, 75, 90, 95, 99])
 
         perdicts = pd.concat([per for per in perdict.values()],
                                 keys=list(perdict.keys()),
@@ -399,7 +399,7 @@ class DescrStats(object):
 
         df = pd.concat([nobs, mean, std, var], keys=stats, axis=1).T.round(3)
         df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
-        summary_frame = pd.concat([df, per])        
+        summary_frame = pd.concat([df, per])
         return summary_frame
 
     def summary(self, stats='basic'):
@@ -419,7 +419,7 @@ class DescrStats(object):
         data = df.values
         header = df.columns.tolist()
         stubs = df.index.tolist()
-        part_fmt = dict(data_fmts = ["%#8.3g"])
+        part_fmt = dict(data_fmts=["%#8.3g"])
         title = "Summary Statistics"
 
         table = SimpleTable(data,
