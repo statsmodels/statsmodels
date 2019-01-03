@@ -7,5 +7,5 @@ sudo apt-get install graphviz -qq
 echo conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
 conda install --channel conda-forge/label/gcc7 sphinx ipython jupyter nbconvert numpydoc tzlocal r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
 # doctr and pdr
-echo pip install colorama doctr pandas-datareader simplegeneric
-pip install colorama doctr pandas-datareader simplegeneric
+echo pip install doctr pandas-datareader simplegeneric
+pip install doctr pandas-datareader simplegeneric
