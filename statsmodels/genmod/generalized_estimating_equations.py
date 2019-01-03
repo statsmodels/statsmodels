@@ -1357,6 +1357,164 @@ class GEE(base.Model):
 
     fit.__doc__ = _gee_fit_doc
 
+
+    def _update_regularized(self, params, pen_wt, scad_param=3.7):
+
+        eps = 1e-6
+
+        sn, hm = 0, 0
+
+        for i in range(self.num_group):
+
+            expval, lpr = self.cached_means[i]
+            resid = self.endog_li[i] - expval
+            sdev = np.sqrt(self.family.variance(expval))
+
+            ex = self.exog_li[i] * sdev[:, None]**2
+            rslt = self.cov_struct.covariance_matrix_solve(
+                           expval, i, sdev, (resid, ex))
+            sn0 = rslt[0]
+            sn += np.dot(ex.T, sn0)
+            hm0 = rslt[1]
+            hm += np.dot(ex.T, hm0)
+
+        sn /= self.num_group
+
+        ap = np.abs(params)
+        en = pen_wt * np.clip(scad_param * pen_wt - ap, 0, np.inf) * (ap > pen_wt)
+        en /= (scad_param - 1) * pen_wt
+        en += pen_wt * (ap <= pen_wt)
+        en /= eps + ap
+
+        hm.flat[::hm.shape[0] + 1] += self.num_group * en
+        sn -= self.num_group * en * params
+
+        return np.linalg.solve(hm, sn), hm
+
+    def _regularized_covmat(self, mean_params):
+
+        self.update_cached_means(mean_params)
+
+        ma = 0
+
+        for i in range(self.num_group):
+
+            expval, lpr = self.cached_means[i]
+            resid = self.endog_li[i] - expval
+            sdev = np.sqrt(self.family.variance(expval))
+            sresid = resid / sdev
+
+            ex = self.exog_li[i] * sdev[:, None]**2
+            rslt = self.cov_struct.covariance_matrix_solve(
+                           expval, i, sdev, (sresid,))
+            ma0 = np.dot(ex.T, rslt[0])
+            ma += np.outer(ma0, ma0)
+
+        return ma
+
+    def fit_regularized(self, pen_wt, scad_param=3.7, eps=1e-6,
+                        maxiter=400, ddof_scale=None, update_assoc=5,
+                        ctol=1e-4, ztol=1e-3):
+        """
+        Regularized estimation for GEE.
+
+        Parameters
+        ----------
+        pen_wt : float
+            The penalty weight (a non-negative scalar).
+        scad_param : float
+            Non-negative scalar determining the shape of the Scad
+            penalty.
+        eps : non-negative scalar
+            Numerical constant, see section 3.2 of Wang et al.
+        maxiter : integer
+            The maximum number of iterations.
+        ddof_scale : integer
+            Value to subtract from `nobs` when calculating the
+            denominator degrees of freedom for t-statistics, defaults
+            to the number of columns in `exog`.
+        update_assoc : integer
+            The dependence parameters are updated every `update_assoc`
+            iterations of the mean structure parameter updates.
+        ctol : float
+            Convergence criterion, default is based on section 3.1 of
+            Wang et al.
+        ztol : float
+            Coefficients smaller than this value are treated as
+            being zero, default is based on section 5 of Wang et al.
+
+        Returns
+        -------
+        GEEResults instance.  Note that not all methods of the results
+        class make sense when the model has been fit with regularization.
+
+        Notes
+        -----
+        This implementation assumes that the link is canonical.
+
+        References
+        ----------
+        Wang L, Zhou J, Qu A. (2012). Penalized generalized estimating
+        equations for high-dimensional longitudinal data analysis.
+        Biometrics. 2012 Jun;68(2):353-60. doi: 10.1111/j.1541-0420.2011.01678.x.
+        https://www.ncbi.nlm.nih.gov/pubmed/21955051
+        http://users.stat.umn.edu/~wangx346/research/GEE_selection.pdf
+        """
+
+        mean_params = np.zeros(self.exog.shape[1])
+        self.update_cached_means(mean_params)
+        converged = False
+        fit_history = {'params': []}
+
+        # Subtract this number from the total sample size when
+        # normalizing the scale parameter estimate.
+        if ddof_scale is None:
+            self.ddof_scale = self.exog.shape[1]
+        else:
+            if not ddof_scale >= 0:
+                raise ValueError(
+                    "ddof_scale must be a non-negative number or None")
+            self.ddof_scale = ddof_scale
+
+        for itr in range(maxiter):
+
+            update, hm = self._update_regularized(mean_params, pen_wt, scad_param)
+            if update is None:
+                msg = "Singular matrix encountered in regularized GEE update",
+                warnings.warn(msg, ConvergenceWarning)
+                break
+            if np.sqrt(np.sum(update**2)) < ctol:
+                converged = True
+                break
+            mean_params += update
+            fit_history['params'].append(mean_params.copy())
+            self.update_cached_means(mean_params)
+
+            if itr != 0 and (itr % update_assoc == 0):
+                self._update_assoc(mean_params)
+
+        if not converged:
+            msg = "GEE.fit_regularized did not converge"
+            warnings.warn(msg)
+
+        mean_params[np.abs(mean_params) < ztol] = 0
+
+        self._update_assoc(mean_params)
+        ma = self._regularized_covmat(mean_params)
+        cov = np.linalg.solve(hm, ma)
+        cov = np.linalg.solve(hm, cov.T)
+
+        # kwargs to add to results instance, need to be available in __init__
+        res_kwds = dict(cov_type="robust",
+                        cov_robust=cov)
+
+        scale = self.estimate_scale()
+        rslt = GEEResults(self, mean_params, cov, scale,
+                          regularized=True, attr_kwds=res_kwds)
+        rslt.fit_history = fit_history
+
+        return GEEResultsWrapper(rslt)
+
     def _handle_constraint(self, mean_params, bcov):
         """
         Expand the parameter estimate `mean_params` and covariance matrix
@@ -1567,7 +1725,8 @@ class GEEResults(base.LikelihoodModelResults):
         "using GEE.\n" + _gee_results_doc)
 
     def __init__(self, model, params, cov_params, scale,
-                 cov_type='robust', use_t=False, **kwds):
+                 cov_type='robust', use_t=False, regularized=False,
+                 **kwds):
 
         super(GEEResults, self).__init__(
             model, params, normalized_cov_params=cov_params,
