@@ -323,19 +323,13 @@ class DescrStats(object):
     Examples
     --------
 
-    >>> from descriptivestats import DescrStats
     >>> import numpy as np
     >>> np.random.seed(0)
     >>> data = np.random.rand(3,4)
     >>> stats = DescrStats(data)
     >>> stats.mean.values
-    array([0.64537702, 0.58150833, 0.61069188, 0.6551837 ])
     >>> stats.summary_frame()
-          Col 0  Col 1  Col 2  Col 3
-    nobs  3.000  3.000  3.000  3.000
-    mean  0.645  0.582  0.611  0.655
-    std   0.231  0.143  0.145  0.167
-    var   0.053  0.020  0.021  0.028
+    >>> print(stats.summary())
     '''
     def __init__(self, data):
         '''convert data to pandas dataframe and extract the
@@ -369,10 +363,17 @@ class DescrStats(object):
         '''standard deviation of the data'''
         return np.std(self.data, axis=0)
 
-    @OneTimeProperty
-    def percentiles(self, percent):
+    # OPTIMIZE:  Curent execution time for 3X4 matrix = 7.44 ms
+    def percentiles(self):
         '''return percentile for a given percent'''
-        return stats.scoreatpercentile(self.data, percent)
+        perdict = dict(('perc_%02d' % per, self.data.quantile(per/100)) for per in
+             [1,5,10,25,50,75,90,95,99])
+
+        perdicts = pd.concat([per for per in perdict.values()],
+                                keys=list(perdict.keys()),
+                                axis=1).T.round(3)
+        perdicts.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
+        return perdicts
 
     def summary_frame(self, stats='basic'):
         '''collect all the stats and return as a DataFrame
@@ -381,7 +382,7 @@ class DescrStats(object):
         -----------
         stats: str
             The desired statistics, Accepts 'basic' or 'all' or a list.
-               'basic' = ('obs', 'mean', 'std', 'var')
+               'basic' = ('obs', 'mean', 'std', 'var', 'percentiles')
 
         Returns
         -------
@@ -394,12 +395,14 @@ class DescrStats(object):
             mean = self.mean
             std = self.std
             var = self.var
+            per = self.percentiles()
 
         df = pd.concat([nobs, mean, std, var], keys=stats, axis=1).T.round(3)
         df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
-        return df
+        summary_frame = pd.concat([df, per])
+        
+        return summary_frame
 
-    ## BUG: summary returning NoneType object for some values
     def summary(self, stats='basic'):
         '''summarize the descriptive statistics
 
@@ -417,14 +420,14 @@ class DescrStats(object):
         data = df.values
         header = df.columns.tolist()
         stubs = df.index.tolist()
-        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))
+        part_fmt = dict(data_fmts = ["%#8.3g"])
         title = "Summary Statistics"
 
         table = SimpleTable(data,
                             header,
                             stubs,
                             title=title,
-                            txt_fmt = part_fmt)
+                            txt_fmt=part_fmt)
         return table
 
 if __name__ == "__main__":
