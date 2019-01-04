@@ -1358,12 +1358,9 @@ class GEE(base.Model):
     fit.__doc__ = _gee_fit_doc
 
 
-    def _update_regularized(self, params, pen_wt, scad_param=3.7):
-
-        eps = 1e-6
+    def _update_regularized(self, params, pen_wt, scad_param, eps):
 
         sn, hm = 0, 0
-
         for i in range(self.num_group):
 
             expval, lpr = self.cached_means[i]
@@ -1388,6 +1385,7 @@ class GEE(base.Model):
         en /= eps + ap
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
+        hm *= self.estimate_scale()
         sn -= self.num_group * en * params
 
         return np.linalg.solve(hm, sn), hm
@@ -1412,9 +1410,9 @@ class GEE(base.Model):
 
         return ma
 
-    def fit_regularized(self, pen_wt, scad_param=3.7, eps=1e-6,
-                        maxiter=100, ddof_scale=None, update_assoc=5,
-                        ctol=1e-5, ztol=1e-3):
+    def fit_regularized(self, pen_wt, scad_param=3.7, maxiter=100,
+                        ddof_scale=None, update_assoc=5,
+                        ctol=1e-5, ztol=1e-3, eps=1e-6):
         """
         Regularized estimation for GEE.
 
@@ -1425,8 +1423,6 @@ class GEE(base.Model):
         scad_param : float
             Non-negative scalar determining the shape of the Scad
             penalty.
-        eps : non-negative scalar
-            Numerical constant, see section 3.2 of Wang et al.
         maxiter : integer
             The maximum number of iterations.
         ddof_scale : integer
@@ -1442,6 +1438,8 @@ class GEE(base.Model):
         ztol : float
             Coefficients smaller than this value are treated as
             being zero, default is based on section 5 of Wang et al.
+        eps : non-negative scalar
+            Numerical constant, see section 3.2 of Wang et al.
 
         Returns
         -------
@@ -1478,7 +1476,8 @@ class GEE(base.Model):
 
         for itr in range(maxiter):
 
-            update, hm = self._update_regularized(mean_params, pen_wt, scad_param)
+            update, hm = self._update_regularized(
+                              mean_params, pen_wt, scad_param, eps)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update",
                 warnings.warn(msg, ConvergenceWarning)
