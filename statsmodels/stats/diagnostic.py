@@ -5,8 +5,7 @@ from statsmodels.sandbox.stats.diagnostic import (
     het_goldfeldquandt, het_arch,
     het_white, recursive_olsresiduals, acorr_breusch_godfrey,
     linear_harvey_collier, linear_rainbow, linear_lm,
-    unitroot_adf
-)
+    spec_white, unitroot_adf)
 
 from ._lilliefors import (kstest_fit, lilliefors, kstest_normal,
                           kstest_exponential)
