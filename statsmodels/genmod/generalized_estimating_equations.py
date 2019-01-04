@@ -1378,7 +1378,8 @@ class GEE(base.Model):
             hm0 = rslt[1]
             hm += np.dot(ex.T, hm0)
 
-        sn /= self.num_group
+        # Wang et al. divide sn here by num_group, but that seems
+        # to be incorrect
 
         ap = np.abs(params)
         en = pen_wt * np.clip(scad_param * pen_wt - ap, 0, np.inf) * (ap > pen_wt)
@@ -1402,19 +1403,18 @@ class GEE(base.Model):
             expval, lpr = self.cached_means[i]
             resid = self.endog_li[i] - expval
             sdev = np.sqrt(self.family.variance(expval))
-            sresid = resid / sdev
 
             ex = self.exog_li[i] * sdev[:, None]**2
             rslt = self.cov_struct.covariance_matrix_solve(
-                           expval, i, sdev, (sresid,))
+                           expval, i, sdev, (resid,))
             ma0 = np.dot(ex.T, rslt[0])
             ma += np.outer(ma0, ma0)
 
         return ma
 
     def fit_regularized(self, pen_wt, scad_param=3.7, eps=1e-6,
-                        maxiter=400, ddof_scale=None, update_assoc=5,
-                        ctol=1e-4, ztol=1e-3):
+                        maxiter=100, ddof_scale=None, update_assoc=5,
+                        ctol=1e-5, ztol=1e-3):
         """
         Regularized estimation for GEE.
 
@@ -1437,8 +1437,8 @@ class GEE(base.Model):
             The dependence parameters are updated every `update_assoc`
             iterations of the mean structure parameter updates.
         ctol : float
-            Convergence criterion, default is based on section 3.1 of
-            Wang et al.
+            Convergence criterion, default is one order of magnitude
+            smaller than proposed in section 3.1 of Wang et al.
         ztol : float
             Coefficients smaller than this value are treated as
             being zero, default is based on section 5 of Wang et al.
@@ -1505,8 +1505,7 @@ class GEE(base.Model):
         cov = np.linalg.solve(hm, cov.T)
 
         # kwargs to add to results instance, need to be available in __init__
-        res_kwds = dict(cov_type="robust",
-                        cov_robust=cov)
+        res_kwds = dict(cov_type="robust", cov_robust=cov)
 
         scale = self.estimate_scale()
         rslt = GEEResults(self, mean_params, cov, scale,
