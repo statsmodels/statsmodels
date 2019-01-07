@@ -16,6 +16,7 @@ forecast_results = genfromtxt(open(cur_dir+"/results_arima_forecasts.csv",
 # they appear to be using a larger sample than R, gretl, or us.
 # CSS results are therefore taken from R and gretl
 
+
 class ARIMA111(object):
     def __init__(self, method="mle"):
         self.k_ar = 1
@@ -185,6 +186,7 @@ class ARIMA111(object):
             self.forecast_dyn = forecast_results['fc111cdyn_css']
             self.forecasterr_dyn = forecast_results['fc111cdynse_css']
 
+
 class ARIMA211(object):
     def __init__(self, method="mle"):
         if method == 'mle':
@@ -259,6 +261,7 @@ class ARIMA211(object):
             self.forecasterr = forecast_results['fc111cse_css'][-25:]
             self.forecast_dyn = forecast_results['fc111cdyn_css']
             self.forecasterr_dyn = forecast_results['fc111cdynse_css']
+
 
 class ARIMA112(object):
     def __init__(self, method="mle"):
@@ -433,6 +436,3 @@ class ARIMA112(object):
             self.forecasterr = forecast_results['fc112cse_css'][-25:]
             self.forecast_dyn = forecast_results['fc112cdyn_css']
             self.forecasterr_dyn = forecast_results['fc112cdynse_css']
-
-
-

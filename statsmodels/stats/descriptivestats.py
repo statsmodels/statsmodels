@@ -159,6 +159,7 @@ class Describe(object):
             except (TypeError, ValueError):
                 return False
             return True
+
         def number_like():
             try:
                 self.dataset[col][0] + 1.0
@@ -217,13 +218,13 @@ class Describe(object):
         import scipy.stats
         #BUG: the following has all per the same per=99
         ##perdict = dict(('perc_%2d'%per, [lambda x:
-         #      scipy.stats.scoreatpercentile(x, per), None, None])
+        #       scipy.stats.scoreatpercentile(x, per), None, None])
         ##          for per in (1,5,10,25,50,75,90,95,99))
 
         def _fun(per):
             return lambda x: scipy.stats.scoreatpercentile(x, per)
 
-        perdict = dict(('perc_%02d'%per, [_fun(per), None, None])
+        perdict = dict(('perc_%02d' % per, [_fun(per), None, None])
                        for per in (1,5,10,25,50,75,90,95,99))
 
         if 'percentiles' in stats:
@@ -257,7 +258,7 @@ class Describe(object):
 
             columstypes = self.dataset.dtype
             #TODO: do we need to make sure they dtype is float64 ?
-            for  astat in stats:
+            for astat in stats:
                 calc = self.univariate[astat]
                 if self._arraytype == 'sctruct':
                     calc[1] =  self._columns_list
@@ -265,8 +266,8 @@ class Describe(object):
                             self._columns_list if (self._is_dtype_like(col) ==
                                                       'number')]
                     #calc[2].append([len(np.unique(self.dataset[col])) for col
-                                   #in self._columns_list if
-                                   #self._is_dtype_like(col)=='string']
+                    #                in self._columns_list if
+                    #                self._is_dtype_like(col)=='string']
                 else:
                     calc[1] = ['Col '+str(col) for col in self._columns_list]
                     calc[2] = [calc[0](self.dataset[:,col]) for col in
@@ -311,6 +312,11 @@ class Describe(object):
 
 if __name__ == "__main__":
     #unittest.main()
+
+    data4 = np.array([[1,2,3,4,5,6],
+                      [6,5,4,3,2,1],
+                      [9,9,9,9,9,9]])
+
     t1 = Describe(data4)
     #print(t1.summary(stats='all'))
     noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
@@ -338,9 +344,6 @@ if __name__ == "__main__":
                       [2,3,3,3],
                       [2,4,4,3]], dtype=float)
 
-    data4 = np.array([[1,2,3,4,5,6],
-                      [6,5,4,3,2,1],
-                      [9,9,9,9,9,9]])
 
     class TestSimpleTable(object):
         #from statsmodels.iolib.table import SimpleTable, default_txt_fmt
@@ -388,6 +391,3 @@ if __name__ == "__main__":
         def test_basic_4a(self):
             t1 = Describe(data4)
             print(t1.summary(stats='all'))
-
-
-

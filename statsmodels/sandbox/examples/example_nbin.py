@@ -40,7 +40,7 @@ def _ll_nbp(y, X, beta, alph, Q):
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
 
     Following notation in Greene (2008), with negative binomial heterogeneity
-	parameter :math:`\alpha`:
+    parameter :math:`\alpha`:
 
     .. math::
 
@@ -233,8 +233,8 @@ from statsmodels.compat.python import urlopen
 from numpy.testing import assert_almost_equal
 import pandas
 import patsy
-medpar = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'))
-mdvis = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/mdvis.csv'))
+medpar = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'))
+mdvis = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv'))
 
 # NB-2
 '''
@@ -311,9 +311,9 @@ alpha          4.57898241 0.22015968 20.7984603  4.14746943  5.01049539
     ## TODO: Test fails with some of the other optimization methods
     #nb1 = NBin(y,X,'nb1').fit(method='ncg', maxiter=10000, maxfun=5000)
     #assert_almost_equal(nb1.params,
-						#[2.34918407014186, 0.161754714412848, 0.418792569970658,
-                         #-0.0453356614650342, -0.129512952033423, 4.57898241219275],
-						#decimal=2)
+                        #[2.34918407014186, 0.161754714412848, 0.418792569970658,
+                        # -0.0453356614650342, -0.129512952033423, 4.57898241219275],
+                        #decimal=2)
 
 # NB-Geometric
 '''
@@ -356,8 +356,8 @@ Number of Fisher Scoring iterations: 5
     ## TODO: remove alph from geom params
     #geom = NBin(y,X,'geom').fit(maxiter=10000, maxfun=5000)
     #assert_almost_equal(geom.params,
-						#[2.3084850946241, 0.221206159108742, 0.705986369841159,
-                         #-0.0677871843613577, -0.127088772164963],
-						#decimal=4)
+                        #[2.3084850946241, 0.221206159108742, 0.705986369841159,
+                        # -0.0677871843613577, -0.127088772164963],
+                        #decimal=4)
 
 test_nb2()

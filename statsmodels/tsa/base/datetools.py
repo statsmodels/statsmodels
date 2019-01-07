@@ -55,10 +55,12 @@ _m_pattern = '''
 $               # end of string
 '''
 
+
 #NOTE: see also ts.extras.isleapyear, which accepts a sequence
 def _is_leap(year):
     year = int(year)
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
@@ -85,6 +87,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         return to_datetime(timestr, **kwargs)
 
     return datetime.datetime(year, month, day)
+
 
 def date_range_str(start, end=None, length=None):
     """
@@ -142,6 +145,7 @@ def date_range_str(start, end=None, length=None):
         date_arr_range = years.tolist()
     return date_arr_range
 
+
 def dates_from_str(dates):
     """
     Turns a sequence of date strings and returns a list of datetime.
@@ -159,6 +163,7 @@ def dates_from_str(dates):
         A list of datetime types.
     """
     return lmap(date_parser, dates)
+
 
 def dates_from_range(start, end=None, length=None):
     """

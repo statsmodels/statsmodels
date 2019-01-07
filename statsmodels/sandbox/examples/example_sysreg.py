@@ -13,7 +13,7 @@ from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 # This example uses the subset of the Grunfeld data in Greene's Econometric
 # Analysis Chapter 14 (5th Edition)
 
-grun_data = sm.datasets.grunfeld.load()
+grun_data = sm.datasets.grunfeld.load(as_pandas=False)
 
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
@@ -74,7 +74,7 @@ print(grun_ires.params)
 # See Greene's Econometric Analysis for more information
 
 # Load the data
-macrodata = sm.datasets.macrodata.load().data
+macrodata = sm.datasets.macrodata.load(as_pandas=False).data
 
 # Not needed, but make sure the data is sorted
 macrodata = np.sort(macrodata, order=['year','quarter'])
@@ -176,9 +176,9 @@ TableF5-1.txt', names=True)
         y[:-1]))
     instruments = sm.add_constant(instruments, prepend=False)
     sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
-    sem_params = sem_mod.fit() # first equation is right, but not second?
-                               # should y_t in the diff be instrumented?
-                               # how would R know this in the script?
+    sem_params = sem_mod.fit()  # first equation is right, but not second?
+                                # should y_t in the diff be instrumented?
+                                # how would R know this in the script?
     # well, let's check...
     y_instr = sem_mod.wexog[0][:,0]
     wyd = y_instr - y[:-1]
@@ -205,4 +205,3 @@ instrumented")
 # we are going to need to keep the two equations separate and use
 # a restrictions matrix.  Ugh, is a formula framework really, necessary to get
 # around this?
-

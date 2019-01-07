@@ -26,7 +26,7 @@ Alternatively, each model in the usual ``statsmodels.api`` namespace has a ``fro
     import pandas as pd
     import statsmodels.formula.api as smf
 
-    url = 'http://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv'
+    url = 'https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/HistData/Guerry.csv'
     data = pd.read_csv(url)
 
     # Fit regression model (using the natural log of one of the regressors)
@@ -108,7 +108,7 @@ The power module (``statsmodel.stats.power``) currently implements power and sam
 
 Other important new features
 ----------------------------
-* **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <http://www.statsmodels.org/devel/examples/index.html#notebook-examples>`_.
+* **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <https://www.statsmodels.org/devel/examples/index.html#notebook-examples>`_.
 
 * **Improved marginal effects for discrete choice models**: Expanded options for obtaining marginal effects after the estimation of nonlinear discrete choice models are available. See :py:meth:`get_margeff <statsmodels.discrete.discrete_model.DiscreteResuls.get_margeff>`.
 
@@ -116,7 +116,7 @@ Other important new features
 
 * **New datasets**: New :ref:`datasets <datasets>` are available for examples.
 
-* **Access to R datasets**: We now have access to many of the same datasets available to R users through the `Rdatasets project <http://vincentarelbundock.github.io/Rdatasets/>`_. You can access these using the :func:`sm.datasets.get_rdataset <statsmodels.datasets.get_rdataset>` function. This function also includes caching of these datasets.
+* **Access to R datasets**: We now have access to many of the same datasets available to R users through the `Rdatasets project <https://vincentarelbundock.github.io/Rdatasets/>`_. You can access these using the :func:`sm.datasets.get_rdataset <statsmodels.datasets.get_rdataset>` function. This function also includes caching of these datasets.
 
 * **Improved numerical differentiation tools**: Numerical differentiation routines have been greatly improved and expanded to cover all the routines discussed in::
 

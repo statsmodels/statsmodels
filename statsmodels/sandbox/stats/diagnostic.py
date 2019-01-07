@@ -37,9 +37,9 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.compat.numpy import np_matrix_rank
 
-#get the old signature back so the examples work
+
+# get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
                     store=store, regresults=False)
@@ -288,8 +288,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         lags = np.arange(1, lags + 1)
     lags = np.asarray(lags)
     maxlag = max(lags)
-    acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
-                             # SS: unbiased=False is default now
+    # normalize by nobs not (nobs-nlags)
+    # SS: unbiased=False is default now
+    acfx = acf(x, nlags=maxlag, fft=False)
     acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
@@ -530,14 +531,6 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
-msg = "Use acorr_breusch_godfrey, acorr_breush_godfrey will be removed " \
-      "in 0.9 \n (Note: misspelling missing 'c'),"
-
-acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
-                               'acorr_breusch_godfrey',
-                               msg)
-
-
 def het_breuschpagan(resid, exog_het):
     '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
@@ -609,9 +602,6 @@ def het_breuschpagan(resid, exog_het):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
 
-het_breushpagan = np.deprecate(het_breuschpagan, 'het_breushpagan', 'het_breuschpagan',
-                               "Use het_breuschpagan, het_breushpagan will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'c')")
 
 def het_white(resid, exog, retres=False):
     '''White's Lagrange Multiplier Test for Heteroscedasticity
@@ -668,7 +658,7 @@ def het_white(resid, exog, retres=False):
     #degrees of freedom take possible reduced rank in exog into account
     #df_model checks the rank to determine df
     #extra calculation that can be removed:
-    assert resols.df_model == np_matrix_rank(exog) - 1
+    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
@@ -1544,7 +1534,7 @@ class StatTestMC(object):
         does not do any plotting
         '''
         if self.mcres.ndim == 2:
-            if  not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')

@@ -1,7 +1,6 @@
 """
 Test functions for sm.rlm
 """
-from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 import pytest
@@ -34,7 +33,7 @@ class CheckRlmResultsMixin(object):
 #TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
         if not hasattr(self.res2, 'conf_int'):
-            raise SkipTest("Results from R")
+            pytest.skip("Results from R")
         else:
             assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
             DECIMAL_4)
@@ -58,7 +57,7 @@ class CheckRlmResultsMixin(object):
 
     def test_bcov_unscaled(self):
         if not hasattr(self.res2, 'bcov_unscaled'):
-            raise SkipTest("No unscaled cov matrix from SAS")
+            pytest.skip("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL_4)
@@ -75,7 +74,7 @@ class CheckRlmResultsMixin(object):
 
     def test_tvalues(self):
         if not hasattr(self.res2, 'tvalues'):
-            raise SkipTest("No tvalues in benchmark")
+            pytest.skip("No tvalues in benchmark")
         else:
             assert_allclose(self.res1.tvalues, self.res2.tvalues, rtol=0.003)
 
@@ -97,7 +96,7 @@ class TestRlm(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()  # class attributes for subclasses
+        cls.data = load(as_pandas=False)  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
@@ -204,7 +203,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         results = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(scale_est=\
@@ -298,7 +297,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()  # class attributes for subclasses
+        cls.data = load(as_pandas=False)  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1

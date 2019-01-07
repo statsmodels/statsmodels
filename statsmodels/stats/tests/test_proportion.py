@@ -127,7 +127,7 @@ def test_multinomial_proportions_errors():
         assert_raises(NotImplementedError, multinomial_proportions_confint,
                       [5] * 50, method=method)
 
-def  test_confint_multinomial_proportions_zeros():
+def test_confint_multinomial_proportions_zeros():
     # test when a count is zero or close to zero
     # values from R MultinomialCI
     ci01 = np.array([
@@ -569,6 +569,3 @@ def test_proportion_ztests():
     res2 = smprop.proportions_chisquare(np.asarray([15, 10]), np.asarray([20., 20]))
     # test only p-value
     assert_almost_equal(res1[1], res2[1], decimal=13)
-
-if __name__ == '__main__':
-    test_confint_proportion()

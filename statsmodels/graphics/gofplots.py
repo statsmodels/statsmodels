@@ -71,7 +71,7 @@ class ProbPlot(object):
     >>> from matplotlib import pyplot as plt
 
     >>> # example 1
-    >>> data = sm.datasets.longley.load()
+    >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> model = sm.OLS(data.endog, data.exog)
     >>> mod_fit = model.fit()
@@ -467,7 +467,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     --------
     >>> import statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
-    >>> data = sm.datasets.longley.load()
+    >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
     >>> res = mod_fit.resid # residuals

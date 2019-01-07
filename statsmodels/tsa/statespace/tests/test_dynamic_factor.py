@@ -5,24 +5,18 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 import re
 
 import warnings
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_raises, assert_allclose
 from statsmodels.iolib.summary import forg
-
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,7 +66,7 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(actual, self.model.start_params)
 
-    def test_results(self):
+    def test_results(self, close_figures):
         # Smoke test for creating the summary
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -89,10 +83,10 @@ class CheckDynamicFactor(object):
         else:
             assert_equal(self.results.coefficient_matrices_var, None)
 
+    @pytest.mark.matplotlib
+    def test_plot_coefficients_of_determination(self, close_figures):
         # Smoke test for plot_coefficients_of_determination
-        if have_matplotlib:
-            fig = self.results.plot_coefficients_of_determination();
-            plt.close(fig)
+        self.results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return
@@ -105,11 +99,14 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
-    def test_mle(self):
+    def test_mle(self, init_powell=True):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
-            results = self.model.fit(method='powell', maxiter=100, disp=False)
-            results = self.model.fit(results.params, maxiter=1000, disp=False)
+            start_params = self.model.start_params
+            if init_powell:
+                results = self.model.fit(method='powell', maxiter=100, disp=False)
+                start_params = results.params
+            results = self.model.fit(start_params, maxiter=1000, disp=False)
             results = self.model.fit(results.params, method='nm', maxiter=1000,
                                      disp=False)
             if not results.llf > self.results.llf:
@@ -140,6 +137,7 @@ class CheckDynamicFactor(object):
             self.true['dynamic_predict'],
             atol=1e-6)
 
+
 class TestDynamicFactor(CheckDynamicFactor):
     """
     Test for a dynamic factor model with 1 AR(2) factor
@@ -154,6 +152,7 @@ class TestDynamicFactor(CheckDynamicFactor):
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
         assert_allclose(bse, self.true['bse_oim'], atol=1e-5)
+
 
 class TestDynamicFactor2(CheckDynamicFactor):
     """
@@ -250,7 +249,6 @@ class TestDynamicFactor2(CheckDynamicFactor):
             assert_equal(re.search('sigma2.%s +%s' % (self.model.endog_names[i], forg(params[offset + i], prec=4)), table) is None, False)
 
 
-
 class TestDynamicFactor_exog1(CheckDynamicFactor):
     """
     Test for a dynamic factor model with 1 exogenous regressor: a constant
@@ -274,6 +272,7 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
         assert_allclose(bse**2, self.true['var_oim'], atol=1e-5)
+
 
 class TestDynamicFactor_exog2(CheckDynamicFactor):
     """
@@ -362,6 +361,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             assert_equal(re.search('sigma2.%s +%s' % (self.model.endog_names[i], forg(params[offset + i], prec=4)), table) is None, False)
 
+
 class TestDynamicFactor_general_errors(CheckDynamicFactor):
     """
     Test for a dynamic factor model where errors are as general as possible,
@@ -380,9 +380,9 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()
         assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
-        assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=2e-4)
+        assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=3e-4)
 
-    @skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
+    @pytest.mark.skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
     def test_mle(self):
         # The following gets us to llf=546.53, which is still not good enough
         # llf = 300.842477412
@@ -483,6 +483,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_equal(re.search('sqrt.cov.dln_inc.dln_consump +' + forg(params[offset + 4], prec=4), table) is None, False)
         assert_equal(re.search('sqrt.var.dln_consump +' + forg(params[offset + 5], prec=4), table) is None, False)
 
+
 class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     """
     Test for a dynamic factor model where errors are as general as possible,
@@ -510,6 +511,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
             res1 = mod.fit(maxiter=100, optim_score='approx', disp=False)
             res = mod.fit(res1.params, method='nm', maxiter=10000, optim_score='approx', disp=False)
             assert_allclose(res.llf, self.results.llf, atol=1e-2)
+
 
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     """
@@ -610,6 +612,9 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors, self).test_dynamic_predict(exog=exog)
 
+    def test_mle(self):
+        super(TestSUR_autocorrelated_errors, self).test_mle(init_powell=False)
+
 
 def test_misspecification():
     # Tests for model specification and misspecification exceptions
@@ -623,6 +628,7 @@ def test_misspecification():
 
     # Bad error_cov_type specification
     assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=1, factor_order=1, order=(1,0), error_cov_type='')
+
 
 def test_miscellaneous():
     # Initialization with 1-dimensional exog array

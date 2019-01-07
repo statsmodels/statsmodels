@@ -247,7 +247,7 @@ class HistDist(object):
         elif method=='Scott':
             width = 3.49 * np.std(self.data) * nobs**(-1./3)
 
-        self.nbin = (self.binlimit.ptp()/width)
+        self.nbin = (np.ptp(self.binlimit)/width)
         return self.nbin
 
 
@@ -328,14 +328,3 @@ if __name__ == '__main__':
     print('(np.diff(ppfs)).min()', (np.diff(ppfs)).min())
     print('(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min())
     #plt.show()
-
-
-
-
-
-
-
-
-
-
-

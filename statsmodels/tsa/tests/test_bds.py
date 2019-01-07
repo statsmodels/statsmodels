@@ -16,8 +16,7 @@ import os
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import bds
-from numpy.testing import assert_almost_equal, assert_equal
-from numpy import genfromtxt
+from numpy.testing import assert_almost_equal
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -28,10 +27,10 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-data_file = os.path.join(curdir, "results/bds_data.csv")
+data_file = os.path.join(curdir, "results", "bds_data.csv")
 data = pd.read_csv(data_file, header=None)
 
-res_file = os.path.join(curdir, "results/bds_results.csv")
+res_file = os.path.join(curdir, "results", "bds_results.csv")
 results = pd.read_csv(res_file, header=None)
 
 

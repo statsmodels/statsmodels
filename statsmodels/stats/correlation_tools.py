@@ -11,12 +11,14 @@ import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import svds
 from scipy.optimize import fminbound
+import warnings
 
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
-    iteration_limit_doc)
+from statsmodels.tools.sm_exceptions import (
+    IterationLimitWarning, iteration_limit_doc)
 
-def clip_evals(x, value=0): #threshold=0, value=0):
+
+def clip_evals(x, value=0):  # threshold=0, value=0):
     evals, evecs = np.linalg.eigh(x)
     clipped = np.any(evals < 0)
     x_new = np.dot(evecs * np.maximum(evals, value), evecs.T)
@@ -85,10 +87,10 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
         x_new = x_psd.copy()
         x_new[diag_idx, diag_idx] = 1
     else:
-        import warnings
         warnings.warn(iteration_limit_doc, IterationLimitWarning)
 
     return x_new
+
 
 def corr_clipped(corr, threshold=1e-15):
     '''
@@ -144,16 +146,15 @@ def corr_clipped(corr, threshold=1e-15):
     if not clipped:
         return corr
 
-    #cov2corr
+    # cov2corr
     x_std = np.sqrt(np.diag(x_new))
-    x_new = x_new / x_std / x_std[:,None]
+    x_new = x_new / x_std / x_std[:, None]
     return x_new
 
 
 def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
-
-    '''
+    """
     Find the nearest covariance matrix that is postive (semi-) definite
 
     This leaves the diagonal, i.e. the variance, unchanged
@@ -163,11 +164,11 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     cov : ndarray, (k,k)
         initial covariance matrix
     method : string
-        if "clipped", then the faster but less accurate ``corr_clipped`` is used.
-        if "nearest", then ``corr_nearest`` is used
+        if "clipped", then the faster but less accurate ``corr_clipped`` is
+        used.if "nearest", then ``corr_nearest`` is used
     threshold : float
         clipping threshold for smallest eigen value, see Notes
-    nfact : int or float
+    n_fact : int or float
         factor to determine the maximum number of iterations in
         ``corr_nearest``. See its doc string
     return_all : bool
@@ -203,14 +204,13 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     --------
     corr_nearest
     corr_clipped
-
-    '''
+    """
 
     from statsmodels.stats.moment_helpers import cov2corr, corr2cov
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == 'clipped':
         corr_ = corr_clipped(cov_, threshold=threshold)
-    elif method == 'nearest':
+    else:  # method == 'nearest'
         corr_ = corr_nearest(cov_, threshold=threshold, n_fact=n_fact)
 
     cov_ = corr2cov(corr_, std_)
@@ -219,6 +219,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
         return cov_, corr_, std_
     else:
         return cov_
+
 
 def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
                       sig2=0.9, gam=1e-4, maxiter=100):
@@ -354,7 +355,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     params = start.copy()
     gval = grad(params)
 
-    obj_hist = [func(params),]
+    obj_hist = [func(params), ]
 
     for itr in range(int(maxiter)):
 
@@ -373,12 +374,18 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
         d -= params
 
         # Carry out the nonmonotone line search
-        alpha, params1, fval, gval1 = _nmono_linesearch(func, grad, params, d,
-                                                 obj_hist, M=M,
-                                                 sig1=sig1,
-                                                 sig2=sig2,
-                                                 gam=gam,
-                                                 maxiter=maxiter_nmls)
+        alpha, params1, fval, gval1 = _nmono_linesearch(
+            func,
+            grad,
+            params,
+            d,
+            obj_hist,
+            M=M,
+            sig1=sig1,
+            sig2=sig2,
+            gam=gam,
+            maxiter=maxiter_nmls)
+
         if alpha is None:
             return Bunch(**{"Converged": False, "params": params,
                             "objective_values": obj_hist,
@@ -413,7 +420,7 @@ def _project_correlation_factors(X):
     nm = np.sqrt((X*X).sum(1))
     ii = np.flatnonzero(nm > 1)
     if len(ii) > 0:
-        X[ii,:] /= nm[ii][:, None]
+        X[ii, :] /= nm[ii][:, None]
 
 
 class FactoredPSDMatrix:
@@ -447,14 +454,12 @@ class FactoredPSDMatrix:
         self.factor = u
         self.scales = s**2
 
-
     def to_matrix(self):
         """
         Returns the PSD matrix represented by this instance as a full
         (square) matrix.
         """
         return np.diag(self.diag) + np.dot(self.root, self.root.T)
-
 
     def decorrelate(self, rhs):
         """
@@ -534,7 +539,6 @@ class FactoredPSDMatrix:
         return logdet
 
 
-
 def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
                         lam_max=1e30, maxiter=1000):
     """
@@ -598,10 +602,10 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
 
     References
     ----------
-    R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
-    correlation matrix with factor structure. SIAM J Matrix Anal
-    Appl, 31:5, 2603-2622.
-    http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
+    .. [*] R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
+       correlation matrix with factor structure. SIAM J Matrix Anal Appl,
+       31:5, 2603-2622.
+       http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
 
     Examples
     --------
@@ -623,11 +627,11 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     p, _ = corr.shape
 
     # Starting values (following the PCA method in BHR).
-    u,s,vt = svds(corr, rank)
+    u, s, vt = svds(corr, rank)
     X = u * np.sqrt(s)
     nm = np.sqrt((X**2).sum(1))
     ii = np.flatnonzero(nm > 1e-5)
-    X[ii,:] /= nm[ii][:, None]
+    X[ii, :] /= nm[ii][:, None]
 
     # Zero the diagonal
     corr1 = corr.copy()
@@ -675,7 +679,8 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
                 ir += bs
             return fval
 
-    rslt = _spg_optim(func, grad, X, _project_correlation_factors)
+    rslt = _spg_optim(func, grad, X, _project_correlation_factors, ctol=ctol,
+                      lam_min=lam_min, lam_max=lam_max, maxiter=maxiter)
     root = rslt.params
     diag = 1 - (root**2).sum(1)
     soln = FactoredPSDMatrix(diag, root)
@@ -761,8 +766,9 @@ def cov_nearest_factor_homog(cov, rank):
     Lambda_opt = Lambda - k_opt
     fac_opt = Q * np.sqrt(Lambda_opt)
 
-    diag = k_opt * np.ones(m, dtype=np.float64) #- (fac_opt**2).sum(1)
+    diag = k_opt * np.ones(m, dtype=np.float64)  # - (fac_opt**2).sum(1)
     return FactoredPSDMatrix(diag, fac_opt)
+
 
 def corr_thresholded(data, minabs=None, max_elt=1e7):
     """
@@ -839,7 +845,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     ir = 0
     while ir < nrow:
         ir2 = min(data.shape[0], ir + bs)
-        cm = np.dot(data[ir:ir2,:], data.T) / (ncol - 1)
+        cm = np.dot(data[ir:ir2, :], data.T) / (ncol - 1)
         cma = np.abs(cm)
         ipos, jpos = np.nonzero(cma >= minabs)
         ipos_all.append(ipos + ir)
@@ -856,6 +862,178 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     return cmat
 
 
+class MultivariateKernel(object):
+    """
+    Base class for multivariate kernels.
 
-if __name__ == '__main__':
-    pass
+    An instance of MultivariateKernel implements a `call` method having
+    signature `call(x, loc)`, returning the kernel weights comparing `x`
+    (a 1d ndarray) to each row of `loc` (a 2d ndarray).
+    """
+
+    def call(self, x, loc):
+        raise NotImplementedError
+
+    def set_bandwidth(self, bw):
+        """
+        Set the bandwidth to the given vector.
+
+        Parameters
+        ----------
+        bw : array-like
+            A vector of non-negative bandwidth values.
+        """
+
+        self.bw = bw
+        self._setup()
+
+    def _setup(self):
+
+        # Precompute the squared bandwidth values.
+        self.bwk = np.prod(self.bw)
+        self.bw2 = self.bw * self.bw
+
+    def set_default_bw(self, loc, bwm=None):
+        """
+        Set default bandwiths based on domain values.
+
+        Parameters
+        ----------
+        loc : array-like
+            Values from the domain to which the kernel will
+            be applied.
+        bwm : scalar, optional
+            A non-negative scalar that is used to multiply
+            the default bandwidth.
+        """
+
+        sd = loc.std(0)
+        q25, q75 = np.percentile(loc, [25, 75], axis=0)
+        iqr = (q75 - q25) / 1.349
+        bw = np.where(iqr < sd, iqr, sd)
+        bw *= 0.9 / loc.shape[0] ** 0.2
+
+        if bwm is not None:
+            bw *= bwm
+
+        # The final bandwidths
+        self.bw = np.asarray(bw, dtype=np.float64)
+
+        self._setup()
+
+
+class GaussianMultivariateKernel(MultivariateKernel):
+    """
+    The Gaussian (squared exponential) multivariate kernel.
+    """
+
+    def call(self, x, loc):
+        return np.exp(-(x - loc)**2 / (2 * self.bw2)).sum(1) / self.bwk
+
+
+def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
+    """
+    Use kernel averaging to estimate a multivariate covariance function.
+
+    The goal is to estimate a covariance function C(x, y) =
+    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g. representing
+    locations in time or space), and Z(.) represents a multivariate
+    process on R^p.
+
+    The data used for estimation can be observed at arbitrary values of the
+    position vector, and there can be multiple independent observations
+    from the process.
+
+    Parameters
+    ----------
+    exog : array-like
+        The rows of exog are realizations of the process obtained at
+        specified points.
+    loc : array-like
+        The rows of loc are the locations (e.g. in space or time) at
+        which the rows of exog are observed.
+    groups : array-like
+        The values of groups are labels for distinct independent copies
+        of the process.
+    kernel : MultivariateKernel instance, optional
+        An instance of MultivariateKernel, defaults to
+        GaussianMultivariateKernel.
+    bw : array-like or scalar
+        A bandwidth vector, or bandwith multiplier.  If a 1d array, it
+        contains kernel bandwidths for each component of the process, and
+        must have length equal to the number of columns of exog.  If a scalar,
+        bw is a bandwidth multiplier used to adjust the default bandwidth; if
+        None, a default bandwidth is used.
+
+    Returns
+    -------
+    A real-valued function C(x, y) that returns an estimate of the covariance
+    between values of the process located at x and y.
+
+    References
+    ----------
+    Genton M, W Kleiber (2015).  Cross covariance functions for multivariate
+    geostatics.  Statistical Science 30(2).
+    https://arxiv.org/pdf/1507.08017.pdf
+    """
+
+    exog = np.asarray(exog)
+    loc = np.asarray(loc)
+    groups = np.asarray(groups)
+
+    if loc.ndim == 1:
+        loc = loc[:, None]
+
+    v = [exog.shape[0], loc.shape[0], len(groups)]
+    if min(v) != max(v):
+        msg = "exog, loc, and groups must have the same number of rows"
+        raise ValueError(msg)
+
+    # Map from group labels to the row indices in each group.
+    ix = {}
+    for i, g in enumerate(groups):
+        if g not in ix:
+            ix[g] = []
+        ix[g].append(i)
+    for g in ix.keys():
+        ix[g] = np.sort(ix[g])
+
+    if kernel is None:
+        kernel = GaussianMultivariateKernel()
+
+    if bw is None:
+        kernel.set_default_bw(loc)
+    elif np.isscalar(bw):
+        kernel.set_default_bw(loc, bwm=bw)
+    else:
+        kernel.set_bandwidth(bw)
+
+    def cov(x, y):
+
+        kx = kernel.call(x, loc)
+        ky = kernel.call(y, loc)
+
+        cm, cw = 0., 0.
+
+        for g, ii in ix.items():
+
+            m = len(ii)
+            j1, j2 = np.indices((m, m))
+            j1 = ii[j1.flat]
+            j2 = ii[j2.flat]
+            w = kx[j1] * ky[j2]
+
+            # TODO: some other form of broadcasting may be faster than
+            # einsum here
+            cm += np.einsum("ij,ik,i->jk", exog[j1, :], exog[j2, :], w)
+            cw += w.sum()
+
+        if cw < 1e-10:
+            msg = ("Effective sample size is 0.  The bandwidth may be too " +
+                   "small, or you are outside the range of your data.")
+            warnings.warn(msg)
+            return np.nan * np.ones_like(cm)
+
+        return cm / cw
+
+    return cov

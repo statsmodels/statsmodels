@@ -3,8 +3,6 @@ from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
-from statsmodels.compat.numpy import np_matrix_rank
-from statsmodels.compat.numpy import np_new_unique
 
 """
 Implementation of proportional hazards regression models for duration
@@ -334,8 +332,8 @@ class PHReg(model.LikelihoodModel):
         self.missing = missing
 
         self.df_resid = (np.float(self.exog.shape[0] -
-                                  np_matrix_rank(self.exog)))
-        self.df_model = np.float(np_matrix_rank(self.exog))
+                                  np.linalg.matrix_rank(self.exog)))
+        self.df_model = np.float(np.linalg.matrix_rank(self.exog))
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -489,8 +487,8 @@ class PHReg(model.LikelihoodModel):
         The penalty is the ``elastic net`` penalty, which is a
         combination of L1 and L2 penalties.
 
-        The function that is minimized is: 
-        
+        The function that is minimized is:
+
         .. math::
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
@@ -1441,7 +1439,7 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         Descriptive statistics of the groups.
         """
-        gsizes = np_new_unique(groups, return_counts=True)
+        gsizes = np.unique(groups, return_counts=True)
         gsizes = gsizes[1]
         return gsizes.min(), gsizes.max(), gsizes.mean(), len(gsizes)
 
@@ -1577,7 +1575,7 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         smry = summary2.Summary()
         float_format = "%8.3f"
 

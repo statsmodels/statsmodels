@@ -685,7 +685,7 @@ class Lbw(object):
     '''
     The LBW data can be found here
 
-    http://www.stata-press.com/data/r9/rmain.html
+    https://www.stata-press.com/data/r9/rmain.html
     '''
     def __init__(self):
         # data set up for data not in datasets
@@ -803,7 +803,7 @@ class Cancer(object):
     '''
     The Cancer data can be found here
 
-    http://www.stata-press.com/data/r10/rmain.html
+    https://www.stata-press.com/data/r10/rmain.html
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -2202,7 +2202,7 @@ class Medpar1(object):
     '''
     The medpar1 data can be found here.
 
-    http://www.stata-press.com/data/hh2/medpar1
+    https://www.stata-press.com/data/hh2/medpar1
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -3898,8 +3898,8 @@ class CpunishTweediePower15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.09501758000751, 8.42856326056927,
                              1.68642881732415, 7.74178229423817,
                              7.95441118875248, 1.53333978161934,
@@ -3966,8 +3966,8 @@ class CpunishTweediePower2(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.06024318838318, 8.39480078450791,
                              1.69154512871877, 7.7059362524505,
                              7.91921022348665, 1.53799164935069,
@@ -4036,8 +4036,8 @@ class CpunishTweedieLog1(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.27689906137016, 9.30731835845648,
                              1.80984539843424, 7.30975297068573,
                              7.87746969906705, 1.71495822007233,
@@ -4117,8 +4117,8 @@ class FairTweedieLog15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 2
         self.df_resid = 6363
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [1.10897954981504, 0.537938133372725,
                              0.722602160018842, 0.507247757370731,
                              0.364216335344828, 0.537493243830281,

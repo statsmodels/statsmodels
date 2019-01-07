@@ -9,7 +9,7 @@ from __future__ import print_function
 from statsmodels.compat.python import lrange, lmap
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
 from statsmodels import iolib
@@ -41,8 +41,8 @@ def get_griliches76_data():
     X = add_constant(griliches76_data[['s', 'iq', 'expr', 'tenure', 'rns',
                                        'smsa', 'D_67', 'D_68', 'D_69', 'D_70',
                                        'D_71', 'D_73']],
-                                       prepend=True)  # for R comparison
                                        #prepend=False)  # for Stata comparison
+                                       prepend=True)  # for R comparison
 
     Z = add_constant(griliches76_data[['expr', 'tenure', 'rns', 'smsa', \
                                        'D_67', 'D_68', 'D_69', 'D_70', 'D_71',
@@ -670,7 +670,7 @@ class CheckIV2SLS(object):
         res_f = res1.f_test(restriction[:-1]) # without constant
         # TODO res1.fvalue problem, see issue #1104
         assert_allclose(res_f.fvalue, res1.fvalue, rtol=1e-12, atol=0)
-        assert_allclose(res_f.pvalue, res1.f_pvalue, rtol=1e-12, atol=0)
+        assert_allclose(res_f.pvalue, res1.f_pvalue, rtol=1e-10, atol=0)
         assert_allclose(res_f.fvalue, res2.F, rtol=1e-10, atol=0)
         assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 

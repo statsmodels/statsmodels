@@ -40,7 +40,8 @@ lutkepohl_data = [
 ]
 
 lutkepohl_ar1 = {
-    'params': [.02193629, -.19639897, .0020982049304637],  # intercept, AR, sigma^2
+    # intercept, AR, sigma^2
+    'params': [.02193629, -.19639897, .0020982049304637],
     'loglike': 123.1654530510318,
     'aic': -3.274741974352211,
     'bic': -3.212469944806153,
@@ -51,7 +52,8 @@ lutkepohl_ar1 = {
 }
 
 lutkepohl_ar1_lustats = {
-    'params': [.02193629, -.19639897, .0020982049304637],  # intercept, AR, sigma^2
+    # intercept, AR, sigma^2
+    'params': [.02193629, -.19639897, .0020982049304637],
     'loglike': 123.1654530510318,
     'aic': -6.139646067788584,
     'bic': -6.108510053015554,
@@ -78,7 +80,7 @@ lutkepohl_var1 = {
         -.25155231, .27806257, .8357748,  # Phi, row 1
         .0226746, .1936755, .66011984,    # Phi, row 2
         -.01493575, .54067685, .2807106,  # Phi, row 3
-        # 0.002010307675,                              # Covariance, lower triangle
+        # 0.002010307675,                       # Covariance, lower triangle
         # 0.000063517318, 0.000184048720,
         # 0.000129337591, 0.000117178971, 0.000162533784
         # Note: the following are the Cholesky of the covariance
@@ -101,7 +103,7 @@ lutkepohl_var1_lustats = {
         -.25155231, .27806257, .8357748,  # Phi, row 1
         .0226746, .1936755, .66011984,    # Phi, row 2
         -.01493575, .54067685, .2807106,  # Phi, row 3
-        # 0.002010307675,                              # Covariance, lower triangle
+        # 0.002010307675,                         # Covariance, lower triangle
         # 0.000063517318, 0.000184048720,
         # 0.000129337591, 0.000117178971, 0.000162533784
         # Note: the following are the Cholesky of the covariance

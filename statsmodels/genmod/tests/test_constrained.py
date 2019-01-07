@@ -187,7 +187,7 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
         #from statsmodels.genmod.tests.results.results_glm import Star98
-        data = load()
+        data = load(as_pandas=False)
         exog = add_constant(data.exog, prepend=True)
         offset = np.ones(len(data.endog))
         exog_keep = exog[:, :-5]

@@ -35,7 +35,6 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
-              'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
@@ -67,10 +66,10 @@ autoclass_content = 'class'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from statsmodels.version import short_version, full_version
-release = short_version
+from statsmodels import __version__
+release = __version__
 # The full version, including dev tag.
-version = full_version
+version = __version__
 
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
@@ -301,12 +300,12 @@ epub_copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-        'numpy' : ('https://docs.scipy.org/doc/numpy/', None),
-        'python' : ('https://docs.python.org/3.2', None),
-        'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
-        'patsy' : ('http://patsy.readthedocs.io/en/latest/', None),
-        'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None),
-        }
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'pydagogue': ('https://matthew-brett.github.io/pydagogue/', None),
+    'patsy': ('https://patsy.readthedocs.io/en/latest/', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
+}
 
 from os.path import dirname, abspath, join
 plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')

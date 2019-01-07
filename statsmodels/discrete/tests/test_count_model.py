@@ -1,15 +1,16 @@
-
 from __future__ import division
-import os
+
 import numpy as np
-from numpy.testing import (assert_, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import (assert_,
+                           assert_equal, assert_array_equal, assert_allclose)
+import pytest
 
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
+from .test_discrete import CheckModelMixin
 
-class CheckGeneric(object):
+
+class CheckGeneric(CheckModelMixin):
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
 
@@ -45,7 +46,6 @@ class CheckGeneric(object):
 
     def test_init_keys(self):
         init_kwds = self.res1.model._get_init_kwds()
-        #assert_equal(sorted(list(init_kwds.keys())), self.init_keys)
         assert_equal(set(init_kwds.keys()), set(self.init_keys))
         for key, value in self.init_kwds.items():
             assert_equal(init_kwds[key], value)
@@ -58,8 +58,8 @@ class CheckGeneric(object):
         exog_infl_null = self.res1.res_null.model.exog_infl
         assert_array_equal(exog_infl_null.shape,
                      (len(self.res1.model.exog), 1))
-        assert_equal(exog_null.ptp(), 0)
-        assert_equal(exog_infl_null.ptp(), 0)
+        assert_equal(np.ptp(exog_null), 0)
+        assert_equal(np.ptp(exog_infl_null), 0)
 
     def test_summary(self):
         # SMOKE test
@@ -69,7 +69,7 @@ class CheckGeneric(object):
 class TestZeroInflatedModel_logit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -87,7 +87,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
 class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -105,7 +105,7 @@ class TestZeroInflatedModel_probit(CheckGeneric):
 class TestZeroInflatedModel_offset(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -237,10 +237,11 @@ class TestZeroInflatedPoisson_predict(object):
             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
+@pytest.mark.slow
 class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -268,7 +269,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
-    def test_minimize(self):
+    def test_minimize(self, reset_randomstate):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -340,7 +341,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -379,7 +380,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
             atol=1e-1, rtol=1e-1)
 
     # possibly slow, adds 25 seconds
-    def test_minimize(self):
+    def test_minimize(self, reset_randomstate):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -531,7 +532,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 class TestZeroInflatedNegativeBinomialP_predict2(object):
         @classmethod
         def setup_class(cls):
-            data = sm.datasets.randhie.load()
+            data = sm.datasets.randhie.load(as_pandas=False)
 
             cls.endog = data.endog
             exog = data.exog

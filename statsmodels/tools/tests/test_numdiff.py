@@ -93,7 +93,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
         #from .results.results_discrete import Anes
-        data = sm.datasets.anes96.load()
+        data = sm.datasets.anes96.load(as_pandas=False)
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
         cls.mod = sm.MNLogit(data.endog, exog)
@@ -140,7 +140,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
 class TestGradLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.spector.load()
+        data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         #mod = sm.Probit(data.endog, data.exog)
         cls.mod = sm.Logit(data.endog, data.exog)
@@ -216,18 +216,18 @@ class CheckDerivativeMixin(object):
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of
                 #    TestDerivativeFun
                 hefd = numdiff.approx_hess2(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 hefd = numdiff.approx_hess3(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
 
     def test_hess_fun1_cs(self):
@@ -339,7 +339,7 @@ if __name__ == '__main__':
 
     import statsmodels.api as sm
 
-    data = sm.datasets.spector.load()
+    data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
@@ -359,29 +359,18 @@ if __name__ == '__main__':
     print('fd', numdiff.approx_fprime(test_params,score,epsilon))
     print('cs', numdiff.approx_fprime_cs(test_params, score))
 
-    #print('fd', numdiff.approx_hess(test_params, loglike, epsilon)) #TODO: bug
-    '''
-    Traceback (most recent call last):
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\test_numdiff.py", line 74, in <module>
-        print('fd', numdiff.approx_hess(test_params, loglike, epsilon))
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 118, in approx_hess
-        xh = x + h
-    TypeError: can only concatenate list (not "float") to list
-    '''
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
     print('cs', hesscs)
     print(maxabs(hess(test_params), hesscs))
 
-    data = sm.datasets.anes96.load()
+    data = sm.datasets.anes96.load(as_pandas=False)
     exog = data.exog
     exog = sm.add_constant(exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 
-    datap = sm.datasets.randhie.load()
+    datap = sm.datasets.randhie.load(as_pandas=False)
     nobs = len(datap.endog)
     exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
                             prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
     resp = modp.fit(method='newton', disp=0)
-
-

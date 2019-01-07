@@ -139,7 +139,8 @@ class HoldIt(object):
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
         if not filename is None:
-            file(filename, 'a+').write('\n'.join(txt))
+            with open(filename, 'a+') as fd:
+                fd.write('\n'.join(txt))
         return txt
 
 def generate_princomp(xo, filen='testsave.py'):
@@ -241,6 +242,3 @@ if __name__ == '__main__':
     mbaryw = mlab.ar(x1000-x1000.mean(), 20, 'yw')
     res_ywar.arcoef1000 = np.array(mbaryw.a.ravel())
     res_ywar.save(filename=filen, header=False)
-
-
-

@@ -169,7 +169,7 @@ def _var_acf(coefs, sig_u):
 
 
 def forecast_cov(ma_coefs, sigma_u, steps):
-    """
+    r"""
     Compute theoretical forecast error variance matrices
 
     Parameters
@@ -523,17 +523,18 @@ class VAR(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
 
-    def _get_predict_start(self, start, k_ar):
-        if start is None:
-            start = k_ar
-        return super(VAR, self)._get_predict_start(start)
-
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
         Returns in-sample predictions or forecasts
         """
-        start = self._get_predict_start(start, lags)
-        end, out_of_sample = self._get_predict_end(end)
+        params = np.array(params)
+
+        if start is None:
+            start = lags
+
+        # Handle start, end
+        start, end, out_of_sample, prediction_index = (
+            self._get_prediction_index(start, end))
 
         if end < start:
             raise ValueError("end is before start")
@@ -616,8 +617,8 @@ class VAR(tsbase.TimeSeriesModel):
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
-                raise Exception("%s not recognized, must be among %s"
-                                % (ic, sorted(selections)))
+                raise ValueError("%s not recognized, must be among %s"
+                                 % (ic, sorted(selections)))
             lags = getattr(selections, ic)
             if verbose:
                 print(selections)
@@ -687,7 +688,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         y_sample = endog[lags:]
         # Lütkepohl p75, about 5x faster than stated formula
-        params = np.linalg.lstsq(z, y_sample, rcond=-1)[0]
+        params = np.linalg.lstsq(z, y_sample, rcond=1e-15)[0]
         resid = y_sample - np.dot(z, params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
@@ -922,7 +923,6 @@ class VARProcess(object):
         """
         return self.intercept_longrun()
 
-
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
 
@@ -956,7 +956,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        r"""Compute long-run effect of unit impulse
 
         .. math::
 
@@ -1042,7 +1042,7 @@ class VARProcess(object):
 
     # TODO: use `mse` module-level function?
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1327,6 +1327,11 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
+        import warnings
+        warnings.warn("For consistency with other statmsodels models, "
+                      "starting in version 0.11.0 `VARResults.cov_params` "
+                      "will be a method instead of a property.",
+                      category=FutureWarning)
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
@@ -1510,30 +1515,9 @@ class VARResults(VARProcess):
         Returns
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
-
         """
-        neqs = self.neqs
-        # mean = self.mean()
-        k_ar = self.k_ar
-        coefs = self.coefs
-        sigma_u = self.sigma_u
-        intercept = self.intercept
-        # df_model = self.df_model
-        nobs = self.nobs
-
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
-
-        def fill_coll(sim):
-            ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
-            return ret.cumsum(axis=0) if cum else ret
-
-        for i in range(repl):
-            # discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
-                              seed=seed, steps=nobs+burn)
-            sim = sim[burn:]
-            ma_coll[i, :, :, :] = fill_coll(sim)
+        ma_coll = self.irf_resim(orth=orth, repl=repl, T=T,
+                                 seed=seed, burn=burn, cum=cum)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         # python 2: round returns float
@@ -1610,6 +1594,7 @@ class VARResults(VARProcess):
         # TODO: much lower-hanging fruit in caching `np.trace` and `chain_dot` below.
         B = self._bmat_forc_cov()
         _B = {}
+
         def bpow(i):
             if i not in _B:
                 _B[i] = np.linalg.matrix_power(B, i)
@@ -1812,7 +1797,7 @@ class VARResults(VARProcess):
             df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
-            raise Exception('kind %s not recognized' % kind)
+            raise ValueError('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -1976,7 +1961,7 @@ class VARResults(VARProcess):
                                     nlags, adjusted)
 
     def plot_acorr(self, nlags=10, resid=True, linewidth=8):
-        """
+        r"""
         Plot autocorrelation of sample (endog) or residuals
 
         Sample (Y) or Residual autocorrelations are plotted together with the
@@ -2115,7 +2100,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
     _wrap_methods.pop('cov_params')  # not yet a method in VARResults
-wrap.populate_wrapper(VARResultsWrapper, VARResults)
+wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
 class FEVD(object):
@@ -2268,7 +2253,7 @@ if __name__ == '__main__':
     """
 
     '''
-    mdata = sm.datasets.macrodata.load().data
+    mdata = sm.datasets.macrodata.load(as_pandas=False).data
     mdata2 = mdata[['realgdp','realcons','realinv']]
     names = mdata2.dtype.names
     data = mdata2.view((float,3))

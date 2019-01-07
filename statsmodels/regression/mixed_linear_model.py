@@ -151,13 +151,12 @@ from scipy.stats.distributions import norm
 from scipy import sparse
 import pandas as pd
 import patsy
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from statsmodels.compat.python import string_types
 from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _dot(x, y):
@@ -414,7 +413,7 @@ class MixedLMParams(object):
 
 
 def _smw_solver(s, A, AtA, Qi, di):
-    """
+    r"""
     Returns a solver for the linear system:
 
     .. math::
@@ -435,8 +434,8 @@ def _smw_solver(s, A, AtA, Qi, di):
     AtA : square ndarray
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
+        The matrix `B` is q x q, where q = r + d.  `B` consists of a r
+        x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
         See documentation for Qi.
@@ -479,7 +478,7 @@ def _smw_solver(s, A, AtA, Qi, di):
 
 
 def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
-    """
+    r"""
     Returns the log determinant of
 
     .. math::
@@ -487,7 +486,7 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
         sI + ABA^\prime
 
     Uses the matrix determinant lemma to accelerate the calculation.
-    B is assumed to be positive semidefinite, and s > 0, therefore the
+    B is assumed to be positive definite, and s > 0, therefore the
     determinant is positive.
 
     Parameters
@@ -499,8 +498,8 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     AtA : square ndarray
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
+        The matrix `B` is q x q, where q = r + d.  `B` consists of a r
+        x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
         See documentation for Qi.
@@ -1938,7 +1937,7 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, method='bfgs', **kwargs):
+            full_output=False, method=None, **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1976,20 +1975,29 @@ class MixedLM(base.LikelihoodModel):
         full_output : bool
             If true, attach iteration history to results
         method : string
-            Optimization method.
+            Optimization method.  Can be a scipy.optimize method name,
+            or a list of such names to be tried in sequence.
 
         Returns
         -------
         A MixedLMResults instance.
         """
 
-        _allowed_kwargs = ['gtol', 'maxiter']
+        _allowed_kwargs = ['gtol', 'maxiter', 'eps', 'maxcor', 'ftol',
+                           'tol', 'disp', 'maxls']
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
-                raise ValueError("Argument %s not allowed for MixedLM.fit" % x)
+                warnings.warn("Argument %s not used by MixedLM.fit" % x)
 
-        if method.lower() in ["newton", "ncg"]:
-            raise ValueError("method %s not available for MixedLM" % method)
+        if method is None:
+            method = ['bfgs', 'lbfgs']
+        elif isinstance(method, str):
+            method = [method]
+
+        for meth in method:
+            if meth.lower() in ["newton", "ncg"]:
+                raise ValueError(
+                    "method %s not available for MixedLM" % meth)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -2032,16 +2040,24 @@ class MixedLM(base.LikelihoodModel):
             if niter_sa > 0:
                 warnings.warn("niter_sa is currently ignored")
 
-            # It seems that the optimizers sometimes stop too soon, so
-            # we run a few times.
-            for rep in range(5):
+            # Try optimizing one or more times
+            for j in range(len(method)):
                 rslt = super(MixedLM, self).fit(start_params=packed,
                                                 skip_hessian=True,
-                                                method=method,
+                                                method=method[j],
                                                 **kwargs)
                 if rslt.mle_retvals['converged']:
                     break
                 packed = rslt.params
+                if j + 1 < len(method):
+                    next_method = method[j + 1]
+                    warnings.warn(
+                        "Retrying MixedLM optimization with %s" % next_method,
+                        ConvergenceWarning)
+                else:
+                    msg = ("MixedLM optimization failed, " +
+                           "trying a different optimizer may help.")
+                    warnings.warn(msg, ConvergenceWarning)
 
             # The optimization succeeded
             params = np.atleast_1d(rslt.params)
@@ -2050,7 +2066,9 @@ class MixedLM(base.LikelihoodModel):
 
         converged = rslt.mle_retvals['converged']
         if not converged:
-            msg = "Gradient optimization failed."
+            gn = self.score(rslt.params)
+            gn = np.sqrt(np.sum(gn**2))
+            msg = "Gradient optimization failed, |grad| = %f" % gn
             warnings.warn(msg, ConvergenceWarning)
 
         # Convert to the final parameterization (i.e. undo the square
@@ -2158,7 +2176,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         super(MixedLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
-        self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
+        self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
     @cache_readonly
     def fittedvalues(self):
@@ -2308,7 +2326,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             ex_r = self.model._aex_r[group_ix]
             ex2_r = self.model._aex_r2[group_ix]
             label = self.model.group_labels[group_ix]
-            vc_var = self.model._expand_vcomp(vcomp, group_ix)
+            vc_var = self.model._expand_vcomp(vcomp, label)
 
             solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv,
                                  1 / vc_var)
@@ -2325,7 +2343,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             v[0:m, 0:m] += self.cov_re
             ix = np.arange(m, v.shape[0])
             v[ix, ix] += vc_var
-            na = self._expand_re_names(group_ix)
+            na = self._expand_re_names(label)
             v = pd.DataFrame(v, index=na, columns=na)
             ranef_dict[label] = v
 

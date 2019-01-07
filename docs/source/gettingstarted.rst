@@ -34,11 +34,11 @@ Data
 ----
 
 We download the `Guerry dataset
-<http://vincentarelbundock.github.io/Rdatasets/doc/HistData/Guerry.html>`_, a
+<https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/doc/HistData/Guerry.html>`_, a
 collection of historical data used in support of Andre-Michel Guerry's 1833
 *Essay on the Moral Statistics of France*. The data set is hosted online in
 comma-separated values format (CSV) by the `Rdatasets
-<http://vincentarelbundock.github.io/Rdatasets/>`_ repository.
+<https://github.com/vincentarelbundock/Rdatasets/>`_ repository.
 We could download the file locally and then load it using ``read_csv``, but
 ``pandas`` takes care of all of this automatically for us:
 

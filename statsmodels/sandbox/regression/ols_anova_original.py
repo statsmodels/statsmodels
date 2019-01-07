@@ -330,5 +330,3 @@ for dropn in names_b1a:
     rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).results
     #print(rest_b1a_.params
     print(anova_str % anovadict(rest_b1a_))
-
-

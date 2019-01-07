@@ -3,7 +3,6 @@ Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
-from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
 from pandas import DataFrame, Series, isnull
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
@@ -104,7 +103,6 @@ class ModelData(object):
                                           return_type='dataframe')
                     break
                 except (NameError, PatsyError) as e:
-                    print('not in depth %d' % depth)
                     exc.append(e)   # why do I need a reference from outside except block
                     pass
             else:
@@ -128,7 +126,7 @@ class ModelData(object):
         else:
             # detect where the constant is
             check_implicit = False
-            ptp_ = self.exog.ptp(axis=0)
+            ptp_ = np.ptp(self.exog, axis=0)
             if not np.isfinite(ptp_).all():
                 raise MissingDataError('exog contains inf or nans')
             const_idx = np.where(ptp_ == 0)[0].squeeze()
@@ -172,11 +170,10 @@ class ModelData(object):
                 # Compute rank of augmented matrix
                 augmented_exog = np.column_stack(
                             (np.ones(self.exog.shape[0]), self.exog))
-                rank_augm = np_matrix_rank(augmented_exog)
-                rank_orig = np_matrix_rank(self.exog)
+                rank_augm = np.linalg.matrix_rank(augmented_exog)
+                rank_orig = np.linalg.matrix_rank(self.exog)
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
-
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
@@ -477,7 +474,7 @@ class PandasData(ModelData):
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
-        if hasattr(x, 'ix'):
+        if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans(x, nan_mask)
@@ -569,6 +566,7 @@ class PandasData(ModelData):
             return Series(squeezed, name=self.ynames)
         else:
             return DataFrame(result, columns=self.ynames)
+
 
 def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:

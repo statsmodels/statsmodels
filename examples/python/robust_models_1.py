@@ -7,7 +7,6 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
-from statsmodels.compat.pandas import sort_values
 
 
 # * An M-estimator minimizes the function 
@@ -201,7 +200,7 @@ from statsmodels.graphics.api import abline_plot
 from statsmodels.formula.api import ols, rlm
 
 
-prestige = sm.datasets.get_rdataset("Duncan", "car", cache=True).data
+prestige = sm.datasets.get_rdataset("Duncan", "carData", cache=True).data
 
 
 print(prestige.head(10))
@@ -233,12 +232,12 @@ print(infl.summary_frame().loc['minister'])
 
 
 sidak = ols_model.outlier_test('sidak')
-sort_values(sidak, 'unadj_p', inplace=True)
+sidak.sort_values('unadj_p', inplace=True)
 print(sidak)
 
 
 fdr = ols_model.outlier_test('fdr_bh')
-sort_values(fdr, 'unadj_p', inplace=True)
+fdr.sort_values('unadj_p', inplace=True)
 print(fdr)
 
 
@@ -300,12 +299,12 @@ hat_diag.loc[hat_diag > h_bar]
 
 
 sidak2 = ols_model.outlier_test('sidak')
-sort_values(sidak2, 'unadj_p', inplace=True)
+sidak2.sort_values('unadj_p', inplace=True)
 print(sidak2)
 
 
 fdr2 = ols_model.outlier_test('fdr_bh')
-sort_values(fdr2, 'unadj_p', inplace=True)
+fdr2.sort_values('unadj_p', inplace=True)
 print(fdr2)
 
 
@@ -383,4 +382,3 @@ beta_true
 
 
 se_loss(all_betas.mean(0) - beta_true)
-

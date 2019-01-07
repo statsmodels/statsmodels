@@ -181,8 +181,8 @@ class TheilGLS(GLS):
     def fit(self, pen_weight=1., cov_type='sandwich'):
         """Estimate parameters and return results instance
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         pen_weight : float
             penalization factor for the restriction, default is 1.
         cov_type : string, 'data-prior' or 'sandwich'

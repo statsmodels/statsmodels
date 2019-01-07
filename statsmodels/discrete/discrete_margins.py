@@ -345,11 +345,13 @@ def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
 def margeff():
     pass
 
+
 def _check_at_is_all(method):
     if method['at'] == 'all':
-        raise NotImplementedError("Only margeff are available when `at` is "
-                    "all. Please input specific points if you would like to "
-                    "do inference.")
+        raise ValueError("Only margeff are available when `at` is "
+                         "'all'. Please input specific points if you would "
+                         "like to do inference.")
+
 
 _transform_names = dict(dydx='dy/dx',
                         eyex='d(lny)/d(lnx)',

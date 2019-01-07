@@ -76,7 +76,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''
 
     pd_index = getattr(count, 'index', None)
-    if pd_index is not None and hasattr(pd_index, '__call__'):
+    if pd_index is not None and callable(pd_index):
         # this rules out lists, lists have an index method
         pd_index = None
     count = np.asarray(count)
@@ -795,7 +795,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     >>> from statsmodels.stats.proportion import proportions_ztest
     >>> count = np.array([5, 12])
     >>> nobs = np.array([83, 99])
-    >>> stat, pval = proportions_ztest(counts, nobs)
+    >>> stat, pval = proportions_ztest(count, nobs)
     >>> print('{0:0.3f}'.format(pval))
     0.159
 

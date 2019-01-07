@@ -339,7 +339,7 @@ class emplikeAFT(object):
         km = np.cumprod(km)  # If no ties, this is kaplan-meier
         tied = self._is_tied(endog, censors)
         wtd_km = self._km_w_ties(tied, km)
-        return  (censors / wtd_km).reshape(nobs, 1)
+        return (censors / wtd_km).reshape(nobs, 1)
 
     def fit(self):
         """
@@ -445,7 +445,7 @@ class AFTResults(OptAFT):
         >>> import numpy as np
 
         # Test parameter is .05 in one regressor no intercept model
-        >>> data=sm.datasets.heart.load()
+        >>> data=sm.datasets.heart.load(as_pandas=False)
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors
@@ -456,7 +456,7 @@ class AFTResults(OptAFT):
 
         #Test slope is 0 in  model with intercept
 
-        >>> data=sm.datasets.heart.load()
+        >>> data=sm.datasets.heart.load(as_pandas=False)
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors

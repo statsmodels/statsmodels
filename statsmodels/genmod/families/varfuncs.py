@@ -1,9 +1,6 @@
 """
 Variance functions for use with the link functions in statsmodels.family.links
 """
-
-__docformat__ = 'restructuredtext'
-
 import numpy as np
 FLOAT_EPS = np.finfo(float).eps
 

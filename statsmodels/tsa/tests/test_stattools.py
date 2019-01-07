@@ -1,21 +1,27 @@
-from statsmodels.compat.numpy import recarray_select
-
+from statsmodels.compat.pandas import assert_index_equal
 from statsmodels.compat.python import lrange
-from statsmodels.tools.sm_exceptions import ColinearityWarning
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests,
-                                               coint, acovf, kpss, ResultsStore,
-                                               arma_order_select_ic)
+
+import os
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, assert_, assert_allclose)
-from statsmodels.datasets import macrodata, sunspots
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           assert_, assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
-import os
-import warnings
-from statsmodels.tools.sm_exceptions import MissingDataError
+
+from statsmodels.datasets import macrodata, sunspots
+from statsmodels.tools.sm_exceptions import (CollinearityWarning,
+                                             MissingDataError)
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+                                       pacf, grangercausalitytests,
+                                       coint, acovf, kpss,
+                                       arma_order_select_ic, levinson_durbin,
+                                       levinson_durbin_pacf, pacf_burg,
+                                       innovations_algo, innovations_filter)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -25,6 +31,13 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
+
+@pytest.fixture('module')
+def acovf_data():
+    rnd = np.random.RandomState(12345)
+    return rnd.randn(250)
+
+
 class CheckADF(object):
     """
     Test Augmented Dickey-Fuller
@@ -32,9 +45,9 @@ class CheckADF(object):
     Test values taken from Stata.
     """
     levels = ['1%', '5%', '10%']
-    data = macrodata.load()
-    x = data.data['realgdp']
-    y = data.data['infl']
+    data = macrodata.load_pandas()
+    x = data.data['realgdp'].values
+    y = data.data['infl'].values
 
     def test_teststat(self):
         assert_almost_equal(self.res1[0], self.teststat, DECIMAL_5)
@@ -45,6 +58,7 @@ class CheckADF(object):
     def test_critvalues(self):
         critvalues = [self.res1[4][lev] for lev in self.levels]
         assert_almost_equal(critvalues, self.critvalues, DECIMAL_2)
+
 
 class TestADFConstant(CheckADF):
     """
@@ -58,6 +72,7 @@ class TestADFConstant(CheckADF):
         cls.pvalue = .99399563
         cls.critvalues = [-3.476, -2.883, -2.573]
 
+
 class TestADFConstantTrend(CheckADF):
     """
     """
@@ -69,11 +84,13 @@ class TestADFConstantTrend(CheckADF):
         cls.pvalue = .67682968
         cls.critvalues = [-4.007, -3.437, -3.137]
 
+
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
 #    pass
 #TODO: get test values from R?
+
 
 class TestADFNoConstant(CheckADF):
     """
@@ -88,6 +105,7 @@ class TestADFNoConstant(CheckADF):
                         # assumed that its right-tail is well-behaved
         cls.critvalues = [-2.587, -1.950, -1.617]
 
+
 # No Unit Root
 
 class TestADFConstant2(CheckADF):
@@ -99,6 +117,7 @@ class TestADFConstant2(CheckADF):
         cls.pvalue = .00038661
         cls.critvalues = [-3.476, -2.883, -2.573]
 
+
 class TestADFConstantTrend2(CheckADF):
     @classmethod
     def setup_class(cls):
@@ -108,20 +127,23 @@ class TestADFConstantTrend2(CheckADF):
         cls.pvalue = .00199633
         cls.critvalues = [-4.006, -3.437, -3.137]
 
+
 class TestADFNoConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.y, regression="nc", autolag=None,
                 maxlag=1)
         cls.teststat = -2.4511596
-        cls.pvalue = 0.013747 # Stata does not return a p-value for noconstant
-                               # this value is just taken from our results
+        cls.pvalue = 0.013747
+        # Stata does not return a p-value for noconstant
+        # this value is just taken from our results
         cls.critvalues = [-2.587,-1.950,-1.617]
         _, _1, _2, cls.store = adfuller(cls.y, regression="nc", autolag=None,
                                          maxlag=1, store=True)
 
     def test_store_str(self):
         assert_equal(self.store.__str__(), 'Augmented Dickey-Fuller Test Results')
+
 
 class CheckCorrGram(object):
     """
@@ -146,8 +168,8 @@ class TestACF(CheckCorrGram):
         cls.acf = cls.results['acvar']
         #cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results['Q1']
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05)
-        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].as_matrix()
+        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05, fft=False)
+        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].values
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
@@ -180,6 +202,7 @@ class TestACF_FFT(CheckCorrGram):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
 
+
 class TestACFMissing(CheckCorrGram):
     # Test Autocorrelation Function using Missing
     @classmethod
@@ -188,17 +211,18 @@ class TestACFMissing(CheckCorrGram):
         cls.acf = cls.results['acvar'] # drop and conservative
         cls.qstat = cls.results['Q1']
         cls.res_drop = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                            missing='drop')
+                           missing='drop', fft=False)
         cls.res_conservative = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                                    missing='conservative')
-        cls.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
+                                   fft=False, missing='conservative')
+        cls.acf_none = np.empty(40) * np.nan  # lags 1 to 40 inclusive
         cls.qstat_none = np.empty(40) * np.nan
         cls.res_none = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                        missing='none')
+                           missing='none', fft=False)
 
     def test_raise(self):
-        assert_raises(MissingDataError, acf, self.x, nlags=40,
-                      qstat=True, alpha=.05, missing='raise')
+        with pytest.raises(MissingDataError):
+            acf(self.x, nlags=40, qstat=True, fft=False, alpha=.05,
+                missing='raise')
 
     def test_acf_none(self):
         assert_almost_equal(self.res_none[0][1:41], self.acf_none, DECIMAL_8)
@@ -238,7 +262,6 @@ class TestPACF(CheckCorrGram):
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
 
-
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
@@ -252,6 +275,7 @@ class TestPACF(CheckCorrGram):
         pacfld = pacf(self.x, nlags=40, method="ldu")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
+
 class CheckCoint(object):
     """
     Test Cointegration Test Results for 2-variable system
@@ -259,12 +283,13 @@ class CheckCoint(object):
     Test values taken from Stata
     """
     levels = ['1%', '5%', '10%']
-    data = macrodata.load()
-    y1 = data.data['realcons']
-    y2 = data.data['realgdp']
+    data = macrodata.load_pandas()
+    y1 = data.data['realcons'].values
+    y2 = data.data['realgdp'].values
 
     def test_tstat(self):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
+
 
 # this doesn't produce the old results anymore
 class TestCoint_t(CheckCoint):
@@ -362,10 +387,9 @@ def test_coint_identical_series():
     scale_e = 1
     np.random.seed(123)
     y = scale_e * np.random.randn(nobs)
-    warnings.simplefilter('always', ColinearityWarning)
-    with warnings.catch_warnings(record=True) as w:
+    warnings.simplefilter('always', CollinearityWarning)
+    with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
-    assert_equal(len(w), 1)
     assert_equal(c[1], 0.0)
     assert_(np.isneginf(c[0]))
 
@@ -377,7 +401,7 @@ def test_coint_perfect_collinearity():
     np.random.seed(123)
     x = scale_e * np.random.randn(nobs, 2)
     y = 1 + x.sum(axis=1) + 1e-7 * np.random.randn(nobs)
-    warnings.simplefilter('always', ColinearityWarning)
+    warnings.simplefilter('always', CollinearityWarning)
     with warnings.catch_warnings(record=True) as w:
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
@@ -388,9 +412,9 @@ class TestGrangerCausality(object):
 
     def test_grangercausality(self):
         # some example data
-        mdata = macrodata.load().data
-        mdata = recarray_select(mdata, ['realgdp', 'realcons'])
-        data = mdata.view((float, 2))
+        mdata = macrodata.load_pandas().data
+        mdata = mdata[['realgdp', 'realcons']].values
+        data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
 
         #R: lmtest:grangertest
@@ -407,8 +431,8 @@ class TestGrangerCausality(object):
 
 
 class SetupKPSS(object):
-    data = macrodata.load()
-    x = data.data['realgdp']
+    data = macrodata.load_pandas()
+    x = data.data['realgdp'].values
 
 
 class TestKPSS(SetupKPSS):
@@ -473,20 +497,21 @@ class TestKPSS(SetupKPSS):
         # assert_warns(UserWarning, kpss, self.x)
 
 
-
 def test_pandasacovf():
     s = Series(lrange(1, 11))
-    assert_almost_equal(acovf(s), acovf(s.values))
+    assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
     dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
-    res = acovf(dta)
-    assert_equal(res, acovf(dta.values))
-    X = np.random.random((10,2))
-    assert_raises(ValueError, acovf, X)
+    res = acovf(dta, fft=False)
+    assert_equal(res, acovf(dta.values, fft=False))
+    x = np.random.random((10, 2))
+    with pytest.raises(ValueError):
+        acovf(x, fft=False)
+
 
 def test_acovf_fft_vs_convolution():
     np.random.seed(1)
@@ -498,11 +523,11 @@ def test_acovf_fft_vs_convolution():
             F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
             assert_almost_equal(F1, F2, decimal=7)
 
+
 @pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample
-    import statsmodels.api as sm
 
     arparams = np.array([.75, -.25])
     maparams = np.array([.65, .35])
@@ -523,8 +548,8 @@ def test_arma_order_select_ic():
                       [ 517.61019619,  496.99650196,  499.52656493],
                       [ 498.12580329,  499.75598491,  504.99255506],
                       [ 499.49225249,  504.96650341,  510.48779255]])
-    aic = DataFrame(aic_x , index=lrange(5), columns=lrange(3))
-    bic = DataFrame(bic_x , index=lrange(5), columns=lrange(3))
+    aic = DataFrame(aic_x, index=lrange(5), columns=lrange(3))
+    bic = DataFrame(bic_x, index=lrange(5), columns=lrange(3))
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
@@ -534,11 +559,21 @@ def test_arma_order_select_ic():
     assert_(res.bic.index.equals(bic.index))
     assert_(res.bic.columns.equals(bic.columns))
 
+    index = pd.date_range('2000-1-1', freq='M', periods=len(y))
+    y_series = pd.Series(y, index=index)
+    res_pd = arma_order_select_ic(y_series, max_ar=2, max_ma=1,
+                                  ic=['aic', 'bic'], trend='nc')
+    assert_almost_equal(res_pd.aic.values, aic.values[:3, :2], 5)
+    assert_almost_equal(res_pd.bic.values, bic.values[:3, :2], 5)
+    assert_equal(res_pd.aic_min_order, (2, 1))
+    assert_equal(res_pd.bic_min_order, (1, 1))
+
     res = arma_order_select_ic(y, ic='aic', trend='nc')
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
+
 
 def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
@@ -567,6 +602,220 @@ def test_acf_fft_dataframe():
     result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
     assert_equal(result.ndim, 1)
 
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+
+def test_levinson_durbin_acov():
+    rho = 0.9
+    m = 20
+    acov = rho**np.arange(200)
+    sigma2_eps, ar, pacf, _, _ = levinson_durbin(acov, m, isacov=True)
+    assert_allclose(sigma2_eps, 1 - rho ** 2)
+    assert_allclose(ar, np.array([rho] + [0] * (m - 1)), atol=1e-8)
+    assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
+
+
+
+@pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
+@pytest.mark.parametrize("fft", [False, True])
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("unbiased", [True, False])
+def test_acovf_nlags(acovf_data, unbiased, demean, fft, missing):
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
+    assert_allclose(full[:11], limited)
+
+
+@pytest.mark.parametrize("missing", ['conservative', 'drop'])
+@pytest.mark.parametrize("fft", [False, True])
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("unbiased", [True, False])
+def test_acovf_nlags_missing(acovf_data, unbiased, demean, fft, missing):
+    acovf_data = acovf_data.copy()
+    acovf_data[1:3] = np.nan
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
+    assert_allclose(full[:11], limited)
+
+
+def test_acovf_error(acovf_data):
+    with pytest.raises(ValueError):
+        acovf(acovf_data, nlag=250, fft=False)
+
+
+def test_acovf_warns(acovf_data):
+    with pytest.warns(FutureWarning):
+        acovf(acovf_data)
+
+
+def test_acf_warns(acovf_data):
+    with pytest.warns(FutureWarning):
+        acf(acovf_data, nlags=40)
+
+
+def test_pacf2acf_ar():
+    pacf = np.zeros(10)
+    pacf[0] = 1
+    pacf[1] = 0.9
+    ar, acf = levinson_durbin_pacf(pacf)
+    assert_allclose(acf, 0.9 ** np.arange(10.))
+    assert_allclose(ar, pacf[1:], atol=1e-8)
+
+    ar, acf = levinson_durbin_pacf(pacf, nlags=5)
+    assert_allclose(acf, 0.9 ** np.arange(6.))
+    assert_allclose(ar, pacf[1:6], atol=1e-8)
+
+
+def test_pacf2acf_levinson_durbin():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    ar, acf = levinson_durbin_pacf(pacf)
+    _, ar_ld, pacf_ld, _, _ = levinson_durbin(acf, 10, isacov=True)
+    assert_allclose(ar, ar_ld, atol=1e-8)
+    assert_allclose(pacf, pacf_ld, atol=1e-8)
+
+    # From R, FitAR, PacfToAR
+    ar_from_r = [-4.1609, -9.2549, -14.4826, -17.6505, -17.5012, -14.2969, -9.5020, -4.9184,
+                 -1.7911, -0.3486]
+    assert_allclose(ar, ar_from_r, atol=1e-4)
+
+
+def test_pacf2acf_errors():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf, nlags=20)
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf[:1])
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros(10))
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros((10, 2)))
+
+
+def test_pacf_burg():
+    rnd = np.random.RandomState(12345)
+    e = rnd.randn(10001)
+    y = e[1:] + 0.5 * e[:-1]
+    pacf, sigma2 = pacf_burg(y, 10)
+    yw_pacf = pacf_yw(y, 10)
+    assert_allclose(pacf, yw_pacf, atol=5e-4)
+    # Internal consistency check between pacf and sigma2
+    ye = y - y.mean()
+    s2y = ye.dot(ye) / 10000
+    pacf[0] = 0
+    sigma2_direct = s2y * np.cumprod(1 - pacf ** 2)
+    assert_allclose(sigma2, sigma2_direct, atol=1e-3)
+
+
+def test_pacf_burg_error():
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty((20,2)), 10)
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty(100), 101)
+
+
+def test_innovations_algo_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, sigma2 = innovations_algo(acovf, nobs=4)
+    exp_theta = np.array([[0], [-.4972], [-.6606], [-.7404]])
+    assert_allclose(theta, exp_theta, rtol=1e-4)
+    assert_allclose(sigma2, [1.81, 1.3625, 1.2155, 1.1436], rtol=1e-4)
+
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    assert_allclose(theta[-1, 0], ma)
+    assert_allclose(sigma2[-1], 1.0)
+
+
+def test_innovations_algo_rtol():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    theta_2, sigma2_2 = innovations_algo(acovf, nobs=500, rtol=1e-8)
+    assert_allclose(theta, theta_2)
+    assert_allclose(sigma2, sigma2_2)
+
+
+def test_innovations_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=2.2)
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=-1)
+    with pytest.raises(ValueError):
+        innovations_algo(np.empty((2, 2)))
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, rtol='none')
+
+
+def test_innovations_filter_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    e = np.random.randn(5)
+    endog = e[1:] + ma * e[:-1]
+    resid = innovations_filter(endog, theta)
+    expected = [endog[0]]
+    for i in range(1, 4):
+        expected.append(endog[i] - theta[i, 0] * expected[-1])
+    expected = np.array(expected)
+    assert_allclose(resid, expected)
+
+
+def test_innovations_filter_pandas():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, _ = innovations_algo(acovf, nobs=10)
+    endog = np.random.randn(10)
+    endog_pd = pd.Series(endog,
+                         index=pd.date_range('2000-01-01', periods=10))
+    resid = innovations_filter(endog, theta)
+    resid_pd = innovations_filter(endog_pd, theta)
+    assert_allclose(resid, resid_pd.values)
+    assert_index_equal(endog_pd.index, resid_pd.index)
+
+
+def test_innovations_filter_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty((2, 2)), theta)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty(4), theta[:-1])
+    with pytest.raises(ValueError):
+        innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
+
+
+def test_innovations_algo_filter_kalman_filter():
+    # Test the innovations algorithm and filter against the Kalman filter
+    # for exact likelihood evaluation of an ARMA process
+    ar_params = np.array([0.5])
+    ma_params = np.array([0.2])
+    # TODO could generalize to sigma2 != 1, if desired, after #5324 is merged
+    # and there is a sigma2 argument to arma_acovf
+    # (but maybe this is not really necessary for the point of this test)
+    sigma2 = 1
+
+    endog = np.random.normal(size=10)
+
+    # Innovations algorithm approach
+    acovf = arma_acovf(np.r_[1, -ar_params], np.r_[1, ma_params],
+                       nobs=len(endog))
+
+    theta, v = innovations_algo(acovf)
+    u = innovations_filter(endog, theta)
+    llf_obs = -0.5 * u**2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
+
+    # Kalman filter apparoach
+    mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
+    res = mod.filter(np.r_[ar_params, ma_params, sigma2])
+
+    # Test that the two approaches are identical
+    assert_allclose(u, res.forecasts_error[0])
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
+    assert_allclose(llf_obs, res.llf_obs)

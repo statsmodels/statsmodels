@@ -170,8 +170,8 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
 def dummy_1d(x, varname=None):
     '''dummy variable for id integer groups
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     x : ndarray, 1d
         categorical variable, requires integers if varname is None
     varname : string
@@ -639,7 +639,7 @@ if __name__ == '__main__':
 
     y = np.arange(12)
     x1 = np.arange(12)//4
-    x2 = np.arange(12)//2%2
+    x2 = np.arange(12)//2 % 2
 
     if 'small' in examples:
         d1, d1_labels = dummy_1d(x1)

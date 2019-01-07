@@ -40,7 +40,6 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -197,7 +196,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -214,7 +213,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -276,7 +275,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = np_matrix_rank(np.diag(singular_values))
+                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -291,7 +290,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np_matrix_rank(R)
+                self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
@@ -437,7 +436,7 @@ class GLS(RegressionModel):
     --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.longley.load()
+    >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
     >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
@@ -1244,7 +1243,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.datasets.sunspots import load
-    >>> data = load()
+    >>> data = load(as_pandas=False)
     >>> rho, sigma = sm.regression.yule_walker(data.endog,
     ...                                        order=4, method="mle")
 
@@ -1283,6 +1282,52 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
+
+
+def burg(endog, order=1, demean=True):
+    """
+    Burg's AP(p) parameter estimator
+
+    Parameters
+    ----------
+    endog : array-like
+        The endogenous variable
+    order : int, optional
+        Order of the AR.  Default is 1.
+    demean : bool, optional
+        Flag indicating to subtract the mean from endog before estimation
+
+    Returns
+    -------
+    rho : ndarray
+        AR(p) coefficients computed using Burg's algorithm
+    sigma2 : float
+        Estimate of the residual variance
+
+    Notes
+    -----
+    AR model estimated includes a constant estimated using the sample mean.
+    This value is not reported.
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    # Avoid circular imports
+    from statsmodels.tsa.stattools import levinson_durbin_pacf, pacf_burg
+
+    endog = np.squeeze(np.asarray(endog))
+    if endog.ndim != 1:
+        raise ValueError('endog must be 1-d or squeezable to 1-d.')
+    order = int(order)
+    if order < 1:
+        raise ValueError('order must be an integer larger than 1')
+    if demean:
+        endog = endog - endog.mean()
+    pacf, sigma = pacf_burg(endog, order, demean=demean)
+    ar, _ = levinson_durbin_pacf(pacf)
+    return ar, sigma[-1]
 
 
 class RegressionResults(base.LikelihoodModelResults):
@@ -1520,10 +1565,19 @@ class RegressionResults(base.LikelihoodModelResults):
     def centered_tss(self):
         model = self.model
         weights = getattr(model, 'weights', None)
+        sigma = getattr(model, 'sigma', None)
         if weights is not None:
-            return np.sum(weights * (
-                model.endog - np.average(model.endog, weights=weights))**2)
-        else:  # this is probably broken for GLS
+            mean = np.average(model.endog, weights=weights)
+            return np.sum(weights * (model.endog - mean)**2)
+        elif sigma is not None:
+            # Exactly matches WLS when sigma is diagonal
+            iota = np.ones_like(model.endog)
+            iota = model.whiten(iota)
+            mean = model.wendog.dot(iota) / iota.dot(iota)
+            err = model.endog - mean
+            err = model.whiten(err)
+            return np.sum(err**2)
+        else:
             centered_endog = model.wendog - model.wendog.mean()
             return np.dot(centered_endog, centered_endog)
 
@@ -2375,8 +2429,9 @@ class RegressionResults(base.LikelihoodModelResults):
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
-        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
-                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+        rsquared_type = '' if self.k_constant else ' (uncentered)'
+        top_right = [('R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared]),
+                     ('Adj. R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue]),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
                      ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
@@ -2491,7 +2546,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  omni_normtest,
                                                  durbin_watson)
 
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)
@@ -2660,7 +2715,7 @@ class OLSResults(RegressionResults):
         Examples
         --------
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.stackloss.load()
+        >>> data = sm.datasets.stackloss.load(as_pandas=False)
         >>> endog = data.endog
         >>> exog = sm.add_constant(data.exog)
         >>> model = sm.OLS(endog, exog)
@@ -2824,7 +2879,7 @@ wrap.populate_wrapper(RegressionResultsWrapper,
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     data.exog = add_constant(data.exog, prepend=False)
     ols_results = OLS(data.endog, data.exog).fit()  # results
     gls_results = GLS(data.endog, data.exog).fit()  # results

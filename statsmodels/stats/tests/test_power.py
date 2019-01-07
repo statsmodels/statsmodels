@@ -9,7 +9,6 @@ Created on Sat Mar 09 08:44:49 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.testing import SkipTest, skipif
 import copy
 import warnings
 from distutils.version import LooseVersion
@@ -17,17 +16,17 @@ from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns, dec)
+                           assert_equal, assert_warns)
+import pytest
 import scipy
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 
 try:
-    import matplotlib.pyplot as plt  # makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
@@ -90,11 +89,10 @@ class CheckPowerMixin(object):
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_power_plot(self):
+    @pytest.mark.matplotlib
+    def test_power_plot(self, close_figures):
         if self.cls == smp.FTestPower:
-            raise SkipTest('skip FTestPower plot_power')
-        plt.close()
+            pytest.skip('skip FTestPower plot_power')
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
         fig = self.cls().plot_power(dep_var='nobs',
@@ -104,13 +102,12 @@ class CheckPowerMixin(object):
                                   ax=ax, title='Power of t-Test',
                                   **self.kwds_extra)
         ax = fig.add_subplot(2,1,2)
-        fig = self.cls().plot_power(dep_var='es',
-                                  nobs=np.array([10, 20, 30, 50, 70, 100]),
-                                  effect_size=np.linspace(0.01, 2, 51),
-                                  #alternative='larger',
-                                  ax=ax, title='',
-                                  **self.kwds_extra)
-        plt.close(fig)
+        self.cls().plot_power(dep_var='es',
+                              nobs=np.array([10, 20, 30, 50, 70, 100]),
+                              effect_size=np.linspace(0.01, 2, 51),
+                              #alternative='larger',
+                              ax=ax, title='',
+                              **self.kwds_extra)
 
 #''' test cases
 #one sample
@@ -741,7 +738,7 @@ def test_power_solver():
     assert_raises(ValueError, nip.solve_power, nobs1=None, effect_size=0, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
-@skipif(SM_GT_10, 'Known failure on modern SciPy')
+@pytest.mark.skipif(SM_GT_10, reason='Known failure on modern SciPy')
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,
@@ -774,15 +771,3 @@ def test_power_solver_warn():
                               alternative='larger')
         assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
-
-
-
-if __name__ == '__main__':
-    test_normal_power_explicit()
-    nt = TestNormalIndPower1()
-    nt.test_power()
-    nt.test_roots()
-    nt = TestNormalIndPower_onesamp1()
-    nt.test_power()
-    nt.test_roots()
-

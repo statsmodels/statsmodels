@@ -30,7 +30,7 @@ if __name__ == '__main__':
     L = evecs[:, :k_constr]
     T = evecs[:, k_constr:]
 
-    print T.T.dot(np.eye(k_vars))
+    print(T.T.dot(np.eye(k_vars)))
 
     tr = np.column_stack((T, R.T))
 
@@ -133,7 +133,7 @@ if __name__ == '__main__':
 
     from statsmodels.discrete.discrete_model import Poisson
     import statsmodels.api as sm
-    rand_data = sm.datasets.randhie.load()
+    rand_data = sm.datasets.randhie.load(as_pandas=False)
     rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
     rand_exog = sm.add_constant(rand_exog, prepend=False)
 

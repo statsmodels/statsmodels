@@ -183,96 +183,96 @@ def Tukeythreegene(first,second,third):
 ##   qwb.sheet_names()
 ##   qcrittable = qwb.sheet_by_name(u'Sheet1')
 
-   firstmean = numpy.mean(first) #means of the three arrays
-   secondmean = numpy.mean(second)
-   thirdmean = numpy.mean(third)
+    firstmean = numpy.mean(first) #means of the three arrays
+    secondmean = numpy.mean(second)
+    thirdmean = numpy.mean(third)
 
-   firststd = numpy.std(first) #standard deviations of the threearrays
-   secondstd = numpy.std(second)
-   thirdstd = numpy.std(third)
+    firststd = numpy.std(first) #standard deviations of the threearrays
+    secondstd = numpy.std(second)
+    thirdstd = numpy.std(third)
 
-   firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
-   seconds2 = math.pow(secondstd,2)
-   thirds2 = math.pow(thirdstd,2)
+    firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
+    seconds2 = math.pow(secondstd,2)
+    thirds2 = math.pow(thirdstd,2)
 
-   mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
-   mserrorden = (len(first)+len(second)+len(third))-3 #denominator for mean square error
-   mserror = mserrornum/mserrorden #mean square error
+    mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
+    mserrorden = (len(first)+len(second)+len(third))-3 #denominator for mean square error
+    mserror = mserrornum/mserrorden #mean square error
 
-   standarderror = math.sqrt(mserror/len(first))
-   #standard error, which is square root of mserror and the number of samples in a group
+    standarderror = math.sqrt(mserror/len(first))
+    #standard error, which is square root of mserror and the number of samples in a group
 
-   dftotal = len(first)+len(second)+len(third)-1 #various degrees of freedom
-   dfgroups = 2
-   dferror = dftotal-dfgroups
+    dftotal = len(first)+len(second)+len(third)-1 #various degrees of freedom
+    dfgroups = 2
+    dferror = dftotal-dfgroups
 
-   qcrit = 0.5 # fix arbitrary#qcrittable.cell(dftotal, 3).value
-   qcrit = get_tukeyQcrit(3, dftotal, alpha=0.05)
-   #getting the q critical value, for degrees of freedom total and 3 groups
+    qcrit = 0.5 # fix arbitrary#qcrittable.cell(dftotal, 3).value
+    qcrit = get_tukeyQcrit(3, dftotal, alpha=0.05)
+    #getting the q critical value, for degrees of freedom total and 3 groups
 
-   qtest3to1 = (math.fabs(thirdmean-firstmean))/standarderror
+    qtest3to1 = (math.fabs(thirdmean-firstmean))/standarderror
     #calculating q test statistic values
-   qtest3to2 = (math.fabs(thirdmean-secondmean))/standarderror
-   qtest2to1 = (math.fabs(secondmean-firstmean))/standarderror
+    qtest3to2 = (math.fabs(thirdmean-secondmean))/standarderror
+    qtest2to1 = (math.fabs(secondmean-firstmean))/standarderror
 
-   conclusion = []
+    conclusion = []
 
 ##    print(qcrit
-   print(qtest3to1)
-   print(qtest3to2)
-   print(qtest2to1)
+    print(qtest3to1)
+    print(qtest3to2)
+    print(qtest2to1)
 
-   if(qtest3to1>qcrit): #testing all q test statistic values to q critical values
-       conclusion.append('3to1null')
-   else:
-       conclusion.append('3to1alt')
-   if(qtest3to2>qcrit):
-       conclusion.append('3to2null')
-   else:
-       conclusion.append('3to2alt')
-   if(qtest2to1>qcrit):
-       conclusion.append('2to1null')
-   else:
-       conclusion.append('2to1alt')
+    if(qtest3to1>qcrit): #testing all q test statistic values to q critical values
+        conclusion.append('3to1null')
+    else:
+        conclusion.append('3to1alt')
+    if(qtest3to2>qcrit):
+        conclusion.append('3to2null')
+    else:
+        conclusion.append('3to2alt')
+    if(qtest2to1>qcrit):
+        conclusion.append('2to1null')
+    else:
+        conclusion.append('2to1alt')
 
-   return conclusion
+    return conclusion
 
 
 #rewrite by Vincent
 def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three genes
-   """gend is a list, ie [first, second, third]"""
+    """gend is a list, ie [first, second, third]"""
 #   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
     #opening the workbook containing the q crit table
 #   qwb.sheet_names()
 #   qcrittable = qwb.sheet_by_name(u'Sheet1')
 
-   means = []
-   stds = []
-   for gene in genes:
-      means.append(numpy.mean(gene))
-      std.append(numpy.std(gene))
+    means = []
+    stds = []
+    for gene in genes:
+        means.append(numpy.mean(gene))
+        std.append(numpy.std(gene))
 
-   #firstmean = numpy.mean(first) #means of the three arrays
-   #secondmean = numpy.mean(second)
-   #thirdmean = numpy.mean(third)
+    #firstmean = numpy.mean(first) #means of the three arrays
+    #secondmean = numpy.mean(second)
+    #thirdmean = numpy.mean(third)
 
-   #firststd = numpy.std(first) #standard deviations of the three arrays
-   #secondstd = numpy.std(second)
-   #thirdstd = numpy.std(third)
+    #firststd = numpy.std(first) #standard deviations of the three arrays
+    #secondstd = numpy.std(second)
+    #thirdstd = numpy.std(third)
 
-   stds2 = []
-   for std in stds:
-      stds2.append(math.pow(std,2))
+    stds2 = []
+    for std in stds:
+        stds2.append(math.pow(std,2))
 
 
-   #firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
-   #seconds2 = math.pow(secondstd,2)
-   #thirds2 = math.pow(thirdstd,2)
+    #firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
+    #seconds2 = math.pow(secondstd,2)
+    #thirds2 = math.pow(thirdstd,2)
 
-   #mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
-   mserrornum = sum(stds2)*2
-   mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 #denominator for mean square error
-   mserror = mserrornum/mserrorden #mean square error
+    #mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
+    mserrornum = sum(stds2)*2
+    mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 #denominator for mean square error
+    mserror = mserrornum/mserrorden #mean square error
 
 
 def catstack(args):
@@ -799,7 +799,7 @@ class MultiComparison(object):
             for grp in group_order:
                 if grp not in groups:
                     raise ValueError(
-                            "group_order value '%s' not found in groups"%grp)
+                            "group_order value '%s' not found in groups" % grp)
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.empty(len(data), int)
             self.groupintlab.fill(-999)  # instead of a nan
@@ -1662,6 +1662,7 @@ def homogeneous_subsets(vals, dcrit):
     subsetsli = []
     if np.size(dcrit) == 1:
         dcrit = dcrit*np.ones((nvals, nvals))  #example numbers for experimenting
+
     def subsets(vals, indices_):
         '''recursive function for constructing homogeneous subset
 

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function
 
-import math
 from collections import defaultdict
-from math import log
 import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
@@ -16,13 +14,13 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tsa.tsatools import duplication_matrix, vec
+from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
-    CausalityTestResults, NormalityTestResults, WhitenessTestResults
+    CausalityTestResults, WhitenessTestResults
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults, _compute_acov
@@ -609,22 +607,9 @@ def coint_johansen(endog, det_order, k_ar_diff):
                       category=HypothesisTestWarning)
 
     from statsmodels.regression.linear_model import OLS
-    tdiff = np.diff
 
     class Holder(object):
         pass
-
-    def trimr(x, front, end):
-        if end > 0:
-            return x[front:-end]
-        else:
-            return x[front:]
-
-    import statsmodels.tsa.tsatools as tsat
-    mlag = tsat.lagmat
-
-    def lag(x, lags):
-        return x[:-lags]
 
     def detrend(y, order):
         if order == -1:
@@ -647,17 +632,17 @@ def coint_johansen(endog, det_order, k_ar_diff):
         f = det_order
 
     endog = detrend(endog, det_order)
-    dx = tdiff(endog, 1, axis=0)
-    z = mlag(dx, k_ar_diff)
-    z = trimr(z, k_ar_diff, 0)
+    dx = np.diff(endog, 1, axis=0)
+    z = lagmat(dx, k_ar_diff)
+    z = z[k_ar_diff:]
     z = detrend(z, f)
 
-    dx = trimr(dx, k_ar_diff, 0)
+    dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = lag(endog, k_ar_diff)
-    lx = trimr(lx, 1, 0)
+    lx = endog[:-k_ar_diff]
+    lx = lx[1:]
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
     skk = np.dot(rkt.T, rkt) / rkt.shape[0]
@@ -684,7 +669,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     iota = np.ones(neqs)
     t, junk = rkt.shape
     for i in range(0, neqs):
-        tmp = trimr(np.log(iota-a), i, 0)
+        tmp = np.log(iota - a)[i:]
         lr1[i] = -t * np.sum(tmp, 0)
         lr2[i] = -t * np.log(1-a[i])
         cvm[i, :] = c_sja(neqs - i, det_order)
@@ -1183,7 +1168,7 @@ class VECMResults(object):
         KxK parameter matrices :math:`A_i` of the corresponding VAR
         representation. If the return value is assigned to a variable ``A``,
         these matrices can be accessed via ``A[i]`` for
-        :math:`i=0, \ldots, k_{ar}-1`.
+        :math:`i=0, \\ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
         This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
         It is needed e.g. for impulse-response-analysis.
@@ -1274,8 +1259,8 @@ class VECMResults(object):
         r = self.coint_rank
         s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T,
                                          self._y_lag1)
-        return - K * T * log(2*math.pi) / 2  \
-            - T * (log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
+        return - K * T * np.log(2*np.pi) / 2  \
+            - T * (np.log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
             - K * T / 2
 
     @cache_readonly
@@ -1285,7 +1270,6 @@ class VECMResults(object):
         d_K_plus = np.linalg.pinv(d)
         # compare p. 93, 297 Lutkepohl (2005)
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
-
 
     @cache_readonly
     def cov_params_default(self):  # p.296 (7.2.21)
@@ -1727,7 +1711,7 @@ class VECMResults(object):
                            legend_options={"loc": "lower left"})
 
     def test_granger_causality(self, caused, causing=None, signif=0.05):
-        """
+        r"""
         Test for Granger-causality.
 
         The concept of Granger-causality is described in chapter 7.6.3 of [1]_.
@@ -1861,7 +1845,7 @@ class VECMResults(object):
                                     method="f")
 
     def test_inst_causality(self, causing, signif=0.05):
-        """
+        r"""
         Test for instantaneous causality.
 
         The concept of instantaneous causality is described in chapters 3.6.3
@@ -1955,7 +1939,7 @@ class VECMResults(object):
         return self.y_all.T[self.k_ar:] - self.fittedvalues
 
     def test_normality(self, signif=0.05):
-        """
+        r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
         omnibus :math:`\\chi^2` test.
 
@@ -2025,7 +2009,6 @@ class VECMResults(object):
 
         return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
                                     nlags, adjusted)
-
 
     def plot_data(self, with_presample=False):
         """

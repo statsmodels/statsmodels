@@ -288,7 +288,7 @@ class _OptFuncts(object):
             return chi2.sf(-2 * llr, 1)
         return -2 * llr
 
-    def  _ci_limits_var(self, var):
+    def _ci_limits_var(self, var):
         """
         Used to determine the confidence intervals for the variance.
         It calls test_var and when called by an optimizer,
@@ -586,7 +586,7 @@ class DescStatUV(_OptFuncts):
                 max(endog) - epsilon_u)
             llim = optimize.brentq(self._ci_limits_mu, middle,
                 min(endog) + epsilon_l)
-            return  llim, ulim
+            return llim, ulim
 
         if method == 'gamma':
             self.r0 = chi2.ppf(sig, 1)
@@ -638,7 +638,7 @@ class DescStatUV(_OptFuncts):
         if return_weights:
             return llr, p_val, self.new_weights.T
         else:
-            return  llr, p_val
+            return llr, p_val
 
     def ci_var(self, lower_bound=None, upper_bound=None, sig=.05):
         """
@@ -802,7 +802,7 @@ class DescStatUV(_OptFuncts):
                                      full_output=1, disp=0)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
-            return  llr, p_val, self.new_weights.T
+            return llr, p_val, self.new_weights.T
         return llr, p_val
 
     def test_joint_skew_kurt(self, skew0, kurt0, return_weights=False):
@@ -880,7 +880,7 @@ class DescStatUV(_OptFuncts):
         self.r0 = chi2.ppf(1 - sig, 1)
         llim = optimize.brentq(self._ci_limits_skew, lower_bound, skew(endog))
         ulim = optimize.brentq(self._ci_limits_skew, skew(endog), upper_bound)
-        return   llim, ulim
+        return llim, ulim
 
     def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None):
         """
@@ -935,7 +935,7 @@ class DescStatUV(_OptFuncts):
                              kurtosis(endog))
         ulim = optimize.brentq(self._ci_limits_kurt, kurtosis(endog), \
                              upper_bound)
-        return   llim, ulim
+        return llim, ulim
 
 
 class DescStatMV(_OptFuncts):
@@ -984,8 +984,8 @@ class DescStatMV(_OptFuncts):
         endog = self.endog
         nobs = self.nobs
         if len(mu_array) != endog.shape[1]:
-            raise Exception('mu_array must have the same number of \
-                           elements as the columns of the data.')
+            raise ValueError('mu_array must have the same number of '
+                             'elements as the columns of the data.')
         mu_array = mu_array.reshape(1, endog.shape[1])
         means = np.ones((endog.shape[0], endog.shape[1]))
         means = mu_array * means
@@ -1050,7 +1050,7 @@ class DescStatMV(_OptFuncts):
         >>> contourp.show()
         """
         if self.endog.shape[1] != 2:
-            raise Exception('Data must contain exactly two variables')
+            raise ValueError('Data must contain exactly two variables')
         fig, ax = utils.create_mpl_ax()
         if var2_name is None:
             ax.set_ylabel('Variable 2')
@@ -1091,7 +1091,7 @@ class DescStatMV(_OptFuncts):
         nobs = self.nobs
         endog = self.endog
         if endog.shape[1] != 2:
-            raise Exception('Correlation matrix not yet implemented')
+            raise NotImplementedError('Correlation matrix not yet implemented')
         nuis0 = np.array([endog[:, 0].mean(),
                               endog[:, 0].var(),
                               endog[:, 1].mean(),

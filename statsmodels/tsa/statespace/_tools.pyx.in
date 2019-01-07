@@ -1066,4 +1066,43 @@ cpdef int {{prefix}}copy_index_vector({{cython_type}} [::1, :] A, {{cython_type}
             A_t = t
         _{{prefix}}copy_index_rows(&A[0, A_t], &B[0, t], &index[0, t], n, 1)
 
+cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
+                               {{cython_type}} * tmp,
+                               {{cython_type}} * selection,
+                               {{cython_type}} * cov,
+                               {{cython_type}} * selected_cov):
+    cdef:
+        int i, k_states2 = k_states**2
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    # Only need to do something if there is a covariance matrix
+    # (i.e k_posdof == 0)
+    if k_posdef > 0:
+
+        # #### Calculate selected state covariance matrix  
+        # $Q_t^* = R_t Q_t R_t'$
+        # 
+        # Combine a selection matrix and a covariance matrix to get
+        # a simplified (but possibly singular) "selected" covariance
+        # matrix (see e.g. Durbin and Koopman p. 43)
+
+        # `tmp0` array used here, dimension $(m \times r)$  
+
+        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $(m \times r) = (m \times r) (r \times r)$
+        blas.{{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
+              &alpha, selection, &k_states_total,
+                      cov, &k_posdef,
+              &beta, tmp, &k_states)
+        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $(m \times m) = (m \times r) (m \times r)'$
+        blas.{{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
+              &alpha, tmp, &k_states,
+                      selection, &k_states_total,
+              &beta, selected_cov, &k_states)
+    else:
+        for i in range(k_states2):
+            selected_cov[i] = 0
+
 {{endfor}}

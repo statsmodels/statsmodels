@@ -13,18 +13,18 @@ Documentation
 
 The documentation for the latest release is at
 
-http://www.statsmodels.org/stable/
+https://www.statsmodels.org/stable/
 
 The documentation for the development version is at
 
-http://www.statsmodels.org/dev/
+https://www.statsmodels.org/dev/
 
 Recent improvements are highlighted in the release notes
 
-http://www.statsmodels.org/stable/release/version0.9.html
+https://www.statsmodels.org/stable/release/version0.9.html
 
-Backups of documentation are available at http://statsmodels.github.io/stable/
-and http://statsmodels.github.io/dev/.
+Backups of documentation are available at https://statsmodels.github.io/stable/
+and https://statsmodels.github.io/dev/.
 
 
 
@@ -125,7 +125,7 @@ https://github.com/statsmodels/statsmodels/tags
 
 Binaries and source distributions are available from PyPi
 
-http://pypi.python.org/pypi/statsmodels/
+https://pypi.org/project/statsmodels/
 
 Binaries can be installed in Anaconda
 
@@ -137,7 +137,7 @@ Installing from sources
 
 See INSTALL.txt for requirements or see the documentation
 
-http://statsmodels.github.io/dev/install.html
+https://statsmodels.github.io/dev/install.html
 
 License
 =======

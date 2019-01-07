@@ -12,8 +12,8 @@ Release summary
 
 Statsmodels is using github to store the updated documentation which
 is available under
-http://www.statsmodels.org/stable for the last release, and
-http://www.statsmodels.org/devel/ for the development version.
+https://www.statsmodels.org/stable for the last release, and
+https://www.statsmodels.org/devel/ for the development version.
 
 
 **Warning**
@@ -40,12 +40,12 @@ The Highlights
   - distributed estimation
   - VECM and enhancements to VAR (including cointegration test)
   - new count models: GeneralizedPoisson, zero inflated models
- - Bayesian mixed GLM
- - Gaussian Imputation
- - new multivariate methods: factor analysis, MANOVA, repeated measures
-   within ANOVA
- - GLM var_weights in addition to freq_weights
- - Holt-Winters and Exponential Smoothing
+- Bayesian mixed GLM
+- Gaussian Imputation
+- new multivariate methods: factor analysis, MANOVA, repeated measures
+  within ANOVA
+- GLM var_weights in addition to freq_weights
+- Holt-Winters and Exponential Smoothing
 
 
 What's new - an overview
@@ -273,7 +273,7 @@ New features include:
 
 These features yield new features and improve performance for the existing
 state space models (`SARIMAX`, `UnobservedComopnents`, `DynamicFactor`, and
-`VARMAX), and they also make Bayesian estimation by Gibbs-sampling possible.
+`VARMAX`), and they also make Bayesian estimation by Gibbs-sampling possible.
 
 **Warning**: this will be the last version that includes the original state
 space code and supports Scipy < 0.16. The next release will only include the
@@ -347,62 +347,62 @@ Thanks to all of the contributors for the 0.9 release (based on git log):
 
 .. note::
 
-* Aleksandar Karakas
-* Alex Fortin
-* Alexander Belopolsky
-* Brock Mendel
-* Chad Fulton
-* ChadFulton
-* Christian Lorentzen
-* Dave Willmer
-* Dror Atariah
-* Evgeny Zhurko
-* Gerard Brunick
-* Greg Mosby
-* Jacob Kimmel
-* Jamie Morton
-* Jarvis Miller
-* Jasmine Mou
-* Jeroen Van Goey
-* Jim Correia
-* Joon Ro
-* Jordan Yoder
-* Jorge C. Leitao
-* Josef Perktold
-* Joses W. Ho
-* José Lopez
-* Joshua Engelman
-* Juan Escamilla
-* Justin Bois
-* Kerby Shedden
-* Kernc
-* Kevin Sheppard
-* Leland Bybee
-* Maxim Uvarov
-* Michael Kaminsky
-* Mosky Liu
-* Natasha Watkins
-* Nick DeRobertis
-* Niels Wouda
-* Pamphile ROY
-* Peter Quackenbush
-* Quentin Andre
-* Richard Höchenberger
-* Rob Klooster
-* Roman Ring
-* Scott Tsai
-* Soren Fuglede Jorgensen
-* Tom Augspurger
-* Tommy Odland
-* Tony Jiang
-* Yichuan Liu
-* ftemme
-* hugovk
-* kiwirob
-* malickf
-* tvanzyl
-* weizhongg
-* zveryansky
+    * Aleksandar Karakas
+    * Alex Fortin
+    * Alexander Belopolsky
+    * Brock Mendel
+    * Chad Fulton
+    * ChadFulton
+    * Christian Lorentzen
+    * Dave Willmer
+    * Dror Atariah
+    * Evgeny Zhurko
+    * Gerard Brunick
+    * Greg Mosby
+    * Jacob Kimmel
+    * Jamie Morton
+    * Jarvis Miller
+    * Jasmine Mou
+    * Jeroen Van Goey
+    * Jim Correia
+    * Joon Ro
+    * Jordan Yoder
+    * Jorge C. Leitao
+    * Josef Perktold
+    * Joses W. Ho
+    * José Lopez
+    * Joshua Engelman
+    * Juan Escamilla
+    * Justin Bois
+    * Kerby Shedden
+    * Kernc
+    * Kevin Sheppard
+    * Leland Bybee
+    * Maxim Uvarov
+    * Michael Kaminsky
+    * Mosky Liu
+    * Natasha Watkins
+    * Nick DeRobertis
+    * Niels Wouda
+    * Pamphile ROY
+    * Peter Quackenbush
+    * Quentin Andre
+    * Richard Höchenberger
+    * Rob Klooster
+    * Roman Ring
+    * Scott Tsai
+    * Soren Fuglede Jorgensen
+    * Tom Augspurger
+    * Tommy Odland
+    * Tony Jiang
+    * Yichuan Liu
+    * ftemme
+    * hugovk
+    * kiwirob
+    * malickf
+    * tvanzyl
+    * weizhongg
+    * zveryansky
 
 These lists of names are automatically generated based on git log, and may not
 be complete.

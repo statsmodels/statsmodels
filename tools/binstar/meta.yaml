@@ -31,5 +31,5 @@ test:
     - statsmodels
 
 about:
-  home: http://www.statsmodels.org/
+  home: https://www.statsmodels.org/
   license : BSD License

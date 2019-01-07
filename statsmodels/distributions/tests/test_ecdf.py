@@ -42,4 +42,3 @@ class TestDistributions(object):
         f = monotone_fn_inverter(fn, x)
         npt.assert_array_equal(f.y, x[::-1])
         npt.assert_array_equal(f.x, y[::-1])
-

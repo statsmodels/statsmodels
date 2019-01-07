@@ -11,7 +11,7 @@ from __future__ import division
 from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
                                 itervalues, zip, range)
 import numpy as np
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array
@@ -392,9 +392,9 @@ def _create_labels(rects, horizontal, ax, rotation):
     """
     categories = _categories_level(list(iterkeys(rects)))
     if len(categories) > 4:
-        msg = ("maximum of 4 level supported for axes labeling..and 4"
-               "is alreay a lot of level, are you sure you need them all?")
-        raise NotImplementedError(msg)
+        msg = ("maximum of 4 level supported for axes labeling... and 4"
+               "is already a lot of levels, are you sure you need them all?")
+        raise ValueError(msg)
     labels = {}
     #keep it fixed as will be used a lot of times
     items = list(iteritems(rects))

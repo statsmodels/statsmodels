@@ -293,7 +293,7 @@ class MICEData(object):
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
             ix = di.idxmin()
-            imp = di.loc[ix]
+            imp = self.data[col].loc[ix]
             self.data[col].fillna(imp, inplace=True)
 
     def _split_indices(self, vec):
@@ -1078,8 +1078,8 @@ class MICEData(object):
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
-        ix = dxi[[jj, ir]]
-        iz = ixm[[jj, ix]]
+        ix = dxi[(jj, ir)]
+        iz = ixm[(jj, ix)]
 
         imputed_miss = np.array(endog_obs[iz]).squeeze()
         self._store_changes(vname, imputed_miss)
@@ -1318,7 +1318,7 @@ class MICEResults(LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
 
         smry = summary2.Summary()
         float_format = "%8.3f"

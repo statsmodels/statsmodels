@@ -2,12 +2,10 @@
 """
 Test VAR Model
 """
-from __future__ import print_function
 import warnings
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
-from statsmodels.compat.testing import skipif
 
 import os
 import sys
@@ -15,16 +13,12 @@ import sys
 import numpy as np
 import pytest
 
-have_matplotlib = False
 try:
-    import matplotlib
-    have_matplotlib = True
-    import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')  # otherwise segfault on windows
+    import matplotlib  # noqa: F401
     from distutils.version import LooseVersion
     MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
 except ImportError:
-    pass
+    MATPLOTLIB_GT_15 = False
 
 
 import statsmodels.api as sm
@@ -43,6 +37,7 @@ DECIMAL_5 = 5
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
+
 
 class CheckVAR(object):
     # just so pylint won't complain
@@ -98,6 +93,7 @@ class CheckVAR(object):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
+
 def get_macrodata():
     data = sm.datasets.macrodata.load_pandas().data[['realgdp','realcons','realinv']]
     data = data.to_records(index=False)
@@ -105,15 +101,18 @@ def get_macrodata():
     nd = np.diff(np.log(nd), axis=0)
     return nd.ravel().view(data.dtype, type=np.ndarray)
 
+
 def generate_var():
     from rpy2.robjects import r
     import pandas.rpy.common as prp
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
+
 def write_generate_var():
     result = generate_var()
     np.savez('tests/results/vars_results.npz', **result)
+
 
 class RResults(object):
     """
@@ -150,23 +149,14 @@ class RResults(object):
 
         self.causality = data['causality']
 
-def close_plots():
-    try:
-        import matplotlib.pyplot as plt
-        plt.close('all')
-    except ImportError:
-        pass
 
 _orig_stdout = None
+
 
 def setup_module():
     global _orig_stdout
     _orig_stdout = sys.stdout
     sys.stdout = StringIO()
-
-def teardown_module():
-    sys.stdout = _orig_stdout
-    close_plots()
 
 
 class CheckIRF(object):
@@ -181,50 +171,32 @@ class CheckIRF(object):
         self._check_irfs(self.irf.irfs, self.ref.irf)
         self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
 
-
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
             ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
-
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_irf(self):
-        import matplotlib.pyplot as plt
+    @pytest.mark.matplotlib
+    def test_plot_irf(self, close_figures):
         self.irf.plot()
-        plt.close('all')
         self.irf.plot(plot_stderr=False)
-        plt.close('all')
 
         self.irf.plot(impulse=0, response=1)
-        plt.close('all')
         self.irf.plot(impulse=0)
-        plt.close('all')
         self.irf.plot(response=0)
-        plt.close('all')
 
         self.irf.plot(orth=True)
-        plt.close('all')
         self.irf.plot(impulse=0, response=1, orth=True)
-        close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_cum_effects(self):
-        # I need close after every plot to avoid segfault, see #3158
-        import matplotlib.pyplot as plt
-        plt.close('all')
+    @pytest.mark.matplotlib
+    def test_plot_cum_effects(self, close_figures):
         self.irf.plot_cum_effects()
-        plt.close('all')
         self.irf.plot_cum_effects(plot_stderr=False)
-        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1)
-        plt.close('all')
 
         self.irf.plot_cum_effects(orth=True)
-        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
-        close_plots()
 
 
 class CheckFEVD(object):
@@ -234,10 +206,9 @@ class CheckFEVD(object):
     #---------------------------------------------------------------------------
     # FEVD tests
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_fevd_plot(self):
+    @pytest.mark.matplotlib
+    def test_fevd_plot(self, close_figures):
         self.fevd.plot()
-        close_plots()
 
     def test_fevd_repr(self):
         self.fevd
@@ -245,12 +216,12 @@ class CheckFEVD(object):
     def test_fevd_summary(self):
         self.fevd.summary()
 
+    @pytest.mark.xfail(reason="FEVD.cov() is not implemented")
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
-        # covs = self.fevd.cov()
+        covs = self.fevd.cov()
 
-        pass
 
 class TestVARResults(CheckIRF, CheckFEVD):
 
@@ -284,7 +255,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert(type(self.res.names) is list)
+        assert type(self.res.names) is list  # noqa: E721
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -319,7 +290,6 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_summary(self):
         summ = self.res.summary()
-
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -414,28 +384,24 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_sim(self):
+    @pytest.mark.matplotlib
+    def test_plot_sim(self, close_figures):
         self.res.plotsim(steps=100)
-        close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot(self):
+    @pytest.mark.matplotlib
+    def test_plot(self, close_figures):
         self.res.plot()
-        close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_acorr(self):
+    @pytest.mark.matplotlib
+    def test_plot_acorr(self, close_figures):
         self.res.plot_acorr()
-        close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_forecast(self):
+    @pytest.mark.matplotlib
+    def test_plot_forecast(self, close_figures):
         self.res.plot_forecast(5)
-        close_plots()
 
     def test_reorder(self):
-        #manually reorder
+        # manually reorder
         data = self.data.view((float,3), type=np.ndarray)
         names = self.names
         data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
@@ -461,7 +427,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res))
+        assert type(res_unpickled) is type(self.res)  # noqa: E721
 
 
 class E1_Results(object):
@@ -503,20 +469,23 @@ class E1_Results(object):
                                    [.048, .230, .288],
                                    [.043, .208, .260]])
 
+
 basepath = os.path.split(sm.__file__)[0]
 resultspath = basepath + '/tsa/vector_ar/tests/results/'
 
+
 def get_lutkepohl_data(name='e2'):
-    lut_data = basepath + '/tsa/vector_ar/data/'
-    path = lut_data + '%s.dat' % name
+    path = resultspath + '%s.dat' % name
 
     return util.parse_lutkepohl_data(path)
+
 
 def test_lutkepohl_parse():
     files = ['e%d' % i for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)
+
 
 class TestVARResultsLutkepohl(object):
     """
@@ -563,6 +532,7 @@ class TestVARResultsLutkepohl(object):
         orth_stderr = self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
 
+
 def test_get_trendorder():
     results = {
         'c' : 1,
@@ -599,6 +569,7 @@ def test_var_constant():
     with pytest.raises(ValueError):
         model.fit(1)
 
+
 def test_var_trend():
     # see 2271
     data = get_macrodata().view((float,3), type=np.ndarray)
@@ -606,7 +577,6 @@ def test_var_trend():
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
     irf = results.irf(10)
-
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
@@ -624,7 +594,6 @@ def test_irf_trend():
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
     irf = results.irf(10)
-
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
@@ -655,7 +624,7 @@ class TestVARExtras(object):
         data = np.diff(np.log(data), axis=0) * 400
         cls.res0 = sm.tsa.VAR(data).fit(maxlags=2)
 
-    def test_process(self):
+    def test_process(self, close_figures):
         res0 = self.res0
         k_ar = res0.k_ar
         fc20 = res0.forecast(res0.endog[-k_ar:], 20)
@@ -686,11 +655,9 @@ class TestVARExtras(object):
         irf = res0.irf()
 
         # partially SMOKE test
-        if have_matplotlib and MATPLOTLIB_GT_15:
-            fig = res0.plotsim()
-            plt.close(fig)
-            fig = res0.plot_acorr()
-            plt.close(fig)
+        if MATPLOTLIB_GT_15:
+            res0.plotsim()
+            res0.plot_acorr()
 
             fig = res0.plot_forecast(20)
             fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
@@ -700,8 +667,6 @@ class TestVARExtras(object):
             assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
             fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
             assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
-            plt.close(fig)
-            plt.close('all')
 
             fig_asym = irf.plot()
             fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
@@ -712,9 +677,6 @@ class TestVARExtras(object):
                 # use m as desired because it is larger
                 # a is for some irf much smaller than m
                 assert_allclose(a, m, atol=0.1, rtol=0.9)
-            plt.close(fig_asym)
-            plt.close(fig_mc)
-            plt.close('all')
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only

@@ -118,8 +118,10 @@ def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,
 def dummy_func(X):
     return X
 
+
 def dummy_func_array(X):
     return X.values
+
 
 def dummy_func_pandas_columns(X):
     return X.values
@@ -127,6 +129,7 @@ def dummy_func_pandas_columns(X):
 
 def dummy_func_pandas_series(X):
     return X['A']
+
 
 import pandas as pd
 import numpy as np
@@ -145,4 +148,3 @@ def test_pandas_freq_decorator():
     expected = X.rename(columns=dict(zip('ABCD', 'EFGH')))
     func = pandas_wrapper(dummy_func_array, names=list('EFGH'))
     pd.util.testing.assert_frame_equal(func(X), expected)
-

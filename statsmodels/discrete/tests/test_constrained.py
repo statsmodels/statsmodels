@@ -9,7 +9,6 @@ License: BSD-3
 from __future__ import division
 
 from statsmodels.compat.python import StringIO
-from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
@@ -28,7 +27,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels import datasets
 
 
-spector_data = datasets.spector.load()
+spector_data = datasets.spector.load(as_pandas=False)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 from .results import results_poisson_constrained as results
@@ -103,7 +102,7 @@ class CheckPoissonConstrainedMixin(object):
             df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
     def test_other(self):
         # some results may not be valid or available for all models
@@ -121,7 +120,7 @@ class CheckPoissonConstrainedMixin(object):
                     warnings.warn(message)
 
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
@@ -177,8 +176,8 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -281,8 +280,8 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -378,8 +377,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,

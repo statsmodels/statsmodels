@@ -9,14 +9,12 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 import os
-import re
+import pytest
 
-import warnings
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
-from statsmodels.compat.testing import SkipTest
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
-from .results import results_sarimax
+
+from numpy.testing import assert_equal, assert_allclose, assert_raises
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -238,7 +236,7 @@ class TestLargeStateCovAR1(object):
         # TODO This test is skipped since an exception is currently raised if
         # k_posdef > k_states. However, this test could be used if models of
         # those types were allowed.
-        raise SkipTest
+        pytest.skip('Not implemented')
 
         # Data: just some sample data
         endog = [0.2, -1.5, -.3, -.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]

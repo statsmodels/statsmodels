@@ -128,7 +128,6 @@ class TransformRestriction(object):
         return params.dot(self.transf_mat)
 
 
-
 def transform_params_constraint(params, Sinv, R, q):
     """find the parameters that statisfy linear constraint from unconstraint
 

@@ -9,14 +9,9 @@ from statsmodels.compat.python import BytesIO, asbytes, range
 
 import warnings
 
-try:
-    import matplotlib.pyplot as plt
-    has_maplotlib = True
-except ImportError:
-    has_maplotlib = False
-
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal, \
     assert_raises
 
@@ -192,13 +187,12 @@ class CheckTuckeyHSDMixin(object):
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
         assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
-    def test_plot_simultaneous_ci(self):
+    @pytest.mark.matplotlib
+    def test_plot_simultaneous_ci(self, close_figures):
         # smoke tests
         self.res._simultaneous_ci()
-        if has_maplotlib:
-            reference = self.res.groupsunique[1]
-            fig = self.res.plot_simultaneous(comparison_name=reference)
-            plt.close('all')
+        reference = self.res.groupsunique[1]
+        self.res.plot_simultaneous(comparison_name=reference)
 
 
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):

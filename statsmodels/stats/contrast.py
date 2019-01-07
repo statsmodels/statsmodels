@@ -4,7 +4,6 @@ from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 from scipy import stats
 from statsmodels.tools.tools import clean0, fullrank
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.stats.multitest import multipletests
 
 
@@ -146,7 +145,7 @@ class ContrastResults(object):
             use_t = (self.distribution == 't')
             yname='constraints' # Not used in params_frame
             if xname is None:
-                xname = ['c%d'%ii for ii in range(len(self.effect))]
+                xname = ['c%d' % ii for ii in range(len(self.effect))]
             from statsmodels.iolib.summary import summary_params
             pvalues = np.atleast_1d(self.pvalue)
             summ = summary_params((self, self.effect, self.sd, self.statistic,
@@ -177,7 +176,7 @@ class ContrastResults(object):
             use_t = (self.distribution == 't')
             yname='constraints'  # Not used in params_frame
             if xname is None:
-                xname = ['c%d'%ii for ii in range(len(self.effect))]
+                xname = ['c%d' % ii for ii in range(len(self.effect))]
             from statsmodels.iolib.summary import summary_params_frame
             summ = summary_params_frame((self, self.effect, self.sd,
                                          self.statistic,self.pvalue,
@@ -345,7 +344,7 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if np_matrix_rank(Lp) != Lp.shape[1]:
+    if np.linalg.matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 

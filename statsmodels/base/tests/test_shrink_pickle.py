@@ -102,7 +102,7 @@ class RemoveDataPickle(object):
         self.results._results.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.results._results.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.results._results))
+        assert type(res_unpickled) is type(self.results._results)  # noqa: E721
 
         # test wrapped results load save
         fh.seek(0, 0)
@@ -110,8 +110,7 @@ class RemoveDataPickle(object):
         fh.seek(0, 0)
         res_unpickled = self.results.__class__.load(fh)
         fh.close()
-        # print type(res_unpickled)
-        assert_(type(res_unpickled) is type(self.results))
+        assert type(res_unpickled) is type(self.results)  # noqa: E721
 
         before = sorted(iterkeys(self.results.__dict__))
         after = sorted(iterkeys(res_unpickled.__dict__))
@@ -166,15 +165,17 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
 
+
 class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
     def setup(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, data.exog)
         self.results = mod.fit(disp=0)
+
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -260,8 +261,11 @@ class TestPickleFormula4(TestPickleFormula2):
     def setup(self):
         self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C", data=self.data).fit()
 
-# we need log in module namespace for the following test
+
+# we need log in module namespace for TestPickleFormula5
 from numpy import log
+
+
 class TestPickleFormula5(TestPickleFormula2):
 
     def setup(self):
@@ -279,20 +283,3 @@ class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
         self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
-
-
-
-if __name__ == '__main__':
-    for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
-                TestRemoveDataPicklePoisson,
-                TestRemoveDataPicklePoissonRegularized,
-                TestRemoveDataPickleNegativeBinomial,
-                TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
-                TestRemoveDataPickleGLM]:
-        print(cls)
-        cls.setup_class()
-        tt = cls()
-        tt.setup()
-        tt.test_remove_data_pickle()
-        tt.test_remove_data_docstring()
-        tt.test_pickle_wrapper()

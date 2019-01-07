@@ -1,4 +1,5 @@
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -51,21 +52,24 @@ NOTE        = """::
     returned by load.
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-def load():
+def load(as_pandas=None):
     """
     Load the Scotvote data and returns a Dataset instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
 
 def load_pandas():
     """
@@ -77,11 +81,10 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_pandas(data, endog_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/scotvote.csv',"rb") as f:
-        data = np.recfromtxt(f, delimiter=",",
-                             names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-    return data
+    data = du.load_csv(__file__, 'scotvote.csv')
+    data = data.iloc[:, 1:9]
+    return data.astype(float)

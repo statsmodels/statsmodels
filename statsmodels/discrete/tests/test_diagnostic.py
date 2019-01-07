@@ -9,6 +9,7 @@ from __future__ import division
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.discrete._diagnostics_count as dia
@@ -57,7 +58,8 @@ class TestCountDiagnostic(object):
         tzi3_1 = (0.79863597832443878, 0.67077736750318928, 2, 2)
         assert_allclose(tzi3, tzi3_1, rtol=5e-4)
 
-    def test_probs(self):
+    @pytest.mark.matplotlib
+    def test_probs(self, close_figures):
         nobs = self.nobs
         probs = self.res.predict_prob()
         freq = np.bincount(self.endog) / nobs
@@ -68,10 +70,4 @@ class TestCountDiagnostic(object):
         assert_allclose(tzi[:2], tzi1, rtol=5e-5)
 
         # smoke test for plot
-
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            return
-        fig = dia.plot_probs(freq, probs.mean(0))
-        plt.close(fig)
+        dia.plot_probs(freq, probs.mean(0))

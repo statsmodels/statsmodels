@@ -12,7 +12,7 @@ import os
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_approx_equal, assert_array_less)
+                           assert_allclose, assert_array_less)
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
@@ -20,7 +20,6 @@ from statsmodels.datasets import macrodata
 
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 
@@ -31,24 +30,25 @@ def compare_ftest(contrast_res, other, decimal=(5,4)):
     assert_equal(contrast_res.df_denom, other[3])
     assert_equal("f", other[4])
 
+
 class TestGLSARGretl(object):
 
     def test_all(self):
 
-        d = macrodata.load().data
+        d = macrodata.load_pandas().data
         #import datasetswsm.greene as g
         #d = g.load('5-1')
 
         #growth rates
-        gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
-        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp']))
+        gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
+        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
 
         #simple diff, not growthrate, I want heteroscedasticity later for testing
         endogd = np.diff(d['realinv'])
-        exogd = add_constant(np.c_[np.diff(d['realgdp']), d['realint'][:-1]])
+        exogd = add_constant(np.c_[np.diff(d['realgdp'].values), d['realint'][:-1].values])
 
         endogg = gs_l_realinv
-        exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1]])
+        exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1].values])
 
         res_ols = OLS(endogg, exogg).fit()
         #print res_ols.params
@@ -116,7 +116,9 @@ class TestGLSARGretl(object):
         #assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=7) #FAIL
         assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
         assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=4)
-        assert_approx_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], significant=2)
+        assert_allclose(res.f_pvalue,
+                        result_gretl_g1['f_pvalue'][1],
+                        rtol=1e-2)
         #assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) #TODO
 
         #arch
@@ -411,10 +413,10 @@ def test_GLSARlag():
     #test that results for lag>1 is close to lag=1, and smaller ssr
 
     from statsmodels.datasets import macrodata
-    d2 = macrodata.load().data
-    g_gdp = 400*np.diff(np.log(d2['realgdp']))
-    g_inv = 400*np.diff(np.log(d2['realinv']))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
+    d2 = macrodata.load_pandas().data
+    g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
+    g_inv = 400*np.diff(np.log(d2['realinv'].values))
+    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values], prepend=False)
 
     mod1 = GLSAR(g_inv, exogg, 1)
     res1 = mod1.iterative_fit(5)

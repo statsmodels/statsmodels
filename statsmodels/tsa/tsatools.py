@@ -115,7 +115,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         x = np.column_stack(x[::order])
 
     if is_recarray:
-        x = x.to_records(index=False, convert_datetime64=False)
+        x = x.to_records(index=False)
         new_descr = x.dtype.descr
         extra_col = len(new_descr) - len(descr)
         if prepend:
@@ -167,7 +167,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     --------
 
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.macrodata.load()
+    >>> data = sm.datasets.macrodata.load(as_pandas=False)
     >>> data = data.data[['year','quarter','realgdp','cpi']]
     >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
 
@@ -187,10 +187,12 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             col = x.dtype.names[col]
         if not PY3:
             # TODO: Get rid of this kludge.  See GH # 3658
-            names = [bytes(name) if isinstance(name, unicode) else name for name in names]
+            names = [bytes(name)
+                     if isinstance(name, unicode)  # noqa:F821
+                     else name for name in names]
             # Fail loudly if there is a non-ascii name.
             x.dtype.names = names
-            if isinstance(col, unicode):
+            if isinstance(col, unicode):  # noqa:F821
                 col = bytes(col)
 
         contemp = x[col]
@@ -485,7 +487,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         else:
             x = x[:, None]
     elif x.ndim == 0 or x.ndim > 2:
-        raise TypeError('Only supports 1 and 2-dimensional data.')
+        raise ValueError('Only supports 1 and 2-dimensional data.')
 
     nobs, nvar = x.shape
 
@@ -506,12 +508,15 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         lagsli.append(lagmat(x[:, k], maxlag, trim=trim, original='in')[:, dropex:maxlagex + 1])
     return np.column_stack(lagsli)
 
+
 def vec(mat):
     return mat.ravel('F')
+
 
 def vech(mat):
     # Gets Fortran-order
     return mat.T.take(_triu_indices(len(mat)))
+
 
 # tril/triu/diag, suitable for ndarray.take
 
@@ -519,18 +524,22 @@ def _tril_indices(n):
     rows, cols = np.tril_indices(n)
     return rows * n + cols
 
+
 def _triu_indices(n):
     rows, cols = np.triu_indices(n)
     return rows * n + cols
+
 
 def _diag_indices(n):
     rows, cols = np.diag_indices(n)
     return rows * n + cols
 
+
 def unvec(v):
     k = int(np.sqrt(len(v)))
     assert(k * k == len(v))
     return v.reshape((k, k), order='F')
+
 
 def unvech(v):
     # quadratic formula, correct fp error
@@ -546,6 +555,7 @@ def unvech(v):
 
     return result
 
+
 def duplication_matrix(n):
     """
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
@@ -557,6 +567,7 @@ def duplication_matrix(n):
     """
     tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
+
 
 def elimination_matrix(n):
     """
@@ -572,6 +583,7 @@ def elimination_matrix(n):
     """
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
+
 
 def commutation_matrix(p, q):
     """
@@ -589,6 +601,7 @@ def commutation_matrix(p, q):
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
+
 
 def _ar_transparams(params):
     """
@@ -614,6 +627,7 @@ def _ar_transparams(params):
         newparams[:j] = tmp[:j]
     return newparams
 
+
 def _ar_invtransparams(params):
     """
     Inverse of the Jones reparameterization
@@ -633,6 +647,7 @@ def _ar_invtransparams(params):
         params[:j] = tmp[:j]
     invarcoefs = -np.log((1-params)/(1+params))
     return invarcoefs
+
 
 def _ma_transparams(params):
     """
@@ -657,6 +672,7 @@ def _ma_transparams(params):
             tmp[kiter] += b * newparams[j-kiter-1]
         newparams[:j] = tmp[:j]
     return newparams
+
 
 def _ma_invtransparams(macoefs):
     """
@@ -780,4 +796,3 @@ def freq_to_period(freq):
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
            'vec', 'vech', 'unvec', 'unvech']
-

@@ -149,4 +149,3 @@ if __name__=="__main__":
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
     rls_fit = rls_mod.fit()
     print(rls_fit.params)
-

@@ -167,6 +167,7 @@ z_ctt_largep = array([ [3.4671,4.3476,1.9231,0.5381,0.6216],
                        [4.8479,2.6447,0.5647,0.0827,0.0518]])
 z_ctt_largep *= z_large_scaling
 
+
 #TODO: finish this and then integrate them into adf function
 def mackinnonp(teststat, regression="c", N=1, lags=None):
     """
@@ -215,6 +216,7 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
     else:
         tau_coef = eval("tau_" + regression + "_largep["+str(N-1)+"]")
     return norm.cdf(polyval(tau_coef[::-1], teststat))
+
 
 # These are the new estimates from MacKinnon 2010
 # the first axis is N -1
@@ -340,6 +342,7 @@ tau_ctt_2010 = [[ [-4.37113,-11.5882,-35.819,-334.047], # N = 1
                   [-6.22941,-36.9673,-10.868,418.414]]]
 tau_ctt_2010 = asarray(tau_ctt_2010)
 
+
 def mackinnoncrit(N=1, regression ="c", nobs=inf):
     """
     Returns the critical values for cointegrating and the ADF test.
@@ -377,11 +380,8 @@ def mackinnoncrit(N=1, regression ="c", nobs=inf):
     """
     reg = regression
     if reg not in ['c','ct','nc','ctt']:
-        raise ValueError("regression keyword %s not understood") % reg
+        raise ValueError("regression keyword %s not understood" % reg)
     if nobs is inf:
         return eval("tau_"+reg+"_2010["+str(N-1)+",:,0]")
     else:
         return polyval(eval("tau_"+reg+"_2010["+str(N-1)+",:,::-1].T"),1./nobs)
-
-if __name__=="__main__":
-    pass

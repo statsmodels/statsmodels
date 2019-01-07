@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+
 class ARLagResults(object):
     """
     Results are from R vars::VARselect for sunspot data.
@@ -35,6 +36,7 @@ class ARLagResults(object):
                   5.515935627515806,  5.601455679120634,  5.729461000735226,
                 248.654927915301300]
             self.ic = np.asarray(ic).reshape(4,-1, order='F')
+
 
 class ARResultsOLS(object):
     """
@@ -106,7 +108,6 @@ class ARResultsOLS(object):
             self.FVOLSn4start312 = np.hstack((fv[-1],pv[:8]))
             # n = 15, start = 312
             self.FVOLSn15start312 = np.hstack((fv[-1],pv[:19]))
-
 
         elif not constant:
             self.params = [1.19582389902985, -0.40591818219637,
@@ -210,9 +211,5 @@ class ARResultsMLE(object):
             self.fcdyn3 = dynamicpv[:,2]
             self.fcdyn4 = dynamicpv[:,3]
 
-
         else:
             pass
-
-
-

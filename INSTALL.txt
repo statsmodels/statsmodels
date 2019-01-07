@@ -111,7 +111,7 @@ You will need a C compiler installed.
 Installing from Source on Windows
 ---------------------------------
 
-See http://www.statsmodels.org/devel/install.html#windows.
+See https://www.statsmodels.org/devel/install.html#windows.
 
 
 Documentation
@@ -120,4 +120,4 @@ Documentation
 You may find more information about the project and installation in our 
 documentation
 
-http://www.statsmodels.org/devel/install.html
+https://www.statsmodels.org/devel/install.html

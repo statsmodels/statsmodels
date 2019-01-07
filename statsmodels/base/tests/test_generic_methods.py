@@ -10,12 +10,13 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.python import range
+
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
-from statsmodels.compat.scipy import NumpyVersion
-from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
@@ -77,7 +78,6 @@ class CheckGenericMixin(object):
                 'Conf. Int. Low', 'Conf. Int. Upp.']
         assert_array_equal(summf.columns.values, cols)
 
-
     def test_ftest_pvalues(self):
         res = self.results
         use_t = res.use_t
@@ -116,9 +116,8 @@ class CheckGenericMixin(object):
             results = self.results._results
         else:
             results = self.results
-        if (isinstance(results, GLMResults) or
-            isinstance(results, DiscreteResults)):
-            raise SkipTest('Infeasible for {0}'.format(type(results)))
+        if isinstance(results, GLMResults) or isinstance(results, DiscreteResults):
+            pytest.skip('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -141,8 +140,7 @@ class CheckGenericMixin(object):
         else:
             results = self.results
 
-        if (isinstance(results, GLMResults) or
-            isinstance(results, DiscreteResults)):
+        if isinstance(results, (GLMResults, DiscreteResults)):
             # SMOKE test only  TODO
             res.predict(p_exog)
             res.predict(p_exog.tolist())
@@ -185,7 +183,7 @@ class CheckGenericMixin(object):
         # not completely generic yet
         if (isinstance(self.results.model, (sm.GEE))):
             # GEE does not subclass LikelihoodModel
-            raise SkipTest
+            pytest.skip('GEE does not subclass LikelihoodModel')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS))
@@ -200,23 +198,28 @@ class CheckGenericMixin(object):
             del keep_index_p[i]
 
         if use_start_params:
-            res1 = self.results.model._fit_zeros(keep_index,
+            res1 = self.results.model._fit_zeros(keep_index, maxiter=500,
                                         start_params=self.results.params)
         else:
-            res1 = self.results.model._fit_zeros(keep_index)
+            res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
 
         res2 = self._get_constrained(keep_index, keep_index_p)
 
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10)
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.params[drop_index], 0)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.bse[drop_index], 0)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10,
+                        atol=1e-10)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10,
+                        atol=1e-10)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10)
+            # atol discussion at gh-5158
+            assert_allclose(res1.resid, res2.resid, rtol=1e-10, atol=1e-12)
 
         ex = self.results.model.exog.mean(0)
         predicted1 = res1.predict(ex, **self.predict_kwds)
@@ -235,15 +238,16 @@ class CheckGenericMixin(object):
         init_kwds = mod2._get_init_kwds()
         mod = mod_cls(mod2.endog, mod2.exog[:, keep_index], **init_kwds)
         if self.use_start_params:
-            res = mod.fit(start_params=self.results.params[keep_index_p])
+            res = mod.fit(start_params=self.results.params[keep_index_p],
+                          maxiter=500)
         else:
-            res = mod.fit()
+            res = mod.fit(maxiter=500)
         return res
 
     def test_zero_collinear(self):
         # not completely generic yet
-        if (isinstance(self.results.model, (sm.GEE))):
-            raise SkipTest
+        if isinstance(self.results.model, (sm.GEE)):
+            pytest.skip('Not completely generic yet')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
@@ -379,7 +383,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def test_zero_constrained(self):
         # override, we cannot remove the only regressor
-        raise SkipTest
+        pytest.skip('Override since cannot remove the only regressor')
         pass
 
 
@@ -431,13 +435,13 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
     def setup(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, exog)
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
                                  0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
                                  0.17490962,  0.66461151,   1.2925957 ])
-        self.results = mod.fit(start_params=start_params, disp=0)
+        self.results = mod.fit(start_params=start_params, disp=0, maxiter=500)
         self.transform_index = -1
 
 
@@ -565,7 +569,6 @@ class CheckAnovaMixin(object):
         cls.data = test.data.drop([0,1,2])
         cls.initialize()
 
-
     def test_combined(self):
         res = self.res
         wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
@@ -578,7 +581,6 @@ class CheckAnovaMixin(object):
         c_duration = eye[[1, 4, 5]]
 
         compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
-
 
     def test_categories(self):
         # test only multicolumn terms
@@ -629,7 +631,6 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
-
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
@@ -660,12 +661,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         ex.iloc[0, 1] = np.nan
         predicted1 = self.res.predict(ex)
         predicted2 = self.res.predict(ex[1:])
-        from pandas.util.testing import assert_series_equal
-        try:
-            from pandas.util.testing import assert_index_equal
-        except ImportError:
-            # for old pandas
-            from numpy.testing import assert_array_equal as assert_index_equal
 
         assert_index_equal(predicted1.index, ex.index)
         assert_series_equal(predicted1[1:], predicted2)
@@ -759,7 +754,6 @@ class TestTTestPairwiseOLS(CheckPairwise):
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
 
-
     def test_alpha(self):
         pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
                                        factor_labels='A B C'.split())
@@ -813,6 +807,7 @@ class TestTTestPairwiseOLS3(CheckPairwise):
                            'C(Weight)[3] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[2]']
 
+
 class TestTTestPairwiseOLS4(CheckPairwise):
 
     @classmethod
@@ -849,8 +844,3 @@ class TestTTestPairwisePoisson(CheckPairwise):
         cls.constraints = ['C(Weight)[T.2]',
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
-
-
-
-if __name__ == '__main__':
-    pass

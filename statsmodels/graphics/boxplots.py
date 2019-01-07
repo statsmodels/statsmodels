@@ -375,9 +375,9 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
         # Draw mean line.
         if plot_opts.get('bean_show_mean', True):
-             ax.hlines(np.mean(pos_data), pos - bean_mean_width, pos + bean_mean_width,
-                       lw=plot_opts.get('bean_mean_lw', 2.),
-                       color=plot_opts.get('bean_mean_color', 'b'))
+            ax.hlines(np.mean(pos_data), pos - bean_mean_width, pos + bean_mean_width,
+                      lw=plot_opts.get('bean_mean_lw', 2.),
+                      color=plot_opts.get('bean_mean_color', 'b'))
 
         # Draw median marker.
         if plot_opts.get('bean_show_median', True):

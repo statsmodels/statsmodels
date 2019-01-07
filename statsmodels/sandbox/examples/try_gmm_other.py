@@ -139,4 +139,3 @@ if __name__ == '__main__':
         print(res1b.params)
         print(res1b.bse)  #they look much too large
         print(np.sqrt(np.diag(res1b._cov_params)))
-

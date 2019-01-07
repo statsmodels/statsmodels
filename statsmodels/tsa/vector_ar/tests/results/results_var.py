@@ -5,6 +5,7 @@ datasets/macrodata/var.do
 
 import numpy as np
 
+
 class MacrodataResults(object):
     def __init__(self):
         params = [-0.2794863875, 0.0082427826, 0.6750534746, 0.2904420695,
@@ -58,7 +59,6 @@ class MacrodataResults(object):
         self.bse = bse
 
 
-
 #array([[ -2.79434736e-01, 6.75015752e-01, 3.32194508e-02,
 #    8.22108491e-03, 2.90457628e-01,  -7.32090753e-03,
 #    1.52697235e-03],
@@ -68,4 +68,3 @@ class MacrodataResults(object):
 #   [ -1.97097367e+00, 4.41416233e+00, 2.25478953e-01,
 #    3.80785849e-01, 8.00280918e-01,  -1.24079062e-01,
 #   -2.39025209e-02]])
-

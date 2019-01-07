@@ -2,7 +2,10 @@ import numpy as np
 import statsmodels.api as sm
 import pandas as pd
 
-mdatagen = sm.datasets.macrodata.load().data
+from statsmodels.tsa.vector_ar.svar_model import SVAR
+
+
+mdatagen = sm.datasets.macrodata.load(as_pandas=False).data
 mdata = mdatagen[['realgdp','realcons','realinv']]
 names = mdata.dtype.names
 start = pd.datetime(1959, 3, 31)

@@ -71,4 +71,3 @@ results_theil_textile = Bunch(
                 cov_prior_rownames=cov_prior_rownames,
                 **est
                 )
-

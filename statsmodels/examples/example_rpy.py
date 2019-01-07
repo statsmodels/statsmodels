@@ -27,7 +27,7 @@ import statsmodels.api as sm
 examples = [1, 2]
 
 if 1 in examples:
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     y,x = data.endog, sm.add_constant(data.exog, prepend=False)
     des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
     formula = r('y~%s-1' % '+'.join(des_cols))
@@ -37,7 +37,7 @@ if 1 in examples:
     print(results['coefficients'])
 
 if 2 in examples:
-    data2 = sm.datasets.star98.load()
+    data2 = sm.datasets.star98.load(as_pandas=False)
     y2,x2 = data2.endog, sm.add_constant(data2.exog, prepend=False)
     import rpy
     y2 = y2[:,0]/y2.sum(axis=1)
@@ -49,4 +49,3 @@ if 2 in examples:
                     in sorted(results2['coefficients'])]
     print(params_est)
     print(', '.join(['%13.10f']*21) % tuple(params_est))
-

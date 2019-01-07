@@ -718,5 +718,3 @@ if __name__ == '__main__':
         mcres = distfitmc(sample, distr, nrepl=nrepl,
                           distkwds=dict(arg=arg, loc=loc, scale=scale))
         printresults(sample, arg, mcres, kind='montecarlo')
-
-

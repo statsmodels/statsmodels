@@ -32,8 +32,9 @@ cdef int SIMULATE_ALL = (
 )
 
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    FILTER_CONVENTIONAL, INVERT_UNIVARIATE, SOLVE_CHOLESKY,
-    TIMING_INIT_PREDICTED, STABILITY_FORCE_SYMMETRY, MEMORY_STORE_ALL
+    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE,
+    INVERT_UNIVARIATE, SOLVE_CHOLESKY, TIMING_INIT_PREDICTED,
+    STABILITY_FORCE_SYMMETRY, MEMORY_STORE_ALL
 )
 from statsmodels.tsa.statespace._kalman_smoother cimport (
     SMOOTHER_ALL
@@ -237,7 +238,10 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         # Simulated data (\tilde eta_t, \tilde eps_t, \tilde alpha_t)
         # Note that these are (k_endog x nobs), (k_posdef x nobs), (k_states x nobs)
-        dim2[0] = self.model.k_endog; dim2[1] = self.nobs;
+        if filter_method & FILTER_COLLAPSED:
+            dim2[0] = self.model.k_states; dim2[1] = self.nobs;
+        else:
+            dim2[0] = self.model.k_endog; dim2[1] = self.nobs;
         self.simulated_measurement_disturbance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         dim2[0] = self.model.k_posdef; dim2[1] = self.nobs;
         self.simulated_state_disturbance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
@@ -264,9 +268,9 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp2 = &self.tmp2[0,0]
 
     def __reduce__(self):
-        args = (self.model, self.filter_method, self.inversion_method,
-                self.stability_method, self.conserve_memory, self.filter_timing,
-                self.tolerance, self.loglikelihood_burn, self.smoother_output,
+        args = (self.model, self.model.filter_method, self.model.inversion_method,
+                self.model.stability_method, self.model.conserve_memory, self.model.filter_timing,
+                self.model.tolerance, self.model.loglikelihood_burn, self.simulated_smoother.smoother_output,
                 self.simulation_output, self.nobs, self.pretransformed_variates)
         state = {
             'disturbance_variates': np.array(self.disturbance_variates, copy=True, order='F'),
@@ -360,6 +364,9 @@ cdef class {{prefix}}SimulationSmoother(object):
         cdef:
             {{cython_type}} alpha = 1.0
             {{cython_type}} gamma = -1.0
+        cdef {{prefix}}Statespace collapsing_model
+        cdef {{cython_type}} [:,:] collapsing_obs
+        cdef np.npy_intp dim2[2]
 
 
         if simulation_output == -1:
@@ -371,10 +378,12 @@ cdef class {{prefix}}SimulationSmoother(object):
             raise RuntimeError("Statespace model not initialized.")
         blas.{{prefix}}copy(&k_states, &self.model.initial_state[0], &inc, &self.simulated_model.initial_state[0], &inc)
         blas.{{prefix}}copy(&k_states2, &self.model.initial_state_cov[0,0], &inc, &self.simulated_model.initial_state_cov[0,0], &inc)
+        blas.{{prefix}}copy(&k_states2, &self.model.initial_diffuse_state_cov[0,0], &inc, &self.simulated_model.initial_diffuse_state_cov[0,0], &inc)
 
         if self.has_missing:
             blas.{{prefix}}copy(&k_states, &self.model.initial_state[0], &inc, &self.secondary_simulated_model.initial_state[0], &inc)
             blas.{{prefix}}copy(&k_states2, &self.model.initial_state_cov[0,0], &inc, &self.secondary_simulated_model.initial_state_cov[0,0], &inc)
+            blas.{{prefix}}copy(&k_states2, &self.model.initial_diffuse_state_cov[0,0], &inc, &self.secondary_simulated_model.initial_diffuse_state_cov[0,0], &inc)
 
         # 0. Kalman filter initialization: get alpha_1^+ ~ N(a_1, P_1)
         # Usually, this means transforming the N(0,1) random variate
@@ -485,6 +494,11 @@ cdef class {{prefix}}SimulationSmoother(object):
         self.simulated_smoother.smoother_output = simulation_output
         self.simulated_smoother()
 
+        # In the FILTER_COLLAPSED case, we now need to replace nobs_endog with
+        # nobs_kstates
+        if self.simulated_kfilter.filter_method & FILTER_COLLAPSED:
+            nobs_endog = nobs_kstates
+
         if self.has_missing:
             # This gives us \hat w_t
             #               \hat alpha_t+1
@@ -520,12 +534,34 @@ cdef class {{prefix}}SimulationSmoother(object):
         #               \tilde alpha_t+1 = \hat alpha_t^* + alpha_t^+  (simulation_output & SIMULATE_STATE)
         if self.simulation_output & SIMULATE_DISTURBANCE:
             # \tilde eps_t = \hat eps_t^* + eps_t^+
-            blas.{{prefix}}copy(&nobs_endog, &self.disturbance_variates[0], &inc, &self.simulated_measurement_disturbance[0,0], &inc)
+            # In the FILTER_COLLAPSED case, we have to use a collapsed version of the disturbance variates,
+            # so we construct a new representation that can perform the collapse on the variates
+            if self.simulated_kfilter.filter_method & FILTER_COLLAPSED:
+                dim2[0] = k_endog; dim2[1] = self.nobs;
+                collapsing_obs = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+                nobs_endog = k_endog * self.nobs
+                blas.{{prefix}}copy(&nobs_endog, &self.disturbance_variates[0], &inc, &collapsing_obs[0, 0], &inc)
+                nobs_endog = nobs_kstates
+
+                collapsing_model = {{prefix}}Statespace(
+                    collapsing_obs,
+                    self.model.design, self.model.obs_intercept, self.model.obs_cov,
+                    self.model.transition, self.model.state_intercept, self.model.selection,
+                    self.model.state_cov
+                )
+                collapsing_model.initialized = True
+                for t in range(self.nobs):
+                    collapsing_model.seek(t, self.simulated_kfilter.filter_method & FILTER_UNIVARIATE,
+                                             self.simulated_kfilter.filter_method & FILTER_COLLAPSED)
+                    blas.{{prefix}}copy(&k_states, &collapsing_model.collapse_obs[0], &inc, &self.simulated_measurement_disturbance[0,t], &inc)
+            else:
+                blas.{{prefix}}copy(&nobs_endog, &self.disturbance_variates[0], &inc, &self.simulated_measurement_disturbance[0,0], &inc)
+
             blas.{{prefix}}axpy(&nobs_endog, &alpha, &self.simulated_smoother.smoothed_measurement_disturbance[0,0], &inc,
                                                      &self.simulated_measurement_disturbance[0,0], &inc)
 
             # \tilde eta_t = \hat eta_t^* + eta_t^+
-            blas.{{prefix}}copy(&nobs_posdef, &self.disturbance_variates[nobs_endog], &inc, &self.simulated_state_disturbance[0,0], &inc)
+            blas.{{prefix}}copy(&nobs_posdef, &self.disturbance_variates[k_endog * self.nobs], &inc, &self.simulated_state_disturbance[0,0], &inc)
             blas.{{prefix}}axpy(&nobs_posdef, &alpha, &self.simulated_smoother.smoothed_state_disturbance[0,0], &inc,
                                                      &self.simulated_state_disturbance[0,0], &inc)
 

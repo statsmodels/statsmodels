@@ -7,22 +7,25 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 from warnings import warn
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 
 import numpy as np
-from statsmodels.tsa.filters.hp_filter import hpfilter
-from statsmodels.tsa.tsatools import lagmat
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from scipy.linalg import solve_discrete_lyapunov
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
                                              SpecificationWarning)
+import statsmodels.base.wrapper as wrap
+
+from statsmodels.tsa.filters.hp_filter import hpfilter
+from statsmodels.tsa.tsatools import lagmat
+
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .initialization import Initialization
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate,
     prepare_exog
 )
-import statsmodels.base.wrapper as wrap
 
 _mask_map = {
     1: 'irregular',
@@ -69,7 +72,7 @@ class UnobservedComponents(MLEModel):
         dictionaries, it defaults to the floor of period/2.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
-    ar : int or None, optional
+    autoregressive : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
         Exogenous variables.
@@ -547,7 +550,6 @@ class UnobservedComponents(MLEModel):
             self.autoregressive
         )
 
-
         # The ar states are initialized as stationary, so they don't need to be
         # burned.
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
@@ -608,6 +610,9 @@ class UnobservedComponents(MLEModel):
                             'damped_cycle', 'cycle_period_bounds',
                             'mle_regression'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
+
+        # Initialize the state
+        self.initialize_default()
 
     def _get_init_kwds(self):
         # Get keywords based on model attributes
@@ -772,46 +777,29 @@ class UnobservedComponents(MLEModel):
             self._var_repetitions[cov_ix] = 2
         self._repeat_any_var = any(self._var_repetitions > 1)
 
-    def initialize_state(self):
-        # Initialize the AR component as stationary, the rest as approximately
-        # diffuse
-        initial_state = np.zeros(self.k_states)
-        initial_state_cov = (
-            np.eye(self.k_states, dtype=self.ssm.transition.dtype) *
-            self.ssm.initial_variance
-        )
+    def initialize_default(self, approximate_diffuse_variance=None):
+        if approximate_diffuse_variance is None:
+            approximate_diffuse_variance = self.ssm.initial_variance
+
+        init = Initialization(
+            self.k_states,
+            approximate_diffuse_variance=approximate_diffuse_variance)
 
         if self.autoregressive:
+            offset = (self.level + self.trend +
+                      self._k_seasonal_states +
+                      self._k_freq_seas_states +
+                      self._k_cycle_states)
+            length = self.ar_order
+            init.set((0, offset), 'approximate_diffuse')
+            init.set((offset, offset + length), 'stationary')
+            init.set((offset + length, self.k_states), 'approximate_diffuse')
+        # If we do not have an autoregressive component, then everything has
+        # a diffuse initialization
+        else:
+            init.set(None, 'approximate_diffuse')
 
-            start = (
-                self.level + self.trend +
-                self._k_seasonal_states +
-                self._k_freq_seas_states +
-                self._k_cycle_states
-            )
-            end = start + self.ar_order
-            selection_stationary = self.ssm['selection', start:end, :, 0]
-            selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
-                selection_stationary.T
-            )
-            try:
-                initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm['transition', start:end, start:end, 0],
-                    selected_state_cov_stationary
-                )
-            except:
-                initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm['transition', start:end, start:end, 0],
-                    selected_state_cov_stationary,
-                    method='direct'
-                )
-
-            initial_state_cov[start:end, start:end] = (
-                initial_state_cov_stationary
-            )
-
-        self.ssm.initialize_known(initial_state, initial_state_cov)
+        self.ssm.initialization = init
 
     @property
     def _res_classes(self):
@@ -933,7 +921,8 @@ class UnobservedComponents(MLEModel):
             elif key == 'seasonal_var':
                 param_names.append('sigma2.seasonal')
             elif key.startswith('freq_seasonal_var_'):
-                # There are potentially multiple frequency domain seasonal terms
+                # There are potentially multiple frequency domain
+                # seasonal terms
                 idx_fseas_comp = int(key[-1])
                 periodicity = self.freq_seasonal_periods[idx_fseas_comp]
                 harmonics = self.freq_seasonal_harmonics[idx_fseas_comp]
@@ -1097,9 +1086,6 @@ class UnobservedComponents(MLEModel):
                     params[offset:offset+self.k_exog]
                 )[None, :]
             offset += self.k_exog
-
-        # Initialize the state
-        self.initialize_state()
 
 
 class UnobservedComponentsResults(MLEResults):
@@ -1335,7 +1321,6 @@ class UnobservedComponentsResults(MLEResults):
                 filtered_cov = np.sum(
                     [self.filtered_state_cov[offset + j, offset + j] for j in
                      states_in_sum], axis=0)
-
 
                 item = Bunch(
                     filtered=filtered_state,
@@ -1841,5 +1826,5 @@ class UnobservedComponentsResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(UnobservedComponentsResultsWrapper,
+wrap.populate_wrapper(UnobservedComponentsResultsWrapper,  # noqa:E305
                       UnobservedComponentsResults)

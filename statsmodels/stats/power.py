@@ -224,14 +224,15 @@ class Power(object):
             from statsmodels.tools.sm_exceptions import HypothesisTestWarning
             warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
             if key == 'power':
-                return alpha
+                return kwds['alpha']
             if key == 'alpha':
-                return power
+                return kwds['power']
             else:
                 raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
 
 
         self._counter = 0
+
         def func(x):
             kwds[key] = x
             fval = self._power_identity(**kwds)
@@ -954,8 +955,7 @@ class GofChisquarePower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):
-              #alternative='two-sided'):
+    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):#alternative='two-sided'):
         '''Calculate the power of a chisquare test for one sample
 
         Only two-sided alternative is implemented

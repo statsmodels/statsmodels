@@ -367,6 +367,3 @@ class KStepAhead(object):
                                 self.__class__.__name__,
                                 self.n,
                                 )
-
-
-

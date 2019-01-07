@@ -9,25 +9,16 @@ License: BSD-3
 currently all tests are against R
 
 """
-#import warnings
-#warnings.simplefilter("default")
-# ResourceWarning doesn't exist in python 2
-#warnings.simplefilter("ignore", ResourceWarning)
 import os
 
 import numpy as np
 import pandas as pd
 
-# skipping some parts
-from distutils.version import LooseVersion
-PD_GE_17 = LooseVersion(pd.__version__) >= '0.17'
-
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_approx_equal, assert_allclose,
-                           assert_array_equal)
+                           assert_allclose, assert_array_equal)
 import pytest
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
@@ -35,18 +26,20 @@ import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 import json
 
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
+
 def compare_t_est(sp, sp_dict, decimal=(14, 14)):
-    assert_almost_equal(sp[0], sp_dict['statistic'], decimal=decimal[0])
-    assert_almost_equal(sp[1], sp_dict['pvalue'], decimal=decimal[1])
+    assert_allclose(sp[0], sp_dict['statistic'], atol=10 ** -decimal[0],
+                    rtol=10 ** -decimal[0])
+    assert_allclose(sp[1], sp_dict['pvalue'], atol=10 ** -decimal[1],
+                    rtol=10 ** -decimal[0])
 
 
 def notyet_atst():
-    d = macrodata.load().data
+    d = macrodata.load(as_pandas=False).data
 
     realinv = d['realinv']
     realgdp = d['realgdp']
@@ -114,12 +107,12 @@ class TestDiagnosticG(object):
 
     @classmethod
     def setup_class(cls):
-        d = macrodata.load().data
+        d = macrodata.load_pandas().data
         #growth rates
-        gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
-        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp']))
-        lint = d['realint'][:-1]
-        tbilrate = d['tbilrate'][:-1]
+        gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
+        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
+        lint = d['realint'][:-1].values
+        tbilrate = d['tbilrate'][:-1].values
 
         endogg = gs_l_realinv
         exogg = add_constant(np.c_[gs_l_realgdp, lint])
@@ -610,10 +603,10 @@ class TestDiagnosticG(object):
         lf3 = smsdia.lilliefors(res.resid[:20])
 
         compare_t_est(lf1, lilliefors1, decimal=(14, 14))
-        compare_t_est(lf2, lilliefors2, decimal=(14, 14)) #pvalue very small
-        assert_approx_equal(lf2[1], lilliefors2['pvalue'], significant=10)
+        compare_t_est(lf2, lilliefors2, decimal=(14, 14))  # pvalue very small
+        assert_allclose(lf2[1], lilliefors2['pvalue'], rtol=1e-10)
         compare_t_est(lf3, lilliefors3, decimal=(14, 1))
-        #R uses different approximation for pvalue in last case
+        # R uses different approximation for pvalue in last case
 
         #> ad = ad.test(residuals(fm))
         #> mkhtest(ad, "ad3", "-")
@@ -766,7 +759,8 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
-def test_outlier_influence_funcs():
+
+def test_outlier_influence_funcs(reset_randomstate):
     #smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
@@ -781,6 +775,7 @@ def test_outlier_influence_funcs():
     oi.summary_table(res2, alpha=0.05)
     infl = res2.get_influence()
     infl.summary_table()
+
 
 def test_influence_wrapped():
     from pandas import DataFrame
@@ -869,7 +864,7 @@ def test_influence_dtype():
     assert_almost_equal(cr1, cr3, decimal=8)
 
 
-def test_outlier_test():
+def get_duncan_data():
     # results from R with NA -> 1. Just testing interface here because
     # outlier_test is just a wrapper
     labels = ['accountant', 'pilot', 'architect', 'author', 'chemist',
@@ -904,6 +899,12 @@ def test_outlier_test():
         41.,  16.,  33.,  53.,  67.,  57.,  26.,  29.,  10.,  15.,  19.,
         10.,  13.,  24.,  20.,   7.,   3.,  16.,   6.,  11.,   8.,  41.,
         10.]
+
+    return endog, exog, labels
+
+
+def test_outlier_test():
+    endog, exog, labels = get_duncan_data()
     ndarray_mod = OLS(endog, exog).fit()
     rstudent =  [3.1345185839, -2.3970223990,  2.0438046359, -1.9309187757,
                  1.8870465798, -1.7604905300, -1.7040324156,  1.6024285876,
@@ -964,14 +965,11 @@ def test_outlier_test():
     assert_almost_equal(res_outl2.values, res2, 7)
     assert_equal(res_outl2.index.tolist(), sorted_labels)
 
-    if PD_GE_17:
-        # pandas < 0.17 does not have sort_values method
-        res_outl1 = res_pd.outlier_test(method='b')
-        res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
-        assert_almost_equal(res_outl1.values, res2, 7)
-        assert_equal(res_outl1.index.tolist(), sorted_labels)
-        assert_array_equal(res_outl2.index, res_outl1.index)
-
+    res_outl1 = res_pd.outlier_test(method='b')
+    res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+    assert_almost_equal(res_outl1.values, res2, 7)
+    assert_equal(res_outl1.index.tolist(), sorted_labels)
+    assert_array_equal(res_outl2.index, res_outl1.index)
 
     # additional keywords in method
     res_outl3 = res_pd.outlier_test(method='b', order=True)

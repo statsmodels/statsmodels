@@ -7,8 +7,8 @@ import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import (assert_equal, assert_array_almost_equal,
         assert_raises, assert_array_equal, assert_, assert_array_less)
-from numpy.testing.decorators import skipif
 from numpy.testing.utils import assert_allclose
+import pytest
 
 try:
     import matplotlib.pyplot as plt
@@ -190,19 +190,15 @@ id            0.2060        -0.5556
     assert_equal(actual, desired)
 
 
-@skipif(missing_matplotlib)
-def test_plots():
+@pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
+def test_plots(close_figures):
     mod = Factor(X.iloc[:, 1:], 3)
     results = mod.fit()
     results.rotate('oblimin')
     fig = results.plot_scree()
-    plt.close(fig)
 
     fig_loadings = results.plot_loadings()
     assert_equal(3, len(fig_loadings))
-    for fig in fig_loadings[:-1]:
-        plt.close(fig)
-    plt.close('all')
 
 
 def test_getframe_smoke():

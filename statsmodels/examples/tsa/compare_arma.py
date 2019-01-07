@@ -75,4 +75,3 @@ results += ["Arma.fit other", ret3[0]]
 print('time used:', t5-t4)
 
 for i in results: print(i)
-

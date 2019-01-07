@@ -5,7 +5,7 @@ from statsmodels.stats.mediation import Mediation
 import pandas as pd
 from numpy.testing import assert_allclose
 import patsy
-
+import pytest
 
 # Compare to mediation R package vignette
 df = [['index', 'Estimate', 'Lower CI bound', 'Upper CI bound', 'P-value'],
@@ -118,6 +118,7 @@ def test_framing_example_moderator():
     med_rslt = med.fit(method='parametric', n_rep=100)
 
 
+@pytest.mark.slow
 def test_framing_example_formula():
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))

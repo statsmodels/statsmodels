@@ -2,10 +2,10 @@ import importlib
 
 import numpy as np
 import pandas as pd
-import nose
 import pytest
 
 import statsmodels.datasets
+from statsmodels.compat import PY3
 from statsmodels.datasets.utils import Dataset
 
 exclude = ['check_internet', 'clear_data_home', 'get_data_home',
@@ -16,21 +16,31 @@ for dataset_name in dir(statsmodels.datasets):
         datasets.append(dataset_name)
 
 
-# TODO: Remove nottest when nose support is dropped
-@nose.tools.nottest
 @pytest.mark.parametrize('dataset_name', datasets)
 def test_dataset(dataset_name):
     dataset = importlib.import_module('statsmodels.datasets.' + dataset_name)
-    data = dataset.load()
-    assert isinstance(data, Dataset)
-    assert isinstance(data.data, np.recarray)
+    warning_type = FutureWarning if PY3 else None
+    with pytest.warns(warning_type):
+        ds = dataset.load()
+    assert isinstance(ds, Dataset)
+    assert isinstance(ds.data, np.recarray)
+    if hasattr(ds, 'exog'):
+        assert isinstance(ds.exog, np.ndarray)
+    if hasattr(ds, 'endog'):
+        assert isinstance(ds.endog, np.ndarray)
 
-    df_data = dataset.load_pandas()
-    assert isinstance(df_data, Dataset)
-    assert isinstance(df_data.data, pd.DataFrame)
+    ds = dataset.load(as_pandas=True)
+    assert isinstance(ds, Dataset)
+    assert isinstance(ds.data, pd.DataFrame)
+    if hasattr(ds, 'exog'):
+        assert isinstance(ds.exog, (pd.DataFrame, pd.Series))
+    if hasattr(ds, 'endog'):
+        assert isinstance(ds.endog, (pd.DataFrame, pd.Series))
 
-
-# TODO: Remove when nose support is dropped
-def test_all_datasets():
-    for dataset in datasets:
-        test_dataset(dataset)
+    ds = dataset.load_pandas()
+    assert isinstance(ds, Dataset)
+    assert isinstance(ds.data, pd.DataFrame)
+    if hasattr(ds, 'exog'):
+        assert isinstance(ds.exog, (pd.DataFrame, pd.Series))
+    if hasattr(ds, 'endog'):
+        assert isinstance(ds.endog, (pd.DataFrame, pd.Series))

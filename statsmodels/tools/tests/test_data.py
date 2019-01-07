@@ -48,4 +48,3 @@ def test_patsy_577():
     np.testing.assert_(data._is_using_patsy(endog, None))
     exog = dmatrix("var2 - 1", df)
     np.testing.assert_(data._is_using_patsy(endog, exog))
-

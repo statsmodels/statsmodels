@@ -13,22 +13,18 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
-import pytest
-import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
-from statsmodels.tsa.statespace.tools import compatibility_mode
-from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
+from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
+    SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,12 +33,14 @@ class TestStatesAR3(object):
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset / Stata comparison
-        path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_wpi1_ar3_stata.csv')
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
                                         freq='QS')
         # Matlab comparison
-        path = current_path + os.sep+'results/results_wpi1_ar3_matlab_ssm.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_wpi1_ar3_matlab_ssm.csv')
         matlab_names = [
             'a1', 'a2', 'a3', 'detP', 'alphahat1', 'alphahat2', 'alphahat3',
             'detV', 'eps', 'epsvar', 'eta', 'etavar'
@@ -71,16 +69,15 @@ class TestStatesAR3(object):
             cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
                 cls.results.smoother_results.smoothed_state_cov[:, :, i])
 
-        if not compatibility_mode:
-            # Perform simulation smoothing
-            n_disturbance_variates = (
-                (cls.model.k_endog + cls.model.ssm.k_posdef) * cls.model.nobs
-            )
-            cls.sim = cls.model.simulation_smoother(filter_timing=0)
-            cls.sim.simulate(
-                disturbance_variates=np.zeros(n_disturbance_variates),
-                initial_state_variates=np.zeros(cls.model.k_states)
-            )
+        # Perform simulation smoothing
+        n_disturbance_variates = (
+            (cls.model.k_endog + cls.model.ssm.k_posdef) * cls.model.nobs
+        )
+        cls.sim = cls.model.simulation_smoother(filter_timing=0)
+        cls.sim.simulate(
+            disturbance_variates=np.zeros(n_disturbance_variates),
+            initial_state_variates=np.zeros(cls.model.k_states)
+        )
 
     def test_predict_obs(self):
         assert_almost_equal(
@@ -158,22 +155,16 @@ class TestStatesAR3(object):
         )
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestStatesAR3AlternateTiming, cls).setup_class(
             alternate_timing=True, *args, **kwargs)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestStatesAR3AlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -185,7 +176,8 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
         )
         assert_almost_equal(
             self.results.smoother_results.smoothed_state.T[2:],
-            self.matlab_ssm.iloc[2:][['alphahat1', 'alphahat2', 'alphahat3']], 4
+            self.matlab_ssm.iloc[2:][['alphahat1', 'alphahat2', 'alphahat3']],
+            4
         )
 
     def test_smoothed_states_cov(self):
@@ -202,12 +194,9 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
                      SMOOTH_ALTERNATIVE)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestStatesAR3UnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -222,19 +211,22 @@ class TestStatesMissingAR3(object):
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
-        path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_wpi1_ar3_stata.csv')
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
-                                         freq='QS')
+                                        freq='QS')
         # Matlab comparison
-        path = current_path + os.sep+'results/results_wpi1_missing_ar3_matlab_ssm.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_wpi1_missing_ar3_matlab_ssm.csv')
         matlab_names = [
-            'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
-            'detV','eps','epsvar','eta','etavar'
+            'a1', 'a2', 'a3', 'detP', 'alphahat1', 'alphahat2', 'alphahat3',
+            'detV', 'eps', 'epsvar', 'eta', 'etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # KFAS comparison
-        path = current_path + os.sep+'results/results_smoothing3_R.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_smoothing3_R.csv')
         cls.R_ssm = pd.read_csv(path)
 
         # Create missing observations
@@ -242,7 +234,7 @@ class TestStatesMissingAR3(object):
         cls.stata.loc[cls.stata.index[10:21], 'dwpi'] = np.nan
 
         cls.model = sarimax.SARIMAX(
-            cls.stata.loc[cls.stata.index[1:],'dwpi'], order=(3, 0, 0),
+            cls.stata.loc[cls.stata.index[1:], 'dwpi'], order=(3, 0, 0),
             hamilton_representation=True, *args, **kwargs
         )
         if alternate_timing:
@@ -257,25 +249,24 @@ class TestStatesMissingAR3(object):
         cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
         for i in range(cls.model.nobs):
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
 
-        if not compatibility_mode:
-            # Perform simulation smoothing
-            n_disturbance_variates = (
-                (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
-            )
-            cls.sim = cls.model.simulation_smoother()
-            cls.sim.simulate(
-                disturbance_variates=np.zeros(n_disturbance_variates),
-                initial_state_variates=np.zeros(cls.model.k_states)
-            )
+        # Perform simulation smoothing
+        n_disturbance_variates = (
+            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
+        )
+        cls.sim = cls.model.simulation_smoother()
+        cls.sim.simulate(
+            disturbance_variates=np.zeros(n_disturbance_variates),
+            initial_state_variates=np.zeros(cls.model.k_states)
+        )
 
     def test_predicted_states(self):
         assert_almost_equal(
-            self.results.predicted_state[:,:-1].T,
+            self.results.predicted_state[:, :-1].T,
             self.matlab_ssm[['a1', 'a2', 'a3']], 4
         )
 
@@ -314,6 +305,7 @@ class TestStatesMissingAR3(object):
     # missing data. Tests against the R package KFAS confirm our results
 
     def test_smoothed_state_disturbance(self):
+        # See note above about why this assertion is invalid
         # assert_almost_equal(
         #     self.results.smoothed_state_disturbance.T,
         #     self.matlab_ssm[['eta']], 4
@@ -324,31 +316,27 @@ class TestStatesMissingAR3(object):
         )
 
     def test_smoothed_state_disturbance_cov(self):
+        # See note above about why this assertion is invalid
         # assert_almost_equal(
         #     self.results.smoothed_state_disturbance_cov[0].T,
         #     self.matlab_ssm[['etavar']], 4
         # )
         assert_almost_equal(
-            self.results.smoothed_state_disturbance_cov[0,0,:],
+            self.results.smoothed_state_disturbance_cov[0, 0, :],
             self.R_ssm['detVeta'], 9
         )
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-        super(TestStatesMissingAR3AlternateTiming, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestStatesMissingAR3AlternateTiming,
+              cls).setup_class(alternate_timing=True, *args, **kwargs)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestStatesMissingAR3AlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -360,12 +348,9 @@ class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
                      SMOOTH_ALTERNATIVE)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestStatesMissingAR3UnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -384,20 +369,21 @@ class TestMultivariateMissing(object):
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
     measurement equation (e.g. forecasts, etc.). In this case, although the
-    model is multivariate, each of the series is truly independent so the values
-    will be the same regardless of whether the univariate approach is used or
-    not.
+    model is multivariate, each of the series is truly independent so the
+    values will be the same regardless of whether the univariate approach
+    is used or not.
     """
     @classmethod
     def setup_class(cls, **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = dta[['realgdp','realcons','realinv']].diff().iloc[1:]
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                                  freq='QS')
+        obs = dta[['realgdp', 'realcons', 'realinv']].diff().iloc[1:]
         obs.iloc[0:50, 0] = np.nan
         obs.iloc[19:70, 1] = np.nan
         obs.iloc[39:90, 2] = np.nan
@@ -425,16 +411,16 @@ class TestMultivariateMissing(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), -205310.9767)
@@ -471,7 +457,7 @@ class TestMultivariateMissing(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']]
         )
 
@@ -496,13 +482,13 @@ class TestMultivariateMissing(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']]
+            self.desired[['muhat1', 'muhat2', 'muhat3']]
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']]
+            self.desired[['etahat1', 'etahat2', 'etahat3']]
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -514,22 +500,19 @@ class TestMultivariateMissing(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']]
+            self.desired[['epshat1', 'epshat2', 'epshat3']]
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']]
+            self.desired[['Veps1', 'Veps2', 'Veps3']]
         )
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateMissingClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -541,12 +524,9 @@ class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
                      SMOOTH_CLASSICAL)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateMissingAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -557,12 +537,10 @@ class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
         assert_equal(self.model.ssm._kalman_smoother._smooth_method,
                      SMOOTH_ALTERNATIVE)
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
+
 class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateMissingUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -581,34 +559,39 @@ class TestMultivariateVAR(object):
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
     measurement equation (e.g. forecasts, etc.). In this case, although the
-    model is multivariate, each of the series is truly independent so the values
-    will be the same regardless of whether the univariate approach is used or
-    not.
+    model is multivariate, each of the series is truly independent so the
+    values will be the same regardless of whether the univariate approach is
+    used or not.
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing2_R.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_smoothing2_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                                  freq='QS')
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
-                                   [ 0.          ,  0.0000572802,  0.          ],
-                                   [ 0.          ,  0.          ,  0.0017088585]])
-        mod['transition'] = np.array([[-0.1119908792,  0.8441841604,  0.0238725303],
-                                      [ 0.2629347724,  0.4996718412, -0.0173023305],
-                                      [-3.2192369082,  4.1536028244,  0.4514379215]])
+        mod['obs_cov'] = np.array([
+            [0.0000640649,  0.,            0.],
+            [0.,            0.0000572802,  0.],
+            [0.,            0.,            0.0017088585]])
+        mod['transition'] = np.array([
+            [-0.1119908792,  0.8441841604,  0.0238725303],
+            [0.2629347724,   0.4996718412, -0.0173023305],
+            [-3.2192369082,  4.1536028244,  0.4514379215]])
         mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([[ 0.0000640649,  0.0000388496,  0.0002148769],
-                                     [ 0.0000388496,  0.0000572802,  0.000001555 ],
-                                     [ 0.0002148769,  0.000001555 ,  0.0017088585]])
+        mod['state_cov'] = np.array([
+            [0.0000640649,  0.0000388496,  0.0002148769],
+            [0.0000388496,  0.0000572802,  0.000001555],
+            [0.0002148769,  0.000001555,   0.0017088585]])
         mod.initialize_approximate_diffuse(1e6)
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
@@ -623,16 +606,16 @@ class TestMultivariateVAR(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), 1695.34872)
@@ -670,7 +653,7 @@ class TestMultivariateVAR(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']], atol=1e-6
         )
 
@@ -695,13 +678,13 @@ class TestMultivariateVAR(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']], atol=1e-6
+            self.desired[['muhat1', 'muhat2', 'muhat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']], atol=1e-6
+            self.desired[['etahat1', 'etahat2', 'etahat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -713,22 +696,19 @@ class TestMultivariateVAR(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']], atol=1e-6
+            self.desired[['epshat1', 'epshat2', 'epshat3']], atol=1e-6
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']], atol=1e-6
+            self.desired[['Veps1', 'Veps2', 'Veps3']], atol=1e-6
         )
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateVARAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -740,12 +720,9 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
                      SMOOTH_ALTERNATIVE)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateVARClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -757,7 +734,6 @@ class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
                      SMOOTH_CLASSICAL)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARUnivariate(object):
     """
     Tests for most filtering and smoothing variables against output from the
@@ -766,37 +742,40 @@ class TestMultivariateVARUnivariate(object):
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
     measurement equation (e.g. forecasts, etc.). In this case, although the
-    model is multivariate, each of the series is truly independent so the values
-    will be the same regardless of whether the univariate approach is used or
-    not.
+    model is multivariate, each of the series is truly independent so the
+    values will be the same regardless of whether the univariate approach is
+    used or not.
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         # Results
-        path = current_path + os.sep + 'results/results_smoothing2_R.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_smoothing2_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                                  freq='QS')
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod.ssm.filter_univariate = True
         mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
-                                   [ 0.          ,  0.0000572802,  0.          ],
-                                   [ 0.          ,  0.          ,  0.0017088585]])
-        mod['transition'] = np.array([[-0.1119908792,  0.8441841604,  0.0238725303],
-                                      [ 0.2629347724,  0.4996718412, -0.0173023305],
-                                      [-3.2192369082,  4.1536028244,  0.4514379215]])
+        mod['obs_cov'] = np.array([
+            [0.0000640649,  0.,            0.],
+            [0.,            0.0000572802,  0.],
+            [0.,            0.,            0.0017088585]])
+        mod['transition'] = np.array([
+            [-0.1119908792,  0.8441841604,  0.0238725303],
+            [0.2629347724,   0.4996718412, -0.0173023305],
+            [-3.2192369082,  4.1536028244,  0.4514379215]])
         mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([[ 0.0000640649,  0.0000388496,  0.0002148769],
-                                     [ 0.0000388496,  0.0000572802,  0.000001555 ],
-                                     [ 0.0002148769,  0.000001555 ,  0.0017088585]])
+        mod['state_cov'] = np.array([
+            [0.0000640649,  0.0000388496,  0.0002148769],
+            [0.0000388496,  0.0000572802,  0.000001555],
+            [0.0002148769,  0.000001555,   0.0017088585]])
         mod.initialize_approximate_diffuse(1e6)
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
@@ -811,16 +790,16 @@ class TestMultivariateVARUnivariate(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), 1695.34872)
@@ -858,7 +837,7 @@ class TestMultivariateVARUnivariate(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']], atol=1e-8
         )
 
@@ -883,13 +862,13 @@ class TestMultivariateVARUnivariate(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']], atol=1e-6
+            self.desired[['muhat1', 'muhat2', 'muhat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']], atol=1e-6
+            self.desired[['etahat1', 'etahat2', 'etahat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -901,22 +880,19 @@ class TestMultivariateVARUnivariate(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']], atol=1e-6
+            self.desired[['epshat1', 'epshat2', 'epshat3']], atol=1e-6
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']]
+            self.desired[['Veps1', 'Veps2', 'Veps3']]
         )
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestMultivariateVARUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -932,17 +908,14 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
                      SMOOTH_UNIVARIATE)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariances(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                                  freq='QS')
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if which == 'all':
             obs.iloc[:50, :] = np.nan
@@ -960,16 +933,19 @@ class TestVARAutocovariances(object):
         # Create the model with typical state space
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 609.0746647855,    0.          ,    0.          ],
-                                   [   0.          ,    1.8774916622,    0.          ],
-                                   [   0.          ,    0.          ,  124.6768281675]])
-        mod['transition'] = np.array([[-0.8110473405,  1.8005304445,  1.0215975772],
-                                      [-1.9846632699,  2.4091302213,  1.9264449765],
-                                      [ 0.9181658823, -0.2442384581, -0.6393462272]])
+        mod['obs_cov'] = np.array([
+            [609.0746647855,  0.,              0.],
+            [0.,              1.8774916622,    0.],
+            [0.,              0.,            124.6768281675]])
+        mod['transition'] = np.array([
+            [-0.8110473405,  1.8005304445,  1.0215975772],
+            [-1.9846632699,  2.4091302213,  1.9264449765],
+            [0.9181658823,  -0.2442384581, -0.6393462272]])
         mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([[ 1552.9758843938,   612.7185121905,   877.6157204992],
-                                     [  612.7185121905,   467.8739411204,    70.608037339 ],
-                                     [  877.6157204992,    70.608037339 ,   900.5440385836]])
+        mod['state_cov'] = np.array([
+            [1552.9758843938,   612.7185121905,   877.6157204992],
+            [612.7185121905,    467.8739411204,    70.608037339],
+            [877.6157204992,     70.608037339,    900.5440385836]])
         mod.initialize_approximate_diffuse(1e6)
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
@@ -978,17 +954,20 @@ class TestVARAutocovariances(object):
         kwargs.pop('filter_collapsed', None)
         mod = mlemodel.MLEModel(obs, k_states=6, k_posdef=3, **kwargs)
         mod['design', :3, :3] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 609.0746647855,    0.          ,    0.          ],
-                                   [   0.          ,    1.8774916622,    0.          ],
-                                   [   0.          ,    0.          ,  124.6768281675]])
-        mod['transition', :3, :3] = np.array([[-0.8110473405,  1.8005304445,  1.0215975772],
-                                              [-1.9846632699,  2.4091302213,  1.9264449765],
-                                              [ 0.9181658823, -0.2442384581, -0.6393462272]])
+        mod['obs_cov'] = np.array([
+            [609.0746647855,    0.,              0.],
+            [0.,                1.8774916622,    0.],
+            [0.,                0.,            124.6768281675]])
+        mod['transition', :3, :3] = np.array([
+            [-0.8110473405,  1.8005304445,  1.0215975772],
+            [-1.9846632699,  2.4091302213,  1.9264449765],
+            [0.9181658823,  -0.2442384581, -0.6393462272]])
         mod['transition', 3:, :3] = np.eye(3)
         mod['selection', :3, :3] = np.eye(3)
-        mod['state_cov'] = np.array([[ 1552.9758843938,   612.7185121905,   877.6157204992],
-                                     [  612.7185121905,   467.8739411204,    70.608037339 ],
-                                     [  877.6157204992,    70.608037339 ,   900.5440385836]])
+        mod['state_cov'] = np.array([
+            [1552.9758843938,  612.7185121905,   877.6157204992],
+            [612.7185121905,   467.8739411204,    70.608037339],
+            [877.6157204992,    70.608037339,    900.5440385836]])
 
         mod.initialize_approximate_diffuse(1e6)
         cls.augmented_model = mod
@@ -1006,12 +985,9 @@ class TestVARAutocovariances(object):
                         atol=1e-7)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestVARAutocovariancesAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -1023,12 +999,9 @@ class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
                      SMOOTH_ALTERNATIVE)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestVARAutocovariancesClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -1040,12 +1013,9 @@ class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
                      SMOOTH_CLASSICAL)
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
         super(TestVARAutocovariancesUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 

@@ -9,11 +9,13 @@ Note: uncomment plt.show() to display graphs
 '''
 
 example = 2 #3  # 1,2 or 3
+import time
 
 import numpy as np
 from statsmodels.compat.python import zip
 import numpy.random as R
 import matplotlib.pyplot as plt
+import scipy.stats
 
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
@@ -65,7 +67,6 @@ if example == 1:
 
     print(m)
 
-import scipy.stats, time
 
 if example == 2:
     print("binomial")
@@ -166,4 +167,3 @@ plt.plot(x2, standardize(f2(x2)), linewidth=2)
 ##     pylab.plot(x2, standardize(m.smoothers[1](x2)), 'b')
 ##     pylab.plot(x2, standardize(f2(x2)), linewidth=2)
 ##     pylab.show()
-

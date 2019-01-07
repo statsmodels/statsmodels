@@ -213,17 +213,17 @@ def load_results_jmulti(dataset):
                     result_p = []
                     started_reading_section = False
                     continue
-                str_number = "-?\d+\.\d{3}"
-                regex_est = re.compile(str_number + "[^\)\]\}]")
+                str_number = r"-?\d+\.\d{3}"
+                regex_est = re.compile(str_number + r"[^\)\]\}]")
                 est_col = re.findall(regex_est, line)
                 # standard errors in parantheses in JMulTi output:
-                regex_se = re.compile("\(" + str_number + "\)")
+                regex_se = re.compile(r"\(" + str_number + r"\)")
                 se_col = re.findall(regex_se, line)
                 # t-values in brackets in JMulTi output:
-                regex_t_value = re.compile("\[" + str_number + "\]")
+                regex_t_value = re.compile(r"\[" + str_number + r"\]")
                 t_col = re.findall(regex_t_value, line)
                 # p-values in braces in JMulTi output:
-                regex_p_value = re.compile("\{" + str_number + "\}")
+                regex_p_value = re.compile(r"\{" + str_number + r"\}")
                 p_col = re.findall(regex_p_value, line)
                 if result == [] and est_col != []:
                     rows = len(est_col)
@@ -278,7 +278,7 @@ def load_results_jmulti(dataset):
                                    sigmau_file)
         rows_to_parse = 0
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
-        regex_est = re.compile("\s+\S+e\S+")
+        regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
         sigmau_file = open(sigmau_file)
         for line in sigmau_file:
@@ -309,7 +309,7 @@ def load_results_jmulti(dataset):
         fc, lower, upper, plu_min = [], [], [], []
         fc_file = open(fc_file, encoding='latin_1')
         for line in fc_file:
-            str_number = "(\s+-?\d+\.\d{4}\s*?)"
+            str_number = r"(\s+-?\d+\.\d{4}\s*?)"
             regex_number = re.compile(str_number)
             numbers = re.findall(regex_number, line)
             if numbers == []:
@@ -349,7 +349,7 @@ def load_results_jmulti(dataset):
             granger_file = open(granger_file)
             granger_results = []
             for line in granger_file:
-                str_number = "\d+\.\d{4}"
+                str_number = r"\d+\.\d{4}"
                 regex_number = re.compile(str_number)
                 number = re.search(regex_number, line)
                 if number is None:
@@ -389,7 +389,7 @@ def load_results_jmulti(dataset):
             inst_file = open(inst_file)
             inst_results = []
             for line in inst_file:
-                str_number = "\d+\.\d{4}"
+                str_number = r"\d+\.\d{4}"
                 regex_number = re.compile(str_number)
                 number = re.search(regex_number, line)
                 if number is None:
@@ -402,7 +402,6 @@ def load_results_jmulti(dataset):
             results["inst_caus"]["p"][(causing, caused)] = \
                 inst_results[3]
 
-
         # ---------------------------------------------------------------------
         # parse output related to impulse-response analysis:
         ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
@@ -413,8 +412,8 @@ def load_results_jmulti(dataset):
         causing = None
         caused = None
         data = None
-        regex_vars = re.compile("\w+")
-        regex_vals = re.compile("-?\d+\.\d{4}")
+        regex_vars = re.compile(r"\w+")
+        regex_vals = re.compile(r"-?\d+\.\d{4}")
         line_start_causing = "time"
         data_line_indicator = "point estimate"
         data_rows_read = 0

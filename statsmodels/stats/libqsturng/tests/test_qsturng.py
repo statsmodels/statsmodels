@@ -6,16 +6,16 @@
 extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
-from statsmodels.compat.testing import skip
 
-from numpy.testing import rand, assert_, assert_equal, \
-    assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
-    assert_approx_equal, assert_raises, run_module_suite
+from numpy.testing import (
+    assert_equal,
+    assert_almost_equal, assert_array_almost_equal,
+    assert_raises)
 
 import numpy as np
 import pytest
 
-from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
+from statsmodels.stats.libqsturng import qsturng, psturng
 
 
 def read_ch(fname):
@@ -79,7 +79,7 @@ class TestQsturng(object):
 
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
-    @skip
+    @pytest.mark.skip
     def test_all_to_tbl(self):
         from statsmodels.stats.libqsturng.make_tbls import T,R
         ps, rs, vs, qs = [], [], [], []
@@ -184,10 +184,10 @@ class TestPsturng(object):
             assert_almost_equal(1.-p, psturng(q,r,v), 5)
 
     @pytest.mark.slow
-    def test_100_random_values(self):
+    def test_100_random_values(self, reset_randomstate):
         n = 100
         ps = np.random.random(n)*(.999 - .1) + .1
-        rs = np.random.random_integers(2, 100, n)
+        rs = np.random.randint(2, 101, n)
         vs = np.random.random(n)*998. + 2.
         qs = qsturng(ps, rs, vs)
         estimates = psturng(qs, rs, vs)
@@ -198,6 +198,3 @@ class TestPsturng(object):
 
 ##     def test_more_exotic_stuff(self, level=3):
 ##         something_obscure_and_expensive()
-
-if __name__ == '__main__':
-    run_module_suite()

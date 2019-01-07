@@ -25,8 +25,6 @@ License : BSD
 from __future__ import print_function
 import numpy as np
 from scipy import signal
-#import matplotlib.pylab as plt
-from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
 #NOTE: this just returns that predicted values given the
@@ -173,4 +171,3 @@ if __name__ == '__main__':
     aav = acovf(x[:,0])
     print(aav[0] == np.var(x[:,0]))
     aac = acf(x[:,0])
-

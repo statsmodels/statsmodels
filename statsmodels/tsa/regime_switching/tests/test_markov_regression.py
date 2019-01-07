@@ -8,17 +8,19 @@ from __future__ import division, absolute_import, print_function
 
 import os
 import warnings
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_raises
 import pandas as pd
+
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
-from numpy.testing import assert_allclose, assert_raises
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-# See http://www.stata-press.com/data/r14/usmacro
+# See https://www.stata-press.com/data/r14/usmacro
 fedfunds = [1.03, 0.99, 1.34, 1.5, 1.94, 2.36, 2.48, 2.69, 2.81, 2.93, 2.93,
             3.0, 3.23, 3.25, 1.86, 0.94, 1.32, 2.16, 2.57, 3.08, 3.58, 3.99,
             3.93, 3.7, 2.94, 2.3, 2.0, 1.73, 1.68, 2.4, 2.46, 2.61, 2.85,
@@ -41,7 +43,7 @@ fedfunds = [1.03, 0.99, 1.34, 1.5, 1.94, 2.36, 2.48, 2.69, 2.81, 2.93, 2.93,
             4.46, 4.91, 5.25, 5.25, 5.26, 5.25, 5.07, 4.5, 3.18, 2.09, 1.94,
             0.51, 0.18, 0.18, 0.16, 0.12, 0.13, 0.19, 0.19, 0.19]
 
-# See http://www.stata-press.com/data/r14/usmacro
+# See https://www.stata-press.com/data/r14/usmacro
 ogap = [-0.53340107, 0.72974336, 2.93532324, 3.58194304, 4.15760183,
         4.28775644, 3.01683831, 2.64185619, 1.82473528, 2.37461162,
         2.39338565, 1.24197006, 1.1370815, -1.28657401, -4.46665335,
@@ -89,7 +91,7 @@ ogap = [-0.53340107, 0.72974336, 2.93532324, 3.58194304, 4.15760183,
         -7.43927145, -6.89403868, -6.8306222, -6.26507998, -5.93287086,
         -5.59370756]
 
-# See http://www.stata-press.com/data/r14/usmacro
+# See https://www.stata-press.com/data/r14/usmacro
 inf = [np.nan, np.nan, np.nan, np.nan, -0.2347243,
        0.37373397, 0.25006533, 1.04645514, 2.01665616, 2.58033299,
        3.41399837, 3.60986805, 3.46304512, 3.08529949, 3.45609665,
@@ -137,7 +139,7 @@ inf = [np.nan, np.nan, np.nan, np.nan, -0.2347243,
        -1.60695589, 1.48749816, 2.33687115, 1.78588998, 1.22873163,
        1.21550024]
 
-# See http://www.stata-press.com/data/r14/snp500
+# See https://www.stata-press.com/data/r14/snp500
 areturns = [1.60864139, 0.6581642, 0.91177338,
             1.88970506, 0.76378739, 0.10790635, 0.29509732,
             0.16913767, 1.30772412, 0.85901159, 0.92307973,
@@ -270,7 +272,7 @@ areturns = [1.60864139, 0.6581642, 0.91177338,
             0.37556711, 0.44287458, 0.34578958, 1.48449266,
             1.95924711, 0.09717447]
 
-# See http://www.stata-press.com/data/r14/mumpspc
+# See https://www.stata-press.com/data/r14/mumpspc
 # Note that this has already been seasonally differenced at period 12
 mumpspc = [0.29791319, 0.41467956, 1.13061404, 1.23267496,
            1.55659747, 1.41078568, 0.45335022, 0.1419628,
@@ -958,7 +960,6 @@ class TestFedFundsConstShort(MarkovRegression):
         expected_marginals = np.empty((k_regimes, nobs))
         expected_marginals[:, :2] = [[1/3], [1/3], [1/3]]
         expected_marginals[:, 2:] = [[0], [1], [0]]
-
 
         py_results = markov_switching.py_hamilton_filter(
             initial_probabilities, regime_transition, conditional_likelihoods)

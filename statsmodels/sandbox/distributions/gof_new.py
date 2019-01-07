@@ -702,5 +702,3 @@ if __name__ == '__main__':
     from numpy.testing import assert_almost_equal, assert_array_almost_equal
     assert_array_almost_equal(resu1, resu2, 15)
     assert_array_almost_equal(resu2, resu3, 15)
-
-

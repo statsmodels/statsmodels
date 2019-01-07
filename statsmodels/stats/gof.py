@@ -120,7 +120,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     if not isinstance(lambd, string_types):
         a = lambd
     else:
-        if   lambd == 'loglikeratio': a = 0
+        if lambd == 'loglikeratio': a = 0
         elif lambd == 'freeman_tukey': a = -0.5
         elif lambd == 'pearson': a = 1
         elif lambd == 'modified_loglikeratio': a = -1
@@ -214,7 +214,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     distmass = []
     for ii in distsupport:
         current = distfn.cdf(ii,*arg)
-        if  current - last >= wsupp-1e-14:
+        if current - last >= wsupp-1e-14:
             distsupp.append(ii)
             distmass.append(current - last)
             last = current
@@ -300,7 +300,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     distmass = []
     for ii in distsupport:
         current = distfn.cdf(ii,*arg)
-        if  current - last >= wsupp-1e-14:
+        if current - last >= wsupp-1e-14:
             distsupp.append(ii)
             distmass.append(current - last)
             last = current

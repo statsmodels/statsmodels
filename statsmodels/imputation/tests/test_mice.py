@@ -1,16 +1,14 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
 import pandas as pd
+import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_allclose, dec
+from numpy.testing import assert_equal, assert_allclose
 
 try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except:
-    have_matplotlib = False
+    pass
 
 pdf_output = False
 
@@ -23,17 +21,11 @@ else:
 
 
 def close_or_save(pdf, fig):
-    if not have_matplotlib:
-        return
     if pdf_output:
         pdf.savefig(fig)
-    plt.close(fig)
 
 
 def teardown_module():
-    if not have_matplotlib:
-        return
-    plt.close('all')
     if pdf_output:
         pdf.close()
 
@@ -89,12 +81,16 @@ class TestMICEData(object):
                         np.concatenate((np.arange(10),
                                         np.arange(11, 30, 2),
                                         np.arange(30, 200))))
+        assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                     [set(df[col].dropna()) for col in df])
 
         for k in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
             assert_equal(imp_data.data.shape[1], ncol)
             assert_allclose(orig[mx], imp_data.data[mx])
+            assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                         [set(df[col].dropna()) for col in df])
 
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
@@ -168,6 +164,7 @@ class TestMICEData(object):
 
         # Save the dataset size at each iteration.
         hist = []
+
         def cb(imp):
             hist.append(imp.data.shape)
 
@@ -222,8 +219,8 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_missing_pattern(self):
+    @pytest.mark.matplotlib
+    def test_plot_missing_pattern(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -236,10 +233,11 @@ class TestMICEData(object):
                                       hide_complete_rows=hide_complete_rows,
                                       color_row_patterns=color_row_patterns)
                     close_or_save(pdf, fig)
+                    close_figures()
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_bivariate(self):
+    @pytest.mark.matplotlib
+    def test_plot_bivariate(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -250,10 +248,11 @@ class TestMICEData(object):
             fig = imp_data.plot_bivariate('x2', 'x4', plot_points=plot_points)
             fig.get_axes()[0].set_title('plot_bivariate')
             close_or_save(pdf, fig)
+            close_figures()
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_fit_obs(self):
+    @pytest.mark.matplotlib
+    def test_fit_obs(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -264,10 +263,11 @@ class TestMICEData(object):
             fig = imp_data.plot_fit_obs('x4', plot_points=plot_points)
             fig.get_axes()[0].set_title('plot_fit_scatterplot')
             close_or_save(pdf, fig)
+            close_figures()
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_imputed_hist(self):
+    @pytest.mark.matplotlib
+    def test_plot_imputed_hist(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -278,7 +278,7 @@ class TestMICEData(object):
             fig = imp_data.plot_imputed_hist('x4')
             fig.get_axes()[0].set_title('plot_imputed_hist')
             close_or_save(pdf, fig)
-
+            close_figures()
 
 
 class TestMICE(object):
@@ -345,13 +345,13 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
         result = mi.fit(10, 20)
 
-        fmi = np.asarray([ 0.1920533 ,  0.1587287 ,  0.33174032])
+        fmi = np.asarray([0.1778143, 0.11057262, 0.29626521])
         assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
 
-        params = np.asarray([-0.05397474,  0.97273307,  1.01652293])
+        params = np.asarray([-0.03486102, 0.96236808, 0.9970371])
         assert_allclose(result.params, params, atol=1e-5)
 
-        tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
+        tvalues = np.asarray([-0.54674776, 15.28091069, 13.61359403])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 
@@ -376,8 +376,3 @@ def test_micedata_miss1():
 
     for k in ix_miss:
         assert_equal(data_imp.ix_miss[k], ix_miss[k])
-
-
-if  __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

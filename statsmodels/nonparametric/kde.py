@@ -496,7 +496,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 #NOTE: silverman_transform is the closed form solution of the FFT of the
 #gaussian kernel. Not yet sure how to generalize it.
     zstar = silverman_transform(bw, gridsize, RANGE)*y # 3.49 in Silverman
-                                                   # 3.50 w Gaussian kernel
+                                                    # 3.50 w Gaussian kernel
     f = revrt(zstar)
     if retgrid:
         return f, grid, bw

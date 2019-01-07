@@ -131,23 +131,16 @@ class SimulationSmoother(KalmanSmoother):
 
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
+        # Initialize the filter and representation
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
-        if self._compatibility_mode:
-            return super(SimulationSmoother, self)._simulate(
-                nsimulations, measurement_shocks, state_shocks, initial_state)
-
-        prefix = self.prefix
+        # Initialize the state
+        self._initialize_state(prefix=prefix)
 
         # Create the simulator if necessary
         if (prefix not in self._simulators or
                 not nsimulations == self._simulators[prefix].nobs):
-
-            # Make sure we have the required Statespace representation
-            prefix, dtype, create_statespace = (
-                self._initialize_representation())
-
-            # Initialize the state
-            self._initialize_state(prefix=self.prefix)
 
             simulation_output = 0
             # Kalman smoother parameters
@@ -223,11 +216,6 @@ class SimulationSmoother(KalmanSmoother):
         SimulationSmoothResults
         """
 
-        if self._compatibility_mode:
-            raise NotImplementedError('Simulation smoothing is not available.'
-                                      ' Consider updating dependencies for'
-                                      ' more options.')
-
         # Set the class to be the default results class, if None provided
         if results_class is None:
             results_class = self.simulation_smooth_results_class
@@ -237,11 +225,8 @@ class SimulationSmoother(KalmanSmoother):
             raise ValueError('Invalid results class provided.')
 
         # Make sure we have the required Statespace representation
-        if prefix is None:
-            prefix = self.prefix
-        prefix, dtype, create_statespace = (
-            self._initialize_representation(prefix)
-        )
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
         # Simulation smoother parameters
         simulation_output = self.get_simulation_output(simulation_output,
@@ -531,7 +516,7 @@ class SimulationSmoothResults(object):
         return self._simulated_state_disturbance
 
     def simulate(self, simulation_output=-1, disturbance_variates=None,
-                 initial_state_variates=None):
+                 initial_state_variates=None, pretransformed_variates=False):
         r"""
         Perform simulation smoothing
 
@@ -564,16 +549,18 @@ class SimulationSmoothResults(object):
         self._simulated_state_disturbance = None
 
         # Re-initialize the _statespace representation
-        self.model._initialize_representation(prefix=self.prefix)
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self.model._initialize_smoother())
 
         # Initialize the state
-        self.model._initialize_state(prefix=self.prefix)
+        self.model._initialize_state(prefix=prefix)
 
         # Draw the (independent) random variates for disturbances in the
         # simulation
         if disturbance_variates is not None:
             self._simulation_smoother.set_disturbance_variates(
-                np.array(disturbance_variates, dtype=self.dtype)
+                np.array(disturbance_variates, dtype=self.dtype),
+                pretransformed=pretransformed_variates
             )
         else:
             self._simulation_smoother.draw_disturbance_variates()
@@ -582,7 +569,8 @@ class SimulationSmoothResults(object):
         # simulation
         if initial_state_variates is not None:
             self._simulation_smoother.set_initial_state_variates(
-                np.array(initial_state_variates, dtype=self.dtype)
+                np.array(initial_state_variates, dtype=self.dtype),
+                pretransformed=pretransformed_variates
             )
         else:
             self._simulation_smoother.draw_initial_state_variates()

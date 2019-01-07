@@ -114,7 +114,3 @@ def test_invlogit_stability():
          812.2382651982667, 495.06449978924525]
     zinv = logit.inverse(z)
     assert_equal(zinv, np.ones_like(z))
-
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

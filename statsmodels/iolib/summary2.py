@@ -222,8 +222,8 @@ class Summary(object):
         'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
 
         if self._merge_latex:
-             # create single tabular object for summary_col
-            tab = re.sub(to_replace,'\midrule\n\midrule\n', tab)
+            # create single tabular object for summary_col
+            tab = re.sub(to_replace,r'\\midrule\n\\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -287,8 +287,10 @@ def summary_model(results):
     info['Norm:'] = lambda x: x.fit_options['norm']
     info['Scale Est.:'] = lambda x: x.fit_options['scale_est']
     info['Cov. Type:'] = lambda x: x.fit_options['cov']
-    info['R-squared:'] = lambda x: "%#8.3f" % x.rsquared
-    info['Adj. R-squared:'] = lambda x: "%#8.3f" % x.rsquared_adj
+
+    rsquared_type = '' if results.k_constant else ' (uncentered)'
+    info['R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared
+    info['Adj. R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared_adj
     info['Pseudo R-squared:'] = lambda x: "%#8.3f" % x.prsquared
     info['AIC:'] = lambda x: "%8.4f" % x.aic
     info['BIC:'] = lambda x: "%8.4f" % x.bic

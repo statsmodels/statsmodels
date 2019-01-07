@@ -106,6 +106,7 @@ stub R2 C2  40.95038  40.65765
         test1header = ('header1', 'header2')
         tbl = SimpleTable(table1data, test1header, test1stubs,txt_fmt=txt_fmt1,
                           ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
+
         def test_txt_fmt1(self):
             # Limited test of custom txt_fmt
             desired = """
@@ -158,7 +159,7 @@ stub R2 C2  40.95038  40.65765
   <th>stub2</th>    <td>2</td>     <td>3.333</td> 
 </tr>
 </table>
-"""
+"""  # noqa:W291
             actual = '\n%s\n' % tbl.as_html()
             assert_equal(actual, desired)
         test_txt_fmt1(self)
@@ -198,8 +199,8 @@ stub R2 C2  40.95038  40.65765
         df = df.join( i )
         endo = df.join( y )
         exo = df.join( x )
-        endo_groups = endo.groupby( ("i",) )
-        exo_groups = exo.groupby( ("i",) )
+        endo_groups = endo.groupby("i")
+        exo_groups = exo.groupby("i")
         exo_Df = exo_groups.agg( [np.sum, np.max] )
         endo_Df = endo_groups.agg( [np.sum, np.max] )
         reg = OLS(exo_Df[[("x", "sum")]],endo_Df).fit()
@@ -217,10 +218,3 @@ stub R2 C2  40.95038  40.65765
                    "('y', 'amax')     0.2432      0.035   "]
 
         assert_equal(sorted(desired), sorted(interesting_lines)  )
-
-
-if __name__ == "__main__":
-    #unittest.main()
-    pass
-
-

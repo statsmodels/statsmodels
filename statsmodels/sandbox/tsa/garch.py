@@ -738,7 +738,7 @@ class AR(LikelihoodModel):
                 ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
         if self.penalty:
             pass
-        j = Jacobian(self.loglike)
+        j = ndt.Jacobian(self.loglike)
         return j(params)
 #        return gradient
 
@@ -754,7 +754,7 @@ class AR(LikelihoodModel):
         Returns numerical hessian for now.  Depends on numdifftools.
         """
 
-        h = Hessian(self.loglike)
+        h = ndt.Hessian(self.loglike)
         return h(params)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35, tol=1e-08,

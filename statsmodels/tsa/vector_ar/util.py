@@ -13,8 +13,10 @@ import pandas as pd
 
 import statsmodels.tsa.tsatools as tsa
 
+
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
+
 def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
@@ -37,6 +39,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
 
     return Z
 
+
 def get_trendorder(trend='c'):
     # Handle constant, etc.
     if trend == 'c':
@@ -48,6 +51,7 @@ def get_trendorder(trend='c'):
     elif trend == 'ctt':
         trendorder = 3
     return trendorder
+
 
 def make_lag_names(names, lag_order, trendorder=1, exog=None):
     """
@@ -81,6 +85,7 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
         for i in range(exog.shape[1]):
             lag_names.insert(trendorder + i, "exog" + str(i))
     return lag_names
+
 
 def comp_matrix(coefs):
     """
@@ -122,7 +127,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
     with open(path, 'rb') as f:
         lines = deque(f)
 
@@ -165,18 +170,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
 
     return data, date_range
-
-
-def get_logdet(m):
-    from statsmodels.tools.linalg import logdet_symm
-    return logdet_symm(m)
-
-
-get_logdet = np.deprecate(get_logdet,
-                          "statsmodels.tsa.vector_ar.util.get_logdet",
-                          "statsmodels.tools.linalg.logdet_symm",
-                          "get_logdet is deprecated and will be removed in "
-                          "0.8.0")
 
 
 def norm_signif_level(alpha=0.05):
@@ -250,6 +243,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
 
     return result
 
+
 def get_index(lst, name):
     try:
         result = lst.index(name)
@@ -258,7 +252,9 @@ def get_index(lst, name):
             raise
         result = name
     return result
-    #method used repeatedly in Sims-Zha error bands
+
+
+#method used repeatedly in Sims-Zha error bands
 def eigval_decomp(sym_array):
     """
     Returns
@@ -271,6 +267,7 @@ def eigval_decomp(sym_array):
     eigva, W = decomp.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k
+
 
 def vech(A):
     """

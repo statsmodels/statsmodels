@@ -46,7 +46,7 @@ def plothist(x,distfn, args, loc, scale, right=1):
 
     plt.xlabel('Smarts')
     plt.ylabel('Probability')
-    plt.title(r'$\mathrm{Testing: %s :}\ \mu=%f,\ \sigma=%f$'%(distfn.name,loc,scale))
+    plt.title(r'$\mathrm{Testing: %s :}\ \mu=%f,\ \sigma=%f$' % (distfn.name,loc,scale))
 
     #plt.axis([bins[0], bins[-1], 0, 0.134+0.05])
 
@@ -260,4 +260,3 @@ if __name__ == '__main__':
         plt.savefig(os.path.join(imagedir,'%s%s%02d_%s.png'% (prefix, ri,ii, distname)))
     ##plt.show()
     ##plt.close()
-

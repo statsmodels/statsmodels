@@ -64,7 +64,6 @@ class PenalizedMixin(object):
 
         return llf
 
-
     def loglikeobs(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -186,8 +185,8 @@ class PenalizedMixin(object):
             # TODO: make it penal function dependent
             # temporary standin, only checked for Poisson and GLM,
             # and is computationally inefficient
-            drop_index = np.nonzero(np.abs(res.params) < trim) [0]
-            keep_index = np.nonzero(np.abs(res.params) > trim) [0]
+            drop_index = np.nonzero(np.abs(res.params) < trim)[0]
+            keep_index = np.nonzero(np.abs(res.params) > trim)[0]
 
             if drop_index.any():
                 # TODO: do we need to add results attributes?

@@ -15,6 +15,7 @@ In the case of linear models with no interactions involving the
 mediator, the results should be similar or identical to the earlier
 Barron-Kenny approach.
 """
+from statsmodels.compat.python import string_types
 
 import numpy as np
 import pandas as pd
@@ -163,7 +164,7 @@ class Mediation(object):
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
-        exp_is_2 = ((len(exp) == 2) and (type(exp) != type('')))
+        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, string_types))
 
         if exp_is_2:
             if model == 'outcome':
@@ -386,7 +387,7 @@ class MediationResults(object):
                                  self.prop_med_avg]):
 
             if ((vec is self.prop_med_ctrl) or (vec is self.prop_med_tx) or
-                (vec is self.prop_med_avg)):
+                    (vec is self.prop_med_avg)):
                 smry.iloc[i, 0] = np.median(vec)
             else:
                 smry.iloc[i, 0] = vec.mean()

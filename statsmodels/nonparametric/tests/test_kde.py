@@ -1,4 +1,3 @@
-from statsmodels.compat.testing import SkipTest
 import os
 import numpy.testing as npt
 import numpy as np
@@ -71,7 +70,7 @@ class CheckKDE(object):
         # added it as test method to TestKDEGauss below
         # inDomain is not vectorized
         #kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
+        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
@@ -208,7 +207,7 @@ class CheckKDEWeights(object):
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':
-            raise SkipTest("Cosine kernel fails against Stata")
+            pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         npt.assert_almost_equal(kde_vals, self.res_density,
@@ -216,7 +215,7 @@ class CheckKDEWeights(object):
 
     def test_compare(self):
         xx = self.res1.support
-        kde_vals = [self.res1.evaluate(xi) for xi in xx]
+        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in xx]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
@@ -329,7 +328,3 @@ class TestNormConstant():
         custom_gauss = kernels.CustomKernel(lambda x: np.exp(-x**2/2.0))
         gauss_true_const = 0.3989422804014327
         npt.assert_almost_equal(gauss_true_const, custom_gauss.norm_const)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

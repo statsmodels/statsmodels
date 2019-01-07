@@ -21,6 +21,7 @@ import statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 
+
 class BaseIRAnalysis(object):
     """
     Base class for plotting and computing IRF-related statistics, want to be
@@ -72,12 +73,19 @@ class BaseIRAnalysis(object):
             else:
                 self.orth_lr_effects = np.dot(model.long_run_effects(), P)
 
-
         # auxiliary stuff
         if vecm:
             self._A = util.comp_matrix(model.var_rep)
         else:
             self._A = util.comp_matrix(model.coefs)
+
+    def _choose_irfs(self, orth=False, svar=False):
+        if orth:
+            return self.orth_irfs
+        elif svar:
+            return self.svar_irfs
+        else:
+            return self.irfs
 
     def cov(self, *args, **kwargs):
         raise NotImplementedError
@@ -125,15 +133,13 @@ class BaseIRAnalysis(object):
         if orth and svar:
             raise ValueError("For SVAR system, set orth=False")
 
+        irfs = self._choose_irfs(orth, svar)
         if orth:
             title = 'Impulse responses (orthogonalized)'
-            irfs = self.orth_irfs
         elif svar:
             title = 'Impulse responses (structural)'
-            irfs = self.svar_irfs
         else:
             title = 'Impulse responses'
-            irfs = self.irfs
 
         if plot_stderr == False:
             stderr = None
@@ -214,7 +220,7 @@ class BaseIRAnalysis(object):
             lr_effects = self.lr_effects
 
         if stderr_type not in ['asym', 'mc']:
-            raise TypeError
+            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cum_effect_cov(orth=orth)
@@ -329,12 +335,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -357,7 +358,6 @@ class IRAnalysis(BaseIRAnalysis):
             for j in range(neqs):
                 lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
                 upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-
 
         return lower, upper
 
@@ -392,12 +392,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -460,12 +455,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -707,5 +697,3 @@ class IRAnalysis(BaseIRAnalysis):
 
     def fevd_table(self):
         pass
-
-

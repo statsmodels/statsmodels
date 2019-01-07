@@ -71,8 +71,3 @@ class TestTriweight(CheckNormalReferenceConstant):
 
     kern = kernels.Triweight()
     constant = 3.15
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

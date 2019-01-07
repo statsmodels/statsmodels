@@ -137,7 +137,7 @@ def _get_window_type(window_type):
         elif window_type_up == 'EXPANDING':
             return EXPANDING
 
-    raise Exception('Unrecognized window type: %s' % window_type)
+    raise ValueError('Unrecognized window type: %s' % window_type)
 
 
 class DynamicVAR(object):
@@ -189,7 +189,8 @@ class DynamicVAR(object):
 
         self._set_window(window_type, window, min_periods)
 
-        warnings.warn('DynamicVAR is depricated and will be removed in a future version, use VAR or VARMAX.', DeprecationWarning)
+        warnings.warn('DynamicVAR is deprecated and will be removed in a '
+                      'future version, use VAR or VARMAX.', DeprecationWarning)
 
     def _set_window(self, window_type, window, min_periods):
         self._window_type = _get_window_type(window_type)
@@ -307,7 +308,8 @@ class DynamicVAR(object):
 
         y_values = self.y.values
         y_index_map = dict((d, idx) for idx, d in enumerate(self.y.index))
-        result_index_map = dict((d, idx) for idx, d in enumerate(self.result_index))
+        result_index_map = dict((d, idx)
+                                for idx, d in enumerate(self.result_index))
 
         coefs = self._coefs_raw
         intercepts = self._intercepts_raw
@@ -336,7 +338,10 @@ class DynamicVAR(object):
 
         Parameters
         ----------
-        steps :
+        steps : int
+            default 1
+        figsize : tuple[int, int]
+            default (10, 10)
         """
         import matplotlib.pyplot as plt
 
@@ -407,7 +412,8 @@ class DynamicPanelVAR(DynamicVAR):
 
         self._set_window(window_type, window, min_periods)
 
-        warnings.warn('DynamicPanelVAR is depricated and will be removed in a future version, use VAR or VARMAX.', DeprecationWarning)
+        warnings.warn('DynamicPanelVAR is deprecated and will be removed in a '
+                      'future version, use VAR or VARMAX.', DeprecationWarning)
 
 
 def _filter_data(lhs, rhs):

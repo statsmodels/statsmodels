@@ -7,7 +7,7 @@ import numpy as np
 from statsmodels.sandbox.survival2 import KaplanMeier
 
 #Getting the strike data as an array
-dta = sm.datasets.strikes.load()
+dta = sm.datasets.strikes.load(as_pandas=False)
 print('basic data')
 print('\n')
 dta = list(dta.values()[-1])

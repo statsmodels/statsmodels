@@ -303,7 +303,7 @@ def iqr(x1, x2, axis=0):
     idx = np.round((nobs-1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
-    iqr = np.diff(xdiff[sl], axis=axis)
+    iqr = np.diff(xdiff[tuple(sl)], axis=axis)
     iqr = np.squeeze(iqr)  # drop reduced dimension
     return iqr
 

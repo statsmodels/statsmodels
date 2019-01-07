@@ -12,7 +12,7 @@ class TestANOVA(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = star98.load().exog[:30, 1:3]
+        cls.data = star98.load(as_pandas=False).exog[:30, 1:3]
         cls.res1 = ANOVA([cls.data[:, 0], cls.data[:, 1]])
         cls.res2 = ANOVAResults()
 

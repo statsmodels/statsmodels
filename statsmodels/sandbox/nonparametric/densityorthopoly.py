@@ -130,7 +130,7 @@ class ChebyTPoly(object):
 
 
 
-from scipy.misc import factorial
+from statsmodels.compat.scipy import factorial
 from scipy import special
 
 logpi2 = np.log(np.pi)/2
@@ -567,4 +567,3 @@ if __name__ == '__main__':
     polysc = [chebyt(i) for i in range(4)]
     r, e = inner_cont(polysc, -1, 1, weight=lambda x: (1-x*x)**(-1/2.))
     print(np.max(np.abs(r - np.diag(np.diag(r)))))
-

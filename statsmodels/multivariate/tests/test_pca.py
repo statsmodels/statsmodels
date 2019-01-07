@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-from statsmodels.compat.testing import skipif
 
 import os
 import sys
@@ -7,13 +6,8 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_allclose, assert_equal, assert_raises
-
-try:
-    import matplotlib.pyplot as plt
-    missing_matplotlib = False
-except ImportError:
-    missing_matplotlib = True
 
 from statsmodels.multivariate.pca import PCA
 from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
@@ -51,8 +45,8 @@ class TestPCA(object):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
-    @skipif(missing_matplotlib, 'matplotlib not available')
-    def test_smoke_plot_and_repr(self):
+    @pytest.mark.matplotlib
+    def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
@@ -187,8 +181,8 @@ class TestPCA(object):
         assert_raises(ValueError, PCA, self.x, tol=2.0)
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
-    @skipif(missing_matplotlib, 'matplotlib not available')
-    def test_pandas(self):
+    @pytest.mark.matplotlib
+    def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
         assert_allclose(pc.factors.values, pc1.factors)
@@ -272,7 +266,7 @@ class TestPCA(object):
         project = pc.project
         assert_raises(ValueError, project, 6)
 
-    @skipif(WIN32, 'Windows 32-bit')
+    @pytest.mark.skipif(WIN32, reason='Windows 32-bit')
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan

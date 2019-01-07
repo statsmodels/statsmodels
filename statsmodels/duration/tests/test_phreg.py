@@ -1,7 +1,6 @@
 import itertools
 import os
 
-import nose
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
@@ -13,8 +12,8 @@ import pytest
 #      with no events, entry times after censoring times, etc.
 
 # All the R results
-from . import survival_r_results
-from . import survival_enet_r_results
+from .results import survival_r_results
+from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.
@@ -112,23 +111,6 @@ class TestPHReg(object):
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
-    # Run all the tests
-    # TODO: Remove after nose is fully dropped in favor of parameterized version
-    # TODO: Restructure file to remove class
-    def test_r(self):
-
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fnames = os.listdir(rdir)
-        fnames = [x for x in fnames if x.startswith("survival")
-                  and x.endswith(".csv")]
-
-        for fname in fnames:
-            for ties in "breslow","efron":
-                for entry_f in False,True:
-                    for strata_f in False,True:
-                        self.do1(fname, ties, entry_f, strata_f)
-
     def test_missing(self):
 
         np.random.seed(34234)
@@ -207,7 +189,7 @@ class TestPHReg(object):
         result1 = model1.fit()
 
         from patsy import dmatrix
-        dfp = dmatrix(model1.data.design_info.builder, df)
+        dfp = dmatrix(model1.data.design_info, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
@@ -412,7 +394,6 @@ class TestPHReg(object):
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                from numpy.testing import assert_equal
                 llf_r = plf(params)
                 llf_sm = plf(sm_result.params)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
@@ -429,14 +410,7 @@ entry_f = (False, True)
 strata_f = (False, True)
 
 
-# TODO: Re-enable after nose is fully dropped
-@nose.tools.nottest
 @pytest.mark.parametrize('fname,ties,entry_f,strata_f',
                          list(itertools.product(fnames, ties, entry_f, strata_f)))
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

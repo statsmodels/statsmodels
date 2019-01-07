@@ -13,17 +13,13 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import approx_hess, approx_fprime
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, \
-                                                        VARResults
+from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.compat.numpy import np_matrix_rank
 
-mat = np.array
 
 def svar_ckerr(svar_type, A, B):
     if A is None and (svar_type == 'A' or svar_type == 'AB'):
@@ -31,6 +27,7 @@ def svar_ckerr(svar_type, A, B):
     if B is None and (svar_type == 'B' or svar_type == 'AB'):
 
         raise ValueError('SVAR of type B or AB but B array not given.')
+
 
 class SVAR(tsbase.TimeSeriesModel):
     r"""
@@ -166,8 +163,8 @@ class SVAR(tsbase.TimeSeriesModel):
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
-                raise Exception("%s not recognized, must be among %s"
-                                % (ic, sorted(selections)))
+                raise ValueError("%s not recognized, must be among %s"
+                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
                 print('Using %d based on %s criterion' %  (lags, ic))
@@ -183,7 +180,6 @@ class SVAR(tsbase.TimeSeriesModel):
         return self._estimate_svar(start_params, lags, trend=trend,
                                    solver=solver, override=override,
                                    maxiter=maxiter, maxfun=maxfun)
-
 
     def _get_init_params(self, A_guess, B_guess):
         """
@@ -298,7 +294,6 @@ class SVAR(tsbase.TimeSeriesModel):
                 np.log(npl.det(A)**2) + b_slogdet + \
                 np.trace(trc_in))
 
-
         return likl
 
     def score(self, AB_mask):
@@ -315,7 +310,6 @@ class SVAR(tsbase.TimeSeriesModel):
         """
         loglike = self.loglike
         return approx_fprime(AB_mask, loglike, epsilon=1e-8)
-
 
     def hessian(self, AB_mask):
         """
@@ -369,8 +363,6 @@ class SVAR(tsbase.TimeSeriesModel):
         retvals = super(SVAR, self).fit(start_params=start_params,
                     method=solver, maxiter=maxiter,
                     maxfun=maxfun, ftol=1e-20, disp=0).params
-
-
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
@@ -443,10 +435,11 @@ class SVAR(tsbase.TimeSeriesModel):
                              "solution may not be unique")
 
     def check_rank(self, J):
-        rank = np_matrix_rank(J)
+        rank = np.linalg.matrix_rank(J)
         if rank < np.size(J, axis=1):
             raise ValueError("Rank condition not met: "
                              "solution may not be unique.")
+
 
 class SVARProcess(VARProcess):
     """
@@ -479,7 +472,6 @@ class SVARProcess(VARProcess):
         self.names = names
 
     def orth_ma_rep(self, maxn=10, P=None):
-
         """
 
         Unavailable for SVAR
@@ -500,7 +492,8 @@ class SVARProcess(VARProcess):
             P = np.dot(npl.inv(A_solve), B_solve)
 
         ma_mats = self.ma_rep(maxn=maxn)
-        return mat([np.dot(coefs, P) for coefs in ma_mats])
+        return np.array([np.dot(coefs, P) for coefs in ma_mats])
+
 
 class SVARResults(SVARProcess, VARResults):
     """
@@ -690,7 +683,6 @@ class SVARResults(SVARProcess, VARResults):
             s_type = 'AB'
         g_list = []
 
-
         for i in range(repl):
             #discard first hundred to correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
@@ -710,12 +702,11 @@ class SVARResults(SVARProcess, VARResults):
                         mean_AB = np.mean(g_list, axis = 0)
                         split = len(A_pass[A_mask])
                         opt_A = mean_AB[:split]
-                        opt_A = mean_AB[split:]
+                        opt_B = mean_AB[split:]
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                  B=B_pass).fit(maxlags=k_ar,\
                                  A_guess=opt_A, B_guess=opt_B).\
                                  svar_ma_rep(maxn=T).cumsum(axis=0)
-
 
             elif cum == False:
                 if i < 10:
@@ -740,4 +731,3 @@ class SVARResults(SVARProcess, VARResults):
         lower = ma_sort[index[0],:, :, :]
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
-

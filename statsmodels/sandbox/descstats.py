@@ -159,7 +159,7 @@ def descstats(data, cols=None, axis=0):
 if __name__ == '__main__':
     import statsmodels.api as sm
     import os
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     sum1 = descstats(data.exog)
     sum1a = descstats(data.exog[:,:1])
@@ -183,5 +183,3 @@ if __name__ == '__main__':
         sum3 = descstats(np.column_stack((data2.ahe,data2.yrseduc)))
         sum4 = descstats(np.column_stack(([data2[_] for \
                 _ in data2.dtype.names])))
-
-

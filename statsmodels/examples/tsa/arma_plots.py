@@ -63,14 +63,14 @@ axs = fig.axes
 
 # turn off all but the bottom xtick labels
 for ax in axs[:-2]:#[:-1,:].flat:
-   for label in ax.get_xticklabels(): label.set_visible(False)
+    for label in ax.get_xticklabels(): label.set_visible(False)
 
 
 # use a MaxNLocator on the first column y axis if you have a bunch of
 # rows to avoid bunching; example below uses at most 3 ticks
 import matplotlib.ticker as mticker
 for ax in axs: #[::2]:#[:,1].flat:
-   ax.yaxis.set_major_locator( mticker.MaxNLocator(3 ))
+    ax.yaxis.set_major_locator( mticker.MaxNLocator(3 ))
 
 
 

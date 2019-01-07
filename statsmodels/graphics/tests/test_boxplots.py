@@ -1,20 +1,17 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
+import pytest
 
 from statsmodels.graphics.boxplots import violinplot, beanplot
 from statsmodels.datasets import anes96
 
-
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
-except:
-    have_matplotlib = False
+except ImportError:
+    pass
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
-def test_violinplot_beanplot():
+@pytest.mark.matplotlib
+def test_violinplot_beanplot(close_figures):
     # Test violinplot and beanplot with the same dataset.
     data = anes96.load_pandas()
     party_ID = np.arange(7)
@@ -31,8 +28,6 @@ def test_violinplot_beanplot():
                           'label_fontsize':'small',
                           'label_rotation':30})
 
-    plt.close(fig)
-
     fig = plt.figure()
     ax = fig.add_subplot(111)
     violinplot(age, ax=ax, labels=labels,
@@ -41,17 +36,12 @@ def test_violinplot_beanplot():
                           'label_rotation':30,
                           'bw_factor':.2})
 
-    plt.close(fig)
-
-
     fig = plt.figure()
     ax = fig.add_subplot(111)
     beanplot(age, ax=ax, labels=labels,
              plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
                         'label_fontsize':'small',
                         'label_rotation':30})
-
-    plt.close(fig)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -60,16 +50,12 @@ def test_violinplot_beanplot():
                         'label_fontsize': 'small',
                         'label_rotation': 30})
 
-    plt.close(fig)
-
     fig = plt.figure()
     ax = fig.add_subplot(111)
     beanplot(age, ax=ax, labels=labels, jitter=True, side='right',
              plot_opts={'cutoff_val': 5, 'cutoff_type': 'abs',
                         'label_fontsize': 'small',
                         'label_rotation': 30})
-
-    plt.close(fig)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -78,11 +64,7 @@ def test_violinplot_beanplot():
                         'label_fontsize': 'small',
                         'label_rotation': 30})
 
-    plt.close(fig)
-
     fig = plt.figure()
     ax = fig.add_subplot(111)
     beanplot(age, ax=ax, labels=labels,
              plot_opts={'bean_legend_text': 'text'})
-
-    plt.close(fig)

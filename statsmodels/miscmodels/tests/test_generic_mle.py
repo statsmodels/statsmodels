@@ -11,7 +11,8 @@ import numpy as np
 from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel
 
-from numpy.testing import assert_array_less, assert_almost_equal, assert_allclose
+from numpy.testing import (assert_array_less, assert_almost_equal,
+                           assert_allclose, assert_)
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution
@@ -149,3 +150,76 @@ class TestMyParetoRestriction(CheckGenericMixin):
 
         # Note: loc is fixed, no problems with parameters close to min data
         cls.skip_bsejac = False
+
+
+class TwoPeakLLHNoExog(GenericLikelihoodModel):
+    """Fit height of signal peak over background."""
+    start_params = [10, 1000]
+    cloneattr = ['start_params', 'signal', 'background']
+    exog_names = ['n_signal', 'n_background']
+    endog_names = ['alpha']
+
+    def __init__(self, endog, exog=None, signal=None, background=None,
+                 *args, **kwargs):
+        # assume we know the shape + location of the two components,
+        # so we re-use their PDFs here
+        self.signal = signal
+        self.background = background
+        super(TwoPeakLLHNoExog, self).__init__(endog=endog, exog=exog,
+                                         *args, **kwargs)
+
+    def loglike(self, params):        # pylint: disable=E0202
+        return -self.nloglike(params)
+
+    def nloglike(self, params):
+        endog = self.endog
+        return self.nlnlike(params, endog)
+
+    def nlnlike(self, params, endog):
+        n_sig = params[0]
+        n_bkg = params[1]
+        if (n_sig < 0) or n_bkg < 0:
+            return np.inf
+        n_tot = n_bkg + n_sig
+        alpha = endog
+        sig = self.signal.pdf(alpha)
+        bkg = self.background.pdf(alpha)
+        sumlogl = np.sum(np.log((n_sig * sig) + (n_bkg * bkg)))
+        sumlogl -= n_tot
+        return -sumlogl
+
+
+class TestTwoPeakLLHNoExog(object):
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(42)
+        pdf_a = stats.halfcauchy(loc=0, scale=1)
+        pdf_b = stats.uniform(loc=0, scale=100)
+
+        n_a = 50
+        n_b = 200
+        params = [n_a, n_b]
+
+        X = np.concatenate([pdf_a.rvs(size=n_a),
+                            pdf_b.rvs(size=n_b),
+                            ])[:, np.newaxis]
+        cls.X = X
+        cls.params = params
+        cls.pdf_a = pdf_a
+        cls.pdf_b = pdf_b
+
+    def test_fit(self):
+        np.random.seed(42)
+        llh_noexog = TwoPeakLLHNoExog(self.X,
+                                      signal=self.pdf_a,
+                                      background=self.pdf_b)
+
+        res = llh_noexog.fit()
+        assert_allclose(res.params, self.params, rtol=1e-1)
+        # TODO: nan if exog is None,
+        assert_(np.isnan(res.df_resid))
+        res_bs = res.bootstrap(nrep=50)
+        assert_allclose(res_bs[2].mean(0), self.params, rtol=1e-1)
+        # SMOKE test,
+        res.summary()

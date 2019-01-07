@@ -17,7 +17,6 @@ class TestDecompose:
                                                  periods=len(data),
                                                  freq='Q'))
 
-
     def test_ndarray(self):
         res_add = seasonal_decompose(self.data.values, freq=4)
         seasonal = [62.46, 86.17, -88.38, -60.25, 62.46, 86.17, -88.38,
@@ -143,7 +142,7 @@ class TestDecompose:
     def test_pandas_nofreq(self):
         # issue #3503
         nobs = 100
-        dta = pd.Series([x%3 for x in range(nobs)] + np.random.randn(nobs))
+        dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))
         res_np = seasonal_decompose(dta.values, freq=3)
         res = seasonal_decompose(dta, freq=3)
 
@@ -290,5 +289,3 @@ class TestDecompose:
         x = self.data.astype(float).copy()
         x.iloc[2] = np.nan
         assert_raises(ValueError, seasonal_decompose, x)
-
-

@@ -50,7 +50,6 @@ License: BSD (3-clause)
 
 from __future__ import print_function
 from statsmodels.compat.python import lrange
-from statsmodels.compat.numpy import np_matrix_rank
 
 import numpy as np
 from scipy import optimize, stats
@@ -65,6 +64,7 @@ from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
+
 
 def maxabs(x):
     '''just a shortcut to np.abs(x).max()
@@ -241,7 +241,7 @@ class IVRegressionResults(RegressionResults):
         #use linalg.lstsq or svd directly
         #cov_diff will very often be in-definite (singular)
         if not dof:
-            dof = np_matrix_rank(cov_diff)
+            dof = np.linalg.matrix_rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
         H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
         pval = stats.chi2.sf(H, dof)
@@ -1673,7 +1673,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     #use linalg.lstsq or svd directly
     #cov_diff will very often be in-definite (singular)
     if not dof:
-        dof = np_matrix_rank(cov_diff)
+        dof = np.linalg.matrix_rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)
@@ -1817,4 +1817,3 @@ class DistQuantilesGMM(GMM):
 results_class_dict = {'GMMResults': GMMResults,
                       'IVGMMResults': IVGMMResults,
                       'DistQuantilesGMM': GMMResults}  #TODO: should be a default
-

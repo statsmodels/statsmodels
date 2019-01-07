@@ -10,18 +10,11 @@ only examples left
 '''
 from __future__ import print_function
 import numpy as np
-#from numpy.testing import assert_array_almost_equal
 from scipy.special import gamma, gammaln
 from scipy import signal
 
-#from statsmodels.sandbox import tsa
-from statsmodels.tsa.arima_process import arma_impulse_response
-
-#--------------------
-# functions have been moved to arima_process
 from statsmodels.tsa.arima_process import (lpol_fiar, lpol_fima, lpol_sdiff,
-                                                   ar2arma)
-#-----------------------------------
+                                           ar2arma, arma_impulse_response)
 
 
 
@@ -75,6 +68,3 @@ if __name__ == '__main__':
         print(ar_app, ma_app)
         ar_app, ma_app, res = ar2arma(ar_desired, 10, 10, n=100, mse='ar')#, start = [-0.1, 0.1])
         print(ar_app, ma_app)
-
-
-

@@ -5,26 +5,17 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import warnings
 
 import numpy as np
+from numpy.testing import assert_equal, assert_allclose
 import pandas as pd
-import os
+import pytest
 
-import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.tsa.statespace import structural
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
-from statsmodels.tools import add_constant
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-
-
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
@@ -43,7 +34,7 @@ def run_ucm(name):
         freq = kwargs.pop('freq', None)
         if freq is not None:
             values.index = pd.date_range(start='1959-01-01', periods=len(dta),
-                                  freq=freq)
+                                         freq=freq)
 
         # Test pandas exog
         if 'exog' in kwargs:
@@ -62,7 +53,9 @@ def run_ucm(name):
         # Smoke test for starting parameters, untransform, transform
         # Also test that transform and untransform are inverses
         mod.start_params
-        assert_allclose(mod.start_params, mod.transform_params(mod.untransform_params(mod.start_params)))
+        roundtrip = mod.transform_params(
+            mod.untransform_params(mod.start_params))
+        assert_allclose(mod.start_params, roundtrip)
 
         # Fit the model at the true parameters
         res_true = mod.filter(true['params'])
@@ -84,22 +77,24 @@ def run_ucm(name):
 
         # Test that the cycle frequency bound is correct
         assert_equal(mod.cycle_frequency_bound,
-            (2*np.pi / cycle_period_bounds[1],
-             2*np.pi / cycle_period_bounds[0])
-        )
+                     (2*np.pi / cycle_period_bounds[1],
+                      2*np.pi / cycle_period_bounds[0]))
 
         # Test that the likelihood is correct
         rtol = true.get('rtol', 1e-7)
         atol = true.get('atol', 0)
         assert_allclose(res_true.llf, true['llf'], rtol=rtol, atol=atol)
 
-        # Smoke test for plot_components
-        if have_matplotlib:
-            fig = res_true.plot_components()
-            plt.close(fig)
+        # Optional smoke test for plot_components
+        try:
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            res_true.plot_components(fig=fig)
+        except ImportError:
+            pass
 
         # Now fit the model via MLE
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             res = mod.fit(disp=-1)
             # If we found a higher likelihood, no problem; otherwise check
             # that we're very close to that found by R
@@ -110,11 +105,11 @@ def run_ucm(name):
             res.summary()
 
 
-def test_irregular():
+def test_irregular(close_figures):
     run_ucm('irregular')
 
 
-def test_fixed_intercept():
+def test_fixed_intercept(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
@@ -125,23 +120,23 @@ def test_fixed_intercept():
         assert_equal(str(w[0].message), message)
 
 
-def test_deterministic_constant():
+def test_deterministic_constant(close_figures):
     run_ucm('deterministic_constant')
 
 
-def test_random_walk():
+def test_random_walk(close_figures):
     run_ucm('random_walk')
 
 
-def test_local_level():
+def test_local_level(close_figures):
     run_ucm('local_level')
 
 
-def test_fixed_slope():
+def test_fixed_slope(close_figures):
     run_ucm('fixed_slope')
 
 
-def test_fixed_slope_warn():
+def test_fixed_slope_warn(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
@@ -152,51 +147,52 @@ def test_fixed_slope_warn():
         assert_equal(str(w[0].message), message)
 
 
-def test_deterministic_trend():
+def test_deterministic_trend(close_figures):
     run_ucm('deterministic_trend')
 
 
-def test_random_walk_with_drift():
+def test_random_walk_with_drift(close_figures):
     run_ucm('random_walk_with_drift')
 
 
-def test_local_linear_deterministic_trend():
+def test_local_linear_deterministic_trend(close_figures):
     run_ucm('local_linear_deterministic_trend')
 
 
-def test_local_linear_trend():
+def test_local_linear_trend(close_figures):
     run_ucm('local_linear_trend')
 
 
-def test_smooth_trend():
+def test_smooth_trend(close_figures):
     run_ucm('smooth_trend')
 
 
-def test_random_trend():
+def test_random_trend(close_figures):
     run_ucm('random_trend')
 
 
-def test_cycle():
+def test_cycle(close_figures):
     run_ucm('cycle')
 
 
-def test_seasonal():
+def test_seasonal(close_figures):
     run_ucm('seasonal')
 
 
-def test_freq_seasonal():
+def test_freq_seasonal(close_figures):
     run_ucm('freq_seasonal')
 
 
-def test_reg():
+def test_reg(close_figures):
     run_ucm('reg')
 
 
-def test_rtrend_ar1():
+def test_rtrend_ar1(close_figures):
     run_ucm('rtrend_ar1')
 
 
-def test_lltrend_cycle_seasonal_reg_ar1():
+@pytest.mark.slow
+def test_lltrend_cycle_seasonal_reg_ar1(close_figures):
     run_ucm('lltrend_cycle_seasonal_reg_ar1')
 
 
@@ -207,14 +203,18 @@ def test_mle_reg():
     endog[::2] += 0.01
     endog[1::2] -= 0.01
 
-    with warnings.catch_warnings(record=True) as w:
-        mod1 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=False)
+    with warnings.catch_warnings(record=True):
+        mod1 = UnobservedComponents(endog, irregular=True,
+                                    exog=exog, mle_regression=False)
         res1 = mod1.fit(disp=-1)
 
-        mod2 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=True)
+        mod2 = UnobservedComponents(endog, irregular=True,
+                                    exog=exog, mle_regression=True)
         res2 = mod2.fit(disp=-1)
 
-    assert_allclose(res1.regression_coefficients.filtered[0, -1], 0.5, atol=1e-5)
+    assert_allclose(res1.regression_coefficients.filtered[0, -1],
+                    0.5,
+                    atol=1e-5)
     assert_allclose(res2.params[1], 0.5, atol=1e-5)
 
 
@@ -235,7 +235,8 @@ def test_specifications():
         assert_equal(mod.trend_specification, 'irregular')
 
     # Test an invalid string trend specification
-    assert_raises(ValueError, UnobservedComponents, endog, 'invalid spec')
+    with pytest.raises(ValueError):
+        UnobservedComponents(endog, 'invalid spec')
 
     # Test that if a trend component is specified without a level component,
     # a warning is issued and a deterministic level component is added
@@ -261,7 +262,9 @@ def test_specifications():
             assert_equal(str(w[0].message), message)
 
     # Test that a seasonal with period less than two is invalid
-    assert_raises(ValueError, UnobservedComponents, endog, seasonal=1)
+    with pytest.raises(ValueError):
+        UnobservedComponents(endog, seasonal=1)
+
 
 def test_start_params():
     # Test that the behavior is correct for multiple exogenous and / or
@@ -281,12 +284,13 @@ def test_start_params():
         endog[t+1] = phi[0] * endog[t] + phi[1] * endog[t-1] + eps[t]
     endog = endog[2:]
     endog += np.dot(exog, beta)
-    
+
     # Now just test that the starting parameters are approximately what they
     # ought to be (could make this arbitrarily precise by increasing nobs,
     # but that would slow down the test for no real gain)
     mod = UnobservedComponents(endog, exog=exog, autoregressive=2)
     assert_allclose(mod.start_params, [1., 0.5, 0.1, 10, -2], atol=1e-1)
+
 
 def test_forecast():
     endog = np.arange(50) + 10
@@ -295,7 +299,7 @@ def test_forecast():
     mod = UnobservedComponents(endog, exog=exog, level='dconstant', seasonal=4)
     res = mod.smooth([1e-15, 0, 1])
 
-    actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
+    actual = res.forecast(10, exog=np.arange(50, 60)[:, np.newaxis])
     desired = np.arange(50, 60) + 10
     assert_allclose(actual, desired)
 
@@ -339,17 +343,20 @@ def test_misc_exog():
 
         # Smoke tests for invalid exog
         oos_exog = np.random.normal(size=(1))
-        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+        with pytest.raises(ValueError):
+            res.forecast(steps=1, exog=oos_exog)
 
         oos_exog = np.random.normal(size=(2, mod.k_exog))
-        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+        with pytest.raises(ValueError):
+            res.forecast(steps=1, exog=oos_exog)
 
         oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
-        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+        with pytest.raises(ValueError):
+            res.forecast(steps=1, exog=oos_exog)
 
     # Test invalid model specifications
-    assert_raises(ValueError, UnobservedComponents, endog, 'llevel',
-                  exog=np.zeros((10, 4)))
+    with pytest.raises(ValueError):
+        UnobservedComponents(endog, 'llevel', exog=np.zeros((10, 4)))
 
 
 def test_predict_custom_index():
@@ -401,11 +408,11 @@ def test_matrices_somewhat_complicated_model():
     expected_transition = __direct_sum([
         np.array([[1, 1],
                   [0, 1]]),
-        np.array([[ 0, 1, 0, 0],
+        np.array([[0, 1, 0, 0],
                   [-1, 0, 0, 0],
                   [0, 0, -1,  0],
                   [0, 0,  0, -1]]),
-        np.array([[ np.cos(2*np.pi*1/9.), np.sin(2*np.pi*1/9.), 0, 0, 0, 0],
+        np.array([[np.cos(2*np.pi*1/9.), np.sin(2*np.pi*1/9.), 0, 0, 0, 0],
                   [-np.sin(2*np.pi*1/9.), np.cos(2*np.pi*1/9.), 0, 0, 0, 0],
                   [0, 0,  np.cos(2*np.pi*2/9.), np.sin(2*np.pi*2/9.), 0, 0],
                   [0, 0, -np.sin(2*np.pi*2/9.), np.cos(2*np.pi*2/9.), 0, 0],

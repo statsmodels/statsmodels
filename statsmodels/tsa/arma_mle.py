@@ -54,7 +54,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         self.nma = 1
         #self.initialize()
 
-
     def initialize(self):
         pass
 
@@ -144,7 +143,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
 #        #print params
 #        jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
 #        return jac(params)[-1]
-
 
 #use generic instead
 #    def hessian(self, params):
@@ -242,7 +240,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         #rh[-q:])) doesnt work for q=0, added p+q as endpoint for safety if var is included
         self.error_estimate = self.geterrors(rh)
         return rh, cov_x, infodict, mesg, ier
-
 
     #renamed and needs check with other fit
     def fit_mle(self, order=(0,0), start_params=None, method='nm', maxiter=5000, tol=1e-08,
@@ -342,7 +339,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         arcoefs_rev = self.params[k:k+p][::-1]
         macoefs_rev = self.params[k+p:k+p+q][::-1]
 
-
         predicted = []
         # create error vector iteratively
         for i in range(start, end):
@@ -364,9 +360,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         forecasts = np.convolve(errors, marep)
         return forecasts#[-(errors.shape[0] - start-5):] #get 5 overlapping for testing
 
-
-
-
     #copied from arima.ARIMA
     #TODO: is this needed as a method at all?
     #JP: not needed in this form, but can be replace with using the parameters
@@ -374,4 +367,3 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
     def generate_sample(cls, ar, ma, nsample, std=1):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
-

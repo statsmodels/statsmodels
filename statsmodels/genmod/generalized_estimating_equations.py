@@ -28,6 +28,7 @@ from statsmodels.compat.python import range, lzip, zip
 import numpy as np
 from scipy import stats
 import pandas as pd
+import patsy
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -643,12 +644,23 @@ class GEE(base.Model):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with two exceptions. `dep_data`
+            is processed as described below.  The ``eval_env`` keyword is
+            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
+            object or an integer indicating the depth of the namespace to use.
+            For example, the default ``eval_env=0`` uses the calling namespace.
+            If you wish to use a "clean" environment set ``eval_env=-1``.
+
+        Optional arguments
+        ------------------
+        dep_data : string or array-like
+            Data used for estimating the dependence structure.  See
+            specific dependence structure classes (e.g. Nested) for
+            details.  If `dep_data` is a string, it is interpreted as
+            a formula that is applied to `data`. If it is an array, it
+            must be an array of strings corresponding to column names in
+            `data`.  Otherwise it must be an array-like with the same
+            number of rows as data.
 
         Returns
         -------
@@ -666,23 +678,40 @@ class GEE(base.Model):
         the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
-        if type(groups) == str:
+        groups_name = "Groups"
+        if isinstance(groups, str):
+            groups_name = groups
             groups = data[groups]
 
-        if type(time) == str:
+        if isinstance(time, str):
             time = data[time]
 
-        if type(offset) == str:
+        if isinstance(offset, str):
             offset = data[offset]
 
-        if type(exposure) == str:
+        if isinstance(exposure, str):
             exposure = data[exposure]
+
+        dep_data = kwargs.get("dep_data")
+        dep_data_names = None
+        if dep_data is not None:
+            if isinstance(dep_data, str):
+                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data_names = dep_data.columns.tolist()
+            else:
+                dep_data_names = list(dep_data)
+                dep_data = data[dep_data]
+            kwargs["dep_data"] = np.asarray(dep_data)
 
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
+
+        if dep_data_names is not None:
+            model._dep_data_names = dep_data_names
+        model._groups_name = groups_name
 
         return model
 
@@ -701,8 +730,11 @@ class GEE(base.Model):
 
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter at the current
-        parameter value.
+        Estimate the dispersion/scale.
+
+        The scale parameter for binomial, Poisson, and multinomial
+        families is fixed at 1, otherwise it is estimated from
+        the data.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson,
@@ -1323,6 +1355,87 @@ class GEE(base.Model):
                                          self, params)
         return margeff
 
+    def qic(self, params, scale, cov_params):
+        """
+        Returns quasi-information criteria and quasi-likelihood values.
+
+        Parameters
+        ----------
+        params : array-like
+            The GEE estimates of the regression parameters.
+        scale : scalar
+            Estimated scale parameter
+        cov_params : array-like
+            An estimate of the covariance matrix for the
+            model parameters.  Conventionally this is the robust
+            covariance matrix.
+
+        Returns
+        -------
+        ql : scalar
+            The quasi-likelihood value
+        qic : scalar
+            A QIC that can be used to compare the mean and covariance
+            structures of the model.
+        qicu : scalar
+            A simplified QIC that can be used to compare mean structures
+            but not covariance structures
+
+        Notes
+        -----
+        The quasi-likelihood used here is obtained by numerically evaluating
+        Wedderburn's integral representation of the quasi-likelihood function.
+        This approach is valid for all families and  links.  Many other
+        packages use analytical expressions for quasi-likelihoods that are valid
+        in special cases where the link function is canonical.  These analytical
+        expressions may omit additive constants that only depend on the
+        data.  Therefore, the numerical values of our QL and QIC values will
+        differ from the values reported by other packages.  However only the
+        differences between two QIC values calculated for different models
+        using the same data are meaningful.  Our QIC should produce the same
+        QIC differences as other software.
+
+        When using the QIC for models with unknown scale parameter, use a common
+        estimate of the scale parameter for all models being compared.
+
+        References
+        ----------
+        .. [*] W. Pan (2001).  Akaike's information criterion in generalized estimating
+               equations.  Biometrics (57) 1.
+        """
+
+        varfunc = self.family.variance
+
+        means = []
+        omega = 0.0  # omega^-1 is the model-based covariance assuming independence
+        for i in range(self.num_group):
+            expval, lpr = self.cached_means[i]
+            means.append(expval)
+            dmat = self.mean_deriv(self.exog_li[i], lpr)
+            omega += np.dot(dmat.T, dmat) / scale
+
+        means = np.concatenate(means)
+
+        # The quasi-likelihood, use change of variables so the integration is
+        # from -1 to 1.
+        du = means - self.endog
+        nstep = 10000
+        qv = np.empty(nstep)
+        xv = np.linspace(-0.99999, 1, nstep)
+        for i, g in enumerate(xv):
+            u = self.endog + (g + 1) * du / 2.0
+            vu = varfunc(u)
+            qv[i] = -np.sum(du**2 * (g + 1) / vu)
+        qv /= (4 * scale)
+
+        from scipy.integrate import trapz
+        ql = trapz(qv, dx=xv[1] - xv[0])
+
+        qicu = -2 * ql + 2 * self.exog.shape[1]
+        qic = -2 * ql + 2 * np.trace(np.dot(omega, cov_params))
+
+        return ql, qic, qicu
+
 
 class GEEResults(base.LikelihoodModelResults):
 
@@ -1452,6 +1565,23 @@ class GEEResults(base.LikelihoodModelResults):
             ii = self.model.group_indices[v]
             sresid.append(self.centered_resid[ii])
         return sresid
+
+    def qic(self, scale=None):
+        """
+        Returns the QIC and QICu information criteria.
+
+        For families with a scale parameter (e.g. Gaussian),
+        provide as the scale argument the estimated scale
+        from the largest model under consideration.
+        """
+
+        if scale is None:
+            scale = self.scale
+
+        _, qic, qicu = self.model.qic(self.params, scale,
+                  self.cov_params())
+
+        return qic, qicu
 
     # FIXME: alias to be removed, temporary backwards compatibility
     split_resid = resid_split
@@ -1644,24 +1774,25 @@ class GEEResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + ' ' +\
                 "Regression Results"
 
-        # Override the dataframe names if xname is provided as an
+        # Override the exog variable names if xname is provided as an
         # argument.
-        if xname is not None:
-            xna = xname
-        else:
-            xna = self.model.exog_names
+        if xname is None:
+            xname = self.model.exog_names
+
+        if yname is None:
+            yname = self.model.endog_names
 
         # Create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=self.model.endog_names, xname=xna,
+                             yname=yname, xname=xname,
                              title=title)
-        smry.add_table_params(self, yname=yname, xname=xna,
+        smry.add_table_params(self, yname=yname, xname=xname,
                               alpha=alpha, use_t=False)
         smry.add_table_2cols(self, gleft=diagn_left,
                              gright=diagn_right, yname=yname,
-                             xname=xna, title="")
+                             xname=xname, title="")
 
         return smry
 
@@ -2189,7 +2320,7 @@ class NominalGEE(GEE):
                 jrow += 1
 
         # exog names
-        if type(self.exog_orig) == pd.DataFrame:
+        if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
@@ -2200,7 +2331,7 @@ class NominalGEE(GEE):
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if isinstance(self.endog_orig, pd.Series):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out

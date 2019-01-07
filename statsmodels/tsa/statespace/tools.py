@@ -5,13 +5,16 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import warnings
 
 import numpy as np
 from scipy.linalg import solve_sylvester
 import pandas as pd
-from statsmodels.tools.data import _is_using_pandas
 
-import warnings
+from statsmodels.tools.data import _is_using_pandas
+from scipy.linalg.blas import find_best_blas_type
+from . import (_initialization, _representation, _kalman_filter,
+               _kalman_smoother, _simulation_smoother, _tools)
 
 
 compatibility_mode = False
@@ -19,205 +22,88 @@ has_trmm = True
 prefix_dtype_map = {
     's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
 }
-prefix_statespace_map = {}
-prefix_kalman_filter_map = {}
-prefix_kalman_smoother_map = {}
-prefix_simulation_smoother_map = {}
-prefix_pacf_map = {}
-prefix_sv_map = {}
-prefix_reorder_missing_matrix_map = {}
-prefix_reorder_missing_vector_map = {}
-prefix_copy_missing_matrix_map = {}
-prefix_copy_missing_vector_map = {}
-prefix_copy_index_matrix_map = {}
-prefix_copy_index_vector_map = {}
+prefix_initialization_map = {
+    's': _initialization.sInitialization,
+    'd': _initialization.dInitialization,
+    'c': _initialization.cInitialization,
+    'z': _initialization.zInitialization
+}
+prefix_statespace_map = {
+    's': _representation.sStatespace, 'd': _representation.dStatespace,
+    'c': _representation.cStatespace, 'z': _representation.zStatespace
+}
+prefix_kalman_filter_map = {
+    's': _kalman_filter.sKalmanFilter,
+    'd': _kalman_filter.dKalmanFilter,
+    'c': _kalman_filter.cKalmanFilter,
+    'z': _kalman_filter.zKalmanFilter
+}
+prefix_kalman_smoother_map = {
+    's': _kalman_smoother.sKalmanSmoother,
+    'd': _kalman_smoother.dKalmanSmoother,
+    'c': _kalman_smoother.cKalmanSmoother,
+    'z': _kalman_smoother.zKalmanSmoother
+}
+prefix_simulation_smoother_map = {
+    's': _simulation_smoother.sSimulationSmoother,
+    'd': _simulation_smoother.dSimulationSmoother,
+    'c': _simulation_smoother.cSimulationSmoother,
+    'z': _simulation_smoother.zSimulationSmoother
+}
+prefix_pacf_map = {
+    's': _tools._scompute_coefficients_from_multivariate_pacf,
+    'd': _tools._dcompute_coefficients_from_multivariate_pacf,
+    'c': _tools._ccompute_coefficients_from_multivariate_pacf,
+    'z': _tools._zcompute_coefficients_from_multivariate_pacf
+}
+prefix_sv_map = {
+    's': _tools._sconstrain_sv_less_than_one,
+    'd': _tools._dconstrain_sv_less_than_one,
+    'c': _tools._cconstrain_sv_less_than_one,
+    'z': _tools._zconstrain_sv_less_than_one
+}
+prefix_reorder_missing_matrix_map = {
+    's': _tools.sreorder_missing_matrix,
+    'd': _tools.dreorder_missing_matrix,
+    'c': _tools.creorder_missing_matrix,
+    'z': _tools.zreorder_missing_matrix
+}
+prefix_reorder_missing_vector_map = {
+    's': _tools.sreorder_missing_vector,
+    'd': _tools.dreorder_missing_vector,
+    'c': _tools.creorder_missing_vector,
+    'z': _tools.zreorder_missing_vector
+}
+prefix_copy_missing_matrix_map = {
+    's': _tools.scopy_missing_matrix,
+    'd': _tools.dcopy_missing_matrix,
+    'c': _tools.ccopy_missing_matrix,
+    'z': _tools.zcopy_missing_matrix
+}
+prefix_copy_missing_vector_map = {
+    's': _tools.scopy_missing_vector,
+    'd': _tools.dcopy_missing_vector,
+    'c': _tools.ccopy_missing_vector,
+    'z': _tools.zcopy_missing_vector
+}
+prefix_copy_index_matrix_map = {
+    's': _tools.scopy_index_matrix,
+    'd': _tools.dcopy_index_matrix,
+    'c': _tools.ccopy_index_matrix,
+    'z': _tools.zcopy_index_matrix
+}
+prefix_copy_index_vector_map = {
+    's': _tools.scopy_index_vector,
+    'd': _tools.dcopy_index_vector,
+    'c': _tools.ccopy_index_vector,
+    'z': _tools.zcopy_index_vector
+}
 
 
 def set_mode(compatibility=None):
-    global compatibility_mode, has_trmm
-
-    # Determine mode automatically if none given
-    if compatibility is None:
-        try:
-            from scipy.linalg import cython_blas
-            compatibility = False
-        except ImportError:
-            compatibility = True
-
-    # If compatibility was False, make sure that is possible
-    if not compatibility:
-        try:
-            from scipy.linalg import cython_blas
-        except ImportError:
-            warnings.warn('Minimum dependencies not met. Compatibility mode'
-                          ' enabled.')
-            compatibility = True
-
-    # Initialize the appropriate mode
-    if not compatibility:
-        from scipy.linalg import cython_blas
-        from . import (_representation, _kalman_filter, _kalman_smoother,
-                       _simulation_smoother, _tools)
-        compatibility_mode = False
-
-        prefix_statespace_map.update({
-            's': _representation.sStatespace, 'd': _representation.dStatespace,
-            'c': _representation.cStatespace, 'z': _representation.zStatespace
-        })
-        prefix_kalman_filter_map.update({
-            's': _kalman_filter.sKalmanFilter,
-            'd': _kalman_filter.dKalmanFilter,
-            'c': _kalman_filter.cKalmanFilter,
-            'z': _kalman_filter.zKalmanFilter
-        })
-        prefix_kalman_smoother_map.update({
-            's': _kalman_smoother.sKalmanSmoother,
-            'd': _kalman_smoother.dKalmanSmoother,
-            'c': _kalman_smoother.cKalmanSmoother,
-            'z': _kalman_smoother.zKalmanSmoother
-        })
-        prefix_simulation_smoother_map.update({
-            's': _simulation_smoother.sSimulationSmoother,
-            'd': _simulation_smoother.dSimulationSmoother,
-            'c': _simulation_smoother.cSimulationSmoother,
-            'z': _simulation_smoother.zSimulationSmoother
-        })
-        prefix_pacf_map.update({
-            's': _tools._scompute_coefficients_from_multivariate_pacf,
-            'd': _tools._dcompute_coefficients_from_multivariate_pacf,
-            'c': _tools._ccompute_coefficients_from_multivariate_pacf,
-            'z': _tools._zcompute_coefficients_from_multivariate_pacf
-        })
-        prefix_sv_map.update({
-            's': _tools._sconstrain_sv_less_than_one,
-            'd': _tools._dconstrain_sv_less_than_one,
-            'c': _tools._cconstrain_sv_less_than_one,
-            'z': _tools._zconstrain_sv_less_than_one
-        })
-        prefix_reorder_missing_matrix_map.update({
-            's': _tools.sreorder_missing_matrix,
-            'd': _tools.dreorder_missing_matrix,
-            'c': _tools.creorder_missing_matrix,
-            'z': _tools.zreorder_missing_matrix
-        })
-        prefix_reorder_missing_vector_map.update({
-            's': _tools.sreorder_missing_vector,
-            'd': _tools.dreorder_missing_vector,
-            'c': _tools.creorder_missing_vector,
-            'z': _tools.zreorder_missing_vector
-        })
-        prefix_copy_missing_matrix_map.update({
-            's': _tools.scopy_missing_matrix,
-            'd': _tools.dcopy_missing_matrix,
-            'c': _tools.ccopy_missing_matrix,
-            'z': _tools.zcopy_missing_matrix
-        })
-        prefix_copy_missing_vector_map.update({
-            's': _tools.scopy_missing_vector,
-            'd': _tools.dcopy_missing_vector,
-            'c': _tools.ccopy_missing_vector,
-            'z': _tools.zcopy_missing_vector
-        })
-        prefix_copy_index_matrix_map.update({
-            's': _tools.scopy_index_matrix,
-            'd': _tools.dcopy_index_matrix,
-            'c': _tools.ccopy_index_matrix,
-            'z': _tools.zcopy_index_matrix
-        })
-        prefix_copy_index_vector_map.update({
-            's': _tools.scopy_index_vector,
-            'd': _tools.dcopy_index_vector,
-            'c': _tools.ccopy_index_vector,
-            'z': _tools.zcopy_index_vector
-        })
-    else:
-        from . import _statespace
-        from ._pykalman_smoother import _KalmanSmoother
-        compatibility_mode = True
-
-        try:
-            from scipy.linalg.blas import dtrmm
-        except ImportError:
-            has_trmm = False
-
-        prefix_statespace_map.update({
-            's': _statespace.sStatespace, 'd': _statespace.dStatespace,
-            'c': _statespace.cStatespace, 'z': _statespace.zStatespace
-        })
-        prefix_kalman_filter_map.update({
-            's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
-            'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
-        })
-        prefix_kalman_smoother_map.update({
-            's': _KalmanSmoother, 'd': _KalmanSmoother,
-            'c': _KalmanSmoother, 'z': _KalmanSmoother
-        })
-        prefix_simulation_smoother_map.update({
-            's': None, 'd': None, 'c': None, 'z': None
-        })
-        if has_trmm:
-            prefix_pacf_map.update({
-                's': _statespace._scompute_coefficients_from_multivariate_pacf,
-                'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-                'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-                'z': _statespace._zcompute_coefficients_from_multivariate_pacf
-            })
-            prefix_sv_map.update({
-                's': _statespace._sconstrain_sv_less_than_one,
-                'd': _statespace._dconstrain_sv_less_than_one,
-                'c': _statespace._cconstrain_sv_less_than_one,
-                'z': _statespace._zconstrain_sv_less_than_one
-            })
-        prefix_reorder_missing_matrix_map.update({
-            's': _statespace.sreorder_missing_matrix,
-            'd': _statespace.dreorder_missing_matrix,
-            'c': _statespace.creorder_missing_matrix,
-            'z': _statespace.zreorder_missing_matrix
-        })
-        prefix_reorder_missing_vector_map.update({
-            's': _statespace.sreorder_missing_vector,
-            'd': _statespace.dreorder_missing_vector,
-            'c': _statespace.creorder_missing_vector,
-            'z': _statespace.zreorder_missing_vector
-        })
-        prefix_copy_missing_matrix_map.update({
-            's': _statespace.scopy_missing_matrix,
-            'd': _statespace.dcopy_missing_matrix,
-            'c': _statespace.ccopy_missing_matrix,
-            'z': _statespace.zcopy_missing_matrix
-        })
-        prefix_copy_missing_vector_map.update({
-            's': _statespace.scopy_missing_vector,
-            'd': _statespace.dcopy_missing_vector,
-            'c': _statespace.ccopy_missing_vector,
-            'z': _statespace.zcopy_missing_vector
-        })
-        prefix_copy_index_matrix_map.update({
-            's': _statespace.scopy_index_matrix,
-            'd': _statespace.dcopy_index_matrix,
-            'c': _statespace.ccopy_index_matrix,
-            'z': _statespace.zcopy_index_matrix
-        })
-        prefix_copy_index_vector_map.update({
-            's': _statespace.scopy_index_vector,
-            'd': _statespace.dcopy_index_vector,
-            'c': _statespace.ccopy_index_vector,
-            'z': _statespace.zcopy_index_vector
-        })
-set_mode(compatibility=None)
-
-
-try:
-    from scipy.linalg.blas import find_best_blas_type
-except ImportError:  # pragma: no cover
-    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-    def find_best_blas_type(arrays):
-        dtype, index = max(
-            [(ar.dtype, i) for i, ar in enumerate(arrays)])
-        prefix = _type_conv.get(dtype.char, 'd')
-        return prefix, dtype, None
+    if compatibility:
+        raise NotImplementedError('Compatibility mode is only available in'
+                                  ' statsmodels <= 0.9')
 
 
 def companion_matrix(polynomial):
@@ -380,11 +266,11 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     if k_seasonal_diff is not None:
         while k_seasonal_diff > 0:
             if not pandas:
-                differenced = (
-                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
-                )
+                differenced = (differenced[seasonal_periods:] -
+                               differenced[:-seasonal_periods])
             else:
-                differenced = differenced.diff(seasonal_periods)[seasonal_periods:]
+                sdiffed = differenced.diff(seasonal_periods)
+                differenced = sdiffed[seasonal_periods:]
             k_seasonal_diff -= 1
 
     # Simple differencing
@@ -927,62 +813,56 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
     return constrained, var
 
 
-# Conditionally use the Cython versions of the multivariate constraint if
-# possible (i.e. if Scipy >= 0.14.0 is available.)
-if has_trmm:
+def constrain_stationary_multivariate(unconstrained, variance,
+                                      transform_variance=False,
+                                      prefix=None):
 
-    def constrain_stationary_multivariate(unconstrained, variance,
-                                          transform_variance=False,
-                                          prefix=None):
+    use_list = type(unconstrained) == list
+    if use_list:
+        unconstrained = np.concatenate(unconstrained, axis=1)
 
-        use_list = type(unconstrained) == list
-        if use_list:
-            unconstrained = np.concatenate(unconstrained, axis=1)
+    k_endog, order = unconstrained.shape
+    order //= k_endog
 
-        k_endog, order = unconstrained.shape
-        order //= k_endog
+    if order < 1:
+        raise ValueError('Must have order at least 1')
+    if k_endog < 1:
+        raise ValueError('Must have at least 1 endogenous variable')
 
-        if order < 1:
-            raise ValueError('Must have order at least 1')
-        if k_endog < 1:
-            raise ValueError('Must have at least 1 endogenous variable')
+    if prefix is None:
+        prefix, dtype, _ = find_best_blas_type(
+            [unconstrained, variance])
+    dtype = prefix_dtype_map[prefix]
 
-        if prefix is None:
-            prefix, dtype, _ = find_best_blas_type(
-                [unconstrained, variance])
-        dtype = prefix_dtype_map[prefix]
+    unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
+    variance = np.asfortranarray(variance, dtype=dtype)
 
-        unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
-        variance = np.asfortranarray(variance, dtype=dtype)
+    # Step 1: convert from arbitrary matrices to those with singular values
+    # less than one.
+    # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
+    #                                              k_endog, prefix)
+    sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
 
-        # Step 1: convert from arbitrary matrices to those with singular values
-        # less than one.
-        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
-        #                                              k_endog, prefix)
-        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
+    # Step 2: convert matrices from our "partial autocorrelation matrix"
+    # space (matrices with singular values less than one) to the space of
+    # stationary coefficient matrices
+    constrained, variance = prefix_pacf_map[prefix](
+        sv_constrained, variance, transform_variance, order, k_endog)
 
-        # Step 2: convert matrices from our "partial autocorrelation matrix"
-        # space (matrices with singular values less than one) to the space of
-        # stationary coefficient matrices
-        constrained, variance = prefix_pacf_map[prefix](
-            sv_constrained, variance, transform_variance, order, k_endog)
+    constrained = np.array(constrained, dtype=dtype)
+    variance = np.array(variance, dtype=dtype)
 
-        constrained = np.array(constrained, dtype=dtype)
-        variance = np.array(variance, dtype=dtype)
+    if use_list:
+        constrained = [
+            constrained[:k_endog, i*k_endog:(i+1)*k_endog]
+            for i in range(order)
+        ]
 
-        if use_list:
-            constrained = [
-                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-                for i in range(order)
-            ]
+    return constrained, variance
 
-        return constrained, variance
-    constrain_stationary_multivariate.__doc__ = (
-        constrain_stationary_multivariate_python.__doc__)
 
-else:
-    constrain_stationary_multivariate = (
-        constrain_stationary_multivariate_python)
+constrain_stationary_multivariate.__doc__ = (
+    constrain_stationary_multivariate_python.__doc__)
 
 
 def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
@@ -1162,7 +1042,7 @@ def _compute_multivariate_acovf_from_coefficients(
     # Then stack the VAR(p) into a VAR(1) in companion matrix form:
     # z_{t+1} = F z_t + v_t
     companion = companion_matrix(
-        [1] + [-coefficients[i] for i in range(order)]
+        [1] + [-np.squeeze(coefficients[i]) for i in range(order)]
     ).T
 
     # Compute the error variance matrix for the stacked form: E v_t v_t'
@@ -1739,7 +1619,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     try:
         if not A.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
@@ -1785,7 +1665,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     try:
         if not a.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(missing))
@@ -1842,7 +1722,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     try:
         if not A.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(index), index_rows, index_cols,
@@ -1888,7 +1768,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     try:
         if not a.is_f_contig():
             raise ValueError()
-    except:
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(index))
@@ -1912,3 +1792,50 @@ def prepare_exog(exog):
 
         k_exog = exog.shape[1]
     return (k_exog, exog)
+
+
+def prepare_trend_spec(trend):
+    # Trend
+    if trend is None or trend in ['n', 'nc']:
+        polynomial_trend = np.ones((0))
+        if trend == 'nc':
+            warnings.warn("Argument option trend='nc' is deprecated. Please"
+                          " use option trend='n'.", DeprecationWarning)
+    elif trend == 'c':
+        polynomial_trend = np.r_[1]
+    elif trend == 't':
+        polynomial_trend = np.r_[0, 1]
+    elif trend == 'ct':
+        polynomial_trend = np.r_[1, 1]
+    elif trend == 'ctt':
+        # TODO deprecate ctt?
+        polynomial_trend = np.r_[1, 1, 1]
+    else:
+        trend = np.array(trend)
+        if trend.ndim > 0:
+            polynomial_trend = (trend > 0).astype(int)
+        else:
+            raise ValueError('Invalid trend method.')
+
+    # Note: k_trend is not the degree of the trend polynomial, because e.g.
+    # k_trend = 1 corresponds to the degree zero polynomial (with only a
+    # constant term).
+    k_trend = int(np.sum(polynomial_trend))
+
+    return polynomial_trend, k_trend
+
+
+def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
+    # Cache the arrays for calculating the intercept from the trend
+    # components
+    time_trend = np.arange(offset, nobs + offset)
+    trend_data = np.zeros((nobs, k_trend))
+    i = 0
+    for k in polynomial_trend.nonzero()[0]:
+        if k == 0:
+            trend_data[:, i] = np.ones(nobs,)
+        else:
+            trend_data[:, i] = time_trend**k
+        i += 1
+
+    return trend_data

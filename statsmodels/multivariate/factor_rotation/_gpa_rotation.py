@@ -28,7 +28,7 @@ import numpy as np
 
 def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         rotation_method='orthogonal', tol=1e-5):
-    """
+    r"""
     The gradient projection algorithm (GPA) minimizes a target function
     :math:`\phi(L)`, where :math:`L` is a matrix with rotated factors.
 
