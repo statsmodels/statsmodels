@@ -15,7 +15,7 @@ sm_knots_hp = c(48.0, 48.0, 48.0, 48.0, 68.0, 73.0, 88.0, 101.0, 116.0, 152.2857
 
 knots_w <- data.frame(weight=sm_knots_w)
 knots_h <- data.frame(hp=sm_knots_hp)
-gam_p = gam(city.mpg ~ fuel + drive + s(weight,bs="bs",k=12) + s(hp,bs="bs",k=10), data = mpg, knots=c(knots_w, knots_h), family=poisson)
+gam_a = gam(city.mpg ~ fuel + drive + s(weight,bs="bs",k=12) + s(hp,bs="bs",k=10), data = mpg, knots=c(knots_w, knots_h), family=poisson)
 
 
 pls = gam_a
