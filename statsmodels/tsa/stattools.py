@@ -1731,12 +1731,12 @@ class ur_za(object):
         """
         Minimal implementation of LS estimator for internal use
         """
-        xpxi = np.linalg.inv(exog.T @ exog)
-        xpy = exog.T @ endog
+        xpxi = np.linalg.inv(exog.T.dot(exog))
+        xpy = exog.T.dot(endog)
         nobs, k_exog = exog.shape
-        b = xpxi @ xpy
-        e = endog - exog @ b
-        sigma2 = e.T @ e / (nobs - k_exog)
+        b = xpxi.dot(xpy)
+        e = endog - exog.dot(b)
+        sigma2 = e.T.dot(e) / (nobs - k_exog)
         return b / np.sqrt(np.diag(sigma2 * xpxi))
 
     def run(self, x, trim=0.15, maxlag=None, regression='c', autolag='AIC'):
