@@ -497,44 +497,6 @@ class TestKPSS(SetupKPSS):
         # assert_warns(UserWarning, kpss, self.x)
 
 
-def test_za():
-    resdir = os.path.join(cur_dir, "results")
-    zafiles = ['rgnp.csv', 'gnpdef.csv', 'stkprc.csv', 'rgnpq.csv', 'rand10000.csv']
-    for file in zafiles:
-        mdlfile = os.path.join(resdir, file)
-        mdl = np.asarray(pd.read_csv(mdlfile))
-        # compare results to R package urca.ur.za (1.13-0)
-        if file == 'rgnp.csv':
-            res = za(mdl, maxlag=8, regression='c', autolag=None)
-            assert_almost_equal(res[0], -5.57615, decimal=3)
-            assert_almost_equal(res[1], 0.00312, decimal=3)
-            assert_equal(res[4], 20)
-        elif file == 'gnpdef.csv':
-            res = za(mdl, maxlag=8, regression='c', autolag='t-stat')
-            assert_almost_equal(res[0], -4.12155, decimal=3)
-            assert_almost_equal(res[1], 0.28024, decimal=3)
-            assert_equal(res[3], 5)
-            assert_equal(res[4], 40)
-        elif file == 'stkprc.csv':
-            res = za(mdl, maxlag=8, regression='ct', autolag='t-stat')
-            assert_almost_equal(res[0], -5.60689, decimal=3)
-            assert_almost_equal(res[1], 0.00894, decimal=3)
-            assert_equal(res[3], 1)
-            assert_equal(res[4], 65)
-        elif file == 'rgnpq.csv':
-            res = za(mdl, maxlag=12, regression='t', autolag='t-stat')
-            assert_almost_equal(res[0], -3.02761, decimal=3)
-            assert_almost_equal(res[1], 0.63993, decimal=3)
-            assert_equal(res[3], 12)
-            assert_equal(res[4], 102)
-        else:
-            res = za(mdl, regression='c', autolag='t-stat')
-            assert_almost_equal(res[0], -3.48223, decimal=3)
-            assert_almost_equal(res[1], 0.69111, decimal=3)
-            assert_equal(res[3], 25)
-            assert_equal(res[4], 7071)
-
-
 def test_pandasacovf():
     s = Series(lrange(1, 11))
     assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
@@ -857,3 +819,41 @@ def test_innovations_algo_filter_kalman_filter():
     assert_allclose(u, res.forecasts_error[0])
     assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
     assert_allclose(llf_obs, res.llf_obs)
+
+
+def test_za():
+    resdir = os.path.join(cur_dir, "results")
+    zafiles = ['rgnp.csv', 'gnpdef.csv', 'stkprc.csv', 'rgnpq.csv', 'rand10000.csv']
+    for file in zafiles:
+        mdlfile = os.path.join(resdir, file)
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        # compare results to R package urca.ur.za (1.13-0)
+        if file == 'rgnp.csv':
+            res = za(mdl, maxlag=8, regression='c', autolag=None)
+            assert_almost_equal(res[0], -5.57615, decimal=3)
+            assert_almost_equal(res[1], 0.00312, decimal=3)
+            assert_equal(res[4], 20)
+        elif file == 'gnpdef.csv':
+            res = za(mdl, maxlag=8, regression='c', autolag='t-stat')
+            assert_almost_equal(res[0], -4.12155, decimal=3)
+            assert_almost_equal(res[1], 0.28024, decimal=3)
+            assert_equal(res[3], 5)
+            assert_equal(res[4], 40)
+        elif file == 'stkprc.csv':
+            res = za(mdl, maxlag=8, regression='ct', autolag='t-stat')
+            assert_almost_equal(res[0], -5.60689, decimal=3)
+            assert_almost_equal(res[1], 0.00894, decimal=3)
+            assert_equal(res[3], 1)
+            assert_equal(res[4], 65)
+        elif file == 'rgnpq.csv':
+            res = za(mdl, maxlag=12, regression='t', autolag='t-stat')
+            assert_almost_equal(res[0], -3.02761, decimal=3)
+            assert_almost_equal(res[1], 0.63993, decimal=3)
+            assert_equal(res[3], 12)
+            assert_equal(res[4], 102)
+        else:
+            res = za(mdl, regression='c', autolag='t-stat')
+            assert_almost_equal(res[0], -3.48223, decimal=3)
+            assert_almost_equal(res[1], 0.69111, decimal=3)
+            assert_equal(res[3], 25)
+            assert_equal(res[4], 7071)
