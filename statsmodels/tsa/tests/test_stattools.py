@@ -1,3 +1,10 @@
+from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
+from statsmodels.compat.python import lrange
+
 import os
 import warnings
 
@@ -8,10 +15,6 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, date_range, DataFrame
 
-from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import assert_index_equal
-from statsmodels.compat.platform import PLATFORM_WIN
-from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError,
@@ -24,7 +27,20 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
                                        innovations_algo, innovations_filter,
-                                       periodogram)
+                                       periodogram, zivot_andrews)
+from pandas import Series, DatetimeIndex, DataFrame
+
+from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
+from statsmodels.tools.sm_exceptions import (CollinearityWarning,
+                                             MissingDataError)
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
+                                       pacf, grangercausalitytests,
+                                       coint, acovf, kpss, zivot_andrews,
+                                       arma_order_select_ic, levinson_durbin,
+                                       levinson_durbin_pacf, pacf_burg,
+                                       innovations_algo, innovations_filter)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -33,6 +49,8 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
+
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture('module')
@@ -158,8 +176,7 @@ class CheckCorrGram(object):
     """
     data = macrodata.load_pandas()
     x = data.data['realgdp']
-    filename = os.path.dirname(os.path.abspath(__file__))+\
-            "/results/results_corrgram.csv"
+    filename = os.path.join(CURR_DIR, 'results', 'results_corrgram.csv')
     results = pd.read_csv(filename, delimiter=',')
 
     #not needed: add 1. for lag zero
@@ -594,15 +611,49 @@ class TestKPSS(SetupKPSS):
         with pytest.warns(InterpolationWarning):
             res = kpss(self.x, 'c', nlags='legacy')
         assert_equal(res[2], 15)
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='auto')[2]
+        assert_equal(lags, 9)
+        # sunspot activity from sunspots data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c',
+                        lags='auto')[2]
+        assert_equal(lags, 7)
+        # volumes from nile data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(nile.load().data['volume'], 'c', lags='auto')[2]
+        assert_equal(lags, 5)
+        # log-coinsurance from randhie data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(randhie.load().data['lncoins'], 'ct', lags='auto')[2]
+        assert_equal(lags, 75)
+        # in-vehicle time from modechoice data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(modechoice.load().data['invt'], 'ct', lags='auto')[2]
+        assert_equal(lags, 18)
+
+    def test_kpss_fails_on_nobs_check(self):
+        # Test that if lags exceeds number of observations KPSS raises a clear error
+        nobs = len(self.x)
+        msg = (r"lags \({}\) must be <= number of observations \({}\)"
+               .format(nobs+1, nobs))
+        with pytest.raises(ValueError, match=msg):
+            kpss(self.x, 'c', lags=nobs+1)
+
+    def test_legacy_lags(self):
+        # Test legacy lags are the same
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='legacy')[2]
+        assert_equal(lags, 15)
 
     def test_unknown_lags(self):
         # Test legacy lags are the same
         with pytest.raises(ValueError):
-            kpss(self.x, 'c', nlags='unknown')
+            kpss(self.x, 'c', lags='unknown')
 
     def test_deprecation(self):
-        with pytest.warns(FutureWarning):
-            kpss(self.x, 'c')
+        with pytest.deprecated_call():
+            kpss(self.x, 'c', lags=None)
 
 
 def test_pandasacovf():
@@ -953,3 +1004,119 @@ def test_adfuller_maxlag_too_large(reset_randomstate):
 def test_periodogram_future_warning(reset_randomstate):
     with pytest.warns(FutureWarning):
         periodogram(np.random.standard_normal(100))
+
+
+class SetupZivotAndrews(object):
+    # test directory
+    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    run_dir = os.path.join(cur_dir, 'results')
+    # use same file for testing failure modes
+    fail_file = os.path.join(run_dir, 'rgnp.csv')
+    fail_mdl = np.asarray(pd.read_csv(fail_file))
+
+
+class TestZivotAndrews(SetupZivotAndrews):
+
+    # failure mode tests
+    def test_fail_regression_type(self):
+        assert_raises(ValueError, zivot_andrews, self.fail_mdl, regression='x')
+
+    def test_fail_trim_value(self):
+        assert_raises(ValueError, zivot_andrews, self.fail_mdl, trim=0.5)
+
+    def test_fail_array_shape(self):
+        assert_raises(ValueError, zivot_andrews, np.random.rand(50,2))
+
+    def test_fail_autolag_type(self):
+        assert_raises(TypeError, zivot_andrews, self.fail_mdl, autolag='None')
+
+    # following tests compare results to R package urca.ur.za (1.13-0)
+    def test_rgnp_case(self):
+        res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c', autolag=None)
+        assert_allclose([res[0], res[1], res[4]],
+                        [-5.57615, 0.00312, 20], rtol=1e-3)
+
+    def test_gnpdef_case(self):
+        mdlfile = os.path.join(self.run_dir, 'gnpdef.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-4.12155, 0.28024, 5, 40], rtol=1e-3)
+
+    def test_stkprc_case(self):
+        mdlfile = os.path.join(self.run_dir, 'stkprc.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='ct', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-5.60689, 0.00894, 1, 65], rtol=1e-3)
+
+    def test_rgnpq_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rgnpq.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=12, regression='t', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.02761, 0.63993, 12, 102], rtol=1e-3)
+
+    def test_rand10000_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rand10000.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.48223, 0.69111, 25, 7071], rtol=1e-3)
+
+
+def test_adfuller_short_series(reset_randomstate):
+    y = np.random.standard_normal(7)
+    res = adfuller(y, store=True)
+    assert res[-1].maxlag == 1
+    y = np.random.standard_normal(2)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y)
+    y = np.random.standard_normal(3)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y, regression='ct')
+
+
+def test_adfuller_maxlag_too_large(reset_randomstate):
+    y = np.random.standard_normal(100)
+    with pytest.raises(ValueError, match='maxlag must be less than'):
+        adfuller(y, maxlag=51)
+
+
+def test_zivot_andrews():
+    za = zivot_andrews
+    resdir = os.path.join(CURR_DIR, "results")
+    zafiles = ['rgnp.csv', 'gnpdef.csv', 'stkprc.csv', 'rgnpq.csv', 'rand10000.csv']
+    for file in zafiles:
+        mdlfile = os.path.join(resdir, file)
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        # compare results to R package urca.ur.za (1.13-0)
+        if file == 'rgnp.csv':
+            res = za(mdl, maxlag=8, regression='c', autolag=None)
+            assert_almost_equal(res[0], -5.57615, decimal=3)
+            assert_almost_equal(res[1], 0.00312, decimal=3)
+            assert_equal(res[4], 20)
+        elif file == 'gnpdef.csv':
+            res = za(mdl, maxlag=8, regression='c', autolag='t-stat')
+            assert_almost_equal(res[0], -4.12155, decimal=3)
+            assert_almost_equal(res[1], 0.28024, decimal=3)
+            assert_equal(res[3], 5)
+            assert_equal(res[4], 40)
+        elif file == 'stkprc.csv':
+            res = za(mdl, maxlag=8, regression='ct', autolag='t-stat')
+            assert_almost_equal(res[0], -5.60689, decimal=3)
+            assert_almost_equal(res[1], 0.00894, decimal=3)
+            assert_equal(res[3], 1)
+            assert_equal(res[4], 65)
+        elif file == 'rgnpq.csv':
+            res = za(mdl, maxlag=12, regression='t', autolag='t-stat')
+            assert_almost_equal(res[0], -3.02761, decimal=3)
+            assert_almost_equal(res[1], 0.63993, decimal=3)
+            assert_equal(res[3], 12)
+            assert_equal(res[4], 102)
+        else:
+            res = za(mdl, regression='c', autolag='t-stat')
+            assert_almost_equal(res[0], -3.48223, decimal=3)
+            assert_almost_equal(res[1], 0.69111, decimal=3)
+            assert_equal(res[3], 25)
+            assert_equal(res[4], 7071)

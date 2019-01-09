@@ -7,6 +7,7 @@ from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
+import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy import stats
 import pandas as pd
@@ -20,13 +21,18 @@ from statsmodels.tools.validation import (array_like, string_like, bool_like,
                                           int_like, dict_like, float_like)
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_filter, innovations_algo
+from statsmodels.tsa._bds import bds
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
+           'adfuller', 'kpss', 'zivot_andrews', 'bds', 'pacf_burg',
+           'innovations_algo', 'innovations_filter', 'levinson_durbin_pacf',
+           'levinson_durbin', 'adfuller', 'kpss', 'bds', 'levinson_durbin',
            'adfuller', 'kpss', 'bds', 'pacf_burg', 'innovations_algo',
+           'adfuller', 'kpss', 'zivot_andrews', 'bds', 'pacf_burg', 'innovations_algo',
            'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -1088,6 +1094,152 @@ def levinson_durbin_pacf(pacf, nlags=None):
     return arcoefs, acf
 
 
+def innovations_algo(acov, nobs=None, rtol=None):
+    """
+    Innovations algorithm to convert autocovariances to MA parameters
+
+    Parameters
+    ----------
+    acov : array-like
+        Array containing autocovariances including lag 0
+    nobs : int, optional
+        Number of periods to run the algorithm.  If not provided, nobs is
+        equal to the length of acovf
+    rtol : float, optional
+        Tolerance used to check for convergence. Default value is 0 which will
+        never prematurely end the algorithm. Checks after 10 iterations and
+        stops if sigma2[i] - sigma2[i - 10] < rtol * sigma2[0]. When the
+        stopping condition is met, the remaining values in theta and sigma2
+        are forward filled using the value of the final iteration.
+
+    Returns
+    -------
+    theta : ndarray
+        Innovation coefficients of MA representation. Array is (nobs, q) where
+        q is the largest index of a non-zero autocovariance. theta
+        corresponds to the first q columns of the coefficient matrix in the
+        common description of the innovation algorithm.
+    sigma2 : ndarray
+        The prediction error variance (nobs,).
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> rgdpg = data.data['realgdp'].pct_change().dropna()
+    >>> acov = sm.tsa.acovf(rgdpg)
+    >>> nobs = activity.shape[0]
+    >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
+
+    See also
+    --------
+    innovations_filter
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    acov = np.squeeze(np.asarray(acov))
+    if acov.ndim != 1:
+        raise ValueError('acov must be 1-d or squeezable to 1-d.')
+    rtol = 0.0 if rtol is None else rtol
+    if not isinstance(rtol, float):
+        raise ValueError('rtol must be a non-negative float or None.')
+    if nobs is not None and (nobs != int(nobs) or nobs < 1):
+        raise ValueError('nobs must be a positive integer')
+    n = acov.shape[0] if nobs is None else int(nobs)
+    max_lag = int(np.max(np.argwhere(acov != 0)))
+
+    v = np.zeros(n + 1)
+    v[0] = acov[0]
+    # Retain only the relevant columns of theta
+    theta = np.zeros((n + 1, max_lag + 1))
+    for i in range(1, n):
+        for k in range(max(i - max_lag, 0), i):
+            sub = 0
+            for j in range(max(i - max_lag, 0), k):
+                sub += theta[k, k - j] * theta[i, i - j] * v[j]
+            theta[i, i - k] = 1. / v[k] * (acov[i - k] - sub)
+        v[i] = acov[0]
+        for j in range(max(i - max_lag, 0), i):
+            v[i] -= theta[i, i - j] ** 2 * v[j]
+        # Break if v has converged
+        if i >= 10:
+            if v[i - 10] - v[i] < v[0] * rtol:
+                # Forward fill all remaining values
+                v[i + 1:] = v[i]
+                theta[i + 1:] = theta[i]
+                break
+
+    theta = theta[:-1, 1:]
+    v = v[:-1]
+    return theta, v
+
+
+def innovations_filter(endog, theta):
+    """
+    Filter observations using the innovations algorithm
+
+    Parameters
+    ----------
+    endog : array-like
+        The time series to filter (nobs,). Should be demeaned if not mean 0.
+    theta : ndarray
+        Innovation coefficients of MA representation. Array must be (nobs, q)
+        where q order of the MA.
+
+    Returns
+    -------
+    resid : ndarray
+        Array of filtered innovations
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> rgdpg = data.data['realgdp'].pct_change().dropna()
+    >>> acov = sm.tsa.acovf(rgdpg)
+    >>> nobs = activity.shape[0]
+    >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
+    >>> resid = innovations_filter(rgdpg, theta)
+
+    See also
+    --------
+    innovations_algo
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    orig_endog = endog
+    endog = np.squeeze(np.asarray(endog))
+    if endog.ndim != 1:
+        raise ValueError('endog must be 1-d or squeezable to 1-d.')
+    nobs = endog.shape[0]
+    n_theta, k = theta.shape
+    if nobs != n_theta:
+        raise ValueError('theta must be (nobs, q) where q is the moder order')
+    is_pandas = isinstance(orig_endog, (pd.DataFrame, pd.Series))
+    if is_pandas:
+        if len(orig_endog.index) != nobs:
+            msg = 'If endog is a Series or DataFrame, the index must ' \
+                  'correspond to the number of time series observations.'
+            raise ValueError(msg)
+    u = np.empty(nobs)
+    u[0] = endog[0]
+    for i in range(1, nobs):
+        if i < k:
+            hat = (theta[i, :i] * u[:i][::-1]).sum()
+        else:
+            hat = (theta[i] * u[i - k:i][::-1]).sum()
+        u[i] = endog[i] - hat
+    if is_pandas:
+        u = pd.Series(u, index=orig_endog.index.copy())
+    return u
+
+
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     """four tests for granger non causality of 2 timeseries
 
@@ -1700,3 +1852,323 @@ def _kpss_autolag(resids, nobs):
     gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
     autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
+
+
+class ZivotAndrewsUnitRoot(object):
+    """
+    Class wrapper for Zivot-Andrews structural-break unit-root test
+    """
+    def __init__(self):
+        """
+        Critical values for the three different models specified for the
+        Zivot-Andrews unit-root test.
+
+        Notes
+        -----
+        The p-values are generated through Monte Carlo simulation using
+        100,000 replications and 2000 data points.
+        """
+        self._za_critical_values = {}
+        # constant-only model
+        self._c = (
+            (0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
+            (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
+            (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
+            (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
+            (5.000, -4.81067), (7.500, -4.67636), (10.000, -4.56618),
+            (12.500, -4.48130), (15.000, -4.40507), (17.500, -4.33947),
+            (20.000, -4.28155), (22.500, -4.22683), (25.000, -4.17830),
+            (27.500, -4.13101), (30.000, -4.08586), (32.500, -4.04455),
+            (35.000, -4.00380), (37.500, -3.96144), (40.000, -3.92078),
+            (42.500, -3.88178), (45.000, -3.84503), (47.500, -3.80549),
+            (50.000, -3.77031), (52.500, -3.73209), (55.000, -3.69600),
+            (57.500, -3.65985), (60.000, -3.62126), (65.000, -3.54580),
+            (70.000, -3.46848), (75.000, -3.38533), (80.000, -3.29112),
+            (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
+            (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
+            (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932)
+        )
+        self._za_critical_values['c'] = np.asarray(self._c)
+        # trend-only model
+        self._t = (
+            (0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
+            (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
+            (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
+            (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
+            (5.000, -4.40580), (7.500, -4.25214), (10.000, -4.13678),
+            (12.500, -4.03765), (15.000, -3.95185), (17.500, -3.87945),
+            (20.000, -3.81295), (22.500, -3.75273), (25.000, -3.69836),
+            (27.500, -3.64785), (30.000, -3.59819), (32.500, -3.55146),
+            (35.000, -3.50522), (37.500, -3.45987), (40.000, -3.41672),
+            (42.500, -3.37465), (45.000, -3.33394), (47.500, -3.29393),
+            (50.000, -3.25316), (52.500, -3.21244), (55.000, -3.17124),
+            (57.500, -3.13211), (60.000, -3.09204), (65.000, -3.01135),
+            (70.000, -2.92897), (75.000, -2.83614), (80.000, -2.73893),
+            (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
+            (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
+            (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466)
+        )
+        self._za_critical_values['t'] = np.asarray(self._t)
+        # constant + trend model
+        self._ct = (
+            (0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
+            (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
+            (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
+            (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
+            (5.000, -5.07332), (7.500, -4.93003), (10.000, -4.82668),
+            (12.500, -4.73711), (15.000, -4.66020), (17.500, -4.58970),
+            (20.000, -4.52855), (22.500, -4.47100), (25.000, -4.42011),
+            (27.500, -4.37387), (30.000, -4.32705), (32.500, -4.28126),
+            (35.000, -4.23793), (37.500, -4.19822), (40.000, -4.15800),
+            (42.500, -4.11946), (45.000, -4.08064), (47.500, -4.04286),
+            (50.000, -4.00489), (52.500, -3.96837), (55.000, -3.93200),
+            (57.500, -3.89496), (60.000, -3.85577), (65.000, -3.77795),
+            (70.000, -3.69794), (75.000, -3.61852), (80.000, -3.52485),
+            (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
+            (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
+            (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767)
+        )
+        self._za_critical_values['ct'] = np.asarray(self._ct)
+
+    def _za_crit(self, stat, model='c'):
+        """
+        Linear interpolation for Zivot-Andrews p-values and critical values
+
+        Parameters
+        ----------
+        stat : float
+            The ZA test statistic
+        model : {'c','t','ct'}
+            The model used when computing the ZA statistic. 'c' is default.
+
+        Returns
+        -------
+        pvalue : float
+            The interpolated p-value
+        cvdict : dict
+            Critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+
+        Notes
+        -----
+        The p-values are linear interpolated from the quantiles of the
+        simulated ZA test statistic distribution
+        """
+        table = self._za_critical_values[model]
+        pcnts = table[:, 0]
+        stats = table[:, 1]
+        # ZA cv table contains quantiles multiplied by 100
+        pvalue = np.interp(stat, stats, pcnts) / 100.0
+        cv = [1.0, 5.0, 10.0]
+        crit_value = np.interp(cv, pcnts, stats)
+        cvdict = {"1%": crit_value[0], "5%": crit_value[1],
+                  "10%": crit_value[2]}
+        return pvalue, cvdict
+
+    def _quick_ols(self, endog, exog):
+        """
+        Minimal implementation of LS estimator for internal use
+        """
+        xpxi = np.linalg.inv(exog.T.dot(exog))
+        xpy = exog.T.dot(endog)
+        nobs, k_exog = exog.shape
+        b = xpxi.dot(xpy)
+        e = endog - exog.dot(b)
+        sigma2 = e.T.dot(e) / (nobs - k_exog)
+        return b / np.sqrt(np.diag(sigma2 * xpxi))
+
+    def _format_regression_data(self, series, nobs, const, trend, cols, lags):
+        """
+        Create the endog/exog data for the auxiliary regressions
+        from the original (standardized) series under test.
+        """
+        # first-diff y and standardize for numerical stability
+        endog = np.diff(series, axis=0)[:, 0]
+        endog /= np.sqrt(endog.T.dot(endog))
+        series /= np.sqrt(series.T.dot(series))
+        # reserve exog space
+        exog = np.zeros((endog[lags:].shape[0], cols + lags))
+        exog[:, 0] = const
+        # lagged y and dy
+        exog[:, cols - 1] = series[lags:(nobs - 1), 0]
+        exog[:, cols:] = lagmat(
+            endog, lags, trim='none')[lags:exog.shape[0] + lags]
+        return endog, exog
+
+    def _update_regression_exog(self, exog, regression, period, nobs, const,
+                                trend, cols, lags):
+        """
+        Update the exog array for the next regression.
+        """
+        cutoff = (period - (lags + 1))
+        if regression != 't':
+            exog[:cutoff, 1] = 0
+            exog[cutoff:, 1] = const
+            exog[:, 2] = trend[(lags + 2):(nobs + 1)]
+            if regression == 'ct':
+                exog[:cutoff, 3] = 0
+                exog[cutoff:, 3] = trend[1:(nobs - period + 1)]
+        else:
+            exog[:, 1] = trend[(lags + 2):(nobs + 1)]
+            exog[:(cutoff-1), 2] = 0
+            exog[(cutoff-1):, 2] = trend[0:(nobs - period + 1)]
+        return exog
+
+    def run(self, x, trim=0.15, maxlag=None, regression='c', autolag='AIC'):
+        """
+        Zivot-Andrews structural-break unit-root test
+        The Zivot-Andrews test can be used to test for a unit root in a
+        univariate process in the presence of serial correlation and a
+        single structural break.
+
+        Parameters
+        ----------
+        x : array_like
+            data series
+        trim : float
+            percentage of series at begin/end to exclude from break-period
+            calculation in range [0, 0.333] (default=0.15)
+        maxlag : int
+            maximum lag which is included in test, default=12*(nobs/100)^{1/4}
+            (Schwert, 1989)
+        regression : {'c','t','ct'}
+            Constant and trend order to include in regression
+            * 'c' : constant only (default)
+            * 't' : trend only
+            * 'ct' : constant and trend
+        autolag : {'AIC', 'BIC', 't-stat', None}
+            * if None, then maxlag lags are used
+            * if 'AIC' (default) or 'BIC', then the number of lags is chosen
+              to minimize the corresponding information criterion
+            * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
+              lag until the t-statistic on the last lag length is significant
+              using a 5%-sized test
+
+        Returns
+        -------
+        zastat : float
+            test statistic
+        pvalue : float
+            based on MC-derived critical values
+        cvdict : dict
+            critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+        bpidx : int
+            index of x corresponding to endogenously calculated break period
+            with values in the range [0..nobs-1]
+        baselag : int
+            number of lags used for period regressions
+
+        Notes
+        -----
+        H0 = unit root with a single structural break
+
+        Algorithm follows Baum (2004/2015) approximation to original
+        Zivot-Andrews method. Rather than performing an autolag regression at
+        each candidate break period (as per the original paper), a single
+        autolag regression is run up-front on the base model (constant + trend
+        with no dummies) to determine the best lag length. This lag length is
+        then used for all subsequent break-period regressions. This results in
+        significant run time reduction but also slightly more pessimistic test
+        statistics than the original Zivot-Andrews method, although no attempt
+        has been made to characterize the size/power tradeoff.
+
+        References
+        ----------
+        Baum, C.F. (2004). ZANDREWS: Stata module to calculate Zivot-Andrews
+        unit root test in presence of structural break," Statistical Software
+        Components S437301, Boston College Department of Economics, revised
+        2015.
+
+        Schwert, G.W. (1989). Tests for unit roots: A Monte Carlo
+        investigation. Journal of Business & Economic Statistics, 7: 147-159.
+
+        Zivot, E., and Andrews, D.W.K. (1992). Further evidence on the great
+        crash, the oil-price shock, and the unit-root hypothesis. Journal of
+        Business & Economic Studies, 10: 251-270.
+        """
+        if regression not in ['c', 't', 'ct']:
+            raise ValueError(
+                'ZA: regression option \'{}\' not understood'.format(
+                    regression))
+        if not isinstance(trim, float) or trim < 0 or trim > (1. / 3.):
+            raise ValueError(
+                'ZA: trim value must be a float in range [0, 0.333]')
+        x = np.asarray(x)
+        if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
+            raise ValueError(
+                'ZA: x must be a 1d array or a 2d array with a single column')
+        x = np.reshape(x, (-1, 1))
+        nobs = x.shape[0]
+        if autolag:
+            baselags = adfuller(x[:, 0], maxlag=maxlag, regression='ct',
+                                    autolag=autolag)[2]
+        elif maxlag:
+            baselags = maxlag
+        else:
+            baselags = int(12. * np.power(nobs / 100., 1 / 4.))
+        trimcnt = int(nobs * trim)
+        start_period = trimcnt
+        end_period = nobs - trimcnt
+        if regression == 'ct':
+            basecols = 5
+        else:
+            basecols = 4
+<<<<<<< HEAD
+        # first-diff y and standardize for numerical stability
+        dy = np.diff(x, axis=0)[:, 0]
+        dy /= np.sqrt(dy.T.dot(dy))
+        x = x / np.sqrt(x.T.dot(x))
+        # reserve exog space
+        exog = np.zeros((dy[baselags:].shape[0], basecols + baselags))
+        # normalize constant for stability in long time series
+        c_const = 1 / np.sqrt(nobs)  # Normalize
+        exog[:, 0] = c_const
+        # lagged y and dy
+        exog[:, basecols - 1] = x[baselags:(nobs - 1), 0]
+        ex_cols = lagmat(dy, baselags, trim='none')
+        exog[:, basecols:] = ex_cols[baselags:exog.shape[0] + baselags]
+        # better time trend: t_const @ t_const = 1 for large nobs
+=======
+        # normalize constant and trend terms for stability
+        c_const = 1 / np.sqrt(nobs)
+>>>>>>> Style corrections (PR 5455)
+        t_const = np.arange(1.0, nobs + 2)
+        t_const *= np.sqrt(3) / nobs ** (3 / 2)
+        # format the auxiliary regression data
+        endog, exog = self._format_regression_data(
+            x, nobs, c_const, t_const, basecols, baselags)
+        # iterate through the time periods
+        stats = np.full(end_period + 1, np.inf)
+        for bp in range(start_period + 1, end_period + 1):
+            # update intercept dummy / trend / trend dummy
+            exog = self._update_regression_exog(exog, regression, bp, nobs,
+                                                c_const, t_const, basecols,
+                                                baselags)
+            # check exog rank on first iteration
+            if bp == start_period + 1:
+                o = OLS(endog[baselags:], exog, hasconst=1).fit()
+                if o.df_model < exog.shape[1] - 1:
+                    raise ValueError(
+                        'ZA: auxiliary exog matrix is not full rank.\n'
+                        '  cols (exc intercept) = {}  rank = {}'.format(
+                            exog.shape[1] - 1, o.df_model))
+                stats[bp] = o.tvalues[basecols - 1]
+            else:
+                stats[bp] = self._quick_ols(endog[baselags:],
+                                            exog)[basecols - 1]
+        # return best seen
+        zastat = np.min(stats)
+        bpidx = np.argmin(stats) - 1
+        crit = self._za_crit(zastat, regression)
+        pval = crit[0]
+        cvdict = crit[1]
+        return zastat, pval, cvdict, baselags, bpidx
+
+    def __call__(self, x, trim=0.15, maxlag=None, regression='c',
+                 autolag='AIC'):
+        return self.run(x, trim=trim, maxlag=maxlag, regression=regression,
+                        autolag=autolag)
+
+zivot_andrews = ZivotAndrewsUnitRoot()
+zivot_andrews.__doc__ = zivot_andrews.run.__doc__
