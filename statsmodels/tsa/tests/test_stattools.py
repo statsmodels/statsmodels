@@ -822,6 +822,7 @@ def test_innovations_algo_filter_kalman_filter():
 
 
 def test_za():
+    cur_dir = os.path.abspath(os.path.dirname(__file__))
     resdir = os.path.join(cur_dir, "results")
     zafiles = ['rgnp.csv', 'gnpdef.csv', 'stkprc.csv', 'rgnpq.csv', 'rand10000.csv']
     for file in zafiles:
