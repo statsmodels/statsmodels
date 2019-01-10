@@ -1064,7 +1064,7 @@ class GLM(base.LikelihoodModel):
 
         if method.lower() == "irls":
             if cov_type.lower() == 'eim':
-                cov_type='nonrobust'
+                cov_type = 'nonrobust'
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)

@@ -54,11 +54,7 @@ class PenalizedMixin(object):
         self._null_drop_keys = getattr(self, '_null_drop_keys', [])
         self._null_drop_keys.extend(['penal'])
 
-    def _handle_scale(self, params, **kwds):
-
-        #if kwds['scale'] is not None:
-        #    raise
-        scale = kwds.get('scale', None)
+    def _handle_scale(self, params, scale=None, **kwds):
 
         if scale is None:
             # special handling for GLM
@@ -66,7 +62,6 @@ class PenalizedMixin(object):
                 mu = self.predict(params)
                 scale = self.estimate_scale(mu)
             else:
-                #raise
                 scale = 1
                 pass
 

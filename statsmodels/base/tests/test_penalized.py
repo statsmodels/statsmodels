@@ -705,15 +705,15 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
 
     def test_params_table(self):
         # override inherited because match is not good except for params and predict
+        # The cov_type in GLMPenalized and in TheilGLS are not the same
+        # both use sandwiches but TheilGLS sandwich is not HC
+        # relative difference in bse up to 7%
         res1 = self.res1
         res2 = self.res2
         assert_equal((res1.params != 0).sum(), self.k_params)
         assert_allclose(res1.params, res2.params, rtol=self.rtol,
                         atol=self.atol)
 
-        # failure for penalized values
-        # check only first 2, others fails, see #4669
-        exog_index = slice(None, 2, None)
         exog_index = slice(None, None, None)
         assert_allclose(res1.bse[exog_index], res2.bse[exog_index],
                         rtol=0.1, atol=self.atol)

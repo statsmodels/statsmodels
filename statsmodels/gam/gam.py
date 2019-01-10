@@ -222,7 +222,7 @@ class GLMGAMResults(GLMResults):
             prediction will be added to the plot.
         cpr : bool
             If cpr (component plus residual) is true, the a scatter plot of
-            the partial residuals will be added to the plot.
+            the partial working residuals will be added to the plot.
         include_constant : bool
             If true, then the estimated intercept is added to the prediction
             and its standard errors. This avoids that the confidence interval

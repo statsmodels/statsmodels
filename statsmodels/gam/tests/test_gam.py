@@ -13,6 +13,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 from scipy.linalg import block_diag
+import pytest
 
 from statsmodels.tools.linalg import matrix_sqrt
 from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
@@ -178,17 +179,9 @@ def test_gam_glm():
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = np.asarray(data_from_r.y_est)
 
-    # alpha = 1000
-    alpha = 0.03
-    alpha = 0.0001
-    alpha = 0.1
+    alpha = 0.1  # chosen by trial and error
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
-                              disp=1, maxiter=10000, maxfun=5000)
-
-    glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
-
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
                               disp=1, maxiter=10000, maxfun=5000)
     y_gam0 = np.dot(bsplines.basis, res_glm_gam.params)
@@ -326,8 +319,9 @@ def test_multivariate_gam_1d_data():
 
     glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines,
                      alpha=alpha)
-#     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
-#                               disp=1, maxiter=10000, maxfun=5000)
+    # "nm" converges to a different params, "bfgs" params are close to pirls
+    # res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
+    #                           disp=1, maxiter=10000, maxfun=5000)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=1, maxiter=10000)
     y_gam = res_glm_gam.fittedvalues
@@ -476,6 +470,7 @@ def test_make_augmented_matrix():
     alpha = 1
     aug_y, aug_x, aug_w = make_augmented_matrix(y, x, s, w)
     rs = matrix_sqrt(alpha * s)
+    # alternative version to matrix_sqrt using cholesky is not available
     # rs = sp.linalg.cholesky(alpha * s)
     assert_allclose(np.dot(rs.T, rs), alpha * s)
     expected_aug_x = np.vstack([x, rs])
@@ -521,12 +516,13 @@ def test_cyclic_cubic_splines():
     # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
-    # gam_res = gam._fit_pirls(y, ccs, alpha=alpha)
     gam_res = gam.fit(method='pirls')
 
     s0 = np.dot(ccs.basis[:, ccs.mask[0]],
                 gam_res.params[ccs.mask[0]])
-    s0 -= s0.mean()  # TODO: Mean has to be removed
+    # TODO: Mean has to be removed
+    # removing mean could be replaced by options for intercept handling
+    s0 -= s0.mean()
 
     s1 = np.dot(ccs.basis[:, ccs.mask[1]],
                 gam_res.params[ccs.mask[1]])
@@ -700,6 +696,8 @@ def test_partial_values2():
 
 
 def test_partial_values():
+    # this test is only approximate because we don't use the same spline
+    # basis functions (knots) as mgcv
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
 
@@ -724,12 +722,15 @@ def test_partial_values():
 
     assert_allclose(hat_y, data_from_r["y_est"], rtol=0, atol=0.008)
     # TODO: bug missing scale
-    bug_fact = np.sqrt(res_glm_gam.scale) * 0.976  # 0.106
+    bug_fact = np.sqrt(res_glm_gam.scale) * 0.976  # this is = 0.106
     assert_allclose(se, se_from_mgcv * bug_fact, rtol=0, atol=0.008)
 
 
+@pytest.mark.matplotlib
 def test_partial_plot():
-    # TODO: SMOKE No test is performed.
+    # verify that plot and partial_values method agree
+    # the model only has one component so partial values is the same as
+    # fittedvalues
     # Generate a plot to visualize analyze the result.
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -748,10 +749,18 @@ def test_partial_plot():
     alpha = 0.03
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
+    fig = res_glm_gam.plot_partial(0)
+    xp, yp = fig.axes[0].get_children()[0].get_data()
+    # Note xp and yp are sorted by x
+    sort_idx = np.argsort(x)
+    hat_y, se = res_glm_gam.partial_values(0)
+    # assert that main plot line is the prediction
+    assert_allclose(xp, x[sort_idx])
+    assert_allclose(yp, hat_y[sort_idx])
 
     # Uncomment to visualize the plot
     # import matplotlib.pyplot as plt
-    # res_glm_gam.plot_partial(bsplines, 0)
+    # res_glm_gam.plot_partial(0)
     # plt.plot(x, y, '.')
     # plt.show()
 

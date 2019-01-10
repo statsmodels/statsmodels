@@ -243,5 +243,3 @@ def with_metaclass(meta, *bases):
         def __new__(cls, name, this_bases, d):
             return meta(name, bases, d)
     return type.__new__(metaclass, 'temporary_class', (), {})
-
-from itertools import combinations
