@@ -14,14 +14,13 @@ from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
 
 def test_univariate_polynomial_smoother():
     x = np.linspace(0, 1, 5)
-    # test_univariate_polynomial_smoother()
-    # test_make_basis()
     pol = UnivariatePolynomialSmoother(x, degree=3)
     assert_equal(pol.basis.shape, (5, 3))
     assert_allclose(pol.basis[:, 2], x.ravel() ** 3)
 
 
 def test_multivariate_polynomial_basis():
+    np.random.seed(1)
     x = np.random.normal(0, 1, (10, 2))
     degrees = [3, 4]
     mps = PolynomialSmoother(x, degrees)

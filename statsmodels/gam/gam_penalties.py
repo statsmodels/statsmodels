@@ -34,7 +34,7 @@ class UnivariateGamPenalty(Penalty):
     """
 
     def __init__(self, univariate_smoother, alpha=1, weights=1):
-        self.weights = weights  # should we keep weights????
+        self.weights = weights
         self.alpha = alpha
         self.univariate_smoother = univariate_smoother
         self.nobs = self.univariate_smoother.nobs
@@ -164,10 +164,10 @@ class MultivariateGamPenalty(Penalty):
                  start_idx=0):
 
         if len(multivariate_smoother.smoothers) != len(alpha):
-            raise ValueError('all the input values should be list of the same'
-                             ' length. len(smoothers)=',
-                             len(multivariate_smoother.smoothers),
-                             ' len(alphas)=', len(alpha))
+            msg = ('all the input values should be of the same length.'
+                   ' len(smoothers)=%d, len(alphas)=%d') % (
+                   len(multivariate_smoother.smoothers), len(alpha))
+            raise ValueError(msg)
 
         self.multivariate_smoother = multivariate_smoother
         self.dim_basis = self.multivariate_smoother.dim_basis

@@ -243,7 +243,6 @@ class TestGlmGaussian(CheckModelResultsMixin):
         cls.decimal_params = DECIMAL_2
         cls.decimal_bic = DECIMAL_0
         cls.decimal_bse = DECIMAL_3
-        #cls.decimal_bse = 3
 
         from statsmodels.datasets.longley import load
         cls.data = load(as_pandas=False)
@@ -1138,15 +1137,14 @@ def test_gradient_irls():
                     ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                     gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
                     assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
-                    # this uses observed=True
+                    # rslt_irls.bse corresponds to observed=True
                     assert_allclose(rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5)
 
                     rslt_gradient_eim = mod_gradient.fit(max_start_irls=0,
-                                                     cov_type='eim',
-                                                     start_params=rslt_gradient.params,
-                                                     method="newton", maxiter=300)
+                                                         cov_type='eim',
+                                                         start_params=rslt_gradient.params,
+                                                         method="newton", maxiter=300)
                     assert_allclose(rslt_gradient_eim.bse, rslt_irls.bse, rtol=5e-5, atol=0)
-
 
 
 def test_gradient_irls_eim():
