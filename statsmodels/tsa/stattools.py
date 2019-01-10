@@ -1849,7 +1849,7 @@ class ur_za(object):
         exog[:, 0] = c_const
         # lagged y and dy
         exog[:, basecols - 1] = x[baselags:(nobs - 1), 0]
-        exog[:, basecols:] = tsa.lagmat(
+        exog[:, basecols:] = lagmat(
             dy, baselags, trim='none')[baselags:exog.shape[0] + baselags]
         # better time trend: t_const @ t_const = 1 for large nobs
         t_const = np.arange(1.0, nobs + 2)
