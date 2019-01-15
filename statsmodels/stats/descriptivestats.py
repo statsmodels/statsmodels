@@ -363,7 +363,6 @@ class DescrStats(object):
         '''standard deviation of the data'''
         return np.std(self.data, axis=0)
 
-    # OPTIMIZE:  Curent execution time for 3X4 matrix = 7.44 ms
     def percentiles(self):
         '''return percentile for a given percent'''
         perdict = dict(('perc_%02d' % per, self.data.quantile(per/100)) for per in
