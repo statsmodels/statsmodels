@@ -34,7 +34,7 @@ Data
 ----
 
 We download the `Guerry dataset
-<https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/doc/HistData/Guerry.html>`_, a
+<https://vincentarelbundock.github.io/Rdatasets/doc/HistData/Guerry.html>`_, a
 collection of historical data used in support of Andre-Michel Guerry's 1833
 *Essay on the Moral Statistics of France*. The data set is hosted online in
 comma-separated values format (CSV) by the `Rdatasets
