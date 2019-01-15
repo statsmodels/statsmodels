@@ -34,6 +34,10 @@ class CheckExternalMixin(object):
         std = self.descriptive.std.values
         assert_allclose(std, self.std, rtol=1e-4)
 
+    def test_percentiles(self):
+        per = self.descriptive.percentiles().values
+        assert_almost_equal(per, self.per, 1)
+
 class TestSim1(CheckExternalMixin):
 
         # Taken from R
@@ -41,6 +45,15 @@ class TestSim1(CheckExternalMixin):
         mean = 0.56930
         var = 0.72281079
         std = 0.85018
+        per = [[-0.95387327],
+               [-0.86025485],
+               [-0.27005201],
+               [0.06545155],
+               [0.40537786],
+               [1.09762186],
+               [1.77440291],
+               [1.88622475],
+               [2.16995951]]
 
         @classmethod
         def setup_class(cls):
