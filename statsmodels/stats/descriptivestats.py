@@ -356,12 +356,12 @@ class DescrStats(object):
     @OneTimeProperty
     def var(self):
         '''variance of the data'''
-        return np.var(self.data, axis=0)
+        return np.var(self.data, axis=0, ddof=1)
 
     @OneTimeProperty
     def std(self):
         '''standard deviation of the data'''
-        return np.std(self.data, axis=0)
+        return np.std(self.data, axis=0, ddof=1)
 
     def percentiles(self):
         '''return percentile for a given percent'''
