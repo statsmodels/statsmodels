@@ -23,6 +23,22 @@ def forg(x, prec=3):
 
 
 def d_or_f(x, width=6):
+    """convert number to string with either integer of float formatting
+
+    This is used internally for nobs and degrees of freedom which are usually
+    integers but can be float in some cases.
+
+    Parameters
+    ----------
+    x : int or float
+    width : int
+        only used if x is nan
+
+    Returns
+    -------
+    str : str
+        number as formatted string
+    """
     if np.isnan(x):
         return (width - 3) * ' ' + 'NaN'
 
@@ -297,7 +313,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     #change of names ?
     gen_left, gen_right = gleft, gright
 
-    #time and names are always included
+    # time and names are always included
     import time
     time_now = time.localtime()
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
@@ -305,30 +321,19 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
     yname, xname = _getnames(results, yname=yname, xname=xname)
 
-    #create dictionary with default
-    #use lambdas because some values raise exception if they are not available
-    #alternate spellings are commented out to force unique labels
-    def num_to_str(x, width=6):
-        if np.isnan(x):
-            return (width - 3) * ' ' + 'NaN'
-        return "%#6d" % x
-
+    # create dictionary with default
+    # use lambdas because some values raise exception if they are not available
     default_items = dict([
           ('Dependent Variable:', lambda: [yname]),
           ('Dep. Variable:', lambda: [yname]),
           ('Model:', lambda: [results.model.__class__.__name__]),
-          #('Model type:', lambda: [results.model.__class__.__name__]),
+          # ('Model type:', lambda: [results.model.__class__.__name__]),
           ('Date:', lambda: [date]),
           ('Time:', lambda: time_of_day),
           ('Number of Obs:', lambda: [results.nobs]),
-          #('No. of Observations:', lambda: ["%#6d" % results.nobs]),
           ('No. Observations:', lambda: [d_or_f(results.nobs)]),
-          #('Df model:', lambda: [results.df_model]),
           ('Df Model:', lambda: [d_or_f(results.df_model)]),
-          #TODO: check when we have non-integer df
           ('Df Residuals:', lambda: [d_or_f(results.df_resid)]),
-          # ('Df resid:', lambda: [results.df_resid]),
-          # ('df resid:', lambda: [results.df_resid]), #check capitalization
           ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception
           # ('Method:', lambda: [???]), # no default for this
     ])
@@ -337,7 +342,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         title = results.model.__class__.__name__ + 'Regression Results'
 
     if gen_left is None:
-        #default: General part of the summary table, Applicable to all? models
+        # default: General part of the summary table, Applicable to all? models
         gen_left = [('Dep. Variable:', None),
                     ('Model type:', None),
                     ('Date:', None),
@@ -348,7 +353,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         try:
             llf = results.llf
             gen_left.append(('Log-Likelihood', None))
-        except: #AttributeError, NotImplementedError
+        except: # AttributeError, NotImplementedError
             pass
 
         gen_right = []

@@ -9,12 +9,14 @@ created on 08/07/2015
 """
 
 from __future__ import division
+import collections
 import numpy as np
 from scipy import optimize
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
-    GLMResultsWrapper, lm, _check_convergence)
-import statsmodels.regression._tools as reg_tools
+    GLMResultsWrapper, _check_convergence)
+import statsmodels.regression.linear_model as lm
+import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base._penalized import PenalizedMixin
@@ -22,15 +24,15 @@ from statsmodels.gam.gam_penalties import MultivariateGamPenalty
 from statsmodels.tools.linalg import matrix_sqrt
 
 
-class GLMGAMResults(GLMResults):
+class GLMGamResults(GLMResults):
     """Results class for generalized additive models, GAM.
 
     This inherits from GLMResults.
 
-    Warning: not all inherited methods might take correctly account of the
+    Warning: some inherited methods might not correctly take account of the
     penalization
 
-    GLMGAMResults inherits from GLMResults
+    GLMGamResults inherits from GLMResults
 
     Extra Attributes
     ----------------
@@ -62,7 +64,7 @@ class GLMGAMResults(GLMResults):
         edf = self.edf.sum()
         self.df_model = edf - 1  # assume constant
         # need to use nobs or wnobs attribute
-        self.df_resid = self.df_resid = self.model.endog.shape[0] - edf
+        self.df_resid = self.model.endog.shape[0] - edf
 
         # we are setting the model df for the case when super is using it
         # df in model will be incorrect state when alpha/pen_weight changes
@@ -70,7 +72,7 @@ class GLMGAMResults(GLMResults):
         self.model.df_resid = self.df_resid
         mu = self.fittedvalues
         self.scale = scale = self.model.estimate_scale(mu)
-        super(GLMGAMResults, self).__init__(model, params,
+        super(GLMGamResults, self).__init__(model, params,
                                             normalized_cov_params, scale,
                                             **kwds)
 
@@ -107,7 +109,7 @@ class GLMGAMResults(GLMResults):
 
         return ex
 
-    def predict(self, exog=None, x=None, transform=True, **kwds):
+    def predict(self, exog=None, x=None, transform=True, **kwargs):
         """"compute prediction
 
         Parameters
@@ -129,9 +131,9 @@ class GLMGAMResults(GLMResults):
             predicted values
         """
         ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
-        return super(GLMGAMResults, self).predict(ex, **kwds)
+        return super(GLMGamResults, self).predict(ex, **kwargs)
 
-    def get_prediction(self, exog=None, x=None, transform=True, **kwds):
+    def get_prediction(self, exog=None, x=None, transform=True, **kwargs):
         """compute prediction results
 
         Parameters
@@ -156,8 +158,8 @@ class GLMGAMResults(GLMResults):
 
         """
         ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
-        return super(GLMGAMResults, self).get_prediction(ex, transform=True,
-                                                         **kwds)
+        return super(GLMGamResults, self).get_prediction(ex, transform=True,
+                                                         **kwargs)
 
     def partial_values(self, smooth_index, include_constant=True):
         """contribution of a smooth term to the linear prediction
@@ -233,7 +235,7 @@ class GLMGAMResults(GLMResults):
 
         Returns
         -------
-        fig : matplotlib figure instance
+        fig : matplotlib Figure instance
 
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
@@ -305,6 +307,14 @@ class GLMGAMResults(GLMResults):
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
+            This is only relevant for models that implement both observed
+            and expected Hessian, which is currently only GLM. Other
+            models only use the observed Hessian.
+        _axis : int
+            This is mainly for internal use. By default it returns the usual
+            diagonal of the hat matrix. If _axis is zero, then the result
+            corresponds to the effective degrees of freedom, ``edf`` for each
+            column of exog.
 
         Returns
         -------
@@ -314,15 +324,14 @@ class GLMGAMResults(GLMResults):
         """
         weights = self.model.hessian_factor(self.params, observed=observed)
         wexog = np.sqrt(weights)[:, None] * self.model.exog
-        # Note we needed to add a factor 2 in penalized_wls
-        # pencov = 2 * self.model.penal.penalty_matrix(alpha=self.alpha)
 
         # we can use inverse hessian directly instead of computing it from
         # WLS/IRLS as in GLM
 
         # TODO: does `normalized_cov_params * scale` work in all cases?
-        # avoids recomputing hessian
+        # this avoids recomputing hessian, check when used for other models.
         hess_inv = self.normalized_cov_params * self.scale
+        # this is in GLM equivalent to the more generic and direct
         # hess_inv = np.linalg.inv(-self.model.hessian(self.params))
         hd = (wexog * hess_inv.dot(wexog.T).T).sum(axis=_axis)
         return hd
@@ -390,7 +399,7 @@ class GLMGam(PenalizedMixin, GLM):
 
     """
 
-    _results_class = GLMGAMResults
+    _results_class = GLMGamResults
 
     def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None,
                  offset=None, exposure=None, missing='none', **kwargs):
@@ -432,7 +441,6 @@ class GLMGam(PenalizedMixin, GLM):
             smooth terms
 
         """
-        import collections
         if not isinstance(alpha, collections.Iterable):
             alpha = [alpha] * len(self.smoother.smoothers)
         elif not isinstance(alpha, list):
@@ -443,7 +451,7 @@ class GLMGam(PenalizedMixin, GLM):
     def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
-        """estimate parameters and create instance of GLMGAMResults class
+        """estimate parameters and create instance of GLMGamResults class
 
         Parameters
         ----------
@@ -455,7 +463,7 @@ class GLMGam(PenalizedMixin, GLM):
 
         Returns
         -------
-        res : instance of GLMGAMResults
+        res : instance of GLMGamResults
         """
         # TODO: alpha not allowed yet, but is in `_fit_pirls`
         # alpha = self._check_alpha()
@@ -544,6 +552,8 @@ class GLMGam(PenalizedMixin, GLM):
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
+            # We don't need to update scale in GLM/LEF models
+            # We might need it in dispersion models.
             # self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
 
@@ -552,12 +562,13 @@ class GLMGam(PenalizedMixin, GLM):
                 raise PerfectSeparationError(msg)
 
             # TODO need atol, rtol
+            # args of _check_convergence: (criterion, iteration, atol, rtol)
             converged = _check_convergence(criterion, iteration, tol, 0)
             if converged:
                 break
         self.mu = mu
         self.scale = self.estimate_scale(mu)
-        glm_results = GLMGAMResults(self, wls_results.params,
+        glm_results = GLMGamResults(self, wls_results.params,
                                     wls_results.normalized_cov_params,
                                     self.scale,
                                     cov_type=cov_type, cov_kwds=cov_kwds,
@@ -579,16 +590,15 @@ class GLMGam(PenalizedMixin, GLM):
         ``gcv``, ``aic`` or ``bic`` where the latter are based on effective
         degrees of freedom.
 
-        Warning: In many case the optimization might converge to local
-        optima or near optima. Different start_params or using a global
-        optimizer is recommendet, default is basinhopping.
+        Warning: In many case the optimization might converge to a local
+        optimum or near optimum. Different start_params or using a global
+        optimizer is recommended, default is basinhopping.
 
         Parameters
         ----------
         criterion='aic'
             name of results attribute to be minimized.
             Default is 'aic', other options are 'gcv', 'cv' or 'bic'.
-
         start_params : None or array
             starting parameters for alpha in the penalization weight
             minimization. The parameters are internally exponentiated and
@@ -622,8 +632,8 @@ class GLMGam(PenalizedMixin, GLM):
         In the test cases Nelder-Mead and bfgs often converge to local optima,
         see also https://github.com/statsmodels/statsmodels/issues/5381.
 
-        This does currently not use any analytical derivatives for the
-        criterion minimization.
+        This does not use any analytical derivatives for the criterion
+        minimization.
 
         Status: experimental, It is possible that defaults change if there
         is a better way to find a global optimum. API (e.g. type of return)
@@ -683,7 +693,6 @@ class LogitGam(PenalizedMixin, Logit):
 
     """
     def __init__(self, endog, smoother, alpha, *args, **kwargs):
-        import collections
         if not isinstance(alpha, collections.Iterable):
             alpha = np.array([alpha] * len(smoother.smoothers))
 
@@ -719,7 +728,10 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
     # TODO: I don't understand why I need 2 * s
     aug_y, aug_x, aug_weights = make_augmented_matrix(y, x, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
-    # MinimalWLS does not return normalized_cov_params
+    # TODO: use MinimalWLS during iterations, less overhead
+    # However, MinimalWLS does not return normalized_cov_params
+    #   which we need at the end of the iterations
+    # call would be
     # wls_results = reg_tools._MinimalWLS(aug_y, aug_x, aug_weights).fit()
     wls_results.params = wls_results.params.ravel()
 

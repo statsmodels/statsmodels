@@ -19,45 +19,41 @@ class BaseCrossValidator(with_metaclass(ABCMeta)):
     split the data in train and test as for example KFolds or LeavePOut
     """
     def __init__(self):
-
-        return
+        pass
 
     @abstractmethod
     def split(self):
-
-        return
+        pass
 
 
 class KFold(BaseCrossValidator):
     """
     K-Folds cross validation iterator:
     Provides train/test indexes to split data in train test sets
+
+    Parameters
+    ----------
+    k: int
+        number of folds
+    shuffle : bool
+        If true, then the index is shuffled before splitting into train and
+        test indices.
+
+    Notes
+    -----
+    All folds except for last fold have size trunc(n/k), the last fold has
+    the remainder.
     """
 
     def __init__(self, k_folds, shuffle=False):
-        """
-        K-Folds cross validation iterator:
-        Provides train/test indexes to split data in train test sets
-
-        Parameters
-        ----------
-        k: int
-            number of folds
-
-        Examples
-        --------
-
-        Notes
-        -----
-        All the folds have size trunc(n/k), the last one has the complementary
-        """
-
         self.nobs = None
         self.k_folds = k_folds
         self.shuffle = shuffle
-        return
 
     def split(self, X, y=None, label=None):
+        """yield index split into train and test sets
+        """
+        # TODO: X and y are redundant, we only need nobs
 
         nobs = X.shape[0]
         index = np.array(range(nobs))
@@ -67,7 +63,7 @@ class KFold(BaseCrossValidator):
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:
-            test_index = np.array([False]*nobs)
+            test_index = np.zeros(nobs, dtype=np.bool_)
             test_index[fold] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index

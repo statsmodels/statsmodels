@@ -155,17 +155,17 @@ class ContrastResults(object):
             return summ
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
-            return '<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>' % \
+            return ('<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>' %
                    (repr(self.fvalue), self.pvalue, self.df_denom,
-                    self.df_num)
+                    self.df_num))
         elif self.distribution == 'chi2':
-            return '<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>' % \
+            return ('<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>' %
                    (self.distribution, self.statistic, self.pvalue,
-                    self.df_denom)
+                    self.df_denom))
         else:
             # generic
-            return '<Wald test: statistic=%s, p-value=%s>' % \
-                   (self.statistic, self.pvalue)
+            return ('<Wald test: statistic=%s, p-value=%s>' %
+                   (self.statistic, self.pvalue))
 
 
     def summary_frame(self, xname=None, alpha=0.05):

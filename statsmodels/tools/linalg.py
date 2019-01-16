@@ -107,9 +107,9 @@ def transf_constraints(constraints):
     """
 
     from scipy import linalg
-    # constraints = spsc._constraints
+
     m = constraints.shape[0]
-    q, r = linalg.qr(np.transpose(constraints))
+    q, _ = linalg.qr(np.transpose(constraints))
     transf = q[:, m:]
     return transf
 

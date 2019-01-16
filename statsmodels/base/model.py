@@ -1692,7 +1692,7 @@ class LikelihoodModelResults(Results):
 
         # TODO streamline computation, we don't need to compute J if given
         if df_constraints is not None:
-            # let caller override df_constraint. J
+            # let caller override J by df_constraint
             J = df_constraints
 
         if (hasattr(self, 'mle_settings') and
