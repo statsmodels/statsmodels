@@ -140,7 +140,7 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
             # TODO add return
 
 
-class MultivariateGAMCVPath:
+class MultivariateGAMCVPath(object):
 
     def __init__(self, smoothers, alphas, gam, cost, y, cv):
         self.cost = cost

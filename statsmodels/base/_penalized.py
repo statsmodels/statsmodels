@@ -63,10 +63,8 @@ class PenalizedMixin(object):
                 scale = self.estimate_scale(mu)
             else:
                 scale = 1
-                pass
 
         return scale
-
 
     def loglike(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
