@@ -569,3 +569,34 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         alpha_mgcv = res1.model.alpha
         res_s = res1.model.select_penweight()
         assert_allclose(res_s[0], alpha_mgcv, rtol=5e-5)
+
+
+class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
+    # This is the same as the previous but with from_formula
+
+    @classmethod
+    def setup_class(cls):
+
+        sp = np.array([40491.3940640059, 232455.530262537])
+        # s_scale is same as before
+        cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
+
+        x_spline = df_autos[['weight', 'hp']].values
+        bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
+                      variable_names=['weight', 'hp'],
+                      constraints='center',
+                      include_intercept=True)
+
+        alpha0 = 1 / s_scale * sp / 2
+        gam_bs = GLMGam.from_formula('city_mpg ~ fuel + drive', df_autos,
+                                     smoother=bs, family=family.Poisson(),
+                                     alpha=alpha0)
+
+        cls.res1a = gam_bs.fit(use_t=False)
+
+        cls.res1b = gam_bs.fit(method='newton', use_t=True)
+        cls.res1 = cls.res1a._results
+        cls.res2 = results_mpg_bs_poisson.mpg_bs_poisson
+
+        cls.rtol_fitted = 1e-8
+        cls.covp_corrfact = 1  # not needed

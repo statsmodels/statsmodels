@@ -333,7 +333,7 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
                 self.cov_der2 = ctransf.T.dot(base4[3]).dot(ctransf)
 
         self.dim_basis = self.basis.shape[1]
-        self.col_names = [self.variable_name + str(i)
+        self.col_names = [self.variable_name + "_s" + str(i)
                           for i in range(self.dim_basis)]
 
     @abstractmethod
@@ -620,6 +620,16 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
     def __init__(self, x, variable_names=None, include_intercept=False,
                  **kwargs):
 
+        # get pandas names before using asarray
+        if isinstance(x, pd.DataFrame):
+            data_names = x.columns.tolist()
+        elif isinstance(x, pd.Series):
+            data_names = [x.name]
+        else:
+            data_names = None
+
+        x = np.asarray(x)
+
         if x.ndim == 1:
             self.x = x.copy()
             self.x.shape = (len(x), 1)
@@ -632,9 +642,13 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         else:
             self.include_intercept = include_intercept
 
+
         if variable_names is None:
-            self.variable_names = ['x' + str(i)
-                                   for i in range(self.k_variables)]
+            if data_names is not None:
+                self.variable_names = data_names
+            else:
+                self.variable_names = ['x' + str(i)
+                                       for i in range(self.k_variables)]
         else:
             self.variable_names = variable_names
 

@@ -312,7 +312,7 @@ class GLMGamResults(GLMResults):
             models only use the observed Hessian.
         _axis : int
             This is mainly for internal use. By default it returns the usual
-            diagonal of the hat matrix. If _axis is zero, then the result 
+            diagonal of the hat matrix. If _axis is zero, then the result
             corresponds to the effective degrees of freedom, ``edf`` for each
             column of exog.
 
@@ -404,6 +404,18 @@ class GLMGam(PenalizedMixin, GLM):
     def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None,
                  offset=None, exposure=None, missing='none', **kwargs):
 
+        # TODO: check usage of hasconst
+        hasconst = kwargs.get('hasconst', None)
+        xnames_linear = None
+        if hasattr(exog, 'design_info'):
+            self.design_info_linear = exog.design_info
+            xnames_linear = self.design_info_linear.column_names
+
+        # TODO: handle data is experimental, see #5469
+        # This is a bit wasteful because we need to `handle_data twice`
+        self.data_linear = self._handle_data(endog, exog, missing, hasconst)
+        if xnames_linear is None:
+            xnames_linear = self.data_linear.xnames
         if exog is not None:
             exog_linear = np.asarray(exog)
             k_exog_linear = exog_linear.shape[1]
@@ -425,6 +437,26 @@ class GLMGam(PenalizedMixin, GLM):
         super(GLMGam, self).__init__(endog, exog=exog, family=family,
                                      offset=offset, exposure=exposure,
                                      penal=penal, missing=missing, **kwargs)
+
+        # TODO: check: xnames_linear will be None instead of empty list
+        #       if no exog_linear
+        # can smoother be empty ? I guess not allowed.
+        if xnames_linear is None:
+            xnames_linear = []
+        xnames = xnames_linear + self.smoother.col_names
+        self.exog_names[:] = xnames
+
+        # TODO: the generic data handling might attach the design_info from the
+        #       linear part, but this is incorrect for the full model and causes
+        #       problems in wald_test_terms
+
+        if hasattr(self.data, 'design_info'):
+            del self.data.design_info
+        # formula also might be attached which causes problems in predict
+        if hasattr(self, 'formula'):
+            self.formula_linear = self.formula
+            self.formula = None
+            del self.formula
 
     def _check_alpha(self, alpha):
         """check and convert alpha to required list format
@@ -465,6 +497,13 @@ class GLMGam(PenalizedMixin, GLM):
         -------
         res : instance of GLMGamResults
         """
+        # TODO: temporary hack to remove attribute
+        # formula also might be attached which in inherited from_formula
+        # causes problems in predict
+        if hasattr(self, 'formula'):
+            self.formula_linear = self.formula
+            del self.formula
+
         # TODO: alpha not allowed yet, but is in `_fit_pirls`
         # alpha = self._check_alpha()
 
@@ -729,7 +768,7 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
     aug_y, aug_x, aug_weights = make_augmented_matrix(y, x, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     # TODO: use MinimalWLS during iterations, less overhead
-    # However, MinimalWLS does not return normalized_cov_params 
+    # However, MinimalWLS does not return normalized_cov_params
     #   which we need at the end of the iterations
     # call would be
     # wls_results = reg_tools._MinimalWLS(aug_y, aug_x, aug_weights).fit()
