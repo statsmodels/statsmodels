@@ -442,7 +442,10 @@ class GLMGamResults(GLMResults):
         return cv_
 
 
-wrap.populate_wrapper(GLMResultsWrapper, GLMGamResults)
+class GLMGamResultsWrapper(GLMResultsWrapper):
+    pass
+
+wrap.populate_wrapper(GLMGamResultsWrapper, GLMGamResults)
 
 
 class GLMGam(PenalizedMixin, GLM):
