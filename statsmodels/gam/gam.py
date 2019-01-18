@@ -497,6 +497,8 @@ class GLMGam(PenalizedMixin, GLM):
             self.design_info_linear = exog.design_info
             xnames_linear = self.design_info_linear.column_names
 
+        is_pandas = _is_using_pandas(exog, None)
+
         # TODO: handle data is experimental, see #5469
         # This is a bit wasteful because we need to `handle_data twice`
         self.data_linear = self._handle_data(endog, exog, missing, hasconst)
@@ -520,9 +522,6 @@ class GLMGam(PenalizedMixin, GLM):
             exog = np.column_stack((exog_linear, smoother.basis))
         else:
             exog = smoother.basis
-        super(GLMGam, self).__init__(endog, exog=exog, family=family,
-                                     offset=offset, exposure=exposure,
-                                     penal=penal, missing=missing, **kwargs)
 
         # TODO: check: xnames_linear will be None instead of empty list
         #       if no exog_linear
@@ -530,7 +529,19 @@ class GLMGam(PenalizedMixin, GLM):
         if xnames_linear is None:
             xnames_linear = []
         xnames = xnames_linear + self.smoother.col_names
-        self.exog_names[:] = xnames
+
+        if is_pandas and exog_linear is not None:
+            # we a dataframe so we can get a PandasData instance fro wrapping
+            exog = pd.DataFrame(exog, index=self.data_linear.row_labels,
+                                columns=xnames)
+
+        super(GLMGam, self).__init__(endog, exog=exog, family=family,
+                                     offset=offset, exposure=exposure,
+                                     penal=penal, missing=missing, **kwargs)
+
+        if not is_pandas:
+            # set exog nanmes if not given by pandas DataFrame
+            self.exog_names[:] = xnames
 
         # TODO: the generic data handling might attach the design_info from the
         #       linear part, but this is incorrect for the full model and causes
