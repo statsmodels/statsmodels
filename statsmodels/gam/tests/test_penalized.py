@@ -437,7 +437,10 @@ class TestGAMMPGBS(CheckGAMMixin):
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
         x_spline = df_autos[['weight', 'hp']].values
-        cls.exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        # We need asarray to remove the design_info
+        # If design_info is attached,
+        #     then exog_linear will also be transformed in predict.
+        cls.exog = np.asarray(patsy.dmatrix('fuel + drive', data=df_autos))
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
                       variable_names=['weight', 'hp'],
                       constraints='center',
@@ -542,16 +545,22 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
     def test_predict(self):
         res1 = self.res1
         res2 = self.res2
-        predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
+        # this uses transform also for exog_linear
+        # predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
+        predicted = res1.predict(df_autos.iloc[2:4], res1.model.smoother.x[2:4])
         assert_allclose(predicted, res1.fittedvalues[2:4],
                         rtol=1e-13)
         assert_allclose(predicted, res2.fitted_values[2:4],
                         rtol=self.rtol_fitted)
 
-        linpred = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4],
+        # linpred = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4],
+        #                        linear=True)
+        linpred = res1.predict(df_autos.iloc[2:4], res1.model.smoother.x[2:4],
                                linear=True)
         assert_allclose(linpred, res2.linear_predictors[2:4],
                         rtol=self.rtol_fitted)
+        assert_equal(predicted.index.values, [2, 3])
+        assert_equal(linpred.index.values, [2, 3])
 
     def test_wald(self):
         res1 = self.res1
@@ -581,6 +590,8 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         # s_scale is same as before
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
+        cls.exog = patsy.dmatrix('fuel + drive', data=df_autos)
+
         x_spline = df_autos[['weight', 'hp']].values
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
                       variable_names=['weight', 'hp'],
@@ -600,3 +611,15 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
 
         cls.rtol_fitted = 1e-8
         cls.covp_corrfact = 1  # not needed
+
+    def test_names(self):
+        xnames = ['Intercept', 'fuel[T.gas]', 'drive[T.fwd]', 'drive[T.rwd]',
+                  'weight_s0', 'weight_s1', 'weight_s2', 'weight_s3',
+                  'weight_s4', 'weight_s5', 'weight_s6', 'weight_s7',
+                  'weight_s8', 'weight_s9', 'weight_s10',
+                  'hp_s0', 'hp_s1', 'hp_s2', 'hp_s3', 'hp_s4', 'hp_s5',
+                  'hp_s6', 'hp_s7', 'hp_s8']
+
+        assert_equal(self.res1a.model.exog_names, xnames)
+        assert_equal(self.res1a.model.design_info_linear.column_names,
+                     xnames[:4])
