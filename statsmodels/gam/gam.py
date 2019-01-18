@@ -10,18 +10,75 @@ created on 08/07/2015
 
 from __future__ import division
 import collections
+
 import numpy as np
 from scipy import optimize
+import pandas as pd
+
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
     GLMResultsWrapper, _check_convergence)
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
+                                             ValueWarning)
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.data import _is_using_pandas
+
+import statsmodels.base.wrapper as wrap
+
+
 from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
 from statsmodels.tools.linalg import matrix_sqrt
+
+
+def _transform_predict_exog(model, exog, design_info=None):
+    """transform exog for predict using design_info
+
+    Note: this is copied from base.model.Results.predict and converted to
+    standalone function with additional options.
+
+
+    """
+
+    is_pandas = _is_using_pandas(exog, None)
+
+    exog_index = exog.index if is_pandas else None
+
+    if design_info is None:
+        design_info = getattr(model.data, 'design_info', None)
+
+    if design_info is not None and (exog is not None):
+        from patsy import dmatrix
+        if isinstance(exog, pd.Series):
+            # we are guessing whether it should be column or row
+            if (hasattr(exog, 'name') and isinstance(exog.name, str) and
+                    exog.name in design_info.describe()):
+                # assume we need one column
+                exog = pd.DataFrame(exog)
+            else:
+                # assume we need a row
+                exog = pd.DataFrame(exog).T
+        orig_exog_len = len(exog)
+        is_dict = isinstance(exog, dict)
+        exog = dmatrix(design_info, exog, return_type="dataframe")
+        if orig_exog_len > len(exog) and not is_dict:
+            import warnings
+            if exog_index is None:
+                warnings.warn('nan values have been dropped', ValueWarning)
+            else:
+                exog = exog.reindex(exog_index)
+        exog_index = exog.index
+
+    if exog is not None:
+        exog = np.asarray(exog)
+        if exog.ndim == 1 and (model.exog.ndim == 1 or
+                               model.exog.shape[1] == 1):
+            exog = exog[:, None]
+        exog = np.atleast_2d(exog)  # needed in count model shape[1]
+
+    return exog, exog_index
 
 
 class GLMGamResults(GLMResults):
@@ -76,16 +133,20 @@ class GLMGamResults(GLMResults):
                                             normalized_cov_params, scale,
                                             **kwds)
 
-    def _tranform_predict_exog(self, exog=None, x=None, transform=False):
+    def _tranform_predict_exog(self, exog=None, exog_smooth=None,
+                               transform=True):
         """Transform original explanatory variables for prediction
 
         Parameters
         ----------
         exog : array_like, optional
             The values for the linear explanatory variables.
-        x : array_like
+        exog_smooth : array_like
             values for the variables in the smooth terms
         transform : bool, optional
+            If transform is False, then ``exog`` is returned unchanged and
+            ``x`` is ignored. It is assumed that exog contains the full
+            design matrix for the predict observations.
             If transform is True, then the basis representation of the smooth
             term will be constructed from the provided ``x``.
 
@@ -95,28 +156,36 @@ class GLMGamResults(GLMResults):
             design matrix for the prediction
 
         """
+        exog_index = None
         if transform is False:
             ex = exog
         else:
-            if x is not None:
-                exog_smooth = self.model.smoother.transform(x)
+            # transform exog_linear if needed
+            if exog is not None and hasattr(self.model, 'design_info_linear'):
+                exog, exog_index = _transform_predict_exog(self.model, exog,
+                                        self.model.design_info_linear)
+
+            # create smooth basis
+            if exog_smooth is not None:
+                ex_smooth = self.model.smoother.transform(exog_smooth)
                 if exog is None:
-                    ex = exog_smooth
+                    ex = ex_smooth
                 else:
-                    ex = np.column_stack((exog, exog_smooth))
+                    # TODO: there might be problems is exog_smooth is 1-D
+                    ex = np.column_stack((exog, ex_smooth))
             else:
                 ex = exog
 
-        return ex
+        return ex, exog_index
 
-    def predict(self, exog=None, x=None, transform=True, **kwargs):
+    def predict(self, exog=None, exog_smooth=None, transform=True, **kwargs):
         """"compute prediction
 
         Parameters
         ----------
         exog : array_like, optional
             The values for the linear explanatory variables
-        x : array_like
+        exog_smooth : array_like
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
@@ -130,17 +199,29 @@ class GLMGamResults(GLMResults):
         prediction : ndarray, pandas.Series or pandas.DataFrame
             predicted values
         """
-        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
-        return super(GLMGamResults, self).predict(ex, **kwargs)
+        ex, exog_index = self._tranform_predict_exog(exog=exog,
+                                                     exog_smooth=exog_smooth,
+                                                     transform=transform)
+        predict_results = super(GLMGamResults, self).predict(ex,
+                                                             transform=False,
+                                                             **kwargs)
+        if exog_index is not None and not hasattr(predict_results,
+                                                      'predicted_values'):
+            if predict_results.ndim == 1:
+                return pd.Series(predict_results, index=exog_index)
+            else:
+                return pd.DataFrame(predict_results, index=exog_index)
+        else:
+            return predict_results
 
-    def get_prediction(self, exog=None, x=None, transform=True, **kwargs):
+    def get_prediction(self, exog=None, exog_smooth=None, transform=True, **kwargs):
         """compute prediction results
 
         Parameters
         ----------
         exog : array_like, optional
             The values for which you want to predict.
-        x : array_like
+        exog_smooth : array_like
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
@@ -157,8 +238,10 @@ class GLMGamResults(GLMResults):
             tables for the prediction of the mean and of new observations.
 
         """
-        ex = self._tranform_predict_exog(exog=exog, x=x, transform=transform)
-        return super(GLMGamResults, self).get_prediction(ex, transform=True,
+        ex, exog_index = self._tranform_predict_exog(exog=exog,
+                                                     exog_smooth=exog_smooth,
+                                                     transform=transform)
+        return super(GLMGamResults, self).get_prediction(ex, transform=False,
                                                          **kwargs)
 
     def partial_values(self, smooth_index, include_constant=True):
@@ -357,6 +440,9 @@ class GLMGamResults(GLMResults):
         cv_ = ((self.resid_pearson / (1. - self.hat_matrix_diag))**2).sum()
         cv_ /= self.nobs
         return cv_
+
+
+wrap.populate_wrapper(GLMResultsWrapper, GLMGamResults)
 
 
 class GLMGam(PenalizedMixin, GLM):
