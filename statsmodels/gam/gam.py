@@ -489,6 +489,7 @@ class GLMGam(PenalizedMixin, GLM):
     """
 
     _results_class = GLMGamResults
+    _results_class_wrapper = GLMGamResultsWrapper
 
     def __init__(self, endog, exog=None, smoother=None, alpha=0, family=None,
                  offset=None, exposure=None, missing='none', **kwargs):
@@ -607,19 +608,26 @@ class GLMGam(PenalizedMixin, GLM):
         # TODO: alpha not allowed yet, but is in `_fit_pirls`
         # alpha = self._check_alpha()
 
-        if method.lower() == 'pirls':
+        if method.lower() in ['pirls', 'irls']:
             res = self._fit_pirls(self.alpha, start_params=start_params,
                                   maxiter=maxiter, tol=tol, scale=scale,
                                   cov_type=cov_type, cov_kwds=cov_kwds,
                                   use_t=use_t, **kwargs)
         else:
+            if max_start_irls > 0 and (start_params is None):
+                res = self._fit_pirls(self.alpha, start_params=start_params,
+                                      maxiter=max_start_irls, tol=tol, scale=scale,
+                                      cov_type=cov_type, cov_kwds=cov_kwds,
+                                      use_t=use_t, **kwargs)
+                start_params = res.params
+                del res
             res = super(GLMGam, self).fit(start_params=start_params,
                                           maxiter=maxiter, method=method,
                                           tol=tol, scale=scale,
                                           cov_type=cov_type, cov_kwds=cov_kwds,
                                           use_t=use_t,
                                           full_output=full_output, disp=disp,
-                                          max_start_irls=max_start_irls,
+                                          max_start_irls=0,
                                           **kwargs)
         return res
 
@@ -718,7 +726,7 @@ class GLMGam(PenalizedMixin, GLM):
         glm_results.fit_history = history
         glm_results.converged = converged
 
-        return GLMResultsWrapper(glm_results)
+        return GLMGamResultsWrapper(glm_results)
 
     def select_penweight(self, criterion='aic', start_params=None,
                          start_model_params=None,

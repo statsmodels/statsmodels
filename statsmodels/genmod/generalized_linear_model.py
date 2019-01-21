@@ -1135,6 +1135,7 @@ class GLM(base.LikelihoodModel):
             cov_p = None
 
         results_class = getattr(self, '_results_class', GLMResults)
+        results_class_wrapper = getattr(self, '_results_class_wrapper', GLMResultsWrapper)
         glm_results = results_class(self, rslt.params,
                                     cov_p,
                                     scale,
@@ -1150,7 +1151,7 @@ class GLM(base.LikelihoodModel):
         glm_results.method = method
         glm_results.fit_history = history
 
-        return GLMResultsWrapper(glm_results)
+        return results_class_wrapper(glm_results)
 
     def _fit_irls(self, start_params=None, maxiter=100, tol=1e-8,
                   scale=None, cov_type='nonrobust', cov_kwds=None,
