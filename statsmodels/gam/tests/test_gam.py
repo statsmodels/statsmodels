@@ -397,7 +397,7 @@ def test_multivariate_gam_cv_path():
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
     res_glm_gam = glm_gam.fit(method='irls', max_start_irls=0,
-                              disp=1, maxiter=10000, maxfun=5000)
+                              disp=1, maxiter=10000)
     y_est = res_glm_gam.predict(bsplines.basis)
 
     # plt.plot(x, y, '.', label='y')
