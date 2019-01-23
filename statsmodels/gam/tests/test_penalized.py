@@ -24,7 +24,7 @@ import statsmodels.base._penalties as smpen
 
 from statsmodels.gam.smooth_basis import (BSplines, CubicSplines,
                                           CyclicCubicSplines)
-from statsmodels.gam.gam import GLMGam
+from statsmodels.gam.gam import GLMGam, GLMGamResults, GLMGamResultsWrapper
 
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
@@ -630,3 +630,6 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         assert_equal(res1a.fittedvalues[2:4].index.values, [2, 3])
         assert_equal(res1a.params.index.values, xnames)
         assert_(isinstance(res1a.params, pd.Series))
+
+        assert_(isinstance(res1a, GLMGamResultsWrapper))
+        assert_(isinstance(res1a._results, GLMGamResults))

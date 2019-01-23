@@ -360,8 +360,8 @@ def test_multivariate_gam_cv():
     cv = KFold(3)
 
     gp = MultivariateGamPenalty(bsplines, alpha=alphas)
-    gam_cv = MultivariateGAMCV(smoothers=bsplines, alphas=alphas, gam=GLMGam,
-                               cost=cost, y=y, cv=cv)
+    gam_cv = MultivariateGAMCV(smoother=bsplines, alphas=alphas, gam=GLMGam,
+                               cost=cost, endog=y, cv_iterator=cv)
     gam_cv_res = gam_cv.fit()
 
 
@@ -390,9 +390,10 @@ def test_multivariate_gam_cv_path():
     k = 3
     cv = KFold(k_folds=k, shuffle=True)
 
-    # TODO: penal=?
-    gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam,
-                                   cost=sample_metric, y=y, cv=cv)
+    # Note: kfold cv uses random shuffle
+    np.random.seed(123)
+    gam_cv = MultivariateGAMCVPath(smoother=bsplines, alphas=alphas, gam=gam,
+                                   cost=sample_metric, endog=y, cv_iterator=cv)
     gam_cv_res = gam_cv.fit()
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
@@ -406,9 +407,14 @@ def test_multivariate_gam_cv_path():
     # plt.legend()
     # plt.show()
 
-    # The test is done with the result obtained with GCV and not KFOLDS CV.
+    # The test compares to result obtained with GCV and not KFOLDS CV.
     # This is because MGCV does not support KFOLD CV
     assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
+
+    # Note: kfold cv uses random shuffle
+    np.random.seed(123)
+    alpha_cv, res_cv = glm_gam.select_penweight_kfold(alphas=alphas, k_folds=3)
+    assert_allclose(alpha_cv, gam_cv.alpha_cv, rtol=1e-12)
 
 
 def test_train_test_smoothers():

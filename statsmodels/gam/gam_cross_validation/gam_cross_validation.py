@@ -28,11 +28,13 @@ class BaseCV(with_metaclass(ABCMeta)):
     (e.g. GamCV, LassoCV,...)
     """
 
-    def __init__(self, cv, x, y):
-        self.cv = cv
-        self.x = x
-        self.y = y
-        self.train_test_cv_indices = self.cv.split(self.x, self.y, label=None)
+    def __init__(self, cv_iterator, endog, exog):
+        self.cv_iterator = cv_iterator
+        self.exog = exog
+        self.endog = endog
+        self.train_test_cv_indices = self.cv_iterator.split(self.exog,
+                                                            self.endog,
+                                                            label=None)
 
     def fit(self, **kwargs):
         # kwargs are the input values for the fit method of the
@@ -52,10 +54,15 @@ class BaseCV(with_metaclass(ABCMeta)):
         pass
 
 
-def _split_train_test_smoothers(x, smoothers, train_index, test_index):
+def _split_train_test_smoothers(x, smoother, train_index, test_index):
+    """split smoothers in test and train sets and create GenericSmoothers
+
+    Note: this does not take exog_linear into account
+
+    """
     train_smoothers = []
     test_smoothers = []
-    for i, smoother in enumerate(smoothers.smoothers):
+    for i, smoother in enumerate(smoother.smoothers):
         train_basis = smoother.basis[train_index]
         train_der_basis = smoother.der_basis[train_index]
         train_der2_basis = smoother.der2_basis[train_index]
@@ -87,27 +94,29 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
 
 class MultivariateGAMCV(BaseCV):
-    def __init__(self, smoothers, alphas, gam, cost, y, cv):
+    def __init__(self, smoother, alphas, gam, cost, endog, cv_iterator):
         self.cost = cost
         self.gam = gam
-        self.smoothers = smoothers
+        self.smoother = smoother
         self.alphas = alphas
-        self.cv = cv
-        super(MultivariateGAMCV, self).__init__(cv, self.smoothers.basis, y)
+        self.cv_iterator = cv_iterator
+        super(MultivariateGAMCV, self).__init__(cv_iterator,
+                                                endog,
+                                                self.smoother.basis)
 
     def _error(self, train_index, test_index, **kwargs):
-        full_basis_train = self.smoothers.basis[train_index]
-        train_smoothers, test_smoothers = _split_train_test_smoothers(
-            self.smoothers.x, self.smoothers, train_index, test_index)
+        full_basis_train = self.smoother.basis[train_index]
+        train_smoother, test_smoother = _split_train_test_smoothers(
+            self.smoother.x, self.smoother, train_index, test_index)
 
-        y_train = self.y[train_index]
-        y_test = self.y[test_index]
+        endog_train = self.endog[train_index]
+        endog_test = self.endog[test_index]
 
-        gam = self.gam(y_train, smoother=train_smoothers, alpha=self.alphas)
+        gam = self.gam(endog_train, smoother=train_smoother, alpha=self.alphas)
         gam_res = gam.fit(**kwargs)
-        y_est = gam_res.predict(test_smoothers.basis, transform=False)
+        endog_est = gam_res.predict(test_smoother.basis, transform=False)
 
-        return self.cost(y_test, y_est)
+        return self.cost(endog_test, endog_est)
 
 
 class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
@@ -148,28 +157,42 @@ class MultivariateGAMCVPath(object):
 
     Warning: The API of this class is preliminary and will change.
 
+    Parameters
+    ----------
+    smoother : additive smoother instance
+    alphas : list of iteratables
+        list of alpha for smooths. The product space will be used as alpha grid
+        for cross-validation
+    gam : model class
+        model class for creating a model with k-fole training data
+    cost : function
+        cost function for the prediction error
+    endog : array
+        dependent (response) variable of the model
+    cv_iterator : instance of cross-validation iterator
+
     """
 
-    def __init__(self, smoothers, alphas, gam, cost, y, cv):
+    def __init__(self, smoother, alphas, gam, cost, endog, cv_iterator):
         self.cost = cost
-        self.smoothers = smoothers
+        self.smoother = smoother
         self.gam = gam
         self.alphas = alphas
         self.alphas_grid = list(itertools.product(*self.alphas))
-        self.y = y
-        self.cv = cv
+        self.endog = endog
+        self.cv_iterator = cv_iterator
         self.cv_error = np.zeros(shape=(len(self.alphas_grid, )))
         self.cv_std = np.zeros(shape=(len(self.alphas_grid, )))
         self.alpha_cv = None
 
     def fit(self, **kwargs):
         for i, alphas_i in enumerate(self.alphas_grid):
-            gam_cv = MultivariateGAMCV(smoothers=self.smoothers,
+            gam_cv = MultivariateGAMCV(smoother=self.smoother,
                                        alphas=alphas_i,
                                        gam=self.gam,
                                        cost=self.cost,
-                                       y=self.y,
-                                       cv=self.cv)
+                                       endog=self.endog,
+                                       cv_iterator=self.cv_iterator)
             cv_err = gam_cv.fit(**kwargs)
             self.cv_error[i] = cv_err.mean()
             self.cv_std[i] = cv_err.std()
