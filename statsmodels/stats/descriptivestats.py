@@ -312,7 +312,7 @@ class Describe(object):
     #def sign_test_p(samp,mu0=0):
         #return self.sign_test(samp,mu0)[1]
 
-class DescrStats(object):
+class DescrStats:
     '''descriptive statistics for data.
 
     Parameters
@@ -341,7 +341,7 @@ class DescrStats(object):
             self.data = data
         # select only numerics
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        self.data = self.data.select_dtypes(include=numerics)
+        self.data = self.data.select_dtypes(include=numerics).astype('float64')
 
     @OneTimeProperty
     def nobs(self):
@@ -365,12 +365,15 @@ class DescrStats(object):
 
     def percentiles(self):
         '''return percentile for a given percent'''
-        perdict = dict(('perc_%02d' % per, self.data.quantile(per/100)) for per in
-                       [1, 5, 10, 25, 50, 75, 90, 95, 99])
+        _data = self.data.dropna()
+        perdict = dict(('perc_%02d' % per,
+                        _data.apply(lambda x: np.percentile(x, per)))
+                        for per in [1, 5, 10, 25, 50, 75, 90, 95, 99])
 
-        perdicts = pd.concat([per for per in perdict.values()],
-                                keys=list(perdict.keys()),
-                                axis=1).T.round(3)
+        perdicts = pd.concat(objs=[per for per in perdict.values()],
+                             keys=list(perdict.keys()),
+                             axis=1).T.round(3)
+
         if self.data.columns.dtype is not np.dtype(np.object):
             perdicts.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
         return perdicts
@@ -390,14 +393,14 @@ class DescrStats(object):
         '''
         #TODO: Add support for all and list of stats
         if stats == 'basic':
-            stats = ['nobs', 'mean', 'std', 'var']
+            _stats = ['nobs', 'mean', 'std', 'var']
             nobs = self.nobs
             mean = self.mean
             std = self.std
             var = self.var
             per = self.percentiles()
 
-        df = pd.concat([nobs, mean, std, var], keys=stats, axis=1).T.round(3)
+        df = pd.concat([nobs, mean, std, var], keys=_stats, axis=1).T.round(3)
         if self.data.columns.dtype is not np.dtype(np.object):
             df.rename(columns=lambda x: 'Col ' + str(x), inplace=True)
         summary_frame = pd.concat([df, per])
