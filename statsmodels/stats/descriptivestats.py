@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from collections import OrderedDict
 from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest, OneTimeProperty
@@ -366,7 +367,7 @@ class DescrStats:
     def percentiles(self):
         '''return percentile for a given percent'''
         _data = self.data.dropna()
-        perdict = dict(('perc_%02d' % per,
+        perdict = OrderedDict(('perc_%02d' % per,
                         _data.apply(lambda x: np.percentile(x, per)))
                         for per in [1, 5, 10, 25, 50, 75, 90, 95, 99])
 
