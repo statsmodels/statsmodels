@@ -642,7 +642,6 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         else:
             self.include_intercept = include_intercept
 
-
         if variable_names is None:
             if data_names is not None:
                 self.variable_names = data_names
@@ -724,7 +723,6 @@ class BSplines(AdditiveGamSmoother):
 
         super(BSplines, self).__init__(x, include_intercept=include_intercept,
                                        variable_names=variable_names)
-
 
     def _make_smoothers_list(self):
         smoothers = []

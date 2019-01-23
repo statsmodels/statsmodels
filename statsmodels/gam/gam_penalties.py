@@ -179,15 +179,15 @@ class MultivariateGamPenalty(Penalty):
 
         # TODO: Review this,
         if weights is None:
-            # weights should hanve total length as params
-            # but it can also be scalar in individual
+            # weights should have total length as params
+            # but it can also be scalar in individual component
             self.weights = [1. for _ in range(self.k_variables)]
         else:
             import warnings
             warnings.warn('weights is currently ignored')
             self.weights = weights
 
-        self.mask = [np.array([False] * self.k_params)
+        self.mask = [np.zeros(self.k_params, dtype=np.bool_)
                      for _ in range(self.k_variables)]
         param_count = start_idx
         for i, smoother in enumerate(self.multivariate_smoother.smoothers):
