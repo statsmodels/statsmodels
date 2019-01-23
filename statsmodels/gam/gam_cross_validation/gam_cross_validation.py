@@ -47,7 +47,8 @@ class BaseCV(with_metaclass(ABCMeta)):
 
     @abstractmethod
     def _error(self, train_index, test_index, **kwargs):
-        # train the model on the train set and returns the error on the test set
+        # train the model on the train set
+        #   and returns the error on the test set
         pass
 
 
@@ -59,7 +60,7 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
         train_der_basis = smoother.der_basis[train_index]
         train_der2_basis = smoother.der2_basis[train_index]
         train_cov_der2 = smoother.cov_der2
-        # TODO: Double check this part. cov_der2 is calculated with all the data
+        # TODO: Double check this part. cov_der2 is calculated with all data
         train_x = smoother.x[train_index]
 
         train_smoothers.append(UnivariateGenericSmoother(train_x, train_basis,
@@ -70,7 +71,7 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
         test_der_basis = smoother.der_basis[test_index]
         test_der2_basis = smoother.der2_basis[test_index]
         test_cov_der2 = smoother.cov_der2
-        # TODO: Double check this part. cov_der2 is calculated with all the data
+        # TODO: Double check this part. cov_der2 is calculated with all data
         test_x = smoother.x[test_index]
 
         test_smoothers.append(UnivariateGenericSmoother(test_x, test_basis,
@@ -87,7 +88,6 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
 class MultivariateGAMCV(BaseCV):
     def __init__(self, smoothers, alphas, gam, cost, y, cv):
-        # the gam class has already an instance
         self.cost = cost
         self.gam = gam
         self.smoothers = smoothers
@@ -113,7 +113,10 @@ class MultivariateGAMCV(BaseCV):
 class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     """
     Base class for cross validation over a grid of parameters.
+
     The best parameter is saved in alpha_cv
+
+    This class is currently not used
     """
 
     def __init__(self, alphas):
@@ -141,6 +144,11 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
 
 
 class MultivariateGAMCVPath(object):
+    """k-fold cross-validation for GAM
+
+    Warning: The API of this class is preliminary and will change.
+
+    """
 
     def __init__(self, smoothers, alphas, gam, cost, y, cv):
         self.cost = cost

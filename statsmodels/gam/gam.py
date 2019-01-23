@@ -15,6 +15,8 @@ import numpy as np
 from scipy import optimize
 import pandas as pd
 
+import statsmodels.base.wrapper as wrap
+
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
     GLMResultsWrapper, _check_convergence)
@@ -24,13 +26,13 @@ from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
                                              ValueWarning)
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-
-import statsmodels.base.wrapper as wrap
-
+from statsmodels.tools.linalg import matrix_sqrt
 
 from statsmodels.base._penalized import PenalizedMixin
 from statsmodels.gam.gam_penalties import MultivariateGamPenalty
-from statsmodels.tools.linalg import matrix_sqrt
+from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
+    MultivariateGAMCVPath)
+from statsmodels.gam.gam_cross_validation.cross_validators import KFold
 
 
 def _transform_predict_exog(model, exog, design_info=None):
@@ -214,7 +216,8 @@ class GLMGamResults(GLMResults):
         else:
             return predict_results
 
-    def get_prediction(self, exog=None, exog_smooth=None, transform=True, **kwargs):
+    def get_prediction(self, exog=None, exog_smooth=None, transform=True,
+                       **kwargs):
         """compute prediction results
 
         Parameters
@@ -234,8 +237,9 @@ class GLMGamResults(GLMResults):
         -------
         prediction_results : generalized_linear_model.PredictionResults
             The prediction results instance contains prediction and prediction
-            variance and can on demand calculate confidence intervals and summary
-            tables for the prediction of the mean and of new observations.
+            variance and can on demand calculate confidence intervals and
+            summary tables for the prediction of the mean and of new
+            observations.
 
         """
         ex, exog_index = self._tranform_predict_exog(exog=exog,
@@ -445,6 +449,7 @@ class GLMGamResults(GLMResults):
 class GLMGamResultsWrapper(GLMResultsWrapper):
     pass
 
+
 wrap.populate_wrapper(GLMGamResultsWrapper, GLMGamResults)
 
 
@@ -535,7 +540,7 @@ class GLMGam(PenalizedMixin, GLM):
         xnames = xnames_linear + self.smoother.col_names
 
         if is_pandas and exog_linear is not None:
-            # we a dataframe so we can get a PandasData instance fro wrapping
+            # we a dataframe so we can get a PandasData instance for wrapping
             exog = pd.DataFrame(exog, index=self.data_linear.row_labels,
                                 columns=xnames)
 
@@ -548,8 +553,8 @@ class GLMGam(PenalizedMixin, GLM):
             self.exog_names[:] = xnames
 
         # TODO: the generic data handling might attach the design_info from the
-        #       linear part, but this is incorrect for the full model and causes
-        #       problems in wald_test_terms
+        #       linear part, but this is incorrect for the full model and
+        #       causes problems in wald_test_terms
 
         if hasattr(self.data, 'design_info'):
             del self.data.design_info
@@ -616,7 +621,8 @@ class GLMGam(PenalizedMixin, GLM):
         else:
             if max_start_irls > 0 and (start_params is None):
                 res = self._fit_pirls(self.alpha, start_params=start_params,
-                                      maxiter=max_start_irls, tol=tol, scale=scale,
+                                      maxiter=max_start_irls, tol=tol,
+                                      scale=scale,
                                       cov_type=cov_type, cov_kwds=cov_kwds,
                                       use_t=use_t, **kwargs)
                 start_params = res.params
@@ -642,7 +648,6 @@ class GLMGam(PenalizedMixin, GLM):
         # alpha = alpha * len(y) * self.scale / 100
         # TODO: we need to rescale alpha
         endog = self.endog
-        k_exog_linear = self.k_exog_linear
         wlsexog = self.exog  # smoother.basis
         spl_s = self.penal.penalty_matrix(alpha=alpha)
 

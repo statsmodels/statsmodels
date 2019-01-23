@@ -547,7 +547,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res2 = self.res2
         # this uses transform also for exog_linear
         # predicted = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4])
-        predicted = res1.predict(df_autos.iloc[2:4], res1.model.smoother.x[2:4])
+        predicted = res1.predict(df_autos.iloc[2:4],
+                                 res1.model.smoother.x[2:4])
         assert_allclose(predicted, res1.fittedvalues[2:4],
                         rtol=1e-13)
         assert_allclose(predicted, res2.fitted_values[2:4],
