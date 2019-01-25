@@ -361,7 +361,7 @@ def test_multivariate_gam_cv():
 
     gp = MultivariateGamPenalty(bsplines, alpha=alphas)
     gam_cv = MultivariateGAMCV(smoother=bsplines, alphas=alphas, gam=GLMGam,
-                               cost=cost, endog=y, cv_iterator=cv)
+                               cost=cost, endog=y, exog=None, cv_iterator=cv)
     gam_cv_res = gam_cv.fit()
 
 
@@ -393,7 +393,8 @@ def test_multivariate_gam_cv_path():
     # Note: kfold cv uses random shuffle
     np.random.seed(123)
     gam_cv = MultivariateGAMCVPath(smoother=bsplines, alphas=alphas, gam=gam,
-                                   cost=sample_metric, endog=y, cv_iterator=cv)
+                                   cost=sample_metric, endog=y, exog=None,
+                                   cv_iterator=cv)
     gam_cv_res = gam_cv.fit()
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)

@@ -160,7 +160,15 @@ class GLMGamResults(GLMResults):
         """
         exog_index = None
         if transform is False:
-            ex = exog
+            # the following allows that either or both exog are not None
+            if exog_smooth is None:
+                # exog could be None or array
+                ex = exog
+            else:
+                if exog is None:
+                    ex = exog_smooth
+                else:
+                    ex = np.column_stack((exog, exog_smooth))
         else:
             # transform exog_linear if needed
             if exog is not None and hasattr(self.model, 'design_info_linear'):
@@ -191,7 +199,7 @@ class GLMGamResults(GLMResults):
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
-            term will be constructed from the provided ``x``.
+            term will be constructed from the provided ``exog``.
         kwargs :
             Some models can take additional arguments or keywords, see the
             predict method of the model for the details.
@@ -520,6 +528,9 @@ class GLMGam(PenalizedMixin, GLM):
             exog_linear = None
             k_exog_linear = 0
         self.k_exog_linear = k_exog_linear
+        # We need exog_linear for k-fold cross validation
+        # TODO: alternative is to take columns from combined exog
+        self.exog_linear = exog_linear
 
         self.smoother = smoother
         self.k_smooths = smoother.k_variables
@@ -795,6 +806,8 @@ class GLMGam(PenalizedMixin, GLM):
 
         if start_params is None:
             start_params = np.zeros(self.k_smooths)
+        else:
+            start_params = np.log(1e-20 + start_params)
 
         history = {}
         history['alpha'] = []
@@ -833,7 +846,7 @@ class GLMGam(PenalizedMixin, GLM):
         return alpha, fit_res, history
 
     def select_penweight_kfold(self, alphas=None, cv_iterator=None, cost=None,
-                               k_folds=5):
+                               k_folds=5, k_grid=11):
         """find alphas by k-fold cross-validation
 
         Warning: This estimates ``k_folds`` models for each point in the
@@ -863,26 +876,23 @@ class GLMGam(PenalizedMixin, GLM):
         Notes
         -----
         The default alphas are defined as
-        ``alphas = [np.logspace(0, 7, 11) for _ in range(k_smooths)]``
+        ``alphas = [np.logspace(0, 7, k_grid) for _ in range(k_smooths)]``
 
         """
-
-        if self.k_exog_linear > 0:
-            raise NotImplementedError('linear component in exog are not yet'
-                                      ' supported for k-fold cross-validation')
 
         if cost is None:
             def cost(x1, x2):
                 return np.linalg.norm(x1 - x2) / len(x1)
 
         if alphas is None:
-            alphas = [np.logspace(0, 7, 11) for _ in range(self.k_smooths)]
+            alphas = [np.logspace(0, 7, k_grid) for _ in range(self.k_smooths)]
 
         if cv_iterator is None:
             cv_iterator = KFold(k_folds=k_folds, shuffle=True)
 
         gam_cv = MultivariateGAMCVPath(smoother=self.smoother, alphas=alphas,
                                        gam=GLMGam, cost=cost, endog=self.endog,
+                                       exog=self.exog_linear,
                                        cv_iterator=cv_iterator)
         gam_cv_res = gam_cv.fit()
 

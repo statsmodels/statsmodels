@@ -32,6 +32,7 @@ class BaseCV(with_metaclass(ABCMeta)):
         self.cv_iterator = cv_iterator
         self.exog = exog
         self.endog = endog
+        # TODO: cv_iterator.split only needs nobs from endog or exog
         self.train_test_cv_indices = self.cv_iterator.split(self.exog,
                                                             self.endog,
                                                             label=None)
@@ -62,7 +63,7 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
     """
     train_smoothers = []
     test_smoothers = []
-    for i, smoother in enumerate(smoother.smoothers):
+    for smoother in smoother.smoothers:
         train_basis = smoother.basis[train_index]
         train_der_basis = smoother.der_basis[train_index]
         train_der2_basis = smoother.der2_basis[train_index]
@@ -94,14 +95,18 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
 
 
 class MultivariateGAMCV(BaseCV):
-    def __init__(self, smoother, alphas, gam, cost, endog, cv_iterator):
+    def __init__(self, smoother, alphas, gam, cost, endog, exog, cv_iterator):
         self.cost = cost
         self.gam = gam
         self.smoother = smoother
+        self.exog_linear = exog
         self.alphas = alphas
         self.cv_iterator = cv_iterator
+        # TODO: super does not do anything with endog, exog, except get nobs
+        # refactor to clean up what where `exog` and `exog_linear` is attached
         super(MultivariateGAMCV, self).__init__(cv_iterator,
                                                 endog,
+                                                # exog,  # not used in super
                                                 self.smoother.basis)
 
     def _error(self, train_index, test_index, **kwargs):
@@ -111,10 +116,20 @@ class MultivariateGAMCV(BaseCV):
 
         endog_train = self.endog[train_index]
         endog_test = self.endog[test_index]
+        if self.exog_linear is not None:
+            exog_linear_train = self.exog_linear[train_index]
+            exog_linear_test = self.exog_linear[test_index]
+        else:
+            exog_linear_train = None
+            exog_linear_test = None
 
-        gam = self.gam(endog_train, smoother=train_smoother, alpha=self.alphas)
+        gam = self.gam(endog_train, exog=exog_linear_train,
+                       smoother=train_smoother, alpha=self.alphas)
         gam_res = gam.fit(**kwargs)
-        endog_est = gam_res.predict(test_smoother.basis, transform=False)
+        # exog_linear_test and test_smoother.basis will be column_stacked
+        #     but not transformed in predict
+        endog_est = gam_res.predict(exog_linear_test, test_smoother.basis,
+                                    transform=False)
 
         return self.cost(endog_test, endog_est)
 
@@ -161,8 +176,8 @@ class MultivariateGAMCVPath(object):
     ----------
     smoother : additive smoother instance
     alphas : list of iteratables
-        list of alpha for smooths. The product space will be used as alpha grid
-        for cross-validation
+        list of alpha for smooths. The product space will be used as alpha
+        grid for cross-validation
     gam : model class
         model class for creating a model with k-fole training data
     cost : function
@@ -173,13 +188,14 @@ class MultivariateGAMCVPath(object):
 
     """
 
-    def __init__(self, smoother, alphas, gam, cost, endog, cv_iterator):
+    def __init__(self, smoother, alphas, gam, cost, endog, exog, cv_iterator):
         self.cost = cost
         self.smoother = smoother
         self.gam = gam
         self.alphas = alphas
         self.alphas_grid = list(itertools.product(*self.alphas))
         self.endog = endog
+        self.exog = exog
         self.cv_iterator = cv_iterator
         self.cv_error = np.zeros(shape=(len(self.alphas_grid, )))
         self.cv_std = np.zeros(shape=(len(self.alphas_grid, )))
@@ -192,6 +208,7 @@ class MultivariateGAMCVPath(object):
                                        gam=self.gam,
                                        cost=self.cost,
                                        endog=self.endog,
+                                       exog=self.exog,
                                        cv_iterator=self.cv_iterator)
             cv_err = gam_cv.fit(**kwargs)
             self.cv_error[i] = cv_err.mean()
