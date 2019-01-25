@@ -486,6 +486,17 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_allclose(predicted, res2.fitted_values[2:4],
                         rtol=self.rtol_fitted)
 
+    def test_crossval(self):
+        mod = self.res1.model
+        alpha_aic = mod.select_penweight()[0]
+        # regression number, but in the right ball park
+        assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
+
+        np.random.seed(987125)
+        alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6)
+        # regression number, but in the right ball park
+        assert_allclose(alpha_cv, [10000000.0, 630.957344480193], rtol=1e-5)
+
 
 class TestGAMMPGBSPoisson(CheckGAMMixin):
     # This has matching results from mgcv
