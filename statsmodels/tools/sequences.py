@@ -105,6 +105,106 @@ def update_discrepancy(x_new, sample, initial_disc, bounds=None):
     return initial_disc + disc1 + disc2 + disc3
 
 
+def perturb_discrepancy(sample, i1, i2, k, disc, bounds=None):
+    """Centered discrepancy after and elementary perturbation on a LHS.
+
+    An elementary perturbation consists of an exchange of coordinates between
+    two points: ``sample[i1, k] <-> sample[i2, k]``. By construction,
+    this operation conserves the LHS properties.
+
+    Parameters
+    ----------
+    sample : array_like (n_samples, k_vars)
+        The sample (before permutation) to compute the discrepancy from.
+    i1 : int
+        The first line of the elementary permutation.
+    i2 : int
+        The second line of the elementary permutation.
+    k : int
+        The column of the elementary permutation.
+    disc : float
+        Centered discrepancy of the design before permutation.
+    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
+        Desired range of transformed data. The transformation apply the bounds
+        on the sample and not the theoretical space, unit cube. Thus min and
+        max values of the sample will coincide with the bounds.
+
+    Returns
+    -------
+    discrepancy : float
+        Centered discrepancy.
+
+    References
+    ----------
+    [1] Jin et al. "An efficient algorithm for constructing optimal design
+        of computer experiments", Journal of Statistical Planning and
+        Inference, 2005.
+
+    """
+    sample = np.asarray(sample)
+    n_samples = sample.shape[0]
+
+    # Sample scaling from bounds to unit hypercube
+    if bounds is not None:
+        min_ = bounds.min(axis=0)
+        max_ = bounds.max(axis=0)
+        sample = (sample - min_) / (max_ - min_)
+
+    z_ij = sample - 0.5
+
+    # Eq (19)
+    c_i1j = 1. / n_samples ** 2. * np.prod(0.5 * (2. + abs(z_ij[i1, :]) + \
+        abs(z_ij) - abs(z_ij[i1, :] - z_ij)), axis=1)
+    c_i2j = 1. / n_samples ** 2. * np.prod(0.5 * (2. + abs(z_ij[i2, :]) + \
+        abs(z_ij) - abs(z_ij[i2, :] - z_ij)), axis=1)
+
+    # Eq (20)
+    c_i1i1 = (1. / n_samples ** 2 * np.prod(1 + abs(z_ij[i1, :])) -
+              2. / n_samples * np.prod(1. + 0.5 * abs(z_ij[i1, :]) -
+                                       0.5 * z_ij[i1, :] ** 2))
+    c_i2i2 = (1. / n_samples ** 2 * np.prod(1 + abs(z_ij[i2, :])) -
+              2. / n_samples * np.prod(1. + 0.5 * abs(z_ij[i2, :]) -
+                                       0.5 * z_ij[i2, :] ** 2))
+
+    # Eq (22), typo in the article in the denominator i2 -> i1
+    num = (2 + abs(z_ij[i2, k]) + abs(z_ij[:, k]) -
+           abs(z_ij[i2, k] - z_ij[:, k]))
+    denum = (2 + abs(z_ij[i1, k]) + abs(z_ij[:, k]) -
+             abs(z_ij[i1, k] - z_ij[:, k]))
+    gamma = num / denum
+
+    # Eq (23)
+    c_p_i1j = gamma * c_i1j
+    # Eq (24)
+    c_p_i2j = c_i2j / gamma
+
+    alpha = (1 + abs(z_ij[i2, k])) / (1 + abs(z_ij[i1, k]))
+    beta = (2 - abs(z_ij[i2, k])) / (2 - abs(z_ij[i1, k]))
+
+    g_i1 = np.prod(1. + abs(z_ij[i1, :]))
+    g_i2 = np.prod(1. + abs(z_ij[i2, :]))
+    h_i1 = np.prod(1. + 0.5 * abs(z_ij[i1, :]) - 0.5 * (z_ij[i1, :] ** 2))
+    h_i2 = np.prod(1. + 0.5 * abs(z_ij[i2, :]) - 0.5 * (z_ij[i2, :] ** 2))
+
+    # Eq (25), typo in the article g is missing
+    c_p_i1i1 = ((g_i1 * alpha) / (n_samples ** 2) -
+                2. * alpha * beta * h_i1 / n_samples)
+    # Eq (26), typo in the article n ** 2
+    c_p_i2i2 = ((g_i2 / ((n_samples ** 2) * alpha)) -
+                (2. * h_i2 / (n_samples * alpha * beta)))
+
+    # Eq (26)
+    sum_ = c_p_i1j - c_i1j + c_p_i2j - c_i2j
+
+    mask = np.ones(n_samples, dtype=bool)
+    mask[[i1, i2]] = False
+    sum_ = sum(sum_[mask])
+
+    disc_ep = (disc + c_p_i1i1 - c_i1i1 + c_p_i2i2 - c_i2i2 + 2 * sum_)
+
+    return disc_ep
+
+
 def primes_from_2_to(n):
     """Prime numbers from 2 to *n*.
 

@@ -48,7 +48,8 @@ def test_optimal_design():
     np.random.seed(123456)
 
     start_design = latin.orthogonal_latin_hypercube(2, 5)
-    sample = latin.optimal_design(dim=2, n_samples=5, start_design=start_design)
+    sample = latin.optimal_design(dim=2, n_samples=5,
+                                  start_design=start_design)
     out = np.array([[0.025, 0.223], [0.779, 0.677], [0.452, 0.043],
                     [0.393, 0.992], [0.875, 0.416]])
     assert_almost_equal(sample, out, decimal=1)
@@ -73,4 +74,3 @@ def test_optimal_design():
     out = np.array([[1.052, 4.218], [2.477, 2.987], [7.616, 4.527],
                     [9.134, 3.393], [4.064, 2.430]])
     assert_almost_equal(sample, out, decimal=1)
-

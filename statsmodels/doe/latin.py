@@ -8,7 +8,9 @@ try:
     have_basinhopping = True
 except ImportError:
     have_basinhopping = False
-from statsmodels.tools.sequences import discrepancy
+from statsmodels.tools.sequences import discrepancy, perturb_discrepancy
+
+global best_doe, best_disc
 
 
 def orthogonal_latin_hypercube(dim, n_samples, bounds=None):
@@ -42,7 +44,7 @@ def orthogonal_latin_hypercube(dim, n_samples, bounds=None):
     sample = []
     step = 1.0 / n_samples
 
-    for i in range(dim):
+    for _ in range(dim):
         # Enforce a unique point per grid
         j = np.arange(n_samples) * step
         temp = j + np.random.uniform(low=0, high=step, size=n_samples)
@@ -161,10 +163,12 @@ def optimal_design(dim, n_samples, bounds=None, start_design=None, niter=1,
     best_disc = np.inf
 
     if (bounds is None) and (best_doe is not None):
-            bounds = np.array([best_doe.min(axis=0), best_doe.max(axis=0)])
+        bounds = np.array([best_doe.min(axis=0), best_doe.max(axis=0)])
     if optimization:
         if best_doe is None:
             best_doe = orthogonal_latin_hypercube(dim, n_samples, bounds)
+
+        best_disc = discrepancy(best_doe, bounds)
 
         def _perturb_best_doe(x, bounds):
             """Perturbe the DoE and keep track of the best DoE.
@@ -194,7 +198,8 @@ def optimal_design(dim, n_samples, bounds=None, start_design=None, niter=1,
             col, row_1, row_2 = np.round(x).astype(int)
             doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
 
-            disc = discrepancy(doe, bounds)
+            disc = perturb_discrepancy(best_doe, row_1, row_2, col,
+                                       best_disc, bounds)
 
             if disc < best_disc:
                 best_disc = disc
@@ -206,24 +211,26 @@ def optimal_design(dim, n_samples, bounds=None, start_design=None, niter=1,
         complexity = dim * n_samples ** 2
 
         if have_basinhopping and ((complexity > 1e6) or force):
-            bounds_optim = ([0, dim - 1], [0, n_samples - 1], [0, n_samples - 1])
+            bounds_optim = ([0, dim - 1],
+                            [0, n_samples - 1],
+                            [0, n_samples - 1])
         else:
             bounds_optim = (slice(0, dim - 1, 1), slice(0, n_samples - 1, 1),
                             slice(0, n_samples - 1, 1))
 
-        for n in range(niter):
+        for _ in range(niter):
             if have_basinhopping and ((complexity > 1e6) or force):
                 minimizer_kwargs = {"method": "L-BFGS-B",
                                     "bounds": bounds_optim,
                                     "args": (bounds,)}
-                basinhopping(_perturb_best_doe, [0, 0, 0], niter=100,
-                             minimizer_kwargs=minimizer_kwargs).x
+                _ = basinhopping(_perturb_best_doe, [0, 0, 0], niter=100,
+                                 minimizer_kwargs=minimizer_kwargs)
             else:
-                brute(_perturb_best_doe, ranges=bounds_optim,
-                      finish=None, args=(bounds,))
+                _ = brute(_perturb_best_doe, ranges=bounds_optim,
+                          finish=None, args=(bounds,))
 
     else:
-        for n in range(niter):
+        for _ in range(niter):
             doe = orthogonal_latin_hypercube(dim, n_samples, bounds)
             disc = discrepancy(doe, bounds)
             if disc < best_disc:

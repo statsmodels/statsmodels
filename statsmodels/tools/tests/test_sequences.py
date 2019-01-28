@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import numpy.testing as npt
 from statsmodels.tools import sequences
@@ -27,6 +28,23 @@ def test_update_discrepancy():
                                              disc_init, bounds=corners)
 
     npt.assert_allclose(disc_iter, 0.0081, atol=1e-4)
+
+
+def test_perm_discrepancy():
+    doe_init = np.array([[1, 3], [2, 6], [3, 2], [4, 5], [5, 1], [6, 4]])
+    corners = np.array([[0.5, 0.5], [6.5, 6.5]])
+    disc_init = sequences.discrepancy(doe_init, corners)
+
+    row_1, row_2, col = 5, 2, 1
+
+    doe = copy.deepcopy(doe_init)
+    doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
+
+    disc_valid = sequences.discrepancy(doe, corners)
+    disc_perm = sequences.perturb_discrepancy(doe_init, row_1, row_2, col,
+                                              disc_init, corners)
+
+    npt.assert_allclose(disc_valid, disc_perm)
 
 
 def test_van_der_corput():
