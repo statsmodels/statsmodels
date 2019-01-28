@@ -458,6 +458,9 @@ class TestGAMMPGBS(CheckGAMMixin):
         cls.rtol_fitted = 1e-8
         cls.covp_corrfact = 1  # not needed
 
+        # for checking that alpha model attribute is unchanged, same as alpha0
+        cls.alpha = [169947.78222669504, 26767.58046340008]
+
     @classmethod
     def _init(cls):
         pass
@@ -487,15 +490,32 @@ class TestGAMMPGBS(CheckGAMMixin):
                         rtol=self.rtol_fitted)
 
     def test_crossval(self):
+        # includes some checks that penalization in the model is unchanged
         mod = self.res1.model
+        assert_equal(mod.alpha, self.alpha)  # assert unchanged
+        assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
+
         alpha_aic = mod.select_penweight()[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
+        assert_equal(mod.alpha, self.alpha)  # assert unchanged
+        assert_equal(mod.penal.start_idx, 4)
+        pm = mod.penal.penalty_matrix()
+        assert_equal(pm[:, :4], 0)
+        assert_equal(pm[:4, :], 0)
+        assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
+
 
         np.random.seed(987125)
         alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6)
         # regression number, but in the right ball park
         assert_allclose(alpha_cv, [10000000.0, 630.957344480193], rtol=1e-5)
+        assert_equal(mod.alpha, self.alpha)  # assert unchanged
+        assert_equal(mod.penal.start_idx, 4)
+        pm = mod.penal.penalty_matrix()
+        assert_equal(pm[:, :4], 0)
+        assert_equal(pm[:4, :], 0)
+        assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
 
 class TestGAMMPGBSPoisson(CheckGAMMixin):

@@ -10,6 +10,7 @@ created on 08/07/2015
 
 from __future__ import division
 import collections
+import copy  # check if needed when dropping python 2.7
 
 import numpy as np
 from scipy import optimize
@@ -417,7 +418,8 @@ class GLMGamResults(GLMResults):
             The diagonal of the hat matrix computed from the observed
             or expected hessian.
         """
-        weights = self.model.hessian_factor(self.params, observed=observed)
+        weights = self.model.hessian_factor(self.params, scale=self.scale,
+                                            observed=observed)
         wexog = np.sqrt(weights)[:, None] * self.model.exog
 
         # we can use inverse hessian directly instead of computing it from
@@ -655,6 +657,11 @@ class GLMGam(PenalizedMixin, GLM):
         """fit model with penalized reweighted least squares
 
         """
+        # TODO: this currently modifies several attributes
+        # self.scale, self.scaletype, self.mu, self.weights
+        # self.data_weights,
+        # and possibly self._offset_exposure
+        # several of those might not be necessary, e.g. mu and weights
 
         # alpha = alpha * len(y) * self.scale / 100
         # TODO: we need to rescale alpha
@@ -803,6 +810,11 @@ class GLMGam(PenalizedMixin, GLM):
         might also change.
 
         """
+        # copy attributes that are changed, so we can reset them
+        scale_keep = self.scale
+        scaletype_keep = self.scaletype
+        # TODO: use .copy() method when available for all types
+        alpha_keep = copy.copy(self.alpha)
 
         if start_params is None:
             start_params = np.zeros(self.k_smooths)
@@ -843,6 +855,12 @@ class GLMGam(PenalizedMixin, GLM):
         del history['params'][0]  # remove the model start_params
 
         alpha = np.exp(opt)
+
+        # reset attributes that have or might have changed
+        self.scale = scale_keep
+        self.scaletype = scaletype_keep
+        self.alpha = alpha_keep
+
         return alpha, fit_res, history
 
     def select_penweight_kfold(self, alphas=None, cv_iterator=None, cost=None,
