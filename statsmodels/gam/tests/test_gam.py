@@ -169,8 +169,8 @@ def test_gam_glm():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.y.values
 
     df = [10]
     degree = [3]
@@ -202,8 +202,8 @@ def test_gam_discrete():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.ybin.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.ybin.values
 
     df = [10]
     degree = [5]
@@ -303,7 +303,7 @@ def test_multivariate_gam_1d_data():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
+    x = data_from_r.x.values
     y = data_from_r.y
 
     df = [10]
@@ -346,8 +346,8 @@ def test_multivariate_gam_cv():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.y.values
 
     df = [10]
     degree = [5]
@@ -375,8 +375,8 @@ def test_multivariate_gam_cv_path():
     data_from_r = pd.read_csv(file_path)
 
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.y.values
     se_from_mgcv = data_from_r.y_est_se
     y_mgcv = data_from_r.y_mgcv_gcv
 
@@ -512,10 +512,10 @@ def test_cyclic_cubic_splines():
                              "cubic_cyclic_splines_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
 
-    x = data_from_r[['x0', 'x2']].as_matrix()
-    y = data_from_r['y'].as_matrix()
-    y_est_mgcv = data_from_r[['y_est']].as_matrix()
-    s_mgcv = data_from_r[['s(x0)', 's(x2)']].as_matrix()
+    x = data_from_r[['x0', 'x2']].values
+    y = data_from_r['y'].values
+    y_est_mgcv = data_from_r[['y_est']].values
+    s_mgcv = data_from_r[['s(x0)', 's(x2)']].values
 
     dfs = [10, 10]
     ccs = CyclicCubicSplines(x, df=dfs)
@@ -711,8 +711,8 @@ def test_partial_values():
     data_from_r = pd.read_csv(file_path)
 
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.y.values
     se_from_mgcv = data_from_r.y_est_se
     df = [10]
     degree = [6]
@@ -746,8 +746,8 @@ def test_partial_plot():
     data_from_r = pd.read_csv(file_path)
 
     # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
+    x = data_from_r.x.values
+    y = data_from_r.y.values
     se_from_mgcv = data_from_r.y_est_se
     df = [10]
     degree = [6]

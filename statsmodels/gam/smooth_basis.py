@@ -381,7 +381,10 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
             dg = i + 1
             basis[:, i] = self.x ** dg
             der_basis[:, i] = dg * self.x ** (dg - 1)
-            der2_basis[:, i] = dg * (dg - 1) * self.x ** (dg - 2)
+            if dg > 1:
+                der2_basis[:, i] = dg * (dg - 1) * self.x ** (dg - 2)
+            else:
+                der2_basis[:, i] = 0
 
         cov_der2 = np.dot(der2_basis.T, der2_basis)
 
@@ -747,8 +750,8 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             self.variable_names = variable_names
 
         self.smoothers = self._make_smoothers_list()
-        self.basis = np.hstack(smoother.basis
-                               for smoother in self.smoothers)
+        self.basis = np.hstack(list(smoother.basis
+                               for smoother in self.smoothers))
         self.dim_basis = self.basis.shape[1]
         self.penalty_matrices = [smoother.cov_der2
                                  for smoother in self.smoothers]
@@ -785,8 +788,8 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             design matrix for the spline basis for given ``x_new``.
 
         """
-        exog = np.hstack(self.smoothers[i].transform(x_new[:, i])
-                         for i in range(self.k_variables))
+        exog = np.hstack(list(self.smoothers[i].transform(x_new[:, i])
+                         for i in range(self.k_variables)))
         return exog
 
 
