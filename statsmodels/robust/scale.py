@@ -39,6 +39,8 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     mad : float
         `mad` = median(abs(`a` - center))/`c`
     """
+    if a.size == 0:
+        return np.nan
     a = np.asarray(a)
     if callable(center):
         center = np.apply_over_axes(center, a, axis)
