@@ -93,17 +93,16 @@ class GLMGamResults(GLMResults):
     penalization
 
     GLMGamResults inherits from GLMResults
+    All methods related to the loglikelihood function return the penalized
+    values.
 
     Extra Attributes
     ----------------
     edf : list of effective degrees of freedom for each column of the
         design matrix.
-
     hat_matrix_diag : diagonal of hat matrix
-
     gcv : generalized cross-validation criterion computed as
         `gcv = scale / (1. - hat_matrix_trace / self.nobs)**2`
-
     cv : cross-validation criterion computed as
         cv = ((resid_pearson / (1. - hat_matrix_diag))**2).sum() / self.nobs
 
@@ -475,9 +474,12 @@ class GLMGam(PenalizedMixin, GLM):
     Parameters
     ----------
     endog : array_like
-    exog : array_like or None,
-    smoother : instance of additive smoother class
-        required keyword argument
+    exog : array_like or None
+        This explanatory variables are treated as linear. The model in this
+        case is a partial linear model.
+    smoother : instance of additive smoother class such as Bsplines or
+        CyclicCubicSplines
+        This is a required keyword argument
     alpha : list of floats
         penalization weights for smooth terms. The length of the list needs
         to be the same as the number of smooth terms in the ``smoother``
@@ -599,7 +601,7 @@ class GLMGam(PenalizedMixin, GLM):
             alpha = list(alpha)
         return alpha
 
-    def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
+    def fit(self, start_params=None, maxiter=1000, method='pirls', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
         """estimate parameters and create instance of GLMGamResults class
@@ -614,7 +616,7 @@ class GLMGam(PenalizedMixin, GLM):
 
         Returns
         -------
-        res : instance of GLMGamResults
+        res : instance of wrapped GLMGamResults
         """
         # TODO: temporary hack to remove attribute
         # formula also might be attached which in inherited from_formula

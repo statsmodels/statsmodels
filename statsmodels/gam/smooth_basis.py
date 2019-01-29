@@ -127,8 +127,9 @@ def make_bsplines_basis(x, df, degree):
     return basis, der_basis, der2_basis
 
 
-def get_knots_bsplines(x=None, df=None, knots=None, degree=3, spacing='quantile',
-                       lower_bound=None, upper_bound=None, all_knots=None):
+def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
+                       spacing='quantile', lower_bound=None,
+                       upper_bound=None, all_knots=None):
     """knots for use in B-splines
 
     There are two main options for the knot placement
@@ -298,7 +299,7 @@ def make_poly_basis(x, degree, intercept=True):
 # plt.show()
 
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
-    """Base Class for single component smoothers for GAM
+    """Base Class for single smooth component
     """
     def __init__(self, x, constraints=None, variable_name='x'):
         self.x = x
@@ -342,7 +343,7 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
 
 class UnivariateGenericSmoother(UnivariateGamSmoother):
-    """Generic single component smoother for GAM
+    """Generic single smooth component
     """
     def __init__(self, x, basis, der_basis, der2_basis, cov_der2,
                  variable_name='x'):
@@ -359,7 +360,7 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
 
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
-    """polynomial single component smoother for GAM
+    """polynomial single smooth component
     """
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
@@ -388,9 +389,58 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 
 
 class UnivariateBSplines(UnivariateGamSmoother):
-    """B-Spline single component smoother for GAM
+    """B-Spline single smooth component
+
+    This creates and holds the B-Spline basis function for one
+    component.
+
+    Parameters
+    ----------
+    x : array, 1-D
+        underlying explanatory variable for smooth terms.
+    df : int
+        numer of basis functions or degrees of freedom
+    degree : int
+        degree of the spline
+    include_intercept : bool
+        If False, then the basis functions are transformed so that they
+        do not include a constant. This avoids perfect collinearity if
+        a constant or several components are included in the model.
+    constraints : None, string or array
+        Constraints are used to transform the basis functions to satisfy
+        those constraints.
+        `constraints = 'center'` applies a linear transform to remove the
+        constant and center the basis functions.
+    variable_name : None or str
+        The name for the underlying explanatory variable, x, used in for
+        creating the column and parameter names for the basis functions.
+    covder2_kwds : None or dict
+        options for computing the penalty matrix from the second derivative
+        of the spline.
+    knot_kwds : None or list of dict
+        option for the knot selection.
+        By default knots are selected in the same way as in patsy, however the
+        number of knots is independent of keeping or removing the constant.
+        Interior knot selection is based on quantiles of the data and is the
+        same in patsy and mgcv. Boundary points are at the limits of the data
+        range.
+        The available options use with `get_knots_bsplines` are
+
+        - knots : None or array
+          interior knots
+        - spacing : 'quantile' or 'equal'
+        - lower_bound : None or float
+          location of lower boundary knots, all boundary knots are at the same
+          point
+        - upper_bound : None or float
+          location of upper boundary knots, all boundary knots are at the same
+          point
+        - all_knots : None or array
+          If all knots are provided, then those will be taken as given and
+          all other options will be ignored.
+
     """
-    def __init__(self, x, degree, df, include_intercept=False,
+    def __init__(self, x, df, degree=3, include_intercept=False,
                  constraints=None, variable_name='x',
                  covder2_kwds=None, **knot_kwds):
         self.degree = degree
@@ -414,6 +464,27 @@ class UnivariateBSplines(UnivariateGamSmoother):
         return basis, der_basis, der2_basis, cov_der2
 
     def transform(self, x_new, deriv=0, skip_ctransf=False):
+        """create the spline basis for new observations
+
+        The main use of this stateful transformation is for prediction
+        using the same specification of the spline basis.
+
+        Parameters
+        ----------
+        x_new : array
+            observations of the underlying explanatory variable
+        deriv : int
+            which derivative of the spline basis to compute
+            This is an options for internal computation.
+        skip_ctransf : bool
+            whether to skip the constraint transform
+            This is an options for internal computation.
+
+        Returns
+        -------
+        basis : ndarray
+            design matrix for the spline basis for given ``x_new``
+        """
 
         if x_new is None:
             x_new = self.x
@@ -429,7 +500,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
 
 class UnivariateCubicSplines(UnivariateGamSmoother):
-    """Cubic Spline single component smoother for GAM
+    """Cubic Spline single smooth component
 
     Cubic splines as described in the wood's book in chapter 3
     """
@@ -533,7 +604,31 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
 
 class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
-    """cyclic cubic regression spline single component smoother for GAM
+    """cyclic cubic regression spline single smooth component
+
+    This creates and holds the Cyclic CubicSpline basis function for one
+    component.
+
+    Parameters
+    ----------
+    x : array, 1-D
+        underlying explanatory variable for smooth terms.
+    df : int
+        numer of basis functions or degrees of freedom
+    degree : int
+        degree of the spline
+    include_intercept : bool
+        If False, then the basis functions are transformed so that they
+        do not include a constant. This avoids perfect collinearity if
+        a constant or several components are included in the model.
+    constraints : None, string or array
+        Constraints are used to transform the basis functions to satisfy
+        those constraints.
+        `constraints = 'center'` applies a linear transform to remove the
+        constant and center the basis functions.
+    variable_name : None or str
+        The name for the underlying explanatory variable, x, used in for
+        creating the column and parameter names for the basis functions.
     """
     def __init__(self, x, df, constraints=None, variable_name='x'):
         self.degree = 3
@@ -615,7 +710,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 
 class AdditiveGamSmoother(with_metaclass(ABCMeta)):
-    """Base class for additive smoothers for GAM
+    """Base class for additive smooth components
     """
     def __init__(self, x, variable_names=None, include_intercept=False,
                  **kwargs):
@@ -674,13 +769,29 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         pass
 
     def transform(self, x_new):
+        """create the spline basis for new observations
+
+        The main use of this stateful transformation is for prediction
+        using the same specification of the spline basis.
+
+        Parameters
+        ----------
+        x_new: array
+            observations of the underlying explanatory variable
+
+        Returns
+        -------
+        basis : ndarray
+            design matrix for the spline basis for given ``x_new``.
+
+        """
         exog = np.hstack(self.smoothers[i].transform(x_new[:, i])
                          for i in range(self.k_variables))
         return exog
 
 
 class GenericSmoothers(AdditiveGamSmoother):
-    """generic class for additive smoothers for GAM
+    """generic class for additive smooth components for GAM
     """
     def __init__(self, x, smoothers):
         self.smoothers = smoothers
@@ -691,7 +802,7 @@ class GenericSmoothers(AdditiveGamSmoother):
 
 
 class PolynomialSmoother(AdditiveGamSmoother):
-    """additive polynomial smoothers for GAM
+    """additive polynomial components for GAM
     """
     def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
@@ -709,7 +820,84 @@ class PolynomialSmoother(AdditiveGamSmoother):
 
 
 class BSplines(AdditiveGamSmoother):
-    """additive smoothers using B-Splines for GAM
+    """additive smooth components using B-Splines
+
+    This creates and holds the B-Spline basis function for several
+    components.
+
+    Parameters
+    ----------
+    x : array_like, 1-D or 2-D
+        underlying explanatory variable for smooth terms.
+        If 2-dimensional, then observations should be in rows and
+        explanatory variables in columns.
+    df :  int
+        numer of basis functions or degrees of freedom
+    degree : int
+        degree of the spline
+    include_intercept : bool
+        If False, then the basis functions are transformed so that they
+        do not include a constant. This avoids perfect collinearity if
+        a constant or several components are included in the model.
+    constraints : None, string or array
+        Constraints are used to transform the basis functions to satisfy
+        those constraints.
+        `constraints = 'center'` applies a linear transform to remove the
+        constant and center the basis functions.
+    variable_names : None or list of strings
+        The names for the underlying explanatory variables, x used in for
+        creating the column and parameter names for the basis functions.
+        If ``x`` is a pandas object, then the names will be taken from it.
+    knot_kwds : None or list of dict
+        option for the knot selection.
+        By default knots are selected in the same way as in patsy, however the
+        number of knots is independent of keeping or removing the constant.
+        Interior knot selection is based on quantiles of the data and is the
+        same in patsy and mgcv. Boundary points are at the limits of the data
+        range.
+        The available options use with `get_knots_bsplines` are
+
+        - knots : None or array
+          interior knots
+        - spacing : 'quantile' or 'equal'
+        - lower_bound : None or float
+          location of lower boundary knots, all boundary knots are at the same
+          point
+        - upper_bound : None or float
+          location of upper boundary knots, all boundary knots are at the same
+          point
+        - all_knots : None or array
+          If all knots are provided, then those will be taken as given and
+          all other options will be ignored.
+
+
+    Attributes
+    ----------
+    smoothers : list of univariate smooth component instances
+    basis : design matrix, array of spline bases columns for all components
+    penalty_matrices : list of penalty matrices, one for each smooth term
+    dim_basis : number of columns in the basis
+    k_variables : number of smooth components
+    col_names : created names for the basis columns
+
+    There are additional attributes about the specification of the splines
+    and some attributes mainly for internal use.
+
+    Notes
+    -----
+    A constant in the spline basis function can be removed in two different
+    ways.
+    The first is by dropping one basis column and normalizing the
+    remaining columns. This is obtained by the default
+    ``include_intercept=False, constraints=None``
+    The second option is by using the centering transform which is a linear
+    transformation of all basis functions. As a consequence of the
+    transformation, the B-spline basis functions do not have locally bounded
+    support anymore. This is obtained ``constraints='center'``. In this case
+    ``include_intercept`` will be automatically set to True to avoid
+    dropping an additional column.
+
+
     """
     def __init__(self, x, df, degree, include_intercept=False,
                  constraints=None, variable_names=None, knot_kwds=None):
@@ -729,7 +917,7 @@ class BSplines(AdditiveGamSmoother):
         for v in range(self.k_variables):
             kwds = self.knot_kwds[v] if self.knot_kwds else {}
             uv_smoother = UnivariateBSplines(self.x[:, v],
-                            degree=self.degrees[v], df=self.dfs[v],
+                            df=self.dfs[v], degree=self.degrees[v],
                             include_intercept=self.include_intercept[v],
                             constraints=self.constraints,
                             variable_name=self.variable_names[v], **kwds)
@@ -739,6 +927,12 @@ class BSplines(AdditiveGamSmoother):
 
 
 class CubicSplines(AdditiveGamSmoother):
+    """additive smooth components using cubic splines as in Wood 2006.
+
+    Note, these splines do NOT use the same spline basis as
+    ``Cubic Regression Splines``.
+
+    """
     def __init__(self, x, df, constraints='center', transform='domain',
                  variable_names=None):
         self.dfs = df
@@ -761,7 +955,26 @@ class CubicSplines(AdditiveGamSmoother):
 
 
 class CyclicCubicSplines(AdditiveGamSmoother):
-    """additive smoothers using cyclic cubic regression splines for GAM
+    """additive smooth components using cyclic cubic regression splines
+
+    This spline basis is the same as in patsy.
+
+    Parameters
+    ----------
+    x : array_like, 1-D or 2-D
+        underlying explanatory variable for smooth terms.
+        If 2-dimensional, then observations should be in rows and
+        explanatory variables in columns.
+    df :  int
+        numer of basis functions or degrees of freedom
+    constraints : None, string or array
+        Constraints are used to transform the basis functions to satisfy
+        those constraints.
+    variable_names : None or list of strings
+        The names for the underlying explanatory variables, x used in for
+        creating the column and parameter names for the basis functions.
+        If ``x`` is a pandas object, then the names will be taken from it.
+
     """
     def __init__(self, x, df, constraints=None, variable_names=None):
         self.dfs = df
