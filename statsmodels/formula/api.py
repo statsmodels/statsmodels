@@ -6,7 +6,7 @@ import statsmodels.robust.robust_linear_model as roblm_
 import statsmodels.regression.quantile_regression as qr_
 import statsmodels.duration.hazard_regression as hr_
 import statsmodels.genmod.generalized_estimating_equations as gee_
-import statsmodels.gam.gam as gam_
+import statsmodels.gam.generalized_additive_model as gam_
 
 gls = lm_.GLS.from_formula
 wls = lm_.WLS.from_formula

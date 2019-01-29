@@ -24,7 +24,8 @@ import statsmodels.base._penalties as smpen
 
 from statsmodels.gam.smooth_basis import (BSplines, CubicSplines,
                                           CyclicCubicSplines)
-from statsmodels.gam.gam import GLMGam, GLMGamResults, GLMGamResultsWrapper
+from statsmodels.gam.generalized_additive_model import (
+    GLMGam, GLMGamResults, GLMGamResultsWrapper)
 
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 

@@ -30,7 +30,7 @@ from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test
 
-from .gam.gam import GLMGam
+from .gam.generalized_additive_model import GLMGam
 from .gam import api as gam
 from .graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics
