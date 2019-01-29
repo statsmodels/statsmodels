@@ -36,7 +36,10 @@ from . import _prediction as pred
 from statsmodels.genmod._prediction import PredictionResults
 
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             DomainWarning)
+                                             DomainWarning,
+                                             HessianInversionWarning)
+
+from numpy.linalg.linalg import LinAlgError
 
 __all__ = ['GLM', 'PredictionResults']
 
@@ -291,6 +294,7 @@ class GLM(base.LikelihoodModel):
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
+
             import warnings
             warnings.warn(("The %s link function does not respect the domain "
                            "of the %s family.") %
@@ -790,7 +794,7 @@ class GLM(base.LikelihoodModel):
                 return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu, self.var_weights,
-                                             self.freq_weights, self.scale) /
+                                             self.freq_weights, 1.) /
                         (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
@@ -1057,6 +1061,8 @@ class GLM(base.LikelihoodModel):
         self.scaletype = scale
 
         if method.lower() == "irls":
+            if cov_type.lower() == 'eim':
+                cov_type = 'nonrobust'
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
@@ -1112,11 +1118,27 @@ class GLM(base.LikelihoodModel):
         else:
             cov_p = rslt.normalized_cov_params / scale
 
-        glm_results = GLMResults(self, rslt.params,
-                                 cov_p,
-                                 scale,
-                                 cov_type=cov_type, cov_kwds=cov_kwds,
-                                 use_t=use_t)
+        if cov_type.lower() == 'eim':
+            oim = False
+            cov_type = 'nonrobust'
+        else:
+            oim = True
+
+        try:
+            cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+        except LinAlgError:
+            from warnings import warn
+            warn('Inverting hessian failed, no bse or cov_params '
+                 'available', HessianInversionWarning)
+            cov_p = None
+
+        results_class = getattr(self, '_results_class', GLMResults)
+        results_class_wrapper = getattr(self, '_results_class_wrapper', GLMResultsWrapper)
+        glm_results = results_class(self, rslt.params,
+                                    cov_p,
+                                    scale,
+                                    cov_type=cov_type, cov_kwds=cov_kwds,
+                                    use_t=use_t)
 
         # TODO: iteration count is not always available
         history = {'iteration': 0}
@@ -1127,7 +1149,7 @@ class GLM(base.LikelihoodModel):
         glm_results.method = method
         glm_results.fit_history = history
 
-        return GLMResultsWrapper(glm_results)
+        return results_class_wrapper(glm_results)
 
     def _fit_irls(self, start_params=None, maxiter=100, tol=1e-8,
                   scale=None, cov_type='nonrobust', cov_kwds=None,

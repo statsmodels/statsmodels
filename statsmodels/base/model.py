@@ -1597,7 +1597,7 @@ class LikelihoodModelResults(Results):
 
     # TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
-                  use_f=None):
+                  use_f=None, df_constraints=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1685,11 +1685,15 @@ class LikelihoodModelResults(Results):
             J_ = np.linalg.matrix_rank(cov_p)
             if J_ < J:
                 import warnings
-                from statsmodels.tools.sm_exceptions import ValueWarning
                 warnings.warn('covariance of constraints does not have full '
                               'rank. The number of constraints is %d, but '
                               'rank is %d' % (J, J_), ValueWarning)
                 J = J_
+
+        # TODO streamline computation, we don't need to compute J if given
+        if df_constraints is not None:
+            # let caller override J by df_constraint
+            J = df_constraints
 
         if (hasattr(self, 'mle_settings') and
                 self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
@@ -1824,7 +1828,7 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue, constraint.shape[0]]
+            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)

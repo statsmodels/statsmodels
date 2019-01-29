@@ -60,7 +60,8 @@ class CheckModelResultsMixin(object):
 
     decimal_bse = DECIMAL_4
     def test_standard_errors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, self.decimal_bse)
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=10**(-self.decimal_bse), rtol=1e-5)
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
@@ -281,6 +282,28 @@ class TestGlmGaussian(CheckModelResultsMixin):
 #        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
 #        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
 #        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
+
+
+class TestGlmGaussianGradient(TestGlmGaussian):
+    @classmethod
+    def setup_class(cls):
+        '''
+        Test Gaussian family with canonical identity link
+        '''
+        # Test Precisions
+        cls.decimal_resids = DECIMAL_3
+        cls.decimal_params = DECIMAL_2
+        cls.decimal_bic = DECIMAL_0
+        cls.decimal_bse = DECIMAL_2
+
+        from statsmodels.datasets.longley import load
+        cls.data = load(as_pandas=False)
+        cls.data.exog = add_constant(cls.data.exog, prepend=False)
+        cls.res1 = GLM(cls.data.endog, cls.data.exog,
+                        family=sm.families.Gaussian()).fit(method='bfgs')
+        from .results.results_glm import Longley
+        cls.res2 = Longley()
+
 
 class TestGaussianLog(CheckModelResultsMixin):
     @classmethod
@@ -961,13 +984,13 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     elif family_class == fam.Gamma:
         endog = np.random.gamma(2, mu)
     elif family_class == fam.Gaussian:
-        endog = mu + np.random.normal(size=len(lin_pred))
+        endog = mu + 2 * np.random.normal(size=len(lin_pred))
     elif family_class == fam.NegativeBinomial:
         from scipy.stats.distributions import nbinom
         endog = nbinom.rvs(mu, 0.5)
     elif family_class == fam.InverseGaussian:
         from scipy.stats.distributions import invgauss
-        endog = invgauss.rvs(mu)
+        endog = invgauss.rvs(mu, scale=20)
     else:
         raise ValueError
 
@@ -1114,8 +1137,14 @@ def test_gradient_irls():
                     ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                     gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
                     assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
+                    # rslt_irls.bse corresponds to observed=True
+                    assert_allclose(rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5)
 
-
+                    rslt_gradient_eim = mod_gradient.fit(max_start_irls=0,
+                                                         cov_type='eim',
+                                                         start_params=rslt_gradient.params,
+                                                         method="newton", maxiter=300)
+                    assert_allclose(rslt_gradient_eim.bse, rslt_irls.bse, rtol=5e-5, atol=0)
 
 
 def test_gradient_irls_eim():
