@@ -107,6 +107,7 @@ Table of Contents
    regression
    glm
    gee
+   gam
    rlm
    mixed_linear
    discretemod

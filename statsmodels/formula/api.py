@@ -6,6 +6,7 @@ import statsmodels.robust.robust_linear_model as roblm_
 import statsmodels.regression.quantile_regression as qr_
 import statsmodels.duration.hazard_regression as hr_
 import statsmodels.genmod.generalized_estimating_equations as gee_
+import statsmodels.gam.gam as gam_
 
 gls = lm_.GLS.from_formula
 wls = lm_.WLS.from_formula
@@ -24,5 +25,6 @@ phreg = hr_.PHReg.from_formula
 ordinal_gee = gee_.OrdinalGEE.from_formula
 nominal_gee = gee_.NominalGEE.from_formula
 gee = gee_.GEE.from_formula
+glmgam = gam_.GLMGam.from_formula
 
-del lm_, dm_, mlm_, glm_, roblm_, qr_, hr_, gee_
+del lm_, dm_, mlm_, glm_, roblm_, qr_, hr_, gee_, gam_

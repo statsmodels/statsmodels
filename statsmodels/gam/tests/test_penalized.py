@@ -505,7 +505,6 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(pm[:4, :], 0)
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
-
         np.random.seed(987125)
         alpha_cv, _ = mod.select_penweight_kfold(k_folds=3, k_grid=6)
         # regression number, but in the right ball park
