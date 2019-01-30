@@ -14,7 +14,10 @@ except ImportError:
     from pandas.core.common import is_numeric_dtype  # noqa:F401
 
 if version >= '0.20':
-    from pandas.tseries import frequencies
+    try:
+        from pandas.tseries import frequencies
+    except ImportError:
+        from pandas.tseries import offsets as frequencies
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel)
 else:
     try:

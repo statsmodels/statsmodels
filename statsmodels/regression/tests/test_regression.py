@@ -1119,9 +1119,9 @@ def test_missing_formula_predict():
     # see 2171
     nsample = 30
 
-    data = pandas.DataFrame({'x': np.linspace(0, 10, nsample)})
-    null = pandas.DataFrame({'x': np.array([np.nan])})
-    data = pandas.concat([data, null])
+    data = np.linspace(0, 10, nsample)
+    null = np.array([np.nan])
+    data = pandas.DataFrame({'x': np.concatenate((data, null))})
     beta = np.array([1, 0.1])
     e = np.random.normal(size=nsample+1)
     data['y'] = beta[0] + beta[1] * data['x'] + e

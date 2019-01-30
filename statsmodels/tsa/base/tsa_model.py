@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
                     PeriodIndex, RangeIndex, Timestamp, Series, Index,
-                    Float64Index)
+                    Float64Index, date_range)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -181,7 +181,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
-                    resampled_index = type(index)(
+                    resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq)
                     if not inferred_freq and not resampled_index.equals(index):
                         raise ValueError('The given frequency argument could'
