@@ -15,9 +15,9 @@ except ImportError:
 
 if version >= '0.20':
     try:
-        from pandas.tseries import frequencies
-    except ImportError:
         from pandas.tseries import offsets as frequencies
+    except ImportError:
+        from pandas.tseries import frequencies
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel)
 else:
     try:
