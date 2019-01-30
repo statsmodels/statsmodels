@@ -18,7 +18,7 @@ import pandas as pd
 from patsy import dmatrix
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
-from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
+from statsmodels.tools.linalg import transf_constraints
 
 
 # Obtain b splines from patsy
@@ -364,8 +364,8 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     """
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
-        super(UnivariatePolynomialSmoother, self).__init__(x,
-                variable_name=variable_name)
+        super(UnivariatePolynomialSmoother, self).__init__(
+            x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         # TODO: unclear description
@@ -452,8 +452,8 @@ class UnivariateBSplines(UnivariateGamSmoother):
         self.knots = get_knots_bsplines(x, degree=degree, df=df, **knot_kwds)
         self.covder2_kwds = (covder2_kwds if covder2_kwds is not None
                              else {})
-        super(UnivariateBSplines, self).__init__(x,
-                constraints=constraints, variable_name=variable_name)
+        super(UnivariateBSplines, self).__init__(
+            x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis, der_basis, der2_basis = _eval_bspline_basis(
@@ -517,8 +517,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
         self.x = x = self.transform_data(x, initialize=True)
         self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicSplines, self).__init__(x,
-                constraints=constraints, variable_name=variable_name)
+        super(UnivariateCubicSplines, self).__init__(
+            x, constraints=constraints, variable_name=variable_name)
 
     def transform_data(self, x, initialize=False):
         tm = self.transform_data_method
@@ -638,8 +638,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         self.df = df
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
-        super(UnivariateCubicCyclicSplines, self).__init__(x,
-                constraints=constraints, variable_name=variable_name)
+        super(UnivariateCubicCyclicSplines, self).__init__(
+            x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
@@ -815,9 +815,10 @@ class PolynomialSmoother(AdditiveGamSmoother):
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            uv_smoother = UnivariatePolynomialSmoother(self.x[:, v],
-                            degree=self.degrees[v],
-                            variable_name=self.variable_names[v])
+            uv_smoother = UnivariatePolynomialSmoother(
+                self.x[:, v],
+                degree=self.degrees[v],
+                variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
         return smoothers
 
@@ -919,11 +920,12 @@ class BSplines(AdditiveGamSmoother):
         smoothers = []
         for v in range(self.k_variables):
             kwds = self.knot_kwds[v] if self.knot_kwds else {}
-            uv_smoother = UnivariateBSplines(self.x[:, v],
-                            df=self.dfs[v], degree=self.degrees[v],
-                            include_intercept=self.include_intercept[v],
-                            constraints=self.constraints,
-                            variable_name=self.variable_names[v], **kwds)
+            uv_smoother = UnivariateBSplines(
+                self.x[:, v],
+                df=self.dfs[v], degree=self.degrees[v],
+                include_intercept=self.include_intercept[v],
+                constraints=self.constraints,
+                variable_name=self.variable_names[v], **kwds)
             smoothers.append(uv_smoother)
 
         return smoothers
@@ -989,9 +991,10 @@ class CyclicCubicSplines(AdditiveGamSmoother):
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            uv_smoother = UnivariateCubicCyclicSplines(self.x[:, v],
-                            df=self.dfs[v], constraints=self.constraints,
-                            variable_name=self.variable_names[v])
+            uv_smoother = UnivariateCubicCyclicSplines(
+                self.x[:, v],
+                df=self.dfs[v], constraints=self.constraints,
+                variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 
         return smoothers

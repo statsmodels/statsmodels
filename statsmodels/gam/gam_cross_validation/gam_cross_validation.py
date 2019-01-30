@@ -71,20 +71,21 @@ def _split_train_test_smoothers(x, smoother, train_index, test_index):
         # TODO: Double check this part. cov_der2 is calculated with all data
         train_x = smoother.x[train_index]
 
-        train_smoothers.append(UnivariateGenericSmoother(train_x, train_basis,
-            train_der_basis, train_der2_basis, train_cov_der2,
-            smoother.variable_name + ' train'))
+        train_smoothers.append(
+            UnivariateGenericSmoother(
+                train_x, train_basis, train_der_basis, train_der2_basis,
+                train_cov_der2, smoother.variable_name + ' train'))
 
         test_basis = smoother.basis[test_index]
         test_der_basis = smoother.der_basis[test_index]
-        test_der2_basis = smoother.der2_basis[test_index]
         test_cov_der2 = smoother.cov_der2
         # TODO: Double check this part. cov_der2 is calculated with all data
         test_x = smoother.x[test_index]
 
-        test_smoothers.append(UnivariateGenericSmoother(test_x, test_basis,
-            test_der_basis, train_der2_basis, test_cov_der2,
-            smoother.variable_name + ' test'))
+        test_smoothers.append(
+            UnivariateGenericSmoother(
+                test_x, test_basis, test_der_basis, train_der2_basis,
+                test_cov_der2, smoother.variable_name + ' test'))
 
     train_multivariate_smoothers = GenericSmoothers(x[train_index],
                                                     train_smoothers)
@@ -110,7 +111,6 @@ class MultivariateGAMCV(BaseCV):
                                                 self.smoother.basis)
 
     def _error(self, train_index, test_index, **kwargs):
-        full_basis_train = self.smoother.basis[train_index]
         train_smoother, test_smoother = _split_train_test_smoothers(
             self.smoother.x, self.smoother, train_index, test_index)
 

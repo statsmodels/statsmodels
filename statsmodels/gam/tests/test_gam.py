@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# pylint: disable=F841
 """
 unit test for GAM
 
@@ -16,9 +16,9 @@ from scipy.linalg import block_diag
 import pytest
 
 from statsmodels.tools.linalg import matrix_sqrt
-from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
-    PolynomialSmoother, BSplines, GenericSmoothers, UnivariateCubicSplines,
-    CyclicCubicSplines)
+from statsmodels.gam.smooth_basis import (
+    UnivariatePolynomialSmoother, PolynomialSmoother, BSplines,
+    GenericSmoothers, UnivariateCubicSplines, CyclicCubicSplines)
 from statsmodels.gam.generalized_additive_model import (
     GLMGam, LogitGam, make_augmented_matrix, penalized_wls)
 from statsmodels.gam.gam_cross_validation.gam_cross_validation import (

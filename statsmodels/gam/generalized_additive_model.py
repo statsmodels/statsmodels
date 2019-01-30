@@ -19,10 +19,10 @@ import pandas as pd
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.discrete.discrete_model import Logit
-from statsmodels.genmod.generalized_linear_model import (GLM, GLMResults,
-    GLMResultsWrapper, _check_convergence)
+from statsmodels.genmod.generalized_linear_model import (
+    GLM, GLMResults, GLMResultsWrapper, _check_convergence)
 import statsmodels.regression.linear_model as lm
-import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
+# import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
                                              ValueWarning)
 from statsmodels.tools.decorators import cache_readonly
@@ -172,8 +172,8 @@ class GLMGamResults(GLMResults):
         else:
             # transform exog_linear if needed
             if exog is not None and hasattr(self.model, 'design_info_linear'):
-                exog, exog_index = _transform_predict_exog(self.model, exog,
-                                        self.model.design_info_linear)
+                exog, exog_index = _transform_predict_exog(
+                    self.model, exog, self.model.design_info_linear)
 
             # create smooth basis
             if exog_smooth is not None:
@@ -215,8 +215,8 @@ class GLMGamResults(GLMResults):
         predict_results = super(GLMGamResults, self).predict(ex,
                                                              transform=False,
                                                              **kwargs)
-        if exog_index is not None and not hasattr(predict_results,
-                                                      'predicted_values'):
+        if exog_index is not None and not hasattr(
+                predict_results, 'predicted_values'):
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=exog_index)
             else:
@@ -388,7 +388,7 @@ class GLMGamResults(GLMResults):
         k_constraints = mask.sum()
         idx = start_idx + np.nonzero(mask)[0][0]
         constraints = np.eye(k_constraints, k_params, idx)
-        df_constraints = self.edf[idx : idx + k_constraints].sum()
+        df_constraints = self.edf[idx: idx + k_constraints].sum()
 
         return self.wald_test(constraints, df_constraints=df_constraints)
 

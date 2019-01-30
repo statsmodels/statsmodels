@@ -103,7 +103,7 @@ class UnivariateGamPenalty(Penalty):
 
         d2 = 2 * alpha * self.univariate_smoother.cov_der2
         d2 /= self.nobs
-        return  d2
+        return d2
 
     def penalty_matrix(self, alpha=None):
         """penalty matrix for the smooth term of a GAM
