@@ -14,11 +14,11 @@ Examples
 --------
 
 The following illustrates a Gaussian and a Poisson regression where
-categorical variables are treated as a linear term and the effect of
+categorical variables are treated as linear terms and the effect of
 two explanatory variables is captured by penalized B-splines.
 The data is from the automobile dataset
 https://archive.ics.uci.edu/ml/datasets/automobile
-that we can load a dataframe with selected columns from the unit test module.
+We can load a dataframe with selected columns from the unit test module.
 
 .. ipython:: python
 
@@ -70,7 +70,7 @@ References
 Module Reference
 ----------------
 
-.. module:: statsmodels.gam.gam
+.. module:: statsmodels.gam.generalized_additive_model
    :synopsis: Generalized Additive Models
 
 Model Class
@@ -97,23 +97,23 @@ Smooth Basis Functions
 
 .. currentmodule:: statsmodels.gam.smooth_basis
 
-Currently there is verified support for two spline basis
+Currently there is verified support for two spline bases
 
 .. autosummary::
    :toctree: generated/
 
-   Bsplines
+   BSplines
    CyclicCubicSplines
 
-   `smooth_basis` includes additional splines and a (global) polynomial
-   smoother basis but those have not been verified yet.
+`statsmodels.gam.smooth_basis` includes additional splines and a (global)
+polynomial smoother basis but those have not been verified yet.
 
 
 
 Families and Link Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The distribution families in `GLMGam` are the same as for GLM as are
+The distribution families in `GLMGam` are the same as for GLM and so are
 the corresponding link functions.
 Current unit tests only cover Gaussian and Poisson, and GLMGam might not
 work for all options that are available in GLM.
