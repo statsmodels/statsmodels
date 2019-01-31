@@ -131,10 +131,10 @@ these are rarely needed by end-users):
    :toctree: generated/
 
    kalmanf.kalmanfilter.KalmanFilter
-   innovations.arma_loglike
-   innovations.arma_loglikeobs
-   innovations.arma_score
-   innovations.arma_scoreobs
+   innovations.arma_innovations.arma_loglike
+   innovations.arma_innovations.arma_loglikeobs
+   innovations.arma_innovations.arma_score
+   innovations.arma_innovations.arma_scoreobs
 
 
 Exponential Smoothing

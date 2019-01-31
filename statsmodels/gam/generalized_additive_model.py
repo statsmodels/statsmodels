@@ -96,8 +96,8 @@ class GLMGamResults(GLMResults):
     All methods related to the loglikelihood function return the penalized
     values.
 
-    Extra Attributes
-    ----------------
+    **Extra Attributes**
+
     edf : list of effective degrees of freedom for each column of the
         design matrix.
     hat_matrix_diag : diagonal of hat matrix
