@@ -210,7 +210,7 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
                          % (inner_knots[inner_knots > upper_bound],
                             upper_bound))
 
-    if spacing is "equal":
+    if spacing == "equal":
         diffs = np.arange(1, order + 1) * diff_knots
         lower_knots = inner_knots[0] - diffs[::-1]
         upper_knots = inner_knots[-1] + diffs

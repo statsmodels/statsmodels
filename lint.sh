@@ -21,9 +21,11 @@ if [ "$LINT" == true ]; then
         statsmodels/interface/ \
         statsmodels/duration/__init__.py \
         statsmodels/gam/gam_penalties.py \
-        statsmodels/gam/generalized_additive_model.py \
         statsmodels/gam/gam_cross/validation/ \
+        statsmodels/gam/generalized_additive_model.py \
         statsmodels/gam/smooth_basis.py \
+        statsmodels/gam/tests/test_smooth_basis.py \
+        statsmodels/gam/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
