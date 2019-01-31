@@ -286,7 +286,7 @@ def test_multivariate_penalty():
 def test_generic_smoother():
     x, y, poly = multivariate_sample_data()
     alphas = [0.4, 0.7]
-    weights = [1, 1]
+    weights = [1, 1]  # noqa: F841
 
     gs = GenericSmoothers(poly.x, poly.smoothers)
     gam_gs = GLMGam(y, smoother=gs, alpha=alphas)
@@ -315,7 +315,7 @@ def test_multivariate_gam_1d_data():
 
     # alpha is by manually adjustment to reduce discrepancy in fittedvalues
     alpha = [0.0168 * 0.0251 / 2 * 500]
-    gp = MultivariateGamPenalty(bsplines, alpha=alpha)
+    gp = MultivariateGamPenalty(bsplines, alpha=alpha)    # noqa: F841
 
     glm_gam = GLMGam(y, exog=np.ones((len(y), 1)), smoother=bsplines,
                      alpha=alpha)
@@ -359,10 +359,10 @@ def test_multivariate_gam_cv():
     alphas = [2]
     cv = KFold(3)
 
-    gp = MultivariateGamPenalty(bsplines, alpha=alphas)
+    gp = MultivariateGamPenalty(bsplines, alpha=alphas)  # noqa: F841
     gam_cv = MultivariateGAMCV(smoother=bsplines, alphas=alphas, gam=GLMGam,
                                cost=cost, endog=y, exog=None, cv_iterator=cv)
-    gam_cv_res = gam_cv.fit()
+    gam_cv_res = gam_cv.fit()  # noqa: F841
 
 
 def test_multivariate_gam_cv_path():
@@ -377,8 +377,8 @@ def test_multivariate_gam_cv_path():
     # dataset used to train the R model
     x = data_from_r.x.values
     y = data_from_r.y.values
-    se_from_mgcv = data_from_r.y_est_se
-    y_mgcv = data_from_r.y_mgcv_gcv
+    se_from_mgcv = data_from_r.y_est_se  # noqa: F841
+    y_mgcv = data_from_r.y_mgcv_gcv  # noqa: F841
 
     df = [10]
     degree = [6]
@@ -395,7 +395,7 @@ def test_multivariate_gam_cv_path():
     gam_cv = MultivariateGAMCVPath(smoother=bsplines, alphas=alphas, gam=gam,
                                    cost=sample_metric, endog=y, exog=None,
                                    cv_iterator=cv)
-    gam_cv_res = gam_cv.fit()
+    gam_cv_res = gam_cv.fit()  # noqa: F841
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
     res_glm_gam = glm_gam.fit(method='irls', max_start_irls=0,
@@ -514,7 +514,7 @@ def test_cyclic_cubic_splines():
 
     x = data_from_r[['x0', 'x2']].values
     y = data_from_r['y'].values
-    y_est_mgcv = data_from_r[['y_est']].values
+    y_est_mgcv = data_from_r[['y_est']].values  # noqa: F841
     s_mgcv = data_from_r[['s(x0)', 's(x2)']].values
 
     dfs = [10, 10]
@@ -608,7 +608,7 @@ def test_glm_pirls_compatibility():
 
     # TODO: we have now alphas == alphas_glm
     alphas = [5.75] * 2
-    alphas_glm = [1.2] * 2
+    alphas_glm = [1.2] * 2  # noqa: F841
     # using constraints avoids singular exog.
     cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints='center')
 
@@ -685,7 +685,7 @@ def test_partial_values2():
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000)
-    glm = GLM(y, bsplines.basis)
+    glm = GLM(y, bsplines.basis)  # noqa: F841
 
     # case with constant column in exog is currently wrong
     # ex = np.column_stack((np.zeros((len(y), 1)), bsplines.smoothers[0].basis,
@@ -724,7 +724,7 @@ def test_partial_values():
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
     # TODO: if IRLS is used res_glm_gam has not partial_values.
 
-    univ_bsplines = bsplines.smoothers[0]
+    univ_bsplines = bsplines.smoothers[0]  # noqa: F841
     hat_y, se = res_glm_gam.partial_values(0)
 
     assert_allclose(hat_y, data_from_r["y_est"], rtol=0, atol=0.008)
@@ -748,7 +748,7 @@ def test_partial_plot():
     # dataset used to train the R model
     x = data_from_r.x.values
     y = data_from_r.y.values
-    se_from_mgcv = data_from_r.y_est_se
+    se_from_mgcv = data_from_r.y_est_se  # noqa: F841
     df = [10]
     degree = [6]
     bsplines = BSplines(x, degree=degree, df=df)
