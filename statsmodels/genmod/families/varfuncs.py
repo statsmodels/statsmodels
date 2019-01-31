@@ -70,12 +70,11 @@ class Power(object):
     call
         Returns the power variance
 
-    Formulas
-    --------
-    V(mu) = numpy.fabs(mu)**power
-
     Notes
     -----
+    Formulas
+       V(mu) = numpy.fabs(mu)**power
+
     Aliases for Power:
     mu = Power()
     mu_squared = Power(power=2)
@@ -154,14 +153,14 @@ class Binomial(object):
     call
         Returns the binomial variance
 
-    Formulas
-    --------
-    V(mu) = p * (1 - p) * n
+    Notes
+    -----
+    Formulas :
+
+       V(mu) = p * (1 - p) * n
 
     where p = mu / n
 
-    Notes
-    -----
     Alias for Binomial:
     binary = Binomial()
 
@@ -224,12 +223,12 @@ class NegativeBinomial(object):
     call
         Returns the negative binomial variance
 
-    Formulas
-    --------
-    V(mu) = mu + alpha*mu**2
-
     Notes
     -----
+    Formulas :
+
+       V(mu) = mu + alpha*mu**2
+
     Alias for NegativeBinomial:
     nbinom = NegativeBinomial()
 
