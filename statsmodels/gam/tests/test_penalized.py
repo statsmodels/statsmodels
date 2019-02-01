@@ -14,7 +14,6 @@ import pandas as pd
 
 import patsy
 
-from statsmodels.regression.linear_model import OLS
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import family
@@ -22,8 +21,7 @@ from statsmodels.sandbox.regression.penalized import TheilGLS
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
 
-from statsmodels.gam.smooth_basis import (BSplines, CubicSplines,
-                                          CyclicCubicSplines)
+from statsmodels.gam.smooth_basis import (BSplines, CyclicCubicSplines)
 from statsmodels.gam.generalized_additive_model import (
     GLMGam, GLMGamResults, GLMGamResultsWrapper)
 
@@ -270,7 +268,7 @@ class TestGAM6Bfgs0(object):
 
     @classmethod
     def setup_class(cls):
-        s_scale = 0.0263073404164214
+        s_scale = 0.0263073404164214  # noqa: F841
 
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6])
         gam_cc = GLMGam(data_mcycle['accel'], smoother=cc,

@@ -154,9 +154,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        asbytes('Q'): frequencies.BQuarterEnd(),
+        asbytes('M'): frequencies.BMonthEnd(),
+        asbytes('A'): frequencies.BYearEnd()
     }
 
     # create an instance
