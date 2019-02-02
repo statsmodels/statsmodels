@@ -1215,3 +1215,69 @@ class TestSMWLogdet(object):
     @pytest.mark.parametrize("s", [0, 0.5])
     def test_smw_logdet(self, p, q, r, s):
         check_smw_logdet(p, q, r, s)
+
+
+def test_get_distribution():
+
+    np.random.seed(234)
+
+    n = 100
+    n_groups = 10
+    fe_params = np.r_[1, -2]
+    cov_re = np.asarray([[1, 0.5], [0.5, 2]])
+    vcomp = np.r_[0.5**2, 1.5**2]
+    scale = 1.5
+
+    exog_fe = np.random.normal(size=(n, 2))
+    exog_re = np.random.normal(size=(n, 2))
+    exog_vca = np.random.normal(size=(n, 2))
+    exog_vcb = np.random.normal(size=(n, 2))
+
+    groups = np.repeat(np.arange(n_groups, dtype=np.int),
+                       n / n_groups)
+
+    ey = np.dot(exog_fe, fe_params)
+
+    u = np.random.normal(size=(n_groups, 2))
+    u = np.dot(u, np.linalg.cholesky(cov_re).T)
+
+    u1 = np.sqrt(vcomp[0]) * np.random.normal(size=(n_groups, 2))
+    u2 = np.sqrt(vcomp[1]) * np.random.normal(size=(n_groups, 2))
+
+    y = ey + (u[groups, :] * exog_re).sum(1)
+    y += (u1[groups, :] * exog_vca).sum(1)
+    y += (u2[groups, :] * exog_vcb).sum(1)
+    y += np.sqrt(scale) * np.random.normal(size=n)
+
+    df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0], "x2": exog_fe[:, 1],
+                       "z0": exog_re[:, 0], "z1": exog_re[:, 1],
+                       "grp": groups})
+    df["z2"] = exog_vca[:, 0]
+    df["z3"] = exog_vca[:, 1]
+    df["z4"] = exog_vcb[:, 0]
+    df["z5"] = exog_vcb[:, 1]
+
+    vcf = {"a": "0 + z2 + z3", "b": "0 + z4 + z5"}
+    m = MixedLM.from_formula("y ~ 0 + x1 + x2", groups="grp",
+                             re_formula="0 + z0 + z1",
+                             vc_formula=vcf, data=df)
+
+    # Build a params vector that is comparable to
+    # MixedLMResults.params
+    import statsmodels
+    mp = statsmodels.regression.mixed_linear_model.MixedLMParams
+    po = mp.from_components(fe_params=fe_params, cov_re=cov_re,
+                            vcomp=vcomp)
+    pa = po.get_packed(has_fe=True, use_sqrt=False)
+    pa[2:] /= scale
+
+    # Get a realization
+    dist = m.get_distribution(pa, scale, None)
+    yy = dist.rvs(0)
+
+    # Check the overall variance
+    v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()
+    v += vcomp[0] * (exog_vca**2).sum(1).mean()
+    v += vcomp[1] * (exog_vcb**2).sum(1).mean()
+    v += scale
+    assert_allclose(np.var(yy - ey), v, rtol=1e-2, atol=1e-4)

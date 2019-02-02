@@ -957,9 +957,12 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_vc = None
 
+        kwargs["subset"] = None
+        kwargs["exog_re"] = exog_re
+        kwargs["exog_vc"] = exog_vc
+        kwargs["groups"] = groups
         mod = super(MixedLM, cls).from_formula(
-            formula, data, subset=None, exog_re=exog_re,
-            exog_vc=exog_vc, groups=groups, *args, **kwargs)
+            formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
         (param_names,
@@ -2134,6 +2137,61 @@ class MixedLM(base.LikelihoodModel):
 
         return MixedLMResultsWrapper(results)
 
+    def get_distribution(self, params, scale, exog):
+        return _mixedlm_distribution(self, params, scale, exog)
+
+
+class _mixedlm_distribution(object):
+    """
+    A private class for simulating data from a given mixed linear model.
+
+    Used in Mediation, and possibly elsewhere.
+    """
+
+    def __init__(self, model, params, scale, exog):
+        self.model = model
+        self.exog = exog
+
+        po = MixedLMParams.from_packed(params,
+                 model.k_fe, model.k_re, False, True)
+
+        self.fe_params = po.fe_params
+        self.cov_re = scale * po.cov_re
+        self.vcomp = scale * po.vcomp
+        self.scale = scale
+
+        group_idx = np.zeros(model.nobs, dtype=np.int)
+        for k, g in enumerate(model.group_labels):
+            group_idx[model.row_indices[g]] = k
+        self.group_idx = group_idx
+
+    def rvs(self, n):
+        # n is ignored, but required to match the interface
+
+        model = self.model
+
+        # Fixed effects
+        y = np.dot(self.exog, self.fe_params)
+
+        # Random effects
+        u = np.random.normal(size=(model.n_groups, model.k_re))
+        u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
+        y += (u[self.group_idx, :] * model.exog_re).sum(1)
+
+        # Variance components
+        for j, k in enumerate(model._vc_names):
+            ex = model.exog_vc[k]
+            v = self.vcomp[j]
+            for g in model.group_labels:
+                exg = ex[g]
+                ii = model.row_indices[g]
+                u = np.random.normal(size=exg.shape[1])
+                y[ii] += np.sqrt(v) * np.dot(exg, u)
+
+        # Residual variance
+        y += np.sqrt(self.scale) * np.random.normal(size=len(y))
+
+        return y
 
 class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
@@ -2153,6 +2211,12 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Pointer to MixedLM model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
+    params : array
+        A packed parameter vector, the first `k_fe` elements
+        are the fixed effects coefficient estimated.  The
+        remaining elements are variance parameters.  The
+        variance parameter are all divided by `scale` and are
+        not the variance parameters shown in the summary.
     fe_params : array
         The fitted fixed-effects coefficients
     cov_re : array
