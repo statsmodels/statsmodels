@@ -2145,12 +2145,34 @@ class _mixedlm_distribution(object):
     """
     A private class for simulating data from a given mixed linear model.
 
-    Used in Mediation, and possibly elsewhere.
+    Parameters
+    ----------
+    model : MixedLM instance
+        A mixed linear model
+    params : array-like
+        A parameter vector defining a mixed linear model.  See
+        notes for more information.
+    scale : scalar
+        The unexplained variance
+    exog : array-like
+        An array of fixed effect covariates.  If None, model.exog
+        is used.
+
+    Notes
+    -----
+    The params array is a vector containing fixed effects parameters,
+    random effects parameters, and variance component parameters, in
+    that order.  The lower triangle of the random effects covariance
+    matrix is stored.  The random effects and variance components
+    parameters are divided by the scale parameter.
+
+    This class is used in Mediation, and possibly elsewhere.
     """
 
     def __init__(self, model, params, scale, exog):
+
         self.model = model
-        self.exog = exog
+        self.exog = exog if exog is not None else model.exog
 
         po = MixedLMParams.from_packed(params,
                  model.k_fe, model.k_re, False, True)
@@ -2166,7 +2188,12 @@ class _mixedlm_distribution(object):
         self.group_idx = group_idx
 
     def rvs(self, n):
-        # n is ignored, but required to match the interface
+        """
+        Return a vector of simulated values from a mixed linear
+        model.
+
+        The parameter n is ignored, but required by the interface
+        """
 
         model = self.model
 

@@ -1269,15 +1269,15 @@ def test_get_distribution():
     po = mp.from_components(fe_params=fe_params, cov_re=cov_re,
                             vcomp=vcomp)
     pa = po.get_packed(has_fe=True, use_sqrt=False)
-    pa[2:] /= scale
+    pa[len(fe_params):] /= scale
 
     # Get a realization
     dist = m.get_distribution(pa, scale, None)
-    yy = dist.rvs(0)
+    yr = dist.rvs(0)
 
     # Check the overall variance
     v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()
     v += vcomp[0] * (exog_vca**2).sum(1).mean()
     v += vcomp[1] * (exog_vcb**2).sum(1).mean()
     v += scale
-    assert_allclose(np.var(yy - ey), v, rtol=1e-2, atol=1e-4)
+    assert_allclose(np.var(yr - ey), v, rtol=1e-2, atol=1e-4)
