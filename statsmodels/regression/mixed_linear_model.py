@@ -2212,11 +2212,12 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
     params : array
-        A packed parameter vector, the first `k_fe` elements
-        are the fixed effects coefficient estimated.  The
-        remaining elements are variance parameters.  The
-        variance parameter are all divided by `scale` and are
-        not the variance parameters shown in the summary.
+        A packed parameter vector for the profile parameterization.
+        The first `k_fe` elements are the estimated fixed effects
+        coefficients.  The remaining elements are the estimated
+        variance parameters.  The variance parameters are all divided
+        by `scale` and are not the variance parameters shown
+        in the summary.
     fe_params : array
         The fitted fixed-effects coefficients
     cov_re : array
