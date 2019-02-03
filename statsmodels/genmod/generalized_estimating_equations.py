@@ -38,6 +38,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import cov_struct as cov_structs
 
 import statsmodels.genmod.families.varfuncs as varfuncs
@@ -1086,8 +1087,11 @@ class GEE(base.Model):
 
     def _starting_params(self):
 
-        # TODO: use GLM to get Poisson starting values
-        return np.zeros(self.exog.shape[1])
+        model = GLM(self.endog, self.exog, family=self.family,
+                       offset=self._offset_exposure,
+                       freq_weights=self.weights)
+        result = model.fit()
+        return result.params
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
