@@ -887,6 +887,46 @@ class Summary(object):
         '''
         self.extra_txt = '\n'.join(etext)
 
+    def add_penal_table(self, res):
+        """
+        Returns a table summarising model penalization.
+
+        This function returns a SimpleTable insatnce of the penalization
+        for each variable.
+
+        Parameters
+        ----------
+        result : result instance
+            The model result instance.
+
+        Returns
+        -------
+        penal_table : SimpleTable instance
+            Model penalization summarized in a SimpleTable instance.
+
+        """
+        try:
+            penal_weights = res.model.alpha # get penalty
+            # if scalar make vector
+            if np.isscalar(penal_weights):
+                penal_weights = penal_weights * np.ones(len(res.model.exog))
+
+
+        except AttributeError:
+            # If no penalization then None
+            penal_weights = None
+
+        if penal_weights:
+            # Collect penalization information from results instance
+            penal_data = [res.model.alpha]
+            penal_data = np.transpose(penal_data)
+            penal_headers = ["Penalty Weights"]
+            penal_stubs = res.model.exog_names
+
+            penal_table = SimpleTable(penal_data, penal_headers, penal_stubs, title="Penalization")
+            
+            self.tables.append(penal_table)
+
     def as_text(self):
         '''return tables as string
 
