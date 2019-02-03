@@ -924,7 +924,7 @@ class Summary(object):
             penal_stubs = res.model.exog_names
 
             penal_table = SimpleTable(penal_data, penal_headers, penal_stubs, title="Penalization")
-            
+
             self.tables.append(penal_table)
 
     def as_text(self):
