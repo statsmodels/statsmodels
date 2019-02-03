@@ -14,7 +14,8 @@ import os
 import numpy as np
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_)
+                           assert_array_less, assert_raises, assert_warns,
+                           assert_)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
@@ -539,10 +540,10 @@ class TestGEE(object):
         va = Independence()
         mod1 = GEE(endog, exog, group, family=family,
                    cov_struct=va, constraint=(L, R))
-        mod1.fit()
-        assert_almost_equal(mod1.score_test_results["statistic"],
+        res1 = mod1.fit()
+        assert_almost_equal(res1.score_test()["statistic"],
                             1.08126334)
-        assert_almost_equal(mod1.score_test_results["p-value"],
+        assert_almost_equal(res1.score_test()["p-value"],
                             0.2984151086)
 
         # Test under the alternative.
@@ -552,10 +553,10 @@ class TestGEE(object):
         va = Independence()
         mod2 = GEE(endog, exog, group, family=family,
                    cov_struct=va, constraint=(L, R))
-        mod2.fit()
-        assert_almost_equal(mod2.score_test_results["statistic"],
+        res2 = mod2.fit()
+        assert_almost_equal(res2.score_test()["statistic"],
                             3.491110965)
-        assert_almost_equal(mod2.score_test_results["p-value"],
+        assert_almost_equal(res2.score_test()["p-value"],
                             0.0616991659)
 
         # Compare to Wald tests
@@ -575,12 +576,77 @@ class TestGEE(object):
             va = Independence()
             mod1 = GEE(endog, exog, group, family=family,
                        cov_struct=va, constraint=(L, R))
-            mod1.fit()
+            res1 = mod1.fit()
             se = np.sqrt(np.dot(f, np.dot(rslt0.cov_params(), f)))
             wald_z = np.dot(f, rslt0.params) / se
             wald_p = 2 * norm.cdf(-np.abs(wald_z))
-            score_p = mod1.score_test_results["p-value"]
+            score_p = res1.score_test()["p-value"]
             assert_array_less(np.abs(wald_p - score_p), 0.02)
+
+    @pytest.mark.parametrize("cov_struct", [sm.cov_struct.Independence, sm.cov_struct.Exchangeable])
+    def test_compare_score_test(self, cov_struct):
+
+        np.random.seed(6432)
+        n = 200  # Must be divisible by 4
+        exog = np.random.normal(size=(n, 4))
+        group = np.kron(np.arange(n / 4), np.ones(4))
+
+        exog_sub = exog[:, [0, 3]]
+        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+
+        L = np.asarray([[0, 1, 0, 0], [0, 0, 1, 0]])
+        R = np.zeros(2)
+        mod_lr = GEE(endog, exog, group, constraint=(L, R), cov_struct=cov_struct())
+        _ = mod_lr.fit()
+
+        mod_sub = GEE(endog, exog_sub, group, cov_struct=cov_struct())
+        res_sub = mod_sub.fit()
+        mod = GEE(endog, exog, group, cov_struct=cov_struct())
+        score_results = mod.compare_score_test(res_sub)
+        assert_almost_equal(score_results["statistic"],
+            mod_lr.score_test_results["statistic"])
+        assert_almost_equal(score_results["p-value"],
+            mod_lr.score_test_results["p-value"])
+        assert_almost_equal(score_results["df"],
+            mod_lr.score_test_results["df"])
+
+    def test_compare_score_test_warnings(self):
+
+        np.random.seed(6432)
+        n = 200  # Must be divisible by 4
+        exog = np.random.normal(size=(n, 4))
+        group = np.kron(np.arange(n / 4), np.ones(4))
+        exog_sub = exog[:, [0, 3]]
+        endog = exog_sub.sum(1) + 3 * np.random.normal(size=n)
+
+        # Mismatched cov_struct
+        with assert_warns(UserWarning):
+            mod_sub = GEE(endog, exog_sub, group, cov_struct=sm.cov_struct.Exchangeable())
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group, cov_struct=sm.cov_struct.Independence())
+            _ = mod.compare_score_test(res_sub)
+
+        # Mismatched family
+        with assert_warns(UserWarning):
+            mod_sub = GEE(endog, exog_sub, group, family=sm.families.Gaussian())
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group, family=sm.families.Poisson())
+            _ = mod.compare_score_test(res_sub)
+
+        # Mismatched size
+        with assert_raises(Exception):
+            mod_sub = GEE(endog, exog_sub, group)
+            res_sub = mod_sub.fit()
+            mod = GEE(endog[0:100], exog[:100, :], group[0:100])
+            _ = mod.compare_score_test(res_sub)
+
+        # Mismatched weights
+        with assert_warns(UserWarning):
+            w = np.random.uniform(size=n)
+            mod_sub = GEE(endog, exog_sub, group, weights=w)
+            res_sub = mod_sub.fit()
+            mod = GEE(endog, exog, group)
+            _ = mod.compare_score_test(res_sub)
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types
