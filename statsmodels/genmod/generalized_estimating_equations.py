@@ -1358,12 +1358,15 @@ class GEE(base.Model):
     fit.__doc__ = _gee_fit_doc
 
 
-    def _update_regularized(self, params, pen_wt, scad_param, eps):
+    def _update_regularized(self, params, pen_wt, scad_param=3.7):
+
+        eps = 1e-6
 
         sn, hm = 0, 0
+
         for i in range(self.num_group):
 
-            expval, _ = self.cached_means[i]
+            expval, lpr = self.cached_means[i]
             resid = self.endog_li[i] - expval
             sdev = np.sqrt(self.family.variance(expval))
 
@@ -1375,8 +1378,7 @@ class GEE(base.Model):
             hm0 = rslt[1]
             hm += np.dot(ex.T, hm0)
 
-        # Wang et al. divide sn here by num_group, but that seems
-        # to be incorrect
+        sn /= self.num_group
 
         ap = np.abs(params)
         en = pen_wt * np.clip(scad_param * pen_wt - ap, 0, np.inf) * (ap > pen_wt)
@@ -1385,7 +1387,6 @@ class GEE(base.Model):
         en /= eps + ap
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
-        hm *= self.estimate_scale()
         sn -= self.num_group * en * params
 
         return np.linalg.solve(hm, sn), hm
@@ -1398,21 +1399,22 @@ class GEE(base.Model):
 
         for i in range(self.num_group):
 
-            expval, _ = self.cached_means[i]
+            expval, lpr = self.cached_means[i]
             resid = self.endog_li[i] - expval
             sdev = np.sqrt(self.family.variance(expval))
+            sresid = resid / sdev
 
             ex = self.exog_li[i] * sdev[:, None]**2
             rslt = self.cov_struct.covariance_matrix_solve(
-                           expval, i, sdev, (resid,))
+                           expval, i, sdev, (sresid,))
             ma0 = np.dot(ex.T, rslt[0])
             ma += np.outer(ma0, ma0)
 
         return ma
 
-    def fit_regularized(self, pen_wt, scad_param=3.7, maxiter=100,
-                        ddof_scale=None, update_assoc=5,
-                        ctol=1e-5, ztol=1e-3, eps=1e-6):
+    def fit_regularized(self, pen_wt, scad_param=3.7, eps=1e-6,
+                        maxiter=400, ddof_scale=None, update_assoc=5,
+                        ctol=1e-4, ztol=1e-3):
         """
         Regularized estimation for GEE.
 
@@ -1477,7 +1479,7 @@ class GEE(base.Model):
         for itr in range(maxiter):
 
             update, hm = self._update_regularized(
-                              mean_params, pen_wt, scad_param, eps)
+                              mean_params, pen_wt, scad_param)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update",
                 warnings.warn(msg, ConvergenceWarning)

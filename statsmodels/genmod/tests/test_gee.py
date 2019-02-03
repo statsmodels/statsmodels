@@ -538,7 +538,7 @@ class TestGEE(object):
         mod1 = gee.GEE(endog, exog, group, family=family,
                        cov_struct=va, constraint=(L, R))
         res1 = mod1.fit()
-        assert_almost_equal(mod1.score_test_results["statistic"],
+        assert_almost_equal(res1.score_test()["statistic"],
                             1.08126334)
         assert_almost_equal(res1.score_test()["p-value"],
                             0.2984151086)
@@ -551,7 +551,7 @@ class TestGEE(object):
         mod2 = gee.GEE(endog, exog, group, family=family,
                        cov_struct=va, constraint=(L, R))
         res2 = mod2.fit()
-        assert_almost_equal(mod2.score_test_results["statistic"],
+        assert_almost_equal(res2.score_test()["statistic"],
                             3.491110965)
         assert_almost_equal(res2.score_test()["p-value"],
                             0.0616991659)
@@ -1686,17 +1686,17 @@ def test_regularized_poisson():
     groups = np.kron(np.arange(ng), np.ones(gs))
 
     model = gee.GEE(y, x, groups=groups, family=families.Poisson())
-    result = model.fit_regularized(0.01)
+    result = model.fit_regularized(0.0000001)
 
-    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0], rtol=0.01, atol=0.01)
+    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0], rtol=0.01, atol=0.12)
 
 def test_regularized_gaussian():
 
-    # Related to example 1 from Wang et al.
+    # Example 1 from Wang et al.
 
     np.random.seed(8735)
 
-    ng, gs, p = 200, 4, 5
+    ng, gs, p = 200, 4, 200
 
     groups = np.kron(np.arange(ng), np.ones(gs))
 
@@ -1706,7 +1706,7 @@ def test_regularized_gaussian():
     r = 0.5
     for j in range(2, p):
         x[:, j] = r * x[:, j-1] + np.sqrt(1 - r**2) * np.random.normal(size=ng*gs)
-    lpr = np.dot(x[:, 0:4], np.r_[0, 1, 0, -2])
+    lpr = np.dot(x[:, 0:4], np.r_[2, 3, 1.5, 2])
     s = 0.4
     e = np.sqrt(s) * np.kron(np.random.normal(size=ng), np.ones(gs))
     e += np.sqrt(1 - s) * np.random.normal(size=ng*gs)
