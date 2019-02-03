@@ -1363,7 +1363,7 @@ class GEE(base.Model):
         sn, hm = 0, 0
         for i in range(self.num_group):
 
-            expval, lpr = self.cached_means[i]
+            expval, _ = self.cached_means[i]
             resid = self.endog_li[i] - expval
             sdev = np.sqrt(self.family.variance(expval))
 
