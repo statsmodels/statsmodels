@@ -355,8 +355,9 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         eigv2 = np.sort(eigvals(solve(EH, H)))
         stat_table = multivariate_stats(eigv2, p, q, df_resid)
 
-        results[name] = {'stat':stat_table, 'contrast_L':L,
-                         'transform_M':M, 'constant_C':C}
+        results[name] = {'stat': stat_table, 'contrast_L': L,
+                         'transform_M': M, 'constant_C': C,
+                         'E': E, 'H': H}
     return results
 
 
