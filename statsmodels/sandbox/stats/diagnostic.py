@@ -251,7 +251,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         test statistic
     pvalue : float or array
         p-value based on chi-square distribution
-    bpvalue : (optionsal), float or array
+    bpvalue : (optional), float or array
         test statistic for Box-Pierce test
     bppvalue : (optional), float or array
         p-value based for Box-Pierce test on chi-square distribution
