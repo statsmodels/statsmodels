@@ -445,6 +445,18 @@ class GLM(base.LikelihoodModel):
                                   self.freq_weights, scale)
         return llf
 
+    def loglikeobs(self, params, scale=1.):
+        """
+        Evaluate the log-likelihood for a generalized linear model.
+        """
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+        llo = self.freq_weights * self.family.loglike_obs(self.endog, mu,
+                                                          self.var_weights,
+                                                          scale)
+        return llo
+
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
 
