@@ -68,11 +68,11 @@ This can be put into state space form in the following way:
 
 .. math::
 
-   y_t & = \begin{bmatrix} 1 & 0 \end{bmatrix} \alpha_t \\
+   y_t & = \begin{bmatrix} 1 & 0 \end{bmatrix} \alpha_t + \epsilon_t \\
    \alpha_t & = \begin{bmatrix}
       \phi_1 & \phi_2 \\
            1 &      0
-   \end{bmatrix} \alpha_{t-1} + \begin{bmatrix} 1 \\ 0 \end{bmatrix} \eta_t
+   \end{bmatrix} \alpha_{t-1} + \begin{bmatrix} \phi_1 \\ 1 \end{bmatrix} \epsilon_t
 
 Where
 
@@ -88,8 +88,8 @@ and
       \phi_1 & \phi_2 \\
            1 &      0
    \end{bmatrix} \\
-   R_t \equiv R & = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \\
-   \eta_t & \sim N(0, \sigma^2)
+   R_t \equiv R & = \begin{bmatrix} \phi_1 \\ 1 \end{bmatrix} \\
+   \epsilon_t & \sim N(0, \sigma^2)
 
 There are three unknown parameters in this model:
 :math:`\phi_1, \phi_2, \sigma^2`.
