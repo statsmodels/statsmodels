@@ -48,7 +48,7 @@ Example Data
 
 It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
 
-.. ipython::
+.. ipython:: python
 
    hsb2.groupby('race')['write'].mean()
 
