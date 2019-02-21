@@ -227,7 +227,7 @@ class Summary(object):
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
-        out = out.replace("$$","")
+        out = out.replace("$$", "")
         return out
 
 
