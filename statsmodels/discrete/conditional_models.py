@@ -453,25 +453,25 @@ class ConditionalMlogit(conditionalModel):
     ----------
     endog : array-like
         The dependent variable, must be integer-valued, coded
-        0, 1, ..., c, where c + 1 is the number of response
+        0, 1, ..., c-1, where c is the number of response
         categories.
     exog : array-like
         The independent variables.
 
     References
     ----------
-    Gary Chamberlain (1980).  Analysis of covariance with quyalitative data.
-    The Review of Economic Studies.  Vol. 47, No. 1, pp. 225-238.
+    Gary Chamberlain (1980).  Analysis of covariance with qualitative
+    data. The Review of Economic Studies.  Vol. 47, No. 1, pp. 225-238.
 
     Notes
     -----
-    Fits the same model as femlogit in Stata.
+    Equivalent to femlogit in Stata.
     """
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
         if "time" not in kwargs:
-            msg = "'time' is a required aregument for ConditionalMlogit"
+            msg = "'time' is a required argument for ConditionalMlogit"
             raise ValueError(msg)
         time = kwargs["time"]
         del kwargs["time"]
@@ -498,7 +498,6 @@ class ConditionalMlogit(conditionalModel):
         self._group_labels = list(grx.keys())
         self._group_labels.sort()
         self._grp_ix = [grx[k] for k in self._group_labels]
-
 
     def fit(self,
             start_params=None,
