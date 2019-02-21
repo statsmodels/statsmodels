@@ -1,6 +1,6 @@
 import numpy as np
 from statsmodels.discrete.conditional_models import (
-      ConditionalLogit, ConditionalPoisson)
+      ConditionalLogit, ConditionalPoisson, ConditionalMlogit)
 from statsmodels.tools.numdiff import approx_fprime
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -237,3 +237,75 @@ def test_lasso_poisson():
     model3 = ConditionalPoisson.from_formula(fml, groups="groups", data=df)
     result3 = model3.fit_regularized(L1_wt=1, alpha=0.2)
     assert_allclose(result2.params, result3.params)
+
+
+def gen_mlogit(n):
+
+    np.random.seed(235)
+
+    g = np.kron(np.ones(5), np.arange(n//5))
+    t = np.kron(np.ones(n//5), np.arange(5))
+    x1 = np.random.normal(size=n)
+    x2 = np.random.normal(size=n)
+    xm = np.concatenate((x1[:, None], x2[:, None]), axis=1)
+    pa = np.array([[0, 1, -1], [0, 2, -1]])
+    lpr = np.dot(xm, pa)
+    pr = np.exp(lpr)
+    pr /= pr.sum(1)[:, None]
+    cpr = pr.cumsum(1)
+    y = 2 * np.ones(n)
+    u = np.random.uniform(size=n)
+    y[u < cpr[:, 2]] = 2
+    y[u < cpr[:, 1]] = 1
+    y[u < cpr[:, 0]] = 0
+
+    df = pd.DataFrame({"time": t, "y": y, "x1": x1,
+                       "x2": x2, "g": g})
+    return df
+
+def test_conditional_mlogit_grad():
+
+    df = gen_mlogit(90)
+    model = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2",
+              time="time", groups="g", data=df)
+
+    # Compare the gradients to numeric gradients
+    for k in range(5):
+        za = np.random.normal(size=4)
+        grad = model.score(za)
+        ngrad = approx_fprime(za, lambda x: model.loglike(x))
+        assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
+
+    result = model.fit()
+
+def test_conditional_mlogit1():
+
+    df = gen_mlogit(90)
+    model = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2",
+              time="time", groups="g", data=df)
+    result = model.fit()
+
+    # Regression tests
+    assert_allclose(result.params,
+        np.r_[0.75592035, -1.58565494,  1.82919869, -1.32594231],
+        rtol=1e-5, atol=1e-5)
+    assert_allclose(result.bse,
+        np.r_[0.68099698, 0.65190315, 0.70142727, 0.59653771],
+        rtol=1e-5, atol=1e-5)
+
+def test_conditional_mlogit2():
+
+    df = gen_mlogit(90)
+    df["x3"] = np.random.normal(size=df.shape[0])
+    model1 = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2 + x3",
+              time="time", groups="g", data=df)
+    result1 = model1.fit()
+
+    # Regression tests
+    assert_allclose(result1.params,
+        np.asarray([[0.729629, -1.633673], [1.879019, -1.327163], [-0.114124, -0.109378]]),
+        atol=1e-5, rtol=1e-5)
+
+    assert_allclose(result1.bse,
+        np.asarray([[0.682965, 0.604720], [0.672947, 0.424013], [0.722631, 0.336630]]),
+        atol=1e-5, rtol=1e-5)
