@@ -301,10 +301,6 @@ def test_conditional_mlogit2():
               time="time", groups="g", data=df)
     result1 = model1.fit()
 
-    import statsmodels.api as sm
-    model2 = sm.MNLogit.from_formula("y ~ 0 + x1 + x2 + x3", data=df)
-    result2 = model2.fit()
-
     # Regression tests
     assert_allclose(result1.params,
         np.asarray([[ 0.729629, -1.633673],
