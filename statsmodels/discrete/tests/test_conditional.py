@@ -270,13 +270,11 @@ def test_conditional_mlogit_grad():
               time="time", groups="g", data=df)
 
     # Compare the gradients to numeric gradients
-    for k in range(5):
+    for _ in range(5):
         za = np.random.normal(size=4)
         grad = model.score(za)
-        ngrad = approx_fprime(za, lambda x: model.loglike(x))
+        ngrad = approx_fprime(za, model.loglike)
         assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
-
-    result = model.fit()
 
 def test_conditional_mlogit1():
 
@@ -287,10 +285,12 @@ def test_conditional_mlogit1():
 
     # Regression tests
     assert_allclose(result.params,
-        np.r_[0.75592035, -1.58565494,  1.82919869, -1.32594231],
+        np.asarray([[0.75592035, -1.58565494],
+                   [1.82919869, -1.32594231]]),
         rtol=1e-5, atol=1e-5)
     assert_allclose(result.bse,
-        np.r_[0.68099698, 0.65190315, 0.70142727, 0.59653771],
+        np.asarray([[0.68099698, 0.70142727],
+                    [0.65190315, 0.59653771]]),
         rtol=1e-5, atol=1e-5)
 
 def test_conditional_mlogit2():
@@ -301,11 +301,22 @@ def test_conditional_mlogit2():
               time="time", groups="g", data=df)
     result1 = model1.fit()
 
+    import statsmodels.api as sm
+    model2 = sm.MNLogit.from_formula("y ~ 0 + x1 + x2 + x3", data=df)
+    result2 = model2.fit()
+
     # Regression tests
     assert_allclose(result1.params,
-        np.asarray([[0.729629, -1.633673], [1.879019, -1.327163], [-0.114124, -0.109378]]),
+        np.asarray([[ 0.729629, -1.633673],
+                    [ 1.879019, -1.327163],
+                    [-0.114124, -0.109378]]),
         atol=1e-5, rtol=1e-5)
 
     assert_allclose(result1.bse,
-        np.asarray([[0.682965, 0.604720], [0.672947, 0.424013], [0.722631, 0.336630]]),
+        np.asarray([[0.682965, 0.60472 ],
+                    [0.672947, 0.424013],
+                    [0.722631, 0.33663 ]]),
         atol=1e-5, rtol=1e-5)
+
+    # Smoke test
+    result1.summary()

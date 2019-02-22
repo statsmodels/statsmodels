@@ -119,7 +119,8 @@ class conditionalModel(base.LikelihoodModel):
             "%d" % max(self._groupsize),
             "%.1f" % np.mean(self._groupsize)
         ]
-        return ConditionalResultsWrapper(crslt)
+        rslt = ConditionalResultsWrapper(crslt)
+        return rslt
 
     def fit_regularized(self,
                         method="elastic_net",
@@ -516,7 +517,9 @@ class ConditionalMlogit(conditionalModel):
             c = self.k_cat - 1
             start_params = np.random.normal(size=q * c)
 
-        rslt = super(conditionalModel, self).fit(
+        # Don't call super(...).fit because it can't handle the 2d-params.
+        rslt = base.LikelihoodModel.fit(
+            self,
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -524,7 +527,7 @@ class ConditionalMlogit(conditionalModel):
             disp=disp,
             skip_hessian=skip_hessian)
 
-        rslt.params = rslt.params.reshape(self.exog.shape[1], -1)
+        rslt.params = rslt.params.reshape((self.exog.shape[1], -1))
         rslt = MultinomialResults(self, rslt)
         return MultinomialResultsWrapper(rslt)
 
