@@ -1,13 +1,17 @@
 """
-Conditional logistic and Poisson regression
+Conditional logistic, Poisson, and multinomial logit regression
 """
 
 import numpy as np
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (MultinomialResults,
+      MultinomialResultsWrapper)
 import collections
 import warnings
+import itertools
+
 
 
 class conditionalModel(base.LikelihoodModel):
@@ -115,7 +119,8 @@ class conditionalModel(base.LikelihoodModel):
             "%d" % max(self._groupsize),
             "%.1f" % np.mean(self._groupsize)
         ]
-        return ConditionalResultsWrapper(crslt)
+        rslt = ConditionalResultsWrapper(crslt)
+        return rslt
 
     def fit_regularized(self,
                         method="elastic_net",
@@ -180,6 +185,9 @@ class conditionalModel(base.LikelihoodModel):
 
         if isinstance(groups, str):
             groups = data[groups]
+
+        if "time" in kwargs:
+            kwargs["time"] = data[kwargs["time"]]
 
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
@@ -437,6 +445,145 @@ class ConditionalResults(base.LikelihoodModelResults):
             self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t)
 
         return smry
+
+class ConditionalMlogit(conditionalModel):
+    """
+    Fit a conditional multinomial logit model to grouped data.
+
+    Parameters
+    ----------
+    endog : array-like
+        The dependent variable, must be integer-valued, coded
+        0, 1, ..., c-1, where c is the number of response
+        categories.
+    exog : array-like
+        The independent variables.
+
+    References
+    ----------
+    Gary Chamberlain (1980).  Analysis of covariance with qualitative
+    data. The Review of Economic Studies.  Vol. 47, No. 1, pp. 225-238.
+
+    Notes
+    -----
+    Equivalent to femlogit in Stata.
+    """
+
+    def __init__(self, endog, exog, missing='none', **kwargs):
+
+        if "time" not in kwargs:
+            msg = "'time' is a required argument for ConditionalMlogit"
+            raise ValueError(msg)
+        time = kwargs["time"]
+        del kwargs["time"]
+
+        super(ConditionalMlogit, self).__init__(
+            endog, exog, time=time, missing=missing, **kwargs)
+
+        # endog must be integers
+        self.endog = self.endog.astype(np.int)
+
+        self.k_cat = self.endog.max() + 1
+        self.df_model = (self.k_cat - 1) * self.exog.shape[1]
+        self.df_resid = self.nobs - self.df_model
+        self._ynames_map = {j: str(j) for j in range(self.k_cat)}
+        self.J = self.k_cat # Unfortunate name, needed for results
+
+        if self.endog.min() < 0:
+            msg = "endog may not contain negative values"
+            raise ValueError(msg)
+
+        grx = collections.defaultdict(list)
+        for k, v in enumerate(self.groups):
+            grx[v].append(k)
+        self._group_labels = list(grx.keys())
+        self._group_labels.sort()
+        self._grp_ix = [grx[k] for k in self._group_labels]
+
+    def fit(self,
+            start_params=None,
+            method='BFGS',
+            maxiter=100,
+            full_output=True,
+            disp=False,
+            fargs=(),
+            callback=None,
+            retall=False,
+            skip_hessian=False,
+            **kwargs):
+
+        if start_params is None:
+            q = self.exog.shape[1]
+            c = self.k_cat - 1
+            start_params = np.random.normal(size=q * c)
+
+        # Don't call super(...).fit because it can't handle the 2d-params.
+        rslt = base.LikelihoodModel.fit(
+            self,
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=disp,
+            skip_hessian=skip_hessian)
+
+        rslt.params = rslt.params.reshape((self.exog.shape[1], -1))
+        rslt = MultinomialResults(self, rslt)
+        return MultinomialResultsWrapper(rslt)
+
+    def loglike(self, params):
+
+        q = self.exog.shape[1]
+        c = self.k_cat - 1
+
+        pmat = params.reshape((q, c))
+        pmat = np.concatenate((np.zeros((q, 1)), pmat), axis=1)
+        lpr = np.dot(self.exog, pmat)
+
+        ll = 0.0
+        for ii in self._grp_ix:
+            x = lpr[ii, :]
+            jj = np.arange(x.shape[0], dtype=np.int)
+            y = self.endog[ii]
+            denom = 0.0
+            for p in itertools.permutations(y):
+                denom += np.exp(x[(jj, p)].sum())
+            ll += x[(jj, y)].sum() - np.log(denom)
+
+        return ll
+
+
+    def score(self, params):
+
+        q = self.exog.shape[1]
+        c = self.k_cat - 1
+
+        pmat = params.reshape((q, c))
+        pmat = np.concatenate((np.zeros((q, 1)), pmat), axis=1)
+        lpr = np.dot(self.exog, pmat)
+
+        grad = np.zeros((q, c))
+        for ii in self._grp_ix:
+            x = lpr[ii, :]
+            jj = np.arange(x.shape[0], dtype=np.int)
+            y = self.endog[ii]
+            denom = 0.0
+            denomg = np.zeros((q, c))
+            for p in itertools.permutations(y):
+                v = np.exp(x[(jj, p)].sum())
+                denom += v
+                for i, r in enumerate(p):
+                    if r != 0:
+                        denomg[:, r - 1] += v * self.exog[ii[i], :]
+
+            for i, r in enumerate(y):
+                if r != 0:
+                    grad[:, r - 1] += self.exog[ii[i], :]
+
+            grad -= denomg / denom
+
+        return grad.flatten()
+
 
 
 class ConditionalResultsWrapper(lm.RegressionResultsWrapper):
