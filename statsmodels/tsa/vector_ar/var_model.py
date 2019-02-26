@@ -163,7 +163,8 @@ def _var_acf(coefs, sig_u):
     vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
-    acf = acf[:k].T.reshape((p, k, k))
+    acf = [acf[:k, k * i:k * (i + 1)] for i in range(p)]
+    acf = np.array(acf)
 
     return acf
 
