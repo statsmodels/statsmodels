@@ -25,7 +25,6 @@ from __future__ import division
 
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
 
 
 class _ControlChartDataHolder(object):
@@ -50,12 +49,20 @@ class ControlChart(object):
                  distr='t'):
         """
         Creates a control chart with historical (phase I) data.
-        :param historical: A numpy array with shape (number of observations,
-        number of variables)
-        :param future: An optional numpy array of future (phase II) data
-        :param alpha:
-        :param crit:
-        :param distr:
+
+        Parameters
+        ----------
+        historical : array_like
+            Phase I historical data with shape (number of observations,
+            number of variables)
+        future : array_like
+            An optional numpy array of future (phase II) data
+        alpha : float, optional
+            Significance level
+        crit : ndarray
+            Critical values
+        distr : str
+            The distribution type
         """
         self.endog = historical
 
@@ -82,6 +89,9 @@ class ControlChart(object):
         self._update_statistics()
 
     def _update_statistics(self):
+        """
+        Updates both historical and future statistics and control limits.
+        """
         (self.statistic, self.stat_new) = self.generate_chart_statistic()
         self.determine_control_limits(phase=1)
         idx_out, out = self.find_out_control(self.historical_info,
@@ -100,8 +110,13 @@ class ControlChart(object):
         Calculates the statistic that this control chart is based off of.
         This could be a dynamic value that changes with new observations or it
         may remain static.
-        :return: This function should return a tuple of (phase I statistic,
-        phase II statistic)
+
+        Returns
+        -------
+        phase_i_stat : ndarray
+            Phase I statistic values
+        phase_ii_stat : ndarray
+            Phase II statistic values
         """
         raise NotImplementedError('Needs to have a calculate statistic method')
 
@@ -124,7 +139,11 @@ class ControlChart(object):
     def _validate_phase(self, phase):
         """
         Verifies that we can actually plot the requested control chart.
-        Raises a :exc:`ValueError` if this is not possible.
+
+        Raises
+        ------
+        ValueError
+            If the requested phase(s) cannot be plotted.
         """
         if phase != 1 and self.future_data is None:
             raise ValueError(
@@ -143,23 +162,32 @@ class ControlChart(object):
             raise ValueError('Not a supported distribution')
 
     def _info_from_phase(self, phase):
-        """Returns the appropriate statistic values, indices, and control
+        """
+        Returns the appropriate statistic values, indices, and control
         limits depending on the phase of the control chart.
-        :return A tuple of (ControlChartDataHolder, statistic ndarray)"""
-        if phase == 1:
-            return self.historical_info, self.statistic
-        elif phase == 2:
-            return self.future_info, self.stat_new
-        else:
-            concat_stat = np.concatenate((self.statistic, self.stat_new),
-                                         axis=0)
-            concat_info = _ControlChartDataHolder(y=concat_stat, phase=phase)
+
+        Returns
+        ------
+        info : _ControlChartDataHolder
+            Metadata for this phase, like the index, control limits etc
+        statistic : ndarray
+            The statistic values for this phase
+        """
         info = self.historical_info if phase == 1 else self.future_info
         stat = self.statistic if phase == 1 else self.stat_new
         return info, stat
 
     def plot_control_limits(self, phase, ax):
-        info, statistic = self._info_from_phase(phase)
+        """
+        Plots control limits on the given axes.
+
+        Parameters
+        ------
+        phase : int
+            The phase to plot, either 0 (both), 1 or 2
+        ax : None or matplotlib axis instance
+        """
+        info, _ = self._info_from_phase(phase)
         if np.isscalar(info.upper):
             ax.fill_between(info.index,
                             info.upper,
@@ -185,9 +213,16 @@ class ControlChart(object):
     def plot_phase(self, phase, ax):
         """
         Plots the control chart for the specified phase on the axes.
-        :param phase - either 0 (both), 1, or 2
-        :param ax - the axes to plot on
-        :return the axes
+
+        Parameters
+        ------
+        phase : int
+            The phase to plot, either 0 (both), 1 or 2
+        ax : None or matplotlib axis instance
+
+        Returns
+        ------
+        axes : matplotlib axis instance
         """
         # Gets the statistic, index, and control limits depending on the phase
         info, statistic = self._info_from_phase(phase)
@@ -202,6 +237,15 @@ class ControlChart(object):
         return ax
 
     def update(self, future=None):
+        """
+        Updates the current control chart with future data points and
+        re-calculates all of the statistics.
+
+        Parameters
+        ------
+        future : ndarray, optional
+            The phase II data
+        """
         if future is not None:
             if self.future_data is not None:
                 self.future_data, self.future_info.index = \
@@ -222,18 +266,23 @@ class ControlChart(object):
         """
         Plots the control chart.
 
-        :param future: Optional new data that we want to include for phase II.
-        If phase II data already exists, the new data will be concatenated to
-        that and statistics will be recalculated.
+        Parameters
+        ------
+        future : ndarray, optional
+            New data that we want to include for phase II. If phase II data
+            already exists, the new data will be concatenated to that and
+            statistics will be recalculated.
+        phase : int
+            The phase of the control chart to plot (either 1, 2, or
+            0 for both phases)
+        ax : matplotlib axis instance
+            The axes to plot the chart on
+        update : bool
+            Whether or not to update the future data
 
-        :param phase: The phase of the control chart to plot (either 1, 2, or
-        0 for both phases)
-
-        :param ax: The axes to plot the chart on
-
-        :param update: boolean Whether or not to update the future data
-
-        :return chart axes
+        Returns
+        ------
+        axes : matplotlib chart axes
         """
         if update:
             self.update(future)
@@ -242,6 +291,7 @@ class ControlChart(object):
 
         # Create new plot if none exists
         if ax is None:
+            import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.add_subplot(111)
 
@@ -262,8 +312,23 @@ class ControlChart(object):
     def find_out_control(self, info, statistic, phase):
         """
         Finds the out-of-control points depending on the phase.
-        :param info: `ControlChartDataHolder`
-        :return: A tuple of the out-of-control indexes and all indexes
+
+        Parameters
+        ------
+        info : `ControlChartDataHolder`
+            Metadata for the data points in a given phase
+        statistic : ndarray
+            Statistic values for this phase
+        phase : int
+            The phase to plot, either 0 (both), 1 or 2
+
+        Returns
+        ------
+        idx_out : ndarray of ints
+            The out-of-control indexes
+        out : ndarray of booleans
+            An array of booleans that maps to whether or not the value at the
+            index is out-of-control
         """
         out = (statistic > info.upper) | (statistic < info.lower)
         if statistic.ndim > 1:
@@ -283,7 +348,23 @@ class ControlChart(object):
 
     def concat_data_and_index(self, y_old, y_new, old_idx):
         """
-        returns: y, full index
+        Concatenates new data and indexes.
+
+        Parameters
+        ------
+        y_old : ndarray
+            The original data points
+        y_new : ndarray
+            New data points
+        old_idx : ndarray
+            The original index
+
+        Returns
+        ------
+        y : ndarray
+            Concatenated data points
+        idx : ndarray
+            New index for concatenated data points
         """
         y = np.concatenate((y_old, y_new), axis=0)
         n1 = y_new.shape[0]
@@ -304,6 +385,8 @@ class ControlChartMean(ControlChart):
                                                alpha=alpha,
                                                crit=crit,
                                                distr=distr)
+        self.sbcmap = ['#006BA4', '#FF800E', '#ABABAB', '#595959', '#5F9ED1',
+                       '#C85200', '#898989', '#A2C8EC', '#FFBC79', '#CFCFCF']
 
     def generate_chart_statistic(self):
         return self.endog, self.future_data
@@ -316,42 +399,38 @@ class ControlChartMean(ControlChart):
             self.future_info.upper = self.center + self.diff
             self.future_info.lower = self.center - self.diff
 
-    def plot_control_limits(self, phase, ax, cmap=None):
-        info, y = self._info_from_phase(phase)
+    def plot_control_limits(self, phase, ax):
+        info, _ = self._info_from_phase(phase)
         n = info.upper.shape[0]
         for i in range(n):
             ax.hlines(info.upper[i],
                       info.index[0],
                       info.index[-1],
-                      colors=cmap[i] if cmap else 'k', linestyle='dashed')
+                      colors=self.sbcmap[i], linestyle='dashed')
             ax.hlines(info.lower[i],
                       info.index[0],
                       info.index[-1],
-                      colors=cmap[i] if cmap else 'k', linestyle='dashed')
+                      colors=self.sbcmap[i], linestyle='dashed')
             ax.fill_between(info.index,
                             info.upper[i],
                             info.lower[i],
-                            color=cmap[i] if cmap else 'k', alpha=.2)
+                            color=self.sbcmap[i], alpha=.2)
 
     def plot_phase(self, phase, ax):
         """
-        Plots the control chart for the specified phase on the axes.
-        :param phase - either 0 (both), 1, or 2
-        :param ax - the axes to plot on
-        :return the axes
+        Because this control chart needs to be able to handle plotting control
+        charts for multiple variables on one graph, it attempts to color-code
+        each variable's features (i.e., its center line and control limits) to
+        make things clearer.
         """
         # Gets the statistic, index, and control limits depending on the phase
         info, statistic = self._info_from_phase(phase)
 
         # Plot the statistic and control limits
-        sbcmap = ['#006BA4', '#FF800E', '#ABABAB',
-                  '#595959', '#5F9ED1', '#C85200',
-                  '#898989', '#A2C8EC', '#FFBC79',
-                  '#CFCFCF']
         for i in range(info.k_endog):
-            ax.plot(info.index, statistic[:, i], 'o-', color=sbcmap[i])
+            ax.plot(info.index, statistic[:, i], 'o-', color=self.sbcmap[i])
 
-        self.plot_control_limits(phase=phase, ax=ax, cmap=sbcmap)
+        self.plot_control_limits(phase=phase, ax=ax)
 
         # Highlight the out-of-control points
         idx_out, out = info.out_control_idx
@@ -375,7 +454,8 @@ class MultiVariateControlChart(ControlChart):
     This generates a multivariate control chart based on the T2
     Hotelling statistic.
 
-    References:
+    References
+    ------
     https://itl.nist.gov/div898/software/dataplot/refman1/auxillar/hotell.htm
     """
 
@@ -469,9 +549,12 @@ class EWMAMultivariateControlChart(MultiVariateControlChart):
 
     def _generate_t2_ewma(self, y):
         """
-        Reference: https://mpra.ub.uni-muenchen.de/6399/1/MPRA
-        :param y:
-        :return:
+        Generates the T2 EWMA statistic.
+
+        References
+        ------
+        - https://mpra.ub.uni-muenchen.de/6399/1/MPRA
+        - https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc343.htm
         """
         ewma_0 = y.mean(0)
         ewma = [ewma_0]

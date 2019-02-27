@@ -1,5 +1,6 @@
 import os
 
+import pytest
 from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
                            assert_allclose,
@@ -8,6 +9,7 @@ import pandas as pd
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.stats.control_chart import ControlChartMean, \
     MultiVariateControlChart, EWMAMultivariateControlChart
+from statsmodels.graphics import utils
 import unittest
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
@@ -15,19 +17,22 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 class TestControlChart(unittest.TestCase):
 
+    @pytest.mark.matplotlib
     def test_no_future_phase_two(self):
         """
         A control chart with no future data should not be able to plot a
         non-phase I chart
         """
+        _, mpl_ax = utils.create_mpl_ax()
         div_point = TestControlChart.nobs // 2
         old_data = TestControlChart.data[:div_point]
         cc = MultiVariateControlChart(old_data, alpha=0.05, distr='F')
-        with self.assertRaises(ValueError) as context:
-            cc.plot_chart(phase=2)
-        with self.assertRaises(ValueError) as context:
-            cc.plot_chart(phase=0)
+        with self.assertRaises(ValueError):
+            cc.plot_chart(phase=2, ax=mpl_ax)
+        with self.assertRaises(ValueError):
+            cc.plot_chart(phase=0, ax=mpl_ax)
 
+    @pytest.mark.matplotlib
     def test_chart_updates(self):
         """
         Verifies that future data gets appended when we perform updates.
@@ -38,16 +43,17 @@ class TestControlChart(unittest.TestCase):
         new_data_part1 = TestControlChart.data[div_point:div_point+10]
         new_data_part2 = TestControlChart.data[div_point+10:]
 
+        _, mpl_ax = utils.create_mpl_ax()
         cc = ControlChartMean(old_data, alpha=0.05)
-        cc.plot_chart(future=new_data_part1, update=True)
+        cc.plot_chart(future=new_data_part1, update=True, ax=mpl_ax)
         assert_array_equal(cc.future_data, new_data_part1)
 
         # shouldn't update from plotting if we specify update=False
-        cc.plot_chart(future=new_data_part2, update=False)
+        cc.plot_chart(future=new_data_part2, update=False, ax=mpl_ax)
         assert_array_equal(cc.future_data, new_data_part1)
 
         # should concatenate the current future data with new data
-        cc.plot_chart(future=new_data_part2, update=True)
+        cc.plot_chart(future=new_data_part2, update=True, ax=mpl_ax)
         assert_array_equal(cc.future_data, new_data)
 
     def test_univariate_control_chart_mean(self):
@@ -74,7 +80,6 @@ class TestControlChart(unittest.TestCase):
         """
         div_point = TestControlChart.nobs // 2
         old_data = TestControlChart.data[:div_point]
-        new_data = TestControlChart.data[div_point:]
         cc = MultiVariateControlChart(old_data, alpha=0.05, distr='F')
 
         assert_array_almost_equal(cc.center, [0.01013271, 0.08381132])
@@ -87,6 +92,7 @@ class TestControlChart(unittest.TestCase):
         # Verify that the out of control indices are correct
         assert_array_equal(cc.historical_info.out_control_idx[0], [])
 
+    @pytest.mark.matplotlib
     def test_multivariate_control_chart_phase_2(self):
         """
         This plots the phase 2 multivariate T2 control chart - the control
@@ -97,9 +103,10 @@ class TestControlChart(unittest.TestCase):
         div_point = TestControlChart.nobs // 2
         old_data = TestControlChart.data[:div_point]
         new_data = TestControlChart.data[div_point:]
+        _, mpl_ax = utils.create_mpl_ax()
         cc = MultiVariateControlChart(old_data, new_data,
                                       alpha=0.05, distr='F')
-        ax = cc.plot_chart(phase=2)
+        cc.plot_chart(phase=2, ax=mpl_ax)
         assert_array_almost_equal(cc.center, [0.01013271, 0.08381132])
         assert_allclose(cc.stat_new,
                         TestControlChart.results_r_df['t2'].values[53:])
@@ -112,6 +119,7 @@ class TestControlChart(unittest.TestCase):
         assert_array_equal(cc.future_info.out_control_idx[0],
                            [63,  99, 103, 104, 105, 106])
 
+    @pytest.mark.matplotlib
     def test_multivariate_ewma(self):
         t2_ewma_stat = [0.47327288, 0.01709351, 0.51630749, 0.44703781,
                         1.66208689, 2.29793468, 4.06751727, 4.94504601,
@@ -131,9 +139,10 @@ class TestControlChart(unittest.TestCase):
         div_point = TestControlChart.nobs // 2
         old_data = TestControlChart.data[:div_point]
         new_data = TestControlChart.data[div_point:]
+        _, mpl_ax = utils.create_mpl_ax()
         cc = EWMAMultivariateControlChart(old_data, future=new_data,
                                           weight=0.5, alpha=0.05, distr='F')
-        cc.plot_chart(phase=2)
+        cc.plot_chart(phase=2, ax=mpl_ax)
         assert_array_almost_equal(cc.statistic, t2_ewma_stat)
         assert_approx_equal(cc.historical_info.upper, 5.761466)
         assert_approx_equal(cc.future_info.upper, 6.604564, significant=1)
