@@ -70,11 +70,11 @@ This can be put into state space form in the following way:
 
    y_t & = \begin{bmatrix} 1 & 0 \end{bmatrix} \alpha_t \\
    \alpha_t & = \begin{bmatrix}
-      \phi_1 & \phi_2 \\
-           1 &      0
+      \phi_1 & 1 \\
+      \phi_2 & 0
    \end{bmatrix} \alpha_{t-1} + \begin{bmatrix} 1 \\ 0 \end{bmatrix} \eta_t
 
-Where
+where
 
 .. math::
 
@@ -85,14 +85,15 @@ and
 .. math::
 
    T_t \equiv T & = \begin{bmatrix}
-      \phi_1 & \phi_2 \\
-           1 &      0
+      \phi_1 & 1 \\
+      \phi_2 & 0
    \end{bmatrix} \\
    R_t \equiv R & = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \\
-   \eta_t & \sim N(0, \sigma^2)
+   \eta_t & = \epsilon_{t+1} \sim N(0, \sigma^2)
 
 There are three unknown parameters in this model:
-:math:`\phi_1, \phi_2, \sigma^2`.
+:math:`\phi_1, \phi_2, \sigma^2`. For the general case 
+of an ARIMA(p,d,q) model see Durbin and Koopman (2012), pp. 54.
 
 Models and Estimation
 ---------------------
