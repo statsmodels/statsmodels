@@ -23,6 +23,11 @@ DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
 
+try:
+    import cvxopt
+    has_cvxopt = True
+except:
+    has_cvxopt = False
 
 class CheckRegressionResults(object):
     """
@@ -1277,6 +1282,7 @@ def test_burg_errors():
         burg(np.random.randn(100), 'apple')
 
 
+@pytest.mark.skipif(not has_cvxopt, reason="sqrt_lasso requires cvxopt")
 def test_sqrt_lasso():
 
     np.random.seed(234923)
