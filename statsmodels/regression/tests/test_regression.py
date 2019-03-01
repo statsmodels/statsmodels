@@ -26,7 +26,7 @@ DECIMAL_0 = 0
 try:
     import cvxopt
     has_cvxopt = True
-except:
+except ImportError:
     has_cvxopt = False
 
 class CheckRegressionResults(object):
