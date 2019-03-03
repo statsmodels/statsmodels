@@ -92,6 +92,9 @@ class PHD(DimReductionRegression):
 
     References
     ----------
+    KC Li (1992).  On Principal Hessian Directions for Data
+    Visualization and Dimension Reduction: Another application
+    of Stein's lemma. JASA 87:420.
     """
 
     def __init__(self, endog, exog, **kwargs):
@@ -105,7 +108,9 @@ class PHD(DimReductionRegression):
         Parameters
         ----------
         resid : bool
-
+            If True, use least squares regression to remove the
+            linear relationship between each covariate and the
+            response, before conducting PHD.
         """
 
         y = self.endog - self.endog.mean()
