@@ -1,7 +1,6 @@
 import numpy as np
 from statsmodels.base import model
 import statsmodels.base.wrapper as wrap
-import pandas as pd
 
 class DimReductionRegression(model.Model):
 
@@ -12,7 +11,6 @@ class DimReductionRegression(model.Model):
 
         # Sort the data by endog
         ii = np.argsort(self.endog)
-        y = self.endog[ii]
         x = self.exog[ii, :]
 
         # Whiten the data
@@ -48,15 +46,18 @@ class SIR(DimReductionRegression):
         super(SIR, self).__init__(endog, exog, **kwargs)
 
 
-    def fit(self, slice_n=20):
+    def fit(self, **kwargs):
         """
         Estimate the EDR space.
 
-        Parameters
-        ----------
+        Optional keyword parameters
+        ---------------------------
         slice_n : int
             Number of observations per slice
         """
+
+        # Sample size per slice
+        slice_n = kwargs.get("slice_n", 20)
 
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
@@ -101,17 +102,19 @@ class PHD(DimReductionRegression):
         super(PHD, self).__init__(endog, exog, **kwargs)
 
 
-    def fit(self, resid=False):
+    def fit(self, **kwargs):
         """
         Estimate the EDR space using PHD.
 
-        Parameters
-        ----------
+        Optional keyword parameters
+        ---------------------------
         resid : bool
             If True, use least squares regression to remove the
             linear relationship between each covariate and the
             response, before conducting PHD.
         """
+
+        resid = kwargs.get("resid", False)
 
         y = self.endog - self.endog.mean()
         x = self.exog - self.exog.mean(0)
@@ -170,15 +173,18 @@ class SAVE(DimReductionRegression):
         if "bc" in kwargs.keys() and kwargs["bc"] == True:
             self.bc = True
 
-    def fit(self, slice_n=50):
+    def fit(self, **kwargs):
         """
         Estimate the EDR space.
 
-        Parameters
-        ----------
+        Optional keyword arguments
+        --------------------------
         slice_n : int
             Number of observations per slice
         """
+
+        # Sample size per slice
+        slice_n = kwargs.get("slice_n", 50)
 
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
@@ -186,16 +192,16 @@ class SAVE(DimReductionRegression):
         self._prep(n_slice)
 
         cv = [np.cov(z.T) for z in self._split_wexog]
-        n = [z.shape[0] for z in self._split_wexog]
+        ns = [z.shape[0] for z in self._split_wexog]
 
         p = self.wexog.shape[1]
 
         if not self.bc:
             # Cook's original approach
             vm = 0
-            for i in range(len(cv)):
-                icv = np.eye(p) - cv[i]
-                vm += n[i] * np.dot(icv, icv)
+            for w, cvx in zip(ns, cv):
+                icv = np.eye(p) - cvx
+                vm += w * np.dot(icv, icv)
             vm /= len(cv)
         else:
             # The bias-corrected approach of Li and Zhu
@@ -208,7 +214,7 @@ class SAVE(DimReductionRegression):
 
             # V_n in Li, Zhu
             vn = 0
-            for j, x in enumerate(self._split_wexog):
+            for x in self._split_wexog:
                 r = x - x.mean(0)
                 for i in range(r.shape[0]):
                     u = r[i, :]
@@ -216,7 +222,7 @@ class SAVE(DimReductionRegression):
                     vn += np.dot(m, m)
             vn /= self.exog.shape[0]
 
-            c = np.mean(n)
+            c = np.mean(ns)
             k1 = c * (c - 1) / ((c - 1)**2 + 1)
             k2 = (c - 1) / ((c - 1)**2 + 1)
             av2 = k1 * av - k2 * vn
