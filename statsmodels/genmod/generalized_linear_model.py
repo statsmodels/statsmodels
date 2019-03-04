@@ -1316,7 +1316,7 @@ class GLM(base.LikelihoodModel):
 
         return result
 
-    def _fit_ridge(self, alpha, start_params):
+    def _fit_ridge(self, alpha, start_params, method="newton-cg"):
 
         if start_params is None:
             start_params = np.zeros(self.exog.shape[1])
@@ -1331,8 +1331,14 @@ class GLM(base.LikelihoodModel):
         from statsmodels.base.elastic_net import (RegularizedResults,
             RegularizedResultsWrapper)
 
-        mr = minimize(fun, start_params, jac=grad)
+        mr = minimize(fun, start_params, jac=grad, method=method)
         params = mr.x
+
+        if not mr.success:
+            import warnings
+            ngrad = np.sqrt(np.sum(mr.jac**2))
+            msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
+            warnings.warn(msg)
 
         results = RegularizedResults(self, params)
         results = RegularizedResultsWrapper(results)

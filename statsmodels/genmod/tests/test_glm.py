@@ -1940,8 +1940,8 @@ def test_tweedie_EQL():
 
     # Series of ridge fits using gradients
     ev = (np.array([1.00177988, -0.99388262, 0.007971, 0.50618676]),
-          np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
-          np.array([0.20642861, -0.16454719, 0.00023485, 0.1024888]))
+          np.array([0.9854501, -0.96991095, 0.0073212, 0.49744815]),
+          np.array([0.20643362, -0.16456528, 0.00023651, 0.10249308]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
