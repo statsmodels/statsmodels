@@ -1904,6 +1904,49 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
                            exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
+def test_tweedie_EQL():
+    # All tests below are regression tests
+
+    np.random.seed(3242)
+    n = 500
+    p = 1.5 # Tweedie variance power
+    x = np.random.normal(size=(n, 4))
+    lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
+    mu = np.exp(lpr)
+    lam = 10 * mu**(2 - p) / (2 - p)
+    alp = (2 - p) / (p - 1)
+    bet = 10 * mu**(1 - p) / (p - 1)
+
+    # Generate Tweedie values using commpound Poisson distribution
+    y = np.empty(n)
+    N = np.random.poisson(lam)
+    for i in range(n):
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
+
+    # Un-regularized fit using gradients not IRLS
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    model1 = sm.GLM(y, x, family=fam)
+    result1 = model1.fit(method="newton")
+    assert_allclose(result1.params,
+       np.array([1.00350497, -0.99656954, 0.00802702, 0.50713209]),
+       rtol=1e-5, atol=1e-5)
+
+    # Lasso fit using coordinatewise descent
+    model2 = sm.GLM(y, x, family=fam)
+    result2 = model2.fit_regularized(L1_wt=1, alpha=0.07)
+    assert_allclose(result2.params,
+        np.array([1.00399431, -0.99124397,  0., 0.5044154]),
+        rtol=1e-5, atol=1e-5)
+
+    # Series of ridge fits using gradients
+    ev = (np.array([1.00177988, -0.99388262, 0.007971, 0.50618676]),
+          np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
+          np.array([0.20642861, -0.16454719, 0.00023485, 0.1024888]))
+    for j, alpha in enumerate([0.05, 0.5, 0.7]):
+        model3 = sm.GLM(y, x, family=fam)
+        result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
+        assert_allclose(result3.params, ev[j], rtol=1e-5, atol=1e-5)
+
 
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.

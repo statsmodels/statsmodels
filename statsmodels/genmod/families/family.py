@@ -202,7 +202,7 @@ class Family(object):
 
         .. math::
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
-           
+
         D_i is calculated from the _resid_dev method in each family.
         Distribution-specific documentation of the calculation is available
         there.
@@ -1166,7 +1166,7 @@ class NegativeBinomial(Family):
     Parameterization for :math:`y=0, 1, 2, \ldots` is
 
     .. math::
-      
+
        f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
               \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
               \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y
@@ -1329,6 +1329,9 @@ class Tweedie(Family):
         See statsmodels.genmod.families.links for more information.
     var_power : float, optional
         The variance power. The default is 1.
+    eql : bool
+        If True, the Extended Quasi-Likelihood is used, else the
+        likelihood is used (however the latter is not implemented).
 
     Attributes
     ----------
@@ -1355,8 +1358,9 @@ class Tweedie(Family):
     variance = V.Power
     safe_links = [L.log, L.Power]
 
-    def __init__(self, link=None, var_power=1.):
+    def __init__(self, link=None, var_power=1., eql=False):
         self.var_power = var_power
+        self.eql = eql
         if link is None:
             link = L.log()
         super(Tweedie, self).__init__(
@@ -1451,10 +1455,28 @@ class Tweedie(Family):
 
         Notes
         -----
-        This is not implemented because of the complexity of calculating an
-        infinite series of sums.
+        If eql is True, the Extended Quasi-Likelihood is used.  At present,
+        this method returns NaN if eql is False.  When the actual likelihood
+        is implemented, it will be accessible by setting eql to False.
+
+        References
+        ----------
+        http://support.sas.com/documentation/cdl/en/stathpug/67524/HTML/default/viewer.htm#stathpug_hpgenselect_details16.htm
         """
-        return np.nan
+        if self.eql == False:
+            # We have not yet implemented the actual likelihood
+            return np.nan
+
+        p = self.var_power
+        llf = np.log(2 * np.pi * scale) + p * np.log(endog) - np.log(var_weights)
+        llf *= -1 / 2
+
+        u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
+        u *= var_weights / (scale * (1 - p)**2)
+        llf += u
+
+        return llf
+
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
