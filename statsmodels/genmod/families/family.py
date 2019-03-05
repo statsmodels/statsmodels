@@ -1472,7 +1472,7 @@ class Tweedie(Family):
         llf *= -1 / 2
 
         u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
-        u *= var_weights / (scale * (1 - p)**2)
+        u *= var_weights / (scale * (1 - p) * (2 - p))
         llf += u
 
         return llf

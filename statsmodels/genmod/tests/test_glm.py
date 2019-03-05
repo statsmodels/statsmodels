@@ -1935,18 +1935,17 @@ def test_tweedie_EQL():
     model2 = sm.GLM(y, x, family=fam)
     result2 = model2.fit_regularized(L1_wt=1, alpha=0.07)
     assert_allclose(result2.params,
-        np.array([1.00399431, -0.99124397,  0., 0.5044154]),
+        np.array([1.01059123, -1.00378706,  0., 0.50834694]),
         rtol=1e-5, atol=1e-5)
 
     # Series of ridge fits using gradients
-    ev = (np.array([1.00177988, -0.99388262, 0.007971, 0.50618676]),
-          np.array([0.9854501, -0.96991095, 0.0073212, 0.49744815]),
+    ev = (np.array([1.00724238, -0.99017577, 0.0057054, 0.50892953]),
+          np.array([0.98619792, -0.97033874, 0.00604844, 0.4981513]),
           np.array([0.20643362, -0.16456528, 0.00023651, 0.10249308]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
         assert_allclose(result3.params, ev[j], rtol=1e-5, atol=1e-5)
-
 
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
