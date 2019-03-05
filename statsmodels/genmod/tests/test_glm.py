@@ -1904,8 +1904,10 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
                            exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
+@pytest.mark.filterwarnings("ignore:GLM ridge optimization")
 def test_tweedie_EQL():
-    # All tests below are regression tests
+    # All tests below are regression tests, but the results
+    # are very close to the population values.
 
     np.random.seed(3242)
     n = 500
