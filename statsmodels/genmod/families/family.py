@@ -1332,6 +1332,7 @@ class Tweedie(Family):
     eql : bool
         If True, the Extended Quasi-Likelihood is used, else the
         likelihood is used (however the latter is not implemented).
+        If eql is True, var_power must be between 1 and 2.
 
     Attributes
     ----------
@@ -1361,6 +1362,9 @@ class Tweedie(Family):
     def __init__(self, link=None, var_power=1., eql=False):
         self.var_power = var_power
         self.eql = eql
+        if eql and (var_power < 1 or var_power > 2):
+            msg = "Tweedie: if EQL=True then var_power must fall between 1 and 2"
+            raise ValueError(msg)
         if link is None:
             link = L.log()
         super(Tweedie, self).__init__(
@@ -1463,7 +1467,7 @@ class Tweedie(Family):
         ----------
         http://support.sas.com/documentation/cdl/en/stathpug/67524/HTML/default/viewer.htm#stathpug_hpgenselect_details16.htm
         """
-        if self.eql == False:
+        if not self.eql:
             # We have not yet implemented the actual likelihood
             return np.nan
 
