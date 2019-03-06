@@ -13,7 +13,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, date_range, DataFrame
 
-from statsmodels.datasets import macrodata, sunspots
+from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
@@ -511,11 +511,28 @@ class TestKPSS(SetupKPSS):
         assert_equal(store.nobs, len(self.x))
         assert_equal(store.lags, 3)
 
+    # test autolag function _kpss_autolag against SAS 9.3
     def test_lags(self):
+        # real GDP from macrodata data set
         with warnings.catch_warnings(record=True) as w:
-            kpss_stat, pval, lags, crits = kpss(self.x, 'c')
-        assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
-        # assert_warns(UserWarning, kpss, self.x)
+            lags = kpss(self.x, 'c')[2]
+        assert_equal(lags, 9)
+        # real interest rates from macrodata data set
+        with warnings.catch_warnings(record=True) as w:
+            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c')[2]
+        assert_equal(lags, 7)
+        # volumes from nile data set
+        with warnings.catch_warnings(record=True) as w:
+            lags = kpss(nile.load().data['volume'], 'c')[2]
+        assert_equal(lags, 5)
+        # log-coinsurance from randhie data set
+        with warnings.catch_warnings(record=True) as w:
+            lags = kpss(randhie.load().data['lncoins'], 'ct')[2]
+        assert_equal(lags, 75)
+        # in-vehicle time from modechoice data set
+        with warnings.catch_warnings(record=True) as w:
+            lags = kpss(modechoice.load().data['invt'], 'ct')[2]
+        assert_equal(lags, 18)
 
 
 def test_pandasacovf():
