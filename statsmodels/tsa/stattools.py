@@ -1512,8 +1512,9 @@ def kpss(x, regression='c', lags=None, store=False):
         * 'ct' : The data is stationary around a trend
     lags : int
         Indicates the number of lags to be used. If None (default),
-        lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
-        Schwert (1989).
+        lags is calculated with the data-dependent method of Hobijn
+        et al. (1998). See also Andrews (1991), Newey & West (1994),
+        and Schwert (1989).
     store : bool
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
@@ -1549,9 +1550,21 @@ def kpss(x, regression='c', lags=None, store=False):
 
     References
     ----------
-    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing
-    the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
-    `Journal of Econometrics` 54, 159-178.
+    Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation consistent
+    covariance matrix estimation. Econometrica, 59: 817-858.
+
+    Hobijn, B., Frances, B.H., & Ooms, M. (2004). Generalizations of the
+    KPSS-test for stationarity. Statistica Neerlandica, 52: 483-502.
+
+    Kwiatkowski, D., Phillips, P.C.B., Schmidt, P., & Shin, Y. (1992). Testing
+    the null hypothesis of stationarity against the alternative of a unit root.
+    Journal of Econometrics, 54: 159-178.
+
+    Newey, W.K., & West, K.D. (1994). Automatic lag selection in covariance
+    matrix estimation. Review of Economic Studies, 61: 631-653.
+
+    Schwert, G. W. (1989). Tests for unit roots: A Monte Carlo investigation.
+    Journal of Business and Economic Statistics, 7 (2): 147-159.
     """
     from warnings import warn
 
@@ -1578,8 +1591,8 @@ def kpss(x, regression='c', lags=None, store=False):
         raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
-        # from Kwiatkowski et al. referencing Schwert (1989)
-        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        # autolag method of Hobijn et al. (1998)
+        lags = _kpss_autolag(resids, nobs)
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
@@ -1620,3 +1633,24 @@ def _sigma_est_kpss(resids, nobs, lags):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
+
+
+def _kpss_autolag(resids, nobs):
+    """
+    Computes the number of lags for covariance matrix estimation in KPSS test
+    using method of Hobijn et al (1998). See also Andrews (1991), Newey & West
+    (1994), and Schwert (1989). Assumes Bartlett / Newey-West kernel.
+    """
+    covlags = int(np.power(nobs, 2. / 9.))
+    s0 = sum(resids**2) / nobs
+    s1 = 0
+    for i in range(1, covlags + 1):
+        resids_prod = np.dot(resids[i:], resids[:nobs - i])
+        resids_prod /= (nobs / 2.)
+        s0 += resids_prod
+        s1 += i * resids_prod
+    s_hat = s1 / s0;
+    pwr = 1. / 3.
+    gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
+    autolags = np.amin([nobs, int(gamma_hat * np.power(nobs, pwr))])
+    return autolags
