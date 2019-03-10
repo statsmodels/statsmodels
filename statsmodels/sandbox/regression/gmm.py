@@ -1486,6 +1486,57 @@ class LinearIVGMM(IVGMM):
 
         return np.dot(exog, params)
 
+    def compare_j(self, weights=None, var):
+        ## The function computes the C statistic which compare the two nested linear GMM
+        ## models. We use the same weight matrix so that the difference is always
+        ## positive.
+        ## var takes a list giving the position of the variable to be
+        ## removed in the second regression. Example: var=[2,5,8]
+
+        if weights is None:
+            weights = self.start_weights(inv=False)
+         
+
+        weights = np.array(weights)   
+        #weights2 = np.delete(weights, var,axis=1)
+        weights2 = np.delete(np.delete(weights, var,axis=1), var,axis=0)
+       
+        y, x, z = self.endog, self.exog, self.instrument
+        w = x[...,var]
+        
+        ## compute jstat1
+        zTx = np.dot(z.T, x)
+        zTy = np.dot(z.T, y)
+        # normal equation, solved with pinv
+        part0 = zTx.T.dot(weights)
+        part1 = part0.dot(zTx)
+        part2 = part0.dot(zTy)
+        params = np.linalg.pinv(part1).dot(part2)
+
+        zy = (z.T)@y
+        zx = z.T @ x @ params
+        diff = (zy - zx)/(x.shape[0])
+        jstat1 =(x.shape[0])*((diff.T) @ weights @ (diff))
+        
+        
+        ### compute jstat2
+        zTw = np.dot(z.T, w)
+        zTy = np.dot(z.T, y)
+        # normal equation, solved with pinv
+        part0 = zTw.T.dot(weights2)
+        part1 = part0.dot(zTw)
+        part2 = part0.dot(zTy)
+        params2 = np.linalg.pinv(part1).dot(part2)
+        
+        zy = (z.T)@y
+        zx = z.T @ w @ params2
+        diff = (zy - zw)/(x.shape[0])
+        jstat2 =(x.shape[0])*((diff.T) @ weights @ (diff))
+        
+        
+        jdiff = jstat1 - jstat2
+        df = x.shape[1] - x.shape[1]
+        return jdiff, stats.chi2.sf(jdiff, df), df
 
     def gradient_momcond(self, params, **kwds):
         # **kwds for compatibility not used
