@@ -1486,7 +1486,7 @@ class LinearIVGMM(IVGMM):
 
         return np.dot(exog, params)
 
-    def compare_j(self, weights=None, var):
+    def compare_j(self, weights=None, var=None):
         ## The function computes the C statistic which compare the two nested linear GMM
         ## models. We use the same weight matrix so that the difference is always
         ## positive.
@@ -1502,7 +1502,7 @@ class LinearIVGMM(IVGMM):
         weights2 = np.delete(np.delete(weights, var,axis=1), var,axis=0)
        
         y, x, z = self.endog, self.exog, self.instrument
-        w = x[...,var]
+        w = np.delete(x, var, axis=1)
         
         ## compute jstat1
         zTx = np.dot(z.T, x)
