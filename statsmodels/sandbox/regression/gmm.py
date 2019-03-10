@@ -1495,9 +1495,7 @@ class LinearIVGMM(IVGMM):
 
         if weights is None:
             weights = self.start_weights(inv=False)
-         
-
-        weights = np.array(weights)   
+           
         #weights2 = np.delete(weights, var,axis=1)
         weights2 = np.delete(np.delete(weights, var,axis=1), var,axis=0)
        
