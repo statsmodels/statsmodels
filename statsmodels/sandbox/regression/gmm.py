@@ -1487,22 +1487,18 @@ class LinearIVGMM(IVGMM):
         return np.dot(exog, params)
 
     def compare_j(self, weights=None, var=None):
-        ## The function computes the C statistic which compare the two nested linear GMM
-        ## models. We use the same weight matrix so that the difference is always
-        ## positive.
-        ## var takes a list giving the position of the variable to be
-        ## removed in the second regression. Example: var=[2,5,8]
+        # The function computes the C statistic which compare the two nested linear GMM
+        # models. We use the same weight matrix so that the difference is always
+        # positive.
+        # var takes a list giving the position of the variable to be
+        # removed in the second regression. Example: var=[2,5,8]
+        # If var is None we just return the J-test
+        y, x, z = self.endog, self.exog, self.instrument
 
         if weights is None:
             weights = self.start_weights(inv=False)
-           
-        #weights2 = np.delete(weights, var,axis=1)
-        weights2 = np.delete(np.delete(weights, var,axis=1), var,axis=0)
-       
-        y, x, z = self.endog, self.exog, self.instrument
-        w = np.delete(x, var, axis=1)
-        
-        ## compute jstat1
+
+        # compute jstat1
         zTx = np.dot(z.T, x)
         zTy = np.dot(z.T, y)
         # normal equation, solved with pinv
@@ -1511,29 +1507,38 @@ class LinearIVGMM(IVGMM):
         part2 = part0.dot(zTy)
         params = np.linalg.pinv(part1).dot(part2)
 
-        zy = (z.T)@y
-        zx = z.T @ x @ params
+        zy = np.dot(z.T, y)
+        zx = np.dot(z.T.dot(x), params)
         diff = (zy - zx)/(x.shape[0])
-        jstat1 =(x.shape[0])*((diff.T) @ weights @ (diff))
-        
-        
-        ### compute jstat2
-        zTw = np.dot(z.T, w)
-        zTy = np.dot(z.T, y)
+        jint = np.dot(diff.T.dot(weights), diff)
+        jstat1 = (x.shape[0])*jint
+
+        if var is None:
+            df = z.shape[1] - x.shape[1]
+            return jstat1, stats.chi2.sf(jstat1, df), df
+
+        weights2 = np.delete(np.delete(weights, var, axis=1), var, axis=0)
+
+        w = np.delete(z, var, axis=1)
+
+        # compute jstat2
+        wTx = np.dot(w.T, x)
+        wTy = np.dot(w.T, y)
         # normal equation, solved with pinv
-        part0 = zTw.T.dot(weights2)
-        part1 = part0.dot(zTw)
-        part2 = part0.dot(zTy)
+        part0 = wTx.T.dot(weights2)
+        part1 = part0.dot(wTx)
+        part2 = part0.dot(wTy)
         params2 = np.linalg.pinv(part1).dot(part2)
-        
-        zy = (z.T)@y
-        zx = z.T @ w @ params2
-        diff = (zy - zw)/(x.shape[0])
-        jstat2 =(x.shape[0])*((diff.T) @ weights @ (diff))
-        
-        
+
+        wy = np.dot(w.T, y)
+        wxx = np.dot(w.T, x)
+        wx = wxx.dot(params2)
+        diff2 = (wy - wx)/(x.shape[0])
+        jint2 = np.dot(diff2.T.dot(weights2), diff2)
+        jstat2 = (x.shape[0])*jint2
+
         jdiff = jstat1 - jstat2
-        df = x.shape[1] - x.shape[1]
+        df = z.shape[1] - w.shape[1]
         return jdiff, stats.chi2.sf(jdiff, df), df
 
     def gradient_momcond(self, params, **kwds):
