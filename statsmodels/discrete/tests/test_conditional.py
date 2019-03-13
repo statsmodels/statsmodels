@@ -1,6 +1,6 @@
 import numpy as np
 from statsmodels.discrete.conditional_models import (
-      ConditionalLogit, ConditionalPoisson, ConditionalMlogit)
+      ConditionalLogit, ConditionalPoisson, ConditionalMNLogit)
 from statsmodels.tools.numdiff import approx_fprime
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -239,12 +239,11 @@ def test_lasso_poisson():
     assert_allclose(result2.params, result3.params)
 
 
-def gen_mlogit(n):
+def gen_mnlogit(n):
 
     np.random.seed(235)
 
     g = np.kron(np.ones(5), np.arange(n//5))
-    t = np.kron(np.ones(n//5), np.arange(5))
     x1 = np.random.normal(size=n)
     x2 = np.random.normal(size=n)
     xm = np.concatenate((x1[:, None], x2[:, None]), axis=1)
@@ -259,15 +258,15 @@ def gen_mlogit(n):
     y[u < cpr[:, 1]] = 1
     y[u < cpr[:, 0]] = 0
 
-    df = pd.DataFrame({"time": t, "y": y, "x1": x1,
+    df = pd.DataFrame({"y": y, "x1": x1,
                        "x2": x2, "g": g})
     return df
 
-def test_conditional_mlogit_grad():
+def test_conditional_mnlogit_grad():
 
-    df = gen_mlogit(90)
-    model = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2",
-              time="time", groups="g", data=df)
+    df = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2",
+              groups="g", data=df)
 
     # Compare the gradients to numeric gradients
     for _ in range(5):
@@ -276,11 +275,11 @@ def test_conditional_mlogit_grad():
         ngrad = approx_fprime(za, model.loglike)
         assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
 
-def test_conditional_mlogit1():
+def test_conditional_mnlogit1():
 
-    df = gen_mlogit(90)
-    model = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2",
-              time="time", groups="g", data=df)
+    df = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2",
+              groups="g", data=df)
     result = model.fit()
 
     # Regression tests
@@ -293,12 +292,12 @@ def test_conditional_mlogit1():
                     [0.65190315, 0.59653771]]),
         rtol=1e-5, atol=1e-5)
 
-def test_conditional_mlogit2():
+def test_conditional_mnlogit2():
 
-    df = gen_mlogit(90)
+    df = gen_mnlogit(90)
     df["x3"] = np.random.normal(size=df.shape[0])
-    model1 = ConditionalMlogit.from_formula("y ~ 0 + x1 + x2 + x3",
-              time="time", groups="g", data=df)
+    model1 = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3",
+              groups="g", data=df)
     result1 = model1.fit()
 
     # Regression tests

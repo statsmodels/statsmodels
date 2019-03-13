@@ -19,8 +19,14 @@ class conditionalModel(base.LikelihoodModel):
     def __init__(self, endog, exog, missing='none', **kwargs):
 
         if "groups" not in kwargs:
-            raise ValueError("groups is a required argument")
+            raise ValueError("'groups' is a required argument")
         groups = kwargs["groups"]
+
+        if groups.size != endog.size:
+            raise ValueError("'endog' and 'groups' should have the same dimensions")
+
+        if exog.shape[0] != endog.size:
+            raise ValueError("The leading dimension of 'exog' should equal the length of 'endog'")
 
         super(conditionalModel, self).__init__(
             endog, exog, missing=missing, **kwargs)
@@ -186,9 +192,6 @@ class conditionalModel(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = data[groups]
 
-        if "time" in kwargs:
-            kwargs["time"] = data[kwargs["time"]]
-
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
@@ -206,6 +209,23 @@ class ConditionalLogit(conditionalModel):
     a conditional likelihood in which the intercepts are not present.  Thus,
     intercept estimates are not given, but the other parameter estimates can
     be interpreted as being adjusted for any group-level confounders.
+
+    Parameters
+    ----------
+    endog : array-like
+        The response variable, must contain only 0 and 1.
+    exog : array-like
+        The array of covariates.  Do not include an intercept
+        in this array.
+
+    Required keyword parameters
+    ---------------------------
+    groups : array-like
+        Codes defining the groups.
+
+    Returns
+    -------
+    A ConditionalMNLogit model instance, which can be fit using the `fit` method.
     """
 
     def __init__(self, endog, exog, missing='none', **kwargs):
@@ -327,6 +347,22 @@ class ConditionalPoisson(conditionalModel):
     a conditional likelihood in which the intercepts are not present.  Thus,
     intercept estimates are not given, but the other parameter estimates can
     be interpreted as being adjusted for any group-level confounders.
+
+    Parameters
+    ----------
+    endog : array-like
+        The response variable
+    exog : array-like
+        The covariates
+
+    Required keyword parameters
+    ---------------------------
+    groups : array-like
+        Codes defining the groups
+
+    Returns
+    -------
+    A ConditionalPoisson model instance that can be fit using 'fit'.
     """
 
     def loglike(self, params):
@@ -446,7 +482,7 @@ class ConditionalResults(base.LikelihoodModelResults):
 
         return smry
 
-class ConditionalMlogit(conditionalModel):
+class ConditionalMNLogit(conditionalModel):
     """
     Fit a conditional multinomial logit model to grouped data.
 
@@ -458,6 +494,11 @@ class ConditionalMlogit(conditionalModel):
         categories.
     exog : array-like
         The independent variables.
+
+    Required keyword arguments
+    --------------------------
+    groups : array-like
+        Codes defining the groups.
 
     References
     ----------
@@ -471,14 +512,8 @@ class ConditionalMlogit(conditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        if "time" not in kwargs:
-            msg = "'time' is a required argument for ConditionalMlogit"
-            raise ValueError(msg)
-        time = kwargs["time"]
-        del kwargs["time"]
-
-        super(ConditionalMlogit, self).__init__(
-            endog, exog, time=time, missing=missing, **kwargs)
+        super(ConditionalMNLogit, self).__init__(
+            endog, exog, missing=missing, **kwargs)
 
         # endog must be integers
         self.endog = self.endog.astype(np.int)
