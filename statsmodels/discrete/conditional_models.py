@@ -236,6 +236,10 @@ class ConditionalLogit(conditionalModel):
         super(ConditionalLogit, self).__init__(
             endog, exog, missing=missing, **kwargs)
 
+        if np.any(np.unique(self.endog) != np.r_[0, 1]):
+            msg = "endog must be coded as 0, 1"
+            raise ValueError(msg)
+
     def loglike(self, params):
 
         ll = 0
