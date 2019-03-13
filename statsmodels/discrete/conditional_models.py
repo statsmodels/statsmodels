@@ -13,7 +13,6 @@ import warnings
 import itertools
 
 
-
 class conditionalModel(base.LikelihoodModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
@@ -30,6 +29,10 @@ class conditionalModel(base.LikelihoodModel):
 
         super(conditionalModel, self).__init__(
             endog, exog, missing=missing, **kwargs)
+
+        if self.data.const_idx is not None:
+            msg = "Conditional models should not have an intercept in the design matrix"
+            raise ValueError(msg)
 
         exog = self.exog
         self.k_params = exog.shape[1]
@@ -564,6 +567,12 @@ class ConditionalMNLogit(conditionalModel):
 
         rslt.params = rslt.params.reshape((self.exog.shape[1], -1))
         rslt = MultinomialResults(self, rslt)
+
+        # Not clear what the null likelihood should be, there is no intercept
+        # so the null model isn't clearly defined.  This is needed for summary
+        # to work.
+        rslt.set_null_options(llnull=np.nan)
+
         return MultinomialResultsWrapper(rslt)
 
     def loglike(self, params):
