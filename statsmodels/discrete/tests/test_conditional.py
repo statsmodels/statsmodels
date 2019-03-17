@@ -266,8 +266,8 @@ def gen_mnlogit(n):
 def test_conditional_mnlogit_grad():
 
     df = gen_mnlogit(90)
-    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2",
-              groups="g", data=df)
+    model = ConditionalMNLogit.from_formula(
+                "y ~ 0 + x1 + x2", groups="g", data=df)
 
     # Compare the gradients to numeric gradients
     for _ in range(5):
@@ -280,16 +280,18 @@ def test_conditional_mnlogit_grad():
 def test_conditional_mnlogit_2d():
 
     df = gen_mnlogit(90)
-    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2",
-              groups="g", data=df)
+    model = ConditionalMNLogit.from_formula(
+                "y ~ 0 + x1 + x2", groups="g", data=df)
     result = model.fit()
 
     # Regression tests
-    assert_allclose(result.params,
+    assert_allclose(
+        result.params,
         np.asarray([[0.75592035, -1.58565494],
-                   [1.82919869, -1.32594231]]),
+                    [1.82919869, -1.32594231]]),
         rtol=1e-5, atol=1e-5)
-    assert_allclose(result.bse,
+    assert_allclose(
+        result.bse,
         np.asarray([[0.68099698, 0.70142727],
                     [0.65190315, 0.59653771]]),
         rtol=1e-5, atol=1e-5)
@@ -299,21 +301,23 @@ def test_conditional_mnlogit_3d():
 
     df = gen_mnlogit(90)
     df["x3"] = np.random.normal(size=df.shape[0])
-    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3",
-              groups="g", data=df)
+    model = ConditionalMNLogit.from_formula(
+                "y ~ 0 + x1 + x2 + x3", groups="g", data=df)
     result = model.fit()
 
     # Regression tests
-    assert_allclose(result.params,
+    assert_allclose(
+        result.params,
         np.asarray([[ 0.729629, -1.633673],
                     [ 1.879019, -1.327163],
                     [-0.114124, -0.109378]]),
         atol=1e-5, rtol=1e-5)
 
-    assert_allclose(result.bse,
-        np.asarray([[0.682965, 0.60472 ],
-                    [0.672947, 0.424013],
-                    [0.722631, 0.33663 ]]),
+    assert_allclose(
+        result.bse,
+        np.asarray([[0.682965, 0.60472],
+                    [0.672947, 0.42401],
+                    [0.722631, 0.33663]]),
         atol=1e-5, rtol=1e-5)
 
     # Smoke test
