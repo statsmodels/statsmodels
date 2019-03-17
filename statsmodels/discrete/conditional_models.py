@@ -13,7 +13,7 @@ import warnings
 import itertools
 
 
-class conditionalModel(base.LikelihoodModel):
+class _ConditionalModel(base.LikelihoodModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
@@ -22,16 +22,19 @@ class conditionalModel(base.LikelihoodModel):
         groups = kwargs["groups"]
 
         if groups.size != endog.size:
-            raise ValueError("'endog' and 'groups' should have the same dimensions")
+            msg = "'endog' and 'groups' should have the same dimensions"
+            raise ValueError(msg)
 
         if exog.shape[0] != endog.size:
-            raise ValueError("The leading dimension of 'exog' should equal the length of 'endog'")
+            msg = "The leading dimension of 'exog' should equal the length of 'endog'"
+            raise ValueError(msg)
 
-        super(conditionalModel, self).__init__(
+        super(_ConditionalModel, self).__init__(
             endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
-            msg = "Conditional models should not have an intercept in the design matrix"
+            msg = ("Conditional models should not have an intercept in the " +
+                  "design matrix")
             raise ValueError(msg)
 
         exog = self.exog
@@ -111,7 +114,7 @@ class conditionalModel(base.LikelihoodModel):
             skip_hessian=False,
             **kwargs):
 
-        rslt = super(conditionalModel, self).fit(
+        rslt = super(_ConditionalModel, self).fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -198,13 +201,13 @@ class conditionalModel(base.LikelihoodModel):
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
-        model = super(conditionalModel, cls).from_formula(
+        model = super(_ConditionalModel, cls).from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 
         return model
 
 
-class ConditionalLogit(conditionalModel):
+class ConditionalLogit(_ConditionalModel):
     """
     Fit a conditional logistic regression model to grouped data.
 
@@ -346,7 +349,7 @@ class ConditionalLogit(conditionalModel):
         return self._xy[grp] - h / d
 
 
-class ConditionalPoisson(conditionalModel):
+class ConditionalPoisson(_ConditionalModel):
     """
     Fit a conditional Poisson regression model to grouped data.
 
@@ -489,7 +492,7 @@ class ConditionalResults(base.LikelihoodModelResults):
 
         return smry
 
-class ConditionalMNLogit(conditionalModel):
+class ConditionalMNLogit(_ConditionalModel):
     """
     Fit a conditional multinomial logit model to grouped data.
 

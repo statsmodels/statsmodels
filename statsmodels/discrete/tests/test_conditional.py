@@ -262,6 +262,7 @@ def gen_mnlogit(n):
                        "x2": x2, "g": g})
     return df
 
+
 def test_conditional_mnlogit_grad():
 
     df = gen_mnlogit(90)
@@ -275,7 +276,8 @@ def test_conditional_mnlogit_grad():
         ngrad = approx_fprime(za, model.loglike)
         assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
 
-def test_conditional_mnlogit1():
+
+def test_conditional_mnlogit_2d():
 
     df = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2",
@@ -292,26 +294,27 @@ def test_conditional_mnlogit1():
                     [0.65190315, 0.59653771]]),
         rtol=1e-5, atol=1e-5)
 
-def test_conditional_mnlogit2():
+
+def test_conditional_mnlogit_3d():
 
     df = gen_mnlogit(90)
     df["x3"] = np.random.normal(size=df.shape[0])
-    model1 = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3",
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3",
               groups="g", data=df)
-    result1 = model1.fit()
+    result = model.fit()
 
     # Regression tests
-    assert_allclose(result1.params,
+    assert_allclose(result.params,
         np.asarray([[ 0.729629, -1.633673],
                     [ 1.879019, -1.327163],
                     [-0.114124, -0.109378]]),
         atol=1e-5, rtol=1e-5)
 
-    assert_allclose(result1.bse,
+    assert_allclose(result.bse,
         np.asarray([[0.682965, 0.60472 ],
                     [0.672947, 0.424013],
                     [0.722631, 0.33663 ]]),
         atol=1e-5, rtol=1e-5)
 
     # Smoke test
-    result1.summary()
+    result.summary()
