@@ -890,7 +890,7 @@ class ARMA(tsbase.TimeSeriesModel):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1144,7 +1144,7 @@ class ARIMA(ARMA):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
