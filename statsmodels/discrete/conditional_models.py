@@ -13,17 +13,29 @@ import warnings
 import itertools
 
 
-
-class conditionalModel(base.LikelihoodModel):
+class _ConditionalModel(base.LikelihoodModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
         if "groups" not in kwargs:
-            raise ValueError("groups is a required argument")
+            raise ValueError("'groups' is a required argument")
         groups = kwargs["groups"]
 
-        super(conditionalModel, self).__init__(
+        if groups.size != endog.size:
+            msg = "'endog' and 'groups' should have the same dimensions"
+            raise ValueError(msg)
+
+        if exog.shape[0] != endog.size:
+            msg = "The leading dimension of 'exog' should equal the length of 'endog'"
+            raise ValueError(msg)
+
+        super(_ConditionalModel, self).__init__(
             endog, exog, missing=missing, **kwargs)
+
+        if self.data.const_idx is not None:
+            msg = ("Conditional models should not have an intercept in the " +
+                  "design matrix")
+            raise ValueError(msg)
 
         exog = self.exog
         self.k_params = exog.shape[1]
@@ -102,7 +114,7 @@ class conditionalModel(base.LikelihoodModel):
             skip_hessian=False,
             **kwargs):
 
-        rslt = super(conditionalModel, self).fit(
+        rslt = super(_ConditionalModel, self).fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -186,19 +198,16 @@ class conditionalModel(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = data[groups]
 
-        if "time" in kwargs:
-            kwargs["time"] = data[kwargs["time"]]
-
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
-        model = super(conditionalModel, cls).from_formula(
+        model = super(_ConditionalModel, cls).from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 
         return model
 
 
-class ConditionalLogit(conditionalModel):
+class ConditionalLogit(_ConditionalModel):
     """
     Fit a conditional logistic regression model to grouped data.
 
@@ -206,12 +215,33 @@ class ConditionalLogit(conditionalModel):
     a conditional likelihood in which the intercepts are not present.  Thus,
     intercept estimates are not given, but the other parameter estimates can
     be interpreted as being adjusted for any group-level confounders.
+
+    Parameters
+    ----------
+    endog : array-like
+        The response variable, must contain only 0 and 1.
+    exog : array-like
+        The array of covariates.  Do not include an intercept
+        in this array.
+
+    Required keyword parameters
+    ---------------------------
+    groups : array-like
+        Codes defining the groups.
+
+    Returns
+    -------
+    A ConditionalMNLogit model instance, which can be fit using the `fit` method.
     """
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
         super(ConditionalLogit, self).__init__(
             endog, exog, missing=missing, **kwargs)
+
+        if np.any(np.unique(self.endog) != np.r_[0, 1]):
+            msg = "endog must be coded as 0, 1"
+            raise ValueError(msg)
 
     def loglike(self, params):
 
@@ -319,7 +349,7 @@ class ConditionalLogit(conditionalModel):
         return self._xy[grp] - h / d
 
 
-class ConditionalPoisson(conditionalModel):
+class ConditionalPoisson(_ConditionalModel):
     """
     Fit a conditional Poisson regression model to grouped data.
 
@@ -327,6 +357,22 @@ class ConditionalPoisson(conditionalModel):
     a conditional likelihood in which the intercepts are not present.  Thus,
     intercept estimates are not given, but the other parameter estimates can
     be interpreted as being adjusted for any group-level confounders.
+
+    Parameters
+    ----------
+    endog : array-like
+        The response variable
+    exog : array-like
+        The covariates
+
+    Required keyword parameters
+    ---------------------------
+    groups : array-like
+        Codes defining the groups
+
+    Returns
+    -------
+    A ConditionalPoisson model instance that can be fit using 'fit'.
     """
 
     def loglike(self, params):
@@ -446,7 +492,7 @@ class ConditionalResults(base.LikelihoodModelResults):
 
         return smry
 
-class ConditionalMlogit(conditionalModel):
+class ConditionalMNLogit(_ConditionalModel):
     """
     Fit a conditional multinomial logit model to grouped data.
 
@@ -458,6 +504,11 @@ class ConditionalMlogit(conditionalModel):
         categories.
     exog : array-like
         The independent variables.
+
+    Required keyword arguments
+    --------------------------
+    groups : array-like
+        Codes defining the groups.
 
     References
     ----------
@@ -471,14 +522,8 @@ class ConditionalMlogit(conditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        if "time" not in kwargs:
-            msg = "'time' is a required argument for ConditionalMlogit"
-            raise ValueError(msg)
-        time = kwargs["time"]
-        del kwargs["time"]
-
-        super(ConditionalMlogit, self).__init__(
-            endog, exog, time=time, missing=missing, **kwargs)
+        super(ConditionalMNLogit, self).__init__(
+            endog, exog, missing=missing, **kwargs)
 
         # endog must be integers
         self.endog = self.endog.astype(np.int)
@@ -529,6 +574,12 @@ class ConditionalMlogit(conditionalModel):
 
         rslt.params = rslt.params.reshape((self.exog.shape[1], -1))
         rslt = MultinomialResults(self, rslt)
+
+        # Not clear what the null likelihood should be, there is no intercept
+        # so the null model isn't clearly defined.  This is needed for summary
+        # to work.
+        rslt.set_null_options(llnull=np.nan)
+
         return MultinomialResultsWrapper(rslt)
 
     def loglike(self, params):
