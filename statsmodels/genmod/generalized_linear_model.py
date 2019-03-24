@@ -1292,6 +1292,10 @@ class GLM(base.LikelihoodModel):
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
+
+        if kwargs.get("L1_wt", 1) == 0:
+            return self._fit_ridge(alpha, start_params)
+
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
@@ -1311,6 +1315,35 @@ class GLM(base.LikelihoodModel):
         self.scale = self.estimate_scale(self.mu)
 
         return result
+
+    def _fit_ridge(self, alpha, start_params, method="newton-cg"):
+
+        if start_params is None:
+            start_params = np.zeros(self.exog.shape[1])
+
+        def fun(x):
+            return -(self.loglike(x) / self.nobs - alpha * np.sum(x**2) / 2)
+
+        def grad(x):
+            return -(self.score(x) / self.nobs - alpha * x)
+
+        from scipy.optimize import minimize
+        from statsmodels.base.elastic_net import (RegularizedResults,
+            RegularizedResultsWrapper)
+
+        mr = minimize(fun, start_params, jac=grad, method=method)
+        params = mr.x
+
+        if not mr.success:
+            import warnings
+            ngrad = np.sqrt(np.sum(mr.jac**2))
+            msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
+            warnings.warn(msg)
+
+        results = RegularizedResults(self, params)
+        results = RegularizedResultsWrapper(results)
+
+        return results
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
