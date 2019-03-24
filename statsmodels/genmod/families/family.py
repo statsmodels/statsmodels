@@ -1477,8 +1477,16 @@ class Tweedie(Family):
         llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
         llf /= -2
 
-        u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
-        u *= var_weights / (scale * (1 - p) * (2 - p))
+        if p == 1:
+            u = endog * np.log(endog / mu) - (endog - mu)
+            u *= var_weights / scale
+        elif p == 2:
+            yr = endog / mu
+            u = yr - np.log(yr) - 1
+            u *= var_weights / scale
+        else:
+            u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
+            u *= var_weights / (scale * (1 - p) * (2 - p))
         llf -= u
 
         return llf

@@ -1955,6 +1955,57 @@ def test_tweedie_EQL():
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
         assert_allclose(result3.params, ev[j], rtol=rtol, atol=atol)
 
+def test_tweedie_EQL_poisson_limit():
+    # Test the limiting Poisson case of the Nelder/Pregibon/Tweedie
+    # EQL.
+
+    np.random.seed(3242)
+    n = 500
+
+    x = np.random.normal(size=(n, 3))
+    x[:, 0] = 1
+    lpr = 4 + x[:, 1:].sum(1)
+    mn = np.exp(lpr)
+    y = np.random.poisson(mn)
+
+    for scale in 1.0, 'x2', 'dev':
+
+        # Un-regularized fit using gradients not IRLS
+        fam = sm.families.Tweedie(var_power=1, eql=True)
+        model1 = sm.GLM(y, x, family=fam)
+        result1 = model1.fit(method="newton", scale=scale)
+
+        # Poisson GLM
+        model2 = sm.GLM(y, x, family=sm.families.Poisson())
+        result2 = model2.fit(method="newton", scale=scale)
+
+        assert_allclose(result1.params, result2.params, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.bse, result2.bse, 1e-6, 1e-6)
+
+
+def test_tweedie_EQL_upper_limit():
+    # Test the limiting case of the Nelder/Pregibon/Tweedie
+    # EQL with var = mean^2.  These are tests against population
+    # values so accuracy is not high.
+
+    np.random.seed(3242)
+    n = 500
+
+    x = np.random.normal(size=(n, 3))
+    x[:, 0] = 1
+    lpr = 4 + x[:, 1:].sum(1)
+    mn = np.exp(lpr)
+    y = np.random.poisson(mn)
+
+    for scale in 'x2', 'dev', 1.0:
+
+        # Un-regularized fit using gradients not IRLS
+        fam = sm.families.Tweedie(var_power=2, eql=True)
+        model1 = sm.GLM(y, x, family=fam)
+        result1 = model1.fit(method="newton")
+        assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
+
+
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
     #
