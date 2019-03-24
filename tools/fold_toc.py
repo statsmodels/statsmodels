@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import sys
 import re
 
@@ -8,7 +9,7 @@ try:
     static_path = sys.argv[2]
 except:
     static_path = '_static'
-doc = open(filename).read()
+doc = open(filename, encoding='utf8').read()
 
 # Add mktree to head
 pre = '<head>'

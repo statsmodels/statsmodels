@@ -1,18 +1,18 @@
-from statsmodels.compat.python import lrange, long
-from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
+from statsmodels.compat.python import long
+from statsmodels.compat.pandas import is_numeric_dtype
 
-import datetime
+import numbers
 
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, Timestamp, Series, Index)
+                    PeriodIndex, RangeIndex, Timestamp, Series, Index,
+                    Float64Index, date_range)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.tsa.base import datetools
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 _tsa_doc = """
@@ -181,7 +181,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
-                    resampled_index = type(index)(
+                    resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq)
                     if not inferred_freq and not resampled_index.equals(index):
                         raise ValueError('The given frequency argument could'
@@ -204,12 +204,13 @@ class TimeSeriesModel(base.LikelihoodModel):
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
         int_index = isinstance(index, Int64Index)
+        range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
-        increment = Int64Index(np.arange(self.endog.shape[0]))
+        increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
 
         # Issue warnings for unsupported indexes
-        if has_index and not (date_index or is_increment):
+        if has_index and not (date_index or range_index or is_increment):
             warnings.warn('An unsupported index was provided and will be'
                           ' ignored when e.g. forecasting.', ValueWarning)
         if date_index and not has_freq:
@@ -220,8 +221,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Construct the internal index
         index_generated = False
 
-        if (date_index and has_freq) or (int_index and is_increment):
-            _index = index.copy()
+        if ((date_index and has_freq) or (int_index and is_increment) or
+                range_index):
+            _index = index
         else:
             _index = increment
             index_generated = True
@@ -243,7 +245,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or a location if the underlying index is a RangeIndex
+            or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -270,11 +274,25 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         index = base_index
         date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
+        int_index = isinstance(base_index, Int64Index)
+        range_index = isinstance(base_index, RangeIndex)
         index_class = type(base_index)
         nobs = len(index)
 
+        # Special handling for RangeIndex
+        if range_index and isinstance(key, (int, long, np.integer)):
+            # Negative indices (that lie in the Index)
+            if key < 0 and -key <= nobs:
+                key = nobs + key
+            # Out-of-sample (note that we include key itself in the new index)
+            elif key > nobs - 1:
+                stop = base_index._start + (key + 1) * base_index._step
+                index = RangeIndex(start=base_index._start,
+                                   stop=stop,
+                                   step=base_index._step)
+
         # Special handling for Int64Index
-        if (isinstance(index, Int64Index) and not date_index and
+        if (not range_index and int_index and not date_index and
                 isinstance(key, (int, long, np.integer))):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
@@ -319,16 +337,33 @@ class TimeSeriesModel(base.LikelihoodModel):
                                             periods=len(index) + 1,
                                             freq=base_index.freq)
 
-        # Get the location (note that get_loc will throw a KeyError if key is
-        # invalid)
-        loc = index.get_loc(key)
+        # Get the location
+        if date_index:
+            # (note that get_loc will throw a KeyError if key is invalid)
+            loc = index.get_loc(key)
+        elif int_index or range_index:
+            # For Int64Index and RangeIndex, key is assumed to be the location
+            # and not an index value (this assumption is required to support
+            # RangeIndex)
+            try:
+                index[key]
+            # We want to raise a KeyError in this case, to keep the exception
+            # consistent across index types.
+            # - Attempting to index with an out-of-bound location (e.g.
+            #   index[10] on an index of length 9) will raise an IndexError
+            #   (as of Pandas 0.22)
+            # - Attemtping to index with a type that cannot be cast to integer
+            #   (e.g. a non-numeric string) will raise a ValueError if the
+            #   index is RangeIndex (otherwise will raise an IndexError)
+            #   (as of Pandas 0.22)
+            except (IndexError, ValueError) as e:
+                raise KeyError(str(e))
+            loc = key
+        else:
+            loc = index.get_loc(key)
 
         # Check if we now have a modified index
         index_was_expanded = index is not base_index
-
-        # (Never return the actual index object)
-        if not index_was_expanded:
-            index = index.copy()
 
         # Return the index through the end of the loc / slice
         if isinstance(loc, slice):
@@ -345,7 +380,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or is only being used as row labels, or a location if
+            the underlying index is a RangeIndex or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -377,7 +414,32 @@ class TimeSeriesModel(base.LikelihoodModel):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
-                loc = loc[0]  # Require scalar
+                # Require scalar
+                # Pandas may return a slice if there are multiple matching
+                # locations that are monotonic increasing (otherwise it may
+                # return an array of integer locations, see below).
+                if isinstance(loc, slice):
+                    loc = loc.start
+                if isinstance(loc, np.ndarray):
+                    # Pandas may return a mask (boolean array), for e.g.:
+                    # pd.Index(list('abcb')).get_loc('b')
+                    if loc.dtype == bool:
+                        # Return the first True value
+                        # (we know there is at least one True value if we're
+                        # here because otherwise the get_loc call would have
+                        # raised an exception)
+                        loc = np.argmax(loc)
+                    # Finally, Pandas may return an integer array of
+                    # locations that match the given value, for e.g.
+                    # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+                    # (this appears to be slightly undocumented behavior, since
+                    # only int, slice, and mask are mentioned in docs for
+                    # pandas.Index.get_loc as of 0.23.4)
+                    else:
+                        loc = loc[0]
+                if not isinstance(loc, numbers.Integral):
+                    raise
+
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
             except:
@@ -410,7 +472,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Returns
         -------
-        start : int
+        start : integer
             The index / observation location at which to begin prediction.
         end : int
             The index / observation location at which to end in-sample
@@ -425,10 +487,20 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        This method expands on `_get_index_loc` by first trying the given
-        base index (or the model's index if the base index was not given) and
-        then falling back to try again with the model row labels as the base
-        index.
+        The arguments `start` and `end` behave differently, depending on if
+        they are integer or not. If either is an integer, then it is assumed
+        to refer to a *location* in the index, not to an index value. On the
+        other hand, if it is a date string or some other type of object, then
+        it is assumed to refer to an index *value*. In all cases, the returned
+        `start` and `end` values refer to index *locations* (so in the former
+        case, the given location is validated and returned whereas in the
+        latter case a location is found that corresponds to the given index
+        value).
+
+        This difference in behavior is necessary to support `RangeIndex`. This
+        is because integers for a RangeIndex could refer either to index values
+        or to index locations in an ambiguous way (while for `Int64Index`,
+        since we have required them to be full indexes, there is no ambiguity).
 
         """
 
@@ -528,6 +600,7 @@ class TimeSeriesModelResults(base.LikelihoodModelResults):
         super(TimeSeriesModelResults,
                 self).__init__(model, params, normalized_cov_params, scale)
 
+
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
@@ -535,14 +608,15 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _methods = {'predict' : 'dates'}
     _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(TimeSeriesResultsWrapper,
+wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
                       TimeSeriesModelResults)
+
 
 if __name__ == "__main__":
     import statsmodels.api as sm
     import pandas
 
-    data = sm.datasets.macrodata.load()
+    data = sm.datasets.macrodata.load(as_pandas=False)
 
     #make a DataFrame
     #TODO: attach a DataFrame to some of the datasets, for quicker use

@@ -219,7 +219,20 @@ class Power(object):
             del kwds['power']
             return self.power(**kwds)
 
+        if kwds['effect_size'] == 0:
+            import warnings
+            from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+            warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
+            if key == 'power':
+                return kwds['alpha']
+            if key == 'alpha':
+                return kwds['power']
+            else:
+                raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
+
+
         self._counter = 0
+
         def func(x):
             kwds[key] = x
             fval = self._power_identity(**kwds)
@@ -237,7 +250,9 @@ class Power(object):
             start_value = self.start_ttp[key]
         except KeyError:
             start_value = 0.9
-            print('Warning: using default start_value for {0}'.format(key))
+            import warnings
+            from statsmodels.tools.sm_exceptions import ValueWarning
+            warnings.warn('Warning: using default start_value for {0}'.format(key), ValueWarning)
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
@@ -255,12 +270,18 @@ class Power(object):
             success = 1
         else:
             # try backup
-            #TODO: check more cases to make this robust
-            val, infodict, ier, msg = optimize.fsolve(func, start_value,
-                                                      full_output=True) #scalar
-            #val = optimize.newton(func, start_value) #scalar
-            fval = infodict['fvec']
-            fit_res.append(infodict)
+            # TODO: check more cases to make this robust
+            if not np.isnan(start_value):
+                val, infodict, ier, msg = optimize.fsolve(func, start_value,
+                                                          full_output=True) #scalar
+                #val = optimize.newton(func, start_value) #scalar
+                fval = infodict['fvec']
+                fit_res.append(infodict)
+            else:
+                ier = -1
+                fval = 1
+                fit_res.append([None])
+
             if ier == 1 and np.abs(fval) < 1e-4 :
                 success = 1
             else:
@@ -608,7 +629,7 @@ class NormalIndPower(Power):
 
     def power(self, effect_size, nobs1, alpha, ratio=1,
               alternative='two-sided'):
-        '''Calculate the power of a t-test for two independent sample
+        '''Calculate the power of a z-test for two independent sample
 
         Parameters
         ----------
@@ -627,8 +648,6 @@ class NormalIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ratio given the other
-            arguments it has to be explicitly set to None.
         alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
@@ -936,8 +955,7 @@ class GofChisquarePower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):
-              #alternative='two-sided'):
+    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):#alternative='two-sided'):
         '''Calculate the power of a chisquare test for one sample
 
         Only two-sided alternative is implemented

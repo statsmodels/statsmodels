@@ -103,9 +103,3 @@ class TestMixtureDistributions(object):
                        [ 3.60521933,  1.57316531,  0.82784584],
                        [ 3.86102275,  0.6211812 ,  1.33016426],
                        [ 3.91074761,  2.037155  ,  2.22247051]]))
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)

@@ -90,20 +90,21 @@ class CheckGradLoglikeMixin(object):
 
 
 class TestGradMNLogit(CheckGradLoglikeMixin):
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #from .results.results_discrete import Anes
-        data = sm.datasets.anes96.load()
+        data = sm.datasets.anes96.load(as_pandas=False)
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
-        self.mod = sm.MNLogit(data.endog, exog)
+        cls.mod = sm.MNLogit(data.endog, exog)
 
-        #def loglikeflat(self, params):
+        #def loglikeflat(cls, params):
             #reshapes flattened params
-        #    return self.loglike(params.reshape(6,6))
-        #self.mod.loglike = loglikeflat  #need instance method
-        #self.params = [np.ones((6,6)).ravel()]
-        res = self.mod.fit(disp=0)
-        self.params = [res.params.ravel('F')]
+        #    return cls.loglike(params.reshape(6,6))
+        #cls.mod.loglike = loglikeflat  #need instance method
+        #cls.params = [np.ones((6,6)).ravel()]
+        res = cls.mod.fit(disp=0)
+        cls.params = [res.params.ravel('F')]
 
     def test_hess(self):
         #NOTE: I had to overwrite this to lessen the tolerance
@@ -137,20 +138,22 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
             assert_almost_equal(he, hecs, decimal=0)
 
 class TestGradLogit(CheckGradLoglikeMixin):
-    def __init__(self):
-        data = sm.datasets.spector.load()
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         #mod = sm.Probit(data.endog, data.exog)
-        self.mod = sm.Logit(data.endog, data.exog)
+        cls.mod = sm.Logit(data.endog, data.exog)
         #res = mod.fit(method="newton")
-        self.params = [np.array([1,0.25,1.4,-7])]
+        cls.params = [np.array([1,0.25,1.4,-7])]
         ##loglike = mod.loglike
         ##score = mod.score
         ##hess = mod.hessian
 
 
 class CheckDerivativeMixin(object):
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         nobs = 200
         #x = np.arange(nobs*3).reshape(nobs,-1)
         np.random.seed(187678)
@@ -163,12 +166,13 @@ class CheckDerivativeMixin(object):
         y = np.dot(x, beta) + 0.1*np.random.randn(nobs)
         xkols = np.dot(np.linalg.pinv(x),y)
 
-        self.x = x
-        self.y = y
-        self.params = [np.array([1.,1.,1.]), xkols]
-        self.init()
+        cls.x = x
+        cls.y = y
+        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.init()
 
-    def init(self):
+    @classmethod
+    def init(cls):
         pass
 
     def test_grad_fun1_fd(self):
@@ -212,18 +216,18 @@ class CheckDerivativeMixin(object):
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of
                 #    TestDerivativeFun
                 hefd = numdiff.approx_hess2(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 hefd = numdiff.approx_hess3(test_params, fun, #epsilon=1e-8,
+                                             # TODO: should be kwds
                                              args=self.args)
-                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
 
     def test_hess_fun1_cs(self):
@@ -237,10 +241,12 @@ class CheckDerivativeMixin(object):
 
 
 class TestDerivativeFun(CheckDerivativeMixin):
-    def init(self):
-        xkols = np.dot(np.linalg.pinv(self.x), self.y)
-        self.params = [np.array([1.,1.,1.]), xkols]
-        self.args = (self.x,)
+    @classmethod
+    def setup_class(cls):
+        super(TestDerivativeFun,cls).setup_class()
+        xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
+        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.args = (cls.x,)
 
     def fun(self):
         return fun
@@ -251,10 +257,12 @@ class TestDerivativeFun(CheckDerivativeMixin):
         #why is precision only DEC3
 
 class TestDerivativeFun2(CheckDerivativeMixin):
-    def init(self):
-        xkols = np.dot(np.linalg.pinv(self.x), self.y)
-        self.params = [np.array([1.,1.,1.]), xkols]
-        self.args = (self.y, self.x)
+    @classmethod
+    def setup_class(cls):
+        super(TestDerivativeFun2,cls).setup_class()
+        xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
+        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.args = (cls.y, cls.x)
 
     def fun(self):
         return fun2
@@ -269,10 +277,12 @@ class TestDerivativeFun2(CheckDerivativeMixin):
         return 2*np.dot(x.T, x)
 
 class TestDerivativeFun1(CheckDerivativeMixin):
-    def init(self):
-        xkols = np.dot(np.linalg.pinv(self.x), self.y)
-        self.params = [np.array([1.,1.,1.]), xkols]
-        self.args = (self.y, self.x)
+    @classmethod
+    def setup_class(cls):
+        super(TestDerivativeFun1, cls).setup_class()
+        xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
+        cls.params = [np.array([1.,1.,1.]), xkols]
+        cls.args = (cls.y, cls.x)
 
     def fun(self):
         return fun1
@@ -329,7 +339,7 @@ if __name__ == '__main__':
 
     import statsmodels.api as sm
 
-    data = sm.datasets.spector.load()
+    data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
@@ -349,29 +359,18 @@ if __name__ == '__main__':
     print('fd', numdiff.approx_fprime(test_params,score,epsilon))
     print('cs', numdiff.approx_fprime_cs(test_params, score))
 
-    #print('fd', numdiff.approx_hess(test_params, loglike, epsilon)) #TODO: bug
-    '''
-    Traceback (most recent call last):
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\test_numdiff.py", line 74, in <module>
-        print('fd', numdiff.approx_hess(test_params, loglike, epsilon))
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 118, in approx_hess
-        xh = x + h
-    TypeError: can only concatenate list (not "float") to list
-    '''
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
     print('cs', hesscs)
     print(maxabs(hess(test_params), hesscs))
 
-    data = sm.datasets.anes96.load()
+    data = sm.datasets.anes96.load(as_pandas=False)
     exog = data.exog
     exog = sm.add_constant(exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 
-    datap = sm.datasets.randhie.load()
+    datap = sm.datasets.randhie.load(as_pandas=False)
     nobs = len(datap.endog)
     exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
                             prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
     resp = modp.fit(method='newton', disp=0)
-
-

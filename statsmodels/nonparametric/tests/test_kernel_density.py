@@ -1,15 +1,14 @@
 import numpy as np
 import numpy.testing as npt
-import numpy.testing.decorators as dec
-
-from unittest import TestCase
+from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KDETestBase(TestCase):
-    def setUp(self):
+class KDETestBase(object):
+    def setup(self):
         nobs = 60
         np.random.seed(123456)
         self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
@@ -118,7 +117,7 @@ class TestKDEUnivariate(KDETestBase):
 
 
 class TestKDEMultivariate(KDETestBase):
-    @dec.slow
+    @pytest.mark.slow
     def test_pdf_mixeddata_CV_LS(self):
         dens_u = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
                                         var_type='coo', bw='cv_ls')
@@ -152,7 +151,7 @@ class TestKDEMultivariate(KDETestBase):
         R_bw = [1.021563, 2.806409e-14, 0.5142077]
         npt.assert_allclose(dens_ml.bw, R_bw, atol=0.1, rtol=0.1)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_pdf_continuous(self):
         # Test for only continuous data
         dens = nparam.KDEMultivariate(data=[self.growth, self.Italy_gdp],
@@ -179,7 +178,7 @@ class TestKDEMultivariate(KDETestBase):
         # lower tol here. only 2nd decimal
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_unordered_CV_LS(self):
         dens = nparam.KDEMultivariate(data=[self.growth, self.oecd],
                                       var_type='cu', bw='cv_ls')
@@ -201,7 +200,7 @@ class TestKDEMultivariate(KDETestBase):
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 400
         np.random.seed(12345)
@@ -217,7 +216,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.3404, 0.1666])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 400
         np.random.seed(12345)
@@ -234,7 +233,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.4471, 0.2861])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_efficient_notrandom(self):
         nobs = 400
         np.random.seed(12345)
@@ -255,7 +254,7 @@ class TestKDEMultivariate(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,
@@ -264,7 +263,7 @@ class TestKDEMultivariate(KDETestBase):
 
 
 class TestKDEMultivariateConditional(KDETestBase):
-    @dec.slow
+    @pytest.mark.slow
     def test_mixeddata_CV_LS(self):
         dens_ls = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                     exog=[self.Italy_year],
@@ -281,7 +280,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         # Results from R
         npt.assert_allclose(dens_ml.bw, [0.5341164, 0.04510836], atol=1e-3)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_unordered_CV_LS(self):
         dens_ls = nparam.KDEMultivariateConditional(endog=[self.oecd],
                                                     exog=[self.growth],
@@ -301,7 +300,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_pdf_mixeddata(self):
         dens = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                  exog=[self.Italy_year],
@@ -332,6 +331,17 @@ class TestKDEMultivariateConditional(KDETestBase):
         # TODO: here we need a smaller tolerance.check!
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
+        # test default bandwidth method, should be normal_reference
+        dens_nm2 = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
+                                                    exog=[self.growth],
+                                                    dep_type='c',
+                                                    indep_type='c',
+                                                    bw=None)
+        assert_allclose(dens_nm2.bw, dens_nm.bw, rtol=1e-10)
+        assert_equal(dens_nm2._bw_method, 'normal_reference')
+        # check repr works #3125
+        repr(dens_nm2)
+
     def test_continuous_cdf(self):
         dens_nm = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                     exog=[self.growth],
@@ -342,7 +352,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         R_result = [0.81304920, 0.95046942, 0.86878727, 0.71961748, 0.38685423]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_mixeddata_cdf(self):
         dens = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                  exog=[self.Italy_year],
@@ -354,7 +364,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         expected = [0.83378885, 0.97684477, 0.90655143, 0.79393161, 0.43629083]
         npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 500
         np.random.seed(12345)
@@ -382,14 +392,9 @@ class TestKDEMultivariateConditional(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,
                                                           n_sub=100))
         npt.assert_equal(dens.bw, bw_user)
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)

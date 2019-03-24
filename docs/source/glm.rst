@@ -18,7 +18,7 @@ Examples
 
     # Load modules and data
     import statsmodels.api as sm
-    data = sm.datasets.scotland.load()
+    data = sm.datasets.scotland.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog)
 
     # Instantiate a gamma family model with the default link function.
@@ -132,6 +132,7 @@ Results Class
    :toctree: generated/
 
    GLMResults
+   PredictionResults
 
 .. _families:
 
@@ -177,7 +178,6 @@ available link functions can be obtained by
    :toctree: generated/
 
    Link
-
    CDFLink
    CLogLog
    Log
@@ -193,3 +193,32 @@ available link functions can be obtained by
    logit
    nbinom
    probit
+
+.. _varfuncs:
+
+Variance Functions
+^^^^^^^^^^^^^^^^^^
+
+Each of the families has an associated variance function. You can access
+the variance functions here:
+
+::
+
+    >>> sm.families.<familyname>.variance
+
+.. module:: statsmodels.genmod.families.varfuncs
+.. currentmodule:: statsmodels.genmod.families.varfuncs
+
+.. autosummary::
+   :toctree: generated/
+
+   VarianceFunction
+   constant
+   Power
+   mu
+   mu_squared
+   mu_cubed
+   Binomial
+   binary
+   NegativeBinomial
+   nbinom

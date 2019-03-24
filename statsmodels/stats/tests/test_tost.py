@@ -376,21 +376,22 @@ class CheckTostMixin(object):
 
 class TestTostp1(CheckTostMixin):
     #paired var1
-    def __init__(self):
-        self.res2 = tost_clinic_paired_1
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_paired_1
         x1, x2 = clinic[:15, 2], clinic[15:, 2]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_paired(x1, x2, -0.6, 0.6, transform=None)
-        self.res1.pvalue = res[0]
-        #self.res1.df = res[1][-1] not yet
+        cls.res1.pvalue = res[0]
+        #cls.res1.df = res[1][-1] not yet
         res_ds = smws.DescrStatsW(x1 - x2, weights=None, ddof=0)
         #tost confint 2*alpha TODO: check again
-        self.res1.tconfint_diff = res_ds.tconfint_mean(0.1)
-        self.res1.confint_05 = res_ds.tconfint_mean(0.05)
-        self.res1.mean_diff = res_ds.mean
-        self.res1.std_mean_diff = res_ds.std_mean
+        cls.res1.tconfint_diff = res_ds.tconfint_mean(0.1)
+        cls.res1.confint_05 = res_ds.tconfint_mean(0.05)
+        cls.res1.mean_diff = res_ds.mean
+        cls.res1.std_mean_diff = res_ds.std_mean
 
-        self.res2b = ttest_clinic_paired_1
+        cls.res2b = ttest_clinic_paired_1
 
     def test_special(self):
         #TODO: add attributes to other cases and move to superclass
@@ -407,44 +408,49 @@ class TestTostp1(CheckTostMixin):
 
 class TestTostp2(CheckTostMixin):
     #paired var2
-    def __init__(self):
-        self.res2 = tost_clinic_paired
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_paired
         x, y = clinic[:15, 3], clinic[15:, 3]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_paired(x, y, -0.6, 0.6, transform=None)
-        self.res1.pvalue = res[0]
+        cls.res1.pvalue = res[0]
 
 class TestTosti1(CheckTostMixin):
-    def __init__(self):
-        self.res2 = tost_clinic_indep_1
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_indep_1
         x, y = clinic[:15, 2], clinic[15:, 2]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
-        self.res1.pvalue = res[0]
+        cls.res1.pvalue = res[0]
 
 class TestTosti2(CheckTostMixin):
-    def __init__(self):
-        self.res2 = tost_clinic_indep
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_indep
         x, y = clinic[:15, 3], clinic[15:, 3]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
-        self.res1.pvalue = res[0]
+        cls.res1.pvalue = res[0]
 
 class TestTostip1(CheckTostMixin):
-    def __init__(self):
-        self.res2 = tost_clinic_indep_1_pooled
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_indep_1_pooled
         x, y = clinic[:15, 2], clinic[15:, 2]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='pooled')
-        self.res1.pvalue = res[0]
+        cls.res1.pvalue = res[0]
 
 class TestTostip2(CheckTostMixin):
-    def __init__(self):
-        self.res2 = tost_clinic_indep_2_pooled
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = tost_clinic_indep_2_pooled
         x, y = clinic[:15, 3], clinic[15:, 3]
-        self.res1 = Holder()
+        cls.res1 = Holder()
         res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='pooled')
-        self.res1.pvalue = res[0]
+        cls.res1.pvalue = res[0]
 
 #transform=np.log
 #class TestTostp1_log(CheckTost):
@@ -472,7 +478,7 @@ def test_tost_asym():
 
     #SMOKE tests: foe multi-endpoint vectorized, k on k
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
-                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                           np.exp([-1.0, -1.0, -1.5, -1.5, -1.5]), 0.6,
                            usevar='unequal', transform=np.log)
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
@@ -551,18 +557,3 @@ def tost_transform_paired():
     assert_almost_equal(res1[1:], res_sas[1:], 2)
     #result R tost
     assert_almost_equal(res1[0], tost_s_paired.p_value, 13)
-
-if __name__ == '__main__':
-    tt = TestTostp1()
-    tt.test_special()
-    for cls in [TestTostp1, TestTostp2, TestTosti1, TestTosti2,
-                TestTostip1, TestTostip2]:
-        #print cls
-        tt = cls()
-        tt.test_pval()
-
-    test_ttest()
-    tost_transform_paired()
-    test_tost_log()
-
-

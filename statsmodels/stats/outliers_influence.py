@@ -15,10 +15,12 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import maybe_unwrap_results
 
+from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
+
 # outliers test convenience wrapper
 
 def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
-                 order=False):
+                 order=False, cutoff=None):
     """
     Outlier Tests for RegressionResults instances.
 
@@ -38,9 +40,17 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
         See `statsmodels.stats.multitest.multipletests` for details.
     alpha : float
         familywise error rate
+    labels : None or array_like
+        If `labels` is not None, then it will be used as index to the
+        returned pandas DataFrame. See also Returns below
     order : bool
         Whether or not to order the results by the absolute value of the
         studentized residuals. If labels are provided they will also be sorted.
+    cutoff : None or float in [0, 1]
+        If cutoff is not None, then the return only includes observations with
+        multiple testing corrected p-values strictly below the cutoff. The
+        returned array or dataframe can be empty if there are no outlier
+        candidates at the specified cutoff.
 
     Returns
     -------
@@ -56,6 +66,8 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     df = df_resid - 1.
     """
     from scipy import stats # lazy import
+    if labels is None:
+        labels = getattr(model_results.model.data, 'row_labels', None)
     infl = getattr(model_results, 'get_influence', None)
     if infl is None:
         results = maybe_unwrap_results(model_results)
@@ -66,19 +78,23 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
         idx = np.abs(resid).argsort()[::-1]
         resid = resid[idx]
         if labels is not None:
-            labels = np.array(labels)[idx].tolist()
+            labels = np.asarray(labels)[idx]
     df = model_results.df_resid - 1
     unadj_p = stats.t.sf(np.abs(resid), df) * 2
     adj_p = multipletests(unadj_p, alpha=alpha, method=method)
 
     data = np.c_[resid, unadj_p, adj_p[1]]
-    if labels is None:
-        labels = getattr(model_results.model.data, 'row_labels', None)
+    if cutoff is not None:
+        mask = data[:, -1] < cutoff
+        data = data[mask]
+    else:
+        mask = slice(None)
+
     if labels is not None:
         from pandas import DataFrame
         return DataFrame(data,
                          columns=['student_resid', 'unadj_p', method+"(p)"],
-                         index=labels)
+                         index=np.asarray(labels)[mask])
     return data
 
 #influence measures
@@ -168,7 +184,358 @@ def variance_inflation_factor(exog, exog_idx):
     return vif
 
 
-class OLSInfluence(object):
+class _BaseInfluenceMixin(object):
+    """common methods between OLSInfluence and MLE/GLMInfluence
+    """
+
+    def plot_influence(self, external=None, alpha=.05, criterion="cooks",
+                       size=48, plot_alpha=.75, ax=None, **kwargs):
+
+        if external is None:
+            external = hasattr(self, '_cache') and 'res_looo' in self._cache
+        from statsmodels.graphics.regressionplots import _influence_plot
+        res = _influence_plot(self.results, self, external=external, alpha=alpha,
+                              criterion=criterion, size=size,
+                              plot_alpha=plot_alpha, ax=ax, **kwargs)
+        return res
+
+    plot_influence.__doc__ = _plot_influence_doc.format({
+    'extra_params_doc' : ""})
+
+    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
+        from statsmodels.graphics import utils
+        fig, ax = utils.create_mpl_ax(ax)
+        if title is None:
+            title = "Index Plot"
+        nobs = len(self.endog)
+        index = np.arange(nobs)
+        ax.scatter(index, y, **kwds)
+
+        if threshold == 'all':
+            large_points = np.ones(nobs, np.bool_)
+        else:
+            large_points = np.abs(y) > threshold
+        psize = 3 * np.ones(nobs)
+        # add point labels
+        labels = self.results.model.data.row_labels
+        if labels is None:
+            labels = np.arange(nobs)
+        ax = utils.annotate_axes(np.where(large_points)[0], labels,
+                                 lzip(index, y),
+                                 lzip(-psize, psize), "large",
+                                 ax)
+
+        font = {"fontsize" : 16, "color" : "black"}
+        ax.set_ylabel(ylabel, **font)
+        ax.set_xlabel("Observation", **font)
+        ax.set_title(title, **font)
+        return fig
+
+    def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
+                   idx=None, **kwds):
+        """index plot for influence attributes
+
+        Parameters
+        ----------
+        y_var : string
+            Name of attribute or shortcut for predefined attributes that will
+            be plotted on the y-axis.
+        threshold : None or float
+            Threshold for adding annotation with observation labels.
+            Observations for which the absolute value of the y_var is larger
+            than the threshold will be annotated. Set to a negative number to
+            label all observations or to a large number to have no annotation.
+        title : string
+            If provided, the title will replace the default "Index Plot" title.
+        ax : matplolib axis instance
+            The plot will be added to the `ax` if provided, otherwise a new
+            figure is created.
+        idx : None or integer
+            Some attributes require an additional index to select the y-var.
+            In dfbetas this refers to the column indes.
+        kwds : optional keywords
+            Keywords will be used in the call to matplotlib scatter function.
+
+        """
+        criterion = y_var  # alias
+        if threshold is None:
+            # TODO: criterion specific defaults
+            threshold = 'all'
+
+        if criterion == 'dfbeta':
+            y = self.dfbetas[:, idx]
+            ylabel = 'DFBETA for ' + self.results.model.exog_names[idx]
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('hat') or criterion.startswith('lever'):
+            y = self.hat_matrix_diag
+            ylabel = "Leverage (diagonal of hat matrix)"
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('resid'):
+            y = self.resid_studentized
+            ylabel = "Internally Studentized Residuals"
+        else:
+            # assume we have the name of an attribute
+            y = getattr(self, y_var)
+            if idx is not None:
+                y = y[idx]
+            ylabel = y_var
+
+        fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
+                               ax=ax, **kwds)
+        return fig
+
+
+class MLEInfluence(_BaseInfluenceMixin):
+    """Local Influence and outlier measures (experimental)
+
+    This currently subclasses GLMInfluence instead of the other way.
+    No common superclass yet.
+    This is another version before checking what is common
+
+    Parameters
+    ----------
+    results : instance of results class
+        This only works for model and results classes that have the necessary
+        helper methods.
+    other arguments are only to override default behavior and are used instead
+    of the corresponding attribute of the results class.
+    By default resid_pearson is used as resid.
+
+
+
+
+    **Attributes**
+
+    hat_matrix_diag (hii) : This is the generalized leverage computed as the
+        local derivative of fittedvalues (predicted mean) with respect to the
+        observed response for each observation.
+    d_params : Change in parameters computed with one Newton step using the
+        full Hessian corrected by division by (1 - hii).
+    dbetas : change in parameters divided by the standard error of parameters
+        from the full model results, ``bse``.
+    cooks_distance : quadratic form for change in parameters weighted by
+        ``cov_params`` from the full model divided by the number of variables.
+        It includes p-values based on the F-distribution which are only
+        approximate outside of linear Gaussian models.
+    resid_studentized : In the general MLE case resid_studentized are
+        computed from the score residuals scaled by hessian factor and
+        leverage. This does not use ``cov_params``.
+    d_fittedvalues : local change of expected mean given the change in the
+        parameters as computed in ``d_params``.
+    d_fittedvalues_scaled : same as d_fittedvalues but scaled by the standard
+        errors of a predicted mean of the response.
+    params_one : is the one step parameter estimate computed as ``params``
+        from the full sample minus ``d_params``.
+
+
+
+
+
+
+    Notes
+    -----
+    MLEInfluence produces the same results as GLMInfluence (verified for GLM
+    Binomial and Gaussian). There will be some differences for non-canonical
+    links or if a robust cov_type is used.
+
+    Warning: This does currently not work for constrained or penalized models,
+    e.g. models estimated with fit_constrained or fit_regularized.
+
+    This has not yet been tested for correctness when offset or exposure
+    are used, although they should be supported by the code.
+
+    status: experimental,
+    This class will need changes to support different kinds of models, e.g.
+    extra parameters in discrete.NegativeBinomial or two-part models like
+    ZeroInflatedPoisson.
+
+
+    """
+
+    def __init__(self, results, resid=None, endog=None, exog=None,
+                 hat_matrix_diag=None, cov_params=None, scale=None):
+        # I'm not calling super for now, OLS attributes might not be available
+        #check which model is allowed
+        self.results = results = maybe_unwrap_results(results)
+        # TODO: check for extra params in e.g. NegBin
+        self.nobs, self.k_vars = results.model.exog.shape
+        self.endog = endog if endog is not None else results.model.endog
+        self.exog = exog if exog is not None else results.model.exog
+        self.resid = resid if resid is not None else results.resid_pearson
+        self.scale = scale if scale is not None else results.scale
+        self.cov_params = (cov_params if cov_params is not None
+                           else results.cov_params())
+        self.model_class = results.model.__class__
+
+        self.hessian = self.results.model.hessian(self.results.params)
+        self.score_obs = self.results.model.score_obs(self.results.params)
+        if hat_matrix_diag is not None:
+            self._hat_matrix_diag = hat_matrix_diag
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        """(cached attribute) diagonal of the generalized leverage
+
+        This is the analogue of the hat matrix diagonal for general MLE.
+
+        """
+        if hasattr(self, '_hat_matrix_diag'):
+            return self._hat_matrix_diag
+
+        dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
+        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
+        #dmu_dp = 1 / self.results.model.family.link.deriv(self.results.fittedvalues)
+        h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
+        return h
+
+    @cache_readonly
+    def d_params(self):
+        """(cached attribute) change in parameter estimates
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation.
+        """
+        so_noti = self.score_obs.sum(0) - self.score_obs
+        beta_i = np.linalg.solve(self.hessian, so_noti.T).T
+        return beta_i / (1 - self.hat_matrix_diag)[:, None]
+
+    @cache_readonly
+    def dfbetas(self):
+        """(cached attribute) scaled change in parameter estimates
+
+        The one-step change of parameters in d_params is rescaled by dividing
+        by the standard error of the parameter estimate given by results.bse.
+        """
+
+        beta_i = self.d_params / self.results.bse
+        return beta_i
+
+    @cache_readonly
+    def params_one(self):
+        """(cached attribute) parameter estimate based on one-step approximation
+
+        This the one step parameter estimate computed as
+        ``params`` from the full sample minus ``d_params``.
+        """
+        return self.results.params - self.d_params
+
+    @cache_readonly
+    def cooks_distance(self):
+        """(cached attribute) Cook's distance and p-values
+
+        Based on one step approximation d_params and on results.cov_params
+        Cook's distance divides by the number of explanatory variables.
+
+        p-values are based on the F-distribution which are only approximate
+        outside of linear Gaussian models.
+
+        Warning: The definition of p-values might change if we switch to using
+        chi-square distribution instead of F-distribution, or if we make it
+        dependent on the fit keyword use_t.
+
+        """
+        cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T).sum(1)
+        cooks_d2 /= self.k_vars
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        # TODO use chi2   # use_f option
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
+
+    @cache_readonly
+    def resid_studentized(self):
+        """(cached attribute) score residual divided by sqrt of hessian factor
+
+        experimental, agrees with GLMInfluence for Binomial and Gaussian.
+        no reference for this
+        """
+        sf = self.results.model.score_factor(self.results.params)
+        hf = self.results.model.hessian_factor(self.results.params)
+        return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
+
+    @cache_readonly
+    def _get_prediction(self):
+        # TODO: do we cache this or does it need to be a method
+        # we only need unchanging parts, alpha for confint could change
+        return self.results.get_prediction()
+
+    @cache_readonly
+    def d_fittedvalues(self):
+        """(cached attribute) change in expected response, fittedvalues
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`.
+        """
+        # results.params might be a pandas.Series
+        params = np.asarray(self.results.params)
+        deriv = self.results.model._deriv_mean_dparams(params)
+        return (deriv * self.d_params).sum(1)
+
+    @property
+    def d_fittedvalues_scaled(self):
+        """(cached attribute) change in fittedvalues scaled by standard errors
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`, and divides by the standard errors
+        for the predicted mean provided by results.get_prediction.
+        """
+        # Note: this and the previous methods are for the response
+        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # this will be relevant for WLS comparing fitted endog versus wendog
+        return self.d_fittedvalues / self._get_prediction.se_mean
+
+    def summary_frame(self):
+        """
+        Creates a DataFrame with influence results.
+
+        Returns
+        -------
+        frame : pandas DataFrame
+            A DataFrame with selected results for each observation.
+            The index will be the same as provided to the model.
+
+        Notes
+        -----
+        The resultant DataFrame contains six variables in addition to the
+        ``dfbetas``. These are:
+
+        * cooks_d : Cook's Distance defined in ``cooks_distance``
+        * standard_resid : Standardized residuals defined in
+          `resid_studentizedl`
+        * hat_diag : The diagonal of the projection, or hat, matrix defined in
+          `hat_matrix_diag`
+        * dffits_internal : DFFITS statistics using internally Studentized
+          residuals defined in `d_fittedvalues_scaled`
+
+        """
+        from pandas import DataFrame
+
+        # row and column labels
+        data = self.results.model.data
+        row_labels = data.row_labels
+        beta_labels = ['dfb_' + i for i in data.xnames]
+
+        # grab the results
+        summary_data = DataFrame(dict(
+                            cooks_d = self.cooks_distance[0],
+                            standard_resid = self.resid_studentized,
+                            hat_diag = self.hat_matrix_diag,
+                            dffits_internal = self.d_fittedvalues_scaled),
+                            index = row_labels)
+        #NOTE: if we don't give columns, order of above will be arbitrary
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
+                            index=row_labels)
+
+        return dfbeta.join(summary_data)
+
+
+class OLSInfluence(_BaseInfluenceMixin):
     '''class to calculate outlier and influence measures for OLS result
 
     Parameters
@@ -203,9 +570,11 @@ class OLSInfluence(object):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog
+        self.resid = results.resid
         self.model_class = results.model.__class__
 
-        self.sigma_est = np.sqrt(results.mse_resid)
+        #self.sigma_est = np.sqrt(results.mse_resid)
+        self.scale = results.mse_resid
 
         self.aux_regression_exog = {}
         self.aux_regression_endog = {}
@@ -225,7 +594,7 @@ class OLSInfluence(object):
         '''(cached attribute) PRESS residuals
         '''
         hii = self.hat_matrix_diag
-        return self.results.resid / (1 - hii)
+        return self.resid / (1 - hii)
 
     @cache_readonly
     def influence(self):
@@ -236,7 +605,7 @@ class OLSInfluence(object):
         where u are the residuals and h is the diagonal of the hat_matrix
         '''
         hii = self.hat_matrix_diag
-        return self.results.resid * hii / (1 - hii)
+        return self.resid * hii / (1 - hii)
 
     @cache_readonly
     def hat_diag_factor(self):
@@ -253,6 +622,16 @@ class OLSInfluence(object):
         '''(cached attribute) error sum of squares of PRESS residuals
         '''
         return np.dot(self.resid_press, self.resid_press)
+
+    @cache_readonly
+    def resid_studentized(self):
+        '''(cached attribute) studentized residuals using variance from OLS
+
+        alias for resid_studentized_internal for compatibility with MLEInfluence
+        this uses sigma from original estimate
+        does not require leave one out loop
+        '''
+        return self.resid_studentized_internal
 
     @cache_readonly
     def resid_studentized_internal(self):
@@ -302,11 +681,31 @@ class OLSInfluence(object):
         '''
         hii = self.hat_matrix_diag
         if sigma is None:
-            sigma2_est = self.results.mse_resid
+            sigma2_est = self.scale
             #can be replace by different estimators of sigma
             sigma = np.sqrt(sigma2_est)
 
-        return  self.results.resid / sigma / np.sqrt(1 - hii)
+        return self.resid / sigma / np.sqrt(1 - hii)
+
+    # same computation as GLMInfluence
+    @cache_readonly
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        hii = self.hat_matrix_diag
+        #Eubank p.93, 94
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
+        cooks_d2 *= hii / (1 - hii)
+
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
 
     @cache_readonly
     def dffits_internal(self):
@@ -365,6 +764,15 @@ class OLSInfluence(object):
         return dfbetas
 
     @cache_readonly
+    def dfbeta(self):
+        '''(cached attribute) dfbetas
+
+        uses results from leave-one-observation-out loop
+        '''
+        dfbeta = self.results.params - self.params_not_obsi
+        return dfbeta
+
+    @cache_readonly
     def sigma2_not_obsi(self):
         '''(cached attribute) error variance for all LOOO regressions
 
@@ -374,7 +782,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['mse_resid'])
 
-    @cache_readonly
+    @property
     def params_not_obsi(self):
         '''(cached attribute) parameter estimates for all LOOO regressions
 
@@ -382,7 +790,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['params'])
 
-    @cache_readonly
+    @property
     def det_cov_params_not_obsi(self):
         '''(cached attribute) determinant of cov_params of all LOOO regressions
 
@@ -390,24 +798,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['det_cov_params'])
 
-    @cache_readonly
-    def cooks_distance(self):
-        '''(cached attribute) Cooks distance
 
-        uses original results, no nobs loop
-
-        '''
-        hii = self.hat_matrix_diag
-        #Eubank p.93, 94
-        cooks_d2 = self.resid_studentized_internal**2 / self.k_vars
-        cooks_d2 *= hii / (1 - hii)
-
-        from scipy import stats
-        #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
-
-        return cooks_d2, pvals
 
     @cache_readonly
     def cov_ratio(self):
@@ -435,7 +826,7 @@ class OLSInfluence(object):
 
         '''
         #TODO:check if correct outside of ols
-        return self.results.mse_resid * (1 - self.hat_matrix_diag)
+        return self.scale * (1 - self.hat_matrix_diag)
 
     @cache_readonly
     def resid_std(self):
@@ -542,8 +933,8 @@ class OLSInfluence(object):
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
 
-        endog = self.endog
-        exog = self.exog
+        endog = self.results.model.endog
+        exog = self.results.model.exog
 
         params = np.zeros(exog.shape, dtype=np.float)
         mse_resid = np.zeros(endog.shape, dtype=np.float)
@@ -741,3 +1132,232 @@ def summary_table(res, alpha=0.05):
 
     return st, data, ss2
 
+
+class GLMInfluence(MLEInfluence):
+    """Influence and outlier measures (experimental)
+
+    This uses partly formulas specific to GLM, specifically cooks_distance
+    is based on the hessian, i.e. observed or expected information matrix and
+    not on cov_params, in contrast to MLEInfluence.
+    Standardization for changes in parameters, in fittedvalues and in
+    the linear predictor are based on cov_params.
+
+    Parameters
+    ----------
+    results : instance of results class
+        This only works for model and results classes that have the necessary
+        helper methods.
+    other arguments are only to override default behavior and are used instead
+    of the corresponding attribute of the results class.
+    By default resid_pearson is used as resid.
+
+
+
+
+    **Attributes**
+
+    hat_matrix_diag (hii) : diagonal for hatmatrix using the formulas for
+        GLM
+    d_params : Change in parameters computed as one step approximation to
+        deleting an observation.
+    dbetas : change in parameters divided by the standard error of parameters
+        from the full model results, ``bse``.
+    cooks_distance : Computed using formulas for GLM and does not use
+        results.cov_params.
+        It includes p-values based on the F-distribution which are only
+        approximate outside of linear Gaussian models.
+    resid_studentized : studentized pearson residuals.
+    d_fittedvalues : local change of expected mean given the change in the
+        parameters as computed in d_params.
+    d_fittedvalues_scaled : same as d_fittedvalues but scaled by the standard
+        errors of a predicted mean of the response.
+    d_linpred : local change in linear prediction.
+    d_linpred_scale : local change in linear prediction scaled by the
+        standard errors for the prediction based on cov_params.
+
+    Notes
+    -----
+    This has not yet been tested for correctness when offset or exposure
+    are used, although they should be supported by the code.
+
+    Some GLM specific measures like d_deviance are still missing.
+
+    Computing an explicit leave-one-observation-out (LOOO) loop is included
+    but no influence measures are currently computed from it.
+    """
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        """(cached attribute) diagonal of the hat_matrix for GLM
+
+        This returns the diagonal of the hat matrix that was provided as
+        argument to GLMInfluenc or computes it using the results method
+        `get_hat_matrix`.
+
+        """
+        if hasattr(self, '_hat_matrix_diag'):
+            return self._hat_matrix_diag
+        else:
+            return self.results.get_hat_matrix()
+
+    @cache_readonly
+    def d_params(self):
+        """(cached attribute) change in parameter estimates
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation.
+        """
+
+        beta_i = np.linalg.pinv(self.exog) * self.resid_studentized
+        beta_i /= np.sqrt(1 - self.hat_matrix_diag)
+        return beta_i.T
+
+    # same computation as OLS
+    @cache_readonly
+    def resid_studentized(self):
+        """(cached attribute) internally studentized residuals
+
+        residuals / sqrt( scale * (1 - hii))
+
+        where residuals are those provided to GLMInfluence which are
+        pearson residuals by default, and
+        hii is the diagonal of the hat matrix.
+        """
+        hii = self.hat_matrix_diag
+        return self.resid / np.sqrt(self.scale * (1 - hii))
+
+    # same computation as OLS
+    @cache_readonly
+    def cooks_distance(self):
+        """(cached attribute) Cook's distance
+
+        Based on one step approximation using resid_studentized and
+        hat_matrix_diag for the computation.
+
+        Cook's distance divides by the number of explanatory variables.
+
+        """
+        hii = self.hat_matrix_diag
+        #Eubank p.93, 94
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
+        cooks_d2 *= hii / (1 - hii)
+
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
+
+    @property
+    def d_linpred(self):
+        """(cached attribute) change in linear prediction
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`.
+        """
+        # TODO: This will need adjustment for extra params in Poisson
+        # use original model exog not transformed influence exog
+        exog = self.results.model.exog
+        return (exog * self.d_params).sum(1)
+
+    @property
+    def d_linpred_scaled(self):
+        """(cached attribute) change in linpred scaled by standard errors
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`, and divides by the standard errors
+        for linpred provided by results.get_prediction.
+        """
+        # Note: this and the previous methods are for the response
+        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # this will be relevant for WLS comparing fitted endog versus wendog
+        return self.d_linpred / self._get_prediction.linpred.se_mean
+
+    @property
+    def _fittedvalues_one(self):
+        """experimental code
+        """
+        import warnings
+        warnings.warn('this ignores offset and exposure', UserWarning)
+        #TODO: we need to handle offset, exposure and weights
+        # use original model exog not transformed influence exog
+        exog = self.results.model.exog
+        fitted = np.array([self.results.model.predict(pi, exog[i])
+                           for i, pi in enumerate(self.params_one)])
+        return fitted.squeeze()
+
+    @property
+    def _diff_fittedvalues_one(self):
+        """experimental code
+        """
+        # in discrete we cannot reuse results.fittedvalues
+        return self.results.predict() - self._fittedvalues_one
+
+    @cache_readonly
+    def _res_looo(self):
+        """collect required results from the LOOO loop
+
+        all results will be attached.
+        currently only 'params', 'mse_resid', 'det_cov_params' are stored
+
+        Reestimates the model with endog and exog dropping one observation
+        at a time
+
+        This uses a nobs loop, only attributes of the results instance are
+        stored.
+
+        Warning: This will need refactoring and API changes to be able to
+        add options.
+        """
+        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
+        get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
+
+        endog = self.results.model.endog
+        exog = self.results.model.exog
+
+        init_kwds = self.results.model._get_init_kwds()
+        # We need to drop obs also from extra arrays
+        freq_weights = init_kwds.pop('freq_weights')
+        var_weights = init_kwds.pop('var_weights')
+        offset = offset_ = init_kwds.pop('offset')
+        exposure = exposure_ = init_kwds.pop('exposure')
+        n_trials = init_kwds.pop('n_trials', None)
+        # family Binomial creates `n` i.e. `n_trials`
+        # we need to reset it
+        # TODO: figure out how to do this properly
+        if hasattr(init_kwds['family'], 'initialize'):
+            # assume we have Binomial
+            is_binomial = True
+        else:
+            is_binomial = False
+
+        params = np.zeros(exog.shape, dtype=np.float)
+        scale = np.zeros(endog.shape, dtype=np.float)
+        det_cov_params = np.zeros(endog.shape, dtype=np.float)
+
+        cv_iter = LeaveOneOut(self.nobs)
+        for inidx, outidx in cv_iter:
+            if offset is not None:
+                offset_ = offset[inidx]
+            if exposure is not None:
+                exposure_ = exposure[inidx]
+            if n_trials is not None:
+                init_kwds['n_trials'] = n_trials[inidx]
+
+            mod_i = self.model_class(endog[inidx], exog[inidx],
+                                     offset=offset_,
+                                     exposure=exposure_,
+                                     freq_weights=freq_weights[inidx],
+                                     var_weights=var_weights[inidx],
+                                     **init_kwds)
+            if is_binomial:
+                mod_i.family.n = init_kwds['n_trials']
+            res_i = mod_i.fit(start_params=self.results.params,
+                              method='newton')
+            params[outidx] = res_i.params.copy()
+            scale[outidx] = res_i.scale
+            det_cov_params[outidx] = get_det_cov_params(res_i)
+
+        return dict(params=params, scale=scale, mse_resid=scale,  # alias for now
+                       det_cov_params=det_cov_params)

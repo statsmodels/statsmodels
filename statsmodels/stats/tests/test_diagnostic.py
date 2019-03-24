@@ -9,19 +9,16 @@ License: BSD-3
 currently all tests are against R
 
 """
-#import warnings
-#warnings.simplefilter("default")
-# ResourceWarning doesn't exist in python 2
-#warnings.simplefilter("ignore", ResourceWarning)
 import os
 
 import numpy as np
+import pandas as pd
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_approx_equal, assert_allclose)
-from nose import SkipTest
+                           assert_allclose, assert_array_equal)
+import pytest
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
@@ -29,18 +26,20 @@ import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 import json
 
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
+
 def compare_t_est(sp, sp_dict, decimal=(14, 14)):
-    assert_almost_equal(sp[0], sp_dict['statistic'], decimal=decimal[0])
-    assert_almost_equal(sp[1], sp_dict['pvalue'], decimal=decimal[1])
+    assert_allclose(sp[0], sp_dict['statistic'], atol=10 ** -decimal[0],
+                    rtol=10 ** -decimal[0])
+    assert_allclose(sp[1], sp_dict['pvalue'], atol=10 ** -decimal[1],
+                    rtol=10 ** -decimal[0])
 
 
 def notyet_atst():
-    d = macrodata.load().data
+    d = macrodata.load(as_pandas=False).data
 
     realinv = d['realinv']
     realgdp = d['realgdp']
@@ -106,13 +105,14 @@ def notyet_atst():
 
 class TestDiagnosticG(object):
 
-    def __init__(self):
-        d = macrodata.load().data
+    @classmethod
+    def setup_class(cls):
+        d = macrodata.load_pandas().data
         #growth rates
-        gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
-        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp']))
-        lint = d['realint'][:-1]
-        tbilrate = d['tbilrate'][:-1]
+        gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
+        gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
+        lint = d['realint'][:-1].values
+        tbilrate = d['tbilrate'][:-1].values
 
         endogg = gs_l_realinv
         exogg = add_constant(np.c_[gs_l_realgdp, lint])
@@ -124,11 +124,11 @@ class TestDiagnosticG(object):
 
         res_ols3 = OLS(endogg, exogg3).fit()
 
-        self.res = res_ols
-        self.res2 = res_ols2
-        self.res3 = res_ols3
-        self.endog = self.res.model.endog
-        self.exog = self.res.model.exog
+        cls.res = res_ols
+        cls.res2 = res_ols2
+        cls.res3 = res_ols3
+        cls.endog = cls.res.model.endog
+        cls.exog = cls.res.model.exog
 
     def test_basic(self):
         #mainly to check I got the right regression
@@ -306,7 +306,25 @@ class TestDiagnosticG(object):
         assert_almost_equal(bg2, bg3, decimal=13)
 
     def test_acorr_ljung_box(self):
+
+        #unit-test which may be useful later
+        #ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
+        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
+        #> mkhtest(bt, "ljung_box_4df2", "chi2")
+        # ljung_box_4df2 = dict(statistic=5.23587172795227,
+        #                       pvalue=0.0729532930400377,
+        #                       parameters=(2,), distr='chi2')
+
+        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
+        #> mkhtest(bt, "ljung_box_bp_4df2", "chi2")
+        # ljung_box_bp_4df2 = dict(statistic=5.12462932741681,
+        #                          pvalue=0.0771260128929921,
+        #                          parameters=(2,), distr='chi2')
+
+
         res = self.res
+
+        #general test
 
         #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_4", "chi2")
@@ -319,24 +337,48 @@ class TestDiagnosticG(object):
                               pvalue=0.2747471266820692,
                               parameters=(4,), distr='chi2')
 
-        #ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
-        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
-        #> mkhtest(bt, "ljung_box_4df2", "chi2")
-        ljung_box_4df2 = dict(statistic=5.23587172795227,
-                              pvalue=0.0729532930400377,
-                              parameters=(2,), distr='chi2')
-
-        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
-        #> mkhtest(bt, "ljung_box_bp_4df2", "chi2")
-        ljung_box_bp_4df2 = dict(statistic=5.12462932741681,
-                                 pvalue=0.0771260128929921,
-                                 parameters=(2,), distr='chi2')
-
 
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, 4,
                                                        boxpierce=True)
-        compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 14))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 14))
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 13))
+
+    def test_acorr_ljung_box_big_default(self):
+        res = self.res
+        #test with big dataset and default lag
+
+        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
+        #> mkhtest(bt, "ljung_box_none", "chi2")
+        ljung_box_none = dict(statistic=51.03724531797195, pvalue=0.11334744923390,
+                              distr='chi2')
+
+        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
+        #> mkhtest(bt, "ljung_box_bp_none", "chi2")
+        ljung_box_bp_none = dict(statistic=45.12238537034000,
+                              pvalue=0.26638168491464,
+                              distr='chi2')
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, boxpierce=True)
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_none, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(13, 13))
+
+    def test_acorr_ljung_box_small_default(self):
+        res = self.res
+        #test with small dataset and default lag
+
+        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
+        #> mkhtest(bt, "ljung_box_small", "chi2")
+        ljung_box_small = dict(statistic=9.61503968281915, pvalue=0.72507000996945,
+                           parameters=(0,), distr='chi2')
+
+        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
+        #> mkhtest(bt, "ljung_box_bp_small", "chi2")
+        ljung_box_bp_small = dict(statistic=7.41692150864936,
+                              pvalue=0.87940785887006,
+                              parameters=(0,), distr='chi2')
+
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid[:30], boxpierce=True)
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 13))
 
 
     def test_harvey_collier(self):
@@ -554,17 +596,17 @@ class TestDiagnosticG(object):
         #> lt = lillie.test(residuals(fm)[1:20])
         #> mkhtest(lt, "lilliefors", "-")
         lilliefors3 = dict(statistic=0.1333956004203103,
-                          pvalue=0.4618672180799566, parameters=(), distr='-')
+                          pvalue=0.20, parameters=(), distr='-')
 
         lf1 = smsdia.lilliefors(res.resid)
         lf2 = smsdia.lilliefors(res.resid**2)
         lf3 = smsdia.lilliefors(res.resid[:20])
 
         compare_t_est(lf1, lilliefors1, decimal=(14, 14))
-        compare_t_est(lf2, lilliefors2, decimal=(14, 14)) #pvalue very small
-        assert_approx_equal(lf2[1], lilliefors2['pvalue'], significant=10)
+        compare_t_est(lf2, lilliefors2, decimal=(14, 14))  # pvalue very small
+        assert_allclose(lf2[1], lilliefors2['pvalue'], rtol=1e-10)
         compare_t_est(lf3, lilliefors3, decimal=(14, 1))
-        #R uses different approximation for pvalue in last case
+        # R uses different approximation for pvalue in last case
 
         #> ad = ad.test(residuals(fm))
         #> mkhtest(ad, "ad3", "-")
@@ -594,8 +636,9 @@ class TestDiagnosticG(object):
         #this test is slow
         infl = oi.OLSInfluence(res)
 
-        fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
-        lsdiag = json.load(fp)
+        path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
+        with open(path, 'r') as fp:
+            lsdiag = json.load(fp)
 
         #basic
         assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
@@ -650,7 +693,8 @@ class TestDiagnosticG(object):
 
 class TestDiagnosticGPandas(TestDiagnosticG):
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         d = macrodata.load_pandas().data
         #growth rates
         d['gs_l_realinv'] = 400 * np.log(d['realinv']).diff()
@@ -659,7 +703,7 @@ class TestDiagnosticGPandas(TestDiagnosticG):
         d['tbilrate'] = d['tbilrate'].shift(1)
 
         d = d.dropna()
-        self.d = d
+        cls.d = d
         endogg = d['gs_l_realinv']
         exogg = add_constant(d[['gs_l_realgdp', 'lint']])
         exogg2 = add_constant(d[['gs_l_realgdp', 'tbilrate']])
@@ -670,11 +714,11 @@ class TestDiagnosticGPandas(TestDiagnosticG):
 
         res_ols3 = OLS(endogg, exogg3).fit()
 
-        self.res = res_ols
-        self.res2 = res_ols2
-        self.res3 = res_ols3
-        self.endog = self.res.model.endog
-        self.exog = self.res.model.exog
+        cls.res = res_ols
+        cls.res2 = res_ols2
+        cls.res3 = res_ols3
+        cls.endog = cls.res.model.endog
+        cls.exog = cls.res.model.exog
 
 
 def grangertest():
@@ -688,7 +732,8 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
-def test_outlier_influence_funcs():
+
+def test_outlier_influence_funcs(reset_randomstate):
     #smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
@@ -703,6 +748,7 @@ def test_outlier_influence_funcs():
     oi.summary_table(res2, alpha=0.05)
     infl = res2.get_influence()
     infl.summary_table()
+
 
 def test_influence_wrapped():
     from pandas import DataFrame
@@ -738,8 +784,9 @@ def test_influence_wrapped():
     assert_(isinstance(df, DataFrame))
 
     #this test is slow
-    fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
-    lsdiag = json.load(fp)
+    path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
+    with open(path, "r") as fp:
+        lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
 
@@ -790,7 +837,7 @@ def test_influence_dtype():
     assert_almost_equal(cr1, cr3, decimal=8)
 
 
-def test_outlier_test():
+def get_duncan_data():
     # results from R with NA -> 1. Just testing interface here because
     # outlier_test is just a wrapper
     labels = ['accountant', 'pilot', 'architect', 'author', 'chemist',
@@ -825,6 +872,12 @@ def test_outlier_test():
         41.,  16.,  33.,  53.,  67.,  57.,  26.,  29.,  10.,  15.,  19.,
         10.,  13.,  24.,  20.,   7.,   3.,  16.,   6.,  11.,   8.,  41.,
         10.]
+
+    return endog, exog, labels
+
+
+def test_outlier_test():
+    endog, exog, labels = get_duncan_data()
     ndarray_mod = OLS(endog, exog).fit()
     rstudent =  [3.1345185839, -2.3970223990,  2.0438046359, -1.9309187757,
                  1.8870465798, -1.7604905300, -1.7040324156,  1.6024285876,
@@ -874,10 +927,33 @@ def test_outlier_test():
     np.testing.assert_almost_equal(res.values, res2, 7)
     np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
+    data = pd.DataFrame(np.column_stack((endog, exog)),
+                        columns='y const var1 var2'.split(),
+                        index=labels)
+
+    # check `order` with pandas bug in #3971
+    res_pd = OLS.from_formula('y ~ const + var1 + var2 - 0', data).fit()
+
+    res_outl2 = oi.outlier_test(res_pd, method='b', order=True)
+    assert_almost_equal(res_outl2.values, res2, 7)
+    assert_equal(res_outl2.index.tolist(), sorted_labels)
+
+    res_outl1 = res_pd.outlier_test(method='b')
+    res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+    assert_almost_equal(res_outl1.values, res2, 7)
+    assert_equal(res_outl1.index.tolist(), sorted_labels)
+    assert_array_equal(res_outl2.index, res_outl1.index)
+
+    # additional keywords in method
+    res_outl3 = res_pd.outlier_test(method='b', order=True)
+    assert_equal(res_outl3.index.tolist(), sorted_labels)
+    res_outl4 = res_pd.outlier_test(method='b', order=True, cutoff=0.15)
+    assert_equal(res_outl4.index.tolist(), sorted_labels[:1])
+
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
 
     #t = TestDiagnosticG()
     #t.test_basic()
@@ -953,4 +1029,3 @@ if __name__ == '__main__':
     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
     '''
-

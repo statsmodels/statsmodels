@@ -101,7 +101,7 @@ class PolySmoother(object):
 
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
-    #   smoother in gam.py  initalized by function default_smoother
+    #   smoother in gam.py  initialized by function default_smoother
     #   Only fixed exceptions, I didn't check whether it is statistically
     #   correctand I think it is not, there are still be some dimension
     #   problems, and there were some dimension problems initially.
@@ -184,7 +184,7 @@ class PolySmoother(object):
             if not hasattr(self, "X"):
                 raise ValueError("x needed to fit PolySmoother")
         else:
-            if x.ndim > 1: 
+            if x.ndim > 1:
                 print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
                 #x=x[0,:] #TODO: check orientation, row or col
             self.X = np.array([(x**i) for i in range(self.order+1)]).T
@@ -195,7 +195,7 @@ class PolySmoother(object):
         _y = y * _w#[:,None]
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
-        self.coef = np.linalg.lstsq(X, _y)[0]
+        self.coef = np.linalg.lstsq(X, _y, rcond=-1)[0]
         self.params = np.squeeze(self.coef)
 
 

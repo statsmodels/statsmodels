@@ -1,4 +1,5 @@
 """Spector and Mazzeo (1980) - Program Effectiveness Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -32,21 +33,24 @@ NOTE        = """::
         GPA   - Student's grade point average
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-def load():
+def load(as_pandas=None):
     """
     Load the Spector dataset and returns a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=3, dtype=float)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
 
 def load_pandas():
     """
@@ -58,12 +62,11 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=3, dtype=float)
+    return du.process_pandas(data, endog_idx=3)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/spector.csv',"rb") as f:
-        data = np.recfromtxt(f, delimiter=" ",
-                             names=True, dtype=float, usecols=(1,2,3,4))
-    return data
+    data = du.load_csv(__file__, 'spector.csv', sep=r'\s')
+    data = du.strip_column_names(data)
+    data = data.iloc[:, [1, 2, 3, 4]]
+    return data.astype(float)

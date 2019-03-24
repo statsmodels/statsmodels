@@ -17,10 +17,10 @@ version 1: use pinv
 pinv(x) scale pinv(x)   used currently in linear_model, with scale is
 1d (or diagonal matrix)
 (x'x)^(-1) x' scale x (x'x)^(-1),  scale in general is (nobs, nobs) so
-pretty large
-general formulas for scale in cluster case are in
-http://pubs.amstat.org/doi/abstract/10.1198/jbes.2010.07136 which also
-has the second version
+pretty large general formulas for scale in cluster case are in [4],
+which can be found (as of 2017-05-20) at
+http://www.tandfonline.com/doi/abs/10.1198/jbes.2010.07136
+This paper also has the second version.
 
 version 2:
 (x'x)^(-1) S (x'x)^(-1)    with S = x' scale x,    S is (kvar,kvars),
@@ -79,18 +79,18 @@ TODO
 
 References
 ----------
-John C. Driscoll and Aart C. Kraay, “Consistent Covariance Matrix Estimation
+[1] John C. Driscoll and Aart C. Kraay, “Consistent Covariance Matrix Estimation
 with Spatially Dependent Panel Data,” Review of Economics and Statistics 80,
 no. 4 (1998): 549-560.
 
-Daniel Hoechle, "Robust Standard Errors for Panel Regressions with
+[2] Daniel Hoechle, "Robust Standard Errors for Panel Regressions with
 Cross-Sectional Dependence", The Stata Journal
 
-Mitchell A. Petersen, “Estimating Standard Errors in Finance Panel Data
+[3] Mitchell A. Petersen, “Estimating Standard Errors in Finance Panel Data
 Sets: Comparing Approaches,” Review of Financial Studies 22, no. 1
 (January 1, 2009): 435 -480.
 
-A. Colin Cameron, Jonah B. Gelbach, and Douglas L. Miller, “Robust Inference
+[4] A. Colin Cameron, Jonah B. Gelbach, and Douglas L. Miller, “Robust Inference
 With Multiway Clustering,” Journal of Business and Economic Statistics 29
 (April 2011): 238-249.
 
@@ -105,7 +105,7 @@ from statsmodels.compat.python import range
 import pandas as pd
 import numpy as np
 
-from statsmodels.tools.grouputils import Group
+from statsmodels.tools.grouputils import Group, group_sums
 from statsmodels.stats.moment_helpers import se_cov
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
@@ -159,6 +159,7 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
 
 '''
 
+# Note: HCCM stands for Heteroskedasticity Consistent Covariance Matrix
 def _HCCM(results, scale):
     '''
     sandwich with pinv(x) * diag(scale) * pinv(x).T
@@ -356,6 +357,11 @@ def weights_uniform(nlags):
     #with lag zero
     return np.ones(nlags+1)
 
+
+kernel_dict = {'bartlett': weights_bartlett,
+               'uniform': weights_uniform}
+
+
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''inner covariance matrix for HAC (Newey, West) sandwich
 
@@ -426,30 +432,6 @@ def S_white_simple(x):
         x = x[:,None]
 
     return np.dot(x.T, x)
-
-
-
-def group_sums(x, group):
-    '''sum x for each group, simple bincount version, again
-
-    group : array, integer
-        assumed to be consecutive integers
-
-    no dtype checking because I want to raise in that case
-
-    uses loop over columns of x
-
-    #TODO: remove this, already copied to tools/grouputils
-    '''
-
-    #TODO: transpose return in group_sum, need test coverage first
-
-    # re-label groups or bincount takes too much memory
-    if np.max(group) > 2 * x.shape[0]:
-        group = pd.factorize(group)[0]
-
-    return np.array([np.bincount(group, weights=x[:, col])
-                            for col in range(x.shape[1])])
 
 
 def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
@@ -895,5 +877,3 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
             cov_hac *= ((nobs-1.) / float(nobs - k_params))
 
     return cov_hac
-
-

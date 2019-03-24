@@ -1,6 +1,7 @@
-'''Helper files for pickling'''
+"""Helper files for pickling"""
 from statsmodels.compat.python import cPickle
 from statsmodels.iolib.openfile import get_file_obj
+
 
 def save_pickle(obj, fname):
     """
@@ -30,4 +31,3 @@ def load_pickle(fname):
     """
     with get_file_obj(fname, 'rb') as fin:
         return cPickle.load(fin)
-

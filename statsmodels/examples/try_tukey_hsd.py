@@ -220,4 +220,3 @@ assert_equal(reject1, reject2)
 meandiff1 = res3.meandiffs
 meandiff2 = sas_['mean']
 assert_almost_equal(meandiff1, meandiff2, decimal=14)
-

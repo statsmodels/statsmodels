@@ -134,6 +134,7 @@ def varfilter(x, a):
         yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
         return yvalid
 
+
 def varinversefilter(ar, nobs, version=1):
     '''creates inverse ar filter (MA representation) recursively
 
@@ -184,6 +185,7 @@ def varinversefilter(ar, nobs, version=1):
             raise NotImplementedError('waiting for generalized ufuncs or something')
 
     return arinv
+
 
 def vargenerate(ar, u, initvalues=None):
     '''generate an VAR process with errors u
@@ -280,6 +282,7 @@ def padone(x, front=0, back=0, axis=0, fillvalue=0):
     out[tuple(myslice)] = x
     return out
 
+
 def trimone(x, front=0, back=0, axis=0):
     '''trim number of array elements along one axis
 
@@ -308,12 +311,12 @@ def trimone(x, front=0, back=0, axis=0):
     return x[tuple(myslice)]
 
 
-
 def ar2full(ar):
     '''make reduced lagpolynomial into a right side lagpoly array
     '''
     nlags, nvar,nvarex = ar.shape
     return np.r_[np.eye(nvar,nvarex)[None,:,:],-ar]
+
 
 def ar2lhs(ar):
     '''convert full (rhs) lagpolynomial into a reduced, left side lagpoly array
@@ -321,7 +324,6 @@ def ar2lhs(ar):
     this is mainly a reminder about the definition
     '''
     return -ar[1:]
-
 
 
 class _Var(object):
@@ -345,7 +347,6 @@ class _Var(object):
     def __init__(self, y):
         self.y = y
         self.nobs, self.nvars = y.shape
-
 
     def fit(self, nlags):
         '''estimate parameters using ols
@@ -381,7 +382,7 @@ class _Var(object):
         lmat = lagmat(self.y, nlags, trim='both', original='in')
         self.yred = lmat[:,:nvars]
         self.xred = lmat[:,nvars:]
-        res = np.linalg.lstsq(self.xred, self.yred)
+        res = np.linalg.lstsq(self.xred, self.yred, rcond=-1)
         self.estresults = res
         self.arlhs = res[0].reshape(nlags, nvars, nvars)
         self.arhat = ar2full(self.arlhs)
@@ -478,7 +479,6 @@ class VarmaPoly(object):
         self.malags = ar.shape[0]
         self.hasexog = nvarall > nvars
         self.arm1 = -ar[1:]
-
 
     #@property
     def vstack(self, a=None, name='ar'):
@@ -604,7 +604,6 @@ class VarmaPoly(object):
             self.maeigenvalues = np.array([], np.complex)
             return True
 
-
         amat = self.stacksquare(a)
         ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.maeigenvalues = ev
@@ -631,8 +630,6 @@ class VarmaPoly(object):
             a[lag] = np.dot(a0inv, apoly[lag])
 
         return a
-
-
 
 
 if __name__ == "__main__":
@@ -677,17 +674,15 @@ if __name__ == "__main__":
     ut = np.random.randn(1000,2)
     ar2s = vargenerate(a22,ut)
     #res = np.linalg.lstsq(lagmat(ar2s,1)[:,1:], ar2s)
-    res = np.linalg.lstsq(lagmat(ar2s,1), ar2s)
+    res = np.linalg.lstsq(lagmat(ar2s,1), ar2s, rcond=-1)
     bhat = res[0].reshape(1,2,2)
     arhat = ar2full(bhat)
     #print(maxabs(arhat - a22)
-
 
     v = _Var(ar2s)
     v.fit(1)
     v.forecast()
     v.forecast(25)[-30:]
-
 
     ar23 = np.array([[[ 1. ,  0. ],
                      [ 0. ,  1. ]],

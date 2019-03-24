@@ -22,8 +22,10 @@ class CanCorr(Model):
 
     For matrices exog=x and endog=y, find projections x_cancoef and y_cancoef
     such that:
+        
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
+    
     and the correlation between x1 and y1 is maximized.
 
     Attributes
@@ -41,9 +43,9 @@ class CanCorr(Model):
 
     References
     ----------
-    .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
-    .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
-    .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
+    .. [*] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
+    .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
+    .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
     def __init__(self, endog, exog, tolerance=1e-8, missing='none', hasconst=None, **kwargs):
         super(CanCorr, self).__init__(endog, exog, missing=missing,

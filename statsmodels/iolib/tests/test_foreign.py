@@ -1,11 +1,13 @@
 """
 Tests for iolib/foreign.py
 """
+from statsmodels.compat import PY3
+
 import os
 import warnings
 from datetime import datetime
 
-from numpy.testing import *
+from numpy.testing import assert_array_equal, assert_, assert_equal
 import numpy as np
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
@@ -40,23 +42,27 @@ def test_genfromdta_pandas():
     res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta',
                         pandas=True)
     res1 = res1.astype(float)
-    assert_frame_equal(res1, dta)
+    assert_frame_equal(res1, dta.astype(float))
+
 
 def test_stata_writer_structured():
     buf = BytesIO()
-    dta = macrodata.load().data
+    dta = macrodata.load(as_pandas=False).data
     dtype = dta.dtype
-    dta = dta.astype(np.dtype([('year', int),
-                               ('quarter', int)] + dtype.descr[2:]))
+    dt = [('year', int), ('quarter', int)] + dtype.descr[2:]
+    if not PY3:  # Remove unicode
+        dt = [(name.encode('ascii'), typ) for name, typ in dt]
+    dta = dta.astype(np.dtype(dt))
     writer = StataWriter(buf, dta)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
     assert_array_equal(dta, dta2)
 
+
 def test_stata_writer_array():
     buf = BytesIO()
-    dta = macrodata.load().data
+    dta = macrodata.load(as_pandas=False).data
     dta = DataFrame.from_records(dta)
     dta.columns = ["v%d" % i for i in range(1,15)]
     writer = StataWriter(buf, dta.values)
@@ -85,15 +91,11 @@ def test_missing_roundtrip():
 
 def test_stata_writer_pandas():
     buf = BytesIO()
-    dta = macrodata.load().data
-    dtype = dta.dtype
-    #as of 0.9.0 pandas only supports i8 and f8
-    dta = dta.astype(np.dtype([('year', 'i8'),
-                               ('quarter', 'i8')] + dtype.descr[2:]))
-    dta4 = dta.astype(np.dtype([('year', 'i4'),
-                               ('quarter', 'i4')] + dtype.descr[2:]))
-    dta = DataFrame.from_records(dta)
-    dta4 = DataFrame.from_records(dta4)
+    dta = macrodata.load_pandas().data
+    dta4 = dta.copy()
+    for col in ('year','quarter'):
+        dta[col] = dta[col].astype(np.int64)
+        dta4[col] = dta4[col].astype(np.int32)
     # dta is int64 'i8'  given to Stata writer
     writer = StataWriter(buf, dta)
     writer.write_file()
@@ -120,8 +122,9 @@ def test_genfromdta_datetime():
             datetime(1948, 6, 10), datetime(1955, 1, 1), datetime(1955, 7, 1),
             datetime(1955, 1, 1), datetime(2, 1, 1))]
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"))
-        assert_(len(w) == 1)  # should get a warning for that format.
+        assert_(len(w) > 0)  # should get a warning for that format.
 
     assert_array_equal(dta[0].tolist(), results[0])
     assert_array_equal(dta[1].tolist(), results[1])
@@ -182,9 +185,3 @@ def test_datetime_roundtrip():
     buf.seek(0)
     dta2 = genfromdta(buf, pandas=True)
     ptesting.assert_frame_equal(dta, dta2.drop('index', axis=1))
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)

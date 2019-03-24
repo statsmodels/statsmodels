@@ -4,7 +4,7 @@ Author: Josef Perktold
 License: BSD-3
 
 example for usage with different options in
-statsmodels\sandbox\examples\thirdparty\ex_ratereturn.py
+statsmodels/sandbox/examples/thirdparty/ex_ratereturn.py
 
 '''
 import numpy as np

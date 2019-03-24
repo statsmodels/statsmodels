@@ -119,12 +119,8 @@ class GenericKDE (object):
         -----
         The default values for bw is 'normal_reference'.
         """
-
-        self.bw_func = dict(normal_reference=self._normal_reference,
-                            cv_ml=self._cv_ml, cv_ls=self._cv_ls)
         if bw is None:
-            bwfunc = self.bw_func['normal_reference']
-            return bwfunc()
+            bw = 'normal_reference'
 
         if not isinstance(bw, string_types):
             self._bw_method = "user-specified"
@@ -132,7 +128,13 @@ class GenericKDE (object):
         else:
             # The user specified a bandwidth selection method
             self._bw_method = bw
-            bwfunc = self.bw_func[bw]
+            # Workaround to avoid instance methods in __dict__
+            if bw == 'normal_reference':
+                bwfunc = self._normal_reference
+            elif bw == 'cv_ml':
+                bwfunc = self._cv_ml
+            else:  # bw == 'cv_ls'
+                bwfunc = self._cv_ls
             res = bwfunc()
 
         return res
@@ -178,7 +180,7 @@ class GenericKDE (object):
             self._bw_method = 'normal_reference'
         if isinstance(bw, string_types):
             self._bw_method = bw
-        else: 
+        else:
             self._bw_method = "user-specified"
             return bw
 
@@ -206,11 +208,11 @@ class GenericKDE (object):
         class_type, class_vars = self._get_class_vars_type()
         if has_joblib:
             # `res` is a list of tuples (sample_scale_sub, bw_sub)
-            res = joblib.Parallel(n_jobs=self.n_jobs) \
-                (joblib.delayed(_compute_subset) \
-                (class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
-                n_sub, class_vars, self.randomize, bounds[i]) \
-                for i in range(n_blocks))
+            res = joblib.Parallel(n_jobs=self.n_jobs)(
+                joblib.delayed(_compute_subset)(
+                    class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
+                    n_sub, class_vars, self.randomize, bounds[i]) \
+                    for i in range(n_blocks))
         else:
             res = []
             for i in range(n_blocks):

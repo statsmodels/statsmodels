@@ -17,7 +17,7 @@ cdef class sStatespace(object):
     # Statespace representation matrices
     cdef readonly np.float32_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float32_t [:] initial_state
-    cdef readonly np.float32_t [::1,:] initial_state_cov
+    cdef readonly np.float32_t [::1,:] initial_state_cov, initial_diffuse_state_cov
     cdef readonly np.float32_t [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     cdef readonly int [::1,:] missing
@@ -65,6 +65,7 @@ cdef class sStatespace(object):
     cdef np.float32_t * _selected_state_cov
     cdef np.float32_t * _initial_state
     cdef np.float32_t * _initial_state_cov
+    cdef np.float32_t * _initial_diffuse_state_cov
 
     # Current location
     cdef int t
@@ -90,7 +91,7 @@ cdef class dStatespace(object):
     # Statespace representation matrices
     cdef readonly np.float64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float64_t [:] initial_state
-    cdef readonly np.float64_t [::1,:] initial_state_cov
+    cdef readonly np.float64_t [::1,:] initial_state_cov, initial_diffuse_state_cov
     cdef readonly np.float64_t [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     cdef readonly int [::1,:] missing
@@ -138,6 +139,7 @@ cdef class dStatespace(object):
     cdef np.float64_t * _selected_state_cov
     cdef np.float64_t * _initial_state
     cdef np.float64_t * _initial_state_cov
+    cdef np.float64_t * _initial_diffuse_state_cov
 
     # Current location
     cdef int t
@@ -163,7 +165,7 @@ cdef class cStatespace(object):
     # Statespace representation matrices
     cdef readonly np.complex64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex64_t [:] initial_state
-    cdef readonly np.complex64_t [::1,:] initial_state_cov
+    cdef readonly np.complex64_t [::1,:] initial_state_cov, initial_diffuse_state_cov
     cdef readonly np.complex64_t [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     cdef readonly int [::1,:] missing
@@ -211,6 +213,7 @@ cdef class cStatespace(object):
     cdef np.complex64_t * _selected_state_cov
     cdef np.complex64_t * _initial_state
     cdef np.complex64_t * _initial_state_cov
+    cdef np.complex64_t * _initial_diffuse_state_cov
 
     # Current location
     cdef int t
@@ -236,7 +239,7 @@ cdef class zStatespace(object):
     # Statespace representation matrices
     cdef readonly np.complex128_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex128_t [:] initial_state
-    cdef readonly np.complex128_t [::1,:] initial_state_cov
+    cdef readonly np.complex128_t [::1,:] initial_state_cov, initial_diffuse_state_cov
     cdef readonly np.complex128_t [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     cdef readonly int [::1,:] missing
@@ -284,6 +287,7 @@ cdef class zStatespace(object):
     cdef np.complex128_t * _selected_state_cov
     cdef np.complex128_t * _initial_state
     cdef np.complex128_t * _initial_state_cov
+    cdef np.complex128_t * _initial_diffuse_state_cov
 
     # Current location
     cdef int t

@@ -5,7 +5,7 @@ from pandas import DataFrame, Index
 import patsy
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.compat.python import lrange, lmap
+from statsmodels.compat.python import lrange
 from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
 from statsmodels.iolib import summary2
@@ -73,21 +73,22 @@ def anova_single(model, **kwargs):
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
 
-    table = DataFrame(np.zeros((n_rows, 5)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
-    if typ in [1,"I"]:
+    if typ in [1, "I"]:
         return anova1_lm_single(model, endog, exog, nobs, design_info, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
         return anova2_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [3, "III"]:
         return anova3_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [4, "IV"]:
-        raise NotImplemented("Type IV not yet implemented")
-    else: # pragma: no cover
+        raise NotImplementedError("Type IV not yet implemented")
+    else:  # pragma: no cover
         raise ValueError("Type %s not understood" % str(typ))
+
 
 def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
@@ -132,16 +133,14 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     index = term_names.tolist()
     table.index = Index(index + ['Residual'])
     table.loc[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
-    if test == 'F':
-        table.loc[table.index[:n_rows],  test] = ((table['sum_sq']/table['df']) /
-                                                             (model.ssr/model.df_resid))
-        table.loc[table.index[:n_rows], pr_test] = stats.f.sf(table["F"], table["df"],
-                                                                         model.df_resid)
-
     # fill in residual
-    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                             model.df_resid,
-                                                             np.nan, np.nan)
+    table.loc['Residual', ['sum_sq','df']] = model.ssr, model.df_resid
+    if test == 'F':
+        table[test] = ((table['sum_sq'] / table['df']) /
+                       (model.ssr / model.df_resid))
+        table[pr_test] = stats.f.sf(table["F"], table["df"],
+                                    model.df_resid)
+        table.loc['Residual', [test, pr_test]] = np.nan, np.nan
     table['mean_sq'] = table['sum_sq'] / table['df']
     return table
 
@@ -223,7 +222,7 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
-    table = table.iloc [np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
     ssr = table[test] * table['df'] * model.ssr/model.df_resid
     table['sum_sq'] = ssr
@@ -295,12 +294,36 @@ def anova_lm(*args, **kwargs):
     Returns
     -------
     anova : DataFrame
-    A DataFrame containing.
+        When args is a single model, return is DataFrame with columns:
+
+        sum_sq : float64
+            Sum of squares for model terms.
+        df : float64
+            Degrees of freedom for model terms.
+        F : float64
+            F statistic value for significance of adding model terms.
+        PR(>F) : float64
+            P-value for significance of adding model terms.
+
+        When args is multiple models, return is DataFrame with columns:
+
+        df_resid : float64
+            Degrees of freedom of residuals in models.
+        ssr : float64
+            Sum of squares of residuals in models.
+        df_diff : float64
+            Degrees of freedom difference from previous model in args
+        ss_dff : float64
+            Difference in ssr from previous model in args
+        F : float64
+            F statistic comparing to previous model in args
+        PR(>F): float64
+            P-value for significance comparing to previous model in args
 
     Notes
     -----
-    Model statistics are given in the order of args. Models must have
-    been fit using the formula api.
+    Model statistics are given in the order of args. Models must have been fit
+    using the formula api.
 
     See Also
     --------
@@ -310,7 +333,7 @@ def anova_lm(*args, **kwargs):
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.formula.api import ols
-    >>> moore = sm.datasets.get_rdataset("Moore", "car", cache=True) # load
+    >>> moore = sm.datasets.get_rdataset("Moore", "carData", cache=True) # load
     >>> data = moore.data
     >>> data = data.rename(columns={"partner.status" :
     ...                             "partner_status"}) # make name pythonic
@@ -327,40 +350,28 @@ def anova_lm(*args, **kwargs):
         model = args[0]
         return anova_single(model, **kwargs)
 
-    try:
-        assert typ in [1,"I"]
-    except:
+    if typ not in [1, "I"]:
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
-
-    ### COMPUTE Anova TYPE I ###
-
-    # if given a single model
-    if len(args) == 1:
-        return anova_single(*args, **kwargs)
-
-    # received multiple fitted models
 
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     n_models = len(args)
-
-    model_formula = []
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.zeros((n_models, 6)), columns = names)
+    table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
     if not scale: # assume biggest model is last
         scale = args[-1].scale
 
-    table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
-    table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
+    table["ssr"] = [mdl.ssr for mdl in args]
+    table["df_resid"] = [mdl.df_resid for mdl in args]
     table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
         table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                             table["df_resid"])
+                                    table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
         table[pr_test][table['F'].isnull()] = np.nan
 
@@ -416,10 +427,11 @@ class AnovaRM(object):
 
     The full model regression residual sum of squares is
     used to compare with the reduced model for calculating the
-    within subject effect sum of squares [1]
+    within-subject effect sum of squares [1].
 
-    Between subject effect and Greenhouse-Geisser correction is not yet
-    supported.
+    Currently, only fully balanced within-subject designs are supported.
+    Calculation of between-subject effects and corrections for violation of
+    sphericity are not yet implemented.
 
     Parameters
     ----------
@@ -432,18 +444,42 @@ class AnovaRM(object):
         The within-subject factors
     between : a list of string(s)
         The between-subject factors, this is not yet implemented
+    aggregate_func : None, 'mean', or function
+        If the data set contains more than a single observation per subject
+        and cell of the specified model, this function will be used to
+        aggregate the data before running the Anova. `None` (the default) will
+        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        An exception will be raised if aggregation is required, but no
+        aggregation function was specified.
 
     Returns
     -------
     results: AnovaResults instance
 
+    Raises
+    ------
+    ValueError
+        If the data need to be aggregated, but `aggregate_func` was not
+        specified.
+
+    Notes
+    -----
+    This implementation currently only supports fully balanced designs. If the
+    data contain more than one observation per subject and cell of the design,
+    these observations need to be aggregated into a single observation
+    before the Anova is calculated, either manually or by passing an aggregation
+    function via the `aggregate_func` keyword argument.
+    Note that if the input data set was not balanced before performing the
+    aggregation, the implied heteroscedasticity of the data is ignored.
+
     References
     ----------
-    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+    .. [*] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
 
     """
 
-    def __init__(self, data, depvar, subject, within=None, between=None):
+    def __init__(self, data, depvar, subject, within=None, between=None,
+                 aggregate_func=None):
         self.data = data
         self.depvar = depvar
         self.within = within
@@ -455,7 +491,28 @@ class AnovaRM(object):
             raise NotImplementedError('Between subject effect not '
                                       'yet supported!')
         self.subject = subject
+
+        if aggregate_func == 'mean':
+            self.aggregate_func = np.mean
+        else:
+            self.aggregate_func = aggregate_func
+
+        if not data.equals(data.drop_duplicates(subset=[subject] + within)):
+            if self.aggregate_func is not None:
+                self._aggregate()
+            else:
+                msg = ('The data set contains more than one observation per '
+                       'subject and cell. Either aggregate the data manually, '
+                       'or pass the `aggregate_func` parameter.')
+                raise ValueError(msg)
+
         self._check_data_balanced()
+
+    def _aggregate(self):
+        self.data = (self.data
+                     .groupby([self.subject] + self.within,
+                              as_index=False)[self.depvar]
+                     .agg(self.aggregate_func))
 
     def _check_data_balanced(self):
         """raise if data is not balanced
@@ -528,8 +585,8 @@ class AnovaRM(object):
         df_resid = results.df_resid
         ssr = results.ssr
 
-        anova_table = pd.DataFrame(
-            {'F Value': [], 'Num DF': [], 'Den DF': [], 'Pr > F': []})
+        columns = ['F Value', 'Num DF', 'Den DF', 'Pr > F']
+        anova_table = pd.DataFrame(np.zeros((0, 4)), columns=columns)
 
         for key in term_slices:
             if self.subject not in key and key != 'Intercept':
@@ -556,7 +613,7 @@ class AnovaRM(object):
                 anova_table.loc[term, 'Den DF'] = df2
                 anova_table.loc[term, 'Pr > F'] = p
 
-        return AnovaResults(anova_table.iloc[:, [1, 2, 0, 3]])
+        return AnovaResults(anova_table)
 
 
 class AnovaResults(object):
@@ -593,9 +650,9 @@ if __name__ == "__main__":
     # in R
     #library(car)
     #write.csv(Moore, "moore.csv", row.names=FALSE)
-    moore = pandas.read_table('moore.csv', delimiter=",", skiprows=1,
-                                names=['partner_status','conformity',
-                                    'fcategory','fscore'])
+    moore = pandas.read_csv('moore.csv', skiprows=1,
+                            names=['partner_status','conformity',
+                                   'fcategory','fscore'])
     moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
                     data=moore).fit()
 

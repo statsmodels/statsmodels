@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 from scipy import optimize
 
+
 def _check_method(method, methods):
     if method not in methods:
         message = "Unknown fit method %s" % method
@@ -213,7 +214,6 @@ class Optimizer(object):
         """
         pass
 
-
     def _fit_regularized(self, params):
         #TODO: code won't necessarily be general here. 3 options.
         # 1) setup for scipy.optimize.fmin_sqlsqp
@@ -419,8 +419,10 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
         converged = (warnflag == 0)
         gopt = d['grad']
         fcalls = d['funcalls']
+        iterations = d['nit']
         retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
-                   'warnflag': warnflag, 'converged': converged}
+                   'warnflag': warnflag, 'converged': converged,
+                   'iterations': iterations}
     else:
         xopt = retvals[0]
         retvals = None
@@ -548,9 +550,6 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
 def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
                           maxiter=100, callback=None, retall=False,
                           full_output=True, hess=None):
-    if not 'basinhopping' in vars(optimize):
-        msg = 'basinhopping solver is not available, use e.g. bfgs instead!'
-        raise ValueError(msg)
 
     from copy import copy
     kwargs = copy(kwargs)

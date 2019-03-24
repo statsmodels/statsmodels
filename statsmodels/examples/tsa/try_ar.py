@@ -78,4 +78,3 @@ print(signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.ones(10), zi=z
 print(signal.filtfilt(np.array([1, -0.8]), np.array([1.]), np.ones(10)))
 
 #todo write examples/test across different versions
-

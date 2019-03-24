@@ -1,5 +1,5 @@
-#! /usr/bin/env python
 """U.S. Strike Duration Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -36,21 +36,7 @@ NOTE        = """::
                 iprod - unanticipated industrial production
 """
 
-from numpy import recfromtxt, column_stack, array
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-def load():
-    """
-    Load the strikes data and return a Dataset class instance.
-
-    Returns
-    -------
-    Dataset instance:
-        See DATASET_PROPOSAL.txt for more information.
-    """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
 
 def load_pandas():
     """
@@ -62,10 +48,26 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_pandas(data, endog_idx=0)
+
+
+def load(as_pandas=None):
+    """
+    Load the strikes data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/strikes.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__,'strikes.csv').astype(float)

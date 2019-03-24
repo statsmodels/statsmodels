@@ -19,8 +19,6 @@ import numpy
 from scipy import stats
 import pandas
 
-from statsmodels.compat.pandas import sort_values
-
 
 def _ros_sort(df, observations, censorship, warn=False):
     """
@@ -53,8 +51,8 @@ def _ros_sort(df, observations, censorship, warn=False):
     """
 
     # separate uncensored data from censored data
-    censored = sort_values(df[df[censorship]], observations, axis=0)
-    uncensored = sort_values(df[~df[censorship]], observations, axis=0)
+    censored = df[df[censorship]].sort_values(observations, axis=0)
+    uncensored = df[~df[censorship]].sort_values(observations, axis=0)
 
     if censored[observations].max() > uncensored[observations].max():
         censored = censored[censored[observations] <= uncensored[observations].max()]

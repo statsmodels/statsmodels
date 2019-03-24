@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Vector Autoregressive Moving Average with eXogenous regressors model
 
@@ -7,21 +8,24 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 from warnings import warn
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from .tools import (
-    is_invertible, prepare_exog,
-    constrain_stationary_multivariate, unconstrain_stationary_multivariate
-)
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.sm_exceptions import (EstimationWarning, ValueWarning)
+from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+
+from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .tools import (
+    is_invertible, prepare_exog,
+    constrain_stationary_multivariate, unconstrain_stationary_multivariate,
+    prepare_trend_spec, prepare_trend_data
+)
 
 
 class VARMAX(MLEModel):
@@ -37,10 +41,14 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : {'nc', 'c'}, optional
-        Parameter controlling the deterministic trend polynomial.
-        Can be specified as a string where 'c' indicates a constant intercept
-        and 'nc' indicates no intercept term.
+    trend : str{'n','c','t','ct'} or iterable, optional
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        Can be specified as a string where 'c' indicates a constant (i.e. a
+        degree zero component of the trend polynomial), 't' indicates a
+        linear trend with time, and 'ct' is both. Can also be specified as an
+        iterable defining the polynomial as in `numpy.poly1d`, where
+        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is a constant
+        trend component.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
@@ -65,10 +73,13 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : {'nc', 'c'}, optional
-        Parameter controlling the deterministic trend polynomial.
-        Can be specified as a string where 'c' indicates a constant intercept
-        and 'nc' indicates no intercept term.
+    trend : str{'n','c','t','ct'} or iterable
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        Can be specified as a string where 'c' indicates a constant (i.e. a
+        degree zero component of the trend polynomial), 't' indicates a
+        linear trend with time, and 'ct' is both. Can also be specified as an
+        iterable defining the polynomial as in `numpy.poly1d`, where
+        `[1,1,0,1]` would denote :math:`a + bt + ct^3`.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
@@ -91,7 +102,7 @@ class VARMAX(MLEModel):
 
     .. math::
 
-        y_t = \nu + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
+        y_t = A(t) + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
         M_1 \epsilon_{t-1} + \dots M_q \epsilon_{t-q}
 
     where :math:`\epsilon_t \sim N(0, \Omega)`, and where :math:`y_t` is a
@@ -102,13 +113,13 @@ class VARMAX(MLEModel):
     problem in that the coefficient matrices :math:`\{A_i, M_j\}` are not
     generally unique, meaning that for a given time series process there may
     be multiple sets of matrices that equivalently represent it. See Chapter 12
-    of [1]_ for more informationl. Although this class can be used to estimate
+    of [1]_ for more information. Although this class can be used to estimate
     VARMA(p,q) models, a warning is issued to remind users that no steps have
     been taken to ensure identification in this case.
 
     References
     ----------
-    .. [1] Lutkepohl, Helmut. 2007.
+    .. [1] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
 
@@ -132,11 +143,8 @@ class VARMAX(MLEModel):
         # Model orders
         self.k_ar = int(order[0])
         self.k_ma = int(order[1])
-        self.k_trend = int(self.trend == 'c')
 
         # Check for valid model
-        if trend not in ['c', 'nc']:
-            raise ValueError('Invalid trend specification.')
         if error_cov_type not in ['diagonal', 'unstructured']:
             raise ValueError('Invalid error covariance matrix type'
                              ' specification.')
@@ -149,6 +157,12 @@ class VARMAX(MLEModel):
             warn('Estimation of VARMA(p,q) models is not generically robust,'
                  ' due especially to identification issues.',
                  EstimationWarning)
+
+        # Trend
+        self.trend = trend
+        self.polynomial_trend, self.k_trend = prepare_trend_spec(self.trend)
+        self._trend_is_const = (self.polynomial_trend.size == 1 and
+                                self.polynomial_trend[0] == 1)
 
         # Exogenous data
         (self.k_exog, exog) = prepare_exog(exog)
@@ -183,7 +197,7 @@ class VARMAX(MLEModel):
         )
 
         # Set as time-varying model if we have time-trend or exog
-        if self.k_exog > 0 or self.k_trend > 1:
+        if self.k_exog > 0 or (self.k_trend > 0 and not self._trend_is_const):
             self.ssm._time_invariant = False
 
         # Initialize the parameters
@@ -203,12 +217,17 @@ class VARMAX(MLEModel):
         self.parameters['obs_cov'] = self.k_endog * self.measurement_error
         self.k_params = sum(self.parameters.values())
 
+        # Initialize trend data
+        self._trend_data = prepare_trend_data(
+            self.polynomial_trend, self.k_trend, self.nobs, offset=1)
+
         # Initialize known elements of the state space matrices
 
         # If we have exog effects, then the state intercept needs to be
         # time-varying
-        if self.k_exog > 0:
+        if (self.k_trend > 0 and not self._trend_is_const) or self.k_exog > 0:
             self.ssm['state_intercept'] = np.zeros((self.k_states, self.nobs))
+            # self.ssm['obs_intercept'] = np.zeros((self.k_endog, self.nobs))
 
         # The design matrix is just an identity for the first k_endog states
         idx = np.diag_indices(self.k_endog)
@@ -240,10 +259,10 @@ class VARMAX(MLEModel):
             self.ssm[('selection',) + idx] = 1
 
         # Cache some indices
-        if self.trend == 'c' and self.k_exog == 0:
-            self._idx_state_intercept = np.s_['state_intercept', :k_endog]
-        elif self.k_exog > 0:
+        if self._trend_is_const and self.k_exog == 0:
             self._idx_state_intercept = np.s_['state_intercept', :k_endog, :]
+        elif self.k_trend > 0 or self.k_exog > 0:
+            self._idx_state_intercept = np.s_['state_intercept', :k_endog, :-1]
         if self.k_ar > 0:
             self._idx_transition = np.s_['transition', :k_endog, :]
         else:
@@ -271,15 +290,9 @@ class VARMAX(MLEModel):
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
 
-    def filter(self, params, **kwargs):
-        kwargs.setdefault('results_class', VARMAXResults)
-        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
-        return super(VARMAX, self).filter(params, **kwargs)
-
-    def smooth(self, params, **kwargs):
-        kwargs.setdefault('results_class', VARMAXResults)
-        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
-        return super(VARMAX, self).smooth(params, **kwargs)
+    @property
+    def _res_classes(self):
+        return {'fit': (VARMAXResults, VARMAXResultsWrapper)}
 
     @property
     def start_params(self):
@@ -288,12 +301,19 @@ class VARMAX(MLEModel):
         # A. Run a multivariate regression to get beta estimates
         endog = pd.DataFrame(self.endog.copy())
         # Pandas < 0.13 didn't support the same type of DataFrame interpolation
+        # TODO remove this now that we have dropped support for Pandas < 0.13
         try:
             endog = endog.interpolate()
         except TypeError:
             pass
         endog = endog.fillna(method='backfill').values
-        exog = self.exog.copy() if self.k_exog > 0 else None
+        exog = None
+        if self.k_trend > 0 and self.k_exog > 0:
+            exog = np.c_[self._trend_data, self.exog]
+        elif self.k_trend > 0:
+            exog = self._trend_data
+        elif self.k_exog > 0:
+            exog = self.exog
 
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
@@ -303,28 +323,24 @@ class VARMAX(MLEModel):
             if exog is not None:
                 exog = exog[mask]
 
-        # Regression effects via OLS
+        # Regression and trend effects via OLS
+        trend_params = np.zeros(0)
         exog_params = np.zeros(0)
-        if self.k_exog > 0:
-            exog_params = np.linalg.pinv(exog).dot(endog).T
-            endog -= np.dot(exog, exog_params.T)
+        if self.k_trend > 0 or self.k_exog > 0:
+            trendexog_params = np.linalg.pinv(exog).dot(endog)
+            endog -= np.dot(exog, trendexog_params)
+            if self.k_trend > 0:
+                trend_params = trendexog_params[:self.k_trend].T.ravel()
+            if self.k_endog > 0:
+                exog_params = trendexog_params[self.k_trend:].T.ravel()
 
         # B. Run a VAR model on endog to get trend, AR parameters
         ar_params = []
         k_ar = self.k_ar if self.k_ar > 0 else 1
         mod_ar = var_model.VAR(endog)
-        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend=self.trend)
-        ar_params = np.array(res_ar.params.T)
-        if self.trend == 'c':
-            trend_params = ar_params[:, 0]
-            if self.k_ar > 0:
-                ar_params = ar_params[:, 1:].ravel()
-            else:
-                ar_params = []
-        elif self.k_ar > 0:
-            ar_params = ar_params.ravel()
-        else:
-            ar_params = []
+        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend='nc')
+        if self.k_ar > 0:
+            ar_params = np.array(res_ar.params).T.ravel()
         endog = res_ar.resid
 
         # Test for stationarity
@@ -338,9 +354,9 @@ class VARMAX(MLEModel):
             stationary = is_invertible([1] + list(-coefficient_matrices))
 
             if not stationary:
-                raise ValueError('Non-stationary starting autoregressive'
-                                 ' parameters found with'
-                                 ' `enforce_stationarity` set to True.')
+                warn('Non-stationary starting autoregressive parameters'
+                     ' found. Using zeros as starting parameters.')
+                ar_params *= 0
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
@@ -360,23 +376,25 @@ class VARMAX(MLEModel):
                 invertible = is_invertible([1] + list(-coefficient_matrices))
 
                 if not invertible:
-                    raise ValueError('Non-invertible starting moving-average'
-                                     ' parameters found with'
-                                     ' `enforce_stationarity` set to True.')
+                    warn('Non-stationary starting moving-average parameters'
+                         ' found. Using zeros as starting parameters.')
+                    ma_params *= 0
 
         # 1. Intercept terms
-        if self.trend == 'c':
+        if self.k_trend > 0:
             params[self._params_trend] = trend_params
 
         # 2. AR terms
-        params[self._params_ar] = ar_params
+        if self.k_ar > 0:
+            params[self._params_ar] = ar_params
 
         # 3. MA terms
-        params[self._params_ma] = ma_params
+        if self.k_ma > 0:
+            params[self._params_ma] = ma_params
 
         # 4. Regression terms
         if self.mle_regression:
-            params[self._params_regression] = exog_params.ravel()
+            params[self._params_regression] = exog_params
 
         # 5. State covariance terms
         if self.error_cov_type == 'diagonal':
@@ -400,11 +418,17 @@ class VARMAX(MLEModel):
         param_names = []
 
         # 1. Intercept terms
-        if self.trend == 'c':
-            param_names += [
-                'const.%s' % self.endog_names[i]
-                for i in range(self.k_endog)
-            ]
+        if self.k_trend > 0:
+            for i in self.polynomial_trend.nonzero()[0]:
+                if i == 0:
+                    param_names += ['intercept.%s' % self.endog_names[j]
+                                    for j in range(self.k_endog)]
+                elif i == 1:
+                    param_names += ['drift.%s' % self.endog_names[j]
+                                    for j in range(self.k_endog)]
+                else:
+                    param_names += ['trend.%d.%s' % (i, self.endog_names[j])
+                                    for j in range(self.k_endog)]
 
         # 2. AR terms
         param_names += [
@@ -616,15 +640,34 @@ class VARMAX(MLEModel):
         params = super(VARMAX, self).update(params, **kwargs)
 
         # 1. State intercept
+        # - Exog
         if self.mle_regression:
             exog_params = params[self._params_regression].reshape(
                 self.k_endog, self.k_exog).T
-            intercept = np.dot(self.exog, exog_params)
-            if self.trend == 'c':
-                intercept += params[self._params_trend]
+            intercept = np.dot(self.exog[1:], exog_params)
             self.ssm[self._idx_state_intercept] = intercept.T
-        elif self.trend == 'c':
-            self.ssm[self._idx_state_intercept] = params[self._params_trend]
+
+        # - Trend
+        if self.k_trend > 0:
+            # If we didn't set the intercept above, zero it out so we can
+            # just += later
+            if not self.mle_regression:
+                zero = np.array(0, dtype=params.dtype)
+                self.ssm[self._idx_state_intercept] = zero
+
+            trend_params = params[self._params_trend].reshape(
+                self.k_endog, self.k_trend).T
+            if self._trend_is_const:
+                intercept = trend_params
+            else:
+                intercept = np.dot(self._trend_data[1:], trend_params)
+            self.ssm[self._idx_state_intercept] += intercept.T
+
+        # Need to set the last state intercept to np.nan (with appropriate
+        # dtype)
+        if self.mle_regression:
+            nan = np.array(np.nan, dtype=params.dtype)
+            self.ssm['state_intercept', :self.k_endog, -1] = nan
 
         # 2. Transition
         ar = params[self._params_ar].reshape(
@@ -676,11 +719,9 @@ class VARMAXResults(MLEResults):
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
     def __init__(self, model, params, filter_results, cov_type='opg',
-                 **kwargs):
+                 cov_kwds=None, **kwargs):
         super(VARMAXResults, self).__init__(model, params, filter_results,
-                                            cov_type, **kwargs)
-
-        self.df_resid = np.inf  # attribute required for wald tests
+                                            cov_type, cov_kwds, **kwargs)
 
         self.specification = Bunch(**{
             # Set additional model parameters
@@ -766,6 +807,7 @@ class VARMAXResults(MLEResults):
             self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
+        last_intercept = None
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
             # Create a new faux VARMAX model for the extended dataset
             nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
@@ -798,6 +840,10 @@ class VARMAXResults(MLEResults):
                 enforce_invertibility=self.model.enforce_invertibility
             )
             model.update(self.params)
+            if model['state_intercept'].ndim > 1:
+                last_intercept = model['state_intercept', :, self.nobs - 1]
+            else:
+                last_intercept = model['state_intercept', :, 0]
 
             # Set the kwargs with the update time-varying state space
             # representation matrices
@@ -814,9 +860,21 @@ class VARMAXResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(VARMAXResults, self).get_prediction(
+        # If we had exog, then the last predicted_state has been set to NaN
+        # since we didn't have the appropriate exog to create it. Then, if
+        # we are forecasting, we now have new exog that we need to put into
+        # the existing state_intercept array (and we will take it out, below)
+        if last_intercept is not None:
+            self.filter_results.state_intercept[:, -1] = last_intercept
+
+        res = super(VARMAXResults, self).get_prediction(
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
+
+        if last_intercept is not None:
+            self.filter_results.state_intercept[:, -1] = np.nan
+
+        return res
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
@@ -836,7 +894,7 @@ class VARMAXResults(MLEResults):
             model_name += 'X'
         model_name = [model_name + order]
 
-        if spec.trend == 'c':
+        if spec.k_trend > 0:
             model_name.append('intercept')
 
         if spec.measurement_error:
@@ -868,6 +926,7 @@ class VARMAXResults(MLEResults):
             k_endog = self.model.k_endog
             k_ar = self.model.k_ar
             k_ma = self.model.k_ma
+            k_trend = self.model.k_trend
             k_exog = self.model.k_exog
             endog_masks = []
             for i in range(k_endog):
@@ -875,9 +934,9 @@ class VARMAXResults(MLEResults):
                 offset = 0
 
                 # 1. Intercept terms
-                if self.model.trend == 'c':
-                    masks.append(np.array(i, ndmin=1))
-                    offset += k_endog
+                if k_trend > 0:
+                    masks.append(np.arange(i, i + k_endog * k_trend, k_endog))
+                    offset += k_endog * k_trend
 
                 # 2. AR terms
                 if k_ar > 0:
@@ -945,4 +1004,4 @@ class VARMAXResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(VARMAXResultsWrapper, VARMAXResults)
+wrap.populate_wrapper(VARMAXResultsWrapper, VARMAXResults)  # noqa:E305

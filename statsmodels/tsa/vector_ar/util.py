@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Miscellaneous utility code for VAR estimation
 """
@@ -8,11 +9,14 @@ from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
 import scipy.linalg.decomp as decomp
+import pandas as pd
 
 import statsmodels.tsa.tsatools as tsa
 
+
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
+
 def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
@@ -20,7 +24,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
     Z := (Z_0, ..., Z_T).T (T x Kp)
     Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
 
-    Ref: Lutkepohl p.70 (transposed)
+    Ref: Lütkepohl p.70 (transposed)
 
     has_constant can be 'raise', 'add', or 'skip'. See add_constant.
     """
@@ -35,6 +39,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
 
     return Z
 
+
 def get_trendorder(trend='c'):
     # Handle constant, etc.
     if trend == 'c':
@@ -46,6 +51,7 @@ def get_trendorder(trend='c'):
     elif trend == 'ctt':
         trendorder = 3
     return trendorder
+
 
 def make_lag_names(names, lag_order, trendorder=1, exog=None):
     """
@@ -80,6 +86,7 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
             lag_names.insert(trendorder + i, "exog" + str(i))
     return lag_names
 
+
 def comp_matrix(coefs):
     """
     Return compansion matrix for the VAR(1) representation for a VAR(p) process
@@ -107,9 +114,10 @@ def comp_matrix(coefs):
 #-------------------------------------------------------------------------------
 # Miscellaneous stuff
 
+
 def parse_lutkepohl_data(path): # pragma: no cover
     """
-    Parse data files from Lutkepohl (2005) book
+    Parse data files from Lütkepohl (2005) book
 
     Source for data files: www.jmulti.de
     """
@@ -119,7 +127,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
     with open(path, 'rb') as f:
         lines = deque(f)
 
@@ -136,7 +144,8 @@ def parse_lutkepohl_data(path): # pragma: no cover
             year, freq, start_point = m.groups()
             break
 
-    data = np.genfromtxt(path, names=True, skip_header=to_skip+1)
+    data = (pd.read_csv(path, delimiter=r"\s+", header=to_skip+1)
+            .to_records(index=False))
 
     n = len(data)
 
@@ -145,9 +154,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        asbytes('Q'): frequencies.BQuarterEnd(),
+        asbytes('M'): frequencies.BMonthEnd(),
+        asbytes('A'): frequencies.BYearEnd()
     }
 
     # create an instance
@@ -163,18 +172,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     return data, date_range
 
 
-def get_logdet(m):
-    from statsmodels.tools.linalg import logdet_symm
-    return logdet_symm(m)
-
-
-get_logdet = np.deprecate(get_logdet,
-                          "statsmodels.tsa.vector_ar.util.get_logdet",
-                          "statsmodels.tools.linalg.logdet_symm",
-                          "get_logdet is deprecated and will be removed in "
-                          "0.8.0")
-
-
 def norm_signif_level(alpha=0.05):
     return stats.norm.ppf(1 - alpha / 2)
 
@@ -187,16 +184,54 @@ def acf_to_acorr(acf):
 
 def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     """
-    Simulate simple VAR(p) process with known coefficients, intercept, white
-    noise covariance, etc.
+    Simulate VAR(p) process, given coefficients and assuming Gaussian noise
+
+    Parameters
+    ----------
+    coefs : ndarray
+        Coefficients for the VAR lags of endog.
+    intercept : None or ndarray 1-D (neqs,) or (steps, neqs)
+        This can be either the intercept for each equation or an offset.
+        If None, then the VAR process has a zero intercept.
+        If intercept is 1-D, then the same (endog specific) intercept is added
+        to all observations.
+        If intercept is 2-D, then it is treated as an offset and is added as
+        an observation specific intercept to the autoregression. In this case,
+        the intercept/offset should have same number of rows as steps, and the
+        same number of columns as endogenous variables (neqs).
+    sig_u : ndarray
+        Covariance matrix of the residuals or innovations.
+        If sig_u is None, then an identity matrix is used.
+    steps : None or int
+        number of observations to simulate, this includes the initial
+        observations to start the autoregressive process.
+        If offset is not None, then exog of the model are used if they were
+        provided in the model
+    seed : None or integer
+        If seed is not None, then it will be used with for the random
+        variables generated by numpy.random.
+
+    Returns
+    -------
+    endog_simulated : nd_array
+        Endog of the simulated VAR process
+
     """
     rs = np.random.RandomState(seed=seed)
     rmvnorm = rs.multivariate_normal
     p, k, k = coefs.shape
+    if sig_u is None:
+        sig_u = np.eye(k)
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
     if intercept is not None:
-        result[p:] = intercept + ugen[p:]
+        # intercept can be 2-D like an offset variable
+        if np.ndim(intercept) > 1:
+            if not len(intercept) == len(ugen):
+                raise ValueError('2-D intercept needs to have length `steps`')
+        # add intercept/offset also to intial values
+        result += intercept
+        result[p:] += ugen[p:]
     else:
         result[p:] = ugen[p:]
 
@@ -208,6 +243,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
 
     return result
 
+
 def get_index(lst, name):
     try:
         result = lst.index(name)
@@ -216,7 +252,9 @@ def get_index(lst, name):
             raise
         result = name
     return result
-    #method used repeatedly in Sims-Zha error bands
+
+
+#method used repeatedly in Sims-Zha error bands
 def eigval_decomp(sym_array):
     """
     Returns
@@ -229,6 +267,7 @@ def eigval_decomp(sym_array):
     eigva, W = decomp.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k
+
 
 def vech(A):
     """

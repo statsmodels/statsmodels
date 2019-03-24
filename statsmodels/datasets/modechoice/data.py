@@ -1,7 +1,5 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """Travel Mode Choice"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -52,22 +50,24 @@ NOTE = """::
         hinc = household income ($1000s).
         psize = traveling group size in mode chosen (number)."""
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-def load():
+def load(as_pandas=None):
     """
     Load the data modechoice data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=2, exog_idx=[3,4,5,6,7,8],
-                               dtype=float)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
 
 def load_pandas():
     """
@@ -78,13 +78,9 @@ def load_pandas():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx = 2, exog_idx=[3,4,5,6,7,8],
-                                      dtype=float)
+    return du.process_pandas(data, endog_idx = 2, exog_idx=[3,4,5,6,7,8])
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/modechoice.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=";", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'modechoice.csv', sep=';', convert_float=True)

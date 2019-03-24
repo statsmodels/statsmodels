@@ -32,6 +32,10 @@ cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 cimport statsmodels.tsa.statespace._tools as tools
 
+{{for prefix, types in TYPES.items()}}
+from statsmodels.tsa.statespace._initialization cimport {{prefix}}Initialization
+{{endfor}}
+
 cdef int FORTRAN = 1
 
 {{for prefix, types in TYPES.items()}}
@@ -89,6 +93,7 @@ cdef class {{prefix}}Statespace(object):
     # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$  
     # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$  
     # `initial_state_cov` $\equiv P_1$ is the **initial state covariance matrix** $(m \times m)$
+    # `initial_state_cov` $\equiv P_\inf$ is the **initial diffuse state covariance matrix** $(m \times m)$
     #
     # With the exception of `obs`, these are *optionally* time-varying. If they are instead time-invariant,
     # then the dimension of length $T$ is instead of length $1$.
@@ -232,8 +237,6 @@ cdef class {{prefix}}Statespace(object):
 
         # Set the flag for initialization to be false
         self.initialized = False
-        self.initial_state = None
-        self.initial_state_cov = None
 
         # Unless it is specified, check for a diagonal covariance matrix
         if diagonal_obs_cov == -1:
@@ -262,8 +265,16 @@ cdef class {{prefix}}Statespace(object):
 
         # Create the temporary array
         # Holds arrays of dimension $(m \times m)$
-        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        dim2[0] = self.k_states; dim2[1] = max(self.k_states, self.k_posdef);
         self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        # Arrays for initialization
+        dim1[0] = self.k_states;
+        self.initial_state = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        self.initial_diffuse_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Arrays for missing data
         dim1[0] = self.k_endog;
@@ -305,6 +316,7 @@ cdef class {{prefix}}Statespace(object):
         state = {'initialized': self.initialized,
                  'initial_state': None,
                  'initial_state_cov': None,
+                 'initial_diffuse_state_cov': None,
                  'missing': np.array(self.missing, copy=True, order='F'),
                  'nmissing': np.array(self.nmissing, copy=True, order='F'),
                  'has_missing': self.has_missing,
@@ -330,11 +342,13 @@ cdef class {{prefix}}Statespace(object):
         if self.initialized:
             state['initial_state'] = np.array(self.initial_state, copy=True, order='F')
             state['initial_state_cov'] = np.array(self.initial_state_cov, copy=True, order='F')
+            state['initial_diffuse_state_cov'] = np.array(self.initial_diffuse_state_cov, copy=True, order='F')
         return (self.__class__, init, state)
 
     def __setstate__(self, state):
         self.initial_state = state['initial_state']
         self.initial_state_cov = state['initial_state_cov']
+        self.initial_diffuse_state_cov = state['initial_diffuse_state_cov']
         self.initialized = state['initialized']
         self.selected_state_cov = state['selected_state_cov']
         self.missing = state['missing']
@@ -358,6 +372,32 @@ cdef class {{prefix}}Statespace(object):
         self.companion_transition = state['companion_transition']
         self.transform_determinant = state['transform_determinant']
 
+    def initialize(self, init, offset=0, complex_step=False, clear=True):
+        cdef {{prefix}}Initialization _init
+        # Clear initial arrays
+        if clear:
+            self.initial_state[:] = 0
+            self.initial_diffuse_state_cov[:] = 0
+            self.initial_state_cov[:] = 0
+
+        # If using global initialization, compute the actual elements and
+        # return them
+        if init.initialization_type is not None:
+            init._initialize_initialization(prefix='{{prefix}}')
+            _init = init._initializations['{{prefix}}']
+            _init.initialize(init.initialization_type, offset, self,
+                             self.initial_state,
+                             self.initial_diffuse_state_cov,
+                             self.initial_state_cov, complex_step)
+        # Otherwise, if using blocks, initialize each of the blocks
+        else:
+            for block_index, block_init in init.blocks.items():
+                self.initialize(block_init, offset=offset + block_index[0],
+                                complex_step=complex_step, clear=False)
+
+        if not self.initialized:
+            self.initialized = True
+
     # ## Initialize: known values
     #
     # Initialize the filter with specific values, assumed to be known with
@@ -367,11 +407,12 @@ cdef class {{prefix}}Statespace(object):
         """
         initialize_known(initial_state, initial_state_cov)
         """
-        tools.validate_vector_shape('inital state', &initial_state.shape[0], self.k_states, None)
+        tools.validate_vector_shape('initial state', &initial_state.shape[0], self.k_states, None)
         tools.validate_matrix_shape('initial state covariance', &initial_state_cov.shape[0], self.k_states, self.k_states, None)
 
         self.initial_state = initial_state
         self.initial_state_cov = initial_state_cov
+        self.initial_diffuse_state_cov[:] = 0
 
         self.initialized = True
 
@@ -390,6 +431,7 @@ cdef class {{prefix}}Statespace(object):
         dim[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         self.initial_state_cov = np.eye(self.k_states, dtype={{dtype}}).T * variance
+        self.initial_diffuse_state_cov[:] = 0
 
         self.initialized = True
 
@@ -464,6 +506,8 @@ cdef class {{prefix}}Statespace(object):
         # covariance matrix
         tools._{{prefix}}solve_discrete_lyapunov(&self.tmp[0,0], &self.initial_state_cov[0,0], self.k_states, complex_step)
 
+        self.initial_diffuse_state_cov[:] = 0
+
         self.initialized = True
 
     def __iter__(self):
@@ -522,6 +566,7 @@ cdef class {{prefix}}Statespace(object):
             raise RuntimeError("Statespace model not initialized.")
         self._initial_state = &self.initial_state[0]
         self._initial_state_cov = &self.initial_state_cov[0,0]
+        self._initial_diffuse_state_cov = &self.initial_diffuse_state_cov[0,0]
 
         # Create the selected state covariance matrix
         self.select_state_cov(t)

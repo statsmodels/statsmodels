@@ -1,0 +1,5 @@
+The license of this package can be found in LICENSE.txt
+This file contains a Python version of the gradient projection rotation
+algorithms (GPA) developed by Bernaards, C.A. and Jennrich, R.I.
+The code is based on code developed Bernaards, C.A. and Jennrich, R.I.
+and is ported and made available with permission of the authors.

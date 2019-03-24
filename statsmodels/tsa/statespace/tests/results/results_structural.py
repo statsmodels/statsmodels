@@ -164,11 +164,21 @@ cycle = {
 seasonal = {
     'models': [{'irregular': True, 'seasonal': 4}],
     'params': [38.1704278, 0.1],
-    'llf': -655.3337155,
-    'kwargs': {},
+    'llf': -678.8138005,
+    'kwargs': {'loglikelihood_burn': 0},
     'rtol': 1e-6
 }
 
+freq_seasonal = {
+    'models': [{'irregular': True,
+                'freq_seasonal': [{'period': 5}]}],
+    'params': [38.95352534, 0.05],
+    'llf': -688.9697249,
+    'rtol': 1e-6,
+    'kwargs': {
+        'loglikelihood_burn': 0  # No idea why KFAS includes all data in this
+    }
+}
 reg = {
     # Note: The test needs to fill in exog=np.log(dta['realgdp'])
     'models': [
@@ -217,23 +227,23 @@ lltrend_cycle_seasonal_reg_ar1 = {
         # Numpy exog dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': 'numpy', 'mle_regression': False,}, 
+         'exog': 'numpy', 'mle_regression': False},
         # Annual frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'AS'},
+         'exog': True, 'mle_regression': False, 'freq': 'AS'},
         # Quarterly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'QS'},
+         'exog': True, 'mle_regression': False, 'freq': 'QS'},
         # Monthly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'MS'},
+         'exog': True, 'mle_regression': False, 'freq': 'MS'},
         # Minutely frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'T',
+         'exog': True, 'mle_regression': False, 'freq': 'T',
          'cycle_period_bounds': (1.5*12, 12*12)},
     ],
     'params': [0.0001, 0.01, 0.06, 0.0001, 0.0001, 0.1, 2*pi / 10, 0.2],

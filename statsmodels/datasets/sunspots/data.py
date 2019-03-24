@@ -1,4 +1,5 @@
 """Yearly sunspots data 1700-2008"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -27,15 +28,25 @@ NOTE        = """::
     The data file contains a 'YEAR' variable that is not returned by load.
 """
 
-from numpy import recfromtxt, array
-from pandas import Series, DataFrame
 
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
+def load_pandas():
+    data = _get_data()
+    # TODO: time series
+    endog = data.set_index(data.YEAR).SUNACTIVITY
+    dataset = du.Dataset(data=data, names=list(data.columns),
+                         endog=endog, endog_name='volume')
+    return dataset
 
-def load():
+
+def load(as_pandas=None):
     """
     Load the yearly sunspot data and returns a data class.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     --------
@@ -48,24 +59,8 @@ def load():
     data, raw_data, and endog are all the same variable.  There is no exog
     attribute defined.
     """
-    data = _get_data()
-    endog_name = 'SUNACTIVITY'
-    endog = array(data[endog_name], dtype=float)
-    dataset = Dataset(data=data, names=[endog_name], endog=endog,
-                      endog_name=endog_name)
-    return dataset
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
-def load_pandas():
-    data = DataFrame(_get_data())
-    # TODO: time series
-    endog = Series(data['SUNACTIVITY'], index=data['YEAR'].astype(int))
-    dataset = Dataset(data=data, names=list(data.columns),
-                      endog=endog, endog_name='volume')
-    return dataset
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/sunspots.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-        return data
+    return du.load_csv(__file__, 'sunspots.csv').astype(float)

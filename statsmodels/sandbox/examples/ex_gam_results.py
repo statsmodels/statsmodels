@@ -56,4 +56,3 @@ plt.plot(comp2_true + noise_eta, 'r.', alpha=0.95)
 #plt.plot(c2, 'r.', alpha=0.95)
 plt.title('Gaussian loglink, GAM (red), GLM (blue), true (black)')
 plt.show()
-

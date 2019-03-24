@@ -138,12 +138,12 @@ class AffineDiffusion(Diffusion):
         Xtemp = xzero
         Xem[:,0] = xzero
         for j in np.arange(1,L):
-           #Winc = np.sum(dW[:,Tratio*(j-1)+1:Tratio*j],1)
-           Winc = np.sum(dW[:,np.arange(Tratio*(j-1)+1,Tratio*j)],1)
-           #Xtemp = Xtemp + Dt*lamda*Xtemp + mu*Xtemp*Winc;
-           Xtemp = Xtemp + self._drift(x=Xtemp) + self._sig(x=Xtemp) * Winc
-           #Dt*lamda*Xtemp + mu*Xtemp*Winc;
-           Xem[:,j] = Xtemp
+            #Winc = np.sum(dW[:,Tratio*(j-1)+1:Tratio*j],1)
+            Winc = np.sum(dW[:,np.arange(Tratio*(j-1)+1,Tratio*j)],1)
+            #Xtemp = Xtemp + Dt*lamda*Xtemp + mu*Xtemp*Winc;
+            Xtemp = Xtemp + self._drift(x=Xtemp) + self._sig(x=Xtemp) * Winc
+            #Dt*lamda*Xtemp + mu*Xtemp*Winc;
+            Xem[:,j] = Xtemp
         return Xem
 
 '''
@@ -319,7 +319,7 @@ class OUprocess(AffineDiffusion):
         # brute force, no parameter estimation errors
         nobs = len(data)-1
         exog = np.column_stack((np.ones(nobs), data[:-1]))
-        parest, res, rank, sing = np.linalg.lstsq(exog, data[1:])
+        parest, res, rank, sing = np.linalg.lstsq(exog, data[1:], rcond=-1)
         const, slope = parest
         errvar = res/(nobs-2.)
         lambd = -np.log(slope)/dt
@@ -373,7 +373,7 @@ class SchwartzOne(ExactDiffusion):
         # brute force, no parameter estimation errors
         nobs = len(data)-1
         exog = np.column_stack((np.ones(nobs),np.log(data[:-1])))
-        parest, res, rank, sing = np.linalg.lstsq(exog, np.log(data[1:]))
+        parest, res, rank, sing = np.linalg.lstsq(exog, np.log(data[1:]), rcond=-1)
         const, slope = parest
         errvar = res/(nobs-2.)  #check denominator estimate, of sigma too low
         kappa = -np.log(slope)/dt

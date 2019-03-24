@@ -82,6 +82,13 @@ from statsmodels.tsa.statespace._smoothers._univariate cimport (
     {{prefix}}smoothed_estimators_time_univariate,
     {{prefix}}smoothed_disturbances_univariate
 )
+from statsmodels.tsa.statespace._smoothers._univariate_diffuse cimport (
+    {{prefix}}smoothed_estimators_measurement_univariate_diffuse,
+    {{prefix}}smoothed_estimators_time_univariate_diffuse,
+    {{prefix}}smoothed_state_univariate_diffuse,
+    {{prefix}}smoothed_disturbances_univariate_diffuse,
+    {{prefix}}smoothed_state_autocov_univariate_diffuse
+)
 from statsmodels.tsa.statespace._smoothers._classical cimport (
     {{prefix}}smoothed_estimators_measurement_classical,
     {{prefix}}smoothed_estimators_time_classical,
@@ -289,19 +296,34 @@ cdef class {{prefix}}KalmanSmoother(object):
         dim3[0] = self.kfilter.k_posdef; dim3[1] = self.kfilter.k_posdef; dim3[2] = self.model.nobs;
         self.smoothed_state_disturbance_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
+        # Smoothed state autocovariance arrays
+        dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs
+        self.smoothed_state_autocov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
+        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        self.tmp_autocov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._tmp_autocov = &self.tmp_autocov[0, 0]
+
+        # Diffuse output
+        dim2[0] = self.kfilter.k_states; dim2[1] = self.model.nobs+1;
+        self.scaled_smoothed_diffuse_estimator = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs+1;
+        self.scaled_smoothed_diffuse1_estimator_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        self.scaled_smoothed_diffuse2_estimator_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
         # #### Arrays for temporary calculations
         # *Note*: in math notation below, a $\\#$ will represent a generic
         # temporary array, and a $\\#_i$ will represent a named temporary array.
 
-        # # $L_t$ $(m \times m)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        # # $L_t$ $(m \times m)$, also holds $(m \times r)$ sometimes
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmpL = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL = &self.tmpL[0, 0]
         self.tmpL2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL2 = &self.tmpL2[0, 0]
 
         # # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp0 = &self.tmp0[0, 0]
 
@@ -314,14 +336,6 @@ cdef class {{prefix}}KalmanSmoother(object):
         dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_endog;
         self.tmp000 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp000 = &self.tmp000[0, 0]
-
-        # Smoothed state autocovariance arrays
-        dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs
-        self.smoothed_state_autocov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
-
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
-        self.tmp_autocov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-        self._tmp_autocov = &self.tmp_autocov[0, 0]
 
         # Arrays for missing data
         # dim1[0] = self.kfilter.k_endog * self.kfilter.k_states;
@@ -344,6 +358,9 @@ cdef class {{prefix}}KalmanSmoother(object):
             'smoothed_state_disturbance_cov': np.array(self.smoothed_state_disturbance_cov, copy=True, order='F'),
             'smoothed_state_autocov': np.array(self.smoothed_state_autocov, copy=True, order='F'),
             'tmp_autocov': np.array(self.tmp_autocov, copy=True, order='F'),
+            'scaled_smoothed_diffuse_estimator': np.array(self.scaled_smoothed_diffuse_estimator, copy=True, order='F'),
+            'scaled_smoothed_diffuse1_estimator_cov': np.array(self.scaled_smoothed_diffuse1_estimator_cov, copy=True, order='F'),
+            'scaled_smoothed_diffuse2_estimator_cov': np.array(self.scaled_smoothed_diffuse2_estimator_cov, copy=True, order='F'),
             'tmpL': np.array(self.tmpL, copy=True, order='F'),
             'tmpL2': np.array(self.tmpL2, copy=True, order='F'),
             'tmp0': np.array(self.tmp0, copy=True, order='F'),
@@ -367,6 +384,9 @@ cdef class {{prefix}}KalmanSmoother(object):
         self.smoothed_state_disturbance_cov = state['smoothed_state_disturbance_cov']
         self.smoothed_state_autocov = state['smoothed_state_autocov']
         self.tmp_autocov = state['tmp_autocov']
+        self.scaled_smoothed_diffuse_estimator = state['scaled_smoothed_diffuse_estimator']
+        self.scaled_smoothed_diffuse1_estimator_cov = state['scaled_smoothed_diffuse1_estimator_cov']
+        self.scaled_smoothed_diffuse2_estimator_cov = state['scaled_smoothed_diffuse2_estimator_cov']
         self.tmpL = state['tmpL']
         self.tmpL2 = state['tmpL2']
         self.tmp0 = state['tmp0']
@@ -492,6 +512,8 @@ cdef class {{prefix}}KalmanSmoother(object):
         """
         Perform an iteration of the Kalman smoother
         """
+        cdef int t
+        cdef int diffuse = self.t < self.kfilter.nobs_diffuse
 
         # Get time subscript, and stop the iterator if at the end
         if not self.t >= 0:
@@ -517,7 +539,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Conventional timing of the measurement step of the scaled smoothed
         # estimator and covariance matrix, smoothing error  
         # $L_t, r_{t-1}, N_{t-1}, u_t$
-        if self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
+        if diffuse or self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
         # Smoothed state and covariance matrix  
@@ -528,16 +550,19 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Modified Byrson-Frazier timing of the measurement step of the scaled
         # smoothed estimator and covariance matrix, smoothing error  
         # $L_t, r_{t-1}, N_{t-1}, u_t$
-        if self._smooth_method & SMOOTH_ALTERNATIVE:
+        if not diffuse and self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
         # Smoothed state autocovariance matrix
         if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
-            if self.smooth_method & SMOOTH_ALTERNATIVE:
-                self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t+1]
-            {{prefix}}smoothed_state_autocov_conventional(self, self.kfilter, self.model)
-            if self.smooth_method & SMOOTH_ALTERNATIVE:
-                self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t]
+            if diffuse:
+                {{prefix}}smoothed_state_autocov_univariate_diffuse(self, self.kfilter, self.model)
+            else:
+                if self.smooth_method & SMOOTH_ALTERNATIVE:
+                    self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t+1]
+                {{prefix}}smoothed_state_autocov_conventional(self, self.kfilter, self.model)
+                if self.smooth_method & SMOOTH_ALTERNATIVE:
+                    self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t]
 
         # Smoothed disturbances  
         # $\hat \eta_t, \hat \varepsilon_t, Var(\eta_t | Y_n), Var(\varepsilon_t | Y_n)$
@@ -546,6 +571,42 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Time step of the scaled smoothed estimator and covariance matrix
         self.smooth_estimators_time(self, self.kfilter, self.model)
+
+        # Since the exact diffuse filtering and smoothing only uses the
+        # univariate method, if non-univariate filtering methods are used for
+        # the remaining filtering and smoothing, we need to run one or more
+        # univariate time smoothing steps to get the appropriate values (e.g.
+        # for scaled_smoothed_estimator). Moreover, the alternative and
+        # classical methods have different timing.
+        if self.kfilter.nobs_diffuse > 0 and self.t == self.kfilter.nobs_diffuse:
+            t = self.t
+            if self._smooth_method & SMOOTH_CONVENTIONAL:
+                {{prefix}}smoothed_estimators_time_univariate(self, self.kfilter, self.model)
+            if self._smooth_method & SMOOTH_ALTERNATIVE:
+                self.t = self.t - 1
+                self.initialize_statespace_object_pointers()
+                self.initialize_filter_object_pointers()
+                self.initialize_smoother_object_pointers()
+                self.initialize_function_pointers()
+                {{prefix}}smoothed_estimators_time_univariate(self, self.kfilter, self.model)
+                self.t = t
+            elif self._smooth_method & SMOOTH_CLASSICAL:
+                self.t = t - 1
+                self.initialize_statespace_object_pointers()
+                self.initialize_filter_object_pointers()
+                self.initialize_smoother_object_pointers()
+                self.initialize_function_pointers()
+                {{prefix}}smoothed_estimators_measurement_classical(self, self.kfilter, self.model)
+                self.t = t
+                self.initialize_statespace_object_pointers()
+                self.initialize_filter_object_pointers()
+                self.initialize_smoother_object_pointers()
+                self.initialize_function_pointers()
+                {{prefix}}smoothed_estimators_time_univariate(self, self.kfilter, self.model)
+
+        # Note: the above diffuse handling for alternative and classical
+        # handling modifies the pointers, and should be the last part of this
+        # function
 
         # Advance the smoother
         self.t -= 1
@@ -615,9 +676,10 @@ cdef class {{prefix}}KalmanSmoother(object):
         cdef:
             int t = self.t
             int inc = 1
+            int diffuse = self.t < self.kfilter.nobs_diffuse
 
         # Initialize object-level pointers to output arrays
-        if self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
+        if diffuse or self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
             self._input_scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t+1]
             self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t+1]
             self._scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t]
@@ -638,9 +700,26 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         self._smoothed_state_autocov = &self.smoothed_state_autocov[0, 0, t]
 
+        # Diffuse
+        if diffuse:
+            self._input_scaled_smoothed_diffuse_estimator = &self.scaled_smoothed_diffuse_estimator[0, t+1]
+            self._input_scaled_smoothed_diffuse1_estimator_cov = &self.scaled_smoothed_diffuse1_estimator_cov[0, 0, t+1]
+            self._input_scaled_smoothed_diffuse2_estimator_cov = &self.scaled_smoothed_diffuse2_estimator_cov[0, 0, t+1]
+            self._scaled_smoothed_diffuse_estimator = &self.scaled_smoothed_diffuse_estimator[0, t]
+            self._scaled_smoothed_diffuse1_estimator_cov = &self.scaled_smoothed_diffuse1_estimator_cov[0, 0, t]
+            self._scaled_smoothed_diffuse2_estimator_cov = &self.scaled_smoothed_diffuse2_estimator_cov[0, 0, t]
+
+
     cdef void initialize_function_pointers(self) except *:
+        cdef int diffuse = self.t < self.kfilter.nobs_diffuse
+        # Diffuse smoother
+        if diffuse:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_univariate_diffuse
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate_diffuse
+            self.smooth_state = {{prefix}}smoothed_state_univariate_diffuse
+            self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate_diffuse
         # Multivariate modified Bryson-Frazier smoother
-        if self._smooth_method & SMOOTH_ALTERNATIVE:
+        elif self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_alternative
             self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_alternative
             self.smooth_state = {{prefix}}smoothed_state_alternative
@@ -667,7 +746,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             raise NotImplementedError("Smoother method not available.")
 
         # Handle completely missing data
-        # (All methods except the classical method can use the same routines in this case)
+        # (All methods except the conventional method can use the same routines in this case)
         # This is essentially just an application of the smoothed_estimators_time_* step.
         if self._smooth_method & SMOOTH_CONVENTIONAL and self.model._nmissing == self.model.k_endog:
             # Change the smoothing functions to take into account a missing observation

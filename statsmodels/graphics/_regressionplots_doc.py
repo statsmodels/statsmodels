@@ -100,3 +100,60 @@ _plot_ceres_residuals_doc = """\
     other exog variables, `cond_means` can be set to an (empty)
     nx0 array.
 """
+
+
+_plot_influence_doc = """\
+    Plot of influence in regression. Plots studentized resids vs. leverage.
+
+    Parameters
+    ----------
+    %(extra_params_doc)external : bool
+        Whether to use externally or internally studentized residuals. It is
+        recommended to leave external as True.
+    alpha : float
+        The alpha value to identify large studentized residuals. Large means
+        abs(resid_studentized) > t.ppf(1-alpha/2, dof=results.df_resid)
+    criterion : str {{'DFFITS', 'Cooks'}}
+        Which criterion to base the size of the points on. Options are
+        DFFITS or Cook's D.
+    size : float
+        The range of `criterion` is mapped to 10**2 - size**2 in points.
+    plot_alpha : float
+        The `alpha` of the plotted points.
+    ax : matplotlib Axes instance
+        An instance of a matplotlib Axes.
+
+    Returns
+    -------
+    fig : matplotlib figure
+        The matplotlib figure that contains the Axes.
+
+    Notes
+    -----
+    Row labels for the observations in which the leverage, measured by the
+    diagonal of the hat matrix, is high or the residuals are large, as the
+    combination of large residuals and a high influence value indicates an
+    influence point. The value of large residuals can be controlled using the
+    `alpha` parameter. Large leverage points are identified as
+    hat_i > 2 * (df_model + 1)/nobs.
+    """
+
+
+_plot_leverage_resid2_doc = """\
+    Plots leverage statistics vs. normalized residuals squared
+
+    Parameters
+    ----------
+    results : results instance
+        A regression results instance
+    alpha : float
+        Specifies the cut-off for large-standardized residuals. Residuals
+        are assumed to be distributed N(0, 1) with alpha=alpha.
+    ax : Axes instance
+        Matplotlib Axes instance
+
+    Returns
+    -------
+    fig : matplotlib Figure
+        A matplotlib figure instance.
+    """

@@ -27,7 +27,9 @@ from statsmodels.base import model
 from ._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_partial_residuals_doc,
-    _plot_ceres_residuals_doc)
+    _plot_ceres_residuals_doc,
+    _plot_influence_doc,
+    _plot_leverage_resid2_doc)
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
@@ -730,48 +732,11 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     return fig
 
 
-def influence_plot(results, external=True, alpha=.05, criterion="cooks",
-                   size=48, plot_alpha=.75, ax=None, **kwargs):
-    """
-    Plot of influence in regression. Plots studentized resids vs. leverage.
-
-    Parameters
-    ----------
-    results : results instance
-        A fitted model.
-    external : bool
-        Whether to use externally or internally studentized residuals. It is
-        recommended to leave external as True.
-    alpha : float
-        The alpha value to identify large studentized residuals. Large means
-        abs(resid_studentized) > t.ppf(1-alpha/2, dof=results.df_resid)
-    criterion : str {'DFFITS', 'Cooks'}
-        Which criterion to base the size of the points on. Options are
-        DFFITS or Cook's D.
-    size : float
-        The range of `criterion` is mapped to 10**2 - size**2 in points.
-    plot_alpha : float
-        The `alpha` of the plotted points.
-    ax : matplotlib Axes instance
-        An instance of a matplotlib Axes.
-
-    Returns
-    -------
-    fig : matplotlib figure
-        The matplotlib figure that contains the Axes.
-
-    Notes
-    -----
-    Row labels for the observations in which the leverage, measured by the
-    diagonal of the hat matrix, is high or the residuals are large, as the
-    combination of large residuals and a high influence value indicates an
-    influence point. The value of large residuals can be controlled using the
-    `alpha` parameter. Large leverage points are identified as
-    hat_i > 2 * (df_model + 1)/nobs.
-    """
+def _influence_plot(results, influence, external=True, alpha=.05,
+                    criterion="cooks", size=48, plot_alpha=.75, ax=None,
+                    **kwargs):
+    infl = influence
     fig, ax = utils.create_mpl_ax(ax)
-
-    infl = results.get_influence()
 
     if criterion.lower().startswith('coo'):
         psize = infl.cooks_distance[0]
@@ -793,7 +758,7 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     if external:
         resids = infl.resid_studentized_external
     else:
-        resids = infl.resid_studentized_internal
+        resids = infl.resid_studentized
 
     from scipy import stats
 
@@ -820,33 +785,34 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     ax.set_title("Influence Plot", **font)
     return fig
 
+_influence_plot.__doc__ = _plot_influence_doc.format({
+    'extra_params_doc' : "results: object\n\tResults for a fitted regression model\n"
+    "influence: instance\n    instance of Influence for model"})
 
-def plot_leverage_resid2(results, alpha=.05, ax=None,
+
+def influence_plot(results, external=True, alpha=.05, criterion="cooks",
+                   size=48, plot_alpha=.75, ax=None, **kwargs):
+
+    infl = results.get_influence()
+    res = _influence_plot(results, infl, external=external, alpha=alpha,
+                          criterion=criterion, size=size,
+                          plot_alpha=plot_alpha, ax=ax, **kwargs)
+    return res
+
+influence_plot.__doc__ = _plot_influence_doc.format({
+    'extra_params_doc' : "results: object\n"
+                         "    Results for a fitted regression model"})
+
+
+def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
                          **kwargs):
-    """
-    Plots leverage statistics vs. normalized residuals squared
 
-    Parameters
-    ----------
-    results : results instance
-        A regression results instance
-    alpha : float
-        Specifies the cut-off for large-standardized residuals. Residuals
-        are assumed to be distributed N(0, 1) with alpha=alpha.
-    ax : Axes instance
-        Matplotlib Axes instance
-
-    Returns
-    -------
-    fig : matplotlib Figure
-        A matplotlib figure instance.
-    """
     from scipy.stats import zscore, norm
     fig, ax = utils.create_mpl_ax(ax)
 
-    infl = results.get_influence()
+    infl = influence
     leverage = infl.hat_matrix_diag
-    resid = zscore(results.resid)
+    resid = zscore(infl.resid)
     ax.plot(resid**2, leverage, 'o', **kwargs)
     ax.set_xlabel("Normalized residuals**2")
     ax.set_ylabel("Leverage")
@@ -865,6 +831,23 @@ def plot_leverage_resid2(results, alpha=.05, ax=None,
                              ax=ax, ha="center", va="bottom")
     ax.margins(.075, .075)
     return fig
+
+_plot_leverage_resid2.__doc__ = _plot_leverage_resid2_doc.format({
+    'extra_params_doc' : "results: object\n\tResults for a fitted regression model\n"
+    "influence: instance\n    instance of Influence for model"})
+
+
+def plot_leverage_resid2(results, alpha=.05, ax=None, **kwargs):
+
+    infl = results.get_influence()
+    res = _plot_leverage_resid2(results, infl, alpha=.05, ax=None,
+                                 **kwargs)
+    return res
+
+plot_leverage_resid2.__doc__ = _plot_leverage_resid2_doc.format({
+    'extra_params_doc' : "results: object\n"
+                         "    Results for a fitted regression model"})
+
 
 def plot_added_variable(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):

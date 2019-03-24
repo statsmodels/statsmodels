@@ -20,6 +20,7 @@ except ImportError:
 
 from statsmodels.base.model import LikelihoodModel
 
+
 #copied from sandbox/regression/mle.py
 #TODO: I take it this is only a stub and should be included in another
 # model class?
@@ -51,7 +52,6 @@ class TSMLEModel(LikelihoodModel):
         """
         raise NotImplementedError
 
-
     def score(self, params):
         """
         Score vector for Arma model
@@ -68,7 +68,6 @@ class TSMLEModel(LikelihoodModel):
         #return None
         Hfun = ndt.Jacobian(self.score, stepMax=1e-4)
         return Hfun(params)[-1]
-
 
     def fit(self, start_params=None, maxiter=5000, method='fmin', tol=1e-08):
         '''estimate model by minimizing negative loglikelihood

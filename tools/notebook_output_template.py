@@ -45,4 +45,4 @@ $body
    // loadcssfile({{pathto("_static/nbviewer.min.css", 1) }})
    loadcssfile("../../../_static/nbviewer.pygments.css")
    loadcssfile("../../../_static/ipython.min.css")
-   </script>""")
+   </script>""")  # noqa:E501

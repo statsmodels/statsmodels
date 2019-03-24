@@ -3,19 +3,11 @@ from __future__ import print_function, division
 import os
 import sys
 import warnings
-from unittest import TestCase
 
 import numpy as np
 import pandas as pd
-from nose.tools import assert_true
+import pytest
 from numpy.testing import assert_allclose, assert_equal, assert_raises
-from numpy.testing.decorators import skipif
-
-try:
-    import matplotlib.pyplot as plt
-    missing_matplotlib = False
-except ImportError:
-    missing_matplotlib = True
 
 from statsmodels.multivariate.pca import PCA
 from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
@@ -24,9 +16,9 @@ DECIMAL_5 = .00001
 WIN32 = os.name == 'nt' and sys.maxsize < 2**33
 
 
-class TestPCA(TestCase):
+class TestPCA(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         rs = np.random.RandomState()
         rs.seed(1234)
         k = 3
@@ -53,8 +45,8 @@ class TestPCA(TestCase):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
-    @skipif(missing_matplotlib)
-    def test_smoke_plot_and_repr(self):
+    @pytest.mark.matplotlib
+    def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
@@ -72,9 +64,7 @@ class TestPCA(TestCase):
         assert_equal(self.x, pc.data)
 
     def test_eig_svd_equiv(self):
-        """
-        Test leading components since the tail end can differ
-        """
+        # Test leading components since the tail end can differ
         pc_eig = PCA(self.x)
         pc_svd = PCA(self.x, method='svd')
 
@@ -155,9 +145,7 @@ class TestPCA(TestCase):
         assert_allclose(np.abs(pc.factors), np.abs(x.dot(vec)))
 
     def test_against_reference(self):
-        """
-        Test against MATLAB, which by default demeans but does not standardize        
-        """
+        # Test against MATLAB, which by default demeans but does not standardize
         x = data.xo / 1000.0
         pc = PCA(x, normalize=False, standardize=False)
 
@@ -193,11 +181,11 @@ class TestPCA(TestCase):
         assert_raises(ValueError, PCA, self.x, tol=2.0)
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
-    @skipif(missing_matplotlib)
-    def test_pandas(self):
+    @pytest.mark.matplotlib
+    def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
-        assert_equal(pc.factors.values, pc1.factors)
+        assert_allclose(pc.factors.values, pc1.factors)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
         fig = pc.plot_scree(log_scale=False)
@@ -278,7 +266,7 @@ class TestPCA(TestCase):
         project = pc.project
         assert_raises(ValueError, project, 6)
 
-    @skipif(WIN32)
+    @pytest.mark.skipif(WIN32, reason='Windows 32-bit')
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
@@ -286,13 +274,13 @@ class TestPCA(TestCase):
         pc = PCA(x, missing='drop-row')
         x_dropped_row = x[np.logical_not(np.any(np.isnan(x), 1))]
         pc_dropped = PCA(x_dropped_row)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-col')
         x_dropped_col = x[:, np.logical_not(np.any(np.isnan(x), 0))]
         pc_dropped = PCA(x_dropped_col)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-min')
@@ -301,7 +289,7 @@ class TestPCA(TestCase):
         else:
             x_dropped_min = x_dropped_col
         pc_dropped = PCA(x_dropped_min)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, ncomp=3, missing='fill-em')
@@ -393,13 +381,10 @@ class TestPCA(TestCase):
         assert_allclose(pc.factors, pc_df.factors)
 
         pc_df_nomissing = PCA(pd.DataFrame(self.x.copy()), ncomp=3)
-        assert_true(isinstance(pc_df.coeff, type(pc_df_nomissing.coeff)))
-        assert_true(isinstance(pc_df.data, type(pc_df_nomissing.data)))
-        assert_true(isinstance(pc_df.eigenvals,
-                               type(pc_df_nomissing.eigenvals)))
-        assert_true(isinstance(pc_df.eigenvecs,
-                               type(pc_df_nomissing.eigenvecs)))
-
+        assert isinstance(pc_df.coeff, type(pc_df_nomissing.coeff))
+        assert isinstance(pc_df.data, type(pc_df_nomissing.data))
+        assert isinstance(pc_df.eigenvals, type(pc_df_nomissing.eigenvals))
+        assert isinstance(pc_df.eigenvecs, type(pc_df_nomissing.eigenvecs))
 
         x = self.x.copy()
         x[::5, ::7] = np.nan

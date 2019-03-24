@@ -224,4 +224,3 @@ class Pca(object):
         A = vals.T-upc
         B = A.T*np.std(self.M,axis=0)
         return B+np.mean(self.A,axis=0)
-

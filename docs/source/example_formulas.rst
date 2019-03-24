@@ -18,12 +18,14 @@ Loading modules and functions
 
 .. ipython:: python
 
+    import statsmodels.api as sm
     import statsmodels.formula.api as smf
     import numpy as np
     import pandas
 
-Notice that we called ``statsmodels.formula.api`` instead of the usual
-``statsmodels.api``. The ``formula.api`` hosts many of the same
+Notice that we called ``statsmodels.formula.api`` in addition to the usual
+``statsmodels.api``. In fact, ``statsmodels.api`` is used here only to load
+the dataset. The ``formula.api`` hosts many of the same
 functions found in ``api`` (e.g. OLS, GLM), but it also holds lower case
 counterparts for most of these models. In general, lower case models
 accept ``formula`` and ``df`` arguments, whereas upper case ones take
@@ -133,7 +135,8 @@ Define a custom function:
 .. ipython:: python
 
     def log_plus_1(x):
-        return np.log(x) + 1.
+        return np.log(x) + 1.0
+
     res = smf.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
     print(res.params)
 
@@ -158,9 +161,11 @@ To generate ``numpy`` arrays:
 
     import patsy
     f = 'Lottery ~ Literacy * Wealth'
-    y, X = patsy.dmatrices(f, df, return_type='dataframe')
+    y, X = patsy.dmatrices(f, df, return_type='matrix')
     print(y[:5])
     print(X[:5])
+
+``y`` and ``X`` would be instances of ``patsy.DesignMatrix`` which is a subclass of ``numpy.ndarray``.
 
 To generate pandas data frames:
 
@@ -173,5 +178,4 @@ To generate pandas data frames:
 
 .. ipython:: python
 
-    print(smf.OLS(y, X).fit().summary())
-
+    print(sm.OLS(y, X).fit().summary())

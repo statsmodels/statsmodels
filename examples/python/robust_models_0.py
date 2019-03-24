@@ -117,4 +117,3 @@ ax.plot(x1, iv_u, 'r--')
 ax.plot(x1, iv_l, 'r--')
 ax.plot(x1, resrlm2.fittedvalues, 'g.-', label="RLM")
 ax.legend(loc="best")
-

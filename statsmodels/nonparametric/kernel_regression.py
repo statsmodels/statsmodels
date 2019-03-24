@@ -42,7 +42,6 @@ from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
 
 
-
 __all__ = ['KernelReg', 'KernelCensoredReg']
 
 
@@ -57,9 +56,9 @@ class KernelReg(GenericKDE):
 
     Parameters
     ----------
-    endog: list with one element which is array_like
+    endog: array-like
         This is the dependent variable.
-    exog: list
+    exog: array-like
         The training data for the independent variable(s)
         Each element in the list is a separate variable
     var_type: str
@@ -74,9 +73,10 @@ class KernelReg(GenericKDE):
         'll' local Linear estimator.  Default is 'll'
     bw: str or array_like, optional
         Either a user-specified bandwidth or the method for bandwidth
-        selection.  If a string, valid values are 'cv_ls' (least-squares
+        selection. If a string, valid values are 'cv_ls' (least-squares
         cross-validation) and 'aic' (AIC Hurvich bandwidth estimation).
-        Default is 'cv_ls'.
+        Default is 'cv_ls'. User specified bandwidth must have as many
+        entries as the number of variables.
     defaults: EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
 
@@ -84,15 +84,9 @@ class KernelReg(GenericKDE):
     ---------
     bw: array_like
         The bandwidth parameters.
-
-    **Methods**
-
-    r-squared : calculates the R-Squared coefficient for the model.
-    fit : calculates the conditional mean and marginal effects.
-
     """
     def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
-                 defaults=EstimatorSettings()):
+                 defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
@@ -101,9 +95,14 @@ class KernelReg(GenericKDE):
         self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
-        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
+        if not isinstance(bw, string_types):
+            bw = np.asarray(bw)
+            if len(bw) != self.k_vars:
+                raise ValueError('bw must have the same dimension as the '
+                                 'number of variables.')
         if not self.efficient:
             self.bw = self._compute_reg_bw(bw)
         else:
@@ -116,7 +115,11 @@ class KernelReg(GenericKDE):
         else:
             # The user specified a bandwidth selection method e.g. 'cv_ls'
             self._bw_method = bw
-            res = self.bw_func[bw]
+            # Workaround to avoid instance methods in __dict__
+            if bw == 'cv_ls':
+                res = self.cv_loo
+            else:  # bw == 'aic'
+                res = self.aic_hurvich
             X = np.std(self.exog, axis=0)
             h0 = 1.06 * X * \
                  self.nobs ** (- 1. / (4 + np.size(self.exog, axis=1)))
@@ -483,17 +486,9 @@ class KernelCensoredReg(KernelReg):
     ---------
     bw: array_like
         The bandwidth parameters
-
-    Methods
-    -------
-    r-squared
-        Calculate the R-Squared coefficient for the model
-    fit
-        Calculate the conditional mean and marginal effects
-
     """
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
-                 censor_val=0, defaults=EstimatorSettings()):
+                 censor_val=0, defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
@@ -502,8 +497,8 @@ class KernelCensoredReg(KernelReg):
         self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
-        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
         if self.censor_val is not None:
@@ -783,7 +778,7 @@ class TestRegCoefC(object):
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres, ))
         for i in range(self.nres):
-            ind = np.random.random_integers(0, n-1, size=(n,1))
+            ind = np.random.randint(0, n, size=(n, 1))
             Y1 = Y[ind, 0]
             X1 = X[ind, :]
             lam[i] = self._compute_lambda(Y1, X1)
@@ -812,7 +807,7 @@ class TestRegCoefC(object):
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
         for i in range(self.nboot):
-            ind = np.random.random_integers(0, n-1, size=(n,1))
+            ind = np.random.randint(0, n, size=(n, 1))
             e_boot = e[ind, 0]
             Y_boot = M + e_boot
             t_dist[i] = self._compute_test_stat(Y_boot, self.exog)
@@ -939,4 +934,3 @@ class TestRegCoefD(TestRegCoefC):
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.exog)[0], 1))
         return m
-

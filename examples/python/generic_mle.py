@@ -132,8 +132,8 @@ class NBin(GenericLikelihoodModel):
 # 
 # ### Usage Example
 # 
-# The [Medpar](http://vincentarelbundock.github.com/Rdatasets/doc/COUNT/medpar.html)
-# dataset is hosted in CSV format at the [Rdatasets repository](http://vincentarelbundock.github.com/Rdatasets). We use the ``read_csv``
+# The [Medpar](https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/doc/COUNT/medpar.html)
+# dataset is hosted in CSV format at the [Rdatasets repository](https://raw.githubusercontent.com/vincentarelbundock/Rdatasets). We use the ``read_csv``
 # function from the [Pandas library](http://pandas.pydata.org) to load the data
 # in memory. We then print(the first few columns: 
 # 
@@ -194,7 +194,7 @@ print(res_nbin.bse)
 
 # Or we could compare them to results obtained using the MASS implementation for R:
 # 
-#     url = 'http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'
+#     url = 'https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'
 #     medpar = read.csv(url)
 #     f = los~factor(type)+hmo+white
 #     

@@ -16,7 +16,7 @@ from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.stats.tests.test_anova as ttmod
 
 test = ttmod.TestAnova3()
-test.setupClass()
+test.setup_class()
 
 data = test.data.drop([0,1,2])
 res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", data).fit(use_t=False)
@@ -45,4 +45,3 @@ res_nb1 = NegativeBinomial.from_formula("Days ~ C(Weight) * C(Duration)", data,
                                         loglike_method='nb1').fit(cov_type='HC0')
 print('\nNegative Binomial nb2')
 print(res_nb1.wald_test_terms(skip_single=False))
-

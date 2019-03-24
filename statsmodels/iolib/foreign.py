@@ -757,7 +757,7 @@ class StataWriter(object):
         dtype = data.dtype
         descr = dtype.descr
         if dtype.names is None:
-            varlist = _default_names(nvar)
+            varlist = _default_names(self.nvar)
         else:
             varlist = dtype.names
 
@@ -1005,8 +1005,8 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     varnames = header['varlist']
     fmtlist = header['fmtlist']
     dataname = header['data_label']
-    labels = header['vlblist'] # labels are thrown away unless DataArray
-                               # type is used
+    labels = header['vlblist']  # labels are thrown away unless DataArray
+                                # type is used
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 

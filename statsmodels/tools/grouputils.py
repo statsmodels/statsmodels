@@ -31,7 +31,7 @@ from __future__ import print_function
 from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
-from statsmodels.compat.pandas import sort_values
+
 import statsmodels.tools.data as data_util
 from pandas import Index, MultiIndex
 

@@ -22,7 +22,7 @@ Examples
     # Load modules and data
     import numpy as np
     import statsmodels.api as sm
-    spector_data = sm.datasets.spector.load()
+    spector_data = sm.datasets.spector.load(as_pandas=False)
     spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
     # Fit and summarize OLS model
@@ -176,6 +176,7 @@ results class of the other linear models.
 
    RegressionResults
    OLSResults
+   PredictionResults
 
 .. currentmodule:: statsmodels.regression.quantile_regression
 

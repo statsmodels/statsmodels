@@ -65,7 +65,8 @@ def interpret_data(data, colnames=None, rownames=None):
         colnames = data.columns
         rownames = data.index
     else:  # pragma: no cover
-        raise Exception('cannot handle other input types at the moment')
+        raise TypeError('Cannot handle input type {typ}'
+                        .format(typ=type(data).__name__))
 
     if not isinstance(colnames, list):
         colnames = list(colnames)
@@ -97,8 +98,7 @@ def _is_using_ndarray(endog, exog):
 
 
 def _is_using_pandas(endog, exog):
-    # TODO: Remove WidePanel when finished with it
-    klasses = (pd.Series, pd.DataFrame, pd.WidePanel, pd.Panel)
+    from statsmodels.compat.pandas import data_klasses as klasses
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 

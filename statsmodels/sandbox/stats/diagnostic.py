@@ -37,9 +37,9 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.compat.numpy import np_matrix_rank
 
-#get the old signature back so the examples work
+
+# get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
                     store=store, regresults=False)
@@ -227,7 +227,8 @@ compare_j.__doc__ = CompareJ.__doc__
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
-    '''Ljung-Box test for no autocorrelation
+    """
+    Ljung-Box test for no autocorrelation
 
     Parameters
     ----------
@@ -239,7 +240,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         If lags is a list or array, then all lags are included up to the largest
         lag in the list, however only the tests for the lags in the list are
         reported.
-        If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+        If lags is None, then the default maxlag is 'min((nobs // 2 - 2), 40)'
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
@@ -250,7 +251,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         test statistic
     pvalue : float or array
         p-value based on chi-square distribution
-    bpvalue : (optionsal), float or array
+    bpvalue : (optional), float or array
         test statistic for Box-Pierce test
     bppvalue : (optional), float or array
         p-value based for Box-Pierce test on chi-square distribution
@@ -265,7 +266,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     1d or nd ? axis ? ravel ?
     needs more testing
 
-    ''Verification''
+    *Verification*
 
     Looks correctly sized in Monte Carlo studies.
     not yet compared to verified values
@@ -278,22 +279,19 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     ----------
     Greene
     Wikipedia
-
-    '''
+    """
     x = np.asarray(x)
     nobs = x.shape[0]
     if lags is None:
-        lags = lrange(1,41)  #TODO: check default; SS: changed to 40
+        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1)
     elif isinstance(lags, (int, long)):
-        lags = lrange(1,lags+1)
-    maxlag = max(lags)
+        lags = np.arange(1, lags + 1)
     lags = np.asarray(lags)
-
-    acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
-                             # SS: unbiased=False is default now
-#    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+    maxlag = max(lags)
+    # normalize by nobs not (nobs-nlags)
+    # SS: unbiased=False is default now
+    acfx = acf(x, nlags=maxlag, fft=False)
     acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
     if not boxpierce:
@@ -302,6 +300,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
+
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
@@ -532,14 +531,6 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
-msg = "Use acorr_breusch_godfrey, acorr_breush_godfrey will be removed " \
-      "in 0.9 \n (Note: misspelling missing 'c'),"
-
-acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
-                               'acorr_breusch_godfrey',
-                               msg)
-
-
 def het_breuschpagan(resid, exog_het):
     '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
@@ -611,9 +602,6 @@ def het_breuschpagan(resid, exog_het):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
 
-het_breushpagan = np.deprecate(het_breuschpagan, 'het_breushpagan', 'het_breuschpagan',
-                               "Use het_breuschpagan, het_breushpagan will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'c')")
 
 def het_white(resid, exog, retres=False):
     '''White's Lagrange Multiplier Test for Heteroscedasticity
@@ -670,7 +658,7 @@ def het_white(resid, exog, retres=False):
     #degrees of freedom take possible reduced rank in exog into account
     #df_model checks the rank to determine df
     #extra calculation that can be removed:
-    assert resols.df_model == np_matrix_rank(exog) - 1
+    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
@@ -1467,7 +1455,7 @@ class StatTestMC(object):
         does not do any plotting
         '''
         if self.mcres.ndim == 2:
-            if  not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -1624,5 +1612,3 @@ if __name__ == '__main__':
 
     y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print(HetGoldfeldQuandt().run(y,x, 1, alternative='dec'))
-
-

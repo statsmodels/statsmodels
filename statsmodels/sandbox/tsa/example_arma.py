@@ -340,7 +340,7 @@ def pltxcorr(self, x, y, normed=True, detrend=detrend_none,
 
     if maxlags >= Nx or maxlags < 1:
         raise ValueError('maxlags must be None or strictly '
-                         'positive < %d'%Nx)
+                         'positive < %d' % Nx)
 
     lags = np.arange(-maxlags,maxlags+1)
     c = c[Nx-1-maxlags:Nx+maxlags]

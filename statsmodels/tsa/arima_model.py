@@ -21,7 +21,7 @@ from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
-from statsmodels.regression.linear_model import yule_walker, GLS
+from statsmodels.regression.linear_model import yule_walker, OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
@@ -146,8 +146,7 @@ _predict_returns = """predict : array
 """
 
 _arma_predict = _predict % {"Model" : "ARMA",
-                            "params" : """
-            params : array-like
+                            "params" : """params : array-like
             The fitted parameters of the model.""",
                             "extra_params" : "",
                             "returns" : _predict_returns,
@@ -157,27 +156,23 @@ _arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
                                     "extra_params" : "",
                                     "returns" : _predict_returns,
                                     "extra_section" : _results_notes}
+_arima_extras = """typ : str {'linear', 'levels'}
+
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.\n"""
 
 _arima_predict = _predict % {"Model" : "ARIMA",
                              "params" : """params : array-like
             The fitted parameters of the model.""",
-                             "extra_params" : """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""", "returns" : _predict_returns,
+                             "extra_params" : _arima_extras,
+                             "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
                                      "params" : "",
-                                     "extra_params" :
-                                     """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""",
+                                     "extra_params" :_arima_extras,
                                      "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
 
@@ -199,16 +194,18 @@ _arima_plot_predict_example = """        Examples
         .. plot:: plots/arma_predict_plot.py
 """
 
-_plot_predict = ("""
-        Plot forecasts
-                      """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
+_plot_extras = """alpha : float, optional
             The confidence intervals for the forecasts are (1 - alpha)%
         plot_insample : bool, optional
             Whether to plot the in-sample series. Default is True.
         ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
+            Existing axes to plot with."""
+
+_plot_predict = ("""
+        Plot forecasts
+                      """ + '\n'.join(_predict.split('\n')[2:])) % {
+                      "params" : "",
+                          "extra_params" : _plot_extras,
                       "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
                       "extra_section" : ('\n' + _arima_plot_predict_example +
@@ -218,16 +215,11 @@ _plot_predict = ("""
 _arima_plot_predict = ("""
         Plot forecasts
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha)%
-        plot_insample : bool, optional
-            Whether to plot the in-sample series. Default is True.
-        ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
-                      "returns" : """fig : matplotlib.Figure
+    "params" : "",
+    "extra_params" : _plot_extras,
+    "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
-                "extra_section" : ('\n' + _arima_plot_predict_example +
+    "extra_section" : ('\n' + _arima_plot_predict_example +
                                    '\n' +
                                    '\n'.join(_results_notes.split('\n')[:3]) +
                               ("""
@@ -238,12 +230,10 @@ _arima_plot_predict = ("""
 
 
 def cumsum_n(x, n):
-    if n:
-        n -= 1
+    for _ in range(n):
         x = np.cumsum(x)
-        return cumsum_n(x, n)
-    else:
-        return x
+
+    return x
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
@@ -398,10 +388,13 @@ def _make_arma_names(data, k_trend, order, exog_names):
 
     # ensure exog_names stays unchanged when the `fit` method
     # is called multiple times.
-    if exog_names[-k_ma:] == ma_lag_names and \
-       exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
-       (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
-        return exog_names
+    if k_ma ==0 and k_ar ==0:
+        if len(exog_names) != 0:
+            return exog_names
+    elif (exog_names[-k_ma:] == ma_lag_names ) and \
+           exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
+           (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
+            return exog_names
 
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names
@@ -488,10 +481,11 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         p, q, k = order
         start_params = zeros((p+q+k))
-        endog = self.endog.copy()  # copy because overwritten
+        # make copy of endog because overwritten
+        endog = np.array(self.endog, np.float64)
         exog = self.exog
         if k != 0:
-            ols_params = GLS(endog, exog).fit().params
+            ols_params = OLS(endog, exog).fit().params
             start_params[:k] = ols_params
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
@@ -531,7 +525,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 lag_resid = lagmat(resid, q, 'both')[resid_start:]
                 # stack ar lags and resids
                 X = np.column_stack((lag_endog, lag_resid))
-                coefs = GLS(endog[max(p_tmp + q, p):], X).fit().params
+                coefs = OLS(endog[max(p_tmp + q, p):], X).fit().params
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
@@ -571,7 +565,9 @@ class ARMA(tsbase.TimeSeriesModel):
                                             approx_grad=True, m=12,
                                             pgtol=1e-7, factr=1e3,
                                             bounds=bounds, iprint=-1)
-            start_params = self._transparams(mlefit[0])
+            start_params = mlefit[0]
+            if self.transparams:
+                start_params = self._transparams(start_params)
         return start_params
 
     def score(self, params):
@@ -742,7 +738,11 @@ class ARMA(tsbase.TimeSeriesModel):
         if dynamic:
             if self.k_exog > 0:
                 # need the last k_ar exog for the lag-polynomial
-                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
+                exog_insample = self.exog[start - k_ar:, self.k_trend:]
+                if exog is not None:
+                    exog = np.vstack((exog_insample, exog))
+                else:
+                    exog = exog_insample
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
@@ -818,7 +818,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -853,7 +853,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -890,7 +890,7 @@ class ARMA(tsbase.TimeSeriesModel):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -967,6 +967,12 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
         return ARMAResultsWrapper(armafit)
+
+    # base class of "from_formula" is "class Model(object)"
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+        raise NotImplementedError("from_formula is not supported"
+                                  " for ARMA models.")
 
 
 #NOTE: the length of endog changes when we give a difference to fit
@@ -1066,7 +1072,7 @@ class ARIMA(ARMA):
         return start, end, out_of_sample, prediction_index
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
@@ -1101,7 +1107,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -1138,7 +1144,7 @@ class ARIMA(ARMA):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1406,8 +1412,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.arroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1419,8 +1423,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.maroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1550,10 +1552,19 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
                 exog = exog[None, :]
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
+            if self.k_exog != exog.shape[1]:
+                raise ValueError('exog must contain the same number of '
+                                 'variables as in the estimated model.')
             # prepend in-sample exog observations
             if self.k_ar > 0:
                 exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
                                   exog))
+        else:
+            if self.k_exog:
+                raise ValueError('Forecast values for exog are required when '
+                                 'the model contains exogenous regressors.')
+
+
 
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
@@ -1653,15 +1664,16 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if len(stubs):  # not 0, 0
             modulus = np.abs(roots)
             data = np.column_stack((roots.real, roots.imag, modulus, freq))
-            roots_table = SimpleTable(data,
-                                      headers=['           Real',
+            roots_table = SimpleTable([('%17.4f' % row[0],
+                                        '%+17.4fj' % row[1],
+                                        '%17.4f' % row[2],
+                                        '%17.4f' % row[3]) for row in data],
+                                      headers=['            Real',
                                                '         Imaginary',
                                                '         Modulus',
                                                '        Frequency'],
                                       title="Roots",
-                                      stubs=stubs,
-                                      data_fmts=["%17.4f", "%+17.4fj",
-                                                 "%17.4f", "%17.4f"])
+                                      stubs=stubs)
 
             smry.tables.append(roots_table)
         return smry
@@ -1763,7 +1775,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         _ = _import_mpl()
         fig, ax = create_mpl_ax(ax)
 
-
         # use predict so you set dates
         forecast = self.predict(start, end, exog, dynamic)
         # doing this twice. just add a plot keyword to predict?
@@ -1775,7 +1786,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             fc_error = self._forecast_error(steps)
             conf_int = self._forecast_conf_int(forecast[-steps:], fc_error,
                                                alpha)
-
 
         if hasattr(self.data, "predict_dates"):
             from pandas import Series
@@ -1807,7 +1817,7 @@ class ARMAResultsWrapper(wrap.ResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
+wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)  # noqa:E305
 
 
 class ARIMAResults(ARMAResults):
@@ -1864,10 +1874,18 @@ class ARIMAResults(ARMAResults):
                 exog = exog[:, None]
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
+            if self.k_exog != exog.shape[1]:
+                raise ValueError('exog must contain the same number of '
+                                 'variables as in the estimated model.')
             # prepend in-sample exog observations
             if self.k_ar > 0:
                 exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
                                   exog))
+        else:
+            if self.k_exog:
+                raise ValueError('Forecast values for exog are required when '
+                                 'the model contains exogenous regressors.')
+
         forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
                                                self.k_ar, self.k_ma,
                                                self.k_trend, self.k_exog,
@@ -1932,7 +1950,7 @@ class ARIMAResults(ARMAResults):
 
 class ARIMAResultsWrapper(ARMAResultsWrapper):
     pass
-wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)
+wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)  # noqa:E305
 
 
 if __name__ == "__main__":
@@ -1954,7 +1972,7 @@ if __name__ == "__main__":
     arma22_css = ARMA(y_arma22)
     res22css = arma22_css.fit(trend='nc', order=(2, 2), method='css')
 
-    data = sm.datasets.sunspots.load()
+    data = sm.datasets.sunspots.load(as_pandas=False)
     ar = ARMA(data.endog)
     resar = ar.fit(trend='nc', order=(9, 0))
 

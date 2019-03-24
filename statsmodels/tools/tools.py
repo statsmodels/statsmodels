@@ -10,7 +10,6 @@ import pandas as pd
 
 from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -325,7 +324,7 @@ def isestimable(C, D):
     if C.shape[1] != D.shape[1]:
         raise ValueError('Contrast should have %d columns' % D.shape[1])
     new = np.vstack([C, D])
-    if np_matrix_rank(new) != np_matrix_rank(D):
+    if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(D):
         return False
     return True
 
@@ -354,24 +353,37 @@ def pinv_extended(X, rcond=1e-15):
     return res, s_orig
 
 
-def recipr(X):
+def recipr(x):
     """
     Return the reciprocal of an array, setting all entries less than or
     equal to 0 to 0. Therefore, it presumes that X should be positive in
     general.
     """
-    x = np.maximum(np.asarray(X).astype(np.float64), 0)
-    return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
+
+    x = np.asarray(x)
+    out = np.zeros_like(x, dtype=np.float64)
+    nans = np.isnan(x.flat)
+    pos = ~nans
+    pos[pos] = pos[pos] & (x.flat[pos] > 0)
+    out.flat[pos] = 1.0 / x.flat[pos]
+    out.flat[nans] = np.nan
+    return out
 
 
-def recipr0(X):
+def recipr0(x):
     """
     Return the reciprocal of an array, setting all entries equal to 0
     as 0. It does not assume that X should be positive in
     general.
     """
-    test = np.equal(np.asarray(X), 0)
-    return np.where(test, 0, 1. / X)
+    x = np.asarray(x)
+    out = np.zeros_like(x, dtype=np.float64)
+    nans = np.isnan(x.flat)
+    non_zero = ~nans
+    non_zero[non_zero] = non_zero[non_zero] & (x.flat[non_zero] != 0)
+    out.flat[non_zero] = 1.0 / x.flat[non_zero]
+    out.flat[nans] = np.nan
+    return out
 
 
 def clean0(matrix):
@@ -393,7 +405,7 @@ def fullrank(X, r=None):
     """
 
     if r is None:
-        r = np_matrix_rank(X)
+        r = np.linalg.matrix_rank(X)
 
     V, D, U = L.svd(X, full_matrices=0)
     order = np.argsort(D)

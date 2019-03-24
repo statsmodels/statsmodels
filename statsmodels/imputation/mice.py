@@ -118,7 +118,6 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 import pandas as pd
 import numpy as np
 import patsy
-import statsmodels
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
 from collections import defaultdict
@@ -198,7 +197,10 @@ class MICEData(object):
                  k_pmm=20, history_callback=None):
 
         if data.columns.dtype != np.dtype('O'):
-            raise ValueError("MICEData data column names should be string type")
+            msg = "MICEData data column names should be string type"
+            raise ValueError(msg)
+
+        self.regularized = dict()
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
@@ -210,7 +212,7 @@ class MICEData(object):
 
         # Assign the same perturbation method for all variables.
         # Can be overriden when calling 'set_imputer'.
-        self.perturbation_method = defaultdict(lambda :
+        self.perturbation_method = defaultdict(lambda:
                                                perturbation_method)
 
         # Map from variable name to indices of observed/missing
@@ -231,8 +233,8 @@ class MICEData(object):
 
         # Map from variable names to init/fit args of the conditional
         # models.
-        self.init_kwds = defaultdict(lambda : dict())
-        self.fit_kwds = defaultdict(lambda : dict())
+        self.init_kwds = defaultdict(lambda: dict())
+        self.fit_kwds = defaultdict(lambda: dict())
 
         # Map from variable names to the model class.
         self.model_class = {}
@@ -246,7 +248,7 @@ class MICEData(object):
 
         # The order in which variables are imputed in each cycle.
         # Impute variables with the fewest missing values first.
-        vnames =list(data.columns)
+        vnames = list(data.columns)
         nmiss = [len(self.ix_miss[v]) for v in vnames]
         nmiss = np.asarray(nmiss)
         ii = np.argsort(nmiss)
@@ -256,7 +258,6 @@ class MICEData(object):
         self._initial_imputation()
 
         self.k_pmm = k_pmm
-
 
     def next_sample(self):
         """
@@ -280,7 +281,6 @@ class MICEData(object):
         self.update_all(1)
         return self.data
 
-
     def _initial_imputation(self):
         """
         Use a PMM-like procedure for initial imputed values.
@@ -293,9 +293,8 @@ class MICEData(object):
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
             ix = di.idxmin()
-            imp = di.loc[ix]
+            imp = self.data[col].loc[ix]
             self.data[col].fillna(imp, inplace=True)
-
 
     def _split_indices(self, vec):
         null = pd.isnull(vec)
@@ -305,10 +304,9 @@ class MICEData(object):
             raise ValueError("variable to be imputed has no observed values")
         return ix_obs, ix_miss
 
-
     def set_imputer(self, endog_name, formula=None, model_class=None,
                     init_kwds=None, fit_kwds=None, predict_kwds=None,
-                    k_pmm=20, perturbation_method=None):
+                    k_pmm=20, perturbation_method=None, regularized=False):
         """
         Specify the imputation process for a single variable.
 
@@ -337,6 +335,11 @@ class MICEData(object):
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
+        regularized : dict
+            If regularized[name]=True, `fit_regularized` rather than
+            `fit` is called when fitting imputation models for this
+            variable.  When regularized[name]=True for any variable,
+            pertrurbation_method must be set to boot.
 
         Notes
         -----
@@ -376,7 +379,7 @@ class MICEData(object):
             self.perturbation_method[endog_name] = perturbation_method
 
         self.k_pmm = k_pmm
-
+        self.regularized[endog_name] = regularized
 
     def _store_changes(self, col, vals):
         """
@@ -392,8 +395,7 @@ class MICEData(object):
 
         ix = self.ix_miss[col]
         if len(ix) > 0:
-            self.data[col].iloc[ix] = vals
-
+            self.data[col].iloc[ix] = np.atleast_1d(vals)
 
     def update_all(self, n_iter=1):
         """
@@ -417,7 +419,6 @@ class MICEData(object):
         if self.history_callback is not None:
             hv = self.history_callback(self)
             self.history.append(hv)
-
 
     def get_split_data(self, vname):
         """
@@ -469,8 +470,8 @@ class MICEData(object):
             kwds = self.predict_kwds[vname]
             predict_miss_kwds = self._process_kwds(kwds, ixo)
 
-        return endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds
-
+        return (endog_obs, exog_obs, exog_miss, predict_obs_kwds,
+                predict_miss_kwds)
 
     def _process_kwds(self, kwds, ix):
         kwds = kwds.copy()
@@ -484,7 +485,6 @@ class MICEData(object):
                     mat = mat[:, 0]
                 kwds[k] = mat
         return kwds
-
 
     def get_fitting_data(self, vname):
         """
@@ -530,7 +530,6 @@ class MICEData(object):
         fit_kwds = self._process_kwds(self.fit_kwds[vname], ix)
 
         return endog, exog, init_kwds, fit_kwds
-
 
     def plot_missing_pattern(self, ax=None, row_order="pattern",
                              column_order="pattern",
@@ -580,7 +579,8 @@ class MICEData(object):
         elif column_order == "raw":
             ix = np.arange(len(cols))
         else:
-            raise ValueError(column_order + " is not an allowed value for `column_order`.")
+            raise ValueError(
+                column_order + " is not an allowed value for `column_order`.")
         miss = miss[:, ix]
         cols = [cols[i] for i in ix]
 
@@ -594,7 +594,8 @@ class MICEData(object):
         elif row_order == "raw":
             ix = np.arange(miss.shape[0])
         else:
-            raise ValueError(row_order + " is not an allowed value for `row_order`.")
+            raise ValueError(
+                row_order + " is not an allowed value for `row_order`.")
         miss = miss[ix, :]
 
         if hide_complete_rows:
@@ -623,7 +624,7 @@ class MICEData(object):
                       cmap='gist_ncar_r')
         else:
             cmap = LinearSegmentedColormap.from_list("_",
-                                         ["white", "darkgrey"])
+                                                     ["white", "darkgrey"])
             ax.imshow(miss, aspect="auto", interpolation="nearest",
                       cmap=cmap)
 
@@ -632,7 +633,6 @@ class MICEData(object):
         ax.set_xticklabels(cols, rotation=90)
 
         return fig
-
 
     def plot_bivariate(self, col1_name, col2_name,
                        lowess_args=None, lowess_min_n=40,
@@ -745,7 +745,6 @@ class MICEData(object):
 
         return fig
 
-
     def plot_fit_obs(self, col_name, lowess_args=None,
                      lowess_min_n=40, jitter=None,
                      plot_points=True, ax=None):
@@ -778,7 +777,6 @@ class MICEData(object):
 
         from statsmodels.graphics import utils as gutils
         from statsmodels.nonparametric.smoothers_lowess import lowess
-        import pandas as pd
 
         if lowess_args is None:
             lowess_args = {}
@@ -843,7 +841,6 @@ class MICEData(object):
 
         return fig
 
-
     def plot_imputed_hist(self, col_name, ax=None, imp_hist_args=None,
                           obs_hist_args=None, all_hist_args=None):
         """
@@ -872,7 +869,6 @@ class MICEData(object):
         """
 
         from statsmodels.graphics import utils as gutils
-        from matplotlib.colors import LinearSegmentedColormap
 
         if imp_hist_args is None:
             imp_hist_args = {}
@@ -916,20 +912,26 @@ class MICEData(object):
 
         return fig
 
-
+    # Try to identify any auxiliary arrays (e.g. status vector in
+    # PHReg) that need to be bootstrapped along with exog and endog.
     def _boot_kwds(self, kwds, rix):
 
         for k in kwds:
             v = kwds[k]
+
+            # This is only relevant for ndarrays
             if not isinstance(v, np.ndarray):
                 continue
+
+            # Handle 1d vectors
             if (v.ndim == 1) and (v.shape[0] == len(rix)):
                 kwds[k] = v[rix]
+
+            # Handle 2d arrays
             if (v.ndim == 2) and (v.shape[0] == len(rix)):
                 kwds[k] = v[rix, :]
 
         return kwds
-
 
     def _perturb_bootstrap(self, vname):
         """
@@ -948,9 +950,14 @@ class MICEData(object):
 
         klass = self.model_class[vname]
         self.models[vname] = klass(endog, exog, **init_kwds)
-        self.results[vname] = self.models[vname].fit(**fit_kwds)
-        self.params[vname] = self.results[vname].params
 
+        if vname in self.regularized and self.regularized[vname]:
+            self.results[vname] = (
+                self.models[vname].fit_regularized(**fit_kwds))
+        else:
+            self.results[vname] = self.models[vname].fit(**fit_kwds)
+
+        self.params[vname] = self.results[vname].params
 
     def _perturb_gaussian(self, vname):
         """
@@ -971,7 +978,6 @@ class MICEData(object):
         mu = self.results[vname].params
         self.params[vname] = np.random.multivariate_normal(mean=mu, cov=cov)
 
-
     def perturb_params(self, vname):
 
         if self.perturbation_method[vname] == "gaussian":
@@ -981,12 +987,10 @@ class MICEData(object):
         else:
             raise ValueError("unknown perturbation method")
 
-
     def impute(self, vname):
         # Wrap this in case we later add additional imputation
         # methods.
         self.impute_pmm(vname)
-
 
     def update(self, vname):
         """
@@ -1004,7 +1008,6 @@ class MICEData(object):
         self.perturb_params(vname)
         self.impute(vname)
 
-
     # work-around for inconsistent predict return values
     def _get_predicted(self, obj):
 
@@ -1015,8 +1018,8 @@ class MICEData(object):
         elif hasattr(obj, 'predicted_values'):
             return obj.predicted_values
         else:
-            raise ValueError("cannot obtain predicted values from %s" % obj.__class__)
-
+            raise ValueError(
+                "cannot obtain predicted values from %s" % obj.__class__)
 
     def impute_pmm(self, vname):
         """
@@ -1030,14 +1033,16 @@ class MICEData(object):
 
         k_pmm = self.k_pmm
 
-        endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds =\
-                   self.get_split_data(vname)
+        endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds = (
+            self.get_split_data(vname))
 
         # Predict imputed variable for both missing and non-missing
         # observations
         model = self.models[vname]
-        pendog_obs = model.predict(self.params[vname], exog_obs, **predict_obs_kwds)
-        pendog_miss = model.predict(self.params[vname], exog_miss, **predict_miss_kwds)
+        pendog_obs = model.predict(self.params[vname], exog_obs,
+                                   **predict_obs_kwds)
+        pendog_miss = model.predict(self.params[vname], exog_miss,
+                                    **predict_miss_kwds)
 
         pendog_obs = self._get_predicted(pendog_obs)
         pendog_miss = self._get_predicted(pendog_miss)
@@ -1054,7 +1059,7 @@ class MICEData(object):
 
         # Get the indices for the closest k_pmm values on
         # either side of the closest index.
-        ixm = ix[:, None] +  np.arange(-k_pmm, k_pmm)[None, :]
+        ixm = ix[:, None] + np.arange(-k_pmm, k_pmm)[None, :]
 
         # Account for boundary effects
         msk = np.nonzero((ixm < 0) | (ixm > len(endog_obs) - 1))
@@ -1073,8 +1078,8 @@ class MICEData(object):
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
-        ix = dxi[[jj, ir]]
-        iz = ixm[[jj, ix]]
+        ix = dxi[(jj, ir)]
+        iz = ixm[(jj, ix)]
 
         imputed_miss = np.array(endog_obs[iz]).squeeze()
         self._store_changes(vname, imputed_miss)
@@ -1115,6 +1120,7 @@ _mice_example_2 = """
 >>>     results.append(x)
 """
 
+
 class MICE(object):
 
     __doc__ = """\
@@ -1153,9 +1159,8 @@ Run all MICE steps and obtain results:
 Obtain a sequence of fitted analysis models without combining
 to obtain summary:
 %(mice_example_2)s
-    """ % {'mice_example_1' : _mice_example_1,
-           'mice_example_2' : _mice_example_2}
-
+    """ % {'mice_example_1': _mice_example_1,
+           'mice_example_2': _mice_example_2}
 
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
@@ -1168,7 +1173,6 @@ to obtain summary:
 
         self.init_kwds = init_kwds if init_kwds is not None else {}
         self.fit_kwds = fit_kwds if fit_kwds is not None else {}
-
 
     def next_sample(self):
         """
@@ -1211,7 +1215,6 @@ to obtain summary:
 
         return result
 
-
     def fit(self, n_burnin=10, n_imputations=10):
         """
         Fit a model using MICE.
@@ -1235,7 +1238,6 @@ to obtain summary:
         self.exog_names = result.model.exog_names
 
         return self.combine()
-
 
     def combine(self):
         """
@@ -1316,7 +1318,7 @@ class MICEResults(LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
 
         smry = summary2.Summary()
         float_format = "%8.3f"

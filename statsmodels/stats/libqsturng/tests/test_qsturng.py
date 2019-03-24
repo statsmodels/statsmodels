@@ -2,18 +2,21 @@
 # This software is funded in part by NIH Grant P20 RR016454.
 
 """The 'handful' tests are intended to aid refactoring. The tests with the
-@dec.slow are empirical (test within error limits) and intended to more
+@pytest.mark..slow are empirical (test within error limits) and intended to more
 extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
 
-from numpy.testing import TestCase, rand, assert_, assert_equal, \
-    assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
-    assert_approx_equal, assert_raises, run_module_suite, dec
+from numpy.testing import (
+    assert_equal,
+    assert_almost_equal, assert_array_almost_equal,
+    assert_raises)
 
 import numpy as np
+import pytest
 
-from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
+from statsmodels.stats.libqsturng import qsturng, psturng
+
 
 def read_ch(fname):
     with open(fname) as f:
@@ -21,7 +24,8 @@ def read_ch(fname):
     ps,rs,vs,qs = lzip(*[L.split(',') for L in lines])
     return lmap(float, ps), lmap(float, rs),lmap(float, vs), lmap(float, qs)
 
-class test_qsturng(TestCase):
+
+class TestQsturng(object):
     def test_scalar(self):
         # scalar input -> scalar output
         assert_almost_equal(4.43645545899562, qsturng(.9,5,6), 5)
@@ -75,8 +79,8 @@ class test_qsturng(TestCase):
 
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
-    @dec.slow
-    def t_est_all_to_tbl(self):
+    @pytest.mark.skip
+    def test_all_to_tbl(self):
         from statsmodels.stats.libqsturng.make_tbls import T,R
         ps, rs, vs, qs = [], [], [], []
         for p in T:
@@ -116,7 +120,7 @@ class test_qsturng(TestCase):
         for p,r,v,q in cases:
             assert_almost_equal(q, qsturng(p,r,v), 5)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_10000_to_ch(self):
         import os
         curdir = os.path.dirname(os.path.abspath(__file__))
@@ -128,7 +132,7 @@ class test_qsturng(TestCase):
         errors = np.abs(qs-qsturng(ps,rs,vs))/qs
         assert_equal(np.array([]), np.where(errors > .03)[0])
 
-class test_psturng(TestCase):
+class TestPsturng(object):
     def test_scalar(self):
         "scalar input -> scalar output"
         assert_almost_equal(.1, psturng(4.43645545899562,5,6), 5)
@@ -179,11 +183,11 @@ class test_psturng(TestCase):
         for p,r,v,q in cases:
             assert_almost_equal(1.-p, psturng(q,r,v), 5)
 
-    @dec.slow
-    def test_100_random_values(self):
+    @pytest.mark.slow
+    def test_100_random_values(self, reset_randomstate):
         n = 100
         ps = np.random.random(n)*(.999 - .1) + .1
-        rs = np.random.random_integers(2, 100, n)
+        rs = np.random.randint(2, 101, n)
         vs = np.random.random(n)*998. + 2.
         qs = qsturng(ps, rs, vs)
         estimates = psturng(qs, rs, vs)
@@ -194,6 +198,3 @@ class test_psturng(TestCase):
 
 ##     def test_more_exotic_stuff(self, level=3):
 ##         something_obscure_and_expensive()
-
-if __name__ == '__main__':
-    run_module_suite()

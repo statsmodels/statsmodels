@@ -120,8 +120,8 @@ where
 * :math:`\gamma` is a :math:`k_{re}`-dimensional random vector with mean 0
   and covariance matrix :math:`\Psi`; note that each group
   gets its own independent realization of gamma.
-* :math:`Q_j` is a :math: `n_i \time q_j` dimensional design matrix for the
-  :math: `j`th variance component.
+* :math:`Q_j` is a :math:`n_i \times q_j` dimensional design matrix for the
+  :math:`j^{th}` variance component.
 * :math:`\eta_j` is a :math:`q_j`-dimensional random vector containing independent
   and identically distributed values with variance :math:`\tau_j^2`.
 * :math:`\epsilon` is a :math:`n_i` dimensional vector of i.i.d normal

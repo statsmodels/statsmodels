@@ -952,7 +952,7 @@ class MVNormal(MVElliptical):
         return MVNormal(mean_new, sigma_new)
 
     def conditional(self, indices, values):
-        '''return conditional distribution
+        r'''return conditional distribution
 
         indices are the variables to keep, the complement is the conditioning
         set
@@ -1275,4 +1275,3 @@ if __name__ == '__main__':
     assert_almost_equal(mvt.pdf(cov3),
         [0.000863777424247410, 0.001277510788307594, 0.004156314279452241],
         decimal=17)
-

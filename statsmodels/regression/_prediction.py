@@ -70,7 +70,7 @@ class PredictionResults(object):
     def summary_frame(self, what='all', alpha=0.05):
         # TODO: finish and cleanup
         import pandas as pd
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = self.conf_int(alpha=alpha, obs=False)
         to_include = OrderedDict()
@@ -116,11 +116,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Returns
     -------
-    prediction_results : instance
+    prediction_results : linear_model.PredictionResults
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
-
     """
 
     ### prepare exog and row_labels, based on base Results.predict
@@ -131,9 +130,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     if exog is not None:
         if row_labels is None:
-            if hasattr(exog, 'index'):
-                row_labels = exog.index
-            else:
+            row_labels = getattr(exog, 'index', None)
+            if callable(row_labels):
                 row_labels = None
 
         exog = np.asarray(exog)

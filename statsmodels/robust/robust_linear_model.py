@@ -13,25 +13,24 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
-from statsmodels.compat.python import string_types
 import numpy as np
 import scipy.stats as stats
 
-from statsmodels.tools.decorators import (cache_readonly,
-                                                  resettable_cache)
+from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
 
 __all__ = ['RLM']
+
 
 def _check_convergence(criterion, iteration, tol, maxiter):
     return not (np.any(np.fabs(criterion[iteration] -
                 criterion[iteration-1]) > tol) and iteration < maxiter)
+
 
 class RLM(base.LikelihoodModel):
     __doc__ = """
@@ -86,7 +85,7 @@ class RLM(base.LikelihoodModel):
     Examples
     ---------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.stackloss.load()
+    >>> data = sm.datasets.stackloss.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = sm.RLM(data.endog, data.exog, \
                            M=sm.robust.norms.HuberT())
@@ -108,9 +107,9 @@ class RLM(base.LikelihoodModel):
     """ % {'params' : base._model_params_doc,
             'extra_params' : base._missing_param_doc}
 
-    def __init__(self, endog, exog, M=norms.HuberT(), missing='none',
+    def __init__(self, endog, exog, M=None, missing='none',
                  **kwargs):
-        self.M = M
+        self.M = M if M is not None else norms.HuberT()
         super(base.LikelihoodModel, self).__init__(endog, exog,
                 missing=missing, **kwargs)
         self._initialize()
@@ -127,8 +126,8 @@ class RLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
         self.df_resid = (np.float(self.exog.shape[0] -
-                         np_matrix_rank(self.exog)))
-        self.df_model = np.float(np_matrix_rank(self.exog)-1)
+                         np.linalg.matrix_rank(self.exog)))
+        self.df_model = np.float(np.linalg.matrix_rank(self.exog)-1)
         self.nobs = float(self.endog.shape[0])
 
     def score(self, params):
@@ -472,8 +471,6 @@ class RLMResults(base.LikelihoodModelResults):
         """
         This is for testing the new summary setup
         """
-        from statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
 
 ##        left = [(i, None) for i in (
 ##                        'Dependent Variable:',
@@ -606,7 +603,7 @@ if __name__=="__main__":
 ### Stack Loss Data ###
 #######################
     from statsmodels.datasets.stackloss import load
-    data = load()
+    data = load(as_pandas=False)
     data.exog = sm.add_constant(data.exog)
 #############
 ### Huber ###
@@ -670,4 +667,3 @@ if __name__=="__main__":
 #%s
 #""" % (results_ols.params, results_huber.params, results_ramsaysE.params,
 #            results_andrewWave.params, results_hampel.params)
-

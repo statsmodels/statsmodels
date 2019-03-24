@@ -6,15 +6,16 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from __future__ import division
 
 from statsmodels.compat.python import StringIO
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
-from nose import SkipTest
 
 import pandas as pd
 import patsy
+import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.discrete.discrete_model import Logit
@@ -26,7 +27,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels import datasets
 
 
-spector_data = datasets.spector.load()
+spector_data = datasets.spector.load(as_pandas=False)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 from .results import results_poisson_constrained as results
@@ -48,6 +49,7 @@ agecat	smokes	deaths	pyears
 5	0	31	1462'''
 
 data = pd.read_csv(StringIO(ss), delimiter='\t')
+data = data.astype(int)
 data['logpyears'] = np.log(data['pyears'])
 
 
@@ -100,7 +102,7 @@ class CheckPoissonConstrainedMixin(object):
             df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
     def test_other(self):
         # some results may not be valid or available for all models
@@ -118,7 +120,7 @@ class CheckPoissonConstrainedMixin(object):
                     warnings.warn(message)
 
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
@@ -174,8 +176,8 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -278,8 +280,8 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -375,8 +377,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
@@ -487,6 +489,34 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         res_wrap = fit_constrained_wrap(self.res1m.model, self.constraints_rq)
         assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
         assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
+
+
+class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)  # params sequence same as Stata
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint2_robust
+
+        mod1 = GLM(spector_data.endog, spector_data.exog,
+                   family=families.Binomial())
+
+        # not used to match Stata for HC
+        # nobs, k_params = mod1.exog.shape
+        # k_params -= 1   # one constraint
+        cov_type = 'HC0'
+        cov_kwds = {'scaling_factor': 32/31}
+        # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
+        constr = 'x1 - x3 = 0'
+        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
+                                         cov_kwds=cov_kwds, atol=1e-10)
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10,
+                                                         'cov_type': cov_type,
+                                                         'cov_kwds': cov_kwds})
+        cls.constraints_rq = (R, q)
 
 
 def junk():

@@ -1,21 +1,16 @@
-from nose import SkipTest
 from numpy.testing import assert_
+import pytest
 
 from statsmodels.tsa.x13 import _find_x12, x13_arima_select_order
 
 x13path = _find_x12()
 
-if x13path is False:
-    _have_x13 = False
-else:
-    _have_x13 = True
+pytestmark = pytest.mark.skipif(x13path is False, reason='X13/X12 not available')
+
 
 class TestX13(object):
     @classmethod
-    def setupClass(cls):
-        if not _have_x13:
-            raise SkipTest('X13/X12 not available')
-
+    def setup_class(cls):
         import pandas as pd
         from statsmodels.datasets import macrodata, co2
         dta = macrodata.load_pandas().data
@@ -33,7 +28,6 @@ class TestX13(object):
         cls.monthly_start_data = dta.resample('MS')
         if not isinstance(cls.monthly_start_data, (pd.DataFrame, pd.Series)):
             cls.monthly_start_data = cls.monthly_start_data.mean()
-
 
     def test_x13_arima_select_order(self):
         res = x13_arima_select_order(self.monthly_data)

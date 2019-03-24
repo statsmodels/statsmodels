@@ -1,21 +1,14 @@
-from statsmodels.compat.numpy import recarray_select
-from statsmodels.compat.python import (range, StringIO, urlopen,
-                                       HTTPError, URLError, lrange,
-                                       cPickle, urljoin, BytesIO, long, PY3)
-import sys
+from statsmodels.compat.python import (StringIO, urlopen, HTTPError, URLError, lrange,
+                                       cPickle, urljoin, long, PY3)
 import shutil
-from os import environ
-from os import makedirs
-from os.path import expanduser
-from os.path import exists
-from os.path import join
+from os import environ, makedirs
+from os.path import expanduser, exists, dirname, abspath, join
 
 import numpy as np
-from numpy import array
-from pandas import read_csv, DataFrame, Index
+from pandas import read_stata, read_csv, DataFrame, Series, Index
 
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
+def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
     """
     Download and return an example dataset from Stata.
 
@@ -26,12 +19,12 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     baseurl : str
         The base URL to the stata datasets.
     as_df : bool
-        If True, returns a `pandas.DataFrame`
+        Deprecated. Always returns a DataFrame
 
     Returns
     -------
-    dta : Record Array
-        A record array containing the Stata dataset.
+    dta : DataFrame
+        A DataFrame containing the Stata dataset.
 
     Examples
     --------
@@ -42,16 +35,8 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     Make sure baseurl has trailing forward slash. Doesn't do any
     error checking in response URLs.
     """
-    # lazy imports
-    from statsmodels.iolib import genfromdta
-
     url = urljoin(baseurl, data+'.dta')
-    dta = urlopen(url)
-    dta = BytesIO(dta.read())  # make it truly file-like
-    if as_df:  # could make this faster if we don't process dta twice?
-        return DataFrame.from_records(genfromdta(dta))
-    else:
-        return genfromdta(dta)
+    return read_stata(url)
 
 
 class Dataset(dict):
@@ -67,7 +52,7 @@ class Dataset(dict):
         # Some datasets have string variables. If you want a raw_data
         # attribute you must create this in the dataset's load function.
         try:  # some datasets have string variables
-            self.raw_data = self.data.view((float, len(self.names)))
+            self.raw_data = self.data.astype(float)
         except:
             pass
 
@@ -75,73 +60,35 @@ class Dataset(dict):
         return str(self.__class__)
 
 
-def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
-    names = list(data.dtype.names)
-
-    if isinstance(endog_idx, (int, long)):
-        endog = array(data[names[endog_idx]], dtype=dtype)
-        endog_name = names[endog_idx]
-        endog_idx = [endog_idx]
-    else:
-        endog_name = [names[i] for i in endog_idx]
-
-        if stack:
-            endog = np.column_stack(data[field] for field in endog_name)
-        else:
-            endog = data[endog_name]
-
-    if exog_idx is None:
-        exog_name = [names[i] for i in range(len(names))
-                     if i not in endog_idx]
-    else:
-        exog_name = [names[i] for i in exog_idx]
-
-    if stack:
-        exog = np.column_stack(data[field] for field in exog_name)
-    else:
-        exog = recarray_select(data, exog_name)
-
-    if dtype:
-        endog = endog.astype(dtype)
-        exog = exog.astype(dtype)
-
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-                      endog_name=endog_name, exog_name=exog_name)
-
-    return dataset
-
-
-def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
-                            index_idx=None):
-
-    data = DataFrame(data, dtype=dtype)
+def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     names = data.columns
 
     if isinstance(endog_idx, (int, long)):
         endog_name = names[endog_idx]
-        endog = data[endog_name]
+        endog = data[endog_name].copy()
         if exog_idx is None:
             exog = data.drop([endog_name], axis=1)
         else:
-            exog = data.filter(names[exog_idx])
+            exog = data[names[exog_idx]].copy()
     else:
-        endog = data.loc[:, endog_idx]
+        endog = data.loc[:, endog_idx].copy()
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
         elif isinstance(exog_idx, (int, long)):
-            exog = data.filter([names[exog_idx]])
+            exog = data[names[exog_idx]].copy()
         else:
-            exog = data.filter(names[exog_idx])
+            exog = data[names[exog_idx]].copy()
 
     if index_idx is not None:  # NOTE: will have to be improved for dates
-        endog.index = Index(data.iloc[:, index_idx])
-        exog.index = Index(data.iloc[:, index_idx])
+        index = Index(data.iloc[:, index_idx])
+        endog.index = index
+        exog.index = index.copy()
         data = data.set_index(names[index_idx])
 
     exog_name = list(exog.columns)
-    dataset = Dataset(data=data, names=list(names), endog=endog, exog=exog,
-                      endog_name=endog_name, exog_name=exog_name)
+    dataset = Dataset(data=data, names=list(names), endog=endog,
+                      exog=exog, endog_name=endog_name, exog_name=exog_name)
     return dataset
 
 
@@ -171,6 +118,7 @@ def _cache_it(data, cache_path):
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
+        data = data.decode('utf-8')
         open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
                                                                  protocol=2)))
     else:
@@ -209,7 +157,7 @@ def _urlopen_cached(url, cache):
 
     # not using the cache or didn't find it in cache
     if not from_cache:
-        data = urlopen(url).read()
+        data = urlopen(url, timeout=3).read()
         if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
@@ -232,7 +180,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
 def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
-    index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
+    index_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/"
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
     # Python 3
@@ -282,9 +230,9 @@ def get_rdataset(dataname, package="datasets", cache=False):
     dataset is in the cache, it's used.
     """
     # NOTE: use raw github bc html site might not be most up to date
-    data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+    data_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/csv/"+package+"/")
-    docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+    docs_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/doc/"+package+"/rst/")
     cache = _get_cache(cache)
     data, from_cache = _get_data(data_base_url, dataname, cache)
@@ -329,6 +277,7 @@ def clear_data_home(data_home=None):
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
 
+
 def check_internet(url=None):
     """Check if internet is available"""
     url = "https://github.com" if url is None else url
@@ -337,3 +286,68 @@ def check_internet(url=None):
     except URLError as err:
         return False
     return True
+
+
+def strip_column_names(df):
+    """
+    Remove leading and trailing single quotes
+
+    Parameters
+    ----------
+    df : DataFrame
+        DataFrame to process
+
+    Returns
+    -------
+    df : DataFrame
+        Dataframe with stripped column names
+
+    Notes
+    -----
+    In-place modification
+    """
+    columns = []
+    for c in df:
+        if c.startswith('\'') and c.endswith('\''):
+            c = c[1:-1]
+        elif c.startswith('\''):
+            c = c[1:]
+        elif c.endswith('\''):
+            c = c[:-1]
+        columns.append(c)
+    df.columns = columns
+    return df
+
+
+def load_csv(base_file, csv_name, sep=',', convert_float=False):
+    """Standard simple csv loader"""
+    filepath = dirname(abspath(base_file))
+    filename = join(filepath,csv_name)
+    engine = 'python' if sep != ',' else 'c'
+    float_precision = {}
+    if engine == 'c':
+        float_precision = {'float_precision': 'high'}
+    data = read_csv(filename, sep=sep, engine=engine, **float_precision)
+    if convert_float:
+        data = data.astype(float)
+    return data
+
+
+def as_numpy_dataset(ds, as_pandas=None, retain_index=False):
+    """Convert a pandas dataset to a NumPy dataset"""
+    if as_pandas:
+        return ds
+    if as_pandas is None:
+        import warnings
+        warnings.warn('load will return datasets containing pandas DataFrames and Series '
+                      'in the Future.  To suppress this message, specify as_pandas=False',
+                      FutureWarning)
+    ds.data = ds.data.to_records(index=retain_index)
+    for d in dir(ds):
+        if d.startswith('_'):
+            continue
+        attr = getattr(ds, d)
+        if isinstance(attr, (Series, DataFrame)):
+            setattr(ds, d, np.asarray(attr))
+
+    return ds

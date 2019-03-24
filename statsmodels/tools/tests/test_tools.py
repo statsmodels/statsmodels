@@ -5,17 +5,17 @@ from statsmodels.compat.python import lrange, range
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
-                           assert_almost_equal, assert_string_equal, TestCase)
-from nose.tools import (assert_true, assert_false, assert_raises)
+                           assert_almost_equal, assert_string_equal)
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
+import pytest
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
 
 
-class TestTools(TestCase):
+class TestTools(object):
 
     def test_add_constant_list(self):
         x = lrange(1,5)
@@ -34,7 +34,8 @@ class TestTools(TestCase):
         x = tools.add_constant(x, has_constant='skip')
         assert_equal(x, np.ones((5,1)))
 
-        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+        with pytest.raises(ValueError):
+            tools.add_constant(x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.ones((5, 2)))
@@ -44,7 +45,8 @@ class TestTools(TestCase):
         y = tools.add_constant(x, has_constant='skip')
         assert_equal(x, y)
 
-        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+        with pytest.raises(ValueError):
+            tools.add_constant(x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))
@@ -58,7 +60,7 @@ class TestTools(TestCase):
         y = tools.add_constant(x)
         assert_equal(y['const'],np.array([1.0,1.0,1.0]))
         for f in x.dtype.fields:
-            assert_true(y[f].dtype == x[f].dtype)
+            assert y[f].dtype == x[f].dtype
 
     def test_add_constant_series(self):
         s = pd.Series([1.0,2.0,3.0])
@@ -132,11 +134,11 @@ class TestTools(TestCase):
             X[:,0] = X[:,1] + X[:,2]
 
             Y = tools.fullrank(X)
-            self.assertEquals(Y.shape, (40,9))
+            assert_equal(Y.shape, (40,9))
 
             X[:,5] = X[:,3] + X[:,4]
             Y = tools.fullrank(X)
-            self.assertEquals(Y.shape, (40,8))
+            assert_equal(Y.shape, (40,8))
             warnings.simplefilter("ignore")
 
 
@@ -146,57 +148,60 @@ def test_estimable():
     X = rng.normal(size=(N, P))
     C = rng.normal(size=(1, P))
     isestimable = tools.isestimable
-    assert_true(isestimable(C, X))
-    assert_true(isestimable(np.eye(P), X))
+    assert isestimable(C, X)
+    assert isestimable(np.eye(P), X)
     for row in np.eye(P):
-        assert_true(isestimable(row, X))
+        assert isestimable(row, X)
     X = np.ones((40, 2))
-    assert_true(isestimable([1, 1], X))
-    assert_false(isestimable([1, 0], X))
-    assert_false(isestimable([0, 1], X))
-    assert_false(isestimable(np.eye(2), X))
+    assert isestimable([1, 1], X)
+    assert not isestimable([1, 0], X)
+    assert not isestimable([0, 1], X)
+    assert not isestimable(np.eye(2), X)
     halfX = rng.normal(size=(N, 5))
     X = np.hstack([halfX, halfX])
-    assert_false(isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X))
-    assert_false(isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X))
-    assert_true(isestimable(np.hstack([np.eye(5), np.eye(5)]), X))
+    assert not isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X)
+    assert not isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X)
+    assert isestimable(np.hstack([np.eye(5), np.eye(5)]), X)
     # Test array-like for design
     XL = X.tolist()
-    assert_true(isestimable(np.hstack([np.eye(5), np.eye(5)]), XL))
+    assert isestimable(np.hstack([np.eye(5), np.eye(5)]), XL)
     # Test ValueError for incorrect number of columns
     X = rng.normal(size=(N, 5))
     for n in range(1, 4):
-        assert_raises(ValueError, isestimable, np.ones((n,)), X)
-    assert_raises(ValueError, isestimable, np.eye(4), X)
+        with pytest.raises(ValueError):
+            isestimable(np.ones((n,)), X)
+    with pytest.raises(ValueError):
+        isestimable(np.eye(4), X)
 
 
 class TestCategoricalNumerical(object):
     #TODO: use assert_raises to check that bad inputs are taken care of
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #import string
         stringabc = 'abcdefghijklmnopqrstuvwxy'
-        self.des = np.random.randn(25,2)
-        self.instr = np.floor(np.arange(10,60, step=2)/10)
+        cls.des = np.random.randn(25,2)
+        cls.instr = np.floor(np.arange(10,60, step=2)/10)
         x=np.zeros((25,5))
         x[:5,0]=1
         x[5:10,1]=1
         x[10:15,2]=1
         x[15:20,3]=1
         x[20:25,4]=1
-        self.dummy = x
+        cls.dummy = x
         structdes = np.zeros((25,1),dtype=[('var1', 'f4'),('var2', 'f4'),
                     ('instrument','f4'),('str_instr','a10')])
-        structdes['var1'] = self.des[:,0][:,None]
-        structdes['var2'] = self.des[:,1][:,None]
-        structdes['instrument'] = self.instr[:,None]
+        structdes['var1'] = cls.des[:,0][:,None]
+        structdes['var2'] = cls.des[:,1][:,None]
+        structdes['instrument'] = cls.instr[:,None]
         string_var = [stringabc[0:5], stringabc[5:10],
                 stringabc[10:15], stringabc[15:20],
                 stringabc[20:25]]
         string_var *= 5
-        self.string_var = np.array(sorted(string_var))
-        structdes['str_instr'] = self.string_var[:,None]
-        self.structdes = structdes
-        self.recdes = structdes.view(np.recarray)
+        cls.string_var = np.array(sorted(string_var))
+        structdes['str_instr'] = cls.string_var[:,None]
+        cls.structdes = structdes
+        cls.recdes = structdes.view(np.recarray)
 
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))
@@ -466,7 +471,7 @@ def test_chain_dot():
 
 class TestNanDot(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         nan = np.nan
         cls.mx_1 = np.array([[nan, 1.], [2., 3.]])
         cls.mx_2 = np.array([[nan, nan], [2., 3.]])
@@ -534,9 +539,9 @@ class TestNanDot(object):
         expected_res = np.array([[  7.,  10.], [ 15.,  22.]])
         assert_array_equal(test_res, expected_res)
 
-class TestEnsure2d(TestCase):
+class TestEnsure2d(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         x = np.arange(400.0).reshape((100,4))
         cls.df = pd.DataFrame(x, columns = ['a','b','c','d'])
         cls.series = cls.df.iloc[:,0]

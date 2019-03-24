@@ -78,8 +78,8 @@ class Transf_gen(distributions.rv_continuous):
 
 
         self.u_args, self.u_kwargs = get_u_argskwargs(**kwargs)
-        self.kls = kls   #(self.u_args, self.u_kwargs)
-                         # possible to freeze the underlying distribution
+        self.kls = kls  #(self.u_args, self.u_kwargs)
+                        # possible to freeze the underlying distribution
 
         super(Transf_gen,self).__init__(a=a, b=b, name = name,
                                         shapes=kls.shapes,
@@ -320,8 +320,8 @@ class TransfTwo_gen(distributions.rv_continuous):
 
 
         self.u_args, self.u_kwargs = get_u_argskwargs(**kwargs)
-        self.kls = kls   #(self.u_args, self.u_kwargs)
-                         # possible to freeze the underlying distribution
+        self.kls = kls  #(self.u_args, self.u_kwargs)
+                        # possible to freeze the underlying distribution
 
         super(TransfTwo_gen,self).__init__(a=a, b=b,
                                            name = name,

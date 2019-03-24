@@ -2,6 +2,7 @@ from statsmodels.compat.python import lrange, range
 import numpy as np
 import statsmodels.tsa.vector_ar.util as util
 
+
 class MPLConfigurator(object):
 
     def __init__(self):
@@ -21,6 +22,7 @@ class MPLConfigurator(object):
 
         self._inverse_actions.append(revert)
 
+
 #-------------------------------------------------------------------------------
 # Plotting functions
 
@@ -33,12 +35,12 @@ def plot_mts(Y, names=None, index=None):
     k = Y.shape[1]
     rows, cols = k, 1
 
-    plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(10, 10))
 
     for j in range(k):
         ts = Y[:, j]
 
-        ax = plt.subplot(rows, cols, j+1)
+        ax = fig.add_subplot(rows, cols, j+1)
         if index is not None:
             ax.plot(index, ts)
         else:
@@ -46,6 +48,9 @@ def plot_mts(Y, names=None, index=None):
 
         if names is not None:
             ax.set_title(names[j])
+
+    return fig
+
 
 def plot_var_forc(prior, forc, err_upper, err_lower,
                   index=None, names=None, plot_stderr=True,
@@ -81,6 +86,7 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
         ax.legend(**legend_options)
     return fig
 
+
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
                     error_fmt='k--', alpha=0.05, stderr_type = 'asym'):
     """
@@ -110,6 +116,7 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
         if stderr_type in ('mc','sz1','sz2','sz3'):
             plot_action(error[0], error_fmt)
             plot_action(error[1], error_fmt)
+
 
 def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
                     err_bound=None):
@@ -144,6 +151,7 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
 
     return fig
 
+
 def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
     import matplotlib.pyplot as plt
 
@@ -161,8 +169,10 @@ def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
     # hack?
     ax.set_xlim([-1, xlabel[-1] + 1])
 
+
 def plot_acorr_with_error():
     pass
+
 
 def adjust_subplots(**kwds):
     import matplotlib.pyplot as plt
@@ -172,6 +182,7 @@ def adjust_subplots(**kwds):
                        hspace=0.2)
     passed_kwds.update(kwds)
     plt.subplots_adjust(**passed_kwds)
+
 
 #-------------------------------------------------------------------------------
 # Multiple impulse response (cum_effects, etc.) cplots
@@ -234,6 +245,8 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
         sz = subplot_params.get('fontsize', 12)
         ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
 
+    return fig
+
 
 def _get_irf_plot_config(names, impcol, rescol):
     nrows = ncols = k = len(names)
@@ -261,5 +274,3 @@ def _get_irf_plot_config(names, impcol, rescol):
 
 #-------------------------------------------------------------------------------
 # Forecast error variance decomposition
-
-

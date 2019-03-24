@@ -99,4 +99,3 @@ class AllPairsResults(object):
         text += '\n'.join(('%s  %6.4g' % (pairs, pv) for (pairs, pv) in
                 zip(self.all_pairs_names, self.pval_corrected())))
         return text
-

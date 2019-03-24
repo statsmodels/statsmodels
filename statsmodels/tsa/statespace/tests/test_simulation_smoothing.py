@@ -5,28 +5,18 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax, structural
-from statsmodels.tsa.statespace.tools import compatibility_mode
-from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
-from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
-    SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-
-if compatibility_mode:
-    raise SkipTest
 
 
 class MultivariateVARKnown(object):
@@ -36,7 +26,8 @@ class MultivariateVARKnown(object):
     against the simulation smoother output.
     """
     @classmethod
-    def setup_class(cls, missing=None, test_against_KFAS=True, *args, **kwargs):
+    def setup_class(cls, missing=None, test_against_KFAS=True,
+                    *args, **kwargs):
         cls.test_against_KFAS = test_against_KFAS
         # Data
         dta = datasets.macrodata.load_pandas().data
@@ -62,23 +53,25 @@ class MultivariateVARKnown(object):
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
-                                   [ 0.          ,  0.0000572802,  0.          ],
-                                   [ 0.          ,  0.          ,  0.0017088585]])
-        mod['transition'] = np.array([[-0.1119908792,  0.8441841604,  0.0238725303],
-                                      [ 0.2629347724,  0.4996718412, -0.0173023305],
-                                      [-3.2192369082,  4.1536028244,  0.4514379215]])
+        mod['obs_cov'] = np.array([
+            [0.0000640649,  0.,            0.],
+            [0.,            0.0000572802,  0.],
+            [0.,            0.,            0.0017088585]])
+        mod['transition'] = np.array([
+            [-0.1119908792,  0.8441841604,  0.0238725303],
+            [0.2629347724,   0.4996718412, -0.0173023305],
+            [-3.2192369082,  4.1536028244,  0.4514379215]])
         mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([[ 0.0000640649,  0.0000388496,  0.0002148769],
-                                     [ 0.0000388496,  0.0000572802,  0.000001555 ],
-                                     [ 0.0002148769,  0.000001555 ,  0.0017088585]])
+        mod['state_cov'] = np.array([
+            [0.0000640649,  0.0000388496,  0.0002148769],
+            [0.0000388496,  0.0000572802,  0.000001555],
+            [0.0002148769,  0.000001555,   0.0017088585]])
         mod.initialize_approximate_diffuse(1e6)
         mod.ssm.filter_univariate = True
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
 
-        if not compatibility_mode:
-            cls.sim = cls.model.simulation_smoother()
+        cls.sim = cls.model.simulation_smoother()
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), self.true_llf)
@@ -186,8 +179,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing0.csv')
+            path = os.path.join(current_path, 'results',
+                                'results_simulation_smoothing0.csv')
             true = pd.read_csv(path)
 
             assert_allclose(sim.simulated_state,
@@ -231,8 +224,10 @@ class MultivariateVARKnown(object):
         generated_model = mlemodel.MLEModel(
             generated_measurement_disturbance, k_states=self.model.k_states,
             k_posdef=self.model.ssm.k_posdef)
-        for name in ['design', 'obs_cov', 'transition', 'selection', 'state_cov']:
+        for name in ['design', 'obs_cov', 'transition',
+                     'selection', 'state_cov']:
             generated_model[name] = self.model[name]
+
         generated_model.initialize_approximate_diffuse(1e6)
         generated_model.ssm.filter_univariate = True
         generated_res = generated_model.ssm.smooth()
@@ -265,8 +260,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing1.csv')
+            path = os.path.join(current_path, 'results',
+                                'results_simulation_smoothing1.csv')
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state,
                             true[['state1', 'state2', 'state3']].T,
@@ -332,8 +327,10 @@ class MultivariateVARKnown(object):
         generated_model = mlemodel.MLEModel(
             generated_obs.T, k_states=self.model.k_states,
             k_posdef=self.model.ssm.k_posdef)
-        for name in ['design', 'obs_cov', 'transition', 'selection', 'state_cov']:
+        for name in ['design', 'obs_cov', 'transition',
+                     'selection', 'state_cov']:
             generated_model[name] = self.model[name]
+
         generated_model.initialize_approximate_diffuse(1e6)
         generated_model.ssm.filter_univariate = True
         generated_res = generated_model.ssm.smooth()
@@ -369,8 +366,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing2.csv')
+            path = os.path.join(current_path, 'results',
+                                'results_simulation_smoothing2.csv')
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state.T,
                             true[['state1', 'state2', 'state3']],
@@ -434,13 +431,12 @@ class TestDFM(TestMultivariateVARKnown):
 
     @classmethod
     def setup_class(cls, which='none', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:] * 400
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                                  freq='QS')
+        levels = dta[['realgdp', 'realcons', 'realinv']]
+        obs = np.log(levels).diff().iloc[1:] * 400
 
         if which == 'all':
             obs.iloc[:50, :] = np.nan
@@ -473,11 +469,11 @@ class TestDFM(TestMultivariateVARKnown):
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
 
-        if not compatibility_mode:
-            cls.sim = cls.model.simulation_smoother()
+        cls.sim = cls.model.simulation_smoother()
 
     def test_loglike(self):
         pass
+
 
 class MultivariateVAR(object):
     """
@@ -506,23 +502,25 @@ class MultivariateVAR(object):
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
-        mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
-                                   [ 0.          ,  0.0000572802,  0.          ],
-                                   [ 0.          ,  0.          ,  0.0017088585]])
-        mod['transition'] = np.array([[-0.1119908792,  0.8441841604,  0.0238725303],
-                                      [ 0.2629347724,  0.4996718412, -0.0173023305],
-                                      [-3.2192369082,  4.1536028244,  0.4514379215]])
+        mod['obs_cov'] = np.array([
+            [0.0000640649,  0.,            0.],
+            [0.,            0.0000572802,  0.],
+            [0.,            0.,            0.0017088585]])
+        mod['transition'] = np.array([
+            [-0.1119908792,  0.8441841604,  0.0238725303],
+            [0.2629347724,   0.4996718412, -0.0173023305],
+            [-3.2192369082,  4.1536028244,  0.4514379215]])
         mod['selection'] = np.eye(3)
-        mod['state_cov'] = np.array([[ 0.0000640649,  0.0000388496,  0.0002148769],
-                                     [ 0.0000388496,  0.0000572802,  0.000001555 ],
-                                     [ 0.0002148769,  0.000001555 ,  0.0017088585]])
+        mod['state_cov'] = np.array([
+            [0.0000640649,  0.0000388496,  0.0002148769],
+            [0.0000388496,  0.0000572802,  0.000001555],
+            [0.0002148769,  0.000001555,   0.0017088585]])
         mod.initialize_approximate_diffuse(1e6)
         mod.ssm.filter_univariate = True
         cls.model = mod
         cls.results = mod.smooth([], return_ssm=True)
 
-        if not compatibility_mode:
-            cls.sim = cls.model.simulation_smoother()
+        cls.sim = cls.model.simulation_smoother()
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), self.true_llf)
@@ -558,11 +556,11 @@ class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
         super(TestMultivariateVAR, cls).setup_class()
-        path = (current_path + os.sep +
-                'results/results_simulation_smoothing3_variates.csv')
+        path = os.path.join(current_path, 'results',
+                            'results_simulation_smoothing3_variates.csv')
         cls.variates = pd.read_csv(path).values.squeeze()
-        path = (current_path + os.sep +
-                'results/results_simulation_smoothing3.csv')
+        path = os.path.join(current_path, 'results',
+                            'results_simulation_smoothing3.csv')
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
 
@@ -623,3 +621,48 @@ def test_simulation_smoothing_obs_intercept():
     sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], 0)
+
+
+def test_simulation_smoothing_state_intercept():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True)
+    mod.initialize_known([100], [[0]])
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)
+
+
+def test_simulation_smoothing_state_intercept_diffuse():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+
+    # Test without missing values
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)
+
+    # Test with missing values
+    endog[5] = np.nan
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)

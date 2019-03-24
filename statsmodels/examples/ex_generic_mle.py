@@ -6,7 +6,7 @@ import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 
 
-data = sm.datasets.spector.load()
+data = sm.datasets.spector.load(as_pandas=False)
 data.exog = sm.add_constant(data.exog, prepend=False)
 # in this dir
 
@@ -18,12 +18,12 @@ mod = GenericLikelihoodModel(data.endog, data.exog*2, loglike, score)
 res = mod.fit(method="nm", maxiter = 500)
 
 def probitloglike(params, endog, exog):
-      """
-      Log likelihood for the probit
-      """
-      q = 2*endog - 1
-      X = exog
-      return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
+    """
+    Log likelihood for the probit
+    """
+    q = 2*endog - 1
+    X = exog
+    return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
 
 mod = GenericLikelihoodModel(data.endog, data.exog, loglike=probitloglike)
 res = mod.fit(method="nm", fargs=(data.endog,data.exog), maxiter=500)
@@ -34,8 +34,8 @@ print(res)
 
 print(res.params, probit_res.params)
 
-#datal = sm.datasets.longley.load()
-datal = sm.datasets.ccard.load()
+#datal = sm.datasets.longley.load(as_pandas=False)
+datal = sm.datasets.ccard.load(as_pandas=False)
 datal.exog = sm.add_constant(datal.exog, prepend=False)
 # Instance of GenericLikelihood model doesn't work directly, because loglike
 # cannot get access to data in self.endog, self.exog

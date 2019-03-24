@@ -128,7 +128,6 @@ class TransformRestriction(object):
         return params.dot(self.transf_mat)
 
 
-
 def transform_params_constraint(params, Sinv, R, q):
     """find the parameters that statisfy linear constraint from unconstraint
 
@@ -302,7 +301,13 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     res = self.fit(start_params=params, maxiter=0,
                    warn_convergence=False) # we get a wrapper back
     res._results.params = params
-    res._results.normalized_cov_params = cov
+    res._results.cov_params_default = cov
+    cov_type = fit_kwds.get('cov_type', 'nonrobust')
+    if cov_type == 'nonrobust':
+            res._results.normalized_cov_params = cov / res_constr.scale
+    else:
+            res._results.normalized_cov_params = None
+
     k_constr = len(q)
     res._results.df_resid += k_constr
     res._results.df_model -= k_constr

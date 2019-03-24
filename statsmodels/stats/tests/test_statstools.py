@@ -2,7 +2,7 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
+from numpy.testing import (assert_almost_equal, assert_raises, assert_equal)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
@@ -76,7 +76,7 @@ def test_omni_normtest():
     assert_almost_equal(kt, st_pv_R[:, 2], 12)
 
 
-def test_omni_normtest_axis():
+def test_omni_normtest_axis(reset_randomstate):
     #test axis of omni_normtest
     x = np.random.randn(25, 3)
     nt1 = omni_normtest(x)
@@ -157,13 +157,13 @@ def test_adnorm():
     assert_almost_equal(ad, np.column_stack(st_pv), 11)
 
 
-def test_durbin_watson_pandas():
+def test_durbin_watson_pandas(reset_randomstate):
     x = np.random.randn(50)
     x_series = pd.Series(x)
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
 
-class TestStattools(TestCase):
+class TestStattools(object):
     @classmethod
     def setup_class(cls):
         x = np.random.standard_normal(1000)
@@ -192,61 +192,65 @@ class TestStattools(TestCase):
         mc = medcouple(np.arange(5.0))
         assert_almost_equal(mc, 0)
 
-
     def test_medcouple_nonzero(self):
         mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_almost_equal(mc, -0.3333333)
 
+    def test_medcouple_int(self):
+        # GH 4243
+        mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
+        mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        assert_equal(mc1, mc2)
 
-    def test_medcouple_symmetry(self):
+    def test_medcouple_symmetry(self, reset_randomstate):
         x = np.random.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)
         assert_almost_equal(mcp + mcn, 0)
 
+    def test_medcouple_ties(self, reset_randomstate):
+        x = np.array([1, 2, 2, 3, 4])
+        mc = medcouple(x)
+        assert_almost_equal(mc, 1.0 / 6.0)
 
-    def test_durbin_watson(self):
+    def test_durbin_watson(self, reset_randomstate):
         x = np.random.standard_normal(100)
         dw = sum(np.diff(x)**2.0) / np.dot(x, x)
         assert_almost_equal(dw, durbin_watson(x))
 
-
-    def test_durbin_watson_2d(self):
+    def test_durbin_watson_2d(self, reset_randomstate):
         shape = (1, 10)
         x = np.random.standard_normal(100)
         dw = sum(np.diff(x)**2.0) / np.dot(x, x)
         x = np.tile(x[:, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x))
 
-
-    def test_durbin_watson_3d(self):
+    def test_durbin_watson_3d(self, reset_randomstate):
         shape = (10, 1, 10)
         x = np.random.standard_normal(100)
         dw = sum(np.diff(x)**2.0) / np.dot(x, x)
         x = np.tile(x[None, :, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x, axis=1))
 
-
     def test_robust_skewness_1d(self):
         x = np.arange(21.0)
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
 
-    def test_robust_skewness_1d_2d(self):
+    def test_robust_skewness_1d_2d(self, reset_randomstate):
         x = np.random.randn(21)
         y = x[:, None]
         sk_x = robust_skewness(x)
         sk_y = robust_skewness(y, axis=None)
         assert_almost_equal(np.array(sk_x), np.array(sk_y))
 
-    def test_robust_skewness_symmetric(self):
+    def test_robust_skewness_symmetric(self, reset_randomstate):
         x = np.random.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
 
-
-    def test_robust_skewness_3d(self):
+    def test_robust_skewness_3d(self, reset_randomstate):
         x = np.random.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         x = np.tile(x, (10, 10, 1))
@@ -255,7 +259,7 @@ class TestStattools(TestCase):
         for sk in sk_3d:
             assert_almost_equal(sk, result)
 
-    def test_robust_kurtosis_1d_2d(self):
+    def test_robust_kurtosis_1d_2d(self, reset_randomstate):
         x = np.random.randn(100)
         y = x[:, None]
         kr_x = np.array(robust_kurtosis(x))
@@ -272,7 +276,6 @@ class TestStattools(TestCase):
         for i, r in enumerate(self.expected_kurtosis):
             assert_almost_equal(r * np.ones((10, 10)), kurtosis[i])
 
-
     def test_robust_kurtosis_excess_false(self):
         x = self.kurtosis_x
         expected = self.expected_kurtosis + self.kurtosis_constants
@@ -280,7 +283,7 @@ class TestStattools(TestCase):
         assert_almost_equal(expected, kurtosis)
 
     def test_robust_kurtosis_ab(self):
-        """Test custom alpha, beta in kr3"""
+        # Test custom alpha, beta in kr3
         x = self.kurtosis_x
         alpha, beta = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, ab=(alpha,beta), excess=False)
@@ -289,19 +292,9 @@ class TestStattools(TestCase):
         assert_almost_equal(kurtosis[2], num/denom)
 
     def test_robust_kurtosis_dg(self):
-        """Test custom delta, gamma in kr4"""
+        # Test custom delta, gamma in kr4
         x = self.kurtosis_x
         delta, gamma = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta,gamma), excess=False)
         q = np.percentile(x,[delta, 100.0-delta, gamma, 100.0-gamma])
         assert_almost_equal(kurtosis[3], (q[1] - q[0]) / (q[3] - q[2]))
-
-
-if __name__ == "__main__":
-    import nose
-
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False) #, '--pdb'
-    # run_module_suite()
-    #nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-    #               exit=False)
-

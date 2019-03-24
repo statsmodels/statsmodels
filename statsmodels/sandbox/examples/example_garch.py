@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
 #from statsmodels.sandbox import tsa
-from statsmodels.sandbox.tsa.garch import *  # local import
+from statsmodels.sandbox.tsa.garch import Garch, garchplot, Garch0, optimize, loglikeGARCH11
 
 #dta2 = ts.tsfromtxt(r'gspc_table.csv',
 #        datecols=0, skiprows=0, delimiter=',',names=True, freq='D')
@@ -45,9 +45,9 @@ ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
 ggres0 = ggmod0.fit(start_params=start_params, maxiter=2000)
 print('ggres0.params', ggres0.params)
 
-g11res = optimize.fmin(lambda params: -loglike_GARCH11(params, ret - ret.mean())[0], [0.01, 0.1, 0.1])
+g11res = optimize.fmin(lambda params: -loglikeGARCH11(params, ret - ret.mean())[0], [0.01, 0.1, 0.1])
 print(g11res)
-llf = loglike_GARCH11(g11res, ret - ret.mean())
+llf = loglikeGARCH11(g11res, ret - ret.mean())
 print(llf[0])
 
 

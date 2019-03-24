@@ -3,7 +3,6 @@
 
 import numpy as np
 
-from statsmodels.compat.pandas import sort_values
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
@@ -12,7 +11,10 @@ def _prepare_data_corr_plot(x, lags, zero):
     zero = bool(zero)
     irregular = False if zero else True
     if lags is None:
-        lags = np.arange(not zero, len(x))
+        # GH 4663 - use a sensible default value
+        nobs = x.shape[0]
+        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs - 1)
+        lags = np.arange(not zero, lim + 1)
     elif np.isscalar(lags):
         lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag
     else:
@@ -23,19 +25,22 @@ def _prepare_data_corr_plot(x, lags, zero):
     return lags, nlags, irregular
 
 
-def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs):
+def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs):
     if irregular:
         acf_x = acf_x[lags]
         if confint is not None:
             confint = confint[lags]
 
     if use_vlines:
-        ax.vlines(lags, [0], acf_x, **kwargs)
+        ax.vlines(lags, [0], acf_x, **vlines_kwargs)
         ax.axhline(**kwargs)
 
     kwargs.setdefault('marker', 'o')
     kwargs.setdefault('markersize', 5)
-    kwargs.setdefault('linestyle', 'None')
+    if 'ls' not in kwargs:
+        # gh-2369
+        kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
     ax.set_title(title)
@@ -45,11 +50,16 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
             lags = lags[1:]
             confint = confint[1:]
             acf_x = acf_x[1:]
-        ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=.25)
+        lags = lags.astype(np.float)
+        lags[0] -= 0.5
+        lags[-1] += 0.5
+        ax.fill_between(lags, confint[:, 0] - acf_x,
+                        confint[:, 1] - acf_x, alpha=.25)
 
 
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
-             fft=False, title='Autocorrelation', zero=True, **kwargs):
+             fft=False, title='Autocorrelation', zero=True,
+             vlines_kwargs=None, **kwargs):
     """Plot the autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -83,6 +93,8 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
+    vlines_kwargs : dict, optional
+        Optional dictionary of keyword arguments that are passed to vlines.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -105,10 +117,18 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     Data are plotted as ``plot(lags, corr, **kwargs)``
 
+    kwargs is used to pass matplotlib optional arguments to both the line
+    tracing the autocorrelations and for the horizontal line at 0. These
+    options must be valid for a Line2D object.
+
+    vlines_kwargs is used to pass additional optional arguments to the
+    vertical lines connecting each autocorrelation to the axis.  These options
+    must be valid for a LineCollection object.
     """
     fig, ax = utils.create_mpl_ax(ax)
 
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
+    vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     confint = None
     # acf has different return type based on alpha
@@ -119,16 +139,17 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
                              unbiased=unbiased)
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs)
 
     return fig
 
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
-              title='Partial Autocorrelation', zero=True, **kwargs):
-    """Plot the partial autocorrelation function
-
-    Plots lags on the horizontal and the correlations on vertical axis.
+def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
+              use_vlines=True, title='Partial Autocorrelation', zero=True,
+              vlines_kwargs=None, **kwargs):
+    """
+    Plot the partial autocorrelation function
 
     Parameters
     ----------
@@ -141,20 +162,21 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
         int or Array of lag values, used on horizontal axis. Uses
         np.arange(lags) when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    alpha : scalar, optional
+    alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
-    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
-        specifies which method for the calculations to use:
+    method : {'ywunbiased', 'ywmle', 'ols'}
+        Specifies which method for the calculations to use:
 
         - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf
+          for acovf. Default.
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
@@ -164,6 +186,8 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
     zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
+    vlines_kwargs : dict, optional
+        Optional dictionary of keyword arguments that are passed to vlines.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -182,13 +206,21 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
 
     Notes
     -----
+    Plots lags on the horizontal and the correlations on vertical axis.
     Adapted from matplotlib's `xcorr`.
 
     Data are plotted as ``plot(lags, corr, **kwargs)``
 
+    kwargs is used to pass matplotlib optional arguments to both the line
+    tracing the autocorrelations and for the horizontal line at 0. These
+    options must be valid for a Line2D object.
+
+    vlines_kwargs is used to pass additional optional arguments to the
+    vertical lines connecting each autocorrelation to the axis.  These options
+    must be valid for a LineCollection object.
     """
     fig, ax = utils.create_mpl_ax(ax)
-
+    vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     confint = None
@@ -197,7 +229,8 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
     else:
         acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs)
 
     return fig
 
@@ -224,7 +257,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     start = 0
     ticks = []
     for season, df in grouped_x:
-        df = df.copy() # or sort balks for series. may be better way
+        df = df.copy()  # or sort balks for series. may be better way
         df.sort_index()
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
@@ -278,7 +311,6 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
 
     .. plot:: plots/graphics_month_plot.py
     """
-    from pandas import DataFrame
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
@@ -287,9 +319,10 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
         from pandas import Series, PeriodIndex
         x = Series(x, index=PeriodIndex(dates, freq="M"))
 
-    xticklabels = ['j','f','m','a','m','j','j','a','s','o','n','d']
-    return seasonal_plot(x.groupby(lambda y : y.month), xticklabels,
+    xticklabels = ['j', 'f', 'm', 'a', 'm', 'j', 'j', 'a', 's', 'o', 'n', 'd']
+    return seasonal_plot(x.groupby(lambda y: y.month), xticklabels,
                          ylabel=ylabel, ax=ax)
+
 
 def quarter_plot(x, dates=None, ylabel=None, ax=None):
     """
@@ -312,7 +345,6 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
     -------
     matplotlib.Figure
     """
-    from pandas import DataFrame
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
@@ -322,5 +354,5 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
         x = Series(x, index=PeriodIndex(dates, freq="Q"))
 
     xticklabels = ['q1', 'q2', 'q3', 'q4']
-    return seasonal_plot(x.groupby(lambda y : y.quarter), xticklabels,
+    return seasonal_plot(x.groupby(lambda y: y.quarter), xticklabels,
                          ylabel=ylabel, ax=ax)

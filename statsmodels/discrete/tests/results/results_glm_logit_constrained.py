@@ -701,4 +701,3 @@ results_logit_constraint2 = Bunch(
                 infocrit_rownames=infocrit_rownames,
                 **est
                 )
-

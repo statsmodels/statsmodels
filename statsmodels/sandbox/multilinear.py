@@ -11,7 +11,6 @@ multigroup:
     more significant than outside the group.
 """
 
-from statsmodels.compat.pandas import sort_values
 from statsmodels.compat.python import iteritems, string_types
 from patsy import dmatrix
 import pandas as pd
@@ -44,7 +43,7 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
 
 
 def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
-    alpha=0.05, subset=None, model_type=OLS, **kwargs):
+             alpha=0.05, subset=None, model_type=OLS, **kwargs):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
@@ -172,7 +171,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     # mangle them togheter and sort by complexive p-value
     summary = pd.DataFrame(col_results)
     # order by the p-value: the most useful model first!
-    summary = sort_values(summary.T, [('pvals', '_f_test')])
+    summary = summary.T.sort_values([('pvals', '_f_test')])
     summary.index.name = 'endogenous vars'
     # implementing the pvalue correction method
     smt = stats.multipletests
@@ -281,7 +280,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     Examples
     --------
     A toy example on a real dataset, the Guerry dataset from R
-    >>> url = "http://vincentarelbundock.github.com/"
+    >>> url = "https://raw.githubusercontent.com/vincentarelbundock/"
     >>> url = url + "Rdatasets/csv/HistData/Guerry.csv"
     >>> df = pd.read_csv(url, index_col='dept')
 
@@ -317,7 +316,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         results['_in_non'][group_name] = res[2][1]
         results['_out_sign'][group_name] = res[2][2]
         results['_out_non'][group_name] = res[2][3]
-    result_df = sort_values(pd.DataFrame(results), 'pvals')
+    result_df = pd.DataFrame(results).sort_values('pvals')
     if not keep_all:
         result_df = result_df[result_df.increase]
     smt = stats.multipletests

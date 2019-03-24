@@ -732,7 +732,7 @@ class CompareMeans(object):
 #        self.nobs2 = d2.sum_weights.astype(float)
 
     @classmethod
-    def from_data(cls, data1, data2, weights1=None, weights2=None, 
+    def from_data(cls, data1, data2, weights1=None, weights2=None,
             ddof1=0, ddof2=0):
         '''construct a CompareMeans object from data
 
@@ -750,9 +750,9 @@ class CompareMeans(object):
         Returns
         -------
         A CompareMeans instance.
-        
+
         '''
-        return cls(DescrStatsW(data1, weights=weights1, ddof=ddof1), 
+        return cls(DescrStatsW(data1, weights=weights1, ddof=ddof1),
                 DescrStatsW(data2, weights=weights2, ddof=ddof2))
 
     def summary(self, use_t=True, alpha=0.05, usevar='pooled', value=0):
@@ -782,21 +782,21 @@ class CompareMeans(object):
 
         d1 = self.d1
         d2 = self.d2
-        
+
         confint_percents = 100 - alpha * 100
-        
+
         if use_t:
             tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
             lower, upper = self.tconfint_diff(alpha=alpha, usevar=usevar)
         else:
             tstat, pvalue = self.ztest_ind(usevar=usevar, value=value)
             lower, upper = self.zconfint_diff(alpha=alpha, usevar=usevar)
-        
+
         if usevar == 'pooled':
             std_err = self.std_meandiff_pooledvar
         else:
             std_err = self.std_meandiff_separatevar
-        
+
         std_err = np.atleast_1d(std_err)
         tstat = np.atleast_1d(tstat)
         pvalue = np.atleast_1d(pvalue)
@@ -804,10 +804,10 @@ class CompareMeans(object):
         upper = np.atleast_1d(upper)
         conf_int = np.column_stack((lower, upper))
         params = np.atleast_1d(d1.mean - d2.mean - value)
-        
+
         title = 'Test for equality of means'
         yname = 'y' # not used in params_frame
-        xname = ['subset #%d'%(ii + 1) for ii in range(tstat.shape[0])]
+        xname = ['subset #%d' % (ii + 1) for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
         return summary_params((None, params, std_err, tstat, pvalue, conf_int),
@@ -1462,4 +1462,3 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp,
                 ddof=ddof)
     return np.maximum(tt1[1], tt2[1]), tt1, tt2,
-

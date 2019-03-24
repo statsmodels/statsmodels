@@ -6,17 +6,16 @@ from scipy import spatial as ssp
 from numpy.testing import assert_equal
 import matplotlib.pylab as plt
 
-def plt_closeall(n=10):
-    '''close a number of open matplotlib windows'''
-    for i in range(n): plt.close()
 
 def kernel_rbf(x,y,scale=1, **kwds):
     #scale = kwds.get('scale',1)
     dist = ssp.minkowski_distance_p(x[:,np.newaxis,:],y[np.newaxis,:,:],2)
     return np.exp(-0.5/scale*(dist))
 
+
 def kernel_euclid(x,y,p=2, **kwds):
     return ssp.minkowski_distance(x[:,np.newaxis,:],y[np.newaxis,:,:],p)
+
 
 class GaussProcess(object):
     '''class to perform kernel ridge regression (gaussian process)
@@ -206,4 +205,3 @@ if __name__ == '__main__':
     #example2(m=200, scale=0.01,stride=4)
     example1()
     #plt.show()
-    #plt_closeall()   # use this to close the open figure windows

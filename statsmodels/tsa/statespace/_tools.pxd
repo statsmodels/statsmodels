@@ -118,3 +118,28 @@ cpdef int scopy_index_vector(np.float32_t [::1, :] A, np.float32_t [::1, :] B, i
 cpdef int dcopy_index_vector(np.float64_t [::1, :] A, np.float64_t [::1, :] B, int [::1, :] index) except *
 cpdef int ccopy_index_vector(np.complex64_t [::1, :] A, np.complex64_t [::1, :] B, int [::1, :] index) except *
 cpdef int zcopy_index_vector(np.complex128_t [::1, :] A, np.complex128_t [::1, :] B, int [::1, :] index) except *
+
+cdef int _sselect_cov(int k_states, int k_posdef, int k_states_total,
+                           np.float32_t * tmp,
+                           np.float32_t * selection,
+                           np.float32_t * cov,
+                           np.float32_t * selected_cov)
+
+cdef int _dselect_cov(int k_states, int k_posdef, int k_states_total,
+                           np.float64_t * tmp,
+                           np.float64_t * selection,
+                           np.float64_t * cov,
+                           np.float64_t * selected_cov)
+
+cdef int _cselect_cov(int k_states, int k_posdef, int k_states_total,
+                           np.complex64_t * tmp,
+                           np.complex64_t * selection,
+                           np.complex64_t * cov,
+                           np.complex64_t * selected_cov)
+
+cdef int _zselect_cov(int k_states, int k_posdef, int k_states_total,
+                           np.complex128_t * tmp,
+                           np.complex128_t * selection,
+                           np.complex128_t * cov,
+                           np.complex128_t * selected_cov)
+

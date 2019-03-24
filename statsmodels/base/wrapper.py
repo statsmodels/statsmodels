@@ -2,7 +2,8 @@ import inspect
 import functools
 
 import numpy as np
-from statsmodels.compat.python import get_function_name, iteritems, getargspec
+from statsmodels.compat.python import iteritems, getargspec
+
 
 class ResultsWrapper(object):
     """
@@ -95,13 +96,17 @@ def make_wrapper(func, how):
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
 
-    argspec = getargspec(func)
-    formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
-                                      defaults=argspec[3])
+    try:  # Python 3.3+
+        sig = inspect.signature(func)
+        formatted = str(sig)
+    except AttributeError:
+        # TODO: Remove when Python 2.7 is dropped
+        argspec = getargspec(func)
+        formatted = inspect.formatargspec(argspec[0],
+                                          varargs=argspec[1],
+                                          defaults=argspec[3])
 
-    func_name = get_function_name(func)
-
-    wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
+    wrapper.__doc__ = "%s%s\n%s" % (func.__name__, formatted, wrapper.__doc__)
 
     return wrapper
 
@@ -115,10 +120,11 @@ def populate_wrapper(klass, wrapping):
         wrapper = make_wrapper(func, how)
         setattr(klass, meth, wrapper)
 
+
 if __name__ == '__main__':
     import statsmodels.api as sm
     from pandas import DataFrame
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     df = DataFrame(data.exog, columns=data.exog_name)
     y = data.endog
     # data.exog = sm.add_constant(data.exog)
@@ -129,7 +135,7 @@ if __name__ == '__main__':
     # olswrap = RegressionResultsWrapper(olsresult)
     # rlmwrap = RLMResultsWrapper(rlmresult)
 
-    data = sm.datasets.wfs.load()
+    data = sm.datasets.wfs.load(as_pandas=False)
     # get offset
     offset = np.log(data.exog[:, -1])
     exog = data.exog[:, :-1]

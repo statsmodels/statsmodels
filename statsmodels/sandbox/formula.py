@@ -8,7 +8,7 @@ namespace : dictionary
 
 
 """
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
                                 itervalues, range)
 import copy
@@ -262,7 +262,7 @@ class Factor(Term):
         Return the 'main effect' columns of a factor, choosing
         an optional reference key.
 
-	The reference key can be one of the keys of the Factor,
+        The reference key can be one of the keys of the Factor,
         or an integer, representing which column to remove.
         It defaults to 0.
 
@@ -748,7 +748,7 @@ def interactions(terms, order=[1,2]):
             # only keep combinations that have unique entries
 
             if (np.unique(I[:,m]).shape == I[:,m].shape and
-                np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
+                    np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
                 ll = [terms[j] for j in I[:,m]]
                 v = ll[0]
                 for ii in range(len(ll)-1):

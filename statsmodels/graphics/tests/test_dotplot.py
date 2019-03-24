@@ -1,27 +1,25 @@
 import numpy as np
+import pytest
+
 from statsmodels.graphics.dotplots import dot_plot
 import pandas as pd
-from numpy.testing import dec
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    else:
-        plt.close(fig)
 
-@dec.skipif(not have_matplotlib)
-def test_all():
+
+@pytest.mark.matplotlib
+def test_all(close_figures, reset_randomstate):
 
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
@@ -143,11 +141,8 @@ def test_all():
     points = np.random.normal(size=20)
     lines = np.kron(range(5), np.ones(4)).astype(np.int32)
     styles = np.kron(np.ones(5), range(4)).astype(np.int32)
-    #marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
-    #                    "ms": 7, "alpha": 0.6} for k in range(4)}
-    # python 2.6 compat, can be removed later
-    marker_props = dict((k, {"color": "rgbc"[k], "marker": "osvp"[k],
-                        "ms": 7, "alpha": 0.6}) for k in range(4))
+    marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
+                        "ms": 7, "alpha": 0.6} for k in range(4)}
     fig = dot_plot(points, lines=lines, styles=styles, ax=ax,
             marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")
@@ -418,4 +413,3 @@ def test_all():
 
     if pdf_output:
         pdf.close()
-    plt.close('all')

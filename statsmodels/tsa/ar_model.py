@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 from statsmodels.compat.python import iteritems, range, string_types, lmap, long
 
@@ -33,7 +34,7 @@ def _check_ar_start(start, k_ar, method, dynamic):
 
 
 def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
-    mu = params[:k_trend] or 0  # only have to worry about constant
+    mu = params[:k_trend] if k_trend else 0  # only have to worry constant
     arparams = params[k_trend:][::-1]  # reverse for dot
 
     # dynamic endogenous variable
@@ -210,6 +211,8 @@ class AR(tsbase.TimeSeriesModel):
         if method == 'mle':  # use Kalman Filter to get initial values
             if k_trend:
                 mu = params[0]/(1-np.sum(params[k_trend:]))
+            else:
+                mu = 0
 
             # modifies predictedvalues in place
             if start < k_ar:
@@ -584,7 +587,7 @@ class AR(tsbase.TimeSeriesModel):
         #elif method == "yw":
         #    params, omega = yule_walker(endog, order=maxlag,
         #            method="mle", demean=False)
-           # how to handle inference after Yule-Walker?
+        #    # how to handle inference after Yule-Walker?
         #    self.params = params #TODO: don't attach here
         #    self.omega = omega
 
@@ -632,7 +635,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         initial values are computed via the Kalman Filter if the model is
         fit by `mle`.
     fpe : float
-        Final prediction error using Lutkepohl's definition
+        Final prediction error using Lütkepohl's definition
         ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
     hqic : float
         Hannan-Quinn Information Criterion.
@@ -823,12 +826,12 @@ class ARResultsWrapper(wrap.ResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(ARResultsWrapper, ARResults)
+wrap.populate_wrapper(ARResultsWrapper, ARResults)  # noqa:E305
 
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    sunspots = sm.datasets.sunspots.load()
+    sunspots = sm.datasets.sunspots.load(as_pandas=False)
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
     res_ols = ar_ols.fit(maxlag=9)

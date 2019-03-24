@@ -80,4 +80,3 @@ ax.plot(kde3.support, kde3.icdf);
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
 ax.plot(kde3.support, kde3.sf);
-

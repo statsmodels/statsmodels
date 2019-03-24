@@ -247,16 +247,12 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         stackd = 0.
 
     # Map from style code to its integer position
-    #style_codes_map = {x: style_codes.index(x) for x in style_codes}
-    # python 2.6 compat version:
-    style_codes_map = dict((x, style_codes.index(x)) for x in style_codes)
+    style_codes_map = {x: style_codes.index(x) for x in style_codes}
 
     # Setup default marker styles
     colors = ["r", "g", "b", "y", "k", "purple", "orange"]
     if marker_props is None:
-        #marker_props = {x: {} for x in style_codes}
-        # python 2.6 compat version:
-        marker_props = dict((x, {}) for x in style_codes)
+        marker_props = {x: {} for x in style_codes}
     for j in range(nval):
         sc = style_codes[j]
         if "color" not in marker_props[sc]:
@@ -268,9 +264,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # Setup default line styles
     if line_props is None:
-        #line_props = {x: {} for x in style_codes}
-        # python 2.6 compat version:
-        line_props = dict((x, {}) for x in style_codes)
+        line_props = {x: {} for x in style_codes}
     for j in range(nval):
         sc = style_codes[j]
         if "color" not in line_props[sc]:

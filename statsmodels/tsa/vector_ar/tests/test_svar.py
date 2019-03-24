@@ -13,9 +13,10 @@ DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
+
 class TestSVAR(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         mdata = sm.datasets.macrodata.load_pandas().data
         mdata = mdata[['realgdp','realcons','realinv']]
         data = mdata.values
@@ -28,20 +29,16 @@ class TestSVAR(object):
         from .results import results_svar_st
         cls.res2 = results_svar_st.results_svar1_small
 
-
     def _reformat(self, x):
         return x[[1, 4, 7, 2, 5, 8, 3, 6, 9, 0], :].ravel("F")
 
-
     def test_A(self):
         assert_almost_equal(self.res1.A, self.res2.A, DECIMAL_4)
-
 
     def test_B(self):
         # see issue #3148, adding np.abs to make solution positive
         # general case will need positive sqrt of covariance matrix
         assert_almost_equal(np.abs(self.res1.B), self.res2.B, DECIMAL_4)
-
 
     def test_basic(self):
         res1 = self.res1
@@ -49,7 +46,6 @@ class TestSVAR(object):
         assert_allclose(self._reformat(res1.params), res2.b_var, atol=1e-12)
         bse_st = np.sqrt(np.diag(res2.V_var))
         assert_allclose(self._reformat(res1.bse), bse_st, atol=1e-12)
-
 
     def test_llf_ic(self):
         res1 = self.res1

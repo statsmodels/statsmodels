@@ -40,7 +40,6 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -52,11 +51,12 @@ import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 # need import in module instead of lazily to copy `__doc__`
+from statsmodels.regression._prediction import PredictionResults
 from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
 
-__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
+__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR', 'PredictionResults']
 
 
 _fit_regularized_doc =\
@@ -66,7 +66,7 @@ _fit_regularized_doc =\
         Parameters
         ----------
         method : string
-            Only the 'elastic_net' approach is currently implemented.
+            'elastic_net' and 'sqrt_lasso' are currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -105,10 +105,8 @@ _fit_regularized_doc =\
 
         Notes
         -----
-
-        The elastic net approach closely follows that implemented in
-        the glmnet package in R.  The penalty is a combination of L1
-        and L2 penalties.
+        The elastic net uses a combination of L1 and L2 penalties.
+        The implementation closely follows the glmnet package in R.
 
         The function that is minimized is:
 
@@ -135,11 +133,32 @@ _fit_regularized_doc =\
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
+        The square root lasso approach is a variation of the Lasso
+        that is largely self-tuning (the optimal tuning parameter
+        does not depend on the standard deviation of the regression
+        errors).  If the errors are Gaussian, the tuning parameter
+        can be taken to be
+
+        alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
+
+        where n is the sample size and p is the number of predictors.
+
+        The square root lasso uses the following keyword arguments:
+
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+
         References
         ----------
         Friedman, Hastie, Tibshirani (2008).  Regularization paths for
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
+
+        A Belloni, V Chernozhukov, L Wang (2011).  Square-root Lasso:
+        pivotal recovery of sparse signals via conic programming.
+        Biometrika 98(4), 791-806.
+        https://arxiv.org/pdf/1009.5689.pdf
         """
 
 
@@ -164,8 +183,7 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
-
+        cholsigmainv = np.linalg.cholesky(np.linalg.inv(sigma)).T
     return sigma, cholsigmainv
 
 
@@ -197,7 +215,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -214,7 +232,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -276,7 +294,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = np_matrix_rank(np.diag(singular_values))
+                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -291,13 +309,15 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np_matrix_rank(R)
+                self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
+        else:
+            raise ValueError('method has to be "pinv" or "qr"')
 
         if self._df_model is None:
             self._df_model = float(self.rank - self.k_constant)
@@ -435,7 +455,7 @@ class GLS(RegressionModel):
     --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.longley.load()
+    >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
     >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
@@ -962,19 +982,28 @@ class OLS(WLS):
                         refit=False, **kwargs):
         # Docstring attached below
 
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method not in ("elastic_net", "sqrt_lasso"):
+            msg = "Unkown method '%s' for fit_regularized" % method
+            raise ValueError(msg)
+
+        # Set default parameters.
+        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
+                    "zero_tol": 1e-8}
+        kwargs.update(defaults)
+
+        if method == "sqrt_lasso":
+            from statsmodels.base.elastic_net import (
+                RegularizedResults, RegularizedResultsWrapper
+            )
+            params = self._sqrt_lasso(alpha, refit, kwargs["zero_tol"])
+            results = RegularizedResults(self, params)
+            return RegularizedResultsWrapper(results)
+
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if L1_wt == 0:
             return self._fit_ridge(alpha)
-
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-
-        # Set default parameters.
-        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
-                    "zero_tol": 1e-10}
-        defaults.update(kwargs)
 
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
@@ -1000,6 +1029,51 @@ class OLS(WLS):
                               **defaults)
 
     fit_regularized.__doc__ = _fit_regularized_doc
+
+    def _sqrt_lasso(self, alpha, refit, zero_tol):
+
+        try:
+            import cvxopt
+        except ImportError:
+            msg = "sqrt_lasso fitting requires the cvxopt module to be installed"
+            raise ValueError(msg)
+
+        n = len(self.endog)
+        p = self.exog.shape[1]
+
+        h0 = cvxopt.matrix(0., (2*p+1, 1))
+        h1 = cvxopt.matrix(0., (n+1, 1))
+        h1[1:, 0] = cvxopt.matrix(self.endog, (n, 1))
+
+        G0 = cvxopt.spmatrix([], [], [], (2*p+1, 2*p+1))
+        for i in range(1, 2*p+1):
+            G0[i, i] = -1
+        G1 = cvxopt.matrix(0., (n+1, 2*p+1))
+        G1[0, 0] = -1
+        G1[1:, 1:p+1] = self.exog
+        G1[1:, p+1:] = -self.exog
+
+        c = cvxopt.matrix(alpha / n, (2*p + 1, 1))
+        c[0] = 1 / np.sqrt(n)
+
+        from cvxopt import solvers
+        solvers.options["show_progress"] = False
+
+        rslt = solvers.socp(c, Gl=G0, hl=h0, Gq=[G1], hq=[h1])
+        x = np.asarray(rslt['x']).flat
+        bp = x[1:p+1]
+        bn = x[p+1:]
+        params = bp - bn
+
+        if not refit:
+            return params
+
+        ii = np.flatnonzero(np.abs(params) > zero_tol)
+        rfr = OLS(self.endog, self.exog[:, ii]).fit()
+        params *= 0
+        params[ii] = rfr.params
+
+        return params
 
     def _fit_ridge(self, alpha):
         """
@@ -1242,7 +1316,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.datasets.sunspots import load
-    >>> data = load()
+    >>> data = load(as_pandas=False)
     >>> rho, sigma = sm.regression.yule_walker(data.endog,
     ...                                        order=4, method="mle")
 
@@ -1283,6 +1357,52 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq)
 
 
+def burg(endog, order=1, demean=True):
+    """
+    Burg's AP(p) parameter estimator
+
+    Parameters
+    ----------
+    endog : array-like
+        The endogenous variable
+    order : int, optional
+        Order of the AR.  Default is 1.
+    demean : bool, optional
+        Flag indicating to subtract the mean from endog before estimation
+
+    Returns
+    -------
+    rho : ndarray
+        AR(p) coefficients computed using Burg's algorithm
+    sigma2 : float
+        Estimate of the residual variance
+
+    Notes
+    -----
+    AR model estimated includes a constant estimated using the sample mean.
+    This value is not reported.
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    # Avoid circular imports
+    from statsmodels.tsa.stattools import levinson_durbin_pacf, pacf_burg
+
+    endog = np.squeeze(np.asarray(endog))
+    if endog.ndim != 1:
+        raise ValueError('endog must be 1-d or squeezable to 1-d.')
+    order = int(order)
+    if order < 1:
+        raise ValueError('order must be an integer larger than 1')
+    if demean:
+        endog = endog - endog.mean()
+    pacf, sigma = pacf_burg(endog, order, demean=demean)
+    ar, _ = levinson_durbin_pacf(pacf)
+    return ar, sigma[-1]
+
+
 class RegressionResults(base.LikelihoodModelResults):
     r"""
     This class summarizes the fit of a linear regression model.
@@ -1318,7 +1438,7 @@ class RegressionResults(base.LikelihoodModelResults):
     cov_type
         Parameter covariance estimator used for standard errors and t-stats
     df_model
-        Model degress of freedom. The number of regressors `p`. Does not
+        Model degrees of freedom. The number of regressors `p`. Does not
         include the constant if one is present
     df_resid
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
@@ -1334,7 +1454,7 @@ class RegressionResults(base.LikelihoodModelResults):
     f_pvalue
         p-value of the F-statistic
     fittedvalues
-        The predicted the values for the original (unwhitened) design.
+        The predicted values for the original (unwhitened) design.
     het_scale
         adjusted squared residuals for heteroscedasticity robust standard
         errors. Is only available after `HC#_se` or `cov_HC#` is called.
@@ -1447,7 +1567,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 'covariance matrix of the errors is correctly ' +
                 'specified.'}
             if use_t is None:
-                self.use_t = True  # TODO: class default
+                use_t = True  # TODO: class default
+            self.use_t = use_t
         else:
             if cov_kwds is None:
                 cov_kwds = {}
@@ -1518,10 +1639,19 @@ class RegressionResults(base.LikelihoodModelResults):
     def centered_tss(self):
         model = self.model
         weights = getattr(model, 'weights', None)
+        sigma = getattr(model, 'sigma', None)
         if weights is not None:
-            return np.sum(weights * (
-                model.endog - np.average(model.endog, weights=weights))**2)
-        else:  # this is probably broken for GLS
+            mean = np.average(model.endog, weights=weights)
+            return np.sum(weights * (model.endog - mean)**2)
+        elif sigma is not None:
+            # Exactly matches WLS when sigma is diagonal
+            iota = np.ones_like(model.endog)
+            iota = model.whiten(iota)
+            mean = model.wendog.dot(iota) / iota.dot(iota)
+            err = model.endog - mean
+            err = model.whiten(err)
+            return np.sum(err**2)
+        else:
             centered_endog = model.wendog - model.wendog.mean()
             return np.dot(centered_endog, centered_endog)
 
@@ -2047,7 +2177,9 @@ class RegressionResults(base.LikelihoodModelResults):
         - 'HAC' and keywords
 
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` bool (optional) : If true, use small sample
                   correction
 
@@ -2076,7 +2208,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
             - `time` array_like (required) : index of time periods
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
                   If False the the sandwich covariance is calulated without
                   small sample correction.
@@ -2101,7 +2235,9 @@ class RegressionResults(base.LikelihoodModelResults):
               `groups` : indicator for groups
               `time` : index of time periods
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
                   If False the sandwich covariance is calculated without
                   small sample correction.
@@ -2116,7 +2252,6 @@ class RegressionResults(base.LikelihoodModelResults):
         TODO: Currently there is no check for extra or misspelled keywords,
         except in the case of cov_type `HCx`
         """
-
         import statsmodels.stats.sandwich_covariance as sw
 
         # normalize names
@@ -2126,6 +2261,8 @@ class RegressionResults(base.LikelihoodModelResults):
             cov_type = 'hac-groupsum'
         if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
+        if 'weights_func' in kwds and not callable(kwds['weights_func']):
+            kwds['weights_func'] = sw.kernel_dict[kwds['weights_func']]
 
         # TODO: make separate function that returns a robust cov plus info
         use_self = kwds.pop('use_self', False)
@@ -2366,8 +2503,9 @@ class RegressionResults(base.LikelihoodModelResults):
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
-        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
-                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+        rsquared_type = '' if self.k_constant else ' (uncentered)'
+        top_right = [('R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared]),
+                     ('Adj. R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue]),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
                      ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
@@ -2482,7 +2620,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  omni_normtest,
                                                  durbin_watson)
 
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)
@@ -2556,7 +2694,8 @@ class OLSResults(RegressionResults):
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
 
-    def outlier_test(self, method='bonf', alpha=.05):
+    def outlier_test(self, method='bonf', alpha=.05, labels=None,
+                 order=False, cutoff=None):
         """
         Test observations for outliers according to method
 
@@ -2576,6 +2715,16 @@ class OLSResults(RegressionResults):
             See `statsmodels.stats.multitest.multipletests` for details.
         alpha : float
             familywise error rate
+        labels : None or array_like
+            If `labels` is not None, then it will be used as index to the
+            returned pandas DataFrame. See also Returns below
+        order : bool
+            Whether or not to order the results by the absolute value of the
+            studentized residuals. If labels are provided they will also be sorted.
+        cutoff : None or float in [0, 1]
+            If cutoff is not None, then the return only includes observations with
+            multiple testing corrected p-values strictly below the cutoff. The
+            returned array or dataframe can be empty if t
 
         Returns
         -------
@@ -2591,7 +2740,8 @@ class OLSResults(RegressionResults):
         df = df_resid - 1.
         """
         from statsmodels.stats.outliers_influence import outlier_test
-        return outlier_test(self, method, alpha)
+        return outlier_test(self, method, alpha, labels=labels,
+                            order=order, cutoff=cutoff)
 
     def el_test(self, b0_vals, param_nums, return_weights=0,
                 ret_params=0, method='nm',
@@ -2639,7 +2789,7 @@ class OLSResults(RegressionResults):
         Examples
         --------
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.stackloss.load()
+        >>> data = sm.datasets.stackloss.load(as_pandas=False)
         >>> endog = data.endog
         >>> exog = sm.add_constant(data.exog)
         >>> model = sm.OLS(endog, exog)
@@ -2803,7 +2953,7 @@ wrap.populate_wrapper(RegressionResultsWrapper,
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     data.exog = add_constant(data.exog, prepend=False)
     ols_results = OLS(data.endog, data.exog).fit()  # results
     gls_results = GLS(data.endog, data.exog).fit()  # results

@@ -1,16 +1,19 @@
+import itertools
 import os
+
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
                            assert_equal, assert_)
 import pandas as pd
+import pytest
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
 
 # All the R results
-from . import survival_r_results
-from . import survival_enet_r_results
+from .results import survival_r_results
+from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.
@@ -26,6 +29,7 @@ survival_r_results module.
 
 # Arguments passed to the PHReg fit method.
 args = {"method": "bfgs", "disp": 0}
+
 
 def get_results(n, p, ext, ties):
     if ext is None:
@@ -47,7 +51,8 @@ def get_results(n, p, ext, ties):
 class TestPHReg(object):
 
     # Load a data file from the results directory
-    def load_file(self, fname):
+    @staticmethod
+    def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         data = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
                              delimiter=" ")
@@ -58,12 +63,12 @@ class TestPHReg(object):
 
         return time, status, entry, exog
 
-
     # Run a single test against R output
-    def do1(self, fname, ties, entry_f, strata_f):
+    @staticmethod
+    def do1(fname, ties, entry_f, strata_f):
 
         # Read the test data.
-        time, status, entry, exog = self.load_file(fname)
+        time, status, entry, exog = TestPHReg.load_file(fname)
         n = len(time)
 
         vs = fname.split("_")
@@ -105,23 +110,6 @@ class TestPHReg(object):
 
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
-
-
-    # Run all the tests
-    def test_r(self):
-
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fnames = os.listdir(rdir)
-        fnames = [x for x in fnames if x.startswith("survival")
-                  and x.endswith(".csv")]
-
-        for fname in fnames:
-            for ties in "breslow","efron":
-                for entry_f in False,True:
-                    for strata_f in False,True:
-                        yield (self.do1, fname, ties, entry_f,
-                               strata_f)
 
     def test_missing(self):
 
@@ -201,7 +189,7 @@ class TestPHReg(object):
         result1 = model1.fit()
 
         from patsy import dmatrix
-        dfp = dmatrix(model1.data.design_info.builder, df)
+        dfp = dmatrix(model1.data.design_info, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
@@ -406,15 +394,23 @@ class TestPHReg(object):
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                from numpy.testing import assert_equal
                 llf_r = plf(params)
                 llf_sm = plf(sm_result.params)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-if  __name__=="__main__":
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+rdir = os.path.join(cur_dir, 'results')
+fnames = os.listdir(rdir)
+fnames = [x for x in fnames if x.startswith("survival")
+          and x.endswith(".csv")]
 
-    import nose
+ties = ("breslow", "efron")
+entry_f = (False, True)
+strata_f = (False, True)
 
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
+
+@pytest.mark.parametrize('fname,ties,entry_f,strata_f',
+                         list(itertools.product(fnames, ties, entry_f, strata_f)))
+def test_r(fname, ties, entry_f, strata_f):
+    TestPHReg.do1(fname, ties, entry_f, strata_f)

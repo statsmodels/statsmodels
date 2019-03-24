@@ -46,5 +46,3 @@ for i in range(K.shape[0]):
     print("Actual expectations under the fitted model:")
     print("\tsum_{i}p_{i} =", np.sum(p))
     print("\tE[X]  = " + str(np.sum(p*np.arange(1,7))))
-
-

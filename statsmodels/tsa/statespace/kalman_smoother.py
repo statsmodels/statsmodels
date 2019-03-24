@@ -142,33 +142,30 @@ class KalmanSmoother(KalmanFilter):
             self._initialize_filter(prefix, **kwargs)
         )
 
-        if self._compatibility_mode:
-            create_smoother = None
+        # Determine if we need to (re-)create the smoother
+        # (definitely need to recreate if we recreated the filter)
+        create_smoother = (create_filter or
+                           prefix not in self._kalman_smoothers)
+        if not create_smoother:
+            kalman_smoother = self._kalman_smoothers[prefix]
+
+            create_smoother = (kalman_smoother.kfilter is not
+                               self._kalman_filters[prefix])
+
+        # If the dtype-specific _kalman_smoother does not exist (or if we
+        # need to re-create it), create it
+        if create_smoother:
+            # Setup the smoother
+            cls = self.prefix_kalman_smoother_map[prefix]
+            self._kalman_smoothers[prefix] = cls(
+                self._statespaces[prefix], self._kalman_filters[prefix],
+                smoother_output, smooth_method
+            )
+        # Otherwise, update the smoother parameters
         else:
-            # Determine if we need to (re-)create the smoother
-            # (definitely need to recreate if we recreated the filter)
-            create_smoother = (create_filter or
-                               prefix not in self._kalman_smoothers)
-            if not create_smoother:
-                kalman_smoother = self._kalman_smoothers[prefix]
-
-                create_smoother = (kalman_smoother.kfilter is not
-                                   self._kalman_filters[prefix])
-
-            # If the dtype-specific _kalman_smoother does not exist (or if we
-            # need to re-create it), create it
-            if create_smoother:
-                # Setup the smoother
-                cls = self.prefix_kalman_smoother_map[prefix]
-                self._kalman_smoothers[prefix] = cls(
-                    self._statespaces[prefix], self._kalman_filters[prefix],
-                    smoother_output, smooth_method
-                )
-            # Otherwise, update the smoother parameters
-            else:
-                self._kalman_smoothers[prefix].set_smoother_output(
-                    smoother_output, False)
-                self._kalman_smoothers[prefix].set_smooth_method(smooth_method)
+            self._kalman_smoothers[prefix].set_smoother_output(
+                smoother_output, False)
+            self._kalman_smoothers[prefix].set_smooth_method(smooth_method)
 
         return prefix, dtype, create_smoother, create_filter, create_statespace
 
@@ -332,11 +329,6 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if self._compatibility_mode and self.smooth_method not in [0, 1]:
-            raise NotImplementedError('Only conventional Kalman filtering'
-                                      ' is available. Consider updating'
-                                      ' dependencies for more options.')
-
     def _smooth(self, smoother_output=None, smooth_method=None, prefix=None,
                 complex_step=False, results=None, **kwargs):
         # Initialize the smoother
@@ -352,17 +344,7 @@ class KalmanSmoother(KalmanFilter):
                              ' running `_smooth`.')
 
         # Get the appropriate smoother
-        if self._compatibility_mode:
-            # Create the results object if not provided
-            if results is None:
-                results = self.results_class(self)
-                results.update_representation(self)
-                results.update_filter(self._kalman_filters[prefix])
-
-            cls = self.prefix_kalman_smoother_map[prefix]
-            smoother = cls(self, results, smoother_output)
-        else:
-            smoother = self._kalman_smoothers[prefix]
+        smoother = self._kalman_smoothers[prefix]
 
         # Run the smoother
         smoother()
@@ -370,7 +352,8 @@ class KalmanSmoother(KalmanFilter):
         return smoother
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
-               run_filter=True, prefix=None, complex_step=False, **kwargs):
+               run_filter=True, prefix=None, complex_step=False,
+               **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
 
@@ -395,6 +378,7 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
+
         # Run the filter
         kfilter = self._filter(**kwargs)
 
@@ -639,8 +623,7 @@ class SmootherResults(FilterResults):
                 if name in ['smoothing_error',
                             'smoothed_measurement_disturbance']:
                     vector = getattr(smoother, name, None)
-                    if (not self._compatibility_mode and vector is not None and
-                            has_missing):
+                    if vector is not None and has_missing:
                         vector = np.array(reorder_missing_vector(
                             vector, self.missing, prefix=self.prefix))
                     else:
@@ -648,8 +631,7 @@ class SmootherResults(FilterResults):
                     setattr(self, name, vector)
                 elif name == 'smoothed_measurement_disturbance_cov':
                     matrix = getattr(smoother, name, None)
-                    if (not self._compatibility_mode and matrix is not None and
-                            has_missing):
+                    if matrix is not None and has_missing:
                         matrix = reorder_missing_matrix(
                             matrix, self.missing, reorder_rows=True,
                             reorder_cols=True, prefix=self.prefix)
@@ -668,20 +650,27 @@ class SmootherResults(FilterResults):
             else:
                 setattr(self, name, None)
 
+        # Diffuse objects
+        self.scaled_smoothed_diffuse_estimator = None
+        self.scaled_smoothed_diffuse1_estimator_cov = None
+        self.scaled_smoothed_diffuse2_estimator_cov = None
+        if self.nobs_diffuse > 0:
+            self.scaled_smoothed_diffuse_estimator = np.array(
+                smoother.scaled_smoothed_diffuse_estimator, copy=True)
+            self.scaled_smoothed_diffuse1_estimator_cov = np.array(
+                smoother.scaled_smoothed_diffuse1_estimator_cov, copy=True)
+            self.scaled_smoothed_diffuse2_estimator_cov = np.array(
+                smoother.scaled_smoothed_diffuse2_estimator_cov, copy=True)
+
         # Adjustments
 
         # For r_t (and similarly for N_t), what was calculated was
         # r_T, ..., r_{-1}. We only want r_0, ..., r_T
         # so exclude the appropriate element so that the time index is
         # consistent with the other returned output
-        if not self._compatibility_mode:
-            # r_t stored such that scaled_smoothed_estimator[0] == r_{-1}
-            start = 1
-            end = None
-        else:
-            # r_t was stored such that scaled_smoothed_estimator[-1] == r_{-1}
-            start = None
-            end = -1
+        # r_t stored such that scaled_smoothed_estimator[0] == r_{-1}
+        start = 1
+        end = None
         if 'scaled_smoothed_estimator' in attributes:
             self.scaled_smoothed_estimator = (
                 self.scaled_smoothed_estimator[:, start:end]
@@ -695,6 +684,18 @@ class SmootherResults(FilterResults):
         self._smoothed_forecasts = None
         self._smoothed_forecasts_error = None
         self._smoothed_forecasts_error_cov = None
+
+        # Note: if we concentrated out the scale, need to adjust the
+        # loglikelihood values and all of the covariance matrices and the
+        # values that depend on the covariance matrices
+        if self.filter_concentrated and self.model._scale is None:
+            self.smoothed_state_cov *= self.scale
+            self.smoothed_state_autocov *= self.scale
+            self.smoothed_state_disturbance_cov *= self.scale
+            self.smoothed_measurement_disturbance_cov *= self.scale
+            self.scaled_smoothed_estimator /= self.scale
+            self.scaled_smoothed_estimator_cov /= self.scale
+            self.smoothing_error /= self.scale
 
     def _get_smoothed_forecasts(self):
         if self._smoothed_forecasts is None:

@@ -6,15 +6,18 @@ Author: Josef Perktold
 
 """
 import os
+import warnings
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-dta = np.genfromtxt(open(os.path.join(current_path, "Matlab_results",
-                                      "test_coint.csv"), "rb"))
+dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")
+with open(dta_path, "rb") as fd:
+    dta = np.genfromtxt(fd)
 
 
 class CheckCointJoh(object):
@@ -32,6 +35,7 @@ class CheckCointJoh(object):
         table2 = np.column_stack((self.res.lr2, self.res.cvm))
         assert_almost_equal(table2,
                             self.res2_m.reshape(table2.shape, order='F'))
+
 
 class TestCointJoh12(CheckCointJoh):
 
@@ -71,7 +75,6 @@ class TestCointJoh12(CheckCointJoh):
 
         cls.eig_m = np.array([0.3586376068088151, 0.2812806889719111, 0.2074818815675726,  0.141259991767926, 0.09880133062878599, 0.08704563854307619,  0.048471840356709, 0.01919823444066367])
 
-
     def test_evec(self):
         for col in range(self.evec_m.shape[1]):
             try:
@@ -85,7 +88,6 @@ class TestCointJoh12(CheckCointJoh):
         assert_almost_equal(self.res.eig, self.eig_m)
 
 
-
 class TestCointJoh09(CheckCointJoh):
 
     @classmethod
@@ -96,6 +98,7 @@ class TestCointJoh09(CheckCointJoh):
         cls.res1_m = np.array([307.6888935095814,  205.3839229398245,  129.1330243009336,   83.3101865760208,  52.51955460357912,  30.20027050520502,  13.84158157562689, 0.4117390188204866,           153.6341,           120.3673,             91.109,            65.8202,            44.4929,            27.0669,            13.4294,             2.7055,            159.529,           125.6185,            95.7542,            69.8189,            47.8545,            29.7961,            15.4943,             3.8415,           171.0905,           135.9825,           104.9637,            77.8202,            54.6815,            35.4628,            19.9349,             6.6349])
         #r2 = [res.lr2 res.cvm]
         cls.res2_m = np.array([102.3049705697569,  76.25089863889085,  45.82283772491284,   30.7906319724417,  22.31928409837409,  16.35868892957814,   13.4298425568064, 0.4117390188204866,            49.2855,            43.2947,            37.2786,            31.2379,            25.1236,            18.8928,            12.2971,             2.7055,            52.3622,            46.2299,            40.0763,            33.8777,            27.5858,            21.1314,            14.2639,             3.8415,            58.6634,            52.3069,            45.8662,            39.3693,            32.7172,             25.865,              18.52,             6.6349])
+
 
 class TestCointJohMin18(CheckCointJoh):
 
@@ -112,7 +115,9 @@ class TestCointJoh25(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        cls.res = coint_johansen(dta, 2, 5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=HypothesisTestWarning)
+            cls.res = coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
 
         #Note: critical values not available if trend>1
@@ -120,7 +125,3 @@ class TestCointJoh25(CheckCointJoh):
         cls.res1_m[cls.res1_m == 0] = np.nan
         cls.res2_m = np.array([98.50171676072955,  63.82567289491584,  37.03709641353485,  26.19872213966024,  18.88199744409963,  11.56469646930594,  9.890168084263012,  4.288656185006764,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  0])
         cls.res2_m[cls.res2_m == 0] = np.nan
-
-if __name__ == '__main__':
-    pass
-    #import nose

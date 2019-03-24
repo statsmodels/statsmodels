@@ -17,7 +17,7 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 from statsmodels.datasets.stackloss import load
-data = load()   # class attributes for subclasses
+data = load(as_pandas=False)   # class attributes for subclasses
 data.exog = sm.add_constant(data.exog, prepend=False)
 
 decimal_standarderrors = DECIMAL_1

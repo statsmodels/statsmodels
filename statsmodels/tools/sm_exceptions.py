@@ -11,6 +11,8 @@ warning_name_doc that services as a generic message to use when the warning is
 raised.
 """
 
+import warnings
+
 # Errors
 class PerfectSeparationError(Exception):
     pass
@@ -46,8 +48,11 @@ The module {0} is not available. Cannot run in parallel.
 """
 
 
+class ModelWarning(UserWarning):
+    pass
 
-class ConvergenceWarning(UserWarning):
+
+class ConvergenceWarning(ModelWarning):
     pass
 
 
@@ -56,11 +61,11 @@ Failed to converge on a solution.
 """
 
 
-class CacheWriteWarning(UserWarning):
+class CacheWriteWarning(ModelWarning):
     pass
 
 
-class IterationLimitWarning(UserWarning):
+class IterationLimitWarning(ModelWarning):
     pass
 
 
@@ -69,53 +74,55 @@ Maximum iteration reached.
 """
 
 
-class InvalidTestWarning(UserWarning):
+class InvalidTestWarning(ModelWarning):
     pass
 
 
-class NotImplementedWarning(UserWarning):
+class NotImplementedWarning(ModelWarning):
     pass
 
 
-class OutputWarning(UserWarning):
+class OutputWarning(ModelWarning):
     pass
 
 
-class DomainWarning(UserWarning):
+class DomainWarning(ModelWarning):
     pass
 
 
-class ValueWarning(UserWarning):
+class ValueWarning(ModelWarning):
     pass
 
 
-class EstimationWarning(UserWarning):
+class EstimationWarning(ModelWarning):
     pass
 
 
-class SingularMatrixWarning(UserWarning):
+class SingularMatrixWarning(ModelWarning):
     pass
 
 
-class HypothesisTestWarning(UserWarning):
+class HypothesisTestWarning(ModelWarning):
     pass
 
 
-class InterpolationWarning(UserWarning):
+class InterpolationWarning(ModelWarning):
     pass
 
 
-class PrecisionWarning(UserWarning):
+class PrecisionWarning(ModelWarning):
     pass
 
 
-class SpecificationWarning(UserWarning):
+class SpecificationWarning(ModelWarning):
     pass
 
 
-class HessianInversionWarning(UserWarning):
+class HessianInversionWarning(ModelWarning):
     pass
 
 
-class ColinearityWarning(UserWarning):
+class CollinearityWarning(ModelWarning):
     pass
+
+warnings.simplefilter('always', category=ModelWarning)

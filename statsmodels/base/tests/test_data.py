@@ -5,10 +5,15 @@ import pandas.util.testing as ptesting
 
 from statsmodels.base import data as sm_data
 from statsmodels.formula import handle_formula_data
+from statsmodels.regression.linear_model import OLS
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod import families
+from statsmodels.discrete.discrete_model import Logit
+
 
 #class TestDates(object):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        nrows = 10
 #        cls.dates_result = cls.dates_results = np.random.random(nrows)
 #
@@ -16,9 +21,10 @@ from statsmodels.formula import handle_formula_data
 #        np.testing.assert_equal(data.wrap_output(self.dates_input, 'dates'),
 #                                self.dates_result)
 
+
 class TestArrays(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10)
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -63,8 +69,8 @@ class TestArrays(object):
 
 class TestArrays2dEndog(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestArrays2dEndog, cls).setupClass()
+    def setup_class(cls):
+        super(TestArrays2dEndog, cls).setup_class()
         cls.endog = np.random.random((10,1))
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -77,8 +83,8 @@ class TestArrays2dEndog(TestArrays):
 
 class TestArrays1dExog(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestArrays1dExog, cls).setupClass()
+    def setup_class(cls):
+        super(TestArrays1dExog, cls).setup_class()
         cls.endog = np.random.random(10)
         exog =  np.random.random(10)
         cls.data = sm_data.handle_data(cls.endog, exog)
@@ -93,7 +99,7 @@ class TestArrays1dExog(TestArrays):
 
 class TestDataFrames(TestArrays):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
         exog =  pandas.DataFrame(np.random.random((10,2)),
                                  columns=['x_1','x_2'])
@@ -139,8 +145,8 @@ class TestDataFrames(TestArrays):
 
 class TestLists(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestLists, cls).setupClass()
+    def setup_class(cls):
+        super(TestLists, cls).setup_class()
         cls.endog = np.random.random(10).tolist()
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))].tolist()
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -148,8 +154,8 @@ class TestLists(TestArrays):
 
 class TestRecarrays(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestRecarrays, cls).setupClass()
+    def setup_class(cls):
+        super(TestRecarrays, cls).setup_class()
         cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
         exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
@@ -167,8 +173,8 @@ class TestRecarrays(TestArrays):
 
 class TestStructarrays(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestStructarrays, cls).setupClass()
+    def setup_class(cls):
+        super(TestStructarrays, cls).setup_class()
         cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
         exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
@@ -186,7 +192,7 @@ class TestStructarrays(TestArrays):
 
 class TestListDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10).tolist()
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -221,7 +227,7 @@ class TestListDataFrame(TestDataFrames):
 
 class TestDataFrameList(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -256,7 +262,7 @@ class TestDataFrameList(TestDataFrames):
 
 class TestArrayDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10)
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -291,7 +297,7 @@ class TestArrayDataFrame(TestDataFrames):
 
 class TestDataFrameArray(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -326,7 +332,7 @@ class TestDataFrameArray(TestDataFrames):
 
 class TestSeriesDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.Series(np.random.random(10), name='y_1')
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -357,7 +363,7 @@ class TestSeriesDataFrame(TestDataFrames):
 
 class TestSeriesSeries(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.Series(np.random.random(10), name='y_1')
 
         exog =  pandas.Series(np.random.random(10), name='x_1')
@@ -387,6 +393,7 @@ class TestSeriesSeries(TestDataFrames):
         np.testing.assert_equal(self.data.endog, self.endog.values.squeeze())
         np.testing.assert_equal(self.data.exog, self.exog.values[:,None])
 
+
 def test_alignment():
     #Fix Issue #206
     from statsmodels.regression.linear_model import OLS
@@ -408,9 +415,10 @@ def test_alignment():
     # which index do we get??
     np.testing.assert_raises(ValueError, OLS, *(endog, exog))
 
+
 class TestMultipleEqsArrays(TestArrays):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random((10,4))
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -445,7 +453,7 @@ class TestMultipleEqsArrays(TestArrays):
 
 class TestMultipleEqsDataFrames(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = endog = pandas.DataFrame(np.random.random((10,4)),
                                      columns=['y_1', 'y_2', 'y_3', 'y_4'])
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -494,9 +502,10 @@ class TestMultipleEqsDataFrames(TestDataFrames):
                                                  'columns_eq'),
                                 self.col_eq_result)
 
+
 class TestMissingArray(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         X = np.random.random((25,4))
         y = np.random.random(25)
         y[10] = np.nan
@@ -560,9 +569,10 @@ class TestMissingArray(object):
         weights = weights[idx]
         np.testing.assert_array_equal(data.weights, weights)
 
+
 class TestMissingPandas(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         X = np.random.random((25,4))
         y = np.random.random(25)
         y[10] = np.nan
@@ -624,7 +634,7 @@ class TestMissingPandas(object):
 
 class TestConstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from statsmodels.datasets.longley import load_pandas
         cls.data = load_pandas()
 
@@ -730,11 +740,11 @@ class CheckHasConstant(object):
             fit_kwds = getattr(self, 'fit_kwds', {})
             try:
                 res = mod.fit(**fit_kwds)
+            except np.linalg.LinAlgError:
+                pass
+            else:
                 assert_equal(res.model.k_constant, result[0])
                 assert_equal(res.model.data.k_constant, result[0])
-            except:
-                pass
-
 
     @classmethod
     def setup_class(cls):
@@ -770,34 +780,36 @@ class CheckHasConstant(object):
         cls.exogs = (x1, x2, x3, x4, x5, x5b, x5c, x6, x7)
         cls.results = (result1, result2, result3, result4, result5, result5b,
                        result5c, result6, result7)
+        cls._initialize()
 
 
 class TestHasConstantOLS(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.regression.linear_model import OLS
-        self.mod = OLS
-        self.y = self.y_c
+    @classmethod
+    def _initialize(cls):
+
+        cls.mod = OLS
+        cls.y = cls.y_c
 
 
 class TestHasConstantGLM(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.genmod.generalized_linear_model import GLM
-        from statsmodels.genmod import families
-        self.mod = lambda y, x : GLM(y, x, family=families.Binomial())
-        self.y = self.y_bin
+    @staticmethod
+    def mod(y, x):
+        return GLM(y, x, family=families.Binomial())
+
+    @classmethod
+    def _initialize(cls):
+        cls.y = cls.y_bin
+
 
 class TestHasConstantLogit(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.discrete.discrete_model import Logit
-        self.mod = Logit
-        self.y = self.y_bin
-        self.fit_kwds = {'disp': False}
+    @classmethod
+    def _initialize(cls):
+        cls.mod = Logit
+        cls.y = cls.y_bin
+        cls.fit_kwds = {'disp': False}
 
 
 def test_dtype_object():
@@ -886,8 +898,15 @@ def test_formula_missing_extra_arrays():
     assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)
 
 
-if __name__ == "__main__":
-    import nose
-    #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
-    #        exit=False)
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+def test_raise_nonfinite_exog():
+    # we raise now in the has constant check before hitting the linear algebra
+    from statsmodels.regression.linear_model import OLS
+    from statsmodels.tools.sm_exceptions import MissingDataError
+    x = np.arange(10)[:,None]**([0., 1.])
+    # random numbers for y
+    y = np.array([-0.6, -0.1, 0., -0.7, -0.5, 0.5, 0.1, -0.8, -2., 1.1])
+
+    x[1, 1] = np.inf
+    assert_raises(MissingDataError, OLS, y, x)
+    x[1, 1] = np.nan
+    assert_raises(MissingDataError, OLS, y, x)

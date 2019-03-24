@@ -284,7 +284,7 @@ class OneWayLS(object):
         return '\n'.join(txt), summarytable
 
 
-    def print_summary(res):
+    def print_summary(self, res):
         '''printable string of summary
 
         '''
@@ -335,7 +335,7 @@ standard dev', np.sqrt(res.sigmabygroup)
 
         from statsmodels.iolib import SimpleTable
         resvals = {}
-        resvals['tab'] = str(SimpleTable([(['%r'%(row[0],)]
+        resvals['tab'] = str(SimpleTable([(['%r' % (row[0],)]
                             + list(row[1])
                             + ['*']*(row[1][1]>0.5).item() ) for row in summtable],
                           headers=['pair', 'F-statistic','p-value','df_denom',
@@ -379,4 +379,3 @@ standard dev', np.sqrt(res.sigmabygroup)
         lrpval = stats.chi2.sf(lrstat, lrdf)
 
         return lrstat, lrpval, lrdf
-

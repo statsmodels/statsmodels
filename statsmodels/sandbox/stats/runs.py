@@ -22,7 +22,7 @@ TODO
 from __future__ import print_function
 import numpy as np
 from scipy import stats
-from scipy.misc import comb
+from scipy.special import comb
 import warnings
 
 class Runs(object):
@@ -632,4 +632,3 @@ if __name__ == '__main__':
     print(TotalRunsProb(7,9).cdf(11))
     print(median_test_ksample(np.random.randn(100), np.random.randint(0,2,100)))
     print(cochrans_q(np.random.randint(0,2,(100,8))))
-

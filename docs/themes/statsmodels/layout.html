@@ -8,10 +8,31 @@
 {% block extrahead %}
 <link rel="stylesheet" href="{{ pathto('_static/examples.css', 1) }}" type="text/css" />
 <link rel="stylesheet" href="{{ pathto('_static/facebox.css', 1) }}" type="text/css" />
-<script type="text/javascript" src="{{pathto('_static/scripts.js', 1) }}">
+<script type="text/javascript" src="{{ pathto('_static/scripts.js', 1) }}">
 </script>
-<script type="text/javascript" src="{{pathto('_static/facebox.js', 1) }}">
+<script type="text/javascript" src="{{ pathto('_static/facebox.js', 1) }}">
 </script>
+<script type="text/javascript">
+$.facebox.settings.closeImage = "{{ pathto('_static/closelabel.png', 1) }}"
+$.facebox.settings.loadingImage = "{{ pathto('_static/loading.gif', 1) }}"
+</script>
+
+<script>
+$(document).ready(function() {
+  $.getJSON("{{ pathto('../versions.json', 1) }}", function(data) {
+    $(".header").prepend(`
+    <div class="dropdown">
+      <button class="dropbtn">Other Versions</button>
+      <div class="dropdown-content">
+      </div>
+    </div>`)
+    for (var i = 0; i < data.length; i++) {
+      $(".dropdown-content").append("<a href=\"{{ pathto('../', 1) }}" + data[i] + "/index.html\">" + data[i] + "</a>")
+    };
+  });
+});
+</script>
+
 {% endblock %}
 {% set reldelim1 = ' |' %}
 

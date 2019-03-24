@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-from scipy.misc import factorial
+from statsmodels.compat.scipy import factorial
 from scipy.stats import rv_continuous
 import scipy.special as special
 
@@ -144,12 +144,12 @@ class ExpandedNormal(rv_continuous):
 
     References
     ----------
-    .. [1] E.A. Cornish and R.A. Fisher, Moments and cumulants in the
+    .. [*] E.A. Cornish and R.A. Fisher, Moments and cumulants in the
          specification of distributions, Revue de l'Institut Internat.
          de Statistique. 5: 307 (1938), reprinted in
          R.A. Fisher, Contributions to Mathematical Statistics. Wiley, 1950.
-    .. [2] http://en.wikipedia.org/wiki/Edgeworth_series
-    .. [3] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
+    .. [*] http://en.wikipedia.org/wiki/Edgeworth_series
+    .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
 
     """
@@ -163,7 +163,7 @@ class ExpandedNormal(rv_continuous):
         else:
             self._herm_cdf = lambda x: 0.
 
-        # warn if pdf(x) < 0 for some values of x within 4 sigma 
+        # warn if pdf(x) < 0 for some values of x within 4 sigma
         r = np.real_if_close(self._herm_pdf.roots())
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
@@ -210,4 +210,3 @@ class ExpandedNormal(rv_continuous):
 if __name__ == "__main__":
     cum =[1, 1, 1, 1]
     en = ExpandedNormal(cum)
-

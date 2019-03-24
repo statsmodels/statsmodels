@@ -265,6 +265,7 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
         raise NotImplementedError
     nobs = np.sum(freq)
     lnnobsfact = special.gammaln(nobs+1)
+
     def nloglike(params):
         '''negative loglikelihood function of binned data
 
@@ -315,6 +316,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         weights = np.ones(len(freq))
     freqnormed = freq/float(nobs)
     # skip turning weights into matrix diag(freq/float(nobs))
+
     def gmmobjective(params):
         '''negative loglikelihood function of binned data
 

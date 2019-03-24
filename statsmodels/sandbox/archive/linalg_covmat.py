@@ -1,7 +1,7 @@
 from __future__ import print_function
 import math
 import numpy as np
-from scipy import linalg, stats
+from scipy import linalg, stats, special
 
 from .linalg_decomp_1 import tiny2zero
 
@@ -21,13 +21,13 @@ class StandardNormal(object):
     def rvs(self, size):
         return np.random.standard_normal(size)
     def pdf(self, x):
-        return exp(-x**2 * 0.5) / sqrt2pi
+        return np.exp(-x**2 * 0.5) / sqrt2pi
     def logpdf(self, x):
         return -x**2 * 0.5 - logsqrt2pi
     def _cdf(self, x):
         return special.ndtr(x)
     def _logcdf(self, x):
-        return log(special.ndtr(x))
+        return np.log(special.ndtr(x))
     def _ppf(self, q):
         return special.ndtri(q)
 
@@ -77,15 +77,6 @@ class AffineTransform(object):
 
 from .linalg_decomp_1 import SvdArray, OneTimeProperty
 
-class MultivariateNormal(object):
-    '''multivariate normal distribution with plain linalg
-
-    '''
-
-    def __init__(mean, sigma):
-        self.mean = mean
-        self.sigma = sigma
-        self.sigmainv = sigmainv
 
 class MultivariateNormalChol(object):
     '''multivariate normal distribution with cholesky decomposition of sigma

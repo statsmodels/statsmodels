@@ -33,9 +33,11 @@ structure is within statsmodels.tsa is
    and exact maximum likelihood and conditional least-squares
  - arima_model : univariate ARMA process, estimation with conditional
    and exact maximum likelihood and conditional least-squares
- - vector_ar, var : vector autoregressive process (VAR) estimation models,
-   impulse response analysis, forecast error variance decompositions, and data
-   visualization tools
+ - statespace : Comprehensive statespace model specification and estimation. See
+   the :ref:`statespace documentation <statespace>`.
+ - vector_ar, var : vector autoregressive process (VAR) and vector error correction
+   models, estimation, impulse response analysis, forecast error variance decompositions,
+   and data visualization tools. See the :ref:`vector_ar documentation <var>`.
  - kalmanf : estimation classes for ARMA and other models with exact MLE using
    Kalman Filter
  - arma_process : properties of arma processes with given parameters, this
@@ -110,6 +112,9 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 
 .. currentmodule:: statsmodels.tsa
 
+The basic ARIMA model and results classes that should be the starting point for
+for most users are:
+
 .. autosummary::
    :toctree: generated/
 
@@ -117,68 +122,34 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
    arima_model.ARMAResults
    arima_model.ARIMA
    arima_model.ARIMAResults
+
+Some advanced underlying low-level classes and functions that can be used to
+compute the log-likelihood function for ARMA-type models include (note that
+these are rarely needed by end-users):
+
+.. autosummary::
+   :toctree: generated/
+
    kalmanf.kalmanfilter.KalmanFilter
+   innovations.arma_innovations.arma_loglike
+   innovations.arma_innovations.arma_loglikeobs
+   innovations.arma_innovations.arma_score
+   innovations.arma_innovations.arma_scoreobs
 
-Vector Autogressive Processes (VAR)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: statsmodels.tsa
-
-.. autosummary::
-   :toctree: generated/
-
-   vector_ar.var_model.VAR
-   vector_ar.var_model.VARResults
-   vector_ar.dynamic.DynamicVAR
-
-.. seealso:: tutorial :ref:`VAR documentation <var>`
+Exponential Smoothing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
 
-Vector Autogressive Processes (VAR)
-"""""""""""""""""""""""""""""""""""
-
-Besides estimation, several process properties and additional results after
-estimation are available for vector autoregressive processes.
-
 .. autosummary::
    :toctree: generated/
 
-   vector_ar.var_model.LagOrderResults
-   vector_ar.var_model.VAR
-   vector_ar.var_model.VARProcess
-   vector_ar.var_model.VARResults
-   vector_ar.irf.IRAnalysis
-   vector_ar.var_model.FEVD
-   vector_ar.hypothesis_test_results.HypothesisTestResults
-   vector_ar.hypothesis_test_results.CausalityTestResults
-   vector_ar.hypothesis_test_results.NormalityTestResults
-   vector_ar.hypothesis_test_results.WhitenessTestResults
-   vector_ar.dynamic.DynamicVAR
+   holtwinters.ExponentialSmoothing
+   holtwinters.SimpleExpSmoothing
+   holtwinters.Holt
+   holtwinters.HoltWintersResults
 
-.. seealso:: tutorial :ref:`VAR documentation <var>`
-
-Vector Error Correction Models (VECM)
-"""""""""""""""""""""""""""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   vector_ar.vecm.select_order
-   vector_ar.vecm.select_coint_rank
-   vector_ar.vecm.CointRankResults
-   vector_ar.vecm.VECM
-   vector_ar.vecm.VECMResults
-   vector_ar.vecm.coint_johansen
-
-Regime switching models
-"""""""""""""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   regime_switching.markov_regression.MarkovRegression
-   regime_switching.markov_autoregression.MarkovAutoregression
 
 ARMA Process
 """"""""""""
@@ -214,6 +185,25 @@ process for given lag-polynomials.
    sandbox.tsa.fftarma.ArmaFft
 
 .. currentmodule:: statsmodels.tsa
+
+Statespace Models
+"""""""""""""""""
+See the :ref:`statespace documentation. <statespace>`.
+
+
+Vector ARs and Vector Error Correction Models
+"""""""""""""""""""""""""""""""""""""""""""""
+See the :ref:`vector_ar documentation. <var>`.
+
+Regime switching models
+"""""""""""""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   regime_switching.markov_regression.MarkovRegression
+   regime_switching.markov_autoregression.MarkovAutoregression
+
 
 Time Series Filters
 """""""""""""""""""

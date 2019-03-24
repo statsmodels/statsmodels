@@ -30,14 +30,14 @@ def _show_versions_only():
     except:
         pass
     try:
-        from statsmodels import version
+        import statsmodels
         has_sm = True
     except ImportError:
         has_sm = False
 
     print('\nStatsmodels\n===========\n')
     if has_sm:
-        print('Installed: %s' % safe_version(version, 'full_version'))
+        print('Installed: %s' % safe_version(statsmodels))
     else:
         print('Not installed')
 
@@ -92,6 +92,12 @@ def _show_versions_only():
     except ImportError:
         print("cvxopt: Not installed")
 
+    try:
+        import joblib
+        print("joblib: %s " % (safe_version(joblib)))
+    except ImportError:
+        print("joblib: Not installed")
+
     print("\nDeveloper Tools\n================\n")
 
     try:
@@ -118,10 +124,10 @@ def _show_versions_only():
         print("    pygments: Not installed")
 
     try:
-        import nose
-        print("nose: %s" % safe_version(nose))
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
     except ImportError:
-        print("nose: Not installed")
+        print("pytest: Not installed")
 
     try:
         import virtualenv
@@ -150,14 +156,13 @@ def show_versions(show_dirs=True):
 
     try:
         import statsmodels
-        from statsmodels import version
         has_sm = True
     except ImportError:
         has_sm = False
 
     print('\nStatsmodels\n===========\n')
     if has_sm:
-        print('Installed: %s (%s)' % (safe_version(version, 'full_version'),
+        print('Installed: %s (%s)' % (safe_version(statsmodels),
                                       dirname(statsmodels.__file__)))
     else:
         print('Not installed')
@@ -223,6 +228,13 @@ def show_versions(show_dirs=True):
     except ImportError:
         print("cvxopt: Not installed")
 
+    try:
+        import joblib
+        print("joblib: %s (%s)" % (safe_version(joblib),
+                                   dirname(joblib.__file__)))
+    except ImportError:
+        print("joblib: Not installed")
+
     print("\nDeveloper Tools\n================\n")
 
     try:
@@ -253,10 +265,10 @@ def show_versions(show_dirs=True):
         print("    pygments: Not installed")
 
     try:
-        import nose
-        print("nose: %s (%s)" % (safe_version(nose), dirname(nose.__file__)))
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
     except ImportError:
-        print("nose: Not installed")
+        print("pytest: Not installed")
 
     try:
         import virtualenv

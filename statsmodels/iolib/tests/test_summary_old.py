@@ -5,7 +5,7 @@ def _est_regression_summary():
     #little luck getting this test to pass (It should?), can be used for
     #visual testing of the regression.summary table
     #fixed, might fail at minute changes
-    from statsmodels.regression.tests.test_regression  import TestOLS
+    from statsmodels.regression.tests.test_regression import TestOLS
     #from test_regression import TestOLS
     import time
     from string import Template
@@ -46,7 +46,7 @@ def _est_regression_summary():
              XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
     desired = str(desired)
     aregression = TestOLS()
-    TestOLS.setupClass()
+    TestOLS.setup_class()
     results = aregression.res1
     # be quiet!
     original_filters = warnings.filters[:] # copy original
@@ -73,8 +73,3 @@ def _est_regression_summary():
 #            print c1,c2
 #            counter += 1
     np.testing.assert_(actual == desired)
-
-
-if __name__ == '__main__':
-    test_regression_summary()
-

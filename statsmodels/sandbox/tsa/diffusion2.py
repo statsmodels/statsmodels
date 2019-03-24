@@ -500,6 +500,3 @@ if __name__ == '__main__':
     plt.title('CIRSubordinatedBrownian')
 
     #plt.show()
-
-
-

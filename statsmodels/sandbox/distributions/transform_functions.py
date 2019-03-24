@@ -187,5 +187,3 @@ if __name__ == '__main__':
     print(chainf.func(3.))
     chainf2 = ChainFunc(BoxCoxNonzeroFunc(2), AffineFunc(1,2))
     print(chainf.func(3.))
-
-

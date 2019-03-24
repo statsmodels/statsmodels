@@ -55,8 +55,7 @@ This generic form encapsulates many of the most popular linear time series
 models (see below) and is very flexible, allowing estimation with missing
 observations, forecasting, impulse response functions, and much more.
 
-Example: AR(2) model
-^^^^^^^^^^^^^^^^^^^^
+**Example: AR(2) model**
 
 An autoregressive model is a good introductory example to putting models in
 state space form. Recall that an AR(2) model is often written as:
@@ -432,6 +431,7 @@ additional prediction or forecasting results, including confidence intervals.
 
    kalman_filter.KalmanFilter
    kalman_filter.FilterResults
+   kalman_filter.PredictionResults
 
 The `KalmanSmoother` class is a subclass of `KalmanFilter` that provides
 smoothing capabilities. Once the state space representation matrices have been

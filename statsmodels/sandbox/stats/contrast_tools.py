@@ -170,8 +170,8 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
 def dummy_1d(x, varname=None):
     '''dummy variable for id integer groups
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     x : ndarray, 1d
         categorical variable, requires integers if varname is None
     varname : string
@@ -388,8 +388,8 @@ class DummyTransform(object):
 
         should be (x, z) in arguments ?
         '''
-        self.transf_matrix = np.linalg.lstsq(d1, d2)[0]
-        self.invtransf_matrix = np.linalg.lstsq(d2, d1)[0]
+        self.transf_matrix = np.linalg.lstsq(d1, d2, rcond=-1)[0]
+        self.invtransf_matrix = np.linalg.lstsq(d2, d1, rcond=-1)[0]
 
     def dot_left(self, a):
         ''' b = C a
@@ -639,7 +639,7 @@ if __name__ == '__main__':
 
     y = np.arange(12)
     x1 = np.arange(12)//4
-    x2 = np.arange(12)//2%2
+    x2 = np.arange(12)//2 % 2
 
     if 'small' in examples:
         d1, d1_labels = dummy_1d(x1)
@@ -684,8 +684,8 @@ if __name__ == '__main__':
     params_df_df = resols_dropf_dropf.params
 
 
-    tr_of = np.linalg.lstsq(dd_dropf, dd_full)[0]
-    tr_fo = np.linalg.lstsq(dd_full, dd_dropf)[0]
+    tr_of = np.linalg.lstsq(dd_dropf, dd_full, rcond=-1)[0]
+    tr_fo = np.linalg.lstsq(dd_full, dd_dropf, rcond=-1)[0]
     print(np.dot(tr_fo, params_df_df) - params_df_f)
     print(np.dot(tr_of, params_f_f) - params_f_df)
 

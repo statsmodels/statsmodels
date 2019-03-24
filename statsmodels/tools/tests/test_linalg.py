@@ -3,6 +3,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from scipy.linalg import toeplitz
 
+
 def test_stationary_solve_1d():
     b = np.random.uniform(size=10)
     r = np.random.uniform(size=9)

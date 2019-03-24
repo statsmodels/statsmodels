@@ -11,6 +11,7 @@ from ._utils import _maybe_get_pandas_wrapper
 # number between  0 and 1, where 1 corresponds to the Nyquist frequency, p
 # radians per sample.
 
+
 #NOTE: uses a loop, could probably be sped-up for very large datasets
 def cffilter(X, low=6, high=32, drift=True):
     """
@@ -99,10 +100,10 @@ def cffilter(X, low=6, high=32, drift=True):
 
     return cycle, trend
 
+
 if __name__ == "__main__":
     import statsmodels as sm
-    dta = sm.datasets.macrodata.load().data[['infl','tbilrate']].view((float,2))[1:]
+    dta = sm.datasets.macrodata.load(as_pandas=False).data[['infl','tbilrate']].view((float,2))[1:]
     cycle, trend = cffilter(dta, 6, 32, drift=True)
-    dta = sm.datasets.macrodata.load().data['tbilrate'][1:]
+    dta = sm.datasets.macrodata.load(as_pandas=False).data['tbilrate'][1:]
     cycle2, trend2 = cffilter(dta, 6, 32, drift=True)
-

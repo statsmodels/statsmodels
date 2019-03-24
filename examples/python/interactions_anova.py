@@ -386,7 +386,3 @@ nosum_lm = ols('np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
 print(anova_lm(nosum_lm))
 print(anova_lm(nosum_lm, typ=2))
 print(anova_lm(nosum_lm, typ=3))
-
-
-
-

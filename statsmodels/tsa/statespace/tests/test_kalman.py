@@ -1,5 +1,5 @@
 """
-Tests for _statespace module
+Tests for _representation and _kalman_filter modules
 
 Author: Chad Fulton
 License: Simplified-BSD
@@ -25,39 +25,23 @@ import copy
 import numpy as np
 import pandas as pd
 import os
+import pytest
 
-try:
-    from scipy.linalg.blas import find_best_blas_type
-except ImportError:
-    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-    def find_best_blas_type(arrays):
-        dtype, index = max(
-            [(ar.dtype, i) for i, ar in enumerate(arrays)])
-        prefix = _type_conv.get(dtype.char, 'd')
-        return (prefix, dtype, None)
-
-
+from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from statsmodels.tsa.statespace import _statespace as ss
+from statsmodels.tsa.statespace import _representation, _kalman_filter
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
-from numpy.testing.decorators import skipif
-from nose.exc import SkipTest
-
-# Skip copy test on older NumPy since deepcopy does not copy order
-NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 
 prefix_statespace_map = {
-    's': ss.sStatespace, 'd': ss.dStatespace,
-    'c': ss.cStatespace, 'z': ss.zStatespace
+    's': _representation.sStatespace, 'd': _representation.dStatespace,
+    'c': _representation.cStatespace, 'z': _representation.zStatespace
 }
 prefix_kalman_filter_map = {
-    's': ss.sKalmanFilter, 'd': ss.dKalmanFilter,
-    'c': ss.cKalmanFilter, 'z': ss.zKalmanFilter
+    's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
+    'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
 }
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -199,7 +183,6 @@ class Clark1987(object):
             self.true_states.iloc[:, 2], 4
         )
 
-    @skipif(NP_LT_18)
     def test_pickled_filter(self):
         pickled = cPickle.loads(cPickle.dumps(self.filter))
         #  Run the filters
@@ -212,7 +195,6 @@ class Clark1987(object):
         assert_allclose(np.array(self.filter.loglikelihood),
                         np.array(pickled.loglikelihood))
 
-    @skipif(NP_LT_18)
     def test_copied_filter(self):
         copied = copy.deepcopy(self.filter)
         #  Run the filters
@@ -226,13 +208,14 @@ class Clark1987(object):
         assert_allclose(np.array(self.filter.loglikelihood),
                         np.array(copied.loglikelihood))
 
+
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -283,7 +266,7 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )

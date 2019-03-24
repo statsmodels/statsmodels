@@ -94,12 +94,23 @@ print(exp(res_cycle$optim.out$par)) # [37.57197224]
 print(res_cycle$optim.out$value)    # 672.3102588
 
 # Seasonal (with fixed period=4, seasonal variance=0.1)
-mod_seasonal <- SSModel(dta$unemp ~ -1 + SSMseasonal(4, Q=matrix(0.1), sea.type='dummy', P1=diag(1)*1e6), H=matrix(NA))
+# Note: matching this requires setting loglikelihood_burn=0
+mod_seasonal <- SSModel(dta$unemp ~ -1 + SSMseasonal(4, Q=matrix(0.1), sea.type='dummy', P1=diag(rep(1e6, 3))), H=matrix(NA))
 res_seasonal <- fitSSM(inits=c(log(var(dta$unemp))), model=mod_seasonal,
                        method="BFGS", control=list(REPORT=1, trace=1))
 
-print(exp(res_seasonal$optim.out$par)) # [38.1704278]
-print(res_seasonal$optim.out$value)    # 655.3337155
+print(exp(res_seasonal$optim.out$par)) # [38.17043009]
+print(res_seasonal$optim.out$value)    # 678.8138005
+
+# Trig Seasonal (with fixed period=5, full number of harmonics, seasonal variance=.05)
+# Note: matching this requires setting loglikelihood_burn=0
+mod_trig_seasonal <- SSModel(dta$unemp ~ -1 + SSMseasonal(5, Q=0.05, sea.type='trigonometric', P1=diag(rep(1e6, 4))), H=matrix(NA))
+res_trig_seasonal <- fitSSM(inits=c(log(var(dta$unemp))), model=mod_trig_seasonal,
+                       method="BFGS", control=list(REPORT=1, trace=1))
+
+print(exp(res_trig_seasonal$optim.out$par)) # [38.95352534]
+print(res_trig_seasonal$optim.out$value)    # 688.9697249
+
 
 # Regression
 # Note: matching this requires setting loglikelihood_burn = 0

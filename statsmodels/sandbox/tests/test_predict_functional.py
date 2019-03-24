@@ -1,18 +1,16 @@
 from statsmodels.sandbox.predict_functional import predict_functional
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
-from numpy.testing import dec
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 def pctl(q):
     return lambda x : np.percentile(x, 100 *q)
@@ -34,12 +32,9 @@ class TestPredFunc(object):
     def close_or_save(self, fig):
         if pdf_output:
             self.pdf.savefig(fig)
-        else:
-            plt.close(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_formula(self):
+    @pytest.mark.matplotlib
+    def test_formula(self, close_figures):
 
         np.random.seed(542)
         n = 500
@@ -91,9 +86,8 @@ class TestPredFunc(object):
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_lm_contrast(self):
+    @pytest.mark.matplotlib
+    def test_lm_contrast(self, close_figures):
 
         np.random.seed(542)
         n = 200
@@ -127,9 +121,8 @@ class TestPredFunc(object):
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_glm_formula_contrast(self):
+    @pytest.mark.matplotlib
+    def test_glm_formula_contrast(self, close_figures):
 
         np.random.seed(542)
         n = 50
@@ -164,9 +157,8 @@ class TestPredFunc(object):
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_scb(self):
+    @pytest.mark.matplotlib
+    def test_scb(self, close_figures):
 
         np.random.seed(473)
         n = 100
@@ -229,9 +221,8 @@ class TestPredFunc(object):
 
                 self.close_or_save(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_glm_formula(self):
+    @pytest.mark.matplotlib
+    def test_glm_formula(self, close_figures):
 
         np.random.seed(542)
         n = 500
@@ -299,9 +290,8 @@ class TestPredFunc(object):
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
-
-    @dec.skipif(not have_matplotlib)
-    def test_noformula_prediction(self):
+    @pytest.mark.matplotlib
+    def test_noformula_prediction(self, close_figures):
 
         np.random.seed(6434)
         n = 200

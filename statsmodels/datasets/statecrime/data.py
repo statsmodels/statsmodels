@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Statewide Crime Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -53,35 +52,30 @@ NOTE        = """::
         % of population in Urbanized Areas as of 2010 Census. Urbanized
         Areas are area of 50,000 or more people."""
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-def load():
+def load(as_pandas=None):
     """
     Load the statecrime data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray(data, endog_idx=2, exog_idx=[7, 4, 3, 5],
-                               dtype=float)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas,
+                               retain_index=True)
+
 
 def load_pandas():
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=2, exog_idx=[7,4,3,5],
-                                      dtype=float, index_idx=0)
+    return du.process_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5], index_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/statecrime.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
-    return data
+    return du.load_csv(__file__, 'statecrime.csv')

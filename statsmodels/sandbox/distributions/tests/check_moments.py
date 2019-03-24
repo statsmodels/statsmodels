@@ -1,6 +1,6 @@
 '''script to test expect and moments in distributions.stats method
 
-not written as a test, prints results, renamed to prevent nose from running it
+not written as a test, prints results, renamed to prevent test runner from running it
 
 
 '''

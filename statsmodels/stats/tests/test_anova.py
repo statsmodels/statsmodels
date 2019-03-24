@@ -6,7 +6,7 @@ import numpy as np
 
 from statsmodels.stats.anova import anova_lm
 from statsmodels.formula.api import ols
-from pandas import read_table
+from pandas import read_csv
 
 kidney_table = StringIO("""Days      Duration Weight ID
     0.0      1      1      1
@@ -72,11 +72,11 @@ kidney_table = StringIO("""Days      Duration Weight ID
 """)
 
 kidney_table.seek(0)
-kidney_table = read_table(kidney_table, sep="\s+")
+kidney_table = read_csv(kidney_table, sep="\s+", engine='python').astype(int)
 
 class TestAnovaLM(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # kidney data taken from JT's course
         # don't know the license
         cls.data = kidney_table
@@ -99,7 +99,7 @@ class TestAnovaLM(object):
 
 class TestAnovaLMNoconstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # kidney data taken from JT's course
         # don't know the license
         cls.data = kidney_table
@@ -515,7 +515,3 @@ class TestAnova3HC3(TestAnovaLM):
         #np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb-failure'], exit=False)

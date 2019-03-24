@@ -109,7 +109,7 @@ class PanelModel(object):
 #                    time == None:
 #                raise ValueError("If pandel_data is False then endog, exog, \
 #panel_arr, and time_arr cannot be None.")
-           self.initialize(endog, exog, panel, time, xtnames, equation)
+            self.initialize(endog, exog, panel, time, xtnames, equation)
 #        elif aspandas != False:
 #            if not isinstance(endog, str):
 #                raise ValueError("If a pandas object is supplied then endog \
@@ -259,8 +259,9 @@ class PanelModel(object):
         if method: # get rid of this with default
             method = method.lower()
         model = model.lower()
-        if method and method not in ["lsdv", "demeaned", "mle", "gls", "be",
-            "fe"]: # get rid of if method with default
+        if method and method not in ["lsdv", "demeaned", "mle",
+                                     "gls", "be", "fe"]:
+            # get rid of if method with default
             raise ValueError("%s not a valid method" % method)
 #        if method == "lsdv":
 #            self.fit_lsdv(model)
@@ -336,7 +337,7 @@ if __name__ == "__main__":
     import statsmodels.api as sm
     import numpy.lib.recfunctions as nprf
 
-    data = sm.datasets.grunfeld.load()
+    data = sm.datasets.grunfeld.load(as_pandas=False)
     # Baltagi doesn't include American Steel
     endog = data.endog[:-20]
     fullexog = data.exog[:-20]

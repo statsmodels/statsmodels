@@ -44,8 +44,8 @@ data=[]
 v,fopt, gopt, Hopt, func_calls, grad_calls, warnflag, allvecs = \
         optimize.fmin_bfgs(R,v_0,fprime=Rp,full_output=full_output,retall=1)
 if warnflag == 0:
-   plt.semilogy(np.arange(0,len(data)),data)
-   print('Rayleigh quotient BFGS',R(v))
+    plt.semilogy(np.arange(0,len(data)),data)
+    print('Rayleigh quotient BFGS',R(v))
 
 
 print("fmin_bfgs OK")
@@ -59,7 +59,6 @@ data=[]
 v,fopt, fcalls, gcalls, hcalls, warnflag, allvecs = \
         optimize.fmin_ncg(R,v_0,fprime=Rp,fhess=Rpp,full_output=full_output,retall=1)
 if warnflag==0:
-   plt.figure()
-   plt.semilogy(np.arange(0,len(data)),data)
-   print('Rayleigh quotient NCG',R(v))
-
+    plt.figure()
+    plt.semilogy(np.arange(0,len(data)),data)
+    print('Rayleigh quotient NCG',R(v))

@@ -1,12 +1,10 @@
-from unittest import TestCase
-
 import numpy as np
 import numpy.testing as npt
 
 from statsmodels.sandbox.nonparametric.kernel_extras import SemiLinear
 
 
-class KernelExtrasTestBase(TestCase):
+class KernelExtrasTestBase(object):
     @classmethod
     def setup_class(cls):
         nobs = 60

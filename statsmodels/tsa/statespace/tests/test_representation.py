@@ -17,6 +17,7 @@ from __future__ import division, absolute_import, print_function
 import warnings
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels.tsa.statespace.representation import Representation
@@ -24,8 +25,7 @@ from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
-from statsmodels.compat.numpy import NumpyVersion
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -120,7 +120,7 @@ class TestClark1987Single(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -139,6 +139,7 @@ class TestClark1987Double(Clark1987):
         cls.results = cls.run_filter()
 
 
+@pytest.mark.skip('Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
@@ -146,7 +147,6 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )
@@ -555,10 +555,13 @@ def test_slice_notation():
     # Test invalid __setitem__
     def set_designs():
         mod['designs'] = 1
+
     def set_designs2():
         mod['designs',0,0] = 1
+
     def set_designs3():
         mod[0] = 1
+
     assert_raises(IndexError, set_designs)
     assert_raises(IndexError, set_designs2)
     assert_raises(IndexError, set_designs3)
@@ -666,8 +669,8 @@ def test_initialization():
     initial_state = np.zeros(2,) + 1.5
     initial_state_cov = np.eye(2) * 3.
     mod.initialize_known(initial_state, initial_state_cov)
-    assert_equal(mod._initial_state.sum(), 3)
-    assert_equal(mod._initial_state_cov.diagonal().sum(), 6)
+    assert_equal(mod.initialization.constant.sum(), 3)
+    assert_equal(mod.initialization.stationary_cov.diagonal().sum(), 6)
 
     # Test invalid initial_state
     initial_state = np.zeros(10,)
@@ -695,7 +698,7 @@ def test_no_endog():
 
 
 def test_cython():
-    # Test the cython _kalman_filter creation, re-creation, calling, etc. 
+    # Test the cython _kalman_filter creation, re-creation, calling, etc.
 
     # Check that datatypes are correct:
     for prefix, dtype in tools.prefix_dtype_map.items():
@@ -765,6 +768,7 @@ def test_filter():
     # Test default filter results
     res = mod.filter()
     assert_equal(isinstance(res, FilterResults), True)
+
 
 def test_loglike():
     # Tests of invalid calls to the loglike function
@@ -945,6 +949,7 @@ def test_standardized_forecasts_error():
         standardized_forecasts_error,
     )
 
+
 def test_simulate():
     # Test for simulation of new time-series
     from scipy.signal import lfilter
@@ -1025,8 +1030,8 @@ def test_simulate():
                   state_shocks)
 
     # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
-    phi = np.r_[0.1]
-    theta = np.r_[0.5]
+    phi = 0.1
+    theta = 0.5
     mod = sarimax.SARIMAX([0], order=(1, 0, 1))
     mod.update(np.r_[phi, theta, sigma2])
 
@@ -1051,6 +1056,7 @@ def test_simulate():
         np.r_[0, state_shocks[:-1]])
 
     assert_allclose(actual, desired)
+
 
 def test_impulse_responses():
     # Test for impulse response functions
@@ -1229,6 +1235,7 @@ def test_impulse_responses():
     res = mod.filter([phi, 1.])
     actual = res.impulse_responses(steps=10)
     assert_allclose(actual, desired)
+
 
 def test_missing():
     # Datasets

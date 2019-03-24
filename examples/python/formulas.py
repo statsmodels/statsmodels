@@ -106,6 +106,8 @@ print(res.params)
 
 def log_plus_1(x):
     return np.log(x) + 1.
+
+
 res = sm.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
 print(res.params)
 
@@ -135,4 +137,3 @@ print(X[:5])
 
 
 print(sm.OLS(y, X).fit().summary())
-

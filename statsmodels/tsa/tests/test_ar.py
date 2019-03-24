@@ -4,6 +4,7 @@ Test AR Model
 import statsmodels.api as sm
 from statsmodels.compat.python import range
 from statsmodels.tsa.ar_model import AR
+from statsmodels.tsa.arima_model import ARMA
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
 from statsmodels.tools.testing import assert_equal
 from .results import results_ar
@@ -15,6 +16,7 @@ from pandas import Series, Index, DatetimeIndex, PeriodIndex
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
+
 
 class CheckARMixin(object):
     def test_params(self):
@@ -39,15 +41,16 @@ class CheckARMixin(object):
         self.res1.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res1))
+        assert type(res_unpickled) is type(self.res1)  # noqa: E721
+
 
 class TestAROLSConstant(CheckARMixin):
     """
     Test AR fit by OLS with a constant.
     """
     @classmethod
-    def setupClass(cls):
-        data = sm.datasets.sunspots.load()
+    def setup_class(cls):
+        data = sm.datasets.sunspots.load(as_pandas=False)
         cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle')
         cls.res2 = results_ar.ARResultsOLS(constant=True)
 
@@ -83,9 +86,9 @@ class TestAROLSNoConstant(CheckARMixin):
     Test AR fit by OLS without a constant.
     """
     @classmethod
-    def setupClass(cls):
-        data = sm.datasets.sunspots.load()
-        cls.res1 = AR(data.endog).fit(maxlag=9,method='cmle',trend='nc')
+    def setup_class(cls):
+        data = sm.datasets.sunspots.load(as_pandas=False)
+        cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle', trend='nc')
         cls.res2 = results_ar.ARResultsOLS(constant=False)
 
     def test_predict(self):
@@ -114,13 +117,24 @@ class TestAROLSNoConstant(CheckARMixin):
         assert_almost_equal(model.predict(params, start=308, end=327),
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
-        #class TestARMLEConstant(CheckAR):
+    def test_mle(self):
+        # check predict with no constant, #3945
+        res1 = self.res1
+        endog = res1.model.endog
+        res0 = AR(endog).fit(maxlag=9, method='mle', trend='nc', disp=0)
+        assert_allclose(res0.fittedvalues[-10:], res0.fittedvalues[-10:],
+                        rtol=0.015)
+
+        res_arma = ARMA(endog, (9, 0)).fit(method='mle', trend='nc', disp=0)
+        assert_allclose(res0.params, res_arma.params, atol=5e-6)
+        assert_allclose(res0.fittedvalues[-10:], res_arma.fittedvalues[-10:],
+                        rtol=1e-4)
 
 
 class TestARMLEConstant(object):
     @classmethod
-    def setupClass(cls):
-        data = sm.datasets.sunspots.load()
+    def setup_class(cls):
+        data = sm.datasets.sunspots.load(as_pandas=False)
         cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=-1)
         cls.res2 = results_ar.ARResultsMLE(constant=True)
 
@@ -222,8 +236,8 @@ class TestARMLEConstant(object):
 
 class TestAutolagAR(object):
     @classmethod
-    def setupClass(cls):
-        data = sm.datasets.sunspots.load()
+    def setup_class(cls):
+        data = sm.datasets.sunspots.load(as_pandas=False)
         endog = data.endog
         results = []
         for lag in range(1,16+1):
@@ -246,7 +260,6 @@ class TestAutolagAR(object):
             bic = (bic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
             bic += log_sigma2
 
-
             results.append([aic, hqic, bic, r.fpe])
         res1 = np.asarray(results).T.reshape(4,-1, order='C')
         # aic correction to match R
@@ -257,9 +270,10 @@ class TestAutolagAR(object):
 
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)
 
+
 def test_ar_dates():
     # just make sure they work
-    data = sm.datasets.sunspots.load()
+    data = sm.datasets.sunspots.load(as_pandas=False)
     dates = DatetimeIndex(start='1700', periods=len(data.endog), freq='A')
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
@@ -269,6 +283,7 @@ def test_ar_dates():
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 
+
 def test_ar_named_series():
     dates = PeriodIndex(start="2011-1", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
@@ -276,12 +291,14 @@ def test_ar_named_series():
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
                                                "L2.foobar"])))
 
+
 def test_ar_start_params():
     # fix 236
     # smoke test
-    data = sm.datasets.sunspots.load()
+    data = sm.datasets.sunspots.load(as_pandas=False)
     res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10),
                              method="mle", disp=-1, maxiter=100)
+
 
 def test_ar_series():
     # smoke test for 773
@@ -302,6 +319,7 @@ def test_ar_select_order():
     res = ar.select_order(maxlag=12, ic='aic')
     assert_(res == 2)
 
+
 # GH 2658
 def test_ar_select_order_tstat():
     rs = np.random.RandomState(123)
@@ -315,11 +333,10 @@ def test_ar_select_order_tstat():
     assert_equal(res, 0)
 
 
-
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
 #    def setup(self):
-#        data = sm.datasets.macrodata.load()
+#        data = sm.datasets.macrodata.load(as_pandas=False)
 #        endog = data.data.realgdp
 #        exog = data.data.realint
 #        results = []
@@ -329,6 +346,3 @@ def test_ar_select_order_tstat():
 #            r = AR(endog_tmp, exog_tmp).fit(maxlag=lag, trend='ct')
 #            results.append([r.aic, r.hqic, r.bic, r.fpe])
 #        self.res1 = np.asarray(results).T.reshape(4,-1, order='C')
-
-
-

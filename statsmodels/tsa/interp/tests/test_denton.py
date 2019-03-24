@@ -1,6 +1,7 @@
 import numpy as np
 from statsmodels.tsa.interp import dentonm
 
+
 def test_denton_quarterly():
     # Data and results taken from IMF paper
     indicator = np.array([98.2, 100.8, 102.2, 100.8, 99.0, 101.6,
@@ -10,6 +11,7 @@ def test_denton_quarterly():
     imf_stata = np.array([969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
                                 1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
     np.testing.assert_almost_equal(imf_stata, x_imf, 1)
+
 
 def test_denton_quarterly2():
     # Test denton vs stata. Higher precision than other test.
@@ -22,6 +24,7 @@ def test_denton_quarterly2():
                     109.67405,58.290761,122.62556,190.41409,128.66959])
     np.testing.assert_almost_equal(x_denton, x_stata, 5)
 
+
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

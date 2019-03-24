@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 plt.figure()
 plt.plot(x, y, '.', alpha=0.5)
 for lab, beta in zip(['ols', 'qr 0.1', 'qr 0.5', 'qr 0.75'], params):
-    print('%-8s'%lab, np.round(beta, 4))
+    print('%-8s' % lab, np.round(beta, 4))
     fitted = np.dot(exog, beta)
     lw = 2
     plt.plot(x, fitted, lw=lw, label=lab)

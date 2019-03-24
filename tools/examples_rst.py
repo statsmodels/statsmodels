@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -33,6 +33,7 @@ docs_rst_dir = os.path.realpath(os.path.join(file_path,
 example_dir = os.path.realpath(os.path.join(file_path,
                     '../examples/'))
 
+
 def check_script(filename):
     """
     Run all the files in filelist from run_all. Add any with problems
@@ -51,9 +52,10 @@ def check_script(filename):
     if result != 0: # raised an error
         msg = "Not generating reST from %s. An error occurred.\n" % filename
         msg += stderr
-        print msg
+        print(msg)
         return False
     return True
+
 
 def parse_docstring(block):
     """
@@ -69,6 +71,7 @@ def parse_docstring(block):
     docstring = block[start:start+end]
     block = block[start+end+3:]
     return docstring.strip(), block
+
 
 def parse_file(block):
     """
@@ -111,14 +114,16 @@ def parse_file(block):
             outfile.append('   '+line.strip('\n'))
     return '\n'.join(outfile)
 
+
 def write_file(outfile, rst_file_pth):
     """
     Write outfile to rst_file_pth
     """
-    print "Writing ", os.path.basename(rst_file_pth)
+    print("Writing ", os.path.basename(rst_file_pth))
     write_file = open(rst_file_pth, 'w')
     write_file.writelines(outfile)
     write_file.close()
+
 
 def restify(example_file, filehash, fname):
     """
@@ -136,6 +141,7 @@ def restify(example_file, filehash, fname):
     write_file(rst_file, write_filename)
     if filehash is not None:
         hash_funcs.update_hash_dict(filehash, fname)
+
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)
@@ -160,7 +166,7 @@ if __name__ == "__main__":
                 to_write, filehash = hash_funcs.check_hash(whole_file,
                                                            example)
                 if not to_write:
-                    print "Hash has not changed for file %s" % example
+                    print("Hash has not changed for file %s" % example)
                     continue
                 elif (not example.endswith('.py') or example in exclude_list or
                       not check_script(example_file)):

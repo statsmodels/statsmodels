@@ -50,7 +50,6 @@ License: BSD (3-clause)
 
 from __future__ import print_function
 from statsmodels.compat.python import lrange
-from statsmodels.compat.numpy import np_matrix_rank
 
 import numpy as np
 from scipy import optimize, stats
@@ -65,6 +64,7 @@ from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
+
 
 def maxabs(x):
     '''just a shortcut to np.abs(x).max()
@@ -153,13 +153,12 @@ class IV2SLS(LikelihoodModel):
                        normalized_cov_params=self.normalized_cov_params)
 
         lfit.exog_hat_params = xhatparams
-        lfit.exog_hat = xhat # TODO: do we want to store this, might be large
-        self._results = lfit  # TODO : remove this
+        lfit.exog_hat = xhat  # TODO: do we want to store this, might be large
         self._results_ols2nd = OLS(y, xhat).fit()
 
         return RegressionResultsWrapper(lfit)
 
-    #copied from GLS, because I subclass currently LikelihoodModel and not GLS
+    # copied from GLS, because I subclass currently LikelihoodModel and not GLS
     def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
@@ -181,16 +180,8 @@ class IV2SLS(LikelihoodModel):
         """
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params)
-        #JP: this doesn't look correct for GLMAR
-        #SS: it needs its own predict method
-        if self._results is None and params is None:
-            raise ValueError("If the model has not been fit, then you must specify the params argument.")
-        if self._results is not None:
-            return np.dot(exog, self._results.params)
-        else:
-            return np.dot(exog, params)
 
+        return np.dot(exog, params)
 
 
 class IVRegressionResults(RegressionResults):
@@ -213,17 +204,21 @@ class IVRegressionResults(RegressionResults):
 
     @cache_readonly
     def fvalue(self):
-        k_vars = len(self.params)
-        restriction = np.eye(k_vars)
-        idx_noconstant = lrange(k_vars)
-        del idx_noconstant[self.model.data.const_idx]
-        fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
-        return fval
+        const_idx = self.model.data.const_idx
+        # if constant is implicit or missing, return nan see #2444, #3544
+        if const_idx is None:
+            return np.nan
+        else:
+            k_vars = len(self.params)
+            restriction = np.eye(k_vars)
+            idx_noconstant = lrange(k_vars)
+            del idx_noconstant[const_idx]
+            fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
+            return fval
 
 
     def spec_hausman(self, dof=None):
         '''Hausman's specification test
-
 
         See Also
         --------
@@ -246,7 +241,7 @@ class IVRegressionResults(RegressionResults):
         #use linalg.lstsq or svd directly
         #cov_diff will very often be in-definite (singular)
         if not dof:
-            dof = np_matrix_rank(cov_diff)
+            dof = np.linalg.matrix_rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
         H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
         pval = stats.chi2.sf(H, dof)
@@ -533,8 +528,32 @@ class GMM(Model):
                 # cut in front for poisson multiplicative
                 self.data.xnames = xnames[-len(params):]
             elif len(params) > len(xnames):
-                # cut at the end
-                self.data.xnames = xnames[:len(params)]
+                # use generic names
+                self.data.xnames = ['p%2d' % i for i in range(len(params))]
+
+    def set_param_names(self, param_names, k_params=None):
+        """set the parameter names in the model
+
+        Parameters
+        ----------
+        param_names : list of strings
+            param_names should have the same length as the number of params
+        k_params : None or int
+            If k_params is None, then the k_params attribute is used, unless
+            it is None.
+            If k_params is not None, then it will also set the k_params
+            attribute.
+        """
+        if k_params is not None:
+            self.k_params = k_params
+        else:
+            k_params = self.k_params
+
+        if k_params == len(param_names):
+            self.data.xnames = param_names
+        else:
+            raise ValueError('param_names has the wrong length')
+
 
     def fit(self, start_params=None, maxiter=10, inv_weights=None,
                   weights_method='cov', wargs=(),
@@ -1654,7 +1673,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     #use linalg.lstsq or svd directly
     #cov_diff will very often be in-definite (singular)
     if not dof:
-        dof = np_matrix_rank(cov_diff)
+        dof = np.linalg.matrix_rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)
@@ -1798,4 +1817,3 @@ class DistQuantilesGMM(GMM):
 results_class_dict = {'GMMResults': GMMResults,
                       'IVGMMResults': IVGMMResults,
                       'DistQuantilesGMM': GMMResults}  #TODO: should be a default
-

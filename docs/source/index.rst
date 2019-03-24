@@ -8,7 +8,7 @@ of many different statistical models, as well as for conducting statistical test
 data exploration. An extensive list of result statistics are available for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
 package is released under the open source Modified BSD (3-clause) license.
-The online documentation is hosted at `statsmodels.org <http://www.statsmodels.org/>`__.
+The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
 
 
 Minimal Examples
@@ -107,12 +107,15 @@ Table of Contents
    regression
    glm
    gee
+   gam
    rlm
    mixed_linear
    discretemod
+   mixed_glm
    anova
    tsa
    statespace
+   vector_ar
    duration
    stats
    nonparametric
@@ -136,4 +139,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

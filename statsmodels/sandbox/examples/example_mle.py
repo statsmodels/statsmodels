@@ -31,7 +31,7 @@ print('\nExample 2: Longley Data, high multicollinearity')
 print('-----------------------------------------------\n')
 
 from statsmodels.datasets.longley import load
-data = load()
+data = load(as_pandas=False)
 data.exog = sm.add_constant(data.exog, prepend=False)
 mod = sm.OLS(data.endog, data.exog)
 f = lambda params: -1*mod.loglike(params)

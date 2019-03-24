@@ -92,10 +92,10 @@ class TestOLSRobust1(CheckOLSRobust):
 
     @classmethod
     def setup_class(cls):
-        d2 = macrodata.load().data
-        g_gdp = 400*np.diff(np.log(d2['realgdp']))
-        g_inv = 400*np.diff(np.log(d2['realinv']))
-        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
+        d2 = macrodata.load_pandas().data
+        g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
+        g_inv = 400*np.diff(np.log(d2['realinv'].values))
+        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values], prepend=False)
 
         cls.res1 = res_ols = OLS(g_inv, exogg).fit()
 
@@ -842,8 +842,8 @@ class TestWLSOLSRobustSmall(object):
             mat = np.eye(len(res1.params))
             ft1 = res1.f_test(mat)
             ft2 = res2.f_test(mat)
-            assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-13)
-            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-12)
+            assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-12)
+            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=5e-11)
 
     def test_fixed_scale(self):
         cov_type = 'fixed_scale'

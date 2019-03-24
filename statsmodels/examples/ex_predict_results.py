@@ -47,7 +47,7 @@ from numpy.testing import assert_allclose
 assert_allclose(pred_res.se_obs, prstd, rtol=1e-13)
 assert_allclose(ci, np.column_stack((iv_l, iv_u)), rtol=1e-13)
 
-print pred_res.summary_frame().head()
+print(pred_res.summary_frame().head())
 
 pred_res2 = res_wls.get_prediction()
 ci2 = pred_res2.conf_int(obs=True)
@@ -56,7 +56,7 @@ from numpy.testing import assert_allclose
 assert_allclose(pred_res2.se_obs, prstd, rtol=1e-13)
 assert_allclose(ci2, np.column_stack((iv_l, iv_u)), rtol=1e-13)
 
-print pred_res2.summary_frame().head()
+print(pred_res2.summary_frame().head())
 
 res_wls_n = mod_wls.fit(use_t=False)
 pred_wls_n = res_wls_n.get_prediction()

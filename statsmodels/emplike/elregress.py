@@ -88,6 +88,3 @@ class _ELRegOpts(_OptFuncts):
             return -2 * llr
         except np.linalg.linalg.LinAlgError:
             return np.inf
-
-
-

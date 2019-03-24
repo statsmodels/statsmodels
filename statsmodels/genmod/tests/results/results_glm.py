@@ -6,10 +6,17 @@ Stata may be because Stata uses ML by default unless you specifically ask for
 IRLS.
 """
 import numpy as np
+import pandas as pd
 from statsmodels.compat.python import asbytes
 from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
+
+# for genfromtxt changes
+import sys
+PY2 = (sys.version_info[0] < 3)
+from distutils.version import LooseVersion
+NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -678,13 +685,22 @@ class Lbw(object):
     '''
     The LBW data can be found here
 
-    http://www.stata-press.com/data/r9/rmain.html
+    https://www.stata-press.com/data/r9/rmain.html
     '''
     def __init__(self):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data=np.recfromcsv(open(filename, 'rb'), converters={4: lambda s: s.strip(asbytes("\""))})
+
+        # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
+        if NUMPY_LT_113 or PY2:
+            with open(filename, 'rb') as datafile:
+                data=np.recfromcsv(datafile)
+            vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
+            data['race'] = vfunc(data['race'])
+        else:
+            data = pd.read_csv(filename).to_records(index=False)
+        # categorical does not work with pandas
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
@@ -787,7 +803,7 @@ class Cancer(object):
     '''
     The Cancer data can be found here
 
-    http://www.stata-press.com/data/r10/rmain.html
+    https://www.stata-press.com/data/r10/rmain.html
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -2186,12 +2202,12 @@ class Medpar1(object):
     '''
     The medpar1 data can be found here.
 
-    http://www.stata-press.com/data/hh2/medpar1
+    https://www.stata-press.com/data/hh2/medpar1
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_medpar1_glm.csv")
-        data = np.recfromcsv(open(filename, 'rb'), converters ={1: lambda s: s.strip(asbytes("\""))})
+        data = pd.read_csv(filename).to_records()
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
@@ -2206,7 +2222,7 @@ class InvGaussLog(Medpar1):
         super(InvGaussLog, self).__init__()
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "medparlogresids.csv")
-        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
+        self.resids = pd.read_csv(filename, sep=',', header=None).values
         self.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.params = np.array([ 0.09927544, -0.19161722,  1.05712336])
         self.bse = np.array([ 0.00600728,  0.02632126,  0.04915765])
@@ -2969,7 +2985,7 @@ class InvGaussIdentity(Medpar1):
         self.bse = np.array([ 0.02586783,  0.13830023,  0.20834864])
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "igaussident_resids.csv")
-        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
+        self.resids = pd.read_csv(filename, sep=',', header=None).values
         self.null_deviance = 335.1539777981053  # from R, Rpy bug
         self.df_null = 3675
         self.deviance = 305.33661191013988
@@ -3832,11 +3848,11 @@ class CpunishTweediePower15(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1.5, link.power=1),
                 data=data))
     """
@@ -3882,8 +3898,8 @@ class CpunishTweediePower15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.09501758000751, 8.42856326056927,
                              1.68642881732415, 7.74178229423817,
                              7.95441118875248, 1.53333978161934,
@@ -3899,11 +3915,11 @@ class CpunishTweediePower2(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=2, link.power=1),
                 data=data))
     """
@@ -3950,8 +3966,8 @@ class CpunishTweediePower2(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.06024318838318, 8.39480078450791,
                              1.69154512871877, 7.7059362524505,
                              7.91921022348665, 1.53799164935069,
@@ -3967,11 +3983,11 @@ class CpunishTweedieLog1(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1, link.power=0),
                 data=data))
     """
@@ -4020,8 +4036,8 @@ class CpunishTweedieLog1(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [8.27689906137016, 9.30731835845648,
                              1.80984539843424, 7.30975297068573,
                              7.87746969906705, 1.71495822007233,
@@ -4101,8 +4117,8 @@ class FairTweedieLog15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 2
         self.df_resid = 6363
-        # self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                          # in sm yet
+        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
+                                            # in sm yet
         self.fittedvalues = [1.10897954981504, 0.537938133372725,
                              0.722602160018842, 0.507247757370731,
                              0.364216335344828, 0.537493243830281,

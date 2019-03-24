@@ -161,7 +161,6 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         if ax.is_last_row(): # or ax.is_first_col():
             ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
         if ax.is_first_col():
-           ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
+            ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
 
     return fig
-
