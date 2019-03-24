@@ -1953,7 +1953,7 @@ def test_tweedie_EQL():
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
-        assert_allclose(result3.params, ev[j], rtol=1e-5, atol=1e-5)
+        assert_allclose(result3.params, ev[j], rtol=rtol, atol=atol)
 
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
