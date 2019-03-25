@@ -938,9 +938,9 @@ def test_const_indicator():
     assert_almost_equal(modc.rsquared, mod.rsquared, 12)
 
 
-def test_706():
-    # make sure one regressor pandas Series gets passed to DataFrame
-    # for conf_int.
+def test_conf_int_single_regressor():
+    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # should get passed to DataFrame for conf_int
     y = pandas.Series(np.random.randn(10))
     x = pandas.Series(np.ones(10))
     res = OLS(y, x).fit()
@@ -949,8 +949,8 @@ def test_706():
     np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
 
 
-def test_summary():
-    # test 734
+def test_summary_as_latex():
+    # GH#734
     import re
     dta = longley.load_pandas()
     X = dta.exog
