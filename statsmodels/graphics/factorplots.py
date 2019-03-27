@@ -172,9 +172,11 @@ def _recode(x, levels):
     """
     from pandas import Series
     name = None
+    index = None
 
     if isinstance(x, Series):
         name = x.name
+        index = x.index
         x = x.values
 
     if x.dtype.type not in [np.str_, np.object_]:
@@ -194,7 +196,6 @@ def _recode(x, levels):
             out[x == level] = coding
 
         if name:
-            out = Series(out)
-            out.name = name
+            out = Series(out, name=name, index=index)
 
         return out
