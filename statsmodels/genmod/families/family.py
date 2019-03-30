@@ -1465,19 +1465,29 @@ class Tweedie(Family):
 
         References
         ----------
-        http://support.sas.com/documentation/cdl/en/stathpug/67524/HTML/default/viewer.htm#stathpug_hpgenselect_details16.htm
+        JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.  Biometrika
+        74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
         if not self.eql:
             # We have not yet implemented the actual likelihood
             return np.nan
 
+        # Equations 9-10 or Nelder and Pregibon
         p = self.var_power
-        llf = np.log(2 * np.pi * scale) + p * np.log(endog) - np.log(var_weights)
-        llf *= -1 / 2
+        llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
+        llf /= -2
 
-        u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
-        u *= var_weights / (scale * (1 - p) * (2 - p))
-        llf += u
+        if p == 1:
+            u = endog * np.log(endog / mu) - (endog - mu)
+            u *= var_weights / scale
+        elif p == 2:
+            yr = endog / mu
+            u = yr - np.log(yr) - 1
+            u *= var_weights / scale
+        else:
+            u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
+            u *= var_weights / (scale * (1 - p) * (2 - p))
+        llf -= u
 
         return llf
 
