@@ -1993,7 +1993,7 @@ class MixedLM(base.LikelihoodModel):
                 warnings.warn("Argument %s not used by MixedLM.fit" % x)
 
         if method is None:
-            method = ['bfgs', 'lbfgs']
+            method = ['bfgs', 'lbfgs', 'cg']
         elif isinstance(method, str):
             method = [method]
 
