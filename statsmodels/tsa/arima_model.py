@@ -405,7 +405,12 @@ def _make_arma_exog(endog, exog, trend):
     if exog is None and trend == 'c':   # constant only
         exog = np.ones((len(endog), 1))
     elif exog is not None and trend == 'c':  # constant plus exogenous
-        exog = add_trend(exog, trend='c', prepend=True)
+        if len(exog.var(axis=0)) > np.count_nonzero(exog.var(axis=0)): # if true, it means there is at least a constant
+            # column in the exog.
+            raise ValueError("Exog should not contain a constant or trend. These should be added in the fit method."
+                             "See: https://www.statsmodels.org/dev/generated/statsmodels.tsa.arima_model.ARMA.html")
+        else:
+            exog = add_trend(exog, trend='c', prepend=True, has_constant='skip')
     elif exog is not None and trend == 'nc':
         # make sure it's not holding constant from last run
         if exog.var() == 0:
