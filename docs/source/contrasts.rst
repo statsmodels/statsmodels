@@ -11,46 +11,48 @@ In fact, the dummy coding is not technically a contrast coding. This is because 
 
 To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS. First let's load the data.
 
-.. ipython:: python
+.. ipython::
    :suppress:
 
-    import numpy as np
-    np.set_printoptions(precision=4, suppress=True)
+   In [1]: import numpy as np
+      ...: np.set_printoptions(precision=4, suppress=True)
+      ...:
+      ...: from patsy.contrasts import ContrastMatrix
+      ...:
+      ...: def _name_levels(prefix, levels):
+      ...:     return ["[%s%s]" % (prefix, level) for level in levels]
 
-    from patsy.contrasts import ContrastMatrix
-
-    def _name_levels(prefix, levels):
-       return ["[%s%s]" % (prefix, level) for level in levels]
-
-    class Simple(object):
-        def _simple_contrast(self, levels):
-           nlevels = len(levels)
-           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
-           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
-           return contr
-        def code_with_intercept(self, levels):
-           contrast = np.column_stack((np.ones(len(levels)),
-                                       self._simple_contrast(levels)))
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
-        def code_without_intercept(self, levels):
-           contrast = self._simple_contrast(levels)
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
-
+   In [2]: class Simple(object):
+      ...:     def _simple_contrast(self, levels):
+      ...:         nlevels = len(levels)
+      ...:         contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+      ...:         contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+      ...:         return contr
+      ...:
+      ...:     def code_with_intercept(self, levels):
+      ...:         contrast = np.column_stack((np.ones(len(levels)),
+      ...:                                    self._simple_contrast(levels)))
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+      ...:
+      ...:     def code_without_intercept(self, levels):
+      ...:         contrast = self._simple_contrast(levels)
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
+      ...:
 
 Example Data
 ------------
 
 .. ipython:: python
 
-    import pandas
-    url = 'https://stats.idre.ucla.edu/stat/data/hsb2.csv'
-    hsb2 = pandas.read_csv(url)
+   import pandas
+   url = 'https://stats.idre.ucla.edu/stat/data/hsb2.csv'
+   hsb2 = pandas.read_csv(url)
 
 It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
 
 .. ipython:: python
 
-    hsb2.groupby('race')['write'].mean()
+   hsb2.groupby('race')['write'].mean()
 
 Treatment (Dummy) Coding
 ------------------------
@@ -59,25 +61,25 @@ Dummy coding is likely the most well known coding scheme. It compares each level
 
 .. ipython:: python
 
-    from patsy.contrasts import Treatment
-    levels = [1,2,3,4]
-    contrast = Treatment(reference=0).code_without_intercept(levels)
-    print(contrast.matrix)
+   from patsy.contrasts import Treatment
+   levels = [1,2,3,4]
+   contrast = Treatment(reference=0).code_without_intercept(levels)
+   print(contrast.matrix)
 
 Here we used `reference=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
 
 .. ipython:: python
 
-    contrast.matrix[hsb2.race-1, :][:20]
+   contrast.matrix[hsb2.race-1, :][:20]
 
 This is a bit of a trick, as the `race` category conveniently maps to zero-based indices. If it does not, this conversion happens under the hood, so this won't work in general but nonetheless is a useful exercise to fix ideas. The below illustrates the output using the three contrasts above
 
 .. ipython:: python
 
-    from statsmodels.formula.api import ols
-    mod = ols("write ~ C(race, Treatment)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   from statsmodels.formula.api import ols
+   mod = ols("write ~ C(race, Treatment)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 We explicitly gave the contrast for race; however, since Treatment is the default, we could have omitted this.
 
@@ -89,12 +91,12 @@ Like Treatment Coding, Simple Coding compares each level to a fixed reference le
 
 .. ipython:: python
 
-    contrast = Simple().code_without_intercept(levels)
-    print(contrast.matrix)
+   contrast = Simple().code_without_intercept(levels)
+   print(contrast.matrix)
 
-    mod = ols("write ~ C(race, Simple)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   mod = ols("write ~ C(race, Simple)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 Sum (Deviation) Coding
 ----------------------
@@ -103,19 +105,19 @@ Sum coding compares the mean of the dependent variable for a given level to the 
 
 .. ipython:: python
 
-    from patsy.contrasts import Sum
-    contrast = Sum().code_without_intercept(levels)
-    print(contrast.matrix)
+   from patsy.contrasts import Sum
+   contrast = Sum().code_without_intercept(levels)
+   print(contrast.matrix)
 
-    mod = ols("write ~ C(race, Sum)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   mod = ols("write ~ C(race, Sum)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 This correspons to a parameterization that forces all the coefficients to sum to zero. Notice that the intercept here is the grand mean where the grand mean is the mean of means of the dependent variable by each level.
 
 .. ipython:: python
 
-    hsb2.groupby('race')['write'].mean().mean()
+   hsb2.groupby('race')['write'].mean().mean()
 
 Backward Difference Coding
 --------------------------
@@ -124,21 +126,21 @@ In backward difference coding, the mean of the dependent variable for a level is
 
 .. ipython:: python
 
-    from patsy.contrasts import Diff
-    contrast = Diff().code_without_intercept(levels)
-    print(contrast.matrix)
+   from patsy.contrasts import Diff
+   contrast = Diff().code_without_intercept(levels)
+   print(contrast.matrix)
 
-    mod = ols("write ~ C(race, Diff)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   mod = ols("write ~ C(race, Diff)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 For example, here the coefficient on level 1 is the mean of `write` at level 2 compared with the mean at level 1. Ie.,
 
 .. ipython:: python
 
-    res.params["C(race, Diff)[D.1]"]
-    hsb2.groupby('race').mean()["write"][2] - \
-        hsb2.groupby('race').mean()["write"][1]
+   res.params["C(race, Diff)[D.1]"]
+   hsb2.groupby('race').mean()["write"][2] - \
+       hsb2.groupby('race').mean()["write"][1]
 
 Helmert Coding
 --------------
@@ -147,29 +149,29 @@ Our version of Helmert coding is sometimes referred to as Reverse Helmert Coding
 
 .. ipython:: python
 
-    from patsy.contrasts import Helmert
-    contrast = Helmert().code_without_intercept(levels)
-    print(contrast.matrix)
+   from patsy.contrasts import Helmert
+   contrast = Helmert().code_without_intercept(levels)
+   print(contrast.matrix)
 
-    mod = ols("write ~ C(race, Helmert)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   mod = ols("write ~ C(race, Helmert)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 To illustrate, the comparison on level 4 is the mean of the dependent variable at the previous three levels taken from the mean at level 4
 
 .. ipython:: python
 
-    grouped = hsb2.groupby('race')
-    grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
+   grouped = hsb2.groupby('race')
+   grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
 
 As you can see, these are only equal up to a constant. Other versions of the Helmert contrast give the actual difference in means. Regardless, the hypothesis tests are the same.
 
 .. ipython:: python
 
-    k = 4
-    1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
-    k = 3
-    1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
+   k = 4
+   1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
+   k = 3
+   1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
 
 
 Orthogonal Polynomial Coding
@@ -179,24 +181,24 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
 
 .. ipython:: python
 
-    _, bins = np.histogram(hsb2.read, 3)
-    try: # requires numpy master
-       readcat = np.digitize(hsb2.read, bins, True)
-    except:
-       readcat = np.digitize(hsb2.read, bins)
-    hsb2['readcat'] = readcat
-    hsb2.groupby('readcat').mean()['write']
+   _, bins = np.histogram(hsb2.read, 3)
+   try: # requires numpy master
+      readcat = np.digitize(hsb2.read, bins, True)
+   except:
+      readcat = np.digitize(hsb2.read, bins)
+   hsb2['readcat'] = readcat
+   hsb2.groupby('readcat').mean()['write']
 
 .. ipython:: python
 
-    from patsy.contrasts import Poly
-    levels = hsb2.readcat.unique().tolist()
-    contrast = Poly().code_without_intercept(levels)
-    print(contrast.matrix)
+   from patsy.contrasts import Poly
+   levels = hsb2.readcat.unique().tolist()
+   contrast = Poly().code_without_intercept(levels)
+   print(contrast.matrix)
 
-    mod = ols("write ~ C(readcat, Poly)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   mod = ols("write ~ C(readcat, Poly)", data=hsb2)
+   res = mod.fit()
+   print(res.summary())
 
 As you can see, readcat has a significant linear effect on the dependent variable `write` but not a significant quadratic or cubic effect.
 
@@ -207,29 +209,29 @@ User-Defined Coding
 
 If you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a `patsy.contrast.ContrastMatrix` instance.
 
-.. ipython:: python
+.. ipython::
 
-    from patsy.contrasts import ContrastMatrix
+   In [1]: from patsy.contrasts import ContrastMatrix
+      ...:
+      ...: def _name_levels(prefix, levels):
+      ...:     return ["[%s%s]" % (prefix, level) for level in levels]
 
-    def _name_levels(prefix, levels):
-        return ["[%s%s]" % (prefix, level) for level in levels]
+   In [2]: class Simple(object):
+      ...:     def _simple_contrast(self, levels):
+      ...:         nlevels = len(levels)
+      ...:         contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+      ...:         contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+      ...:         return contr
+      ...:
+      ...:     def code_with_intercept(self, levels):
+      ...:         contrast = np.column_stack((np.ones(len(levels)),
+      ...:                                    self._simple_contrast(levels)))
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+      ...:
+      ...:    def code_without_intercept(self, levels):
+      ...:        contrast = self._simple_contrast(levels)
+      ...:        return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
 
-    class Simple(object):
-        def _simple_contrast(self, levels):
-           nlevels = len(levels)
-           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
-           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
-           return contr
-
-        def code_with_intercept(self, levels):
-           contrast = np.column_stack((np.ones(len(levels)),
-                                       self._simple_contrast(levels)))
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
-
-        def code_without_intercept(self, levels):
-           contrast = self._simple_contrast(levels)
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
-
-    mod = ols("write ~ C(race, Simple)", data=hsb2)
-    res = mod.fit()
-    print(res.summary())
+   In [3]: mod = ols("write ~ C(race, Simple)", data=hsb2)
+      ...: res = mod.fit()
+      ...: print(res.summary())
