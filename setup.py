@@ -89,6 +89,11 @@ MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
 URL = 'https://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
+PROJECT_URLS = {
+    'Bug Tracker': 'https://github.com/statsmodels/statsmodels/issues',
+    'Documentation': 'https://www.statsmodels.org/stable/index.html',
+    'Source Code': 'https://github.com/statsmodels/statsmodels'
+}
 
 CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
@@ -325,6 +330,7 @@ setup(name=DISTNAME,
       license=LICENSE,
       url=URL,
       download_url=DOWNLOAD_URL,
+      project_urls=PROJECT_URLS,
       long_description=LONG_DESCRIPTION,
       classifiers=CLASSIFIERS,
       platforms='any',
