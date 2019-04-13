@@ -24,7 +24,12 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/tsaplots.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
+        statsmodels/iolib/tests/test_pickle.py \
+        statsmodels/multivariate/pca.py \
+        statsmodels/regression/mixed_linear_model.py \
+        statsmodels/regression/recursive_ls.py \
         statsmodels/regression/tests/test_lme.py \
+        statsmodels/tools/linalg.py \
         statsmodels/tools/web.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
