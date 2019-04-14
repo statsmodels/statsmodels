@@ -2174,8 +2174,8 @@ class _mixedlm_distribution(object):
         self.model = model
         self.exog = exog if exog is not None else model.exog
 
-        po = MixedLMParams.from_packed(params,
-                 model.k_fe, model.k_re, False, True)
+        po = MixedLMParams.from_packed(
+                params, model.k_fe, model.k_re, False, True)
 
         self.fe_params = po.fe_params
         self.cov_re = scale * po.cov_re
@@ -2219,6 +2219,7 @@ class _mixedlm_distribution(object):
         y += np.sqrt(self.scale) * np.random.normal(size=len(y))
 
         return y
+
 
 class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
