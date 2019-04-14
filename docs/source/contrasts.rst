@@ -183,9 +183,9 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
 
    _, bins = np.histogram(hsb2.read, 3)
    try: # requires numpy master
-      readcat = np.digitize(hsb2.read, bins, True)
+       readcat = np.digitize(hsb2.read, bins, True)
    except:
-      readcat = np.digitize(hsb2.read, bins)
+       readcat = np.digitize(hsb2.read, bins)
    hsb2['readcat'] = readcat
    hsb2.groupby('readcat').mean()['write']
 
