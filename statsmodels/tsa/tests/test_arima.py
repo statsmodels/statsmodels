@@ -2327,7 +2327,7 @@ def test_arima_exog_predict():
         res_002.forecast(steps=h, exog=np.empty(20))
 
 
-def test_arima_fit_mutliple_calls():
+def test_arima_fit_multiple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit

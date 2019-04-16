@@ -912,7 +912,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         # (re)set trend and handle exogenous variables
         # always pass original exog
-        k_trend, exog = _make_arma_exog(endog, self.exog, trend)
+        k_trend, exog = _make_arma_exog(endog, self.data.orig_exog, trend)
 
         # Check has something to estimate
         if k_ar == 0 and k_ma == 0 and k_trend == 0 and k_exog == 0:
