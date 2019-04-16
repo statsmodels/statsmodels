@@ -2432,3 +2432,13 @@ def test_endog_int():
     resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
     assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
     assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)
+
+
+def test_constant_exog_raises_proper_error():
+    # issue 2129
+    with pytest.raises(ValueError) as excinfo:
+        np.random.seed(13)
+        y = np.random.randn(100)
+        u = np.ones((100, 2))
+        ARMA(y, order=(1, 1), exog=u).fit()
+    assert "Exog should not contain a constant or trend" in str(excinfo.value)
