@@ -711,7 +711,7 @@ class ZeroInflatedPoissonResults(CountResults):
     @cache_readonly
     def _dispersion_factor(self):
         mu = self.predict(which='linear')
-        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
+        w = 1 - self.fittedvalues / np.exp(self.predict(which='linear'))
         return (1 + w * np.exp(mu))
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
@@ -749,7 +749,7 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
         p = self.model.model_main.parameterization
         alpha = self.params[self.model.k_inflate:][-1]
         mu = np.exp(self.predict(which='linear'))
-        w = 1 - self.predict() / mu
+        w = 1 - self.fittedvalues / mu
         return ((1 + alpha * mu**p)**2 + w * mu)
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
@@ -790,7 +790,7 @@ class ZeroInflatedNegativeBinomialResults(CountResults):
         p = self.model.model_main.parameterization
         alpha = self.params[self.model.k_inflate:][-1]
         mu = np.exp(self.predict(which='linear'))
-        w = 1 - self.predict() / mu
+        w = 1 - self.fittedvalues / mu
         return (1 + alpha * mu**(p-1) + w * mu)
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,

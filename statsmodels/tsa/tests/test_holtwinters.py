@@ -405,6 +405,7 @@ def test_direct_holt_add():
                                                   b0=res.params['initial_slope'], nforecast=5)
 
     assert_allclose(xhat, res.fittedvalues)
+    assert_allclose(mod.endog - xhat, res.resid)
     assert_allclose(l + b, res.level + res.slope)
     assert_allclose(l, res.level)
     assert_allclose(b, res.slope)

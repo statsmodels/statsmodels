@@ -22,6 +22,7 @@ from scipy.stats import boxcox
 
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.tsatools import freq_to_period
 import statsmodels.tsa._exponential_smoothers as smoothers
@@ -306,6 +307,10 @@ class HoltWintersResults(Results):
     def __init__(self, model, params, **kwargs):
         self.data = model.data
         super(HoltWintersResults, self).__init__(model, params, **kwargs)
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self._fittedvalues
 
     def predict(self, start=None, end=None):
         """
@@ -968,9 +973,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         formatted = formatted.loc[included]
 
         hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted,
-                                   fittedvalues=fitted[:-h - 1], fcastvalues=fitted[-h - 1:],
+                                   _fittedvalues=fitted[:-h - 1], fcastvalues=fitted[-h - 1:],
                                    sse=sse, level=level, slope=slope, season=season, aic=aic,
-                                   bic=bic, aicc=aicc, resid=resid, k=k,
+                                   bic=bic, aicc=aicc, k=k,
                                    params_formatted=formatted, optimized=optimized)
         return HoltWintersResultsWrapper(hwfit)
 

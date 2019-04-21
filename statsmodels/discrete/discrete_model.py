@@ -1465,7 +1465,7 @@ class GeneralizedPoisson(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
-            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+            a = self._estimate_dispersion(res_poi.fittedvalues, res_poi.resid,
                                           df_resid=res_poi.df_resid)
             start_params = np.append(start_params, max(-0.1, a))
 
@@ -2839,7 +2839,8 @@ class NegativeBinomial(CountModel):
             res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
             if self.loglike_method.startswith('nb'):
-                a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                a = self._estimate_dispersion(res_poi.fittedvalues,
+                                              res_poi.resid,
                                               df_resid=res_poi.df_resid)
                 start_params = np.append(start_params, max(0.05, a))
         else:
@@ -3205,7 +3206,7 @@ class NegativeBinomialP(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
-            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+            a = self._estimate_dispersion(res_poi.fittedvalues, res_poi.resid,
                                           df_resid=res_poi.df_resid)
             start_params = np.append(start_params, max(0.05, a))
 
@@ -3484,13 +3485,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         return res_null.llf
 
-    @cache_readonly
-    def fittedvalues(self):
-        return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
+    @property
+    def resid(self):
+        return self.resid_response
 
     @cache_readonly
     def resid_response(self):
-        return self.model.endog - self.predict()
+        return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def aic(self):
@@ -3688,6 +3689,7 @@ class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for count data",
         "extra_attr": ""}
+
     @cache_readonly
     def resid(self):
         """
@@ -3702,7 +3704,7 @@ class CountResults(DiscreteResults):
         where :math:`p = \\exp(X\\beta)`. Any exposure and offset variables
         are also handled.
         """
-        return self.model.endog - self.predict()
+        return self.model.endog - self.fittedvalues
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -3738,7 +3740,7 @@ class GeneralizedPoissonResults(NegativeBinomialResults):
     @cache_readonly
     def _dispersion_factor(self):
         p = getattr(self.model, 'parameterization', 0)
-        mu = self.predict()
+        mu = self.fittedvalues
         return (1 + self.params[-1] * mu**p)**2
 
 class L1CountResults(DiscreteResults):
@@ -3810,7 +3812,7 @@ class PoissonResults(CountResults):
         For now :math:`M_j` is always set to 1.
         """
         # Pearson residuals
-        p = self.predict()  # fittedvalues is still linear
+        p = self.fittedvalues
         return (self.model.endog - p)/np.sqrt(p)
 
 
@@ -3847,7 +3849,7 @@ class BinaryResults(DiscreteResults):
         """
         model = self.model
         actual = model.endog
-        pred = np.array(self.predict() > threshold, dtype=float)
+        pred = np.array(self.fittedvalues > threshold, dtype=float)
         bins = np.array([0, 0.5, 1])
         return np.histogram2d(actual, pred, bins=bins)[0]
 
@@ -3907,7 +3909,7 @@ class BinaryResults(DiscreteResults):
         # M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = two share a covariate pattern
         M = 1
-        p = self.predict()
+        p = self.fittedvalues
         #Y_0 = np.where(exog == 0)
         #Y_M = np.where(exog == M)
         #NOTE: Common covariate patterns are not yet handled
@@ -3939,7 +3941,7 @@ class BinaryResults(DiscreteResults):
         # so M[i] = 2 for i = two share a covariate pattern
         # use unique row pattern?
         M = 1
-        p = self.predict()
+        p = self.fittedvalues
         return (endog - M*p)/np.sqrt(M*p*(1-p))
 
     @cache_readonly
@@ -3955,7 +3957,7 @@ class BinaryResults(DiscreteResults):
 
         where :math:`p=cdf(X\\beta)`.
         """
-        return self.model.endog - self.predict()
+        return self.model.endog - self.fittedvalues
 
 class LogitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
@@ -3976,7 +3978,7 @@ class LogitResults(BinaryResults):
         for the Logit model.
         """
         # Generalized residuals
-        return self.model.endog - self.predict()
+        return self.model.endog - self.fittedvalues
 
 class ProbitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
@@ -4047,6 +4049,10 @@ class MultinomialResults(DiscreteResults):
                 yname_list = ynames
         return yname, yname_list
 
+    @cache_readonly
+    def resid_response(self):
+        return self.model.wendog - self.fittedvalues
+
     def pred_table(self):
         """
         Returns the J x J prediction table.
@@ -4060,7 +4066,7 @@ class MultinomialResults(DiscreteResults):
         # these are the actual, predicted indices
         #idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
-        return np.histogram2d(self.model.endog, self.predict().argmax(1),
+        return np.histogram2d(self.model.endog, self.fittedvalues.argmax(1),
                               bins=bins)[0]
 
     @cache_readonly
@@ -4104,7 +4110,7 @@ class MultinomialResults(DiscreteResults):
         """
         # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
         return (self.model.wendog.argmax(1) !=
-                self.predict().argmax(1)).astype(float)
+                self.fittedvalues.argmax(1)).astype(float)
 
     def summary2(self, alpha=0.05, float_format="%.4f"):
         """Experimental function to summarize regression results

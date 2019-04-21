@@ -930,6 +930,14 @@ class Results(object):
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
 
+    @cache_readonly
+    def fittedvalues(self):
+        return self.predict()
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues
+
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
         Call self.model.predict with self.params as the first argument.
