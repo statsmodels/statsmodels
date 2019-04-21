@@ -5,8 +5,11 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip, zip
 import numpy as np
+
+from statsmodels.compat.python import lzip, zip
+from statsmodels.tools.decorators import nottest
+
 
 class AllPairsResults(object):
     '''Results class for pairwise comparisons, based on p-values
@@ -99,3 +102,277 @@ class AllPairsResults(object):
         text += '\n'.join(('%s  %6.4g' % (pairs, pv) for (pairs, pv) in
                 zip(self.all_pairs_names, self.pval_corrected())))
         return text
+
+
+class Hypothesis(object):
+    """
+    Container for test hypotheses.
+
+    This class may be used to store the hypothesis part of a TestResult, which
+    is convenient for e.g. attribute look-up and printing.
+
+    Parameters
+    ----------
+    null : str
+        The null hypothesis
+    alternative : str
+        The alternative hypothesis
+
+    Attributes
+    ----------
+    null : str
+        The passed null hypothesis, as a property
+    alternative : str
+        The passed alternative hypothesis, as a property
+    """
+
+    def __init__(self, null, alternative):
+        self._null = null
+        self._alternative = alternative
+
+    @property
+    def null(self):
+        return self._null
+
+    @property
+    def alternative(self):
+        return self._alternative
+
+    def __str__(self):
+        return ("Hypotheses:\n\t* H0: {0}\n\t* H1: {1}"
+                .format(self._null, self._alternative))
+
+
+class CriticalValues(object):
+    """
+    Container for critical values of a test.
+
+    This class may be used to store the critical values of a TestResult, which
+    is convenient for e.g. attribute look-up and printing.
+
+    Parameters
+    ----------
+    crit_dict : dict
+        A dictionary of critical values
+
+    Attributes
+    ----------
+    crit_dict : dict
+        The passed dictionary, as a property
+
+    Examples
+    --------
+    >>> from statsmodels.stats.base import CriticalValues
+    >>> vals = CriticalValues({"5%": 0.9, "10%": 1.5})  # percentages
+    >>> print(vals)
+    Critical values:
+    [5%] = 0.9, [10%] = 1.5
+
+    >>> vals2 = CriticalValues({0.05: 0.9, 0.1: 1.5})  # alpha values
+    >>> print(vals2)
+    Critical values:
+    [0.05] = 0.9, [0.1] = 1.5
+    """
+
+    def __init__(self, crit_dict):
+        self._crit_dict = crit_dict
+
+    @property
+    def crit_dict(self):
+        return self._crit_dict
+
+    def __str__(self):
+        items = sorted(self._crit_dict.items(),
+                       key=lambda item: float(str(item[0]).strip("%")))
+
+        critical_values = map(lambda item: "[{0}] = {1}".format(*item),
+                              items)
+
+        return "Critical values:\n" + ", ".join(critical_values)
+
+
+class Statistics(object):
+    """
+    Container for statistics and other values computed in a test.
+
+    This class serves as a container for all values a test should return to the
+    user, including e.g. the p-value, test statistic, degrees of freedom, etc.
+
+    Parameters
+    ----------
+    kwargs : dict
+        Keyword arguments, to store on ``self``.
+
+    Attributes
+    ----------
+    attributes : list
+        All attributes available on ``self``, except for ``print_filter``.
+
+    Notes
+    -----
+    ``TestResult`` sets a field ``print_filter`` on this class which regulates
+    its string representation, printing only those attributes listed in
+    ``print_filter``.
+
+    Example,
+
+    >>> from statsmodels.stats.base import Statistics
+    >>> stats = Statistics(value1=True, value2=0.05)
+    >>> print(stats)
+    Statistics:
+    value1 = True, value2 = 0.05
+
+    >>> stats.print_filter = ["value1"]
+    >>> print(stats)
+    Statistics:
+    value1 = True
+    """
+
+    def __init__(self, **kwargs):
+        self.print_filter = None
+        self.__dict__.update(kwargs)
+
+    @property
+    def attributes(self):  # print_filter is internal
+        return sorted([key for key in self.__dict__.keys()
+                       if key != "print_filter"])
+
+    def __str__(self):
+        def _filter(key):
+            return not self.print_filter or key in self.print_filter
+
+        items = map(lambda item: "{0} = {1}".format(item, getattr(self, item)),
+                    filter(_filter, self.attributes))
+
+        return "Statistics:\n" + ", ".join(items)
+
+
+@nottest
+class TestResult(object):
+    """
+    A modular container for the results of a (statistical) test.
+
+    The base ``TestResult`` class takes a variable number of optional
+    attributes, alongside a test name and an object composed of statistics.
+
+    Parameters
+    ----------
+    test_name : str
+        Test name, e.g. "Two-sided t-test".
+    statistics : Statistics
+        A collection of statistics. The passed object *should* expose these
+        as attributes.
+    print_filter : list, optional
+        List of strings, passed to the statistics object. See also Statistics
+        for intended use.
+    kwargs : dict, keys in {"hypothesis", "critical_values"}
+        If the kwargs' keys are in ``TestResults._options``, the corresponding
+        value is set on this object. Intended to dynamically set attributes
+        based on test components.
+
+    Attributes
+    ----------
+    attributes : list
+        All attributes available on ``self`` that are test components.
+        Utilises ``_options`` to determine this.
+
+    Examples
+    --------
+    This class is intended to be used alongside the other containers in this
+    module.
+
+    >>> from statsmodels.stats.base import (Hypothesis, Statistics, TestResult)
+    >>> hypo = Hypothesis(null="The null hypothesis",
+    >>>                   alternative="The alternative")
+    >>> stats = Statistics(test_stat=1.5, p_value=0.09)
+    >>> result = TestResult("Test name", stats, hypothesis=hypo)
+    >>> print(result)
+    Test name
+
+    Hypotheses:
+        * H0: The null hypothesis
+        * H1: The alternative
+
+    Statistics:
+    test_stat = 1.5, p_value = 0.09
+    """
+
+    _options = ["test_name", "hypothesis", "statistics", "critical_values"]
+
+    _warn = """
+    While previously test results returned fields as class attributes, this 
+    behaviour has changed. Statistics can now be accessed through the statistics
+    attribute; other attributes may also be available, dependent on the type of
+    test. You may use `test.attributes` and `test.statistics.attributes` to 
+    discover all available attributes."
+    """
+
+    def __init__(self, test_name, statistics, print_filter=None, **kwargs):
+        self.test_name = test_name
+
+        self.statistics = statistics
+        self.statistics.print_filter = print_filter
+
+        for key, value in kwargs.items():
+            if key in TestResult._options:
+                setattr(self, key, value)
+
+    @property
+    def attributes(self):
+        return [option for option in self._options
+                if hasattr(self, option)]
+
+    def __getattr__(self, item):
+        import warnings
+
+        # Requested item may be present on the statistics field. While this
+        # type of delegation is generally unusual, we do so here to ensure
+        # the new TestResult class does not break existing code, which may
+        # rely on direct attribute access.
+        if not hasattr(self.statistics, item):
+            raise AttributeError("`{0}` is not an understood field on this "
+                                 "TestResult.".format(item))
+
+        warnings.warn(self._warn, DeprecationWarning)
+
+        return getattr(self.statistics, item)
+
+    def __iter__(self):
+        """
+        This unpacks the TestResult instance as the individual values of its
+        statistics. Mostly here to preserve backwards compatibility with tests
+        that returned tuples of values.
+
+        Returns
+        -------
+        tuple
+            If ``print_filter`` is present, this returns only the values in that
+            list, ordered similarly. If not, it returns all values in
+            ``Statistics``, ordered lexicographically.
+        """
+        if self.statistics.print_filter:
+            return (getattr(self.statistics, attr)
+                    for attr in self.statistics.print_filter)
+
+        return (getattr(self.statistics, attr)
+                for attr in self.statistics.attributes)
+
+    def summary(self):
+        """
+        Returns a formatted string summary of this TestResult object. All
+        attributes present on the object that are also in ``_options`` will
+        be present in the summary.
+
+        Returns
+        -------
+        str
+            Formatted summary
+        """
+        values = [str(getattr(self, key))
+                  for key in TestResult._options
+                  if hasattr(self, key)]
+
+        return "\n\n".join(values)
+
+    def __str__(self):
+        return self.summary()

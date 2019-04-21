@@ -11,6 +11,8 @@ from numpy.linalg import LinAlgError
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS, yule_walker
+from statsmodels.stats.base import (TestResult, Hypothesis, Statistics,
+                                    CriticalValues)
 from statsmodels.tools.sm_exceptions import (InterpolationWarning,
                                              MissingDataError,
                                              CollinearityWarning)
@@ -26,13 +28,6 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
-
-
-#NOTE: now in two places to avoid circular import
-#TODO: I like the bunch pattern for this too.
-class ResultsStore(object):
-    def __str__(self):
-        return self._str  # pylint: disable=E1101
 
 
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
@@ -170,8 +165,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         levels. Based on MacKinnon (2010)
     icbest : float
         The maximized information criterion if autolag is not None.
-    resstore : ResultStore, optional
-        A dummy class with results attached as attributes
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -229,7 +224,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     xdshort = xdiff[-nobs:]
 
     if store:
-        resstore = ResultsStore()
+        statistics = Statistics()
+
     if autolag:
         if regression != 'nc':
             fullRHS = add_trend(xdall, regression, prepend=True)
@@ -247,7 +243,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
                                               maxlag, autolag,
                                               regresults=regresults)
-            resstore.autolag_results = alres
+            statistics.autolag_results = alres
 
         bestlag -= startlag  # convert to lag not column index
 
@@ -267,7 +263,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, xdall[:, :usedlag + 1]).fit()
 
     adfstat = resols.tvalues[0]
-#    adfstat = (resols.params[0]-1.0)/resols.bse[0]
+    # adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
     # I think this is the statistic that is used for series that are integrated
@@ -276,21 +272,29 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
     critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
-    critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
-                  "10%" : critvalues[2]}
+    critvalues = {"1%": critvalues[0], "5%": critvalues[1],
+                  "10%": critvalues[2]}
+
     if store:
-        resstore.resols = resols
-        resstore.maxlag = maxlag
-        resstore.usedlag = usedlag
-        resstore.adfstat = adfstat
-        resstore.critvalues = critvalues
-        resstore.nobs = nobs
-        resstore.H0 = ("The coefficient on the lagged level equals 1 - "
-                       "unit root")
-        resstore.HA = "The coefficient on the lagged level < 1 - stationary"
-        resstore.icbest = icbest
-        resstore._str = 'Augmented Dickey-Fuller Test Results'
-        return adfstat, pvalue, critvalues, resstore
+        statistics.resols = resols
+        statistics.maxlag = maxlag
+        statistics.usedlag = usedlag
+        statistics.adfstat = adfstat
+        statistics.adf_stat = adfstat
+        statistics.p_value = pvalue
+        statistics.nobs = nobs
+        statistics.icbest = icbest
+
+        hypo = Hypothesis(null=("The coefficient on the lagged level equals 1"
+                                " - unit root"),
+                          alternative="The coefficient on the lagged level < 1 "
+                                      "- stationary")
+
+        test_result = TestResult("Augmented Dickey-Fuller Test", statistics,
+                                 print_filter=["adf_stat", "p_value"],
+                                 hypothesis=hypo, critical_values=critvalues)
+
+        return adfstat, pvalue, critvalues, test_result
     else:
         if not autolag:
             return adfstat, pvalue, usedlag, nobs, critvalues
@@ -1533,8 +1537,8 @@ def kpss(x, regression='c', lags=None, store=False):
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
-    resstore : (optional) instance of ResultStore
-        An instance of a dummy class with results attached as attributes
+    resstore : (optional) instance of TestResult
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -1590,20 +1594,27 @@ def kpss(x, regression='c', lags=None, store=False):
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        warn("p-value is smaller than the indicated p-value", InterpolationWarning)
+        warn("p-value is smaller than the indicated p-value",
+             InterpolationWarning)
     elif p_value == pvals[0]:
-        warn("p-value is greater than the indicated p-value", InterpolationWarning)
+        warn("p-value is greater than the indicated p-value",
+             InterpolationWarning)
 
     crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
 
     if store:
-        rstore = ResultsStore()
-        rstore.lags = lags
-        rstore.nobs = nobs
+        statistics = Statistics(lags=lags, nobs=nobs,
+                                kpss_stat=kpss_stat, p_value=p_value)
 
-        stationary_type = "level" if hypo == 'c' else "trend"
-        rstore.H0 = "The series is {0} stationary".format(stationary_type)
-        rstore.HA = "The series is not {0} stationary".format(stationary_type)
+        hypo_text = "level" if hypo == 'c' else "trend"
+
+        hypo = Hypothesis(
+            null="The series is {0} stationary".format(hypo_text),
+            alternative="The series is not {0} stationary".format(hypo_text))
+
+        rstore = TestResult("KPSS Test", statistics, hypothesis=hypo,
+                            print_filter=["kpss_stat", "p_value"],
+                            critical_values=CriticalValues(crit_dict))
 
         return kpss_stat, p_value, crit_dict, rstore
     else:

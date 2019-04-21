@@ -16,14 +16,14 @@ License: BSD (3-clause)
 '''
 
 import numpy as np
-from scipy import stats
 import pandas as pd
-from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_allclose)
+from numpy.testing import (assert_, assert_almost_equal, assert_allclose,
+                           assert_raises)
+from scipy import stats
 
 from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
-                                           ttest_ind, ztest, zconfint)
-# import statsmodels.stats.weightstats as smws
+                                           ttest_ind, ztest, zconfint,
+                                           _hypothesis)
 
 
 class Holder(object):
@@ -764,3 +764,28 @@ class TestZTest(object):
 
             ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+
+class TestHypothesis(object):
+    """
+    Tests hypothesis creation, as part of the TestResult return on t-tests and
+    z-tests.
+    """
+
+    def test_value_in_text(self):
+        for value in range(1, 100):
+            hypo = _hypothesis(value, "two-sided")
+            assert_(str(value) in str(hypo))
+
+    def test_raises_wrong_alternative(self):
+        with assert_raises(ValueError):
+            _hypothesis(0, "some strange specification")
+
+        _hypothesis(0, "two-sided")
+        _hypothesis(0, "smaller")
+        _hypothesis(0, "larger")
+
+    def test_sensible_return(self):
+        for alternative in ["smaller", "larger"]:
+            hypo = _hypothesis(0, alternative)
+            assert_(alternative in hypo.alternative)

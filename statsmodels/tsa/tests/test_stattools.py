@@ -137,12 +137,21 @@ class TestADFNoConstant2(CheckADF):
         cls.pvalue = 0.013747
         # Stata does not return a p-value for noconstant
         # this value is just taken from our results
-        cls.critvalues = [-2.587,-1.950,-1.617]
+        cls.critvalues = [-2.587, -1.950, -1.617]
         _, _1, _2, cls.store = adfuller(cls.y, regression="nc", autolag=None,
                                          maxlag=1, store=True)
 
     def test_store_str(self):
-        assert_equal(self.store.__str__(), 'Augmented Dickey-Fuller Test Results')
+        assert_('Augmented Dickey-Fuller Test' in str(self.store))
+
+    def test_old_new_attributes_store(self):
+        """
+        Written as a verification of default behaviour when ResStore was
+        switched for TestResult.
+        """
+        for attr in ["p_value", "adfstat", "resols", "maxlag", "usedlag",
+                     "nobs", "icbest"]:
+            assert_(hasattr(self.store, attr))
 
 
 class CheckCorrGram(object):
@@ -487,8 +496,8 @@ class TestKPSS(SetupKPSS):
             kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
 
         # assert attributes, and make sure they're correct
-        assert_equal(store.nobs, len(self.x))
-        assert_equal(store.lags, 3)
+        assert_equal(store.statistics.nobs, len(self.x))
+        assert_equal(store.statistics.lags, 3)
 
     def test_lags(self):
         with warnings.catch_warnings(record=True) as w:
