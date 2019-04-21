@@ -20,14 +20,16 @@
 
 capture program drop estmat2nparray
 program define estmat2nparray
-    version 11.0
-    syntax [namelist(min=1)], SAVing(str) [ Format(str) APPend REPlace NOEst]
+    version 12.0
+    syntax [namelist(min=1)], [RESName(str)] SAVing(str) [ Format(str) APPend REPlace NOEst]
     if "`format'"=="" local format "%16.0g"
     local saving: subinstr local saving "." ".", count(local ext)
     if !`ext' local saving "`saving'.py"
     tempname myfile
     file open `myfile' using "`saving'", write text `append' `replace'
-    file write `myfile' "import numpy as np" _n _n
+	if "`replace'" != "" {
+		file write `myfile' "import numpy as np" _n _n
+	}
 
 	/* get results from e()*/
 	if "`noest'" == "" {
@@ -40,7 +42,10 @@ program define estmat2nparray
 
 		local emacros : e(macros)
 		foreach ii in `emacros' {
-			file write `myfile' "           " "`ii'" " = "  `"""'   "`e(`ii')'" `"""' ","   _n
+			capture file write `myfile' "           " "`ii'" " = "  `"""'   "`e(`ii')'" `"""' ","   _n
+			if _rc != 0 {
+				file write `myfile' `"""' "," _n
+			}
 		}
 		file write `myfile' "          )" _n _n
 	}
@@ -50,17 +55,20 @@ program define estmat2nparray
     foreach mat of local namelist {
         mkarray `mat' `myfile' `format'
     }
-    file write `myfile' "class Bunch(dict):" _n
-    file write `myfile' "    def __init__(self, **kw):" _n
-    file write `myfile' "        dict.__init__(self, kw)" _n
-    file write `myfile' "        self.__dict__  = self" _n _n
+	if "`replace'" != "" {
+		file write `myfile' "class Bunch(dict):" _n
+		file write `myfile' "    def __init__(self, **kw):" _n
+		file write `myfile' "        dict.__init__(self, kw)" _n
+		file write `myfile' "        self.__dict__  = self" _n _n
 
-	if "`noest'" == "" {
-		file write `myfile' "        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):" _n
-		file write `myfile' "            self[att] = self.params_table[:,i]" _n _n
+		if "`noest'" == "" {
+			file write `myfile' "        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):" _n
+			file write `myfile' "            self[att] = self.params_table[:,i]" _n _n
+		}
 	}
+
 	file write `myfile' "" _n
-    file write `myfile' "results = Bunch(" _n
+    file write `myfile' "results_`resname' = Bunch(" _n
     foreach mat of local namelist {
         file write `myfile' "                `mat'=`mat', " _n
 		file write `myfile' "                `mat'_colnames=`mat'_colnames, " _n
@@ -82,21 +90,25 @@ program define mkarray
     local ncols = colsof(`mat')
     local i 1
     local j 1
-    file write `myfile' "`mat' = np.array(["
-    local justifyn = length("`mat' = np.array([")
-    forvalues i=1/`nrows' {
-        forvalues j = 1/`ncols' {
-            if `i' > 1 | `j' > 1 { // then we need to indent
-                forvalues k=1/`justifyn' {
+	local counter 0
+    file write `myfile' "`mat' = np.array([" _n
+    local justifyn = 4        /* length("`mat' = np.array([")*/
+	forvalues k=1/`justifyn' {
                     file write `myfile' " "
                 }
+    forvalues i=1/`nrows' {
+        forvalues j = 1/`ncols' {
+			local counter = `counter' + 1
+			*local ++`counter'
+            if `i' > 1 | `j' > 1 { // then we need to indent
+
             }
             if `i' < `nrows' | `j' < `ncols' {
 			    if mi(`mat'[`i',`j']) {
-					file write `myfile' "np.nan" ", " _n
+					file write `myfile' "np.nan" ", " /* _n */
 				}
 				else {
-					file write `myfile' `fmt' (`mat'[`i',`j']) ", " _n
+					file write `myfile' `fmt' (`mat'[`i',`j']) ", " /*_n*/
 				}
             }
             else {
@@ -107,6 +119,14 @@ program define mkarray
 					file write `myfile' `fmt' (`mat'[`i',`j'])
 				}
             }
+			/*if mod((`i'-1)*`nrows' + `j', 4) == 0 { */
+			if `counter' == 4 {
+				local counter = 0
+				file write `myfile' _n
+				forvalues k=1/`justifyn' {
+					file write `myfile' " "
+				}
+			}
         }
     }
 
