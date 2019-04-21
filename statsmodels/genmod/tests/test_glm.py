@@ -2029,28 +2029,86 @@ def testTweediePowerEstimate():
     #                         p.vec=c(1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
     #                                 1.9), link.power=0,
     #                         data=data,do.plot = TRUE)
-    data = sm.datasets.cpunish.load_pandas()
-    y = [1.00113835e+05,   6.89668315e+03,   6.15726842e+03,
-         1.41718806e+03,   5.11776456e+02,   2.55369154e+02,
-         1.07147443e+01,   3.56874698e+00,   4.06797842e-02,
-         7.06996731e-05,   2.10165106e-07,   4.34276938e-08,
-         1.56354040e-09,   0.00000000e+00,   0.00000000e+00,
-         0.00000000e+00,   0.00000000e+00]
-    model1 = sm.GLM(y, data.exog[['INCOME', 'SOUTH']],
+    from scipy.stats.distributions import poisson, gamma
+    mu_shape = 1. / 9.
+    # With p = 1.1, alpha should be 9
+    p = 1.1
+    gamma_shape = 9.
+    gamma_scale = 1.
+    size = 100000
+    n = poisson.rvs(mu_shape, size=size)
+    endog = n * gamma.rvs(gamma_shape, scale=gamma_scale, size=size)
+    exog = np.ones((size, 1))
+
+    model1 = sm.GLM(endog, exog,
                     family=sm.families.Tweedie(link=sm.families.links.log(),
-                                               var_power=1.5))
+                                               var_power=p))
     res1 = model1.fit()
-    model2 = sm.GLM((y - res1.mu) ** 2,
-                    np.column_stack((np.ones(len(res1.mu)), np.log(res1.mu))),
-                    family=sm.families.Gamma(sm.families.links.log()))
-    res2 = model2.fit()
+
     # Sample may be too small for this...
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
-    p = model1.estimate_tweedie_power(res1.mu)
-    assert_allclose(p, res2.params[1], rtol=0.25)
+    est_p = model1.estimate_tweedie_power(res1.mu)
+    assert_allclose(est_p, p, rtol=0.0000001)
+    est_p = model1.estimate_tweedie_power(res1.mu, method='glm-gamma')
+    assert_allclose(est_p, p, rtol=0.5)
+    est_p = model1.estimate_tweedie_power(res1.mu, method='ols')
+    assert_allclose(est_p, p, rtol=0.5)
+
+    data = sm.datasets.fair.load_pandas()
+    family_link = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=1.5)
+    model = sm.GLM(data.endog,
+                   data.exog[['yrs_married', 'age', 'rate_marriage']],
+                   family=family_link)
+    res = model.fit()
+    p1 = model.estimate_tweedie_power(res.mu)
+    p2 = model.estimate_tweedie_power(res.mu, method='glm-gamma')
+    assert_allclose(p1, p2, rtol=1e-3)
+
+
+def testTweedieEstimateWeighted():
+    data = sm.datasets.fair.load_pandas()
+
+    np.random.seed(4321)
+    freq_weights = np.random.randint(low=1, high=5, size=len(data.endog))
+    y = data.endog
+    x = data.exog[['yrs_married', 'age', 'rate_marriage']]
+    x_rep = np.repeat(x.values, freq_weights, 0)
+    y_rep = np.repeat(y.values, freq_weights)
+
+    family_link = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=1.5)
+
+    model = sm.GLM(y, x, family=family_link, freq_weights=freq_weights)
+    res = model.fit()
+
+    model_rep = sm.GLM(y_rep, x_rep, family=family_link)
+    res_rep = model_rep.fit()
+
+    p = model.estimate_tweedie_power(res.mu, method='brentq')
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='brentq')
+    assert_allclose(p, p_rep)
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='brentq',
+                                             freq_weights=freq_weights)
+    assert_allclose(p, p_rep)
+
+    p = model.estimate_tweedie_power(res.mu, method='glm-gamma')
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='glm-gamma')
+    assert_allclose(p, p_rep)
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='glm-gamma',
+                                             freq_weights=freq_weights)
+    assert_allclose(p, p_rep)
+
+    p = model.estimate_tweedie_power(res.mu, method='ols')
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='ols')
+
+    assert_allclose(p, p_rep)
+    p_rep = model_rep.estimate_tweedie_power(res_rep.mu, method='ols',
+                                             freq_weights=freq_weights)
+    assert_allclose(p, p_rep)
+
 
 class TestRegularized(object):
-
     def test_regularized(self):
 
         import os

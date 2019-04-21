@@ -807,7 +807,7 @@ class GLM(base.LikelihoodModel):
         resid = np.power(self.endog - mu, 2) * self.iweights
         return np.sum(resid / self.family.variance(mu)) / self.df_resid
 
-    def estimate_tweedie_power(self, mu, method='brentq', low=1.01, high=5.):
+    def estimate_tweedie_power(self, mu, method='brentq', **kwargs):
         """
         Tweedie specific function to estimate scale and the variance parameter.
         The variance parameter is also referred to as p, xi, or shape.
@@ -817,8 +817,13 @@ class GLM(base.LikelihoodModel):
         mu : array-like
             Fitted mean response variable
         method : str, defaults to 'brentq'
-            Scipy optimizer used to solve the Pearson equation. Only brentq
-            currently supported.
+            Method to search for optimized `p`. 'brentq' uses the Pearson
+            estimate solved with the `brentq` scipy optimizer. `glm-gamma` fits
+            a GLM with a Gamma distribution. `ols` fits an OLS model.
+
+        If the 'brentq' method is specified, the following additional arguments
+        are accepted:
+
         low : float, optional
             Low end of the bracketing interval [a,b] to be used in the search
             for the power. Defaults to 1.01.
@@ -831,18 +836,53 @@ class GLM(base.LikelihoodModel):
         power : float
             The estimated shape or power
         """
-        if method == 'brentq':
-            from scipy.optimize import brentq
+        FLOAT_EPS = np.finfo(float).eps
+        mu = np.clip(mu, FLOAT_EPS, np.inf)
+        weights = self.iweights
 
-            def psi_p(power, mu):
-                scale = ((self.iweights * (self.endog - mu) ** 2 /
-                          (mu ** power)).sum() / self.df_resid)
-                return (np.sum(self.iweights * ((self.endog - mu) ** 2 /
-                               (scale * (mu ** power)) - 1) *
-                               np.log(mu)) / self.freq_weights.sum())
-            power = brentq(psi_p, low, high, args=(mu))
+        if method == 'brentq':
+            from scipy.optimize import brentq, minimize_scalar
+
+            low = kwargs.get('low', 1.01)
+            high = kwargs.get('high', 1.99)
+
+            def psi_p(power, scale):
+                psi = ((self.endog - mu) ** 2 / (scale * (mu ** power)) - 1)
+                psi *= np.log(mu) * self.iweights
+                return psi.sum()
+
+            def estimate_x2_scale(mu, p):
+                resid = np.power(self.endog - mu, 2) * self.iweights
+                return np.sum(resid / np.power(mu, p)) / self.df_resid
+
+            def difference(p):
+                scale = estimate_x2_scale(mu, p)
+
+                new_p = brentq(psi_p, -100, 100., args=(scale, ))
+                return np.abs(new_p - p)
+
+            power = minimize_scalar(difference, bounds=(low, high),
+                                    method='bounded', tol=1e-20).x
+
+        elif method == 'glm-gamma':
+            y = np.power(self.endog - mu, 2)
+            x = np.column_stack((np.ones(len(self.endog)), np.log(mu)))
+            model = GLM(y, x, var_weights=weights,
+                        family=families.Gamma(families.links.log))
+            res = model.fit()
+            scale, power = res.params
+
+        elif method == 'ols':
+            from statsmodels.regression.linear_model import WLS
+
+            y = np.log(np.power(self.endog - mu, 2))
+            x = np.column_stack((np.ones(len(self.endog)), np.log(mu)))
+            model = WLS(endog=y, exog=x, weights=weights)
+            res = model.fit()
+            scale, power = res.params
         else:
-            raise NotImplementedError('Only brentq can currently be used')
+            raise NotImplementedError("Only `brentq`, `glm-gamma`, and `perry`"
+                                      " can currently be used")
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
@@ -1502,7 +1542,6 @@ class GLMResults(base.LikelihoodModelResults):
     --------
     statsmodels.base.model.LikelihoodModelResults
     """
-
     def __init__(self, model, params, normalized_cov_params, scale,
                  cov_type='nonrobust', cov_kwds=None, use_t=None):
         super(GLMResults, self).__init__(
