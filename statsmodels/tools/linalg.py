@@ -4,7 +4,7 @@ Linear Algebra solvers and other helpers
 from __future__ import print_function
 from statsmodels.compat.python import range
 import numpy as np
-from scipy.linalg import pinv, pinv2, lstsq  # noqa:F421
+from scipy.linalg import pinv, pinv2, lstsq  # noqa:F401
 
 
 def logdet_symm(m, check_symm=False):
@@ -114,7 +114,8 @@ def transf_constraints(constraints):
     return transf
 
 
-def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
+def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
+                threshold=1e-15):
     """matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R

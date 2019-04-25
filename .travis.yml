@@ -2,7 +2,7 @@
 # versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
-dist: trusty
+dist: xenial
 sudo: required
 language: python
 
@@ -155,13 +155,15 @@ before_install:
     else
         export COVERAGE_OPTS=""
     fi
-  - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
 # Install packages
 install:
   - python setup.py develop
+
+before_script:
+  - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
 
 script:
   # Show versions

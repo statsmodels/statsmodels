@@ -125,7 +125,8 @@ The full DataFrame is available in the ``data`` attribute of the Dataset object
 With pandas integration in the estimation classes, the metadata will be attached
 to model results:
 
-.. ipython:: python,okwarning
+.. ipython:: python
+   :okwarning:
 
    y, x = data.endog, data.exog
    res = sm.OLS(y, x).fit()
