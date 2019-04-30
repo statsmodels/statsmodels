@@ -167,7 +167,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     offset = offsets[freq]
     from pandas import DatetimeIndex   # pylint: disable=E0611
-    date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
+    date_range = pd.date_range(start=start_date, freq=offset, periods=n)
 
     return data, date_range
 

@@ -208,9 +208,9 @@ if __name__ == "__main__":
                   232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184])
     results = seasonal_decompose(x, freq=4)
 
-    from pandas import DataFrame, DatetimeIndex
-    data = DataFrame(x, DatetimeIndex(start='1/1/1951',
-                                      periods=len(x),
-                                      freq='Q'))
+    from pandas import DataFrame, date_range
+    data = DataFrame(x, date_range(start='1/1/1951',
+                                   periods=len(x),
+                                   freq='Q'))
 
     res = seasonal_decompose(data)

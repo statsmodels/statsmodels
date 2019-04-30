@@ -28,7 +28,7 @@ from statsmodels.tsa.vector_ar.var_model import VAR, var_acf
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
 DECIMAL_12 = 12

@@ -62,7 +62,7 @@ from . import kfas_helpers
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
-macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+macrodata.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
 
 
 # - Model definitions --------------------------------------------------------

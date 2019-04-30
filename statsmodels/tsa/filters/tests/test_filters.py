@@ -4,7 +4,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata
-from pandas import Index, DataFrame, DatetimeIndex, concat
+from pandas import DataFrame, date_range, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
                                          convolution_filter, recursive_filter)
 
@@ -546,7 +546,7 @@ def test_cfitz_filter():
 def test_bking_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
+    index = date_range(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     filtered = bkfilter(dta["infl"])
     nd_filtered = bkfilter(dta['infl'].values)
@@ -567,7 +567,7 @@ def test_bking_pandas():
 def test_cfitz_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
+    index = date_range(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     cycle, trend = cffilter(dta["infl"])
     ndcycle, ndtrend = cffilter(dta['infl'].values)
@@ -587,7 +587,7 @@ def test_cfitz_pandas():
 
 def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
+    index = date_range(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     cycle, trend = hpfilter(dta["realgdp"])
     ndcycle, ndtrend = hpfilter(dta['realgdp'].values)
@@ -604,13 +604,13 @@ class TestFilters(object):
         data = [-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                 530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
                 232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184]
-        cls.data = DataFrame(data, DatetimeIndex(start='1/1/1951',
-                                                 periods=len(data),
-                                                 freq='Q'))
+        cls.data = DataFrame(data, date_range(start='1/1/1951',
+                                              periods=len(data),
+                                              freq='Q'))
         data[9] = np.nan
-        cls.datana = DataFrame(data, DatetimeIndex(start='1/1/1951',
-                                                  periods=len(data),
-                                                  freq='Q'))
+        cls.datana = DataFrame(data, date_range(start='1/1/1951',
+                                                periods=len(data),
+                                                freq='Q'))
         from .results import filter_results
         cls.expected = filter_results
 

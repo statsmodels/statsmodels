@@ -31,7 +31,7 @@ _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
 # regex patterns
 _y_pattern = r'^\d?\d?\d?\d$'
 
-_q_pattern = '''
+_q_pattern = r'''
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 
@@ -42,7 +42,7 @@ _q_pattern = '''
 $               # end of string
 '''
 
-_m_pattern = '''
+_m_pattern = r'''
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 

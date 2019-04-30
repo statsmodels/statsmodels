@@ -14,7 +14,7 @@ class TestX13(object):
         import pandas as pd
         from statsmodels.datasets import macrodata, co2
         dta = macrodata.load_pandas().data
-        index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+        index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
         dta.index = index
         cls.quarterly_data = dta.dropna()
 

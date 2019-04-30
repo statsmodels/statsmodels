@@ -1336,6 +1336,12 @@ class VARResults(VARProcess):
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
+    def _cov_params(self):
+        """Wrapper to avoid FutureWarning.  Remove after 0.11"""
+        import warnings
+        with warnings.catch_warnings(record=True):
+            return self.cov_params
+
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
 
@@ -1368,7 +1374,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
+        return self._cov_params()[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1390,7 +1396,7 @@ class VARResults(VARProcess):
     def stderr(self):
         """Standard errors of coefficients, reshaped to match in size
         """
-        stderr = np.sqrt(np.diag(self.cov_params))
+        stderr = np.sqrt(np.diag(self._cov_params()))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1785,7 +1791,7 @@ class VARResults(VARProcess):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self.cov_params, C.T))
+        middle = scipy.linalg.inv(chain_dot(C, self._cov_params(), C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
