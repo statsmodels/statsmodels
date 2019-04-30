@@ -272,7 +272,7 @@ class RLM(base.LikelihoodModel):
         # done one iteration so update
         history = self._update_history(wls_results, history, conv)
         iteration = 1
-        converged = 0
+        converged = _check_convergence(criterion, iteration, tol, maxiter)
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
