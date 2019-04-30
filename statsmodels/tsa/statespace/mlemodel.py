@@ -88,7 +88,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     Attributes
     ----------
-    ssm : KalmanFilter
+    ssm : statsmodels.tsa.statespace.kalman_filter.KalmanFilter
         Underlying state space representation.
 
     Notes

@@ -6,8 +6,8 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
+import contextlib
 from warnings import warn
-from contextlib import contextmanager
 
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
@@ -739,9 +739,11 @@ class KalmanFilter(Representation):
         if 'timing_init_filtered' in kwargs:
             self.filter_timing = int(kwargs['timing_init_filtered'])
 
-    @contextmanager
+    @contextlib.contextmanager
     def fixed_scale(self, scale):
         """
+        fixed_scale(scale)
+
         Context manager for fixing the scale when FILTER_CONCENTRATED is set
 
         Parameters
