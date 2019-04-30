@@ -190,7 +190,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         fexog.loc[:, ky] = values[ky]
 
-    dexog = patsy.dmatrix(model.data.design_info.builder, fexog, return_type='dataframe')
+    dexog = patsy.dmatrix(model.data.design_info, fexog, return_type='dataframe')
     return dexog, fexog, fvals
 
 
@@ -303,13 +303,13 @@ def predict_functional(result, focus_var, summaries=None, values=None,
             raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
 
         fexog = exog
-        dexog = patsy.dmatrix(model.data.design_info.builder,
+        dexog = patsy.dmatrix(model.data.design_info,
                               fexog, return_type='dataframe')
         fvals = exog[focus_var]
 
         if exog2 is not None:
             fexog2 = exog
-            dexog2 = patsy.dmatrix(model.data.design_info.builder,
+            dexog2 = patsy.dmatrix(model.data.design_info,
                                    fexog2, return_type='dataframe')
             fvals2 = fvals
 

@@ -76,7 +76,7 @@ def corr_arma(k_vars, ar, ma):
     from scipy.linalg import toeplitz
     from statsmodels.tsa.arima_process import arma2ar
 
-    ar = arma2ar(ar, ma, nobs=k_vars)[:k_vars]  #bug in arma2ar
+    ar = arma2ar(ar, ma, lags=k_vars)[:k_vars]  #bug in arma2ar
 
     return toeplitz(ar)
 
