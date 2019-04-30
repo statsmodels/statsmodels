@@ -21,6 +21,7 @@ Examples
 --------
 
 .. ipython:: python
+  :okwarning:
 
   # Load the data from Spector and Mazzeo (1980)
   spector_data = sm.datasets.spector.load_pandas()
