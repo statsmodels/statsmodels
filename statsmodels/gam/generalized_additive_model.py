@@ -9,7 +9,10 @@ created on 08/07/2015
 """
 
 from __future__ import division
-import collections
+try:
+    from collections.abc import Iterable
+except ImportError:  # Python 2.7
+    from collections import Iterable
 import copy  # check if needed when dropping python 2.7
 
 import numpy as np
@@ -598,7 +601,7 @@ class GLMGam(PenalizedMixin, GLM):
             smooth terms
 
         """
-        if not isinstance(alpha, collections.Iterable):
+        if not isinstance(alpha, Iterable):
             alpha = [alpha] * len(self.smoother.smoothers)
         elif not isinstance(alpha, list):
             # we want alpha to be a list
@@ -935,7 +938,7 @@ class LogitGam(PenalizedMixin, Logit):
 
     """
     def __init__(self, endog, smoother, alpha, *args, **kwargs):
-        if not isinstance(alpha, collections.Iterable):
+        if not isinstance(alpha, Iterable):
             alpha = np.array([alpha] * len(smoother.smoothers))
 
         self.smoother = smoother
