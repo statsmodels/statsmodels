@@ -1,8 +1,7 @@
-import scipy.linalg.blas
 from numpy cimport float64_t, ndarray, complex128_t
 from numpy import log as nplog
-from numpy import (identity, dot, kron, pi, sum, zeros_like, ones, asarray,
-                   complex128, float64, asfortranarray)
+from numpy import (identity, dot, kron, pi, sum, zeros_like, ones,
+                   asfortranarray)
 from numpy.linalg import pinv
 cimport cython
 cimport numpy as cnp
@@ -11,6 +10,8 @@ cnp.import_array()
 
 # included in Cython numpy headers
 from numpy cimport PyArray_ZEROS
+from scipy.linalg.cython_blas cimport dgemm, dgemv, zgemm, zgemv
+
 
 ctypedef float64_t DOUBLE
 ctypedef complex128_t dcomplex
@@ -18,25 +19,6 @@ cdef int FORTRAN = 1
 
 cdef extern from "math.h":
     double log(double x)
-
-cdef extern from "capsule.h":
-    void* Capsule_AsVoidPtr(object ptr)
-
-from statsmodels.src.blas_lapack cimport (
-    dgemm_t, zgemm_t, ddot_t, dgemv_t, zgemv_t, zdotu_t)
-
-cdef dgemm_t *dgemm = <dgemm_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('gemm', dtype=float64)._cpointer)
-cdef zgemm_t *zgemm = <zgemm_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('gemm', dtype=complex128)._cpointer)
-cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('dot', dtype=float64)._cpointer)
-cdef dgemv_t *dgemv = <dgemv_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('gemv', dtype=float64)._cpointer)
-cdef zdotu_t *zdotu = <zdotu_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('dotu', dtype=complex128)._cpointer)
-cdef zgemv_t *zgemv = <zgemv_t*>Capsule_AsVoidPtr(
-    scipy.linalg.blas.get_blas_funcs('gemv', dtype=complex128)._cpointer)
 
 
 @cython.boundscheck(False)
