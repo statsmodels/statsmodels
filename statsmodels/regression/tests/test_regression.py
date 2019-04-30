@@ -960,9 +960,9 @@ def test_summary_as_latex():
         res = OLS(y, X).fit()
         table = res.summary().as_latex()
     # replace the date and time
-    table = re.sub("(?<=\n\\\\textbf\{Date:\}             &).+?&",
+    table = re.sub("(?<=\n\\\\textbf\\{Date:\\}             &).+?&",
                    " Sun, 07 Apr 2013 &", table)
-    table = re.sub("(?<=\n\\\\textbf\{Time:\}             &).+?&",
+    table = re.sub("(?<=\n\\\\textbf\\{Time:\\}             &).+?&",
                    "     13:46:07     &", table)
 
     expected = """\\begin{center}

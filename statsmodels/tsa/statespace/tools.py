@@ -912,7 +912,7 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
 
 
 def _compute_multivariate_sample_acovf(endog, maxlag):
-    """
+    r"""
     Computer multivariate sample autocovariances
 
     Parameters

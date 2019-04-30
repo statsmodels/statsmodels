@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
-from pandas import Series, DatetimeIndex, DataFrame
+from pandas import Series, date_range, DataFrame
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
@@ -520,7 +520,7 @@ def test_pandasacovf():
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))
