@@ -108,7 +108,7 @@ class GLMGamResults(GLMResults):
         ``gcv = scale / (1. - hat_matrix_trace / self.nobs)**2``
     cv
         cross-validation criterion computed as
-        ``cv = ((resid_pearson / (1. - hat_matrix_diag))**2).sum() / self.nobs``
+        ``cv = ((resid_pearson / (1 - hat_matrix_diag))**2).sum() / nobs``
 
     Notes
     -----

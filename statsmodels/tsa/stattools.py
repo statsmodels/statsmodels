@@ -1,8 +1,10 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import division
 from statsmodels.compat.python import (iteritems, range, lrange, string_types,
                                        lzip, zip, long)
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -568,6 +570,12 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     pacf : 1d array
         partial autocorrelations, maxlag+1 elements
 
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
     This solves yule_walker for each desired lag and contains
@@ -603,6 +611,8 @@ def pacf_burg(x, nlags=None, demean=True):
     See also
     --------
     statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_ols
 
     References
     ----------
@@ -640,9 +650,9 @@ def pacf_burg(x, nlags=None, demean=True):
     return pacf, sigma2
 
 
-#NOTE: this is incorrect.
-def pacf_ols(x, nlags=40):
-    '''Calculate partial autocorrelations
+def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
+    """
+    Calculate partial autocorrelations via OLS
 
     Parameters
     ----------
@@ -650,30 +660,71 @@ def pacf_ols(x, nlags=40):
         observations of time series for which pacf is calculated
     nlags : int
         Number of lags for which pacf is returned.  Lag 0 is not returned.
+    efficient : bool, optional
+        If true, uses the maximum number of available observations to compute
+        each partial autocorrelation. If not, uses the same number of
+        observations to compute all pacf values.
+    unbiased : bool, optional
+        Adjust each partial autocorrelation by n / (n - lag)
 
     Returns
     -------
     pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
+        partial autocorrelations, (maxlag,) array corresponding to lags
+        0, 1, ..., maxlag
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.
-    '''
-    #TODO: add warnings for Yule-Walker
-    #NOTE: demeaning and not using a constant gave incorrect answers?
-    #JP: demeaning should have a better estimate of the constant
-    #maybe we can compare small sample properties with a MonteCarlo
-    xlags, x0 = lagmat(x, nlags, original='sep')
-    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags)
-    pacf = [1.]
-    for k in range(1, nlags+1):
-        res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-        #np.take(xlags[k:], range(1,k+1)+[-1],
+    This solves a separate OLS estimation for each desired lag. Setting
+    efficient to True has two effects. First, it uses `nobs - lag`
+    observations of estimate each pacf.  Second, it re-estimates the mean in
+    each regression. If efficient is False, then the data are first demeaned,
+    and then `nobs - maxlag` observations are used to estimate each partial
+    autocorrelation.
 
-        pacf.append(res.params[-1])
-    return np.array(pacf)
+    The inefficient estimator appears to have better finite sample properties.
+    This option should only be used in time series that are covariance
+    stationary.
+
+    OLS estimation of the pacf does not guarantee that all pacf values are
+    between -1 and 1.
+
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+
+    References
+    ----------
+    .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
+       Time series analysis: forecasting and control. John Wiley & Sons, p. 66
+    """
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    x = np.squeeze(np.asarray(x))
+    if x.ndim != 1:
+        raise ValueError('x must be squeezable to a 1-d array')
+    if efficient:
+        xlags, x0 = lagmat(x, nlags, original='sep')
+        xlags = add_constant(xlags)
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[k:, :k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = params[-1]
+    else:
+        x = x - np.mean(x)
+        # Create a single set of lags for multivariate OLS
+        xlags, x0 = lagmat(x, nlags, original='sep', trim='both')
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[:, :k], x0, rcond=None)[0]
+            # Last coefficient corresponds to PACF value (see [1])
+            pacf[k] = params[-1]
+
+    if unbiased:
+        n = len(x)
+        pacf *= n / (n - np.arange(nlags + 1))
+
+    return pacf
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
@@ -685,16 +736,22 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     x : 1d array
         observations of time series for which pacf is calculated
     nlags : int
-        largest lag for which pacf is returned
-    method : {'ywunbiased', 'ywmle', 'ols'}
+        largest lag for which the pacf is returned
+    method : str
         specifies which method for the calculations to use:
 
-        - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf. Default.
-        - ywm or ywmle : yule walker without bias correction
-        - ols - regression of time series on lags of it and on constant
-        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
-        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+        - 'yw' or 'ywunbiased' : Yule-Walker with bias correction in
+          denominator for acovf. Default.
+        - 'ywm' or 'ywmle' : Yule-Walker without bias correction
+        - 'ols' : regression of time series on lags of it and on constant
+        - 'ols-inefficient' : regression of time series on lags using a single
+          common sample to estimate all pacf coefficients
+        - 'ols-unbiased' : regression of time series on lags with a bias
+          adjustment
+        - 'ld' or 'ldunbiased' : Levinson-Durbin recursion with bias correction
+        - 'ldb' or 'ldbiased' : Levinson-Durbin recursion without bias
+          correction
+
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
@@ -708,25 +765,38 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     confint : array, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
+    See also
+    --------
+    statsmodels.tsa.stattools.acf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
-    This solves yule_walker equations or ols for each desired lag
-    and contains currently duplicate calculations.
+    Based on simulation evidence across a range of low-order ARMA models,
+    the best methods based on root MSE are Yule-Walker (MLW), Levinson-Durbin
+    (MLE) and Burg, respectively. The estimators with the lowest bias included
+    included these three in addition to OLS and OLS-unbiased.
+
+    Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
+    consistently worse than the other options.
     """
 
-    if method == 'ols':
-        ret = pacf_ols(x, nlags=nlags)
-    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+    if method in ('ols', 'ols-inefficient', 'ols-unbiased'):
+        efficient = 'inefficient' not in method
+        unbiased = 'unbiased' in method
+        ret = pacf_ols(x, nlags=nlags, efficient=efficient, unbiased=unbiased)
+    elif method in ('yw', 'ywu', 'ywunbiased', 'yw_unbiased'):
         ret = pacf_yw(x, nlags=nlags, method='unbiased')
-    elif method in ['ywm', 'ywmle', 'yw_mle']:
+    elif method in ('ywm', 'ywmle', 'yw_mle'):
         ret = pacf_yw(x, nlags=nlags, method='mle')
-    elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
+    elif method in ('ld', 'ldu', 'ldunbiased', 'ld_unbiased'):
         acv = acovf(x, unbiased=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        #print 'ld', ld_
         ret = ld_[2]
     # inconsistent naming with ywmle
-    elif method in ['ldb', 'ldbiased', 'ld_biased']:
+    elif method in ('ldb', 'ldbiased', 'ld_biased'):
         acv = acovf(x, unbiased=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]

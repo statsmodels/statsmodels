@@ -40,10 +40,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 import numpy as np
 
 from .python import PY3
 
+NP_LT_114 = LooseVersion(np.__version__) < LooseVersion('1.14')
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
@@ -74,3 +76,13 @@ def _bytelike_dtype_names(arr):
         names = [bytes(name) if isinstance(name, unicode)  # noqa:F821
                  else name for name in names]
         dtype.names = names
+
+
+def lstsq(a, b, rcond=None):
+    """
+    Shim that allows modern rcond setting with backward compat for NumPY
+    earlier than 1.14
+    """
+    if NP_LT_114 and rcond is None:
+        rcond = -1
+    return np.linalg.lstsq(a, b, rcond=rcond)
