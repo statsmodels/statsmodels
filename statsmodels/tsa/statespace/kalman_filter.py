@@ -1808,7 +1808,7 @@ class FilterResults(FrozenRepresentation):
 
     @property
     def standardized_forecasts_error(self):
-        """
+        r"""
         Standardized forecast errors
 
         Notes

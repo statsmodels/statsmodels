@@ -3,6 +3,7 @@ import numpy as np
 
 #TODO: add plots to weighting functions for online docs.
 
+
 class RobustNorm(object):
     """
     The parent class for the norms used for robust regression.
@@ -66,7 +67,7 @@ class RobustNorm(object):
         raise NotImplementedError
 
     def psi_deriv(self, z):
-        '''
+        """
         Deriative of psi.  Used to obtain robust covariance matrix.
 
         See statsmodels.rlm for more information.
@@ -74,7 +75,7 @@ class RobustNorm(object):
         Abstract method:
 
         psi_derive = psi'
-        '''
+        """
         raise NotImplementedError
 
     def __call__(self, z):
@@ -82,6 +83,7 @@ class RobustNorm(object):
         Returns the value of estimator rho applied to an input
         """
         return self.rho(z)
+
 
 class LeastSquares(RobustNorm):
 
@@ -164,6 +166,7 @@ class LeastSquares(RobustNorm):
         """
         return np.ones(z.shape, np.float64)
 
+
 class HuberT(RobustNorm):
     """
     Huber's T for M estimation.
@@ -211,7 +214,7 @@ class HuberT(RobustNorm):
                 (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Huber's t estimator
 
         The analytic derivative of rho
@@ -233,7 +236,7 @@ class HuberT(RobustNorm):
         return test * z + (1 - test) * self.t * np.sign(z)
 
     def weights(self, z):
-        """
+        r"""
         Huber's t weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -265,6 +268,7 @@ class HuberT(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         return np.less_equal(np.fabs(z), self.t)
+
 
 #TODO: untested, but looks right.  RamsayE not available in R or SAS?
 class RamsayE(RobustNorm):
@@ -304,7 +308,7 @@ class RamsayE(RobustNorm):
                 (1 + self.a * np.fabs(z))) / self.a**2
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Ramsay's Ea estimator
 
         The analytic derivative of rho
@@ -323,7 +327,7 @@ class RamsayE(RobustNorm):
         return z * np.exp(-self.a * np.fabs(z))
 
     def weights(self, z):
-        """
+        r"""
         Ramsay's Ea weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -354,6 +358,7 @@ class RamsayE(RobustNorm):
         return np.exp(-self.a * np.fabs(z)) + z**2*\
                 np.exp(-self.a*np.fabs(z))*-self.a/np.fabs(z)
 
+
 class AndrewWave(RobustNorm):
 
     """
@@ -369,7 +374,7 @@ class AndrewWave(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
-    def __init__(self, a = 1.339):
+    def __init__(self, a=1.339):
         self.a = a
 
     def _subset(self, z):
@@ -403,7 +408,7 @@ class AndrewWave(RobustNorm):
                 (1 - test) * 2 * a)
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Andrew's wave
 
         The analytic derivative of rho
@@ -427,7 +432,7 @@ class AndrewWave(RobustNorm):
         return test * np.sin(z / a)
 
     def weights(self, z):
-        """
+        r"""
         Andrew's wave weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -461,7 +466,8 @@ class AndrewWave(RobustNorm):
         test = self._subset(z)
         return test*np.cos(z / self.a)/self.a
 
-#TODO: this is untested
+
+# TODO: this is untested
 class TrimmedMean(RobustNorm):
     """
     Trimmed mean function for M-estimation.
@@ -510,7 +516,7 @@ class TrimmedMean(RobustNorm):
         return test * z**2 * 0.5
 
     def psi(self, z):
-        """
+        r"""
         The psi function for least trimmed mean
 
         The analytic derivative of rho
@@ -533,7 +539,7 @@ class TrimmedMean(RobustNorm):
         return test * z
 
     def weights(self, z):
-        """
+        r"""
         Least trimmed mean weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -566,6 +572,7 @@ class TrimmedMean(RobustNorm):
         test = self._subset(z)
         return test
 
+
 class Hampel(RobustNorm):
     """
 
@@ -584,7 +591,7 @@ class Hampel(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = 2., b = 4., c = 8.):
+    def __init__(self, a=2., b=4., c=8.):
         self.a = a
         self.b = b
         self.c = c
@@ -630,7 +637,7 @@ class Hampel(RobustNorm):
         return v
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Hampel's estimator
 
         The analytic derivative of rho
@@ -662,7 +669,7 @@ class Hampel(RobustNorm):
         return v
 
     def weights(self, z):
-        """
+        r"""
         Hampel weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -696,6 +703,7 @@ class Hampel(RobustNorm):
     def psi_deriv(self, z):
         t1, t2, t3 = self._subset(z)
         return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
+
 
 class TukeyBiweight(RobustNorm):
     """
@@ -743,7 +751,7 @@ class TukeyBiweight(RobustNorm):
         return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Tukey's biweight estimator
 
         The analytic derivative of rho
@@ -765,9 +773,8 @@ class TukeyBiweight(RobustNorm):
         subset = self._subset(z)
         return z * (1 - (z / self.c)**2)**2 * subset
 
-
     def weights(self, z):
-        """
+        r"""
         Tukey's biweight weighting function for the IRLS algorithm
 
         The psi function scaled by z
@@ -848,5 +855,5 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"\
-            % maxiter)
+    raise ValueError("location estimator failed to converge in %d iterations"
+                     % maxiter)

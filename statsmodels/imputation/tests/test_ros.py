@@ -518,7 +518,7 @@ class Test_ROS_RNADAdata(CheckROSMixin):
     ))
     rescol = 'res'
     cencol = 'cen'
-    df = pandas.read_csv(datastring, sep='\s+')
+    df = pandas.read_csv(datastring, sep=r'\s+')
     expected_final = numpy.array([
         0.01907990,  0.03826254,  0.06080717,  0.10100000,  0.13600000,
         0.34000000,  0.45700000,  0.51400000,  0.62900000,  0.63800000,

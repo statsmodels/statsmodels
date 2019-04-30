@@ -1,4 +1,4 @@
-"""
+r"""
 Tests for smoothing and estimation of unobserved states and disturbances
 
 - Predicted states: :math:`E(\alpha_t | Y_{t-1})`

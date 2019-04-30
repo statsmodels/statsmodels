@@ -532,14 +532,14 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
 
 def het_breuschpagan(resid, exog_het):
-    '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
+    r'''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+    :math: \sigma_i = \sigma * f(\alpha_0 + \alpha z_i)
 
-    Homoscedasticity implies that $\\alpha=0$
+    Homoscedasticity implies that $\alpha=0$
 
 
     Parameters

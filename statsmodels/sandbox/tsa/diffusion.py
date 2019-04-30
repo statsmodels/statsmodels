@@ -82,7 +82,7 @@ class Diffusion(object):
         return U, Umean, t
 
 class AffineDiffusion(Diffusion):
-    '''
+    r'''
 
     differential equation:
 
@@ -92,7 +92,7 @@ class AffineDiffusion(Diffusion):
     integral:
 
     :math::
-    x_T = x_0 + \\int_{0}^{T}f(t,S)dt + \\int_0^T  \\sigma(t,S)dW_t
+    x_T = x_0 + \int_{0}^{T}f(t,S)dt + \int_0^T  \sigma(t,S)dW_t
 
     TODO: check definition, affine, what about jump diffusion?
 

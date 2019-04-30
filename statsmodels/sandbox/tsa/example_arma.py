@@ -208,7 +208,7 @@ their lengths. This results in a correlation = 1 for an auto-correlation"""
 # from matplotlib axes.py
 # note: self is axis
 def pltacorr(self, x, **kwargs):
-    """
+    r"""
     call signature::
 
         acorr(x, normed=True, detrend=detrend_none, usevlines=True,
