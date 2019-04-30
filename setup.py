@@ -291,7 +291,8 @@ for source in statespace_exts:
     extensions.append(ext)
 
 if HAS_CYTHON:
-    extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES)
+    extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES,
+                           language_level=3)
 
 ##############################################################################
 # Construct package data
