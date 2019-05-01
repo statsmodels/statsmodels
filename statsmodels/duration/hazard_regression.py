@@ -3,7 +3,6 @@ from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
-from statsmodels.compat.numpy import np_matrix_rank
 
 """
 Implementation of proportional hazards regression models for duration
@@ -333,8 +332,8 @@ class PHReg(model.LikelihoodModel):
         self.missing = missing
 
         self.df_resid = (np.float(self.exog.shape[0] -
-                                  np_matrix_rank(self.exog)))
-        self.df_model = np.float(np_matrix_rank(self.exog))
+                                  np.linalg.matrix_rank(self.exog)))
+        self.df_model = np.float(np.linalg.matrix_rank(self.exog))
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -404,7 +403,7 @@ class PHReg(model.LikelihoodModel):
             offset = data[offset]
 
         import re
-        terms = re.split("[+\-~]", formula)
+        terms = re.split(r"[+\-~]", formula)
         for term in terms:
             term = term.strip()
             if term in ("0", "1"):
@@ -459,7 +458,7 @@ class PHReg(model.LikelihoodModel):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters

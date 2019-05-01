@@ -75,7 +75,7 @@ class TestFForm(object):
     References
     ----------
     See Racine, J.: "Consistent Significance Testing for Nonparametric
-    Regression" Journal of Business \& Economics Statistics.
+    Regression" Journal of Business & Economics Statistics.
 
     See chapter 12 in [1]  pp. 355-357.
 

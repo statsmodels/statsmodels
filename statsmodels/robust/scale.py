@@ -178,7 +178,7 @@ huber = Huber()
 
 
 class HuberScale(object):
-    """
+    r"""
     Huber's scaling for fitting robust linear models.
 
     Huber's scale is intended to be used as the scale estimate in the

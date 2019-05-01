@@ -40,7 +40,6 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -67,7 +66,7 @@ _fit_regularized_doc =\
         Parameters
         ----------
         method : string
-            Only the 'elastic_net' approach is currently implemented.
+            'elastic_net' and 'sqrt_lasso' are currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -106,10 +105,8 @@ _fit_regularized_doc =\
 
         Notes
         -----
-
-        The elastic net approach closely follows that implemented in
-        the glmnet package in R.  The penalty is a combination of L1
-        and L2 penalties.
+        The elastic net uses a combination of L1 and L2 penalties.
+        The implementation closely follows the glmnet package in R.
 
         The function that is minimized is:
 
@@ -136,11 +133,32 @@ _fit_regularized_doc =\
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
+        The square root lasso approach is a variation of the Lasso
+        that is largely self-tuning (the optimal tuning parameter
+        does not depend on the standard deviation of the regression
+        errors).  If the errors are Gaussian, the tuning parameter
+        can be taken to be
+
+        alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
+
+        where n is the sample size and p is the number of predictors.
+
+        The square root lasso uses the following keyword arguments:
+
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+
         References
         ----------
         Friedman, Hastie, Tibshirani (2008).  Regularization paths for
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
+
+        A Belloni, V Chernozhukov, L Wang (2011).  Square-root Lasso:
+        pivotal recovery of sparse signals via conic programming.
+        Biometrika 98(4), 791-806.
+        https://arxiv.org/pdf/1009.5689.pdf
         """
 
 
@@ -197,7 +215,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -214,7 +232,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = np_matrix_rank(self.exog)
+                self.rank = np.linalg.matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -276,7 +294,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = np_matrix_rank(np.diag(singular_values))
+                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -291,7 +309,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np_matrix_rank(R)
+                self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
@@ -964,19 +982,28 @@ class OLS(WLS):
                         refit=False, **kwargs):
         # Docstring attached below
 
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method not in ("elastic_net", "sqrt_lasso"):
+            msg = "Unkown method '%s' for fit_regularized" % method
+            raise ValueError(msg)
+
+        # Set default parameters.
+        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
+                    "zero_tol": 1e-8}
+        kwargs.update(defaults)
+
+        if method == "sqrt_lasso":
+            from statsmodels.base.elastic_net import (
+                RegularizedResults, RegularizedResultsWrapper
+            )
+            params = self._sqrt_lasso(alpha, refit, kwargs["zero_tol"])
+            results = RegularizedResults(self, params)
+            return RegularizedResultsWrapper(results)
+
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if L1_wt == 0:
             return self._fit_ridge(alpha)
-
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-
-        # Set default parameters.
-        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
-                    "zero_tol": 1e-10}
-        defaults.update(kwargs)
 
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
@@ -1002,6 +1029,51 @@ class OLS(WLS):
                               **defaults)
 
     fit_regularized.__doc__ = _fit_regularized_doc
+
+    def _sqrt_lasso(self, alpha, refit, zero_tol):
+
+        try:
+            import cvxopt
+        except ImportError:
+            msg = "sqrt_lasso fitting requires the cvxopt module to be installed"
+            raise ValueError(msg)
+
+        n = len(self.endog)
+        p = self.exog.shape[1]
+
+        h0 = cvxopt.matrix(0., (2*p+1, 1))
+        h1 = cvxopt.matrix(0., (n+1, 1))
+        h1[1:, 0] = cvxopt.matrix(self.endog, (n, 1))
+
+        G0 = cvxopt.spmatrix([], [], [], (2*p+1, 2*p+1))
+        for i in range(1, 2*p+1):
+            G0[i, i] = -1
+        G1 = cvxopt.matrix(0., (n+1, 2*p+1))
+        G1[0, 0] = -1
+        G1[1:, 1:p+1] = self.exog
+        G1[1:, p+1:] = -self.exog
+
+        c = cvxopt.matrix(alpha / n, (2*p + 1, 1))
+        c[0] = 1 / np.sqrt(n)
+
+        from cvxopt import solvers
+        solvers.options["show_progress"] = False
+
+        rslt = solvers.socp(c, Gl=G0, hl=h0, Gq=[G1], hq=[h1])
+        x = np.asarray(rslt['x']).flat
+        bp = x[1:p+1]
+        bn = x[p+1:]
+        params = bp - bn
+
+        if not refit:
+            return params
+
+        ii = np.flatnonzero(np.abs(params) > zero_tol)
+        rfr = OLS(self.endog, self.exog[:, ii]).fit()
+        params *= 0
+        params[ii] = rfr.params
+
+        return params
 
     def _fit_ridge(self, alpha):
         """
@@ -1495,7 +1567,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 'covariance matrix of the errors is correctly ' +
                 'specified.'}
             if use_t is None:
-                self.use_t = True  # TODO: class default
+                use_t = True  # TODO: class default
+            self.use_t = use_t
         else:
             if cov_kwds is None:
                 cov_kwds = {}

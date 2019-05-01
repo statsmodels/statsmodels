@@ -1168,7 +1168,7 @@ class VECMResults(object):
         KxK parameter matrices :math:`A_i` of the corresponding VAR
         representation. If the return value is assigned to a variable ``A``,
         these matrices can be accessed via ``A[i]`` for
-        :math:`i=0, \ldots, k_{ar}-1`.
+        :math:`i=0, \\ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
         This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
         It is needed e.g. for impulse-response-analysis.
@@ -1711,7 +1711,7 @@ class VECMResults(object):
                            legend_options={"loc": "lower left"})
 
     def test_granger_causality(self, caused, causing=None, signif=0.05):
-        """
+        r"""
         Test for Granger-causality.
 
         The concept of Granger-causality is described in chapter 7.6.3 of [1]_.
@@ -1845,7 +1845,7 @@ class VECMResults(object):
                                     method="f")
 
     def test_inst_causality(self, causing, signif=0.05):
-        """
+        r"""
         Test for instantaneous causality.
 
         The concept of instantaneous causality is described in chapters 3.6.3
@@ -1939,7 +1939,7 @@ class VECMResults(object):
         return self.y_all.T[self.k_ar:] - self.fittedvalues
 
     def test_normality(self, signif=0.05):
-        """
+        r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
         omnibus :math:`\\chi^2` test.
 

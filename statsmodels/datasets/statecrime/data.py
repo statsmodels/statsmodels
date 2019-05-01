@@ -37,7 +37,7 @@ NOTE        = """::
     murder
         Rate of murders / 100,000 population.
     hs_grad
-        Precent of population having graduated from high school or higher.
+        Percent of population having graduated from high school or higher.
     poverty
         % of individuals below the poverty line
     white
@@ -46,7 +46,7 @@ NOTE        = """::
     single
         Calculated from 2009 1-year American Community Survey obtained obtained
         from Census. Variable is Male householder, no wife present, family
-        household combined with Female household, no husband prsent, family
+        household combined with Female householder, no husband present, family
         household, divided by the total number of Family households.
     urban
         % of population in Urbanized Areas as of 2010 Census. Urbanized

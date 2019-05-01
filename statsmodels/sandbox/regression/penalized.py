@@ -49,7 +49,7 @@ def atleast_2dcols(x):
 
 
 class TheilGLS(GLS):
-    """GLS with stochastic restrictions
+    r"""GLS with stochastic restrictions
 
     TheilGLS estimates the following linear model
 
@@ -76,13 +76,13 @@ class TheilGLS(GLS):
 
     The parameter estimates solves the moment equation:
 
-    .. math:: (X' \\Sigma X + \\lambda R' \\sigma^2 \\Simga_p^{-1} R) b = X' \\Sigma y + \\lambda R' \\Simga_p^{-1} q
+    .. math:: (X' \Sigma X + \lambda R' \sigma^2 \Sigma_p^{-1} R) b = X' \Sigma y + \lambda R' \Sigma_p^{-1} q
 
-    :math:`\\lambda` is the penalization weight similar to Ridge regression.
+    :math:`\lambda` is the penalization weight similar to Ridge regression.
 
     If lambda is zero, then the parameter estimate is the same as OLS. If
     lambda goes to infinity, then the restriction is imposed with equality.
-    In the model `pen_weight` is used as name instead of $\\lambda$
+    In the model `pen_weight` is used as name instead of $\lambda$
 
     R does not have to be square. The number of rows of R can be smaller
     than the number of parameters. In this case not all linear combination
@@ -178,7 +178,7 @@ class TheilGLS(GLS):
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
 
-    def fit(self, pen_weight=1., cov_type='sandwich'):
+    def fit(self, pen_weight=1., cov_type='sandwich', use_t=True):
         """Estimate parameters and return results instance
 
         Parameters
@@ -256,7 +256,7 @@ class TheilGLS(GLS):
         self.xpxi = xpxi
         self.sigma2_e = sigma2_e
         lfit = TheilRegressionResults(self, params,
-                       normalized_cov_params=normalized_cov_params)
+                       normalized_cov_params=normalized_cov_params, use_t=use_t)
 
         lfit.penalization_factor = lambd
         return lfit

@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises)
 import pandas as pd
-from pandas import PeriodIndex, DatetimeIndex
+from pandas import DatetimeIndex, date_range, period_range
 import pytest
 
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
@@ -29,10 +29,10 @@ ydata_path = os.path.join(current_path, 'results', 'y_arma_data.csv')
 with open(ydata_path, "rb") as fd:
     y_arma = np.genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
-sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
-cpi_predict_dates = PeriodIndex(start='2009q3', end='2015q4', freq='Q')
-sun_predict_dates = PeriodIndex(start='2008', end='2033', freq='A')
+cpi_dates = period_range(start='1959q1', end='2009q3', freq='Q')
+sun_dates = period_range(start='1700', end='2008', freq='A')
+cpi_predict_dates = period_range(start='2009q3', end='2015q4', freq='Q')
+sun_predict_dates = period_range(start='2008', end='2033', freq='A')
 
 
 def test_compare_arma():
@@ -1624,7 +1624,7 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = pd.date_range(start='1700', end='2009', freq='A')[:309]
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
@@ -1634,7 +1634,7 @@ def test_arima_predict_bug():
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
     assert_(predict.index.equals(dta.index[-20:]))
     # partially out of sample
-    predict_dates = pd.DatetimeIndex(start='2000', end='2015', freq='A')
+    predict_dates = pd.date_range(start='2000', end='2015', freq='A')
     predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
     assert_(predict.index.equals(predict_dates))
     #assert_(1 == 0)
@@ -1826,24 +1826,28 @@ def test_arimax():
 
 
 def test_bad_start_params():
-    endog = np.array([820.69093, 781.0103028, 785.8786988, 767.64282267,
-         778.9837648 ,   824.6595702 ,   813.01877867,   751.65598567,
-         753.431091  ,   746.920813  ,   795.6201904 ,   772.65732833,
-         793.4486454 ,   868.8457766 ,   823.07226547,   783.09067747,
-         791.50723847,   770.93086347,   835.34157333,   810.64147947,
-         738.36071367,   776.49038513,   822.93272333,   815.26461227,
-         773.70552987,   777.3726522 ,   811.83444853,   840.95489133,
-         777.51031933,   745.90077307,   806.95113093,   805.77521973,
-         756.70927733,   749.89091773,  1694.2266924 ,  2398.4802244 ,
-        1434.6728516 ,   909.73940427,   929.01291907,   769.07561453,
-         801.1112548 ,   796.16163313,   817.2496376 ,   857.73046447,
-         838.849345  ,   761.92338873,   731.7842242 ,   770.4641844 ])
+    endog = np.array([
+        820.69093,      781.0103028,    785.8786988,    767.64282267,
+        778.9837648,    824.6595702,    813.01877867,   751.65598567,
+        753.431091,     746.920813,     795.6201904,    772.65732833,
+        793.4486454,    868.8457766,    823.07226547,   783.09067747,
+        791.50723847,   770.93086347,   835.34157333,   810.64147947,
+        738.36071367,   776.49038513,   822.93272333,   815.26461227,
+        773.70552987,   777.3726522,    811.83444853,   840.95489133,
+        777.51031933,   745.90077307,   806.95113093,   805.77521973,
+        756.70927733,   749.89091773,  1694.2266924,   2398.4802244,
+        1434.6728516,   909.73940427,   929.01291907,   769.07561453,
+        801.1112548,    796.16163313,   817.2496376,    857.73046447,
+        838.849345,     761.92338873,   731.7842242,    770.4641844])
+
     mod = ARMA(endog, (15, 0))
-    assert_raises(ValueError, mod.fit)
+    with pytest.raises(ValueError):
+        mod.fit()
 
     inv = load_macrodata_pandas().data['realinv'].values
-    arima_mod = ARIMA(np.log(inv), (1,1,2))
-    assert_raises(ValueError, mod.fit)
+    arima_mod = ARIMA(np.log(inv), (1, 1, 2))
+    with pytest.raises(ValueError):
+        arima_mod.fit()
 
 
 def test_arima_small_data_bug():
@@ -2044,8 +2048,8 @@ def test_arima_dates_startatend():
     # bug
     np.random.seed(18)
     x = pd.Series(np.random.random(36),
-                  index=pd.DatetimeIndex(start='1/1/1990',
-                                         periods=36, freq='M'))
+                  index=pd.date_range(start='1/1/1990',
+                                      periods=36, freq='M'))
     res = ARIMA(x, (1, 0, 0)).fit(disp=0)
     pred = res.predict(start=len(x), end=len(x))
     assert_(pred.index[0] == x.index.shift(1)[-1])
@@ -2066,7 +2070,7 @@ def test_plot_predict(close_figures):
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
 
@@ -2174,7 +2178,7 @@ def test_arima_exog_predict():
 
     dta = load_macrodata_pandas().data
     dates = pd.date_range("1959", periods=len(dta), freq='Q')
-    cpi_dates = PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+    cpi_dates = period_range(start='1959Q1', end='2009Q3', freq='Q')
     dta.index = cpi_dates
 
     data = dta
@@ -2182,7 +2186,7 @@ def test_arima_exog_predict():
     data['loggdp'] = np.log(data['realgdp'])
     data['logcons'] = np.log(data['realcons'])
 
-    forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
+    forecast_period = period_range(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
     data_sample = data.loc[dta.index < end]
 
@@ -2411,7 +2415,7 @@ def test_endog_int():
     # int endog should produce same result as float, #3504
 
     np.random.seed(123987)
-    y = np.random.random_integers(0, 15, size=100)
+    y = np.random.randint(0, 16, size=100)
     yf = y.astype(np.float64)
 
     res = AR(y).fit(5)

@@ -157,7 +157,6 @@ from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _dot(x, y):
@@ -414,7 +413,7 @@ class MixedLMParams(object):
 
 
 def _smw_solver(s, A, AtA, Qi, di):
-    """
+    r"""
     Returns a solver for the linear system:
 
     .. math::
@@ -479,7 +478,7 @@ def _smw_solver(s, A, AtA, Qi, di):
 
 
 def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
-    """
+    r"""
     Returns the log determinant of
 
     .. math::
@@ -958,9 +957,12 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_vc = None
 
+        kwargs["subset"] = None
+        kwargs["exog_re"] = exog_re
+        kwargs["exog_vc"] = exog_vc
+        kwargs["groups"] = groups
         mod = super(MixedLM, cls).from_formula(
-            formula, data, subset=None, exog_re=exog_re,
-            exog_vc=exog_vc, groups=groups, *args, **kwargs)
+            formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
         (param_names,
@@ -2135,6 +2137,89 @@ class MixedLM(base.LikelihoodModel):
 
         return MixedLMResultsWrapper(results)
 
+    def get_distribution(self, params, scale, exog):
+        return _mixedlm_distribution(self, params, scale, exog)
+
+
+class _mixedlm_distribution(object):
+    """
+    A private class for simulating data from a given mixed linear model.
+
+    Parameters
+    ----------
+    model : MixedLM instance
+        A mixed linear model
+    params : array-like
+        A parameter vector defining a mixed linear model.  See
+        notes for more information.
+    scale : scalar
+        The unexplained variance
+    exog : array-like
+        An array of fixed effect covariates.  If None, model.exog
+        is used.
+
+    Notes
+    -----
+    The params array is a vector containing fixed effects parameters,
+    random effects parameters, and variance component parameters, in
+    that order.  The lower triangle of the random effects covariance
+    matrix is stored.  The random effects and variance components
+    parameters are divided by the scale parameter.
+
+    This class is used in Mediation, and possibly elsewhere.
+    """
+
+    def __init__(self, model, params, scale, exog):
+
+        self.model = model
+        self.exog = exog if exog is not None else model.exog
+
+        po = MixedLMParams.from_packed(
+                params, model.k_fe, model.k_re, False, True)
+
+        self.fe_params = po.fe_params
+        self.cov_re = scale * po.cov_re
+        self.vcomp = scale * po.vcomp
+        self.scale = scale
+
+        group_idx = np.zeros(model.nobs, dtype=np.int)
+        for k, g in enumerate(model.group_labels):
+            group_idx[model.row_indices[g]] = k
+        self.group_idx = group_idx
+
+    def rvs(self, n):
+        """
+        Return a vector of simulated values from a mixed linear
+        model.
+
+        The parameter n is ignored, but required by the interface
+        """
+
+        model = self.model
+
+        # Fixed effects
+        y = np.dot(self.exog, self.fe_params)
+
+        # Random effects
+        u = np.random.normal(size=(model.n_groups, model.k_re))
+        u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
+        y += (u[self.group_idx, :] * model.exog_re).sum(1)
+
+        # Variance components
+        for j, k in enumerate(model._vc_names):
+            ex = model.exog_vc[k]
+            v = self.vcomp[j]
+            for g in model.group_labels:
+                exg = ex[g]
+                ii = model.row_indices[g]
+                u = np.random.normal(size=exg.shape[1])
+                y[ii] += np.sqrt(v) * np.dot(exg, u)
+
+        # Residual variance
+        y += np.sqrt(self.scale) * np.random.normal(size=len(y))
+
+        return y
+
 
 class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
@@ -2154,6 +2239,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Pointer to MixedLM model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
+    params : array
+        A packed parameter vector for the profile parameterization.
+        The first `k_fe` elements are the estimated fixed effects
+        coefficients.  The remaining elements are the estimated
+        variance parameters.  The variance parameters are all divided
+        by `scale` and are not the variance parameters shown
+        in the summary.
     fe_params : array
         The fitted fixed-effects coefficients
     cov_re : array
@@ -2177,7 +2269,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         super(MixedLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
-        self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
+        self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
     @cache_readonly
     def fittedvalues(self):

@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import assert_index_equal
 from statsmodels.compat.python import lrange
 
@@ -9,17 +10,19 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
-from pandas import Series, DatetimeIndex, DataFrame
+from pandas import Series, date_range, DataFrame
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
                                        innovations_algo, innovations_filter)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -259,6 +262,21 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0., 0.])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_ols_inefficient(self):
+        lag_len = 5
+        pacfols = pacf_ols(self.x, nlags=lag_len, efficient=False)
+        x = self.x.copy()
+        x -= x.mean()
+        n = x.shape[0]
+        lags = np.zeros((n - 5, 5))
+        lead = x[5:]
+        direct = np.empty(lag_len + 1)
+        direct[0] = 1.0
+        for i in range(lag_len):
+            lags[:, i] = x[5 - (i + 1):-(i + 1)]
+            direct[i + 1] = lstsq(lags[:, :(i + 1)], lead, rcond=None)[0][-1]
+        assert_allclose(pacfols, direct, atol=1e-8)
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
@@ -502,7 +520,7 @@ def test_pandasacovf():
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))
@@ -759,7 +777,7 @@ def test_innovations_filter_brockwell_davis():
     resid = innovations_filter(endog, theta)
     expected = [endog[0]]
     for i in range(1, 4):
-        expected.append(endog[i] + theta[i, 0] * expected[-1])
+        expected.append(endog[i] - theta[i, 0] * expected[-1])
     expected = np.array(expected)
     assert_allclose(resid, expected)
 
@@ -787,3 +805,33 @@ def test_innovations_filter_errors():
         innovations_filter(np.empty(4), theta[:-1])
     with pytest.raises(ValueError):
         innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
+
+
+def test_innovations_algo_filter_kalman_filter():
+    # Test the innovations algorithm and filter against the Kalman filter
+    # for exact likelihood evaluation of an ARMA process
+    ar_params = np.array([0.5])
+    ma_params = np.array([0.2])
+    # TODO could generalize to sigma2 != 1, if desired, after #5324 is merged
+    # and there is a sigma2 argument to arma_acovf
+    # (but maybe this is not really necessary for the point of this test)
+    sigma2 = 1
+
+    endog = np.random.normal(size=10)
+
+    # Innovations algorithm approach
+    acovf = arma_acovf(np.r_[1, -ar_params], np.r_[1, ma_params],
+                       nobs=len(endog))
+
+    theta, v = innovations_algo(acovf)
+    u = innovations_filter(endog, theta)
+    llf_obs = -0.5 * u**2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
+
+    # Kalman filter apparoach
+    mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
+    res = mod.filter(np.r_[ar_params, ma_params, sigma2])
+
+    # Test that the two approaches are identical
+    assert_allclose(u, res.forecasts_error[0])
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
+    assert_allclose(llf_obs, res.llf_obs)

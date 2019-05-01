@@ -137,7 +137,7 @@ if __name__ == '__main__':
     C[1,1,1] = 0.5
     xhat3, err3 = VARMA(x,B,C)
 
-    x = np.r_[np.zeros((P,K)),x]  #prepend inital conditions
+    x = np.r_[np.zeros((P,K)),x]  #prepend initial conditions
     xhat4, err4 = VARMA(x,B,C)
 
     C[1,1,1] = 1

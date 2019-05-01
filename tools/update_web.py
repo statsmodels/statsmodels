@@ -124,12 +124,12 @@ def create_update_gitdir():
 def check_version(branch, latest_hash=None):
     if branch == 'master':
         remote_dir = 'devel'
-        regex = ("(?<=This documentation is for version <b>\d{1}\.\d{1}\."
-                 "\d{1}\.dev-)(\w{7})")
+        regex = (r"(?<=This documentation is for version <b>\d{1}\.\d{1}\."
+                 r"\d{1}\.dev-)(\w{7})")
     else:
         remote_dir = 'stable'
-        regex = ("(?<=This documentation is for the <b>)(\d{1}\.\d{1}\.\d{1})"
-                 "(?=</b> release.)")
+        regex = (r"(?<=This documentation is for the <b>)(\d{1}\.\d{1}\.\d{1})"
+                 r"(?=</b> release.)")
     base_url = 'https://www.statsmodels.org/{}'
     page = urlopen(base_url.format(remote_dir)).read()
 

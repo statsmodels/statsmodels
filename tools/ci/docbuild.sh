@@ -1,11 +1,12 @@
 # Script to text examples and build docs on travis
 
 # Change to doc directory
-cd ${SRCDIR}/docs
+cd "$SRCDIR"/docs
 
 # Run notebooks as tests
 pytest ../statsmodels/examples/tests
 
+set -e
 # Clean up
 echo '================================= Clean ================================='
 make clean
@@ -18,23 +19,26 @@ echo '========================================================================'
 echo 'make html > doc_build.log 2>&1'
 make html 2>&1 | tee doc_build.log
 
+set +e
 # Info
 echo '========================================================================'
 echo '=                 Opportunities To Improve (Warnings)                  ='
 echo '========================================================================'
-cat doc_build.log | grep -E '(WARNING)' | grep -v '(noindex|toctree)'
+grep -E '(WARNING)' doc_build.log | grep -v '(noindex|toctree)'
 
 # Check log
 echo '========================================================================'
 echo '=          Broken Behavior (Errors and Warnings to be Fixed)           ='
 echo '========================================================================'
-cat doc_build.log | grep -E '(SEVERE|ERROR|WARNING)' | grep -Ev '(noindex|toctree)'
+grep -E '(SEVERE|ERROR|WARNING)' doc_build.log | grep -Ev '(noindex|toctree)'
 
 # Deploy with doctr
-cd ${SRCDIR};
+cd "$SRCDIR"
 if [[ -z "$TRAVIS_TAG" ]]; then
   doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io devel;
 else
-  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";
-  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+  if [[ "$TRAVIS_TAG" != *"dev"* ]]; then  # do not push on dev tags
+    doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";
+    doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+  fi;
 fi;

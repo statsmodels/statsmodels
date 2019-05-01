@@ -39,7 +39,6 @@ import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
@@ -156,6 +155,25 @@ def _pandas_to_dummies(endog):
     return endog_dummies, ynames, yname
 
 
+def _validate_l1_method(method):
+    """
+    As of 0.10.0, the supported values for `method` in `fit_regularized`
+    are "l1" and "l1_cvxopt_cp".  If an invalid value is passed, raise
+    with a helpful error message
+
+    Parameters
+    ----------
+    method : str
+
+    Raises
+    ------
+    ValueError
+    """
+    if method not in ['l1', 'l1_cvxopt_cp']:
+        raise ValueError('`method` = {method} is not supported, use either '
+                         '"l1" or "l1_cvxopt_cp"'.format(method=method))
+
+
 #### Private Model Classes ####
 
 
@@ -178,7 +196,7 @@ class DiscreteModel(base.LikelihoodModel):
         and should contain any preprocessing that needs to be done for a model.
         """
         # assumes constant
-        rank = np_matrix_rank(self.exog)
+        rank = np.linalg.matrix_rank(self.exog)
         self.df_model = float(rank - 1)
         self.df_resid = float(self.exog.shape[0] - rank)
 
@@ -321,12 +339,9 @@ class DiscreteModel(base.LikelihoodModel):
         (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\beta_k = 0`
 
         """
-        ### Set attributes based on method
-        if method in ['l1', 'l1_cvxopt_cp']:
-            cov_params_func = self.cov_params_func_l1
-        else:
-            raise ValueError("argument method == %s, which is not handled"
-                            % method)
+        _validate_l1_method(method)
+        # Set attributes based on method
+        cov_params_func = self.cov_params_func_l1
 
         ### Bundle up extra kwargs for the dictionary kwargs.  These are
         ### passed through super(...).fit() as kwargs and unpacked at
@@ -452,16 +467,16 @@ class BinaryModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         bnryfit = super(BinaryModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1BinaryResults(self, bnryfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -863,16 +878,16 @@ class CountModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1CountResults(self, cntfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1CountResults(self, cntfit)
         return L1CountResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -1056,16 +1071,16 @@ class Poisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1PoissonResults(self, cntfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1PoissonResults(self, cntfit)
         return L1PoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -1485,6 +1500,8 @@ class GeneralizedPoisson(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        _validate_l1_method(method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1510,12 +1527,7 @@ class GeneralizedPoisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1GeneralizedPoissonResults(self, cntfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = L1GeneralizedPoissonResults(self, cntfit)
         return L1GeneralizedPoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -2438,6 +2450,7 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
+
 class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
@@ -2454,15 +2467,12 @@ class NegativeBinomial(CountModel):
 
     References
     ----------
-
-    References:
-
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
+    """ % {'params': base._model_params_doc,
+           'extra_params':
            """loglike_method : string
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
@@ -2479,7 +2489,7 @@ class NegativeBinomial(CountModel):
 
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
-                       exposure=None, missing='none', **kwargs):
+                 exposure=None, missing='none', **kwargs):
         super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                missing=missing, **kwargs)
@@ -2499,23 +2509,23 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'nb1':
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'geometric':
             self.hessian = self._hessian_geom
             self.score = self._score_geom
             self.loglikeobs = self._ll_geometric
         else:
-            raise NotImplementedError("Likelihood type must nb1, nb2 or "
-                                      "geometric")
+            raise ValueError('Likelihood type must "nb1", "nb2" '
+                             'or "geometric"')
 
     # Workaround to pickle instance methods
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = self.__dict__.copy()  # copy the dict since we change it
         del odict['hessian']
         del odict['score']
         del odict['loglikeobs']
@@ -2540,14 +2550,14 @@ class NegativeBinomial(CountModel):
         return llf
 
     def _ll_nb2(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
         return self._ll_nbin(params[:-1], alpha, Q=0)
 
     def _ll_nb1(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -2596,8 +2606,8 @@ class NegativeBinomial(CountModel):
 
     def _score_geom(self, params):
         exog = self.exog
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog[:, None]
+        mu = self.predict(params)[:, None]
         dparams = exog * (y-mu)/(mu+1)
         return dparams.sum(0)
 
@@ -2869,6 +2879,8 @@ class NegativeBinomial(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        _validate_l1_method(method)
+
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
             # don't penalize alpha if alpha is scalar
@@ -2900,12 +2912,8 @@ class NegativeBinomial(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialResults(self, cntfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
 
+        discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
@@ -3228,9 +3236,7 @@ class NegativeBinomialP(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
-        if method not in ['l1', 'l1_cvxopt_cp']:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
+        _validate_l1_method(method)
 
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra

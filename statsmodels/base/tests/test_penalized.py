@@ -687,7 +687,7 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         restriction = np.eye(k)[2:]
         modp = TheilGLS(y, x, r_matrix=restriction)
         # the corresponding Theil penweight seems to be 2 * nobs / sigma2_e
-        cls.res2 = modp.fit(pen_weight=120.74564413221599 * 1000)
+        cls.res2 = modp.fit(pen_weight=120.74564413221599 * 1000, use_t=False)
 
         pen = smpen.L2ContraintsPenalty(restriction=restriction)
         mod = GLMPenalized(y, x, family=family.Gaussian(),
@@ -705,17 +705,20 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
 
     def test_params_table(self):
         # override inherited because match is not good except for params and predict
+        # The cov_type in GLMPenalized and in TheilGLS are not the same
+        # both use sandwiches but TheilGLS sandwich is not HC
+        # relative difference in bse up to 7%
         res1 = self.res1
         res2 = self.res2
         assert_equal((res1.params != 0).sum(), self.k_params)
         assert_allclose(res1.params, res2.params, rtol=self.rtol,
                         atol=self.atol)
 
-        # failure for penalized values
-        # check only first 2, others fails, see #4669
-        exog_index = slice(None, 2, None)
+        exog_index = slice(None, None, None)
         assert_allclose(res1.bse[exog_index], res2.bse[exog_index],
                         rtol=0.1, atol=self.atol)
+        assert_allclose(res1.tvalues[exog_index], res2.tvalues[exog_index],
+                        rtol=0.08, atol=5e-3)
         assert_allclose(res1.pvalues[exog_index], res2.pvalues[exog_index],
-                        rtol=self.rtol, atol=self.atol)
+                        rtol=0.1, atol=5e-3)
         assert_allclose(res1.predict(), res2.predict(), rtol=1e-5)

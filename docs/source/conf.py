@@ -11,13 +11,18 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+import os
+import sys
+import contextlib
+
+# -- Monkey Patch ----------------------------------------------------------
+#  Monkey patch contextlib.contextmanager.__doc__ to avoid noise
+contextlib.contextmanager.__doc__ = ''
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../sphinxext'))
-
 
 # -- General configuration -----------------------------------------------------
 
@@ -29,17 +34,16 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
-              'sphinx.ext.mathjax', # One of mathjax or imgmath
-              # 'sphinx.ext.imgmath',
+              # One of mathjax or imgmath
+              'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
-              'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
-              # 'numpydoc',  # numpydoc or napoleon, but not both
+              # numpydoc or sphinx.ext.napoleon, but not both
               'sphinx.ext.napoleon'
               ]
 
@@ -57,7 +61,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2018, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True

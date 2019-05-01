@@ -57,10 +57,11 @@ help
 .coverage
 coverage_html_report/
 
+# Idea IDE
+.idea/
+
 # Project specific
 statsmodels/version.py
-cythonize.dat
-cythonize_exclusions.dat
 statsmodels.egg-info/
 iterate.dat
 hash_dict.pickle
@@ -68,6 +69,7 @@ rehab.table
 salary.table
 .ipynb_checkpoints
 statsmodels/tsa/statespace/_statespace.pyx
+statsmodels/tsa/innovations/_arma_innovations.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
 statsmodels/tsa/regime_switching/_kim_smoother.pyx
 statsmodels/tsa/statespace/_initialization.pyx

@@ -24,11 +24,11 @@ except ImportError:
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.vector_ar.var_model import VAR, var_acf
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
 DECIMAL_12 = 12
@@ -373,6 +373,26 @@ class TestVARResults(CheckIRF, CheckFEVD):
         # defaults to nlags=lag_order
         acfs = self.res.acf()
         assert(len(acfs) == self.p + 1)
+
+    def test_acf_2_lags(self):
+        c = np.zeros((2, 2, 2))
+        c[0] = np.array([[.2, .1], [.15, .15]])
+        c[1] = np.array([[.1, .9], [0, .1]])
+
+        acf = var_acf(c, np.eye(2), 3)
+
+        gamma = np.zeros((6, 6))
+        gamma[:2, :2] = acf[0]
+        gamma[2:4, 2:4] = acf[0]
+        gamma[4:6, 4:6] = acf[0]
+        gamma[2:4, :2] = acf[1].T
+        gamma[4:, :2] = acf[2].T
+        gamma[:2, 2:4] = acf[1]
+        gamma[:2, 4:] = acf[2]
+        recovered = np.dot(gamma[:2, 2:], np.linalg.inv(gamma[:4, :4]))
+        recovered = [recovered[:, 2 * i:2 * (i + 1)] for i in range(2)]
+        recovered = np.array(recovered)
+        assert_allclose(recovered, c, atol=1e-7)
 
     def test_acorr(self):
         acorrs = self.res.acorr(10)

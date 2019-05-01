@@ -366,19 +366,13 @@ class Grouping(object):
     @property
     def labels(self):
         # this was index_int, but that's not a very good name...
-        if hasattr(self.index, 'labels'):
-            return self.index.labels
-        else:  # pandas version issue here
-            # Compat code for the labels -> codes change in pandas 0.15
-            # FIXME: use .codes directly when we don't want to support
-            # pandas < 0.15
-            tmp = pd.Categorical(self.index)
-            try:
-                labl = tmp.codes
-            except AttributeError:
-                labl = tmp.labels  # Old pandsd
-
-            return labl[None]
+        codes = getattr(self.index, 'codes', None)
+        if codes is None:
+            if hasattr(self.index, 'labels'):
+                codes = self.index.labels
+            else:
+                codes = pd.Categorical(self.index).codes[None]
+        return codes
 
     @property
     def group_names(self):

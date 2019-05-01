@@ -5,7 +5,7 @@ from pandas import DataFrame, Index
 import patsy
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.compat.python import lrange, lmap
+from statsmodels.compat.python import lrange
 from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
 from statsmodels.iolib import summary2
@@ -73,21 +73,22 @@ def anova_single(model, **kwargs):
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
 
-    table = DataFrame(np.zeros((n_rows, 5)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
-    if typ in [1,"I"]:
+    if typ in [1, "I"]:
         return anova1_lm_single(model, endog, exog, nobs, design_info, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
         return anova2_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [3, "III"]:
         return anova3_lm_single(model, design_info, n_rows, test, pr_test,
-                robust)
+                                robust)
     elif typ in [4, "IV"]:
-        raise NotImplemented("Type IV not yet implemented")
-    else: # pragma: no cover
+        raise NotImplementedError("Type IV not yet implemented")
+    else:  # pragma: no cover
         raise ValueError("Type %s not understood" % str(typ))
+
 
 def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
@@ -293,12 +294,36 @@ def anova_lm(*args, **kwargs):
     Returns
     -------
     anova : DataFrame
-    A DataFrame containing.
+        When args is a single model, return is DataFrame with columns:
+
+        sum_sq : float64
+            Sum of squares for model terms.
+        df : float64
+            Degrees of freedom for model terms.
+        F : float64
+            F statistic value for significance of adding model terms.
+        PR(>F) : float64
+            P-value for significance of adding model terms.
+
+        When args is multiple models, return is DataFrame with columns:
+
+        df_resid : float64
+            Degrees of freedom of residuals in models.
+        ssr : float64
+            Sum of squares of residuals in models.
+        df_diff : float64
+            Degrees of freedom difference from previous model in args
+        ss_dff : float64
+            Difference in ssr from previous model in args
+        F : float64
+            F statistic comparing to previous model in args
+        PR(>F): float64
+            P-value for significance comparing to previous model in args
 
     Notes
     -----
-    Model statistics are given in the order of args. Models must have
-    been fit using the formula api.
+    Model statistics are given in the order of args. Models must have been fit
+    using the formula api.
 
     See Also
     --------
@@ -325,9 +350,7 @@ def anova_lm(*args, **kwargs):
         model = args[0]
         return anova_single(model, **kwargs)
 
-    try:
-        assert typ in [1,"I"]
-    except:
+    if typ not in [1, "I"]:
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
@@ -336,19 +359,19 @@ def anova_lm(*args, **kwargs):
     n_models = len(args)
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.zeros((n_models, 6)), columns = names)
+    table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
     if not scale: # assume biggest model is last
         scale = args[-1].scale
 
-    table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
-    table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
+    table["ssr"] = [mdl.ssr for mdl in args]
+    table["df_resid"] = [mdl.df_resid for mdl in args]
     table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
         table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                             table["df_resid"])
+                                    table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
         table[pr_test][table['F'].isnull()] = np.nan
 

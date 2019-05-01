@@ -88,7 +88,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     Attributes
     ----------
-    ssm : KalmanFilter
+    ssm : statsmodels.tsa.statespace.kalman_filter.KalmanFilter
         Underlying state space representation.
 
     Notes
@@ -1055,9 +1055,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglike` method.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both *args and **kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        *args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         params = np.array(params, ndmin=1)
 
@@ -1178,9 +1178,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both *args and **kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        *args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         transformed, method, approx_complex_step, approx_centered, kwargs = (
             _handle_args(MLEModel._hessian_param_names,
@@ -2755,7 +2755,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
             ('HQIC', ["%#5.3f" % self.hqic])]
-        if self.filter_results.filter_concentrated:
+        if (self.filter_results is not None and
+                self.filter_results.filter_concentrated):
             top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
@@ -2920,7 +2921,6 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-        self.table = to_include
         # OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
         # data = np.column_stack(list(to_include.values()))

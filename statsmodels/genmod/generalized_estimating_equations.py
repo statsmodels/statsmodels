@@ -28,6 +28,7 @@ from statsmodels.compat.python import range, lzip, zip
 import numpy as np
 from scipy import stats
 import pandas as pd
+import patsy
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
@@ -37,6 +38,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import cov_struct as cov_structs
 
 import statsmodels.genmod.families.varfuncs as varfuncs
@@ -476,6 +478,11 @@ class GEE(base.Model):
         self.constraint = constraint
         self.update_dep = update_dep
 
+        self._fit_history = {'params': [],
+                             'score': [],
+                             'dep_params': [],
+                             'cov_adjust': []}
+
         groups = np.array(groups)  # in case groups is pandas
         # Pass groups, time, offset, and dep_data so they are
         # processed for missing data along with endog and exog.
@@ -643,12 +650,23 @@ class GEE(base.Model):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with two exceptions. `dep_data`
+            is processed as described below.  The ``eval_env`` keyword is
+            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
+            object or an integer indicating the depth of the namespace to use.
+            For example, the default ``eval_env=0`` uses the calling namespace.
+            If you wish to use a "clean" environment set ``eval_env=-1``.
+
+        Optional arguments
+        ------------------
+        dep_data : string or array-like
+            Data used for estimating the dependence structure.  See
+            specific dependence structure classes (e.g. Nested) for
+            details.  If `dep_data` is a string, it is interpreted as
+            a formula that is applied to `data`. If it is an array, it
+            must be an array of strings corresponding to column names in
+            `data`.  Otherwise it must be an array-like with the same
+            number of rows as data.
 
         Returns
         -------
@@ -666,23 +684,40 @@ class GEE(base.Model):
         the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
-        if type(groups) == str:
+        groups_name = "Groups"
+        if isinstance(groups, str):
+            groups_name = groups
             groups = data[groups]
 
-        if type(time) == str:
+        if isinstance(time, str):
             time = data[time]
 
-        if type(offset) == str:
+        if isinstance(offset, str):
             offset = data[offset]
 
-        if type(exposure) == str:
+        if isinstance(exposure, str):
             exposure = data[exposure]
+
+        dep_data = kwargs.get("dep_data")
+        dep_data_names = None
+        if dep_data is not None:
+            if isinstance(dep_data, str):
+                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data_names = dep_data.columns.tolist()
+            else:
+                dep_data_names = list(dep_data)
+                dep_data = data[dep_data]
+            kwargs["dep_data"] = np.asarray(dep_data)
 
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
+
+        if dep_data_names is not None:
+            model._dep_data_names = dep_data_names
+        model._groups_name = groups_name
 
         return model
 
@@ -699,10 +734,128 @@ class GEE(base.Model):
             return [np.array(array[self.group_indices[k], :])
                     for k in self.group_labels]
 
+    def compare_score_test(self, submodel):
+        """
+        Perform a score test for the given submodel against this model.
+
+        Parameters
+        ----------
+        submodel : GEEResults instance
+            A fitted GEE model that is a submodel of this model.
+
+        Returns
+        -------
+        A dictionary with keys "statistic", "p-value", and "df",
+        containing the score test statistic, its chi^2 p-value,
+        and the degrees of freedom used to compute the p-value.
+
+        Notes
+        -----
+        The score test can be performed without calling 'fit' on the
+        larger model.  The provided submodel must be obtained from a
+        fitted GEE.
+
+        This method performs the same score test as can be obtained by
+        fitting the GEE with a linear constraint and calling `score_test`
+        on the results.
+
+        References
+        ----------
+        Xu Guo and Wei Pan (2002). "Small sample performance of the score
+        test in GEE".
+        http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
+        """
+
+        # Check consistency between model and submodel (not a comprehensive
+        # check)
+        submod = submodel.model
+        if self.exog.shape[0] != submod.exog.shape[0]:
+            msg = "Model and submodel have different numbers of cases."
+            raise ValueError(msg)
+        if not isinstance(self.family, type(submod.family)):
+            msg = "Model and submodel have different GLM families."
+            warnings.warn(msg)
+        if not isinstance(self.cov_struct, type(submod.cov_struct)):
+            msg = "Model and submodel have different GEE covariance structures."
+            warnings.warn(msg)
+        if not np.equal(self.weights, submod.weights).all():
+            msg = "Model and submodel should have the same weights."
+            warnings.warn(msg)
+
+        # Get the positions of the submodel variables in the
+        # parent model
+        qm, qc = _score_test_submodel(self, submodel.model)
+        if qm is None:
+            msg = "The provided model is not a submodel."
+            raise ValueError(msg)
+
+        # Embed the submodel params into a params vector for the
+        # parent model
+        params_ex = np.dot(qm, submodel.params)
+
+        # Attempt to preserve the state of the parent model
+        cov_struct_save = self.cov_struct
+        import copy
+        cached_means_save = copy.deepcopy(self.cached_means)
+
+        # Get the score vector of the submodel params in
+        # the parent model
+        self.cov_struct = submodel.cov_struct
+        self.update_cached_means(params_ex)
+        _, score = self._update_mean_params()
+        if score is None:
+            msg = "Singular matrix encountered in GEE score test"
+            warnings.warn(msg, ConvergenceWarning)
+            return None
+
+        if not hasattr(self, "ddof_scale"):
+            self.ddof_scale = self.exog.shape[1]
+
+        if not hasattr(self, "scaling_factor"):
+            self.scaling_factor = 1
+
+        _, ncov1, cmat = self._covmat()
+        scale = self.estimate_scale()
+        cmat = cmat / scale ** 2
+        score2 = np.dot(qc.T, score) / scale
+
+        amat = np.linalg.inv(ncov1)
+
+        bmat_11 = np.dot(qm.T, np.dot(cmat, qm))
+        bmat_22 = np.dot(qc.T, np.dot(cmat, qc))
+        bmat_12 = np.dot(qm.T, np.dot(cmat, qc))
+
+        amat_11 = np.dot(qm.T, np.dot(amat, qm))
+        amat_12 = np.dot(qm.T, np.dot(amat, qc))
+
+        score_cov = bmat_22 - np.dot(amat_12.T,
+                                     np.linalg.solve(amat_11, bmat_12))
+        score_cov -= np.dot(bmat_12.T,
+                            np.linalg.solve(amat_11, amat_12))
+        score_cov += np.dot(amat_12.T,
+                            np.dot(np.linalg.solve(amat_11, bmat_11),
+                                   np.linalg.solve(amat_11, amat_12)))
+
+        # Attempt to restore state
+        self.cov_struct = cov_struct_save
+        self.cached_means = cached_means_save
+
+        from scipy.stats.distributions import chi2
+        score_statistic = np.dot(score2,
+                                 np.linalg.solve(score_cov, score2))
+        score_df = len(score2)
+        score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
+        return {"statistic": score_statistic,
+                "df": score_df,
+                "p-value": score_pvalue}
+
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter at the current
-        parameter value.
+        Estimate the dispersion/scale.
+
+        The scale parameter for binomial, Poisson, and multinomial
+        families is fixed at 1, otherwise it is estimated from
+        the data.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson,
@@ -1054,8 +1207,11 @@ class GEE(base.Model):
 
     def _starting_params(self):
 
-        # TODO: use GLM to get Poisson starting values
-        return np.zeros(self.exog.shape[1])
+        model = GLM(self.endog, self.exog, family=self.family,
+                       offset=self._offset_exposure,
+                       freq_weights=self.weights)
+        result = model.fit()
+        return result.params
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -1201,6 +1357,163 @@ class GEE(base.Model):
 
     fit.__doc__ = _gee_fit_doc
 
+
+    def _update_regularized(self, params, pen_wt, scad_param, eps):
+
+        sn, hm = 0, 0
+
+        for i in range(self.num_group):
+
+            expval, _ = self.cached_means[i]
+            resid = self.endog_li[i] - expval
+            sdev = np.sqrt(self.family.variance(expval))
+
+            ex = self.exog_li[i] * sdev[:, None]**2
+            rslt = self.cov_struct.covariance_matrix_solve(
+                           expval, i, sdev, (resid, ex))
+            sn0 = rslt[0]
+            sn += np.dot(ex.T, sn0)
+            hm0 = rslt[1]
+            hm += np.dot(ex.T, hm0)
+
+        # Wang et al. divide sn here by num_group, but that
+        # seems to be incorrect
+
+        ap = np.abs(params)
+        en = pen_wt * np.clip(scad_param * pen_wt - ap, 0, np.inf) * (ap > pen_wt)
+        en /= (scad_param - 1) * pen_wt
+        en += pen_wt * (ap <= pen_wt)
+        en /= eps + ap
+
+        hm.flat[::hm.shape[0] + 1] += self.num_group * en
+        hm *= self.estimate_scale()
+        sn -= self.num_group * en * params
+
+        return np.linalg.solve(hm, sn), hm
+
+    def _regularized_covmat(self, mean_params):
+
+        self.update_cached_means(mean_params)
+
+        ma = 0
+
+        for i in range(self.num_group):
+
+            expval, _ = self.cached_means[i]
+            resid = self.endog_li[i] - expval
+            sdev = np.sqrt(self.family.variance(expval))
+
+            ex = self.exog_li[i] * sdev[:, None]**2
+            rslt = self.cov_struct.covariance_matrix_solve(
+                           expval, i, sdev, (resid,))
+            ma0 = np.dot(ex.T, rslt[0])
+            ma += np.outer(ma0, ma0)
+
+        return ma
+
+    def fit_regularized(self, pen_wt, scad_param=3.7, maxiter=100,
+                        ddof_scale=None, update_assoc=5,
+                        ctol=1e-5, ztol=1e-3, eps=1e-6):
+        """
+        Regularized estimation for GEE.
+
+        Parameters
+        ----------
+        pen_wt : float
+            The penalty weight (a non-negative scalar).
+        scad_param : float
+            Non-negative scalar determining the shape of the Scad
+            penalty.
+        maxiter : integer
+            The maximum number of iterations.
+        ddof_scale : integer
+            Value to subtract from `nobs` when calculating the
+            denominator degrees of freedom for t-statistics, defaults
+            to the number of columns in `exog`.
+        update_assoc : integer
+            The dependence parameters are updated every `update_assoc`
+            iterations of the mean structure parameter updates.
+        ctol : float
+            Convergence criterion, default is one order of magnitude
+            smaller than proposed in section 3.1 of Wang et al.
+        ztol : float
+            Coefficients smaller than this value are treated as
+            being zero, default is based on section 5 of Wang et al.
+        eps : non-negative scalar
+            Numerical constant, see section 3.2 of Wang et al.
+
+        Returns
+        -------
+        GEEResults instance.  Note that not all methods of the results
+        class make sense when the model has been fit with regularization.
+
+        Notes
+        -----
+        This implementation assumes that the link is canonical.
+
+        References
+        ----------
+        Wang L, Zhou J, Qu A. (2012). Penalized generalized estimating
+        equations for high-dimensional longitudinal data analysis.
+        Biometrics. 2012 Jun;68(2):353-60. doi: 10.1111/j.1541-0420.2011.01678.x.
+        https://www.ncbi.nlm.nih.gov/pubmed/21955051
+        http://users.stat.umn.edu/~wangx346/research/GEE_selection.pdf
+        """
+
+        mean_params = np.zeros(self.exog.shape[1])
+        self.update_cached_means(mean_params)
+        converged = False
+        fit_history = {'params': []}
+
+        # Subtract this number from the total sample size when
+        # normalizing the scale parameter estimate.
+        if ddof_scale is None:
+            self.ddof_scale = self.exog.shape[1]
+        else:
+            if not ddof_scale >= 0:
+                raise ValueError(
+                    "ddof_scale must be a non-negative number or None")
+            self.ddof_scale = ddof_scale
+
+        for itr in range(maxiter):
+
+            update, hm = self._update_regularized(
+                              mean_params, pen_wt, scad_param, eps)
+            if update is None:
+                msg = "Singular matrix encountered in regularized GEE update",
+                warnings.warn(msg, ConvergenceWarning)
+                break
+            if np.sqrt(np.sum(update**2)) < ctol:
+                converged = True
+                break
+            mean_params += update
+            fit_history['params'].append(mean_params.copy())
+            self.update_cached_means(mean_params)
+
+            if itr != 0 and (itr % update_assoc == 0):
+                self._update_assoc(mean_params)
+
+        if not converged:
+            msg = "GEE.fit_regularized did not converge"
+            warnings.warn(msg)
+
+        mean_params[np.abs(mean_params) < ztol] = 0
+
+        self._update_assoc(mean_params)
+        ma = self._regularized_covmat(mean_params)
+        cov = np.linalg.solve(hm, ma)
+        cov = np.linalg.solve(hm, cov.T)
+
+        # kwargs to add to results instance, need to be available in __init__
+        res_kwds = dict(cov_type="robust", cov_robust=cov)
+
+        scale = self.estimate_scale()
+        rslt = GEEResults(self, mean_params, cov, scale,
+                          regularized=True, attr_kwds=res_kwds)
+        rslt.fit_history = fit_history
+
+        return GEEResultsWrapper(rslt)
+
     def _handle_constraint(self, mean_params, bcov):
         """
         Expand the parameter estimate `mean_params` and covariance matrix
@@ -1245,7 +1558,6 @@ class GEE(base.Model):
         scale = self.estimate_scale()
         cmat = cmat / scale ** 2
         score2 = score[red_p:] / scale
-
         amat = np.linalg.inv(ncov1)
 
         bmat_11 = cmat[0:red_p, 0:red_p]
@@ -1412,7 +1724,8 @@ class GEEResults(base.LikelihoodModelResults):
         "using GEE.\n" + _gee_results_doc)
 
     def __init__(self, model, params, cov_params, scale,
-                 cov_type='robust', use_t=False, **kwds):
+                 cov_type='robust', use_t=False, regularized=False,
+                 **kwds):
 
         super(GEEResults, self).__init__(
             model, params, normalized_cov_params=cov_params,
@@ -1496,6 +1809,37 @@ class GEEResults(base.LikelihoodModelResults):
         values from the model.
         """
         return self.model.endog - self.fittedvalues
+
+    def score_test(self):
+        """
+        Return the results of a score test for a linear constraint.
+
+        Returns
+        -------
+        Adictionary containing the p-value, the test statistic,
+        and the degrees of freedom for the score test.
+
+        Notes
+        -----
+        See also GEE.compare_score_test for an alternative way to perform
+        a score test.  GEEResults.score_test is more general, in that it
+        supports testing arbitrary linear equality constraints.   However
+        GEE.compare_score_test might be easier to use when comparing
+        two explicit models.
+
+        References
+        ----------
+        Xu Guo and Wei Pan (2002). "Small sample performance of the score
+        test in GEE".
+        http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
+        """
+
+        if not hasattr(self.model, "score_test_results"):
+            msg = "score_test on results instance only available when "
+            msg += " model was fit with constraints"
+            raise ValueError(msg)
+
+        return self.model.score_test_results
 
     @cache_readonly
     def resid_split(self):
@@ -2191,6 +2535,55 @@ class OrdinalGEEResults(GEEResults):
         return fig
 
 
+def _score_test_submodel(par, sub):
+    """
+    Return transformation matrices for design matrices.
+
+    Parameters
+    ----------
+    par : instance
+        The parent model
+    sub : instance
+        The sub-model
+
+    Returns
+    -------
+    qm : array-like
+        Matrix mapping the design matrix of the parent to the design matrix
+        for the sub-model.
+    qc : array-like
+        Matrix mapping the design matrix of the parent to the orthogonal
+        complement of the columnspace of the submodel in the columnspace
+        of the parent.
+
+    Notes
+    -----
+    Returns None, None if the provided submodel is not actually a submodel.
+    """
+
+    x1 = par.exog
+    x2 = sub.exog
+
+    u, s, vt = np.linalg.svd(x1, 0)
+
+    # Get the orthogonal complement of col(x2) in col(x1).
+    a, _, _ = np.linalg.svd(x2, 0)
+    a = u - np.dot(a, np.dot(a.T, u))
+    x2c, sb, _ = np.linalg.svd(a, 0)
+    x2c = x2c[:, sb > 1e-12]
+
+    # x1 * qm = x2
+    qm = np.dot(vt.T, np.dot(u.T, x2) / s[:, None])
+
+    e = np.max(np.abs(x2 - np.dot(x1, qm)))
+    if e > 1e-8:
+        return None, None
+
+    # x1 * qc = x2c
+    qc = np.dot(vt.T, np.dot(u.T, x2c) / s[:, None])
+
+    return qm, qc
+
 class OrdinalGEEResultsWrapper(GEEResultsWrapper):
     pass
 wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)
@@ -2288,7 +2681,7 @@ class NominalGEE(GEE):
                 jrow += 1
 
         # exog names
-        if type(self.exog_orig) == pd.DataFrame:
+        if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
@@ -2299,7 +2692,7 @@ class NominalGEE(GEE):
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if isinstance(self.endog_orig, pd.Series):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out

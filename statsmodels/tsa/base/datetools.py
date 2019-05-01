@@ -3,6 +3,7 @@ Tools for working with dates
 """
 from statsmodels.compat.python import (lrange, lzip, lmap,
                                        asstr, zip, map)
+
 import re
 import datetime
 
@@ -29,9 +30,9 @@ _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                _months_with_days)))
 
 # regex patterns
-_y_pattern = '^\d?\d?\d?\d$'
+_y_pattern = r'^\d?\d?\d?\d$'
 
-_q_pattern = '''
+_q_pattern = r'''
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 
@@ -42,7 +43,7 @@ _q_pattern = '''
 $               # end of string
 '''
 
-_m_pattern = '''
+_m_pattern = r'''
 ^               # beginning of string
 \d?\d?\d?\d     # match any number 1-9999, includes leading zeros
 

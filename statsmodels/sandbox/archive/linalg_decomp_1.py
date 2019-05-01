@@ -23,7 +23,6 @@ Created on 2010-10-20
 '''
 
 from __future__ import print_function
-from statsmodels.compat.python import get_function_name
 import numpy as np
 from scipy import linalg
 

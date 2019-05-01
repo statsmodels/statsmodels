@@ -295,12 +295,6 @@ class HoltWintersResults(Results):
         the data.
     mle_retvals:  {None, scipy.optimize.optimize.OptimizeResult}
         Optimization results if the parameters were optimized to fit the data.
-
-    Methods
-    -------
-    forecast
-    predict
-    summary
     """
 
     def __init__(self, model, params, **kwargs):
@@ -348,15 +342,17 @@ class HoltWintersResults(Results):
             Array of out of sample forecasts
         """
         try:
-            start = self.model._index[-1] + 1
-            end = self.model._index[-1] + steps
+            freq = getattr(self.model._index, 'freq', 1)
+            start = self.model._index[-1] + freq
+            end = self.model._index[-1] + steps * freq
             return self.model.predict(self.params, start=start, end=end)
-        except ValueError:
+        except (AttributeError, ValueError):
             # May occur when the index doesn't have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
 
     def summary(self):
-        """Summarize the Model
+        """
+        Summarize the fitted Model
 
         Returns
         -------
@@ -533,7 +529,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         predicted values : array
         """
         if start is None:
-            start = self._index[-1] + 1
+            freq = getattr(self._index, 'freq', 1)
+            start = self._index[-1] + freq
         start, end, out_of_sample, prediction_index = self._get_prediction_index(
             start=start, end=end)
         if out_of_sample > 0:

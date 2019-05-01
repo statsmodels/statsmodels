@@ -2238,7 +2238,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                    self.conf_int(alpha)[mask])
 
             param_names = [
-                re.sub('\[\d+\]$', '', name) for name in
+                re.sub(r'\[\d+\]$', '', name) for name in
                 np.array(self.data.param_names)[mask].tolist()
             ]
 
