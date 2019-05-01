@@ -289,8 +289,8 @@ class PanelModel(object):
             endog = self._group_mean(self.endog, index=effects)
             exog = self._group_mean(self.exog, index=effects)
         else:
-            raise ValueError("%s effects is not valid for the between \
-estimator" % s)
+            raise ValueError("%s effects is not valid for the between "
+                             "estimator" % effects)
         befit = GLS(endog, exog).fit()
         return befit
 
