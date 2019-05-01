@@ -1,4 +1,5 @@
 from __future__ import division
+from statsmodels.compat.scipy import SP_GTE_019
 
 import numpy as np
 from numpy.testing import (assert_,
@@ -295,9 +296,12 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
                         atol=1e-3, rtol=0.6)
         assert_(res_dog.mle_retvals['converged'] is True)
 
+        # Ser random_state here to improve reproducibility
+        random_state = np.random.RandomState(1)
+        seed = {'seed': random_state} if SP_GTE_019 else {}
         res_bh = model.fit(start_params=start_params,
-                           method='basinhopping', maxiter=500,
-                           niter_success=3, disp=0)
+                           method='basinhopping', niter=500, stepsize=0.1,
+                           niter_success=None, disp=0, interval=1, **seed)
 
         assert_allclose(res_bh.params, self.res2.params,
                         atol=1e-4, rtol=3e-5)

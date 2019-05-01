@@ -4,7 +4,6 @@ from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
                                         _fit_bfgs, _fit_cg,
                                         _fit_ncg, _fit_powell,
                                         _fit_lbfgs, _fit_basinhopping)
-
 fit_funcs = {
     'newton': _fit_newton,
     'nm': _fit_nm,  # Nelder-Mead
@@ -29,7 +28,7 @@ def dummy_hess(x):
     return [[2.]]
 
 
-def test_full_output_false():
+def test_full_output_false(reset_randomstate):
     # just a smoke test
 
     # newton needs f, score, start, fargs, kwargs
@@ -56,7 +55,7 @@ def test_full_output_false():
             assert_(len(xopt) == 1)
 
 
-def test_full_output():
+def test_full_output(reset_randomstate):
     for method in fit_funcs:
         func = fit_funcs[method]
         if method == "newton":
