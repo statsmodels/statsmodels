@@ -358,7 +358,7 @@ class SCADSmoothed(SCAD):
         weights = self.weights
         self.weights = 1.
         deriv_c0 = super(SCADSmoothed, self).deriv(c0)
-        value_c0 = super(SCADSmoothed, self).deriv(c0)
+        value_c0 = super(SCADSmoothed, self).func(c0)
         self.weights = weights
 
         self.aq1 = value_c0 - 0.5 * deriv_c0 * c0

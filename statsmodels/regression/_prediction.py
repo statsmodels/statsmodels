@@ -125,8 +125,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
         from patsy import dmatrix
-        exog = dmatrix(self.model.data.design_info,
-                       exog)
+        exog = dmatrix(self.model.data.design_info, exog)
 
     if exog is not None:
         if row_labels is None:
