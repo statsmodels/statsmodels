@@ -2450,6 +2450,7 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
+
 class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
@@ -2466,15 +2467,12 @@ class NegativeBinomial(CountModel):
 
     References
     ----------
-
-    References:
-
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
+    """ % {'params': base._model_params_doc,
+           'extra_params':
            """loglike_method : string
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
@@ -2491,7 +2489,7 @@ class NegativeBinomial(CountModel):
 
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
-                       exposure=None, missing='none', **kwargs):
+                 exposure=None, missing='none', **kwargs):
         super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                missing=missing, **kwargs)
@@ -2511,12 +2509,12 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'nb1':
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'geometric':
             self.hessian = self._hessian_geom
             self.score = self._score_geom
@@ -2527,7 +2525,7 @@ class NegativeBinomial(CountModel):
 
     # Workaround to pickle instance methods
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = self.__dict__.copy()  # copy the dict since we change it
         del odict['hessian']
         del odict['score']
         del odict['loglikeobs']
@@ -2552,14 +2550,14 @@ class NegativeBinomial(CountModel):
         return llf
 
     def _ll_nb2(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
         return self._ll_nbin(params[:-1], alpha, Q=0)
 
     def _ll_nb1(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -2608,8 +2606,8 @@ class NegativeBinomial(CountModel):
 
     def _score_geom(self, params):
         exog = self.exog
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog[:, None]
+        mu = self.predict(params)[:, None]
         dparams = exog * (y-mu)/(mu+1)
         return dparams.sum(0)
 
