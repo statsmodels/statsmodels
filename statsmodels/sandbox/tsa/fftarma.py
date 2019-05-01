@@ -35,7 +35,6 @@ import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
 #from try_var_convolve import maxabs
-from statsmodels.sandbox.archive.linalg_decomp_1 import OneTimeProperty
 from statsmodels.tsa.arima_process import ArmaProcess
 
 
@@ -165,7 +164,6 @@ class ArmaFft(ArmaProcess):
             n = len(self.ar)
         return fft.fft(self.padarr(self.ma, n))
 
-    #@OneTimeProperty  # not while still debugging things
     def fftarma(self, n=None):
         '''Fourier transform of ARMA polynomial, zero-padded at end to n
 

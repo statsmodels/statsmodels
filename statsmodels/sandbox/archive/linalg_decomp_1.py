@@ -26,7 +26,7 @@ from __future__ import print_function
 import numpy as np
 from scipy import linalg
 
-from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.tools.decorators import cache_readonly
 
 
 class PlainMatrixArray(object):
@@ -52,22 +52,21 @@ class PlainMatrixArray(object):
         else:
             raise ValueError('either data or sym need to be given')
 
-    @OneTimeProperty
+    @cache_readonly
     def minv(self):
         return np.linalg.inv(self.m)
 
-    @OneTimeProperty
     def m_y(self, y):
         return np.dot(self.m, y)
 
     def minv_y(self, y):
         return np.dot(self.minv, y)
 
-    @OneTimeProperty
+    @cache_readonly
     def mpinv(self):
         return linalg.pinv(self.m)
 
-    @OneTimeProperty
+    @cache_readonly
     def xpinv(self):
         return linalg.pinv(self.x)
 
@@ -84,28 +83,28 @@ class PlainMatrixArray(object):
     def y_minv_yt(self, y):
         return np.dot(y, np.dot(self.minv, y.T))
 
-    @OneTimeProperty
+    @cache_readonly
     def mdet(self):
         return linalg.det(self.m)
 
-    @OneTimeProperty
+    @cache_readonly
     def mlogdet(self):
         return np.log(linalg.det(self.m))
 
-    @OneTimeProperty
+    @cache_readonly
     def meigh(self):
         evals, evecs = linalg.eigh(self.m)
         sortind = np.argsort(evals)[::-1]
         return evals[sortind], evecs[:,sortind]
 
-    @OneTimeProperty
+    @cache_readonly
     def mhalf(self):
         evals, evecs = self.meigh
         return np.dot(np.diag(evals**0.5), evecs.T)
         #return np.dot(evecs, np.dot(np.diag(evals**0.5), evecs.T))
         #return np.dot(evecs, 1./np.sqrt(evals) * evecs.T))
 
-    @OneTimeProperty
+    @cache_readonly
     def minvhalf(self):
         evals, evecs = self.meigh
         return np.dot(evecs, 1./np.sqrt(evals) * evecs.T)
@@ -132,35 +131,34 @@ class SvdArray(PlainMatrixArray):
     def _sdiagpow(self, p):
         return linalg.diagsvd(np.power(self.s, p), *x.shape)
 
-    @OneTimeProperty
+    @cache_readonly
     def minv(self):
         sinvv = np.dot(self.sinvdiag, self.v)
         return np.dot(sinvv.T, sinvv)
 
-
-    @OneTimeProperty
+    @cache_readonly
     def meigh(self):
         evecs = self.v.T
         evals = self.s**2
         return evals, evecs
 
-    @OneTimeProperty
+    @cache_readonly
     def mdet(self):
         return self.meigh[0].prod()
 
-    @OneTimeProperty
+    @cache_readonly
     def mlogdet(self):
         return np.log(self.meigh[0]).sum()
 
-    @OneTimeProperty
+    @cache_readonly
     def mhalf(self):
         return np.dot(np.diag(self.s), self.v)
 
-    @OneTimeProperty
+    @cache_readonly
     def xxthalf(self):
         return np.dot(self.u, self.sdiag)
 
-    @OneTimeProperty
+    @cache_readonly
     def xxtinvhalf(self):
         return np.dot(self.u, self.sinvdiag)
 
