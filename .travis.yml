@@ -33,93 +33,93 @@ env:
 matrix:
   fast_finish: true
   include:
-  # Python 3.7 + cutting edge packages
-  - python: 3.6 # 3.7 is not available on travis
-    env:
-    - PYTHON=3.7
-    - COVERAGE=true
-  # Python 3.6 + legacy blas
-  - python: 3.6
-    env:
-    - PYTHON=3.6
-    - NUMPY=1.14
-    - BLAS="nomkl blas=*=openblas"
-  # Documentation build (on Python 3.6 + cutting edge packages)
-  - python: 3.6
-    env:
-    - PYTHON=3.6
-    - PANDAS=0.23
-    - DOCBUILD=true
-  # Python 3.5 + partially updated packages
-  - python: 3.5
-    env:
-    - PYTHON=3.5
-    - NUMPY=1.13
-    - SCIPY=1.0
-    - PANDAS=0.22
-    - MATPLOTLIB=2.0
-    - LINT=true
-  # Python 3.4 + baseline packages
-  - python: 3.4
-    env:
-    - PYTHON=3.4
-    - NUMPY=1.11
-    - SCIPY=0.18
-    - PANDAS=0.19
-    - MATPLOTLIB=1.5
-  # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
-  - python: 2.7
-    env:
-    - PYTHON=2.7
-    - NUMPY=1.13
-    - MATPLOTLIB=2.0
-    - COVERAGE=true
-  # Python 2.7 + baseline packages
-  - python: 2.7
-    env:
-    - PYTHON=2.7
-    - NUMPY=1.12
-    - BLAS= # Do not specify blas in this config due to conflict
-    - SCIPY=0.19
-    - PANDAS=0.20
-    - USEMPL=false
-    - LINT=true
-  # Standard pip install
-  - python: 3.6
-    env:
-    - BUILD_INIT=tools/ci/travis_pip.sh
-  # Latest pre-release packages
-  - python: 3.6
-    env:
-    - PIP_PRE=true
-    - BUILD_INIT=tools/ci/travis_pip.sh
-  - os: osx
-    language: generic
-    env:
-      - PYTHON=3.6.6
-      - NUMPY=1.14
-      - BUILD_INIT=tools/ci/travis_pip.sh
-  - os: osx
-    language: generic
-    env:
-      - PYTHON=3.7
+    # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
+    - python: 2.7
+      env:
+        - PYTHON=2.7
+        - NUMPY=1.13
+        - MATPLOTLIB=2.0
+        - COVERAGE=true
+      # Python 2.7 + baseline packages
+    - python: 2.7
+      env:
+        - PYTHON=2.7
+        - NUMPY=1.12
+        - BLAS= # Do not specify blas in this config due to conflict
+        - SCIPY=0.19
+        - PANDAS=0.20
+        - USEMPL=false
+        - LINT=true
+    # Python 3.4 + baseline packages
+    - python: 3.4
+      env:
+        - PYTHON=3.4
+        - NUMPY=1.11
+        - SCIPY=0.18
+        - PANDAS=0.19
+        - MATPLOTLIB=1.5
+    # Python 3.7 + cutting edge packages
+    - python: 3.7
+      env:
+        - PYTHON=3.7
+        - COVERAGE=true
+        # Documentation build (on Python 3.6 + cutting edge packages)
+    - python: 3.6
+      env:
+        - PYTHON=3.6
+        - PANDAS=0.23
+        - DOCBUILD=true
+    # Python 3.6 + legacy blas
+    - python: 3.6
+      env:
+        - PYTHON=3.6
+        - NUMPY=1.14
+        - BLAS="nomkl blas=*=openblas"
+    # Python 3.5 + partially updated packages
+    - python: 3.5
+      env:
+        - PYTHON=3.5
+        - NUMPY=1.13
+        - SCIPY=1.0
+        - PANDAS=0.22
+        - MATPLOTLIB=2.0
+        - LINT=true
+    # Standard pip install
+    - python: 3.6
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    # Latest pre-release packages
+    - python: 3.7
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.6.6
+        - NUMPY=1.14
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.7
 
   allow_failures:
-  # pre-testing is a little fragile. Make it an FYI.
-  - python: 3.6
-    env:
-    - PIP_PRE=true
-    - BUILD_INIT=tools/ci/travis_pip.sh
-  - os: osx
-    language: generic
-    env:
-      - PYTHON=3.6.6
-      - NUMPY=1.14
-      - BUILD_INIT=tools/ci/travis_pip.sh
-  - os: osx
-    language: generic
-    env:
-      - PYTHON=3.7
+    # pre-testing is a little fragile. Make it an FYI.
+    - python: 3.7
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.6.6
+        - NUMPY=1.14
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.7
 
 notifications:
   email:
