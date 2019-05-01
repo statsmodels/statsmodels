@@ -1115,10 +1115,10 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
                       weights=(None, None), value=0):
     '''ttest independent sample
 
-    convenience function that uses the classes and throws away the intermediate
+    Convenience function that uses the classes and throws away the intermediate
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    weights option.
 
     Parameters
     ----------
