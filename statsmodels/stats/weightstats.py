@@ -1127,9 +1127,9 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: difference in means not equal to value (default)
-           'larger' :   H1: difference in means larger than value
-           'smaller' :  H1: difference in means smaller than value
+           * 'two-sided' (default): H1: difference in means not equal to value
+           * 'larger' :   H1: difference in means larger than value
+           * 'smaller' :  H1: difference in means smaller than value
 
     usevar : string, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
