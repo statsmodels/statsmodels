@@ -163,13 +163,14 @@ def _var_acf(coefs, sig_u):
     vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
-    acf = acf[:k].T.reshape((p, k, k))
+    acf = [acf[:k, k * i:k * (i + 1)] for i in range(p)]
+    acf = np.array(acf)
 
     return acf
 
 
 def forecast_cov(ma_coefs, sigma_u, steps):
-    """
+    r"""
     Compute theoretical forecast error variance matrices
 
     Parameters
@@ -956,7 +957,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        r"""Compute long-run effect of unit impulse
 
         .. math::
 
@@ -1042,7 +1043,7 @@ class VARProcess(object):
 
     # TODO: use `mse` module-level function?
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1327,8 +1328,19 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
+        import warnings
+        warnings.warn("For consistency with other statmsodels models, "
+                      "starting in version 0.11.0 `VARResults.cov_params` "
+                      "will be a method instead of a property.",
+                      category=FutureWarning)
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
+
+    def _cov_params(self):
+        """Wrapper to avoid FutureWarning.  Remove after 0.11"""
+        import warnings
+        with warnings.catch_warnings(record=True):
+            return self.cov_params
 
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
@@ -1362,7 +1374,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
+        return self._cov_params()[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1384,7 +1396,7 @@ class VARResults(VARProcess):
     def stderr(self):
         """Standard errors of coefficients, reshaped to match in size
         """
-        stderr = np.sqrt(np.diag(self.cov_params))
+        stderr = np.sqrt(np.diag(self._cov_params()))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1779,7 +1791,7 @@ class VARResults(VARProcess):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self.cov_params, C.T))
+        middle = scipy.linalg.inv(chain_dot(C, self._cov_params(), C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
@@ -1956,7 +1968,7 @@ class VARResults(VARProcess):
                                     nlags, adjusted)
 
     def plot_acorr(self, nlags=10, resid=True, linewidth=8):
-        """
+        r"""
         Plot autocorrelation of sample (endog) or residuals
 
         Sample (Y) or Residual autocorrelations are plotted together with the

@@ -81,7 +81,7 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
     return signal.lfilter(ma, ar, eta)[burnin:]
 
 
-def arma_acovf(ar, ma, nobs=10):
+def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     """
     Theoretical autocovariance function of ARMA process
 
@@ -93,6 +93,8 @@ def arma_acovf(ar, ma, nobs=10):
         coefficient for moving-average lag polynomial, including zero lag
     nobs : int
         number of terms (lags plus zero lag) to include in returned acovf
+    sigma2 : float
+        Variance of the innovation term.
 
     Returns
     -------
@@ -104,35 +106,52 @@ def arma_acovf(ar, ma, nobs=10):
     arma_acf
     acovf
 
+    References
+    ----------
+    Brockwell, Peter J., and Richard A. Davis. 2009.
+    Time Series: Theory and Methods. 2nd ed. 1991.
+    New York, NY: Springer.
 
-    Notes
-    -----
-    Tries to do some crude numerical speed improvements for cases
-    with high persistence. However, this algorithm is slow if the process is
-    highly persistent and only a few autocovariances are desired.
     """
-    # increase length of impulse response for AR closer to 1
-    # maybe cheap/fast enough to always keep nobs for ir large
+    if dtype is None:
+        dtype = np.common_type(np.array(ar), np.array(ma), np.array(sigma2))
 
-    # TODO: This doesn't make sense should be analytical
-    if np.abs(np.sum(ar) - 1) > 0.9:
-        nobs_ir = max(1000, 2 * nobs)  # no idea right now how large is needed
-    else:
-        nobs_ir = max(100, 2 * nobs)  # no idea right now
-    ir = arma_impulse_response(ar, ma, leads=nobs_ir)
-    # better safe than sorry (?), I have no idea about the required precision
-    # only checked for AR(1)
-    while ir[-1] > 5 * 1e-5:
-        nobs_ir *= 10
-        ir = arma_impulse_response(ar, ma, leads=nobs_ir)
-    # again no idea where the speed break points are:
-    if nobs_ir > 50000 and nobs < 1001:
-        end = len(ir)
-        # Explitly slice from the end to avoid foo[:-0] returning an empty slice
-        acovf = np.array([np.dot(ir[:end-nobs-t], ir[t:end-nobs])
-                          for t in range(nobs)])
-    else:
-        acovf = np.correlate(ir, ir, 'full')[len(ir) - 1:]
+    p = len(ar) - 1
+    q = len(ma) - 1
+    m = max(p, q) + 1
+
+    if sigma2.real < 0:
+        raise ValueError('Must have positive innovation variance.')
+
+    # Short-circuit for trivial corner-case
+    if p == q == 0:
+        out = np.zeros(nobs, dtype=dtype)
+        out[0] = sigma2
+        return out
+
+    # Get the moving average representation coefficients that we need
+    ma_coeffs = arma2ma(ar, ma, lags=m)
+
+    # Solve for the first m autocovariances via the linear system
+    # described by (BD, eq. 3.3.8)
+    A = np.zeros((m, m), dtype=dtype)
+    b = np.zeros((m, 1), dtype=dtype)
+    # We need a zero-right-padded version of ar params
+    tmp_ar = np.zeros(m, dtype=dtype)
+    tmp_ar[:p + 1] = ar
+    for k in range(m):
+        A[k, :(k + 1)] = tmp_ar[:(k + 1)][::-1]
+        A[k, 1:m - k] += tmp_ar[(k + 1):m]
+        b[k] = sigma2 * np.dot(ma[k:q + 1], ma_coeffs[:max((q + 1 - k), 0)])
+    acovf = np.zeros(max(nobs, m), dtype=dtype)
+    acovf[:m] = np.linalg.solve(A, b)[:, 0]
+
+    # Iteratively apply (BD, eq. 3.3.9) to solve for remaining autocovariances
+    if nobs > m:
+        zi = signal.lfiltic([1], ar, acovf[:m:][::-1])
+        acovf[m:] = signal.lfilter([1], ar, np.zeros(nobs - m, dtype=dtype),
+                                   zi=zi)[0]
+
     return acovf[:nobs]
 
 

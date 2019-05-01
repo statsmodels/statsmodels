@@ -226,16 +226,20 @@ def itervalues(obj, **kwargs):
     return func(**kwargs)
 
 
-def get_function_name(func):
-    try:
-        return func.im_func.func_name
-    except AttributeError:
-        #Python 3
-        return func.__name__
-
 def get_class(func):
     try:
         return func.im_class
     except AttributeError:
         #Python 3
         return func.__self__.__class__
+
+
+def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
+    # This requires a bit of explanation: the basic idea is to make a dummy
+    # metaclass for one level of class instantiation that replaces itself with
+    # the actual metaclass.
+    class metaclass(meta):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+    return type.__new__(metaclass, 'temporary_class', (), {})

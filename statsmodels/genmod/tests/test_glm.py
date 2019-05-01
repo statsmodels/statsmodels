@@ -60,7 +60,8 @@ class CheckModelResultsMixin(object):
 
     decimal_bse = DECIMAL_4
     def test_standard_errors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, self.decimal_bse)
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=10**(-self.decimal_bse), rtol=1e-5)
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
@@ -281,6 +282,28 @@ class TestGlmGaussian(CheckModelResultsMixin):
 #        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
 #        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
 #        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
+
+
+class TestGlmGaussianGradient(TestGlmGaussian):
+    @classmethod
+    def setup_class(cls):
+        '''
+        Test Gaussian family with canonical identity link
+        '''
+        # Test Precisions
+        cls.decimal_resids = DECIMAL_3
+        cls.decimal_params = DECIMAL_2
+        cls.decimal_bic = DECIMAL_0
+        cls.decimal_bse = DECIMAL_2
+
+        from statsmodels.datasets.longley import load
+        cls.data = load(as_pandas=False)
+        cls.data.exog = add_constant(cls.data.exog, prepend=False)
+        cls.res1 = GLM(cls.data.endog, cls.data.exog,
+                        family=sm.families.Gaussian()).fit(method='bfgs')
+        from .results.results_glm import Longley
+        cls.res2 = Longley()
+
 
 class TestGaussianLog(CheckModelResultsMixin):
     @classmethod
@@ -961,13 +984,13 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     elif family_class == fam.Gamma:
         endog = np.random.gamma(2, mu)
     elif family_class == fam.Gaussian:
-        endog = mu + np.random.normal(size=len(lin_pred))
+        endog = mu + 2 * np.random.normal(size=len(lin_pred))
     elif family_class == fam.NegativeBinomial:
         from scipy.stats.distributions import nbinom
         endog = nbinom.rvs(mu, 0.5)
     elif family_class == fam.InverseGaussian:
         from scipy.stats.distributions import invgauss
-        endog = invgauss.rvs(mu)
+        endog = invgauss.rvs(mu, scale=20)
     else:
         raise ValueError
 
@@ -1114,8 +1137,14 @@ def test_gradient_irls():
                     ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                     gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
                     assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
+                    # rslt_irls.bse corresponds to observed=True
+                    assert_allclose(rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5)
 
-
+                    rslt_gradient_eim = mod_gradient.fit(max_start_irls=0,
+                                                         cov_type='eim',
+                                                         start_params=rslt_gradient.params,
+                                                         method="newton", maxiter=300)
+                    assert_allclose(rslt_gradient_eim.bse, rslt_irls.bse, rtol=5e-5, atol=0)
 
 
 def test_gradient_irls_eim():
@@ -1874,6 +1903,107 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
         cls.res2 = sm.GLM(endog=cls.data.endog,
                            exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
+
+@pytest.mark.filterwarnings("ignore:GLM ridge optimization")
+def test_tweedie_EQL():
+    # All tests below are regression tests, but the results
+    # are very close to the population values.
+
+    np.random.seed(3242)
+    n = 500
+    p = 1.5 # Tweedie variance power
+    x = np.random.normal(size=(n, 4))
+    lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
+    mu = np.exp(lpr)
+    lam = 10 * mu**(2 - p) / (2 - p)
+    alp = (2 - p) / (p - 1)
+    bet = 10 * mu**(1 - p) / (p - 1)
+
+    # Generate Tweedie values using commpound Poisson distribution
+    y = np.empty(n)
+    N = np.random.poisson(lam)
+    for i in range(n):
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
+
+    # Un-regularized fit using gradients not IRLS
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    model1 = sm.GLM(y, x, family=fam)
+    result1 = model1.fit(method="newton")
+    assert_allclose(result1.params,
+       np.array([1.00350497, -0.99656954, 0.00802702, 0.50713209]),
+       rtol=1e-5, atol=1e-5)
+
+    # Lasso fit using coordinate-wise descent
+    model2 = sm.GLM(y, x, family=fam)
+    result2 = model2.fit_regularized(L1_wt=1, alpha=0.07)
+    import sys
+    ver = sys.version_info[0]
+    if ver >= 3:
+        rtol, atol = 1e-5, 1e-5
+    else:
+        rtol, atol = 1e-2, 1e-2
+    assert_allclose(result2.params,
+        np.array([1.00281192, -0.99182638, 0., 0.50448516]),
+        rtol=rtol, atol=atol)
+
+    # Series of ridge fits using gradients
+    ev = (np.array([1.00186882, -0.99213087, 0.00717758, 0.50610942]),
+          np.array([0.98560143, -0.96976442,  0.00727526,  0.49749763]),
+          np.array([0.20643362, -0.16456528, 0.00023651, 0.10249308]))
+    for j, alpha in enumerate([0.05, 0.5, 0.7]):
+        model3 = sm.GLM(y, x, family=fam)
+        result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
+        assert_allclose(result3.params, ev[j], rtol=rtol, atol=atol)
+
+def test_tweedie_EQL_poisson_limit():
+    # Test the limiting Poisson case of the Nelder/Pregibon/Tweedie
+    # EQL.
+
+    np.random.seed(3242)
+    n = 500
+
+    x = np.random.normal(size=(n, 3))
+    x[:, 0] = 1
+    lpr = 4 + x[:, 1:].sum(1)
+    mn = np.exp(lpr)
+    y = np.random.poisson(mn)
+
+    for scale in 1.0, 'x2', 'dev':
+
+        # Un-regularized fit using gradients not IRLS
+        fam = sm.families.Tweedie(var_power=1, eql=True)
+        model1 = sm.GLM(y, x, family=fam)
+        result1 = model1.fit(method="newton", scale=scale)
+
+        # Poisson GLM
+        model2 = sm.GLM(y, x, family=sm.families.Poisson())
+        result2 = model2.fit(method="newton", scale=scale)
+
+        assert_allclose(result1.params, result2.params, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.bse, result2.bse, 1e-6, 1e-6)
+
+
+def test_tweedie_EQL_upper_limit():
+    # Test the limiting case of the Nelder/Pregibon/Tweedie
+    # EQL with var = mean^2.  These are tests against population
+    # values so accuracy is not high.
+
+    np.random.seed(3242)
+    n = 500
+
+    x = np.random.normal(size=(n, 3))
+    x[:, 0] = 1
+    lpr = 4 + x[:, 1:].sum(1)
+    mn = np.exp(lpr)
+    y = np.random.poisson(mn)
+
+    for scale in 'x2', 'dev', 1.0:
+
+        # Un-regularized fit using gradients not IRLS
+        fam = sm.families.Tweedie(var_power=2, eql=True)
+        model1 = sm.GLM(y, x, family=fam)
+        result1 = model1.fit(method="newton")
+        assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
 
 
 def testTweediePowerEstimate():

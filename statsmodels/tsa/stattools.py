@@ -1,13 +1,17 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import division
+from statsmodels.compat.python import (iteritems, range, lrange, string_types,
+                                       lzip, zip, long)
+from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.scipy import _next_regular
+
 import numpy as np
+import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy import stats
 
-from statsmodels.compat.python import (iteritems, range, lrange, string_types,
-                                       lzip, zip, long)
-from statsmodels.compat.scipy import _next_regular
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (InterpolationWarning,
                                              MissingDataError,
@@ -20,7 +24,8 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss', 'bds']
+           'adfuller', 'kpss', 'bds', 'pacf_burg', 'innovations_algo',
+           'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
@@ -491,7 +496,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
     acf : array
         autocorrelation function
     confint : array, optional
-        Confidence intervals for the ACF. Returned if confint is not None.
+        Confidence intervals for the ACF. Returned if alpha is not None.
     qstat : array, optional
         The Ljung-Box Q-Statistic.  Returned if q_stat is True.
     pvalues : array, optional
@@ -565,6 +570,12 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     pacf : 1d array
         partial autocorrelations, maxlag+1 elements
 
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
     This solves yule_walker for each desired lag and contains
@@ -600,6 +611,8 @@ def pacf_burg(x, nlags=None, demean=True):
     See also
     --------
     statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_ols
 
     References
     ----------
@@ -637,9 +650,9 @@ def pacf_burg(x, nlags=None, demean=True):
     return pacf, sigma2
 
 
-#NOTE: this is incorrect.
-def pacf_ols(x, nlags=40):
-    '''Calculate partial autocorrelations
+def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
+    """
+    Calculate partial autocorrelations via OLS
 
     Parameters
     ----------
@@ -647,30 +660,71 @@ def pacf_ols(x, nlags=40):
         observations of time series for which pacf is calculated
     nlags : int
         Number of lags for which pacf is returned.  Lag 0 is not returned.
+    efficient : bool, optional
+        If true, uses the maximum number of available observations to compute
+        each partial autocorrelation. If not, uses the same number of
+        observations to compute all pacf values.
+    unbiased : bool, optional
+        Adjust each partial autocorrelation by n / (n - lag)
 
     Returns
     -------
     pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
+        partial autocorrelations, (maxlag,) array corresponding to lags
+        0, 1, ..., maxlag
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.
-    '''
-    #TODO: add warnings for Yule-Walker
-    #NOTE: demeaning and not using a constant gave incorrect answers?
-    #JP: demeaning should have a better estimate of the constant
-    #maybe we can compare small sample properties with a MonteCarlo
-    xlags, x0 = lagmat(x, nlags, original='sep')
-    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags)
-    pacf = [1.]
-    for k in range(1, nlags+1):
-        res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-        #np.take(xlags[k:], range(1,k+1)+[-1],
+    This solves a separate OLS estimation for each desired lag. Setting
+    efficient to True has two effects. First, it uses `nobs - lag`
+    observations of estimate each pacf.  Second, it re-estimates the mean in
+    each regression. If efficient is False, then the data are first demeaned,
+    and then `nobs - maxlag` observations are used to estimate each partial
+    autocorrelation.
 
-        pacf.append(res.params[-1])
-    return np.array(pacf)
+    The inefficient estimator appears to have better finite sample properties.
+    This option should only be used in time series that are covariance
+    stationary.
+
+    OLS estimation of the pacf does not guarantee that all pacf values are
+    between -1 and 1.
+
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+
+    References
+    ----------
+    .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
+       Time series analysis: forecasting and control. John Wiley & Sons, p. 66
+    """
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    x = np.squeeze(np.asarray(x))
+    if x.ndim != 1:
+        raise ValueError('x must be squeezable to a 1-d array')
+    if efficient:
+        xlags, x0 = lagmat(x, nlags, original='sep')
+        xlags = add_constant(xlags)
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[k:, :k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = params[-1]
+    else:
+        x = x - np.mean(x)
+        # Create a single set of lags for multivariate OLS
+        xlags, x0 = lagmat(x, nlags, original='sep', trim='both')
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[:, :k], x0, rcond=None)[0]
+            # Last coefficient corresponds to PACF value (see [1])
+            pacf[k] = params[-1]
+
+    if unbiased:
+        n = len(x)
+        pacf *= n / (n - np.arange(nlags + 1))
+
+    return pacf
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
@@ -682,16 +736,22 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     x : 1d array
         observations of time series for which pacf is calculated
     nlags : int
-        largest lag for which pacf is returned
-    method : {'ywunbiased', 'ywmle', 'ols'}
+        largest lag for which the pacf is returned
+    method : str
         specifies which method for the calculations to use:
 
-        - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf. Default.
-        - ywm or ywmle : yule walker without bias correction
-        - ols - regression of time series on lags of it and on constant
-        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
-        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+        - 'yw' or 'ywunbiased' : Yule-Walker with bias correction in
+          denominator for acovf. Default.
+        - 'ywm' or 'ywmle' : Yule-Walker without bias correction
+        - 'ols' : regression of time series on lags of it and on constant
+        - 'ols-inefficient' : regression of time series on lags using a single
+          common sample to estimate all pacf coefficients
+        - 'ols-unbiased' : regression of time series on lags with a bias
+          adjustment
+        - 'ld' or 'ldunbiased' : Levinson-Durbin recursion with bias correction
+        - 'ldb' or 'ldbiased' : Levinson-Durbin recursion without bias
+          correction
+
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
@@ -705,25 +765,38 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     confint : array, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
+    See also
+    --------
+    statsmodels.tsa.stattools.acf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
-    This solves yule_walker equations or ols for each desired lag
-    and contains currently duplicate calculations.
+    Based on simulation evidence across a range of low-order ARMA models,
+    the best methods based on root MSE are Yule-Walker (MLW), Levinson-Durbin
+    (MLE) and Burg, respectively. The estimators with the lowest bias included
+    included these three in addition to OLS and OLS-unbiased.
+
+    Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
+    consistently worse than the other options.
     """
 
-    if method == 'ols':
-        ret = pacf_ols(x, nlags=nlags)
-    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+    if method in ('ols', 'ols-inefficient', 'ols-unbiased'):
+        efficient = 'inefficient' not in method
+        unbiased = 'unbiased' in method
+        ret = pacf_ols(x, nlags=nlags, efficient=efficient, unbiased=unbiased)
+    elif method in ('yw', 'ywu', 'ywunbiased', 'yw_unbiased'):
         ret = pacf_yw(x, nlags=nlags, method='unbiased')
-    elif method in ['ywm', 'ywmle', 'yw_mle']:
+    elif method in ('ywm', 'ywmle', 'yw_mle'):
         ret = pacf_yw(x, nlags=nlags, method='mle')
-    elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
+    elif method in ('ld', 'ldu', 'ldunbiased', 'ld_unbiased'):
         acv = acovf(x, unbiased=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        #print 'ld', ld_
         ret = ld_[2]
     # inconsistent naming with ywmle
-    elif method in ['ldb', 'ldbiased', 'ld_biased']:
+    elif method in ('ldb', 'ldbiased', 'ld_biased'):
         acv = acovf(x, unbiased=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
@@ -948,6 +1021,152 @@ def levinson_durbin_pacf(pacf, nlags=None):
         acf[i + 1] = arcoefs[i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
     acf[0] = 1
     return arcoefs, acf
+
+
+def innovations_algo(acov, nobs=None, rtol=None):
+    """
+    Innovations algorithm to convert autocovariances to MA parameters
+
+    Parameters
+    ----------
+    acov : array-like
+        Array containing autocovariances including lag 0
+    nobs : int, optional
+        Number of periods to run the algorithm.  If not provided, nobs is
+        equal to the length of acovf
+    rtol : float, optional
+        Tolerance used to check for convergence. Default value is 0 which will
+        never prematurely end the algorithm. Checks after 10 iterations and
+        stops if sigma2[i] - sigma2[i - 10] < rtol * sigma2[0]. When the
+        stopping condition is met, the remaining values in theta and sigma2
+        are forward filled using the value of the final iteration.
+
+    Returns
+    -------
+    theta : ndarray
+        Innovation coefficients of MA representation. Array is (nobs, q) where
+        q is the largest index of a non-zero autocovariance. theta
+        corresponds to the first q columns of the coefficient matrix in the
+        common description of the innovation algorithm.
+    sigma2 : ndarray
+        The prediction error variance (nobs,).
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> rgdpg = data.data['realgdp'].pct_change().dropna()
+    >>> acov = sm.tsa.acovf(rgdpg)
+    >>> nobs = activity.shape[0]
+    >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
+
+    See also
+    --------
+    innovations_filter
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    acov = np.squeeze(np.asarray(acov))
+    if acov.ndim != 1:
+        raise ValueError('acov must be 1-d or squeezable to 1-d.')
+    rtol = 0.0 if rtol is None else rtol
+    if not isinstance(rtol, float):
+        raise ValueError('rtol must be a non-negative float or None.')
+    if nobs is not None and (nobs != int(nobs) or nobs < 1):
+        raise ValueError('nobs must be a positive integer')
+    n = acov.shape[0] if nobs is None else int(nobs)
+    max_lag = int(np.max(np.argwhere(acov != 0)))
+
+    v = np.zeros(n + 1)
+    v[0] = acov[0]
+    # Retain only the relevant columns of theta
+    theta = np.zeros((n + 1, max_lag + 1))
+    for i in range(1, n):
+        for k in range(max(i - max_lag, 0), i):
+            sub = 0
+            for j in range(max(i - max_lag, 0), k):
+                sub += theta[k, k - j] * theta[i, i - j] * v[j]
+            theta[i, i - k] = 1. / v[k] * (acov[i - k] - sub)
+        v[i] = acov[0]
+        for j in range(max(i - max_lag, 0), i):
+            v[i] -= theta[i, i - j] ** 2 * v[j]
+        # Break if v has converged
+        if i >= 10:
+            if v[i - 10] - v[i] < v[0] * rtol:
+                # Forward fill all remaining values
+                v[i + 1:] = v[i]
+                theta[i + 1:] = theta[i]
+                break
+
+    theta = theta[:-1, 1:]
+    v = v[:-1]
+    return theta, v
+
+
+def innovations_filter(endog, theta):
+    """
+    Filter observations using the innovations algorithm
+
+    Parameters
+    ----------
+    endog : array-like
+        The time series to filter (nobs,). Should be demeaned if not mean 0.
+    theta : ndarray
+        Innovation coefficients of MA representation. Array must be (nobs, q)
+        where q order of the MA.
+
+    Returns
+    -------
+    resid : ndarray
+        Array of filtered innovations
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> rgdpg = data.data['realgdp'].pct_change().dropna()
+    >>> acov = sm.tsa.acovf(rgdpg)
+    >>> nobs = activity.shape[0]
+    >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
+    >>> resid = innovations_filter(rgdpg, theta)
+
+    See also
+    --------
+    innovations_algo
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    orig_endog = endog
+    endog = np.squeeze(np.asarray(endog))
+    if endog.ndim != 1:
+        raise ValueError('endog must be 1-d or squeezable to 1-d.')
+    nobs = endog.shape[0]
+    n_theta, k = theta.shape
+    if nobs != n_theta:
+        raise ValueError('theta must be (nobs, q) where q is the moder order')
+    is_pandas = isinstance(orig_endog, (pd.DataFrame, pd.Series))
+    if is_pandas:
+        if len(orig_endog.index) != nobs:
+            msg = 'If endog is a Series or DataFrame, the index must ' \
+                  'correspond to the number of time series observations.'
+            raise ValueError(msg)
+    u = np.empty(nobs)
+    u[0] = endog[0]
+    for i in range(1, nobs):
+        if i < k:
+            hat = (theta[i, :i] * u[:i][::-1]).sum()
+        else:
+            hat = (theta[i] * u[i - k:i][::-1]).sum()
+        u[i] = endog[i] - hat
+    if is_pandas:
+        u = pd.Series(u, index=orig_endog.index.copy())
+    return u
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):

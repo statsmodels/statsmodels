@@ -9,15 +9,12 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 import os
-import re
 import pytest
-import warnings
 
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
-from .results import results_sarimax
+from numpy.testing import assert_equal, assert_allclose, assert_raises
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

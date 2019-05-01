@@ -4,7 +4,6 @@ from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 from scipy import stats
 from statsmodels.tools.tools import clean0, fullrank
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.stats.multitest import multipletests
 
 
@@ -156,15 +155,17 @@ class ContrastResults(object):
             return summ
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
-            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
+            return ('<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>' %
+                   (repr(self.fvalue), self.pvalue, self.df_denom,
+                    self.df_num))
         elif self.distribution == 'chi2':
-            return '<Wald test (%s): statistic=%s, p-value=%s, df_denom=%d>' % \
-                   (self.distribution, self.statistic, self.pvalue, self.df_denom)
+            return ('<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>' %
+                   (self.distribution, self.statistic, self.pvalue,
+                    self.df_denom))
         else:
             # generic
-            return '<Wald test: statistic=%s, p-value=%s>' % \
-                   (self.statistic, self.pvalue)
+            return ('<Wald test: statistic=%s, p-value=%s>' %
+                   (self.statistic, self.pvalue))
 
 
     def summary_frame(self, xname=None, alpha=0.05):
@@ -345,7 +346,7 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if np_matrix_rank(Lp) != Lp.shape[1]:
+    if np.linalg.matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 

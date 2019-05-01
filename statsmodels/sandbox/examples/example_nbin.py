@@ -28,9 +28,10 @@ from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.model import GenericLikelihoodModelResults
 import statsmodels.api as sm
 
+
 #### Negative Binomial Log-likelihoods ####
 def _ll_nbp(y, X, beta, alph, Q):
-    '''
+    r'''
     Negative Binomial Log-likelihood -- type P
 
     References:
@@ -56,20 +57,28 @@ def _ll_nbp(y, X, beta, alph, Q):
     prob = size/(size+mu)
     ll = nbinom.logpmf(y, size, prob)
     return ll
+
+
 def _ll_nb1(y, X, beta, alph):
     '''Negative Binomial regression (type 1 likelihood)'''
     ll = _ll_nbp(y, X, beta, alph, Q=1)
     return ll
+
+
 def _ll_nb2(y, X, beta, alph):
     '''Negative Binomial regression (type 2 likelihood)'''
     ll = _ll_nbp(y, X, beta, alph, Q=0)
     return ll
+
+
 def _ll_geom(y, X, beta):
     '''Geometric regression'''
     ll = _ll_nbp(y, X, beta, alph=1, Q=0)
     return ll
+
+
 def _ll_nbt(y, X, beta, alph, C=0):
-    '''
+    r'''
     Negative Binomial (truncated)
 
     Truncated densities for count models (Cameron & Trivedi, 2005, 680):
@@ -84,6 +93,7 @@ def _ll_nbt(y, X, beta, alph, C=0):
     prob = size/(size+mu)
     ll = nbinom.logpmf(y, size, prob) - np.log(1 - nbinom.cdf(C, size, prob))
     return ll
+
 
 #### Model Classes ####
 class NBin(GenericLikelihoodModel):
@@ -139,6 +149,7 @@ class NBin(GenericLikelihoodModel):
             self.ll_func = _ll_nbp
         elif ll_type == 'nbt':
             self.ll_func = _ll_nbt
+
     def nloglikeobs(self, params):
         alph = params[-1]
         beta = params[:self.exog.shape[1]]
@@ -151,6 +162,7 @@ class NBin(GenericLikelihoodModel):
             return -self.ll_func(self.endog, self.exog, beta, alph, Q)
         else:
             return -self.ll_func(self.endog, self.exog, beta, alph)
+
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         if start_params==None:
             countfit = super(NBin, self).fit(start_params=self.start_params_default,
@@ -160,6 +172,7 @@ class NBin(GenericLikelihoodModel):
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         countfit = CountResults(self, countfit)
         return countfit
+
 
 class CountResults(GenericLikelihoodModelResults):
     def __init__(self, model, mlefit):
@@ -190,10 +203,13 @@ class CountResults(GenericLikelihoodModelResults):
                              use_t=True)
         return smry
 
+
 #### Score function for NB-P ####
 from scipy.special import digamma
+
+
 def _score_nbp(y, X, beta, thet, Q):
-    '''
+    r'''
     Negative Binomial Score -- type P likelihood from Greene (2007)
     .. math::
 
@@ -227,6 +243,7 @@ def _score_nbp(y, X, beta, thet, Q):
     sc = np.array([dt.sum(), dq.sum()])
     sc = np.concatenate([db.sum(axis=0), sc])
     return sc
+
 
 #### Tests ####
 from statsmodels.compat.python import urlopen

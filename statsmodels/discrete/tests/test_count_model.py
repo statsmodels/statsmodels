@@ -1,15 +1,16 @@
 from __future__ import division
 
 import numpy as np
-from numpy.testing import (assert_, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import (assert_,
+                           assert_equal, assert_array_equal, assert_allclose)
 import pytest
 
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
+from .test_discrete import CheckModelMixin
 
-class CheckGeneric(object):
+
+class CheckGeneric(CheckModelMixin):
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
 
@@ -45,7 +46,6 @@ class CheckGeneric(object):
 
     def test_init_keys(self):
         init_kwds = self.res1.model._get_init_kwds()
-        #assert_equal(sorted(list(init_kwds.keys())), self.init_keys)
         assert_equal(set(init_kwds.keys()), set(self.init_keys))
         for key, value in self.init_kwds.items():
             assert_equal(init_kwds[key], value)

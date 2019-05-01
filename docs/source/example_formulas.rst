@@ -178,5 +178,4 @@ To generate pandas data frames:
 
 .. ipython:: python
 
-    print(smf.OLS(y, X).fit().summary())
-
+    print(sm.OLS(y, X).fit().summary())

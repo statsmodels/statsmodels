@@ -1035,17 +1035,17 @@ class SARIMAX(MLEModel):
         diff = ''
         if self.k_diff > 0:
             if self.k_diff == 1:
-                diff = '\Delta' if latex else 'D'
+                diff = r'\Delta' if latex else 'D'
             else:
-                diff = ('\Delta^%d' if latex else 'D%d') % self.k_diff
+                diff = (r'\Delta^%d' if latex else 'D%d') % self.k_diff
 
         seasonal_diff = ''
         if self.k_seasonal_diff > 0:
             if self.k_seasonal_diff == 1:
-                seasonal_diff = (('\Delta_%d' if latex else 'DS%d') %
+                seasonal_diff = ((r'\Delta_%d' if latex else 'DS%d') %
                                  (self.seasonal_periods))
             else:
-                seasonal_diff = (('\Delta_%d^%d' if latex else 'D%dS%d') %
+                seasonal_diff = ((r'\Delta_%d^%d' if latex else 'D%dS%d') %
                                  (self.k_seasonal_diff, self.seasonal_periods))
         endog_diff = self.simple_differencing
         if endog_diff and self.k_diff > 0 and self.k_seasonal_diff > 0:

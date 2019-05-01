@@ -19,7 +19,7 @@ def close_or_save(pdf, fig):
 
 
 @pytest.mark.matplotlib
-def test_all(close_figures):
+def test_all(close_figures, reset_randomstate):
 
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages

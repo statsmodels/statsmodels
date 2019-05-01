@@ -13,7 +13,6 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
     HessianInversionWarning
 from statsmodels.formula import handle_formula_data
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
 
@@ -772,7 +771,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         # and should contain any preprocessing that needs to be done for a model
         if self.exog is not None:
             # assume constant
-            er = np_matrix_rank(self.exog)
+            er = np.linalg.matrix_rank(self.exog)
             self.df_model = float(er - 1)
             self.df_resid = float(self.exog.shape[0] - er)
         else:
@@ -1598,7 +1597,7 @@ class LikelihoodModelResults(Results):
 
     # TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
-                  use_f=None):
+                  use_f=None, df_constraints=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1686,11 +1685,15 @@ class LikelihoodModelResults(Results):
             J_ = np.linalg.matrix_rank(cov_p)
             if J_ < J:
                 import warnings
-                from statsmodels.tools.sm_exceptions import ValueWarning
                 warnings.warn('covariance of constraints does not have full '
                               'rank. The number of constraints is %d, but '
                               'rank is %d' % (J, J_), ValueWarning)
                 J = J_
+
+        # TODO streamline computation, we don't need to compute J if given
+        if df_constraints is not None:
+            # let caller override J by df_constraint
+            J = df_constraints
 
         if (hasattr(self, 'mle_settings') and
                 self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
@@ -1825,7 +1828,7 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue, constraint.shape[0]]
+            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
@@ -2213,13 +2216,17 @@ class ResultMixin(object):
         """
         results = []
         print(self.model.__class__)
-        hascloneattr = True if hasattr(self, 'cloneattr') else False
+        hascloneattr = True if hasattr(self.model, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
+            if self.exog is not None:
+                exog_resamp = self.exog[rvsind, :]
+            else:
+                exog_resamp = None
             fitmod = self.model.__class__(self.endog[rvsind],
-                                          self.exog[rvsind, :])
+                                          exog=exog_resamp)
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))

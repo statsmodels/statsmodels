@@ -75,6 +75,7 @@ Descriptive Statistics and Tests
    stattools.pacf
    stattools.pacf_yw
    stattools.pacf_ols
+   stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
    stattools.periodogram
@@ -85,6 +86,7 @@ Descriptive Statistics and Tests
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.levinson_durbin_pacf
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -112,6 +114,9 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 
 .. currentmodule:: statsmodels.tsa
 
+The basic ARIMA model and results classes that should be the starting point for
+for most users are:
+
 .. autosummary::
    :toctree: generated/
 
@@ -119,7 +124,19 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
    arima_model.ARMAResults
    arima_model.ARIMA
    arima_model.ARIMAResults
+
+Some advanced underlying low-level classes and functions that can be used to
+compute the log-likelihood function for ARMA-type models include (note that
+these are rarely needed by end-users):
+
+.. autosummary::
+   :toctree: generated/
+
    kalmanf.kalmanfilter.KalmanFilter
+   innovations.arma_innovations.arma_loglike
+   innovations.arma_innovations.arma_loglikeobs
+   innovations.arma_innovations.arma_score
+   innovations.arma_innovations.arma_scoreobs
 
 
 Exponential Smoothing

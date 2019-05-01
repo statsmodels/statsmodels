@@ -12,6 +12,7 @@ from statsmodels.compat.python import range
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
 
+
 def _norm(x):
     return np.sqrt(np.sum(x * x))
 
@@ -136,8 +137,8 @@ class PCA(object):
     Notes
     -----
     The default options perform principal component analysis on the
-    demeanded, unit variance version of data.  Setting standardize to False will
-    instead onle demean, and setting both standardized and
+    demeaned, unit variance version of data.  Setting standardize to False
+    will instead only demean, and setting both standardized and
     demean to False will not alter the data.
 
     Once the data have been transformed, the following relationships hold when
@@ -229,14 +230,9 @@ class PCA(object):
             self._ncomp = min_dim
 
         self._method = method
-        if self._method == 'eig':
-            self._compute_eig = self._compute_using_eig
-        elif self._method == 'svd':
-            self._compute_eig = self._compute_using_svd
-        elif self._method == 'nipals':
-            self._compute_eig = self._compute_using_nipals
-        else:
-            raise ValueError('method is not known.')
+        # Workaround to avoid instance methods in __dict__
+        if self._method not in ('eig', 'svd', 'nipals'):
+            raise ValueError('method {0} is not known.'.format(method))
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
@@ -331,7 +327,8 @@ class PCA(object):
 
         # Check adjusted data size
         if self._adjusted_data.size == 0:
-            raise ValueError('Removal of missing values has eliminated all data.')
+            raise ValueError('Removal of missing values has eliminated '
+                             'all data.')
 
     def _compute_gls_weights(self):
         """
@@ -409,6 +406,19 @@ class PCA(object):
             data = adj_data
         return data / np.sqrt(self.weights)
 
+    def _compute_eig(self):
+        """
+        Wrapper for actual eigenvalue method
+
+        This is a workaround to avoid instance methods in __dict__
+        """
+        if self._method == 'eig':
+            return self._compute_using_eig()
+        elif self._method == 'svd':
+            return self._compute_using_svd()
+        else:  # self._method == 'nipals'
+            return self._compute_using_nipals()
+
     def _compute_using_svd(self):
         """SVD method to compute eigenvalues and eigenvecs"""
         x = self.transformed_data
@@ -425,7 +435,8 @@ class PCA(object):
 
     def _compute_using_nipals(self):
         """
-        NIPALS implementation to compute small number of eigenvalues and eigenvectors
+        NIPALS implementation to compute small number of eigenvalues
+        and eigenvectors
         """
         x = self.transformed_data
         if self._ncomp > 1:
@@ -497,7 +508,8 @@ class PCA(object):
             self._compute_eig()
             # Call function to compute factors and projection
             self._compute_pca_from_eig()
-            projection = np.asarray(self.project(transform=False, unweight=False))
+            projection = np.asarray(self.project(transform=False,
+                                                 unweight=False))
             projection_masked = projection[mask]
             data[mask] = projection_masked
             delta = last_projection_masked - projection_masked
@@ -526,9 +538,10 @@ class PCA(object):
             if num_good < self._ncomp:
                 import warnings
 
-                warn = 'Only {num:d} eigenvalues are positive.  The is the ' \
-                       'maximum number of components that can be extracted.'
-                warnings.warn(warn.format(num=num_good), EstimationWarning)
+                warnings.warn('Only {num:d} eigenvalues are positive.  '
+                              'This is the maximum number of components '
+                              'that can be extracted.'.format(num=num_good),
+                              EstimationWarning)
 
                 self._ncomp = num_good
                 vals[num_good:] = np.finfo(np.float64).tiny
@@ -550,7 +563,8 @@ class PCA(object):
         Final statistics to compute
         """
         # TSS and related calculations
-        # TODO: This needs careful testing, with and without weights, gls, standardized and demean
+        # TODO: This needs careful testing, with and without weights,
+        #   gls, standardized and demean
         weights = self.weights
         ss_data = self.transformed_data * np.sqrt(weights)
         self._tss_indiv = np.sum(ss_data ** 2, 0)
@@ -672,7 +686,8 @@ class PCA(object):
         self.ic = pd.DataFrame(self.ic, columns=['IC_p1', 'IC_p2', 'IC_p3'])
         self.ic.index.name = 'ncomp'
 
-    def plot_scree(self, ncomp=None, log_scale=True, cumulative=False, ax=None):
+    def plot_scree(self, ncomp=None, log_scale=True,
+                   cumulative=False, ax=None):
         """
         Plot of the ordered eigenvalues
 
@@ -826,8 +841,8 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
 
     Notes
     -----
-    This is a simple function wrapper around the PCA class. See PCA for more information
-    and additional methods.
+    This is a simple function wrapper around the PCA class. See PCA for
+    more information and additional methods.
     """
     pc = PCA(data, ncomp=ncomp, standardize=standardize, demean=demean,
              normalize=normalize, gls=gls, weights=weights, method=method)

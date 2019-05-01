@@ -32,16 +32,16 @@ from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
-_armax_notes = """
+_armax_notes = r"""
     Notes
     -----
     If exogenous variables are given, then the model that is fit is
 
     .. math::
 
-       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
+       \phi(L)(y_t - X_t\beta) = \theta(L)\epsilon_t
 
-    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    where :math:`\phi` and :math:`\theta` are polynomials in the lag
     operator, :math:`L`. This is the regression model with ARMA errors,
     or ARMAX model. This specification is used, whether or not the model
     is fit using conditional sum of square or maximum-likelihood, using
@@ -890,7 +890,7 @@ class ARMA(tsbase.TimeSeriesModel):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1144,7 +1144,7 @@ class ARIMA(ARMA):
         Notes
         ------
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1412,8 +1412,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.arroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1425,8 +1423,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.maroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1939,7 +1935,7 @@ class ARIMAResults(ARMAResults):
         if plot_insample:
             import re
             k_diff = self.k_diff
-            label = re.sub("D\d*\.", "", self.model.endog_names)
+            label = re.sub(r"D\d*\.", "", self.model.endog_names)
             levels = unintegrate(self.model.endog,
                                  self.model._first_unintegrate)
             ax.plot(x[:end + 1 - start],

@@ -1,14 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
 import re
 import subprocess
-import pickle
-from StringIO import StringIO
-
-# 3rd party
-from matplotlib import pyplot as plt
 
 # Ours
 import hash_funcs
@@ -99,9 +94,9 @@ def parse_file(block):
                 code_snippet = False
             line = line.strip()
             # try to remove lines like # hello -> #hello
-            line = re.sub("(?<=#) (?!\s)", "", line)
+            line = re.sub(r"(?<=#) (?!\s)", "", line)
             # make sure commented out things have a space
-            line = re.sub("#\.\.(?!\s)", "#.. ", line)
+            line = re.sub(r"#\.\.(?!\s)", "#.. ", line)
             line = re.sub("^#+", "", line) # strip multiple hashes
             outfile.append(line)
         else:

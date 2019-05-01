@@ -16,9 +16,21 @@ if [ ${USEMPL} = true ]; then
         PKGS="${PKGS}==${MATPLOTLIB}"
     fi
 fi
-if [ ${PIP_PRE} = true ]; then
+if [ "${PIP_PRE}" = true ]; then
     EXTRA_PIP_FLAGS="--pre $EXTRA_PIP_FLAGS --find-links $PRE_WHEELS"
 fi
+
+# travis osx python support is limited. Use homebrew/pyenv to install python.
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+
+  brew update && brew upgrade pyenv
+
+  eval "$(pyenv init -)"
+
+  pyenv install "$PYTHON"
+  pyenv shell "$PYTHON"
+fi
+
 # Install in our own virtualenv
 python -m pip install --upgrade pip
 pip install --upgrade virtualenv

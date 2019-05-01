@@ -15,11 +15,10 @@ import numpy as np
 import pandas as pd
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_approx_equal, assert_allclose,
-                           assert_array_equal)
+                           assert_allclose, assert_array_equal)
 import pytest
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
@@ -27,7 +26,6 @@ import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 import json
 
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
@@ -605,10 +603,10 @@ class TestDiagnosticG(object):
         lf3 = smsdia.lilliefors(res.resid[:20])
 
         compare_t_est(lf1, lilliefors1, decimal=(14, 14))
-        compare_t_est(lf2, lilliefors2, decimal=(14, 14)) #pvalue very small
-        assert_approx_equal(lf2[1], lilliefors2['pvalue'], significant=10)
+        compare_t_est(lf2, lilliefors2, decimal=(14, 14))  # pvalue very small
+        assert_allclose(lf2[1], lilliefors2['pvalue'], rtol=1e-10)
         compare_t_est(lf3, lilliefors3, decimal=(14, 1))
-        #R uses different approximation for pvalue in last case
+        # R uses different approximation for pvalue in last case
 
         #> ad = ad.test(residuals(fm))
         #> mkhtest(ad, "ad3", "-")
@@ -734,7 +732,8 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
-def test_outlier_influence_funcs():
+
+def test_outlier_influence_funcs(reset_randomstate):
     #smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
@@ -749,6 +748,7 @@ def test_outlier_influence_funcs():
     oi.summary_table(res2, alpha=0.05)
     infl = res2.get_influence()
     infl.summary_table()
+
 
 def test_influence_wrapped():
     from pandas import DataFrame

@@ -127,7 +127,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
     with open(path, 'rb') as f:
         lines = deque(f)
 
@@ -154,9 +154,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        asbytes('Q'): frequencies.BQuarterEnd(),
+        asbytes('M'): frequencies.BMonthEnd(),
+        asbytes('A'): frequencies.BYearEnd()
     }
 
     # create an instance
@@ -167,21 +167,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     offset = offsets[freq]
     from pandas import DatetimeIndex   # pylint: disable=E0611
-    date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
+    date_range = pd.date_range(start=start_date, freq=offset, periods=n)
 
     return data, date_range
-
-
-def get_logdet(m):
-    from statsmodels.tools.linalg import logdet_symm
-    return logdet_symm(m)
-
-
-get_logdet = np.deprecate(get_logdet,
-                          "statsmodels.tsa.vector_ar.util.get_logdet",
-                          "statsmodels.tools.linalg.logdet_symm",
-                          "get_logdet is deprecated and will be removed in "
-                          "0.8.0")
 
 
 def norm_signif_level(alpha=0.05):

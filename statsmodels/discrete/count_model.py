@@ -12,6 +12,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
                                                  _discrete_results_docs,
+                                                 _validate_l1_method,
                                                  GeneralizedPoisson,
                                                  NegativeBinomialP)
 from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
@@ -83,8 +84,8 @@ class GenericZeroInflated(CountModel):
             self._hessian_inflate = self._hessian_probit
 
         else:
-            raise TypeError("inflation == %s, which is not handled"
-                % inflation)
+            raise ValueError("inflation == %s, which is not handled"
+                             % inflation)
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -201,6 +202,8 @@ class GenericZeroInflated(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        _validate_l1_method(method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.k_exog + self.k_inflate
             alpha = alpha * np.ones(k_params)
@@ -224,12 +227,7 @@ class GenericZeroInflated(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = self.result_class_reg(self, cntfit)
-        else:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__

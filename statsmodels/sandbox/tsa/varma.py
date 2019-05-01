@@ -25,8 +25,6 @@ License : BSD
 from __future__ import print_function
 import numpy as np
 from scipy import signal
-#import matplotlib.pylab as plt
-from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
 #NOTE: this just returns that predicted values given the
@@ -139,7 +137,7 @@ if __name__ == '__main__':
     C[1,1,1] = 0.5
     xhat3, err3 = VARMA(x,B,C)
 
-    x = np.r_[np.zeros((P,K)),x]  #prepend inital conditions
+    x = np.r_[np.zeros((P,K)),x]  #prepend initial conditions
     xhat4, err4 = VARMA(x,B,C)
 
     C[1,1,1] = 1

@@ -131,19 +131,16 @@ class SimulationSmoother(KalmanSmoother):
 
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
+        # Initialize the filter and representation
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
-        prefix = self.prefix
+        # Initialize the state
+        self._initialize_state(prefix=prefix)
 
         # Create the simulator if necessary
         if (prefix not in self._simulators or
                 not nsimulations == self._simulators[prefix].nobs):
-
-            # Make sure we have the required Statespace representation
-            prefix, dtype, create_statespace = (
-                self._initialize_representation())
-
-            # Initialize the state
-            self._initialize_state(prefix=self.prefix)
 
             simulation_output = 0
             # Kalman smoother parameters
@@ -228,11 +225,8 @@ class SimulationSmoother(KalmanSmoother):
             raise ValueError('Invalid results class provided.')
 
         # Make sure we have the required Statespace representation
-        if prefix is None:
-            prefix = self.prefix
-        prefix, dtype, create_statespace = (
-            self._initialize_representation(prefix)
-        )
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
         # Simulation smoother parameters
         simulation_output = self.get_simulation_output(simulation_output,
@@ -402,7 +396,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_state_disturbance(self):
-        """
+        r"""
         Randomly drawn state disturbance variates, used to construct
         `generated_state` and `generated_obs`.
 
@@ -410,6 +404,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \eta_t^+ ~ N(0, Q_t)
 
         If `disturbance_variates` were provided to the `simulate()` method,
@@ -426,7 +421,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_obs(self):
-        """
+        r"""
         Generated vector of observations by iterating on the observation and
         transition equations, given a random initial state draw and random
         disturbance draws.
@@ -435,6 +430,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
 
         """
@@ -446,7 +442,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_state(self):
-        """
+        r"""
         Generated vector of states by iterating on the transition equation,
         given a random initial state draw and random disturbance draws.
 
@@ -454,6 +450,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
 
         """
@@ -465,13 +462,14 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state(self):
-        """
+        r"""
         Random draw of the state vector from its conditional distribution.
 
         Notes
         -----
 
         .. math::
+
             \alpha ~ p(\alpha \mid Y_n)
 
         """
@@ -483,7 +481,7 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_measurement_disturbance(self):
-        """
+        r"""
         Random draw of the measurement disturbance vector from its conditional
         distribution.
 
@@ -491,6 +489,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
 
         """
@@ -503,7 +502,7 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state_disturbance(self):
-        """
+        r"""
         Random draw of the state disturbance vector from its conditional
         distribution.
 
@@ -511,6 +510,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \eta ~ N(\hat \eta, Var(\hat \eta \mid Y_n))
 
         """
@@ -555,10 +555,11 @@ class SimulationSmoothResults(object):
         self._simulated_state_disturbance = None
 
         # Re-initialize the _statespace representation
-        self.model._initialize_representation(prefix=self.prefix)
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self.model._initialize_smoother())
 
         # Initialize the state
-        self.model._initialize_state(prefix=self.prefix)
+        self.model._initialize_state(prefix=prefix)
 
         # Draw the (independent) random variates for disturbances in the
         # simulation

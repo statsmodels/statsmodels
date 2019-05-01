@@ -95,7 +95,6 @@ class KernelReg(GenericKDE):
         self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
-        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
@@ -116,7 +115,11 @@ class KernelReg(GenericKDE):
         else:
             # The user specified a bandwidth selection method e.g. 'cv_ls'
             self._bw_method = bw
-            res = self.bw_func[bw]
+            # Workaround to avoid instance methods in __dict__
+            if bw == 'cv_ls':
+                res = self.cv_loo
+            else:  # bw == 'aic'
+                res = self.aic_hurvich
             X = np.std(self.exog, axis=0)
             h0 = 1.06 * X * \
                  self.nobs ** (- 1. / (4 + np.size(self.exog, axis=1)))
@@ -494,7 +497,6 @@ class KernelCensoredReg(KernelReg):
         self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
-        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)

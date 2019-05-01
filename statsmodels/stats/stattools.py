@@ -13,7 +13,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 
 # TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids, axis=0):
-    """
+    r"""
     Calculates the Durbin-Watson statistic
 
     Parameters
@@ -23,8 +23,7 @@ def durbin_watson(resids, axis=0):
     Returns
     --------
     dw : float, array-like
-
-    The Durbin-Watson statistic.
+        The Durbin-Watson statistic.
 
     Notes
     -----
@@ -416,7 +415,20 @@ def _medcouple_1d(y):
     is_zero = np.logical_and(lower == 0.0, upper == 0.0)
     standardization[is_zero] = np.inf
     spread = upper + lower
-    return np.median(spread / standardization)
+    h = spread / standardization
+    # GH5395
+    num_ties = np.sum(lower == 0.0)
+    if num_ties:
+        # Replacements has -1 above the anti-diagonal, 0 on the anti-diagonal,
+        # and 1 below the anti-diagonal
+        replacements = np.ones((num_ties, num_ties)) - np.eye(num_ties)
+        replacements -= 2 * np.triu(replacements)
+        # Convert diagonal to anti-diagonal
+        replacements = np.fliplr(replacements)
+        # Always replace upper right block
+        h[:num_ties, -num_ties:] = replacements
+
+    return np.median(h)
 
 
 def medcouple(y, axis=0):

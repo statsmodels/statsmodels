@@ -11,13 +11,12 @@ License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
 
+import pytest
 import warnings
 import numpy as np
 import pandas as pd
-import pytest
 
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
+from numpy.testing import assert_equal, assert_raises
 
 from statsmodels.tsa.base import tsa_model
 
@@ -32,32 +31,32 @@ dta = [
 
 base_date_indexes = [
     # (usual candidates)
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='D'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='W'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='M'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='Q'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='A'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='D'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='W'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='M'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='Q'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='A'),
     # (some more complicated frequencies)
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='2Q'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='2QS'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='5s'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+    pd.date_range(start='1950-01-01', periods=nobs, freq='2Q'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='2QS'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='5s'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='1D10min')]
 
 # Note: we separate datetime indexes and period indexes because the
 # date coercion does not handle string versions of PeriodIndex objects
 # most of the time.
 base_period_indexes = [
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='D'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='W'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='M'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='Q'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='A')]
+    pd.period_range(start='1950-01-01', periods=nobs, freq='D'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='W'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='M'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='Q'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='A')]
 try:
     # Only later versions of pandas support these
     base_period_indexes += [
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='2Q'),
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='5s'),
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+        pd.period_range(start='1950-01-01', periods=nobs, freq='2Q'),
+        pd.period_range(start='1950-01-01', periods=nobs, freq='5s'),
+        pd.period_range(start='1950-01-01', periods=nobs, freq='1D10min')]
 except:
     pass
 
@@ -530,6 +529,29 @@ def test_prediction_increment_unsupported():
     assert_equal(out_of_sample, 1)
     assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
 
+    # Test getting a location that exists in the (internal) index
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.RangeIndex(start=0, stop=3, step=1)
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the (internal) index
+    # when using the function that alternatively falls back to the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.RangeIndex(start=0, stop=3, step=1)
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the given (unsupported) index
+    # Note that the returned index is now like the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc('c')
+    assert_equal(loc, 2)
+    desired_index = mod.data.row_labels[:3]
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
 
 def test_prediction_increment_nonpandas():
     endog = dta[0]
@@ -573,6 +595,22 @@ def test_prediction_increment_nonpandas():
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
     assert_equal(prediction_index is None, True)
+
+
+    # Test getting a location that exists in the (internal) index
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.RangeIndex(start=0, stop=3, step=1)
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the (internal) index
+    # when using the function that alternatively falls back to the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.RangeIndex(start=0, stop=3, step=1)
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
 
 
 def test_prediction_increment_pandas_noindex():
@@ -664,7 +702,7 @@ def test_prediction_increment_pandas_dates():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    desired_index = pd.DatetimeIndex(start='1950-01-02', periods=5, freq='D')
+    desired_index = pd.date_range(start='1950-01-02', periods=5, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
 
     # Date-based keys
@@ -676,15 +714,38 @@ def test_prediction_increment_pandas_dates():
     assert_equal(start, 0)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 3)
-    desired_index = pd.DatetimeIndex(start='1950-01-01', periods=8, freq='D')
+    desired_index = pd.date_range(start='1950-01-01', periods=8, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
+
+
+    # Test getting a location that exists in the (internal) index
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.date_range(start='1950-01-01', periods=3, freq='D')
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the (internal) index
+    # when using the function that alternatively falls back to the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.date_range(start='1950-01-01', periods=3, freq='D')
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the given (unsupported) index
+    # Note that the returned index is now like the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc('1950-01-03')
+    assert_equal(loc, 2)
+    desired_index = mod.data.row_labels[:3]
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
 
 
 def test_prediction_increment_pandas_dates_nanosecond():
     # Date-based index
     endog = dta[2].copy()
-    endog.index = pd.DatetimeIndex(start='1970-01-01', periods=len(endog),
-                                   freq='N')
+    endog.index = pd.date_range(start='1970-01-01', periods=len(endog), freq='N')
     mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
@@ -723,8 +784,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    desired_index = pd.DatetimeIndex(start='1970-01-01',
-                                     periods=6, freq='N')[1:]
+    desired_index = pd.date_range(start='1970-01-01', periods=6, freq='N')[1:]
     assert_equal(prediction_index.equals(desired_index), True)
 
     # Date-based keys
@@ -736,7 +796,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 0)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 3)
-    desired_index = pd.DatetimeIndex(start='1970-01-01', periods=8, freq='N')
+    desired_index = pd.date_range(start='1970-01-01', periods=8, freq='N')
     assert_equal(prediction_index.equals(desired_index), True)
 
 
@@ -841,6 +901,13 @@ def test_prediction_rangeindex_withstep():
     desired_index = pd.RangeIndex(start=1 * 6, stop=(nobs + 1) * 6, step=6)
     assert_equal(prediction_index.equals(desired_index), True)
 
+    # Test getting a location that exists in the index
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.RangeIndex(start=0, stop=3 * 6, step=6)
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
 
 def test_custom_index():
     tsa_model.__warningregistry__ = {}
@@ -861,11 +928,32 @@ def test_custom_index():
 
     # Test the default output index
     assert_equal(prediction_index.equals(pd.Index(['d', 'e'])), True)
-    start, end, out_of_sample, prediction_index = (
-        mod._get_prediction_index(start_key, end_key, index=['f', 'g']))
 
     # Test custom output index
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key, index=['f', 'g']))
     assert_equal(prediction_index.equals(pd.Index(['f', 'g'])), True)
+
+    # Test getting a location in the index w/o fallback to row lables
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    assert_equal(index.equals(pd.RangeIndex(0, 3)), True)
+    assert_equal(index_was_expanded, False)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting an invalid location in the index w/ fallback to row lables
+    with pytest.raises(KeyError):
+        mod._get_index_loc('c')
+
+    # Test getting a location in the index w/ fallback to row lables
+    loc, index, index_was_expanded = mod._get_index_label_loc('c')
+    assert_equal(loc, 2)
+    assert_equal(index.equals(pd.Index(['a', 'b', 'c'])), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting an invalid location in the index w/ fallback to row lables
+    with pytest.raises(KeyError):
+        mod._get_index_label_loc('aa')
 
     # Test out-of-sample
     start_key = 4

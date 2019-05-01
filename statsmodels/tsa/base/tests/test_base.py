@@ -68,7 +68,7 @@ def test_keyerror_start_date():
 def test_period_index():
     # test 1285
 
-    dates = pd.PeriodIndex(start="1/1/1990", periods=20, freq="M")
+    dates = pd.period_range(start="1/1/1990", periods=20, freq="M")
     x = np.arange(1, 21.)
 
     model = TimeSeriesModel(pd.Series(x, index=dates))
@@ -93,7 +93,7 @@ def test_pandas_dates():
 
 
 def test_get_predict_start_end():
-    index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')
+    index = pd.date_range(start='1970-01-01', end='1990-01-01', freq='AS')
     endog = pd.Series(np.zeros(10), index[:10])
     model = TimeSeriesModel(endog)
 

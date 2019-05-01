@@ -7,14 +7,15 @@ extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
 
-from numpy.testing import assert_, assert_equal, \
-    assert_almost_equal, assert_array_almost_equal, \
-    assert_raises
+from numpy.testing import (
+    assert_equal,
+    assert_almost_equal, assert_array_almost_equal,
+    assert_raises)
 
 import numpy as np
 import pytest
 
-from statsmodels.stats.libqsturng import qsturng, psturng, p_keys, v_keys
+from statsmodels.stats.libqsturng import qsturng, psturng
 
 
 def read_ch(fname):
@@ -183,7 +184,7 @@ class TestPsturng(object):
             assert_almost_equal(1.-p, psturng(q,r,v), 5)
 
     @pytest.mark.slow
-    def test_100_random_values(self):
+    def test_100_random_values(self, reset_randomstate):
         n = 100
         ps = np.random.random(n)*(.999 - .1) + .1
         rs = np.random.randint(2, 101, n)

@@ -7,7 +7,6 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
-from statsmodels.compat.pandas import sort_values
 
 
 # * An M-estimator minimizes the function 
@@ -43,7 +42,7 @@ help(norms.AndrewWave.weights)
 a = 1.339
 support = np.linspace(-np.pi*a, np.pi*a, 100)
 andrew = norms.AndrewWave(a=a)
-plot_weights(support, andrew.weights, ['$-\pi*a$', '0', '$\pi*a$'], [-np.pi*a, 0, np.pi*a]);
+plot_weights(support, andrew.weights, [r'$-\pi*a$', r'0', r'$\pi*a$'], [-np.pi*a, 0, np.pi*a]);
 
 
 #### Hampel's 17A
@@ -233,12 +232,12 @@ print(infl.summary_frame().loc['minister'])
 
 
 sidak = ols_model.outlier_test('sidak')
-sort_values(sidak, 'unadj_p', inplace=True)
+sidak.sort_values('unadj_p', inplace=True)
 print(sidak)
 
 
 fdr = ols_model.outlier_test('fdr_bh')
-sort_values(fdr, 'unadj_p', inplace=True)
+fdr.sort_values('unadj_p', inplace=True)
 print(fdr)
 
 
@@ -300,12 +299,12 @@ hat_diag.loc[hat_diag > h_bar]
 
 
 sidak2 = ols_model.outlier_test('sidak')
-sort_values(sidak2, 'unadj_p', inplace=True)
+sidak2.sort_values('unadj_p', inplace=True)
 print(sidak2)
 
 
 fdr2 = ols_model.outlier_test('fdr_bh')
-sort_values(fdr2, 'unadj_p', inplace=True)
+fdr2.sort_values('unadj_p', inplace=True)
 print(fdr2)
 
 

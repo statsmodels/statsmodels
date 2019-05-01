@@ -8,6 +8,7 @@ pytest --cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels \
 import fnmatch
 import os
 import sys
+import shutil
 from collections import defaultdict
 from os.path import relpath, abspath, split, join as pjoin
 
@@ -88,6 +89,11 @@ MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
 URL = 'https://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
+PROJECT_URLS = {
+    'Bug Tracker': 'https://github.com/statsmodels/statsmodels/issues',
+    'Documentation': 'https://www.statsmodels.org/stable/index.html',
+    'Source Code': 'https://github.com/statsmodels/statsmodels'
+}
 
 CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
@@ -106,7 +112,17 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Topic :: Office/Business :: Financial',
                'Topic :: Scientific/Engineering']
 
+FILES_TO_INCLUDE_IN_PACKAGE = ['LICENSE.txt', 'setup.cfg']
+
+FILES_COPIED_TO_PACKAGE = []
+for filename in FILES_TO_INCLUDE_IN_PACKAGE:
+    if os.path.exists(filename):
+        dest = os.path.join('statsmodels', filename)
+        shutil.copy2(filename, dest)
+        FILES_COPIED_TO_PACKAGE.append(dest)
+
 ADDITIONAL_PACKAGE_DATA = {
+    'statsmodels': FILES_TO_INCLUDE_IN_PACKAGE,
     'statsmodels.datasets.tests': ['*.zip'],
     'statsmodels.iolib.tests.results': ['*.dta'],
     'statsmodels.stats.tests.results': ['*.json'],
@@ -133,6 +149,7 @@ exts = dict(
     _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
     _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa: E501
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
+    _innovations={'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'},  # noqa: E501
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
@@ -274,7 +291,8 @@ for source in statespace_exts:
     extensions.append(ext)
 
 if HAS_CYTHON:
-    extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES)
+    extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES,
+                           language_level=3)
 
 ##############################################################################
 # Construct package data
@@ -313,6 +331,7 @@ setup(name=DISTNAME,
       license=LICENSE,
       url=URL,
       download_url=DOWNLOAD_URL,
+      project_urls=PROJECT_URLS,
       long_description=LONG_DESCRIPTION,
       classifiers=CLASSIFIERS,
       platforms='any',
@@ -327,3 +346,7 @@ setup(name=DISTNAME,
       zip_safe=False,
       data_files=[('', ['LICENSE.txt', 'setup.cfg'])]
       )
+
+# Clean-up copied files
+for copy in FILES_COPIED_TO_PACKAGE:
+    os.unlink(copy)

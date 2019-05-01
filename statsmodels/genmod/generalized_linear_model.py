@@ -17,8 +17,6 @@ Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
 McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
-from statsmodels.compat.numpy import np_matrix_rank
-
 import numpy as np
 from . import families
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -38,7 +36,10 @@ from . import _prediction as pred
 from statsmodels.genmod._prediction import PredictionResults
 
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             DomainWarning)
+                                             DomainWarning,
+                                             HessianInversionWarning)
+
+from numpy.linalg.linalg import LinAlgError
 
 __all__ = ['GLM', 'PredictionResults']
 
@@ -293,6 +294,7 @@ class GLM(base.LikelihoodModel):
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
+
             import warnings
             warnings.warn(("The %s link function does not respect the domain "
                            "of the %s family.") %
@@ -358,7 +360,7 @@ class GLM(base.LikelihoodModel):
                         'params': [np.inf],
                         'deviance': [np.inf]}
 
-        self.df_model = np_matrix_rank(self.exog) - 1
+        self.df_model = np.linalg.matrix_rank(self.exog) - 1
 
         if (self.freq_weights is not None) and \
            (self.freq_weights.shape[0] == self.endog.shape[0]):
@@ -768,8 +770,9 @@ class GLM(base.LikelihoodModel):
 
         Notes
         -----
-        The default scale for Binomial and Poisson families is 1.  The default
-        for the other families is Pearson's Chi-Square estimate.
+        The default scale for Binomial, Poisson and Negative Binomial
+        families is 1.  The default for the other families is Pearson's
+        Chi-Square estimate.
 
         See also
         --------
@@ -791,7 +794,7 @@ class GLM(base.LikelihoodModel):
                 return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu, self.var_weights,
-                                             self.freq_weights, self.scale) /
+                                             self.freq_weights, 1.) /
                         (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
@@ -1058,6 +1061,8 @@ class GLM(base.LikelihoodModel):
         self.scaletype = scale
 
         if method.lower() == "irls":
+            if cov_type.lower() == 'eim':
+                cov_type = 'nonrobust'
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
@@ -1113,11 +1118,27 @@ class GLM(base.LikelihoodModel):
         else:
             cov_p = rslt.normalized_cov_params / scale
 
-        glm_results = GLMResults(self, rslt.params,
-                                 cov_p,
-                                 scale,
-                                 cov_type=cov_type, cov_kwds=cov_kwds,
-                                 use_t=use_t)
+        if cov_type.lower() == 'eim':
+            oim = False
+            cov_type = 'nonrobust'
+        else:
+            oim = True
+
+        try:
+            cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+        except LinAlgError:
+            from warnings import warn
+            warn('Inverting hessian failed, no bse or cov_params '
+                 'available', HessianInversionWarning)
+            cov_p = None
+
+        results_class = getattr(self, '_results_class', GLMResults)
+        results_class_wrapper = getattr(self, '_results_class_wrapper', GLMResultsWrapper)
+        glm_results = results_class(self, rslt.params,
+                                    cov_p,
+                                    scale,
+                                    cov_type=cov_type, cov_kwds=cov_kwds,
+                                    use_t=use_t)
 
         # TODO: iteration count is not always available
         history = {'iteration': 0}
@@ -1128,7 +1149,7 @@ class GLM(base.LikelihoodModel):
         glm_results.method = method
         glm_results.fit_history = history
 
-        return GLMResultsWrapper(glm_results)
+        return results_class_wrapper(glm_results)
 
     def _fit_irls(self, start_params=None, maxiter=100, tol=1e-8,
                   scale=None, cov_type='nonrobust', cov_kwds=None,
@@ -1220,7 +1241,7 @@ class GLM(base.LikelihoodModel):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters
@@ -1271,6 +1292,10 @@ class GLM(base.LikelihoodModel):
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
+
+        if kwargs.get("L1_wt", 1) == 0:
+            return self._fit_ridge(alpha, start_params)
+
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
@@ -1290,6 +1315,35 @@ class GLM(base.LikelihoodModel):
         self.scale = self.estimate_scale(self.mu)
 
         return result
+
+    def _fit_ridge(self, alpha, start_params, method="newton-cg"):
+
+        if start_params is None:
+            start_params = np.zeros(self.exog.shape[1])
+
+        def fun(x):
+            return -(self.loglike(x) / self.nobs - alpha * np.sum(x**2) / 2)
+
+        def grad(x):
+            return -(self.score(x) / self.nobs - alpha * x)
+
+        from scipy.optimize import minimize
+        from statsmodels.base.elastic_net import (RegularizedResults,
+            RegularizedResultsWrapper)
+
+        mr = minimize(fun, start_params, jac=grad, method=method)
+        params = mr.x
+
+        if not mr.success:
+            import warnings
+            ngrad = np.sqrt(np.sum(mr.jac**2))
+            msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
+            warnings.warn(msg)
+
+        results = RegularizedResults(self, params)
+        results = RegularizedResultsWrapper(results)
+
+        return results
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
@@ -1946,30 +2000,3 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
        _cons |  -34.84602    1.79333   -19.43   0.000    -38.36089   -31.33116
 ------------------------------------------------------------------------------
 """
-
-    # NOTE: wfs dataset has been removed due to a licensing issue
-    # example of using offset
-    # data = sm.datasets.wfs.load(as_pandas=False)
-    # get offset
-    # offset = np.log(data.exog[:,-1])
-    # exog = data.exog[:,:-1]
-
-    # convert dur to dummy
-    # exog = sm.tools.categorical(exog, col=0, drop=True)
-    # drop reference category
-    # convert res to dummy
-    # exog = sm.tools.categorical(exog, col=0, drop=True)
-    # convert edu to dummy
-    # exog = sm.tools.categorical(exog, col=0, drop=True)
-    # drop reference categories and add intercept
-    # exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
-
-    # endog = np.round(data.endog)
-    # mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
-
-    # res1 = GLM(endog, exog, family=sm.families.Poisson(),
-    #                         offset=offset).fit(tol=1e-12, maxiter=250)
-    # exposuremod = GLM(endog, exog, family=sm.families.Poisson(),
-    #                   exposure = data.exog[:,-1]).fit(tol=1e-12,
-    #                                                   maxiter=250)
-    # assert(np.all(res1.params == exposuremod.params))

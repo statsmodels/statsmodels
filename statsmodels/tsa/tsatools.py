@@ -487,7 +487,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         else:
             x = x[:, None]
     elif x.ndim == 0 or x.ndim > 2:
-        raise TypeError('Only supports 1 and 2-dimensional data.')
+        raise ValueError('Only supports 1 and 2-dimensional data.')
 
     nobs, nvar = x.shape
 

@@ -9,14 +9,11 @@ from __future__ import division, absolute_import, print_function
 
 import warnings
 import numpy as np
-import pandas as pd
-import os
-import sys
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
+from numpy.testing import assert_allclose
 import pytest
 
 
@@ -348,7 +345,7 @@ def test_varmax():
     eps3[50:] = 1
 
     # VAR(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -357,7 +354,7 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VMA(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(0, 0, 2))
     actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -368,7 +365,7 @@ def test_varmax():
     # VARMA(2, 2) - single series
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='nc')
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
     actual = mod1.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -407,7 +404,7 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VAR(1) + measurement error
-    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc',
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='n',
                         measurement_error=True)
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1., 1., 1.], nobs,
                           measurement_shocks=np.c_[eps, eps],
@@ -416,7 +413,7 @@ def test_varmax():
     assert_allclose(actual, np.c_[eps, eps])
 
     # VARX(1)
-    mod = varmax.VARMAX(np.zeros((nobs, 2)), order=(1, 0), trend='nc',
+    mod = varmax.VARMAX(np.zeros((nobs, 2)), order=(1, 0), trend='n',
                         exog=exog)
     actual = mod.simulate(np.r_[transition.ravel(), 5, -2, 1., 0, 1.], nobs,
                           state_shocks=np.c_[eps1, eps1], initial_state=[1, 1])
@@ -431,7 +428,7 @@ def test_varmax():
     # VMA(1)
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
-        np.random.normal(size=(nobs, 2)), order=(0, 1), trend='nc')
+        np.random.normal(size=(nobs, 2)), order=(0, 1), trend='n')
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog
@@ -522,7 +519,7 @@ def test_known_initialization():
     # (here just test that with an independent VAR we have each initial state
     # geometrically declining at the appropriate rate)
     transition = np.diag([0.5, 0.2])
-    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc')
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='n')
     mod.initialize_known([100, 50], np.diag([0, 0]))
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
                           measurement_shocks=np.c_[eps1, eps1],
@@ -542,3 +539,17 @@ def test_known_initialization():
                           state_shocks=eps1)
     tmp = 100 * 0.5**np.arange(nobs)
     assert_allclose(actual, np.c_[0.8 * tmp, 0.2 * tmp])
+
+
+def test_sequential_simulate():
+    # Test that we can perform simulation, change the system matrices, and then
+    # perform simulation again (i.e. check that everything updates correctly
+    # in the simulation smoother).
+    n_simulations = 100
+    mod = sarimax.SARIMAX([1], order=(0, 0, 0), trend='c')
+
+    actual = mod.simulate([1, 0], n_simulations)
+    assert_allclose(actual, np.ones(n_simulations))
+
+    actual = mod.simulate([10, 0], n_simulations)
+    assert_allclose(actual, np.ones(n_simulations) * 10)

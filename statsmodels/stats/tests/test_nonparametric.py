@@ -8,9 +8,13 @@ Author: Josef Perktold
 from statsmodels.compat.python import lzip, range
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
-from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
-                                            symmetry_bowker,
+import pytest
+
+from statsmodels.stats.contingency_tables import mcnemar, cochrans_q, SquareTable
+from statsmodels.sandbox.stats.runs import (Runs, symmetry_bowker,
                                             runstest_1samp, runstest_2samp)
+from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
+
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
@@ -33,17 +37,18 @@ def test_mcnemar_exact():
     res4 = 0.00206
     res5 = 0.002221
     res6 = 1.
-
-    assert_almost_equal(mcnemar(f_obs1, exact=True), [59, res1], decimal=6)
-    assert_almost_equal(mcnemar(f_obs2, exact=True), [59, res2], decimal=6)
-    assert_almost_equal(mcnemar(f_obs3, exact=True), [59, res3], decimal=6)
-    assert_almost_equal(mcnemar(f_obs4, exact=True), [30, res4], decimal=6)
-    assert_almost_equal(mcnemar(f_obs5, exact=True), [10, res5], decimal=6)
-    assert_almost_equal(mcnemar(f_obs6, exact=True), [10, res6], decimal=6)
-
-    x, y = _expand_table(f_obs2).T  # tuple unpack
-    assert_allclose(mcnemar(f_obs2, exact=True),
-                    mcnemar(x, y, exact=True), rtol=1e-13)
+    stat = mcnemar(f_obs1, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [59, res1], decimal=6)
+    stat = mcnemar(f_obs2, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [59, res2], decimal=6)
+    stat = mcnemar(f_obs3, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [59, res3], decimal=6)
+    stat = mcnemar(f_obs4, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [30, res4], decimal=6)
+    stat = mcnemar(f_obs5, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [10, res5], decimal=6)
+    stat = mcnemar(f_obs6, exact=True)
+    assert_almost_equal([stat.statistic, stat.pvalue], [10, res6], decimal=6)
 
 
 def test_mcnemar_chisquare():
@@ -56,14 +61,12 @@ def test_mcnemar_chisquare():
     res2 = [0.7751938,    0.3786151]
     res3 = [2.87769784,   0.08981434]
 
-    assert_allclose(mcnemar(f_obs1, exact=False), res1, rtol=1e-6)
-    assert_allclose(mcnemar(f_obs2, exact=False), res2, rtol=1e-6)
-    assert_allclose(mcnemar(f_obs3, exact=False), res3, rtol=1e-6)
-
-    # compare table versus observations
-    x, y = _expand_table(f_obs2).T  # tuple unpack
-    assert_allclose(mcnemar(f_obs2, exact=False),
-                    mcnemar(x, y, exact=False), rtol=1e-13)
+    stat = mcnemar(f_obs1, exact=False)
+    assert_allclose([stat.statistic, stat.pvalue], res1, rtol=1e-6)
+    stat = mcnemar(f_obs2, exact=False)
+    assert_allclose([stat.statistic, stat.pvalue], res2, rtol=1e-6)
+    stat = mcnemar(f_obs3, exact=False)
+    assert_allclose([stat.statistic, stat.pvalue], res3, rtol=1e-6)
 
     # test correction = False
     res1 = [2.135556e01, 3.815136e-06]
@@ -71,27 +74,32 @@ def test_mcnemar_chisquare():
     res3 = [3.17266187,  0.07488031]
 
     res = mcnemar(f_obs1, exact=False, correction=False)
-    assert_allclose(res, res1, rtol=1e-6)
+    assert_allclose([res.statistic, res.pvalue], res1, rtol=1e-6)
     res = mcnemar(f_obs2, exact=False, correction=False)
-    assert_allclose(res, res2, rtol=1e-6)
+    assert_allclose([res.statistic, res.pvalue], res2, rtol=1e-6)
     res = mcnemar(f_obs3, exact=False, correction=False)
-    assert_allclose(res, res3, rtol=1e-6)
+    assert_allclose([res.statistic, res.pvalue], res3, rtol=1e-6)
 
 
-def test_mcnemar_vectorized():
+def test_mcnemar_vectorized(reset_randomstate):
     ttk = np.random.randint(5,15, size=(2,2,3))
-    mcnemar(ttk)
-    res = mcnemar(ttk, exact=False)
-    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=False) for i in range(3)])
+    with pytest.deprecated_call():
+        res = sbmcnemar(ttk, exact=False)
+    with pytest.deprecated_call():
+        res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=False) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
-    res = mcnemar(ttk, exact=False, correction=False)
-    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=False, correction=False)
-                                                          for i in range(3)])
+    with pytest.deprecated_call():
+        res = sbmcnemar(ttk, exact=False, correction=False)
+    with pytest.deprecated_call():
+        res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=False, correction=False)
+                      for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
-    res = mcnemar(ttk, exact=True)
-    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=True) for i in range(3)])
+    with pytest.deprecated_call():
+        res = sbmcnemar(ttk, exact=True)
+    with pytest.deprecated_call():
+        res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=True) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
 
@@ -99,32 +107,35 @@ def test_symmetry_bowker():
     table = np.array([0, 3, 4, 4, 2, 4, 1, 2, 4, 3, 5, 3, 0, 0, 2, 2, 3, 0, 0,
                       1, 5, 5, 5, 5, 5]).reshape(5, 5)
 
-    res = symmetry_bowker(table)
+    res = SquareTable(table, shift_zeros=False).symmetry()
     mcnemar5_1 = dict(statistic=7.001587, pvalue=0.7252951, parameters=(10,),
                       distr='chi2')
-    assert_allclose(res[:2], [mcnemar5_1['statistic'], mcnemar5_1['pvalue']],
+    assert_allclose([res.statistic, res.pvalue],
+                    [mcnemar5_1['statistic'], mcnemar5_1['pvalue']],
                     rtol=1e-7)
 
-    res = symmetry_bowker(1 + table)
+    res = SquareTable(1 + table, shift_zeros=False).symmetry()
     mcnemar5_1b = dict(statistic=5.355988, pvalue=0.8661652, parameters=(10,),
                        distr='chi2')
-    assert_allclose(res[:2], [mcnemar5_1b['statistic'], mcnemar5_1b['pvalue']],
+    assert_allclose([res.statistic, res.pvalue],
+                    [mcnemar5_1b['statistic'], mcnemar5_1b['pvalue']],
                     rtol=1e-7)
-
 
     table = np.array([2, 2, 3, 6, 2, 3, 4, 3, 6, 6, 6, 7, 1, 9, 6, 7, 1, 1, 9,
                       8, 0, 1, 8, 9, 4]).reshape(5, 5)
 
-    res = symmetry_bowker(table)
+    res = SquareTable(table, shift_zeros=False).symmetry()
     mcnemar5_2 = dict(statistic=18.76432, pvalue=0.04336035, parameters=(10,),
                       distr='chi2')
-    assert_allclose(res[:2], [mcnemar5_2['statistic'], mcnemar5_2['pvalue']],
+    assert_allclose([res.statistic, res.pvalue],
+                    [mcnemar5_2['statistic'], mcnemar5_2['pvalue']],
                     rtol=1.5e-7)
 
-    res = symmetry_bowker(1 + table)
+    res = SquareTable(1 + table, shift_zeros=False).symmetry()
     mcnemar5_2b = dict(statistic=14.55256, pvalue=0.1492461, parameters=(10,),
                        distr='chi2')
-    assert_allclose(res[:2], [mcnemar5_2b['statistic'], mcnemar5_2b['pvalue']],
+    assert_allclose([res.statistic, res.pvalue],
+                    [mcnemar5_2b['statistic'], mcnemar5_2b['pvalue']],
                     rtol=1e-7)
 
 
@@ -145,12 +156,15 @@ def test_cochransq():
                    [1, 1, 1]])
     res_qstat = 2.8
     res_pvalue = 0.246597
-    assert_almost_equal(cochrans_q(x), [res_qstat, res_pvalue])
+    res = cochrans_q(x)
+    assert_almost_equal([res.statistic, res.pvalue], [res_qstat, res_pvalue])
 
     #equivalence of mcnemar and cochranq for 2 samples
     a,b = x[:,:2].T
-    assert_almost_equal(mcnemar(a,b, exact=False, correction=False),
-                        cochrans_q(x[:,:2]))
+    res = cochrans_q(x[:, :2])
+    with pytest.deprecated_call():
+        assert_almost_equal(sbmcnemar(a, b, exact=False, correction=False),
+                            [res.statistic, res.pvalue])
 
 
 def test_cochransq2():
@@ -170,7 +184,7 @@ def test_cochransq2():
         0 0 1 1'''.split(), int).reshape(-1, 4)
 
     res = cochrans_q(data)
-    assert_allclose(res, [13.2857143, 0.00405776], rtol=1e-6)
+    assert_allclose([res.statistic, res.pvalue], [13.2857143, 0.00405776], rtol=1e-6)
 
 
 def test_cochransq3():
@@ -198,9 +212,9 @@ def test_cochransq3():
     data = np.repeat(cases, count, 0)
 
     res = cochrans_q(data)
-    assert_allclose(res, [8.4706, 0.0145], atol=5e-5)
+    assert_allclose([res.statistic, res.pvalue], [8.4706, 0.0145], atol=5e-5)
 
-def test_runstest():
+def test_runstest(reset_randomstate):
     #comparison numbers from R, tseries, runs.test
     #currently only 2-sided used
     x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
