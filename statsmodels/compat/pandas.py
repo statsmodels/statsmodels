@@ -7,7 +7,7 @@ from pandas import RangeIndex, Float64Index  # noqa:F401
 
 
 version = LooseVersion(pandas.__version__)
-pandas_lte_0_19_2 = version < LooseVersion('0.19.2')
+pandas_lte_0_19_2 = version <= LooseVersion('0.19.2')
 pandas_gt_0_19_2 = version > LooseVersion('0.19.2')
 
 
