@@ -8,7 +8,7 @@ IRLS.
 import numpy as np
 import pandas as pd
 from statsmodels.compat.python import asbytes
-from statsmodels.compat.numpy import NUMPY_LT_113
+from statsmodels.compat.numpy import NP_LT_113
 from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
@@ -692,7 +692,7 @@ class Lbw(object):
             "stata_lbw_glm.csv")
 
         # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
-        if NUMPY_LT_113 or PY2:
+        if NP_LT_113 or PY2:
             with open(filename, 'rb') as datafile:
                 data=np.recfromcsv(datafile)
             vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
