@@ -450,7 +450,8 @@ class SimpleTable(list):
         if center:
             formatted_rows.append(r'\end{center}')
 
-        return '\n'.join(formatted_rows)
+        # Replace $$ due to bug in GH 5444
+        return '\n'.join(formatted_rows).replace('$$', ' ')
 
 
     def extend_right(self, table):
