@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_equal
 
 from statsmodels.iolib.summary2 import summary_col
@@ -103,9 +104,13 @@ class TestSummaryLabels(object):
         x = [1, 5, 7, 3, 5, 2, 5, 3]
         y = [6, 4, 2, 7, 4, 9, 10, 2]
         reg_with_constant = OLS(y, x, hasconst=True).fit()
-        assert 'R-squared:' in str(reg_with_constant.summary2())
-        assert 'R-squared:' in str(reg_with_constant.summary())
+        with pytest.warns(UserWarning):
+            assert 'R-squared:' in str(reg_with_constant.summary2())
+        with pytest.warns(UserWarning):
+            assert 'R-squared:' in str(reg_with_constant.summary())
 
         reg_without_constant = OLS(y, x, hasconst=False).fit()
-        assert 'R-squared (uncentered):' in str(reg_without_constant.summary2())
-        assert 'R-squared (uncentered):' in str(reg_without_constant.summary())
+        with pytest.warns(UserWarning):
+            assert 'R-squared (uncentered):' in str(reg_without_constant.summary2())
+        with pytest.warns(UserWarning):
+            assert 'R-squared (uncentered):' in str(reg_without_constant.summary())

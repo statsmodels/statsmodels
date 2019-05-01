@@ -263,6 +263,11 @@ def test_plots(close_figures):
     res = mod.fit()
 
     # Basic plot
+    try:
+        from pandas.plotting import register_matplotlib_converters
+        register_matplotlib_converters()
+    except ImportError:
+        pass
     fig = res.plot_recursive_coefficient()
 
     # Specific variable
@@ -381,7 +386,8 @@ def test_cusum():
 def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
     mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
-    res = mod.fit()
+    with pytest.warns(UserWarning):
+        res = mod.fit()
     d = max(res.nobs_diffuse, res.loglikelihood_burn)
 
     assert_allclose(res.resid_recursive[3:], results_stata.iloc[3:]['rr'],

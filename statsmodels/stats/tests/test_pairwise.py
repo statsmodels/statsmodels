@@ -138,14 +138,14 @@ ss2 = asbytes(ss2)
 ss3 = asbytes(ss3)
 ss5 = asbytes(ss5)
 
-dta = pd.read_csv(BytesIO(ss), sep=r'\s+', header=None)
+dta = pd.read_csv(BytesIO(ss), sep=r'\s+', header=None, engine='python')
 dta.columns = "Rust", "Brand", "Replication"
-dta2 = pd.read_csv(BytesIO(ss2), sep=r'\s+', header=None)
+dta2 = pd.read_csv(BytesIO(ss2), sep=r'\s+', header=None, engine='python')
 dta2.columns = "idx", "Treatment", "StressReduction"
 dta2["Treatment"] = dta2["Treatment"].map(lambda v: v.encode('utf-8'))
-dta3 = pd.read_csv(BytesIO(ss3), sep=r'\s+', header=None)
+dta3 = pd.read_csv(BytesIO(ss3), sep=r'\s+', header=None, engine='python')
 dta3.columns = ["Brand", "Relief"]
-dta5 = pd.read_csv(BytesIO(ss5), sep=r'\t', header=None)
+dta5 = pd.read_csv(BytesIO(ss5), sep=r'\t', header=None, engine='python')
 dta5.columns = ['pair', 'mean', 'lower', 'upper', 'sig']
 for col in ('pair', 'sig'):
     dta5[col] = dta5[col].map(lambda v: v.encode('utf-8'))

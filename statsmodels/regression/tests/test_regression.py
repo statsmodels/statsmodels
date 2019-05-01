@@ -956,8 +956,8 @@ def test_summary_as_latex():
     X = dta.exog
     X["constant"] = 1
     y = dta.endog
-    with warnings.catch_warnings(record=True):
-        res = OLS(y, X).fit()
+    res = OLS(y, X).fit()
+    with pytest.warns(UserWarning):
         table = res.summary().as_latex()
     # replace the date and time
     table = re.sub("(?<=\n\\\\textbf\\{Date:\\}             &).+?&",
