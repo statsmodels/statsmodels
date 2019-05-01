@@ -288,7 +288,7 @@ class TestGAMGamma(BaseGAM):
     def setup_class(cls):
         super(TestGAMGamma, cls).setup_class() #initialize DGP
 
-        cls.family =  family.Gamma(links.log)
+        cls.family =  family.Gamma(links.log())
         cls.rvs = stats.gamma.rvs
 
         cls.init()

@@ -88,6 +88,11 @@ def run_ucm(name):
         # Optional smoke test for plot_components
         try:
             import matplotlib.pyplot as plt
+            try:
+                from pandas.plotting import register_matplotlib_converters
+                register_matplotlib_converters()
+            except ImportError:
+                pass
             fig = plt.figure()
             res_true.plot_components(fig=fig)
         except ImportError:

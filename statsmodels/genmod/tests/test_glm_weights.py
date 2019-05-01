@@ -596,7 +596,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -606,7 +606,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         agg_endog = agg_endog['endog']
-        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link()),
                       exposure=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -627,7 +627,7 @@ class TestRepeatedvsAverage(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -637,7 +637,7 @@ class TestRepeatedvsAverage(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         avg_endog = agg_endog['endog'] / agg_wt
-        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link()),
                       var_weights=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -757,12 +757,12 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
-        mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
+        mod1 = sm.GLM(endog, exog, family=family(link=link()), freq_weights=wt)
         cls.res1 = mod1.fit()
 
         exog_dup = np.repeat(exog, wt, axis=0)
         endog_dup = np.repeat(endog, wt)
-        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link))
+        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link()))
         cls.res2 = mod2.fit()
 
 

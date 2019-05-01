@@ -1705,7 +1705,7 @@ class TestGeneralizedPoisson_transparams(object):
         data = sm.datasets.randhie.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
-            method='newton', use_transparams=True, disp=0)
+            method='newton', disp=0)
         res2 = RandHIE()
         res2.generalizedpoisson_gp2()
         cls.res2 = res2
@@ -1924,8 +1924,7 @@ class TestNegativeBinomialPNB1Newton(CheckModelResults):
         data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = NegativeBinomialP(data.endog, exog, p=1)
-        cls.res1 = mod.fit(method="newton", maxiter=100, disp=0,
-                           use_transparams=True)
+        cls.res1 = mod.fit(method="newton", maxiter=100, disp=0)
         res2 = RandHIE()
         res2.negativebinomial_nb1_bfgs()
         cls.res2 = res2
@@ -1968,8 +1967,7 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(
                                                 method='bfgs', disp=0,
-                                                maxiter=1000,
-                                                use_transparams=True)
+                                                maxiter=1000)
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2

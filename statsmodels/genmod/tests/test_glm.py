@@ -1649,7 +1649,7 @@ class TestWtdTweediePower2(CheckWtdDuplicationMixin):
         cls.weight = np.random.randint(5, 100, len(cls.endog))
         cls.endog_big = np.repeat(cls.endog.values, cls.weight)
         cls.exog_big = np.repeat(cls.exog.values, cls.weight, axis=0)
-        link = sm.families.links.Power
+        link = sm.families.links.Power()
         family_link = sm.families.Tweedie(link=link, var_power=2)
         cls.res1 = GLM(cls.endog, cls.exog,
                         freq_weights=cls.weight,
