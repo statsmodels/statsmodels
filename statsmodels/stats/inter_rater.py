@@ -46,7 +46,7 @@ class ResultsBunch(dict):
 
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
-        self.__dict__  = self
+        self.__dict__ = self
         self._initialize()
 
     def _initialize(self):

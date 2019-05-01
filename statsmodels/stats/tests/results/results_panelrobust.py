@@ -73,7 +73,7 @@ cov_dk4_stata = np.array([ .00018052657317,
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
 
 results = Bunch(cov_clu_stata=cov_clu_stata, cov_pnw0_stata=cov_pnw0_stata, cov_pnw1_stata=cov_pnw1_stata, cov_pnw4_stata=cov_pnw4_stata, cov_dk0_stata=cov_dk0_stata, cov_dk1_stata=cov_dk1_stata, cov_dk4_stata=cov_dk4_stata, )

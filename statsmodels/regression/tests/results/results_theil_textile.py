@@ -53,7 +53,7 @@ cov_prior_rownames = 'lincome lprice _cons'.split()
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
         for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
             self[att] = self.params_table[:,i]
