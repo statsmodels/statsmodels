@@ -675,12 +675,12 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag. Setting
-    efficient to True has two effects. First, it uses `nobs - lag`
-    observations of estimate each pacf.  Second, it re-estimates the mean in
-    each regression. If efficient is False, then the data are first demeaned,
-    and then `nobs - maxlag` observations are used to estimate each partial
-    autocorrelation.
+    This solves a separate OLS estimation for each desired lag using method in
+    [1]_. Setting efficient to True has two effects. First, it uses
+    `nobs - lag` observations of estimate each pacf.  Second, it re-estimates
+    the mean in each regression. If efficient is False, then the data are first
+    demeaned, and then `nobs - maxlag` observations are used to estimate each
+    partial autocorrelation.
 
     The inefficient estimator appears to have better finite sample properties.
     This option should only be used in time series that are covariance
