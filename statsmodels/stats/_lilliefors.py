@@ -37,8 +37,10 @@ Journal of the American Statistical Association, Vol 64, No. 325. (1969), pp. 38
 from functools import partial
 
 from statsmodels.compat.python import string_types
+
 import numpy as np
 from scipy import stats
+
 from .tabledist import TableDist
 
 
@@ -116,7 +118,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
 # --------------------------
 
 def get_lilliefors_table(dist='norm'):
-    '''
+    """
     Generates tables for significance levels of Lilliefors test statistics
 
     Tables for available normal and exponential distribution testing,
@@ -131,14 +133,14 @@ def get_lilliefors_table(dist='norm'):
     -------
     lf : TableDist object.
         table of critical values
-    '''
+    """
     # function just to keep things together
     # for this test alpha is sf probability, i.e. right tail probability
 
     if dist == 'norm':
-        alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]
-        size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
-                     16,  17,  18,  19,  20,  25,  30,  40, 100, 400, 900], float)
+        alpha = np.array([0.2, 0.15, 0.1, 0.05, 0.01, 0.001])[::-1]
+        size = np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                         16, 17, 18, 19, 20, 25, 30, 40, 100, 400, 900], float)
 
         # critical values, rows are by sample size, columns are by alpha
         crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
@@ -169,22 +171,22 @@ def get_lilliefors_table(dist='norm'):
         def f(n):
             return np.array([0.736, 0.768, 0.805, 0.886, 1.031]) / np.sqrt(n)
 
-        higher_sizes = np.array([35, 40, 45, 50, 60, 70,
-                                 80, 100, 200, 500, 1000,
-                                 2000, 3000, 5000, 10000, 100000], float)
+        higher_sizes = np.array([2000, 3000, 5000, 10000, 100000,
+                                 1000000, 10000000, 100000000], float)
         higher_crit_lf = np.zeros([higher_sizes.shape[0], crit_lf.shape[1]-1])
         for i in range(len(higher_sizes)):
             higher_crit_lf[i, :] = f(higher_sizes[i])
 
-        alpha_large = alpha[:-1]
-        size_large = np.concatenate([size, higher_sizes])
-        crit_lf_large = np.vstack([crit_lf[:-4,:-1], higher_crit_lf])
+        # Higher sizes do not have smallest alpha
+        alpha = alpha[1:]
+        size = np.concatenate([size, higher_sizes])
+        crit_lf = np.vstack([crit_lf[:,:-1], higher_crit_lf])
         lf = TableDist(alpha, size, crit_lf)
 
     elif dist == 'exp':
         alpha = np.array([0.2,  0.15,  0.1,  0.05, 0.01])[::-1]
-        size = np.array([3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30],
-                        float)
+        size = np.array([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+                         18, 19, 20, 25, 30], float)
 
         crit_lf = np.array([   [451, 479, 511, 551, 600],
                                 [396, 422, 499, 487, 548],
@@ -225,12 +227,13 @@ def get_lilliefors_table(dist='norm'):
 
     return lf
 
+
 lilliefors_table_norm = get_lilliefors_table(dist='norm')
 lilliefors_table_expon = get_lilliefors_table(dist='exp')
 
 
 def pval_lf(Dmax, n):
-    '''approximate pvalues for Lilliefors test
+    """approximate pvalues for Lilliefors test
 
     This is only valid for pvalues smaller than 0.1 which is not checked in
     this function.
@@ -261,7 +264,7 @@ def pval_lf(Dmax, n):
     ----------
     DallalWilkinson1986
 
-    '''
+    """
 
     #todo: check boundaries, valid range for n and Dmax
     if n > 100:
@@ -335,6 +338,11 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
     else:
         raise ValueError("Invalid dist parameter. dist must be 'norm' or 'exp'")
 
+    min_nobs = 4 if dist == 'norm' else 3
+    if nobs < min_nobs:
+        raise ValueError('Test for distribution {0} requires at least {1} '
+                         'observations'.format(dist, min_nobs))
+
     d_ks = ksstat(z, test_d, alternative='two_sided')
 
     if pvalmethod == 'approx':
@@ -356,7 +364,7 @@ kstest_exponential = partial(kstest_fit, dist='exp')
 
 # old version:
 # ------------
-'''
+"""
 tble = \
 00 20 15 10 05 01 .1
 4 .303 .321 .346 .376 .413 .433
@@ -381,9 +389,9 @@ tble = \
 40 .115 .120 .128 .139 .162 .189
 100 .074 .077 .082 .089 .104 .122
 400 .037 .039 .041 .045 .052 .061
-900 .025 .026 .028 .030 .035 .042'''
+900 .025 .026 .028 .030 .035 .042"""
 
-'''
+"""
 parr = np.array([line.split() for line in tble.split('\n')],float)
 size = parr[1:,0]
 alpha = parr[0,1:] / 100.
@@ -479,4 +487,4 @@ xx2 = np.array([ 1.138, -0.325, -1.461, -0.441, -0.005, -0.957, -1.52 ,  0.481,
 r_lillieTest = [0.15096827429598147, 0.02225473302348436]
 print kstest_normal(xx2), np.array(kstest_normal(xx2)) - r_lillieTest
 print kstest_normal(xx2, 'table')
-'''
+"""

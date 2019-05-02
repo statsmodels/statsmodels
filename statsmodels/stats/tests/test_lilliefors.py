@@ -1,5 +1,5 @@
-
 import numpy as np
+import pytest
 from numpy.testing import assert_almost_equal
 from scipy import stats
 
@@ -57,3 +57,15 @@ class TestLilliefors(object):
 
         assert_almost_equal(p_n, 0.200, decimal=7)
         assert_almost_equal(p_e, 0.200, decimal=7)
+
+    def test_min_nobs(self):
+        x = np.arange(3.)
+        with pytest.raises(ValueError):
+            lilliefors(x, dist='norm')
+        x = np.arange(2.)
+        with pytest.raises(ValueError):
+            lilliefors(x, dist='exp')
+
+    def test_large_sample(self, reset_randomstate):
+        x = np.random.randn(1500)
+        lilliefors(x)
