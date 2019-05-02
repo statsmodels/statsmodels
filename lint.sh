@@ -19,6 +19,7 @@ if [ "$LINT" == true ]; then
     flake8 --isolated \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/compat/ \
         statsmodels/duration/__init__.py \
         statsmodels/formula/ \
         statsmodels/gam/ \
