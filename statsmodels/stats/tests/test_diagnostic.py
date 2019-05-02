@@ -596,7 +596,7 @@ class TestDiagnosticG(object):
         #> lt = lillie.test(residuals(fm)[1:20])
         #> mkhtest(lt, "lilliefors", "-")
         lilliefors3 = dict(statistic=0.1333956004203103,
-                          pvalue=0.20, parameters=(), distr='-')
+                           pvalue=0.455683, parameters=(), distr='-')
 
         lf1 = smsdia.lilliefors(res.resid)
         lf2 = smsdia.lilliefors(res.resid**2)
