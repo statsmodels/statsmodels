@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-This module implements likelihood-based estimation (MLE) of Gaussian
-models for finite-dimensional observations made on infinite-dimensional
-processes.
+This module implements maximum likelihood-based estimation (MLE) of
+Gaussian models for finite-dimensional observations made on
+infinite-dimensional processes.
 
-The implementation is tailored to regression-style analyses in which the
-mean and covariance structures are parameterized in terms of covariates.
-The fitting is based on a grouped dataset.  The repeated observations within
-a group are related through the Gaussian covariance model.
+The implementation supports regression analyses on grouped data, where
+the observations within a group are dependent (they are made on the
+same underlying process).  The main application is repeated measures
+regression for temporal (longitdunal) data, in which the repeated
+measures occur at arbitrary real-valued time points.
+
+The mean structure is specified as a linear model.  The covariance
+parameters depend on covariates via a link function.
 """
 
 import numpy as np
@@ -26,48 +30,13 @@ import warnings
 
 class ProcessCovariance(object):
     r"""
-    A covariance model for linear regression with dependent data.
-
-    This class represents (possibly) non-stationary covariance models
-    constructed by modifying correlation kernels, as described in the
-    work of Paciorek et al.
-
-    This is a base class that does not implement any functionality.
-    See GaussianCovariance for a concrete implementation.
+    A covariance model for a process indexed by a real parameter.
 
     An implementation of this class is based on a positive definite
     correlation function h that maps real numbers to the interval [0,
     1], such as the Gaussian (squared exponential) correlation
     function :math:`\exp(-x^2)`.  It also depends on a positive
     scaling function `s` and a positive smoothness function `u`.
-    Following Paciorek et al, the covariance between observations with
-    index `i` and `j` is given by:
-
-    .. math::
-
-      s[i] \cdot s[j] \cdot h(|time[i] - time[j]| / \sqrt{(u[i] + u[j]) /
-      2}) \cdot \frac{u[i]^{1/4}u[j]^{1/4}}{\sqrt{(u[i] + u[j])/2}}
-
-    The ProcessMLE class allows linear models with this covariance
-    structure to be fit using maximum likelihood (ML), which is
-    equivalent to generalized least squares (GLS) in this setting.
-
-    The mean and covariance parameters of the model are fit jointly.
-    The mean, scaling, and smoothing parameters can be linked to
-    covariates.  The mean parameters are linked linearly, and the
-    scaling and smoothing parameters use an exponential link to
-    preserve positivity.
-
-    The reference of Paciorek et al. below provides more details.
-    Note that here we only implement the 1-dimensional version of
-    their approach.
-
-    References
-    ----------
-    Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
-    a new class of nonstationary covariance functions. Environmetrics,
-    17:483–506.
-    https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
     """
 
     def get_cov(self, time, sc, sm):
@@ -106,11 +75,40 @@ class ProcessCovariance(object):
 
 
 class GaussianCovariance(ProcessCovariance):
-    """
+    r"""
     An implementation of ProcessCovariance using the Gaussian kernel.
 
-    This is sometimes called the "squared exponential" covariance
-    model.
+    This class represents a parametric covariance model for a Gaussian
+    process as described in the work of Paciorek et al. cited below.
+
+    Following Paciorek et al, the covariance between observations with
+    index `i` and `j` is given by:
+
+    .. math::
+
+      s[i] \cdot s[j] \cdot h(|time[i] - time[j]| / \sqrt{(u[i] + u[j]) /
+      2}) \cdot \frac{u[i]^{1/4}u[j]^{1/4}}{\sqrt{(u[i] + u[j])/2}}
+
+    The ProcessMLE class allows linear models with this covariance
+    structure to be fit using maximum likelihood (ML), which is
+    equivalent to generalized least squares (GLS) in this setting.
+
+    The mean and covariance parameters of the model are fit jointly.
+    The mean, scaling, and smoothing parameters can be linked to
+    covariates.  The mean parameters are linked linearly, and the
+    scaling and smoothing parameters use an exponential link to
+    preserve positivity.
+
+    The reference of Paciorek et al. below provides more details.
+    Note that here we only implement the 1-dimensional version of
+    their approach.
+
+    References
+    ----------
+    Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
+    a new class of nonstationary covariance functions. Environmetrics,
+    17:483–506.
+    https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
     """
 
     def get_cov(self, time, sc, sm):
@@ -194,27 +192,27 @@ class ProcessMLE(base.LikelihoodModel):
     Fit a Gaussian mean/variance regression model.
 
     This class fits a one-dimensional Gaussian process model with
-    parameterized mean and covariance structures to data.  The latent
-    processes are indexed by a variable called 'time' below, but any
-    univariate index can be used.  The data consist of observations
-    made at a finite number of time values on a realization of the
-    process.  The data are grouped, with each group consisting of
-    observations on an independent Gaussian process.
+    parameterized mean and covariance structures to grouped data.  For
+    each group, there is an independent realization of a latent
+    Gaussian process indexed by an observed real-valued time
+    variable..  The data consist of the Gaussian process observed at a
+    finite number of `time` values.
 
-    The mean structure is linear.  The covariance structure is
-    non-stationary, and is defined parametrically through 'scaling',
-    and 'smoothing' parameters.  The covariance between two
-    observations in the same group is a function of the distance
-    between the time values of the two observations.  The scaling and
-    smoothing parameters can be linked to covariates.
+    The process mean and variance can be lined to covariates.  The
+    mean structure is linear in the covariates.  The covariance
+    structure is non-stationary, and is defined parametrically through
+    'scaling', and 'smoothing' parameters.  The covariance of the
+    process between two observations in the same group is a function
+    of the distance between the time values of the two observations.
+    The scaling and smoothing parameters can be linked to covariates.
 
     The observed data are modeled as the sum of the Gaussian process
     realization and independent white noise.  The standard deviation
     of the white noise can be linked to covariates.
 
     The data should be provided in 'long form', with a group label to
-    indicate which observations belong to the same group.  Observations
-    in different groups are always independent.
+    indicate which observations belong to the same group.
+    Observations in different groups are always independent.
 
     Parameters
     ----------
