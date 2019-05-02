@@ -304,7 +304,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
                            niter_success=None, disp=0, interval=1, **seed)
 
         assert_allclose(res_bh.params, self.res2.params,
-                        atol=1e-4, rtol=3e-5)
+                        atol=1e-4, rtol=1e-4)
         assert_allclose(res_bh.bse, self.res2.bse,
                         atol=1e-3, rtol=0.6)
         # skip, res_bh reports converged is false but params agree
