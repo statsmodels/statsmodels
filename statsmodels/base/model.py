@@ -2377,6 +2377,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=False)
+                              use_t=self.use_t)
 
         return smry

@@ -1287,7 +1287,6 @@ class GMMResults(LikelihoodModelResults):
             jdiff = - jdiff
         return jdiff, stats.chi2.sf(jdiff, df), df
 
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
@@ -1343,13 +1342,13 @@ class GMMResults(LikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
+                             yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=False)
+                              use_t=self.use_t)
 
         return smry
 
