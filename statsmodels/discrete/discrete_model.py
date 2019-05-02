@@ -32,7 +32,7 @@ from scipy.stats import nbinom
 
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
@@ -3353,7 +3353,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self._cache = resettable_cache()
+        self._cache = {}
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 

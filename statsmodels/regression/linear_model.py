@@ -41,8 +41,7 @@ from scipy import stats
 from scipy import optimize
 
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
+from statsmodels.tools.decorators import (cache_readonly,
                                           cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -1551,7 +1550,7 @@ class RegressionResults(base.LikelihoodModelResults):
         super(RegressionResults, self).__init__(
             model, params, normalized_cov_params, scale)
 
-        self._cache = resettable_cache()
+        self._cache = {}
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
         else:

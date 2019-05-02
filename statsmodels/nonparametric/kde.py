@@ -16,7 +16,7 @@ from statsmodels.compat.python import range
 import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import (cache_readonly, resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
@@ -153,7 +153,7 @@ class KDEUnivariate(object):
         self.kernel.weights = weights
         if weights is not None:
             self.kernel.weights /= weights.sum()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def cdf(self):

@@ -30,8 +30,7 @@ from scipy import stats
 import pandas as pd
 import patsy
 
-from statsmodels.tools.decorators import (cache_readonly,
-                                          resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.model as base
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
@@ -3015,12 +3014,12 @@ class GEEMargins(object):
     """
 
     def __init__(self, results, args, kwargs={}):
-        self._cache = resettable_cache()
+        self._cache = {}
         self.results = results
         self.get_margeff(*args, **kwargs)
 
     def _reset(self):
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def tvalues(self):

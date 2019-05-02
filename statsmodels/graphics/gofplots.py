@@ -3,8 +3,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
+from statsmodels.tools.decorators import (cache_readonly,
                                           cache_writable)
 
 from . import utils
@@ -153,7 +152,7 @@ class ProbPlot(object):
             self.scale = scale
 
         # propertes
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def theoretical_percentiles(self):

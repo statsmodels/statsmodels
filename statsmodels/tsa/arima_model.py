@@ -17,8 +17,7 @@ from scipy.signal import lfilter
 from numpy import dot, log, zeros, pi
 from numpy.linalg import inv
 
-from statsmodels.tools.decorators import (cache_readonly,
-                                          resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, OLS
@@ -1393,7 +1392,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         self._ic_df_model = df_model + 1
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def arroots(self):

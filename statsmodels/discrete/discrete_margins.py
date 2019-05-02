@@ -3,7 +3,7 @@
 from statsmodels.compat.python import lzip, range
 import numpy as np
 from scipy.stats import norm
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 
 #### margeff helper functions ####
 #NOTE: todo marginal effects for group 2
@@ -367,13 +367,13 @@ class Margins(object):
     """
     def __init__(self, results, get_margeff, derivative, dist=None,
                        margeff_args=()):
-        self._cache = resettable_cache()
+        self._cache = {}
         self.results = results
         self.dist = dist
         self.get_margeff(margeff_args)
 
     def _reset(self):
-        self._cache = resettable_cache()
+        self._cache = {}
 
     def get_margeff(self, *args, **kwargs):
         self._reset()
@@ -420,12 +420,12 @@ class DiscreteMargins(object):
         results.get_margeff. See there for more information.
     """
     def __init__(self, results, args, kwargs={}):
-        self._cache = resettable_cache()
+        self._cache = {}
         self.results = results
         self.get_margeff(*args, **kwargs)
 
     def _reset(self):
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def tvalues(self):

@@ -16,7 +16,7 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
 import numpy as np
 import scipy.stats as stats
 
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
@@ -390,7 +390,7 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
-        self._cache = resettable_cache()
+        self._cache = {}
         #for remove_data
         self.data_in_cache = ['sresid']
 

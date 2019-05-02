@@ -19,7 +19,7 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 import numpy as np
 from . import families
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
@@ -1522,7 +1522,7 @@ class GLMResults(base.LikelihoodModelResults):
             self._n_trials = 1
         self.df_resid = model.df_resid
         self.df_model = model.df_model
-        self._cache = resettable_cache()
+        self._cache = {}
         # are these intermediate results needed or can we just
         # call the model's attributes?
 

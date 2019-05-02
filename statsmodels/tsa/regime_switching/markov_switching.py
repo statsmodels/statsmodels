@@ -15,7 +15,7 @@ import pandas as pd
 
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.sm_exceptions import EstimationWarning
@@ -1871,7 +1871,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         self.cov_type = cov_type
 
         # Setup the cache
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Handle covariance matrix calculation
         if cov_kwds is None:

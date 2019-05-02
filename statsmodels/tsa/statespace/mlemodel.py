@@ -18,7 +18,7 @@ from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
                                        approx_fprime_cs, approx_fprime)
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
 import statsmodels.base.wrapper as wrap
@@ -1594,7 +1594,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.cov_type = cov_type
 
         # Setup the cache
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Handle covariance matrix calculation
         if cov_kwds is None:
