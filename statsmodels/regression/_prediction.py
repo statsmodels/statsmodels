@@ -42,7 +42,8 @@ class PredictionResults(object):
 
     def conf_int(self, obs=False, alpha=0.05):
         """
-        Returns the confidence interval of the value, `effect` of the constraint.
+        Returns the confidence interval of the value, `effect` of the
+        constraint.
 
         This is currently only available for t and z tests.
 
