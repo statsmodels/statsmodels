@@ -4,6 +4,7 @@ import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose
+import warnings
 
 try:
     import matplotlib.pyplot as plt
@@ -106,6 +107,26 @@ class TestMICEData(object):
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
+    def test_settingwithcopywarning(self):
+        "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
+
+        df = gendat()
+        # There need to be some ints in here for the error to be thrown
+        df['intcol'] = np.arange(len(df))
+        df['intcol'] = df.intcol.astype('int32')
+
+        miceData = mice.MICEData(df)
+
+        with pd.option_context('mode.chained_assignment', 'warn'):
+            with warnings.catch_warnings(record=True) as ws:
+                warnings.simplefilter('always')
+                miceData.update_all()
+
+                # on Python 3.4, throws warning
+                # "DeprecationWarning('pandas.core.common.is_categorical_dtype is deprecated. import from the public API:
+                # pandas.api.types.is_categorical_dtype instead',)"
+                # ignore this warning, as this is not what is being tested in this test
+                assert ((len(ws) == 0) or all([w.category == DeprecationWarning for w in ws]))
 
     def test_next_sample(self):
 
