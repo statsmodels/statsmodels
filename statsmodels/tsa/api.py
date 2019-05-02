@@ -1,6 +1,7 @@
 __all__ = ["AR", "ARMA", "ARIMA",
            "var", "VAR", "VECM", "SVAR", "DynamicVAR",
            "filters",
+           "innovations",
            "tsatools",
            "add_trend", "detrend", "lagmat", "lagmat2ds", "add_lag",
            "interp",
