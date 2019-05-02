@@ -21,7 +21,6 @@ if PY3:
     import urllib.request
     import urllib.parse
     from urllib.request import HTTPError, URLError
-    import io
     bytes = bytes
     str = str
     unicode = str
@@ -157,7 +156,6 @@ try:
 except NameError:
     def next(it):
         return it.next()
-
 
 
 def iteritems(obj, **kwargs):
