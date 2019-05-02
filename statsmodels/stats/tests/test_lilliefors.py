@@ -51,7 +51,7 @@ class TestLilliefors(object):
         assert_almost_equal(p_exp, 0.200, decimal=3)
 
     def test_pval_bounds(self):
-        x = np.arange(1,10)
+        x = np.arange(1, 10)
         d_ks_n, p_n = lilliefors(x, dist='norm')
         d_ks_e, p_e = lilliefors(x, dist='exp')
 

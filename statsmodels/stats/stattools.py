@@ -61,8 +61,8 @@ def omni_normtest(resids, axis=0):
     -------
     Chi^2 score, two-tail probability
     """
-    #TODO: change to exception in summary branch and catch in summary()
-    #behavior changed between scipy 0.9 and 0.10
+    # TODO: change to exception in summary branch and catch in summary()
+    #   behavior changed between scipy 0.9 and 0.10
     resids = np.asarray(resids)
     n = resids.shape[axis]
     if n < 8:
@@ -357,7 +357,8 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     e1, e2, e3, e5, e6, e7, fd, f1md, fg, f1mg = np.percentile(y, perc,
                                                                axis=axis)
 
-    expected_value = expected_robust_kurtosis(ab, dg) if excess else np.zeros(4)
+    expected_value = (expected_robust_kurtosis(ab, dg)
+                      if excess else np.zeros(4))
 
     kr1 = stats.kurtosis(y, axis, False) - expected_value[0]
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - expected_value[1]

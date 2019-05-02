@@ -8,9 +8,9 @@ from statsmodels.stats._knockoff import (RegressionFDR,
                                          _design_knockoff_sdp)
 
 try:
-    import cvxopt
+    import cvxopt  # noqa:F401
     has_cvxopt = True
-except:
+except ImportError:
     has_cvxopt = False
 
 
@@ -55,6 +55,7 @@ def test_sdp():
 
     assert_allclose(cm1, cm2, rtol=1e-4, atol=1e-4)
     assert_allclose(cm1 - cm3, np.diag(sl * np.ones(4)), rtol=1e-5, atol=1e-5)
+
 
 @pytest.mark.parametrize("p", [49, 50])
 @pytest.mark.parametrize("tester", [
