@@ -210,4 +210,3 @@ def test_mixedlm():
     st = mr.summary()
     pm = st.loc["Prop. mediated (average)", "Estimate"]
     assert_allclose(pm, 0.52, rtol=1e-2, atol=1e-2)
-  
