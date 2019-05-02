@@ -20,6 +20,7 @@ if [ "$LINT" == true ]; then
         statsmodels/resampling/ \
         statsmodels/interface/ \
         statsmodels/duration/__init__.py \
+        statsmodels/formula/ \
         statsmodels/gam/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/examples/tests/ \
