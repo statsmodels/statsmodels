@@ -21,6 +21,9 @@ assignees: ''
 
 **Note**: Please be sure you are using the latest released version of `statsmodels`, or a recent build of `master`. If your problem has been fixed in an unreleased version, you might be able to use `master` until a new release occurs. 
 
+**Note**: If you are using a released version, have you verified that the bug exists in the master branch of this repository? It helps the limited resources if we know problems exist in the current master so that they do not need to check whether the code sample produces a bug in the next release.
+
+
 If the issue has not been resolved, please file it in the issue tracker.
 
 #### Expected Output
