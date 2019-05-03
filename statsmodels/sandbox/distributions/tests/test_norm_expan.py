@@ -26,7 +26,7 @@ class CheckDistribution(object):
         self.dist1.rvs(size=10)
         self.dist1.pdf(np.linspace(-4, 4, 11))
 
-    def test_dist2_roundtrip(self):
+    def test_cdf_ppf_roundtrip(self):
         # round trip
         probs = np.linspace(0.001, 0.999, 6)
         ppf = self.dist2.ppf(probs)
