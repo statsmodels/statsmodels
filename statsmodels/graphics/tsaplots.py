@@ -124,6 +124,20 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     vlines_kwargs is used to pass additional optional arguments to the
     vertical lines connecting each autocorrelation to the axis.  These options
     must be valid for a LineCollection object.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.api as sm
+
+    >>> dta = sm.datasets.sunspots.load_pandas().data
+    >>> dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+    >>> del dta["YEAR"]
+    >>> sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_tsa_plot_acf.py
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -218,6 +232,20 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
     vlines_kwargs is used to pass additional optional arguments to the
     vertical lines connecting each autocorrelation to the axis.  These options
     must be valid for a LineCollection object.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.api as sm
+
+    >>> dta = sm.datasets.sunspots.load_pandas().data
+    >>> dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+    >>> del dta["YEAR"]
+    >>> sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_tsa_plot_pacf.py
     """
     fig, ax = utils.create_mpl_ax(ax)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
@@ -303,13 +331,12 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     >>> dta = sm.datasets.elnino.load_pandas().data
     >>> dta['YEAR'] = dta.YEAR.astype(int).astype(str)
     >>> dta = dta.set_index('YEAR').T.unstack()
-    >>> dates = pd.to_datetime(list(map(lambda x : '-'.join(x) + '-1',
-    ...                                        dta.index.values)))
-
+    >>> dates = pd.to_datetime(list(map(lambda x: '-'.join(x) + '-1',
+    ...                                 dta.index.values)))
     >>> dta.index = pd.DatetimeIndex(dates, freq='MS')
     >>> fig = sm.graphics.tsa.month_plot(dta)
 
-    .. plot:: plots/graphics_month_plot.py
+    .. plot:: plots/graphics_tsa_month_plot.py
     """
 
     if dates is None:
@@ -344,6 +371,21 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
     Returns
     -------
     matplotlib.Figure
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import pandas as pd
+
+    >>> dta = sm.datasets.elnino.load_pandas().data
+    >>> dta['YEAR'] = dta.YEAR.astype(int).astype(str)
+    >>> dta = dta.set_index('YEAR').T.unstack()
+    >>> dates = pd.to_datetime(list(map(lambda x: '-'.join(x) + '-1',
+    ...                                 dta.index.values)))
+    >>> dta.index = dates.to_period('Q')
+    >>> fig = sm.graphics.tsa.quarter_plot(dta)
+
+    .. plot:: plots/graphics_tsa_quarter_plot.py
     """
 
     if dates is None:

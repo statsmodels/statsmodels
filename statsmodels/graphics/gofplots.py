@@ -548,11 +548,18 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
 
     Examples
     --------
+    >>> import statsmodels.api as sm
+    >>> import numpy as np
+    >>> import matplotlib.pyplot as plt
+    >>> from statsmodels.graphics.gofplots import qqplot_2samples
     >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
     >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
     >>> pp_x = sm.ProbPlot(x)
     >>> pp_y = sm.ProbPlot(y)
     >>> qqplot_2samples(pp_x, pp_y)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_gofplots_qqplot_2samples.py
 
     Notes
     -----
@@ -604,6 +611,30 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     Notes
     -----
     There is no return value. The line is plotted on the given `ax`.
+
+    Examples
+    --------
+    Import the food expenditure dataset.  Plot annual food expendeture on x-axis
+    and household income on y-axis.  Use qqline to add regression line into the
+    plot.
+
+    >>> import statsmodels.api as sm
+    >>> import numpy as np
+    >>> import matplotlib.pyplot as plt
+    >>> from statsmodels.graphics.gofplots import qqline
+
+    >>> foodexp = sm.datasets.engel.load(as_pandas=False)
+    >>> x = foodexp.exog
+    >>> y = foodexp.endog
+    >>> ax = plt.subplot(111)
+    >>> plt.scatter(x, y)
+    >>> ax.set_xlabel(foodexp.exog_name[0])
+    >>> ax.set_ylabel(foodexp.endog_name)
+    >>> qqline(ax, 'r', x, y)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_gofplots_qqplot_qqline.py
+
     """
     if line == '45':
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())

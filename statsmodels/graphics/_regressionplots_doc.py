@@ -99,6 +99,24 @@ _plot_ceres_residuals_doc = """\
     If the focus variable is believed to be independent of the
     other exog variables, `cond_means` can be set to an (empty)
     nx0 array.
+
+    Examples
+    --------
+    Using a model built from the the state crime dataset, make a CERES plot with
+    the rate of Poverty as the focus variable.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.formula.api as smf
+    >>> from statsmodels.graphics.regressionplots import plot_ceres_residuals
+
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> plot_ceres_residuals(results, 'poverty')
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_ceres_residuals.py
 """
 
 
@@ -136,6 +154,25 @@ _plot_influence_doc = """\
     influence point. The value of large residuals can be controlled using the
     `alpha` parameter. Large leverage points are identified as
     hat_i > 2 * (df_model + 1)/nobs.
+
+    Examples
+    --------
+    Using a model built from the the state crime dataset, plot the influence in
+    regression.  Observations with high leverage, or large residuals will be
+    labeled in the plot to show potential influence points.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.formula.api as smf
+
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> sm.graphics.influence_plot(results)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_influence.py
+
     """
 
 
@@ -156,4 +193,23 @@ _plot_leverage_resid2_doc = """\
     -------
     fig : matplotlib Figure
         A matplotlib figure instance.
+
+    Examples
+    --------
+    Using a model built from the the state crime dataset, plot the leverage
+    statistics vs. normalized residuals squared.  Observations with
+    Large-standardized Residuals will be labeled in the plot.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.formula.api as smf
+
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> sm.graphics.plot_leverage_resid2(results)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_leverage_resid2.py
     """
+
