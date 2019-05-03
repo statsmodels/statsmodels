@@ -98,7 +98,9 @@ def test_stata_writer_pandas():
         dta4[col] = dta4[col].astype(np.int32)
     # dta is int64 'i8'  given to Stata writer
     writer = StataWriter(buf, dta)
-    writer.write_file()
+    with warnings.catch_warnings(record=True) as w:
+        writer.write_file()
+        assert len(w) == 0
     buf.seek(0)
     dta2 = genfromdta(buf)
     dta5 = DataFrame.from_records(dta2)

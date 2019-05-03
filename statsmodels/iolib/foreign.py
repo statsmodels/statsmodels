@@ -920,6 +920,8 @@ class StataWriter(object):
                     self._write(var)
                 else:
                     try:
+                        if typ in _type_converters:
+                            var = _type_converters[typ](var)
                         self._write(pack(byteorder+TYPE_MAP[typ], var))
                     except struct_error:
                         # have to be strict about type pack won't do any
