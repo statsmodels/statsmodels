@@ -610,8 +610,7 @@ class Spector(object):
         # last SE taken from margins with i.psi, don't know how they
         # don't know why margeff is different, but trust official results
         self.margeff_count_dummy_dydxoverall_se = [.1094379569,   .0177869773,
-                                                    .1420034]
-                #.1574340751 ]
+                                                   .1420034]
 
         # from new margeff
         self.margeff_count_dummy_dydxmean = [0.533849340033768,
@@ -627,8 +626,8 @@ class Spector(object):
         self.margeff_dummy_atexog2 = [.25105129214546,.00845311433473,
                 .44265645632553]
         self.margeff_dummy_atexog2_se = [.1735778, .012017, .1811925]
-        #The test for the prediction table was taken from Gretl
-        #Gretl Output matched the Stata output here for params and SE
+        # The test for the prediction table was taken from Gretl
+        # Gretl Output matched the Stata output here for params and SE
         self.pred_table = np.array([[18, 3], [3, 8]])
 
     def probit(self):
