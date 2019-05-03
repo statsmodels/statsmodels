@@ -11,7 +11,7 @@ License
 
 To be considered for inclusion in `statsmodels`, a dataset must be in the
 public domain, distributed under a BSD-compatible license, or we must obtain
-permission from the original author. 
+permission from the original author.
 
 Adding a dataset: An example
 ----------------------------
@@ -20,7 +20,7 @@ The Nile River data measures the volume of the discharge of the Nile River at
 Aswan for the years 1871 to 1970. The data are copied from the paper of Cobb
 (1978).
 
-**Step 1**: Create a directory `datasets/nile/`  
+**Step 1**: Create a directory `datasets/nile/`
 
 **Step 2**: Add `datasets/nile/nile.csv` and  a new file `datasets/__init__.py` which contains ::
 
@@ -39,7 +39,7 @@ Aswan for the years 1871 to 1970. The data are copied from the paper of Cobb
 
     DESCRSHORT  = """Annual Nile River Volume at Aswan, 1871-1970""
 
-    DESCRLONG   = """AAnnual Nile River Volume at Aswan, 1871-1970. The units of
+    DESCRLONG   = """Annual Nile River Volume at Aswan, 1871-1970. The units of
     measurement are 1e9 m^{3}, and there is an apparent changepoint near 1898."""
 
     NOTE        = """
@@ -66,4 +66,3 @@ used.
 That's it! The result can be found `here
 <https://github.com/statsmodels/statsmodels/tree/master/statsmodels/datasets/nile>`_
 for reference.
-

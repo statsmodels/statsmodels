@@ -1,4 +1,6 @@
-Working with the Statsmodels Code
+.. _git_notes:
+
+Working with the statsmodels Code
 =================================
 
 Github
@@ -20,7 +22,7 @@ can easily undo changes or see when a change was made, by whom, and why.
 To install and configure Git, and to setup SSH keys, see
 `setting up git <https://help.github.com/articles/set-up-git/>`_.
 
-To learn more about Git, you may want to visit: 
+To learn more about Git, you may want to visit:
 
 + `Git documentation (book and videos) <https://git-scm.com/documentation>`_
 + `Github help pages <https://help.github.com/>`_
@@ -28,7 +30,7 @@ To learn more about Git, you may want to visit:
 + `Matthew Brett's Pydagogue <http://matthew-brett.github.io/pydagogue/>`_
 
 Below, we describe the bare minimum git commands you need to contribute to
-`statsmodels`.   
+`statsmodels`.
 
 Statsmodels Git/Github Workflow
 -------------------------------
@@ -85,7 +87,7 @@ Hack away! Make any changes that you want, but please keep the work in your
 branch completely confined to one specific topic, bugfix, or feature
 implementation. You can work across multiple files and have many commits, but
 the changes should all be related to the feature of the feature branch,
-whatever that may be. 
+whatever that may be.
 
 Now imagine that you changed the file `foo.py`. You can see your changes by
 typing::

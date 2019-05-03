@@ -269,7 +269,8 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
+                 u'Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

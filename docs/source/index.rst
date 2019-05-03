@@ -131,6 +131,8 @@ Table of Contents
    tools
    datasets/index
    sandbox
+   large_data
+   optimization
 
 
 Indices and tables
