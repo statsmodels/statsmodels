@@ -5,11 +5,11 @@ This module implements maximum likelihood-based estimation (MLE) of
 Gaussian models for finite-dimensional observations made on
 infinite-dimensional processes.
 
-The implementation supports regression analyses on grouped data, where
-the observations within a group are dependent (they are made on the
-same underlying process).  The main application is repeated measures
-regression for temporal (longitdunal) data, in which the repeated
-measures occur at arbitrary real-valued time points.
+The ProcessMLE class supports regression analyses on grouped data,
+where the observations within a group are dependent (they are made on
+the same underlying process).  The main application is repeated
+measures regression for temporal (longitudinal) data, in which the
+repeated measures occur at arbitrary real-valued time points.
 
 The mean structure is specified as a linear model.  The covariance
 parameters depend on covariates via a link function.
@@ -571,8 +571,23 @@ class ProcessMLE(base.LikelihoodModel):
         return hess
 
     def fit(self, start_params=None, method=None, maxiter=None,
-            full_output=True, disp=True, fargs=(), callback=None,
-            retall=False, skip_hessian=False, **kwargs):
+            **kwargs):
+        """
+        Fit a grouped Gaussian process regression using MLE.
+
+        Parameters
+        ----------
+        start_params : array-like
+            Optional starting values.
+        method : string or array of strings
+            Method or sequence of methods for scipy optimize.
+        maxiter : int
+            The maximum number of iterations in the optimization.
+
+        Returns
+        -------
+        An instance of ProcessMLEResults.
+        """
 
         if "verbose" in kwargs:
             self.verbose = kwargs["verbose"]
