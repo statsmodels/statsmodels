@@ -212,3 +212,4 @@ _plot_leverage_resid2_doc = """\
 
     .. plot:: plots/graphics_regression_leverage_resid2.py
     """
+
