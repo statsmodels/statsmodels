@@ -210,7 +210,7 @@ def form2design(ss, data):
         if item == 'I':
             vars['const'] = np.ones(data.shape[0])
             names.append('const')
-        elif not ':' in item:
+        elif ':' not in item:
             vars[item] = data[item]
             names.append(item)
         elif item[:2] == 'F:':

@@ -141,7 +141,7 @@ class TLinearModel(GenericLikelihoodModel):
         """
         #print len(params),
         #store_params.append(params)
-        if not self.fixed_params is None:
+        if self.fixed_params is not None:
             #print 'using fixed'
             params = self.expandparams(params)
 

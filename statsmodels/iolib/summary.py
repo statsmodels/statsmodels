@@ -279,14 +279,14 @@ def _getnames(self, yname=None, xname=None):
     '''
     if yname is None:
         if hasattr(self.model, 'endog_names') and (
-               not self.model.endog_names is None):
+                self.model.endog_names is not None):
             yname = self.model.endog_names
         else:
             yname = 'y'
 
     if xname is None:
         if hasattr(self.model, 'exog_names') and (
-               not self.model.exog_names is None):
+                self.model.exog_names is not None):
             xname = self.model.exog_names
         else:
             xname = ['var_%d' % i for i in range(len(self.params))]
@@ -901,7 +901,7 @@ class Summary(object):
 
         '''
         txt = summary_return(self.tables, return_fmt='text')
-        if not self.extra_txt is None:
+        if self.extra_txt is not None:
             txt = txt + '\n\n' + self.extra_txt
         return txt
 
@@ -921,7 +921,7 @@ class Summary(object):
 
         '''
         latex = summary_return(self.tables, return_fmt='latex')
-        if not self.extra_txt is None:
+        if self.extra_txt is not None:
             latex = latex + '\n\n' + self.extra_txt.replace('\n', ' \\newline\n ')
         return latex
 
@@ -935,7 +935,7 @@ class Summary(object):
 
         '''
         csv = summary_return(self.tables, return_fmt='csv')
-        if not self.extra_txt is None:
+        if self.extra_txt is not None:
             csv = csv + '\n\n' + self.extra_txt
         return csv
 
@@ -949,7 +949,7 @@ class Summary(object):
 
         '''
         html = summary_return(self.tables, return_fmt='html')
-        if not self.extra_txt is None:
+        if self.extra_txt is not None:
             html = html + '<br/><br/>' + self.extra_txt.replace('\n', '<br/>')
         return html
 

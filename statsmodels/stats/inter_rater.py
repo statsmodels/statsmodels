@@ -494,7 +494,7 @@ class KappaResults(ResultsBunch):
     template = _kappa_template
 
     def _initialize(self):
-        if not 'alpha' in self:
+        if 'alpha' not in self:
             self['alpha'] = 0.025
             self['alpha_ci'] = _int_ifclose(100 - 0.025 * 200)[1]
 

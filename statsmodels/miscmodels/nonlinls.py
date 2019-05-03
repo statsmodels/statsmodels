@@ -114,7 +114,7 @@ class NonlinearLS(Model):  #or subclass a model
             missing='none'):
         self.endog = endog
         self.exog = exog
-        if not sigma is None:
+        if sigma is not None:
             sigma = np.asarray(sigma)
             if sigma.ndim < 2:
                 self.sigma = sigma
@@ -152,14 +152,14 @@ class NonlinearLS(Model):  #or subclass a model
         #I added start_value even if it's empty, not sure about it
         #but it makes a visible placeholder
 
-        if not start_value is None:
+        if start_value is not None:
             p0 = start_value
         else:
             #nesting so that start_value is only calculated if it is needed
             p0 = self.start_value()
-            if not p0 is None:
+            if p0 is not None:
                 pass
-            elif not nparams is None:
+            elif nparams is not None:
                 p0 = 0.1 * np.ones(nparams)
             else:
                 raise ValueError('need information about start values for' +

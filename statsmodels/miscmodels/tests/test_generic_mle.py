@@ -41,7 +41,7 @@ class MyPareto(GenericLikelihoodModel):
 
     def nloglikeobs(self, params):
         #print params.shape
-        if not self.fixed_params is None:
+        if self.fixed_params is not None:
             #print 'using fixed'
             params = self.expandparams(params)
         b = params[0]

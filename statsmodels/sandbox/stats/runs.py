@@ -204,13 +204,13 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
 
     '''
     x = np.asarray(x)
-    if not y is None:
+    if y is not None:
         y = np.asarray(y)
         groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
         # note reassigning x
         x = np.concatenate((x, y))
         gruni = np.arange(2)
-    elif not groups is None:
+    elif groups is not None:
         gruni = np.unique(groups)
         if gruni.size != 2:  # pylint: disable=E1103
             raise ValueError('not exactly two groups specified')

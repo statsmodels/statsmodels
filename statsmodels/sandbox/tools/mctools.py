@@ -232,7 +232,7 @@ class StatTestMC(object):
         '''
 
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -321,7 +321,7 @@ class StatTestMC(object):
         if kwds is None:
             kwds = ({},{})
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')

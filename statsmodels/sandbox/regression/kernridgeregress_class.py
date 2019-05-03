@@ -96,7 +96,7 @@ class GaussProcess(object):
         self.distxsample = kernel(x,x,scale=scale)
         self.Kinv = np.linalg.inv(self.distxsample +
                              np.eye(*self.distxsample.shape)*ridgecoeff)
-        if not y is None:
+        if y is not None:
             self.y = y
             self.yest = self.fit(y)
 

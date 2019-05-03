@@ -140,12 +140,12 @@ for distname in targetdist:
 
 not_good = ['genextreme', 'reciprocal', 'vonmises']
 # 'genextreme' is right (or left?), 'reciprocal' requires 0<a<b, 'vonmises' no a,b
-targetdist = [f for f in categ[('open', 'open')] if not f in not_good]
+targetdist = [f for f in categ[('open', 'open')] if f not in not_good]
 not_good = ['wrapcauchy']
 not_good = ['vonmises']
 not_good = ['genexpon','vonmises']
 #'wrapcauchy' requires additional parameter (scale) in argcheck
-targetdist = [f for f in contdist if not f in not_good]
+targetdist = [f for f in contdist if f not in not_good]
 #targetdist = contdist
 #targetdist = not_good
 #targetdist = ['t', 'f']

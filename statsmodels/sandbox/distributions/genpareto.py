@@ -111,7 +111,7 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
         meanexcess = meanexcess[::-1]
         if plot:
             plt.plot(datasorted[:-uidx], meanexcess[:-uidx])
-            if not params is None:
+            if params is not None:
                 shape, scale = params
                 plt.plot(datasorted[:-uidx], (scale - datasorted[:-uidx] * shape) / (1. + shape))
     return datasorted, meanexcess

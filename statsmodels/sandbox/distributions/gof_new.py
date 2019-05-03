@@ -563,7 +563,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
 
     #it will be better to build a separate batch function that calls bootstrap
     #keep batch if value is true, but batch iterate from outside if stat is returned
-    if (not batch_size is None):
+    if batch_size is not None:
         if value is None:
             raise ValueError('using batching requires a value')
         n_batch = int(np.ceil(nrep/float(batch_size)))

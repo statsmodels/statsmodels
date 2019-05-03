@@ -819,7 +819,7 @@ class HetGoldfeldQuandt(object):
         else:
             start2 = split + drop
 
-        if not idx is None:
+        if idx is not None:
             xsortind = np.argsort(x[:,idx])
             y = y[xsortind]
             x = x[xsortind,:]
@@ -1562,7 +1562,7 @@ class StatTestMC(object):
         '''
 
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')

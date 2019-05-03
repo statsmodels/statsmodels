@@ -143,7 +143,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     x1 = x1[x1_argsort]
 
     ax.plot(x1, y, 'bo', label=results.model.endog_names)
-    if not y_true is None:
+    if y_true is not None:
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
@@ -528,7 +528,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     k_vars = exog.shape[1]
     #this function doesn't make sense if k_vars=1
 
-    if not grid is None:
+    if grid is not None:
         nrows, ncols = grid
     else:
         if len(exog_idx) > 2:

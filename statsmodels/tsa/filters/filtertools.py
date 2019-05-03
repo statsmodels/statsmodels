@@ -117,11 +117,11 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if (in2 is None) and (in3 is None):
         raise ValueError('at least one of in2 and in3 needs to be given')
     s1 = np.array(in1.shape)
-    if not in2 is None:
+    if in2 is not None:
         s2 = np.array(in2.shape)
     else:
         s2 = 0
-    if not in3 is None:
+    if in3 is not None:
         s3 = np.array(in3.shape)
         s2 = max(s2, s3) # try this looks reasonable for ARMA
         #s2 = s3
@@ -133,9 +133,9 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
     #convolve shorter ones first, not sure if it matters
-    if not in2 is None:
+    if in2 is not None:
         IN1 = fft.fftn(in2, fsize)
-    if not in3 is None:
+    if in3 is not None:
         IN1 /= fft.fftn(in3, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  doesn't seem to work for VARMA

@@ -78,13 +78,13 @@ class HoldIt(object):
         else:
             prefix = ''
 
-        if not comment is None:
+        if comment is not None:
             txt.append("%scomment = '%s'" % (prefix, comment))
 
         for x in what:
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
-        if not filename is None:
+        if filename is not None:
             with open(filename, 'a+') as fd:
                 fd.write('\n'.join(txt))
 

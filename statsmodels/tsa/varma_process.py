@@ -485,7 +485,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -500,7 +500,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial horizontally in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -515,7 +515,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d square array with eye
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -563,7 +563,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isstructured:
@@ -592,7 +592,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isindependent:

@@ -1033,7 +1033,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
     ``value`` and ``alternative`` options are not yet implemented.
 
     '''
-    if (value is not None) or (not alternative in ['two-sided', '2s']):
+    if (value is not None) or (alternative not in ['two-sided', '2s']):
         raise NotImplementedError
     #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(count))]
