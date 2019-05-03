@@ -1,0 +1,71 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+parameters:
+  # defaults for any parameters that aren't specified
+  name: ''
+  vmImage: ''
+
+
+jobs:
+
+- job: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  strategy:
+    matrix:
+      Python27:
+        python.version: '2.7'
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: 'x64'
+
+  - ${{ if eq(parameters.name, 'Windows') }}:
+    # We need to install a C compiler, see
+    #  https://github.com/Microsoft/azure-pipelines-tasks/issues/9674
+    # TODO(py27): This is only necessary for the py27 build, can be removed
+    #  once py27 is dropped
+    - script: choco install vcpython27
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      pip install -r requirements-dev.txt
+    displayName: 'Install dependencies'
+
+  - script: |
+      python setup.py build_ext --inplace -q
+    displayName: 'Build Cython Extensions'
+
+  - script: |
+      pytest statsmodels --junitxml=junit/test-results.xml --skip-examples
+    displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '**/test-results.xml'
+      testRunTitle: 'Python $(python.version)'
+    condition: succeededOrFailed()
+
+- job: ${{ parameters.name }}Publish
+  dependsOn: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+      architecture: 'x64'
