@@ -77,12 +77,15 @@ class CheckModelResults(CheckModelMixin):
     def test_zstat(self):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)
 
-    def pvalues(self):
+    def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
-#    def test_cov_params(self):
-#        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
-#                DECIMAL_4)
+    def test_cov_params(self):
+        if not hasattr(self.res2, "cov_params"):
+            raise pytest.skip("TODO: implement res2.cov_params")
+        assert_almost_equal(self.res1.cov_params(),
+                            self.res2.cov_params,
+                            DECIMAL_4)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_4)
@@ -94,11 +97,15 @@ class CheckModelResults(CheckModelMixin):
         assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_3)
 
     def test_llr_pvalue(self):
-        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue,
-                DECIMAL_4)
+        assert_almost_equal(self.res1.llr_pvalue,
+                            self.res2.llr_pvalue,
+                            DECIMAL_4)
 
+    @pytest.mark.xfail(reason="No idea!  But until this test is actually "
+                              "written, it is considered broken.",
+                       strict=True, raises=NotImplementedError)
     def test_normalized_cov_params(self):
-        pass
+        raise NotImplementedError
 
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
@@ -1026,15 +1033,31 @@ class TestPoissonNewton(CheckModelResults):
 
     def test_predict_prob(self):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        probs_res = np.loadtxt(os.path.join(cur_dir, "results",
-                            "predict_prob_poisson.csv"), delimiter=",")
+        path = os.path.join(cur_dir, "results", "predict_prob_poisson.csv")
+        probs_res = np.loadtxt(path, delimiter=",")
 
         # just check the first 100 obs. vs R to save memory
         probs = self.res1.predict_prob()[:100]
         assert_almost_equal(probs, probs_res, 8)
 
+    @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
+                       strict=True)
+    def test_cov_params(self):
+        super(TestPoissonNewton, self).test_cov_params()
 
-class TestNegativeBinomialNB2Newton(CheckModelResults):
+
+class CheckNegBinMixin(object):
+    # Test methods shared by TestNegativeBinomialXYZ classes
+
+    @pytest.mark.xfail(reason="pvalues do not match, in some cases wrong size",
+                       strict=True, raises=AssertionError)
+    def test_pvalues(self):
+        assert_almost_equal(self.res1.pvalues,
+                            self.res2.pvalues,
+                            DECIMAL_4)
+
+
+class TestNegativeBinomialNB2Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1044,9 +1067,6 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
-
-    def test_jac(self):
-        pass
 
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
@@ -1082,13 +1102,8 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
         assert_almost_equal(self.res1.predict(linear=True)[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-    def no_info(self):
-        pass
 
-    test_jac = no_info
-
-
-class TestNegativeBinomialNB1Newton(CheckModelResults):
+class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1120,9 +1135,6 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
                             DECIMAL_2)
 
-    def test_jac(self):
-        pass
-
     def test_predict(self):
         pass
 
@@ -1130,7 +1142,7 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
         pass
 
 
-class TestNegativeBinomialNB2BFGS(CheckModelResults):
+class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1142,9 +1154,6 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
-
-    def test_jac(self):
-        pass
 
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
@@ -1180,13 +1189,8 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         assert_almost_equal(self.res1.predict(linear=True)[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-    def no_info(self):
-        pass
 
-    test_jac = no_info
-
-
-class TestNegativeBinomialNB1BFGS(CheckModelResults):
+class TestNegativeBinomialNB1BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1217,9 +1221,6 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
                             DECIMAL_2)
 
-    def test_jac(self):
-        pass
-
     def test_predict(self):
         pass
 
@@ -1227,12 +1228,11 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         pass
 
 
-class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+class TestNegativeBinomialGeometricBFGS(CheckNegBinMixin, CheckModelResults):
     # Cannot find another implementation of the geometric to cross-check results
     # we only test fitted values because geometric has fewer parameters
     # than nb1 and nb2
     # and we want to make sure that predict() np.dot(exog, params) works
-
 
     @classmethod
     def setup_class(cls):
@@ -1260,9 +1260,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         assert_almost_equal(self.res1.fittedvalues[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-    def test_jac(self):
-        pass
-
     def test_predict(self):
         assert_almost_equal(self.res1.predict()[:10],
                             np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
@@ -1277,9 +1274,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
 
-    def no_info(self):
-        pass
-
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_1)
 
@@ -1288,8 +1282,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
 
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
-
-    test_jac = no_info
 
 
 class CheckMNLogitBaseZero(CheckModelResults):
@@ -1400,6 +1392,11 @@ class CheckMNLogitBaseZero(CheckModelResults):
 
     def test_resid(self):
         assert_array_equal(self.res1.resid_misclassified, self.res2.resid)
+
+    @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
+                       strict=True)
+    def test_cov_params(self):
+        super(CheckMNLogitBaseZero, self).test_cov_params()
 
 
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
@@ -1868,7 +1865,7 @@ class TestGeneralizedPoisson_underdispersion(object):
                         rtol=0.01)
 
 
-class TestNegativeBinomialPNB2Newton(CheckModelResults):
+class TestNegativeBinomialPNB2Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1917,7 +1914,7 @@ class TestNegativeBinomialPNB2Newton(CheckModelResults):
                         self.res2.fittedvalues[:10])
 
 
-class TestNegativeBinomialPNB1Newton(CheckModelResults):
+class TestNegativeBinomialPNB1Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1959,7 +1956,7 @@ class TestNegativeBinomialPNB1Newton(CheckModelResults):
                         atol=1e-3, rtol=1e-3)
 
 
-class TestNegativeBinomialPNB2BFGS(CheckModelResults):
+class TestNegativeBinomialPNB2BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -2013,7 +2010,7 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
                         atol=1e-3, rtol=1e-3)
 
 
-class TestNegativeBinomialPNB1BFGS(CheckModelResults):
+class TestNegativeBinomialPNB1BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
