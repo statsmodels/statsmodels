@@ -1,9 +1,8 @@
 from __future__ import print_function
-from statsmodels.compat.python import cStringIO, lzip, lrange, StringIO, range
+from statsmodels.compat.python import lzip, StringIO, range
 import numpy as np
 
 from statsmodels.iolib import SimpleTable
-import statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 

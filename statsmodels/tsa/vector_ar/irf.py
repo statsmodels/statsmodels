@@ -9,7 +9,6 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-from scipy import stats
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot

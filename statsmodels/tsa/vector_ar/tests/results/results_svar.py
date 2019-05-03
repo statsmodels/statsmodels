@@ -2,8 +2,6 @@
 Test Results for the SVAR model. Obtained from R using svartest.R
 """
 
-import numpy as np
-
 
 class SVARdataResults(object):
     def __init__(self):

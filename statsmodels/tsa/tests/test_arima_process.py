@@ -1,11 +1,8 @@
 from statsmodels.compat.python import range
 
-from distutils.version import LooseVersion
-
 from statsmodels.tsa.arima_model import ARMA
 from unittest import TestCase
 
-import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
                            assert_allclose,
