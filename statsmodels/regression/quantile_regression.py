@@ -413,9 +413,9 @@ class QuantRegResults(RegressionResults):
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+                             yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                              use_t=self.use_t)
 
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,

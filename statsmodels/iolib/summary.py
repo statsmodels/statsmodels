@@ -882,8 +882,6 @@ class Summary(object):
             table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
                                    use_t=use_t)
         elif res.params.ndim == 2:
-#            _, table = summary_params_2dflat(res, yname=yname, xname=xname,
-#                                             alpha=alpha, use_t=use_t)
             _, table = summary_params_2dflat(res, endog_names=yname,
                                              exog_names=xname,
                                              alpha=alpha, use_t=use_t)

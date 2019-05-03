@@ -249,6 +249,28 @@ def test_zero_resid():
 
     assert_allclose(res.params, np.array([9.99982796e-08, 9.67741630e-01]),
                     rtol=1e-4, atol=1e-20)
-    assert_allclose(res.bse, np.array([0.04455029, 0.01155251]), rtol=1e-4, atol=1e-20)
+    assert_allclose(res.bse, np.array([0.04455029, 0.01155251]), rtol=1e-4,
+                    atol=1e-20)
     assert_allclose(res.resid, np.array([-9.99982796e-08, 3.22583598e-02,
-                                         -3.22574234e-02, 9.46361860e-07]), rtol=1e-4, atol=1e-20)
+                                         -3.22574234e-02, 9.46361860e-07]),
+                    rtol=1e-4, atol=1e-20)
+
+
+def test_use_t_summary():
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+
+    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain', use_t=True)
+    summ = res.summary()
+    assert 'P>|t|' in str(summ)
+    assert 'P>|z|' not in str(summ)
+
+
+def test_alpha_summary():
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+
+    res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain', use_t=True)
+    summ_20 = res.summary(alpha=.2)
+    assert '[0.025      0.975]' not in str(summ_20)
+    assert '[0.1        0.9]' in str(summ_20)

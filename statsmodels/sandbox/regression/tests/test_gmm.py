@@ -8,6 +8,8 @@ Author: Josef Perktold
 from __future__ import print_function
 from statsmodels.compat.python import lrange, lmap
 
+import copy
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -242,6 +244,14 @@ class CheckGMM(object):
         summ = res1.summary()
         # len + 1 is for header line
         assert_equal(len(summ.tables[1]), len(res1.params) + 1)
+
+    def test_use_t(self):
+        # Copy to avoid cache
+        res1 = copy.deepcopy(self.res1)
+        res1.use_t = True
+        summ = res1.summary()
+        assert 'P>|t|' in str(summ)
+        assert 'P>|z|' not in str(summ)
 
 
 class TestGMMSt1(CheckGMM):
