@@ -1377,6 +1377,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
         use_t : bool, optional
@@ -1449,6 +1452,12 @@ class LikelihoodModelResults(Results):
         f_test : for F tests
         patsy.DesignInfo.linear_constraint
         """
+        if scale is not None:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
         from patsy import DesignInfo
         names = self.model.data.param_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
@@ -1520,6 +1529,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             Default is 1.0 for no scaling.
         invcov : array-like, optional
             A q x q array to specify an inverse covariance matrix based on a
@@ -1591,8 +1603,13 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
-        res = self.wald_test(r_matrix, cov_p=cov_p, scale=scale,
-                             invcov=invcov, use_f=True)
+        if scale != 1.0:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
+        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True)
         return res
 
     # TODO: untested for GLMs?
@@ -1615,6 +1632,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             Default is 1.0 for no scaling.
         invcov : array-like, optional
             A q x q array to specify an inverse covariance matrix based on a
@@ -1648,6 +1668,12 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
+        if scale != 1.0:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
         if use_f is None:
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
