@@ -127,9 +127,7 @@ def varfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-        #not necessary:
-        #if np.any(a.shape[1:] != nvar):
-        #    raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
+        # Note: we must have shape[1] == shape[2] == nvar
         yf = signal.convolve(x[:,:,None], a)
         yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
         return yvalid
