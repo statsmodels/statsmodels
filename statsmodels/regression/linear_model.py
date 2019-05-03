@@ -2694,7 +2694,7 @@ class OLSResults(RegressionResults):
         return OLSInfluence(self)
 
     def outlier_test(self, method='bonf', alpha=.05, labels=None,
-                 order=False, cutoff=None):
+                     order=False, cutoff=None):
         """
         Test observations for outliers according to method
 

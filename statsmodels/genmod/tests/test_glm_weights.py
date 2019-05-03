@@ -225,9 +225,10 @@ class TestGlmPoissonFwHC(CheckWeight):
         aweights = fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
 
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=fweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  freq_weights=fweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_hc1
@@ -249,9 +250,10 @@ class TestGlmPoissonAwHC(CheckWeight):
         # manually. Its *possible* lowering the IRLS convergence criterion
         # in stata and here will make this less sketchy.
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), var_weights=aweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  var_weights=aweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         # modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_aweight_hc1
@@ -274,9 +276,11 @@ class TestGlmPoissonFwClu(CheckWeight):
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
         with pytest.warns(None):
-            cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                            family=sm.families.Poisson(), freq_weights=fweights
-                            ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+            mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                      family=sm.families.Poisson(),
+                      freq_weights=fweights)
+            cls.res1 = mod.fit(cov_type='cluster', cov_kwds=cov_kwds)
+
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1

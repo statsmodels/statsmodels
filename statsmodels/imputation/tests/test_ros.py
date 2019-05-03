@@ -511,8 +511,7 @@ class Test_ROS_RNADAdata(CheckROSMixin):
        16.000 False
        17.716 False
        25.000 False
-       51.000 False"""
-    ))
+       51.000 False"""))
     rescol = 'res'
     cencol = 'cen'
     df = pandas.read_csv(datastring, sep=r'\s+')

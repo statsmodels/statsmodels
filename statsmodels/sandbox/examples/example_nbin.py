@@ -185,8 +185,7 @@ class CountResults(GenericLikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     ('Converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
+                     ('Converged:', ["%s" % self.mle_retvals['converged']])]
         top_right = [('No. Observations:', None),
                      ('Log-Likelihood:', None),
                      ]

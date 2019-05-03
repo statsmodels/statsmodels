@@ -71,11 +71,11 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
 
         p1 = ax.plot(prange, prior[:, j], 'k', label='Observed')
         p2 = ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--',
-                        label='Forecast')
+                     label='Forecast')
 
         if plot_stderr:
             p3 = ax.plot(rng_err, err_upper[:, j], 'k-.',
-                            label='Forc 2 STD err')
+                         label='Forc 2 STD err')
             ax.plot(rng_err, err_lower[:, j], 'k-.')
 
         if names is not None:
@@ -228,11 +228,11 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
             if stderr_type == 'asym':
                 sig = np.sqrt(stderr[:, j * k + i, j * k + i])
                 plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
-                            alpha=signif, value_fmt='b', stderr_type=stderr_type)
+                                alpha=signif, value_fmt='b', stderr_type=stderr_type)
             if stderr_type in ('mc','sz1','sz2','sz3'):
                 errs = stderr[0][:, i, j], stderr[1][:, i, j]
                 plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
-                            alpha=signif, value_fmt='b', stderr_type=stderr_type)
+                                alpha=signif, value_fmt='b', stderr_type=stderr_type)
         else:
             plot_with_error(values[:, i, j], None, x=rng, axes=ax,
                             value_fmt='b')

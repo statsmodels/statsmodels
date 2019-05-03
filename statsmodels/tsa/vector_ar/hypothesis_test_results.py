@@ -135,8 +135,8 @@ class CausalityTestResults(HypothesisTestResults):
         # instantaneous causality is a symmetric relation ==> causing and
         # caused may be swapped
         if not variables and self.test == "inst":
-            variables = self.causing == other.caused and \
-                        self.caused == other.causing
+            variables = (self.causing == other.caused and
+                         self.caused == other.causing)
         return test and variables
 
 

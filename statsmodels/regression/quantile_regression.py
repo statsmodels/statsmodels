@@ -391,7 +391,7 @@ class QuantRegResults(RegressionResults):
                      ('No. Observations:', None),
                      ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
                      ('Df Model:', None) #[self.df_model])
-                    ]
+                     ]
 
         # diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
         #               ('Prob(Omnibus):', ["%#6.3f" % omnipv]),

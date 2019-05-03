@@ -2725,12 +2725,12 @@ class NegativeBinomial(CountModel):
         alpha2 = alpha**2
         mu2 = mu**2
         dada = ((alpha3*mu*(2*log_alpha + 2*dgpart + 3) -
-                2*alpha3*y +
-                4*alpha2*mu*(log_alpha + dgpart) +
-                alpha2 * (2*mu - y) +
-                2*alpha*mu2*trigamma + mu2 * trigamma + alpha2 * mu2 * trigamma +
-                2*alpha*mu*(log_alpha + dgpart)
-                )/(alpha**4*(alpha2 + 2*alpha + 1)))
+                 2*alpha3*y +
+                 4*alpha2*mu*(log_alpha + dgpart) +
+                 alpha2 * (2*mu - y) +
+                 2*alpha*mu2*trigamma + mu2 * trigamma + alpha2 * mu2 * trigamma +
+                 2*alpha*mu*(log_alpha + dgpart)
+                 )/(alpha**4*(alpha2 + 2*alpha + 1)))
         hess_arr[-1,-1] = dada.sum()
 
         return hess_arr
@@ -3607,7 +3607,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Time:', None),
                      #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
+                    ]
 
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),

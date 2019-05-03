@@ -325,7 +325,7 @@ class TestFTest2(object):
 
     def test_pvalue(self):
         assert_almost_equal(self.Ftest1.pvalue, 0.0056052885317493459,
-                DECIMAL_4)
+                            DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ftest1.df_denom, 9)

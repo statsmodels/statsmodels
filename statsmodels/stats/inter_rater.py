@@ -427,8 +427,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                     kappa_max=kappa_max,
                     weights=weights,
                     var_kappa=var_kappa,
-                    var_kappa0=var_kappa0
-                    )
+                    var_kappa0=var_kappa0)
         return res
     else:
         return kappa

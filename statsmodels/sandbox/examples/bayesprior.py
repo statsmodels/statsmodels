@@ -53,8 +53,7 @@ Inverted gamma distribution
 
 invgamma.pdf(x,a,b) = b**a*x**(-a-1)/gamma(a) * exp(-b/x)
 for x > 0, a > 0, b>0.
-"""
-)
+""")
 
 
 #NOTE: the above is unnecessary.  B takes the same role as the scale parameter

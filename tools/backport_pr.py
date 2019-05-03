@@ -126,18 +126,17 @@ def should_backport(labels=None, milestone=None):
         raise ValueError("Specify only one of labels or milestone.")
     if labels is not None:
         issues = get_issues_list("statsmodels/statsmodels",
-                labels=labels,
-                state='closed',
-                auth=True,
-        )
+                                 labels=labels,
+                                 state='closed',
+                                 auth=True)
     else:
-        milestone_id = get_milestone_id("statsmodels/statsmodels", milestone,
-                auth=True)
+        milestone_id = get_milestone_id("statsmodels/statsmodels",
+                                        milestone,
+                                        auth=True)
         issues = get_issues_list("statsmodels/statsmodels",
-                milestone=milestone_id,
-                state='closed',
-                auth=True,
-        )
+                                 milestone=milestone_id,
+                                 state='closed',
+                                 auth=True)
 
     should_backport = []
     merged_dates = []
@@ -145,7 +144,7 @@ def should_backport(labels=None, milestone=None):
         if not is_pull_request(issue):
             continue
         pr = get_pull_request("statsmodels/statsmodels", issue['number'],
-                auth=True)
+                              auth=True)
         if not pr['merged']:
             print("Marked PR closed without merge: %i" % pr['number'])
             continue

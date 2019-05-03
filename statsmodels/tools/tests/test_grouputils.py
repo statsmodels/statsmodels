@@ -63,9 +63,8 @@ class CheckGrouping(object):
                                             self.data,
                                             lambda x : x.mean(),
                                             level=0)
-        expected = self.data.reset_index().groupby(names[0]
-                                            ).apply(lambda x : x.mean())[
-                                                    self.data.columns]
+        grouped = self.data.reset_index().groupby(names[0])
+        expected = grouped.apply(lambda x : x.mean())[self.data.columns]
         np.testing.assert_array_equal(transformed_dataframe,
                                       expected.values)
 
@@ -73,10 +72,8 @@ class CheckGrouping(object):
             transformed_dataframe = self.grouping.transform_dataframe(
                                             self.data, lambda x : x.mean(),
                                             level=1)
-            expected = self.data.reset_index().groupby(names[1]
-                                                      ).apply(lambda x :
-                                                              x.mean())[
-                                                        self.data.columns]
+            grouped = self.data.reset_index().groupby(names[1])
+            expected = grouped.apply(lambda x: x.mean())[self.data.columns]
             np.testing.assert_array_equal(transformed_dataframe,
                                           expected.values)
 
@@ -88,9 +85,8 @@ class CheckGrouping(object):
                                             self.data.values,
                                             lambda x : x.mean(),
                                             level=0)
-        expected = self.data.reset_index().groupby(names[0]
-                                            ).apply(lambda x : x.mean())[
-                                                    self.data.columns]
+        grouped = self.data.reset_index().groupby(names[0])
+        expected = grouped.apply(lambda x: x.mean())[self.data.columns]
         np.testing.assert_array_equal(transformed_array,
                                       expected.values)
 
@@ -98,10 +94,8 @@ class CheckGrouping(object):
             transformed_array = self.grouping.transform_array(
                                             self.data.values,
                                             lambda x : x.mean(), level=1)
-            expected = self.data.reset_index().groupby(names[1]
-                                                      ).apply(lambda x :
-                                                              x.mean())[
-                                                        self.data.columns]
+            grouped = self.data.reset_index().groupby(names[1])
+            expected = grouped.apply(lambda x: x.mean())[self.data.columns]
             np.testing.assert_array_equal(transformed_array,
                                           expected.values)
 

@@ -246,15 +246,15 @@ class SVAR(tsbase.TimeSeriesModel):
         self.sigma_u = omega
 
         A, B = self._solve_AB(start_params, override=override,
-                                                    solver=solver,
-                                                    maxiter=maxiter,
-                                                    maxfun=maxfun)
+                              solver=solver,
+                              maxiter=maxiter,
+                              maxfun=maxfun)
         A_mask = self.A_mask
         B_mask = self.B_mask
 
         return SVARResults(y, z, var_params, omega, lags,
-                            names=self.endog_names, trend=trend,
-                            dates=self.data.dates, model=self,
+                           names=self.endog_names, trend=trend,
+                           dates=self.data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
 
     def loglike(self, params):
@@ -290,9 +290,9 @@ class SVAR(tsbase.TimeSeriesModel):
         sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
-        likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
-                np.log(npl.det(A)**2) + b_slogdet + \
-                np.trace(trc_in))
+        likl = -nobs/2. * (neqs * np.log(2 * np.pi) -
+                           np.log(npl.det(A)**2) + b_slogdet +
+                           np.trace(trc_in))
 
         return likl
 
@@ -319,7 +319,7 @@ class SVAR(tsbase.TimeSeriesModel):
         return approx_hess(AB_mask, loglike)
 
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
-            solver='bfgs'):
+                  solver='bfgs'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -361,8 +361,9 @@ class SVAR(tsbase.TimeSeriesModel):
             print("Order/rank conditions have not been checked")
 
         retvals = super(SVAR, self).fit(start_params=start_params,
-                    method=solver, maxiter=maxiter,
-                    maxfun=maxfun, ftol=1e-20, disp=0).params
+                                        method=solver, maxiter=maxiter,
+                                        maxfun=maxfun, ftol=1e-20,
+                                        disp=0).params
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
@@ -602,8 +603,8 @@ class SVARResults(SVARProcess, VARResults):
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
-                             B, names=names)
+        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A, B,
+                                          names=names)
 
     def irf(self, periods=10, var_order=None):
         """
@@ -685,8 +686,7 @@ class SVARResults(SVARProcess, VARResults):
 
         for i in range(repl):
             #discard first hundred to correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
-                    steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
             sim = sim[burn:]
             if cum == True:
                 if i < 10:
@@ -703,10 +703,10 @@ class SVARResults(SVARProcess, VARResults):
                         split = len(A_pass[A_mask])
                         opt_A = mean_AB[:split]
                         opt_B = mean_AB[split:]
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                 B=B_pass).fit(maxlags=k_ar,\
-                                 A_guess=opt_A, B_guess=opt_B).\
-                                 svar_ma_rep(maxn=T).cumsum(axis=0)
+
+                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
+                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+                    ma_coll[i] = sres.svar_ma_rep(maxn=T).cumsum(axis=0)
 
             elif cum == False:
                 if i < 10:
@@ -721,10 +721,10 @@ class SVARResults(SVARProcess, VARResults):
                         split = len(A[A_mask])
                         opt_A = mean_AB[:split]
                         opt_B = mean_AB[split:]
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                 B=B_pass).fit(maxlags=k_ar,\
-                                 A_guess = opt_A, B_guess = opt_B).\
-                                 svar_ma_rep(maxn=T)
+
+                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
+                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+                    ma_coll[i] = sres.svar_ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
