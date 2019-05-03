@@ -27,9 +27,12 @@ associated with that specific optimizer:
 
 - ``newton`` - Newton-Raphson iteration. While not directly from scipy, we
   consider it an optimizer because only the score and hessian are required.
+
     tol : float
         Relative error in params acceptable for convergence.
+
 - ``nm`` - scipy's ``fmin_nm``
+
     xtol : float
         Relative error in params acceptable for convergence
     ftol : float
@@ -37,8 +40,10 @@ associated with that specific optimizer:
         convergence
     maxfun : int
         Maximum number of function evaluations to make.
+
 - ``bfgs`` - Broyden–Fletcher–Goldfarb–Shanno optimization, scipy's
   ``fmin_bfgs``.
+
       gtol : float
           Stop when norm of gradient is less than gtol.
       norm : float
@@ -46,8 +51,10 @@ associated with that specific optimizer:
       epsilon
           If fprime is approximated, use this value for the step
           size. Only relevant if LikelihoodModel.score is None.
+
 - ``lbfgs`` - A more memory-efficient (limited memory) implementation of
   ``bfgs``. Scipy's ``fmin_l_bfgs_b``.
+
       m : int
           The maximum number of variable metric corrections used to
           define the limited memory matrix. (The limited memory BFGS
@@ -74,7 +81,9 @@ associated with that specific optimizer:
       approx_grad : bool
           Whether to approximate the gradient numerically (in which
           case func returns only the function value).
+
 - ``cg`` - Conjugate gradient optimization. Scipy's ``fmin_cg``.
+
       gtol : float
           Stop when norm of gradient is less than gtol.
       norm : float
@@ -83,7 +92,9 @@ associated with that specific optimizer:
           If fprime is approximated, use this value for the step
           size. Can be scalar or vector.  Only relevant if
           Likelihoodmodel.score is None.
+
 - ``ncg`` - Newton conjugate gradient. Scipy's ``fmin_ncg``.
+
       fhess_p : callable f'(x, \*args)
           Function which computes the Hessian of f times an arbitrary
           vector, p.  Should only be supplied if
@@ -94,7 +105,9 @@ associated with that specific optimizer:
       epsilon : float or ndarray
           If fhess is approximated, use this value for the step size.
           Only relevant if Likelihoodmodel.hessian is None.
+
 - ``powell`` - Powell's method. Scipy's ``fmin_powell``.
+
       xtol : float
           Line-search error tolerance
       ftol : float
@@ -104,8 +117,10 @@ associated with that specific optimizer:
           Maximum number of function evaluations to make.
       start_direc : ndarray
           Initial direction set.
+
 - ``basinhopping`` - Basin hopping. This is part of scipy's ``basinhopping``
   tools.
+
       niter : integer
           The number of basin hopping iterations.
       niter_success : integer
@@ -130,13 +145,15 @@ associated with that specific optimizer:
           - `args` <- `fargs`
           - `jac` <- `score`
           - `hess` <- `hess`
-  - ``minimize`` - Allows the use of any scipy optimizer.
-      min_method : str, optional
-          Name of minimization method to use.
-          Any method specific arguments can be passed directly.
-          For a list of methods and their arguments, see
-          documentation of `scipy.optimize.minimize`.
-          If no method is specified, then BFGS is used.
+
+- ``minimize`` - Allows the use of any scipy optimizer.
+
+  min_method : str, optional
+      Name of minimization method to use.
+      Any method specific arguments can be passed directly.
+      For a list of methods and their arguments, see
+      documentation of `scipy.optimize.minimize`.
+      If no method is specified, then BFGS is used.
 
 Model Class
 -----------

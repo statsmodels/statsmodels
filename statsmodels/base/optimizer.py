@@ -371,10 +371,11 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
-                   maxiter=100, callback=None, retall=False,
-                   full_output=True, hess=None):
+def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
+               callback=None, retall=False, full_output=True, hess=None):
     """
+    Fit model using L-BFGS algorithm
+
     Parameters
     ----------
     f : function

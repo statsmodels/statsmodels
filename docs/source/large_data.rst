@@ -1,19 +1,19 @@
 .. module:: statsmodels.base.distributed_estimation
 .. currentmodule:: statsmodels.base.distributed_estimation
 
-Working with "large"-ish data
-=============================
+Working with Large Data Sets
+============================
 
 Big data is something of a buzzword in the modern world. While statsmodels
-works well with small and moderately-sized datasets that can be loaded in
+works well with small and moderately-sized data sets that can be loaded in
 memory--perhaps tens of thousands of observations--use cases exist with
-millions of observations or more. Depending your usecase, statsmodels may or
+millions of observations or more. Depending your use case, statsmodels may or
 may not be a sufficient tool.
 
 statsmodels and most of the software stack it is written on operates in
-memory. Resultantly, building models on larger datasets can be challenging
+memory. Resultantly, building models on larger data sets can be challenging
 or even impractical. With that said, there are 2 general strategies for
-building models on larger datasets with statsmodels.
+building models on larger data sets with statsmodels.
 
 Divide and Conquer - Distributing Jobs
 --------------------------------------
@@ -38,7 +38,7 @@ A detailed example is available
 Subsetting your data
 --------------------
 
-If your entire dataset is too large to store in memory, you might try storing
+If your entire data set is too large to store in memory, you might try storing
 it in a columnar container like `Apache Paruqet <https://parquet.apache.org/>`_
 or `bcolz <http://bcolz.blosc.org/en/latest/>`_. Using the patsy formula
 interface, statsmodels will use the `__getitem__` function (i.e. data['Item'])

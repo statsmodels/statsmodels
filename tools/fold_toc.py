@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
 import re
+import sys
 
 # Read doc to string
 filename = sys.argv[1]
@@ -32,27 +32,27 @@ for i in range(toc_n):
     post_n = re.sub('#', str(i), post)
     doc = re.sub(pre, post_n, doc, count=1)
 
-## TOC entries
+# TOC entries
 pre = '<li class="toctree-l1">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 2nd level
 pre = '<li class="toctree-l2">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 3rd level
 pre = '<li class="toctree-l3">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 4th level
 pre = '<li class="toctree-l4">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # Write to file
-f = open(filename, 'w')
+f = open(filename, 'w', encoding='utf8')
 f.write(doc)
 f.close()

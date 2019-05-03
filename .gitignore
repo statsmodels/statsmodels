@@ -6,9 +6,9 @@ dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild
 docs/source/generated
-docs/source/datasets/generated
 docs/source/dev/generated
 docs/source/examples/generated
+docs/source/datasets/generated
 docs/source/examples/notebooks/generated
 docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
