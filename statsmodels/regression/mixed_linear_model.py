@@ -2471,6 +2471,11 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             The available results have the same elements as the parameter table
             in `summary()`.
         """
+        if scale is not None:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
 
         if r_matrix.shape[1] != self.k_fe:
             raise ValueError("r_matrix for t-test should have %d columns"
@@ -2479,8 +2484,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedLMResults, self).t_test(
-            r_matrix, scale=scale, use_t=use_t)
+        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, use_t=use_t)
         return tst_rslt
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
