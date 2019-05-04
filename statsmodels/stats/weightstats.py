@@ -1115,10 +1115,10 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
                       weights=(None, None), value=0):
     '''ttest independent sample
 
-    convenience function that uses the classes and throws away the intermediate
+    Convenience function that uses the classes and throws away the intermediate
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    weights option.
 
     Parameters
     ----------
@@ -1127,9 +1127,9 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: difference in means not equal to value (default)
-           'larger' :   H1: difference in means larger than value
-           'smaller' :  H1: difference in means smaller than value
+           * 'two-sided' (default): H1: difference in means not equal to value
+           * 'larger' :   H1: difference in means larger than value
+           * 'smaller' :  H1: difference in means smaller than value
 
     usevar : string, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
