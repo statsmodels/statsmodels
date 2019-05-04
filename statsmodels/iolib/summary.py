@@ -221,7 +221,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     #TODO: exists in linear_model, what about other models
     #residual diagnostics
 
-
     #output options
     #--------------
     #TODO: JP the rest needs to be fixed, similar to summary in linear_model
