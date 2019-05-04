@@ -8,6 +8,7 @@ Created on Wed Feb 19 12:39:49 2014
 Author: Josef Perktold
 """
 
+import pytest
 import numpy as np
 from scipy import stats
 
@@ -20,10 +21,12 @@ from statsmodels.stats.moment_helpers import mc2mvsk, mnc2mc
 
 class CheckDistribution(object):
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_dist1(self):
         self.dist1.rvs(size=10)
         self.dist1.pdf(np.linspace(-4, 4, 11))
 
+    def test_cdf_ppf_roundtrip(self):
         # round trip
         probs = np.linspace(0.001, 0.999, 6)
         ppf = self.dist2.ppf(probs)

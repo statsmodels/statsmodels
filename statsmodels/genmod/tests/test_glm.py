@@ -181,9 +181,12 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        #SMOKE test
         self.res1.summary()
+
+    @pytest.mark.smoke
+    def test_summary2(self):
         self.res1.summary2()
 
 
@@ -994,9 +997,8 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     return endog
 
 
+@pytest.mark.smoke
 def test_summary():
-    # Smoke test for summary.
-
     np.random.seed(4323)
 
     n = 100
@@ -1004,7 +1006,7 @@ def test_summary():
     exog[:, 0] = 1
     endog = np.random.normal(size=n)
 
-    for method in "irls", "cg":
+    for method in ["irls", "cg"]:
         fa = sm.families.Gaussian()
         model = sm.GLM(endog, exog, family=fa)
         rslt = model.fit(method=method)

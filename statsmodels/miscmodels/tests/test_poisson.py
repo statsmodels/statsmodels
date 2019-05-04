@@ -2,6 +2,7 @@
 
 
 '''
+import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
@@ -42,8 +43,8 @@ class CompareMixin(object):
         assert_almost_equal(tt.tvalue, self.res.tvalues, DEC)
         assert_almost_equal(pvalue, self.res.pvalues, DEC)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
         self.res.summary()
 
 

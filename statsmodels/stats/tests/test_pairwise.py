@@ -191,9 +191,9 @@ class CheckTuckeyHSDMixin(object):
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
         assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_plot_simultaneous_ci(self, close_figures):
-        # smoke tests
         self.res._simultaneous_ci()
         reference = self.res.groupsunique[1]
         self.res.plot_simultaneous(comparison_name=reference)

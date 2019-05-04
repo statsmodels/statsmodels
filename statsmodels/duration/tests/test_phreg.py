@@ -289,8 +289,8 @@ class TestPHReg(object):
         v = np.r_[0.85154336, 0.72993748, 0.73758071, 0.78599333]
         assert_allclose(np.abs(s_resid).mean(0), v)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # smoke test
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
@@ -319,6 +319,7 @@ class TestPHReg(object):
         msg = "200 observations have positive entry times"
         assert_(msg in str(smry))
 
+    @pytest.mark.smoke
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr
         # tests into real tests against R.  There are many options to
@@ -338,8 +339,8 @@ class TestPHReg(object):
             rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
                          pred_type=pred_type)
 
+    @pytest.mark.smoke
     def test_get_distribution(self):
-        # Smoke test
         np.random.seed(34234)
         n = 200
         exog = np.random.normal(size=(n, 2))
@@ -360,7 +361,6 @@ class TestPHReg(object):
         fitted_var = dist.var()
         fitted_sd = dist.std()
         sample = dist.rvs()
-
 
     def test_fit_regularized(self):
 

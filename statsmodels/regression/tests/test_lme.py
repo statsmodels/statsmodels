@@ -182,8 +182,8 @@ class TestMixedLM(object):
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
 
+    @pytest.mark.smoke
     def test_profile_inference(self):
-        # Smoke test
         np.random.seed(9814)
         k_fe = 2
         gsize = 3

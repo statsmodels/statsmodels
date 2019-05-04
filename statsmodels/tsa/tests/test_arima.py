@@ -156,9 +156,9 @@ class CheckArmaResultsMixin(object):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # smoke tests
-        table = self.res1.summary()
+        self.res1.summary()
 
 
 class CheckForecastMixin(object):
@@ -1599,6 +1599,7 @@ def test_arima_wrapper():
     assert_equal(res.model.endog_names, 'D.cpi')
 
 
+@pytest.mark.smoke
 def test_1dexog():
     # smoke test, this will raise an error if broken
     dta = load_macrodata_pandas().data
@@ -1752,8 +1753,9 @@ def test_arima_predict_exog():
     #assert_almost_equal(predict, predict_expected.values, 3)
 
 
+@pytest.mark.smoke
 def test_arima_no_diff():
-    # issue 736
+    # GH#736
     # smoke test, predict will break if we have ARIMAResults but
     # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
     ar = [1, -.75, .15, .35]
@@ -1767,9 +1769,9 @@ def test_arima_no_diff():
     res.predict()
 
 
+@pytest.mark.smoke
 def test_arima_predict_noma():
-    # issue 657
-    # smoke test
+    # GH#657
     ar = [1, .75]
     ma = [1]
     np.random.seed(12345)
@@ -1863,8 +1865,9 @@ def test_arima_small_data_bug():
     assert_raises(ValueError, mod.fit)
 
 
+@pytest.mark.smoke
 def test_arima_dataframe_integer_name():
-    # Smoke Test for Issue 1038
+    # Smoke Test for Issue GH#1038
     import statsmodels.api as sm
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474,

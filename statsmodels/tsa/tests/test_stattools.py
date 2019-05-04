@@ -540,6 +540,7 @@ def test_acovf_fft_vs_convolution():
             assert_almost_equal(F1, F2, decimal=7)
 
 
+@pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right

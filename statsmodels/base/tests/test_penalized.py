@@ -7,6 +7,8 @@ License: BSD-3
 """
 
 import warnings
+
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
@@ -86,8 +88,12 @@ class CheckPenalizedPoisson(object):
                             rtol=self.rtol, atol=self.atol)
         assert_allclose(res1.predict(), res2.predict(), rtol=0.05)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         self.res1.summary()
+
+    @pytest.mark.smoke
+    def test_summary2(self):
         self.res1.summary2()
 
     def test_numdiff(self):

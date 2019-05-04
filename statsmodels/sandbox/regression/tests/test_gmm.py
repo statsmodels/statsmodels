@@ -10,6 +10,7 @@ from statsmodels.compat.python import lrange, lmap
 
 import copy
 
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -239,7 +240,8 @@ class CheckGMM(object):
         # Smoke test for Wald
         res_wald = res1.wald_test(restriction[:-1])
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         res1 = self.res1
         summ = res1.summary()
         # len + 1 is for header line
@@ -683,7 +685,6 @@ class CheckIV2SLS(object):
         assert_allclose(res_f.fvalue, res2.F, rtol=1e-10, atol=0)
         assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 
-
     def test_hausman(self):
         res1, res2 = self.res1, self.res2
         hausm = res1.spec_hausman()
@@ -691,11 +692,11 @@ class CheckIV2SLS(object):
         assert_allclose(hausm[0], res2.hausman['DWH'], rtol=1e-11, atol=0)
         assert_allclose(hausm[1], res2.hausman['DWHp'], rtol=1e-10, atol=1e-25)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         res1 = self.res1
         summ = res1.summary()
         assert_equal(len(summ.tables[1]), len(res1.params) + 1)
-
 
 
 class TestIV2SLSSt1(CheckIV2SLS):

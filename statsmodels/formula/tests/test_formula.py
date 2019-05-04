@@ -10,6 +10,7 @@ from statsmodels.datasets import cpunish
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
 import numpy as np
+import pytest
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -35,8 +36,8 @@ class CheckFormulaOLS(object):
     def test_endog(self):
         npt.assert_equal(self.model.endog, self.data.endog)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # smoke test
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
                                     "kurtosistest only valid for n>=20")

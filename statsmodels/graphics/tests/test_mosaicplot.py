@@ -194,9 +194,10 @@ def test_axes_labeling(close_figures):
     fig.suptitle("correct alignment of the axes labels")
 
 
+@pytest.mark.smoke
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
-    # SMOKE test  see #2286
+    # GH#2286
     import pandas as pd
     mydata = pd.DataFrame({'id2': {64: 'Angelica',
                                    65: 'DXW_UID', 66: 'casuid01',

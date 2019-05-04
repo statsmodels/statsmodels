@@ -45,6 +45,7 @@ class TestPCA(object):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)

@@ -8,6 +8,8 @@ from statsmodels.tsa.arima_model import ARMA
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
 from statsmodels.tools.testing import assert_equal
 from .results import results_ar
+
+import pytest
 import numpy as np
 import numpy.testing as npt
 from pandas import Series, Index, DatetimeIndex, date_range, period_range
@@ -292,16 +294,17 @@ def test_ar_named_series():
                                                "L2.foobar"])))
 
 
+@pytest.mark.smoke
 def test_ar_start_params():
-    # fix 236
-    # smoke test
+    # fix GH#236
     data = sm.datasets.sunspots.load(as_pandas=False)
     res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10),
                              method="mle", disp=-1, maxiter=100)
 
 
+@pytest.mark.smoke
 def test_ar_series():
-    # smoke test for 773
+    # GH#773
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start='1959Q1', periods=len(dta), freq='Q')
     dta.index = dates
@@ -310,7 +313,7 @@ def test_ar_series():
 
 
 def test_ar_select_order():
-    # 2118
+    # GH#2118
     np.random.seed(12345)
     y = sm.tsa.arma_generate_sample([1, -.75, .3], [1], 100)
     ts = Series(y, index=date_range(start='1/1/1990', periods=100,
