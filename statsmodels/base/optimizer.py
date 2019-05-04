@@ -239,14 +239,15 @@ class Optimizer(object):
         model_instance.add_constraint("x1 + x2 = 2")
         result = model_instance.fit()
         """
-        pass
+        raise NotImplementedError
 
     def _fit_regularized(self, params):
-        #TODO: code won't necessarily be general here. 3 options.
+        # TODO: code won't necessarily be general here. 3 options.
         # 1) setup for scipy.optimize.fmin_sqlsqp
         # 2) setup for cvxopt
         # 3) setup for openopt
-        pass
+        raise NotImplementedError
+
 
 ########################################
 # Helper functions to fit

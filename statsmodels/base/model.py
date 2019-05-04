@@ -1022,7 +1022,7 @@ class Results(object):
             return predict_results
 
     def summary(self):
-        pass
+        raise NotImplementedError
 
 
 # TODO: public method?
@@ -2267,7 +2267,7 @@ class ResultMixin(object):
     def get_nlfun(self, fun):
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
-        pass
+        raise NotImplementedError
 
 
 class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
