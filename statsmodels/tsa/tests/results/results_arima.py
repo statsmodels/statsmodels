@@ -4,10 +4,11 @@ import numpy as np
 from numpy import genfromtxt
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-forecast_results = genfromtxt(open(cur_dir+"/results_arima_forecasts.csv",
-                        "rb"), names=True, delimiter=",", dtype=float)
+path = os.path.join(cur_dir, "results_arima_forecasts.csv")
+with open(path, "rb") as fd:
+    forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
 
-#NOTE:
+# NOTE:
 # stata gives no indication of no convergence for 112 CSS but gives a
 # different answer than x12arima, gretl simply fails to converge
 # redid stata with starting parameters from x12arima
@@ -35,8 +36,8 @@ class ARIMA111(object):
             self.bic = self.icstats[5]
             self.fittedvalues = self.xb[1:] # no idea why this initial value
             self.linear = self.y[1:]
-            #their bse are OPG
-            #self.bse = np.diag(self.cov_params) ** .5
+            # stata bse are OPG
+            # self.bse = np.diag(self.cov_params) ** .5
 
             # from gretl
             self.arroots = [1.0640 + 0j]
@@ -44,19 +45,21 @@ class ARIMA111(object):
             self.hqic = 496.8653
             self.aic_gretl = 491.5112
             self.bic_gretl = 504.7442
-            #self.bse = [.205811, .0457010, .0897565]
             self.tvalues = [4.280, 20.57, -8.590]
             self.pvalues = [1.87e-5, 5.53e-94, 8.73e-18]
             self.cov_params = [[0.0423583,   -0.00167449,    0.00262911],
                                [-0.00167449, 0.00208858,    -0.0035068],
                                [0.00262911, -0.0035068, 0.00805622]]
             self.bse = np.diag(np.sqrt(self.cov_params))
+            # these bse are approx [.205811, .0457010, .0897565]
+
             # from stata
-            #forecast = genfromtxt(open(cur_dir+"/arima111_forecasts.csv"),
+            # forecast = genfromtxt(open(cur_dir+"/arima111_forecasts.csv"),
             #                delimiter=",", skip_header=1, usecols=[1,2,3,4,5])
-            #self.forecast = forecast[203:,1]
-            #self.fcerr = forecast[203:,2]
-            #self.fc_conf_int = forecast[203:,3:]
+            # self.forecast = forecast[203:,1]
+            # self.fcerr = forecast[203:,2]
+            # self.fc_conf_int = forecast[203:,3:]
+
             # from gretl
             self.forecast = forecast_results['fc111c'][-25:]
             self.forecasterr = forecast_results['fc111cse'][-25:]
@@ -84,12 +87,13 @@ class ARIMA111(object):
             self.hqic = 492.6669
             self.arroots = [1.0578 + 0j]
             self.maroots = [1.2473 + 0j]
-            #cov_params = np.array([[0.00369569, -0.00271777, 0.00269806],
+            # cov_params = np.array([[0.00369569, -0.00271777, 0.00269806],
             #                        [0, 0.00209573, -0.00224559],
             #                        [0, 0, 0.00342769]])
-            #self.cov_params = cov_params + cov_params.T - \
+            # self.cov_params = cov_params + cov_params.T - \
             #                np.diag(np.diag(cov_params))
-            #self.bse = np.diag(np.sqrt(self.cov_params))
+            # self.bse = np.diag(np.sqrt(self.cov_params))
+
             self.resid = [-0.015830, -0.236884, -0.093946, -0.281152,
                           -0.089983, -0.226336, -0.351666, -0.198703,
                           -0.258418, -0.259026, -0.149513, -0.325703,
@@ -203,15 +207,15 @@ class ARIMA211(object):
             self.linear = self.y[1:]
             self.k_diff = 1
 
-            #their bse are OPG
-            #self.bse = np.diag(self.cov_params) ** .5
+            # stata bse are OPG
+            # self.bse = np.diag(self.cov_params) ** .5
+
             # from gretl
             self.arroots = [1.027 + 0j, 5.7255+ 0j]
             self.maroots = [1.1442+0j]
             self.hqic = 496.5314
             self.aic_gretl = 489.8388
             self.bic_gretl = 506.3801
-            #self.bse = [0.248376, 0.102617, 0.0871312, 0.0696346]
             self.tvalues = [3.468, 11.14, -1.941, 12.55]
             self.pvalues = [.0005, 8.14e-29, .0522, 3.91e-36]
             cov_params = np.array([
@@ -222,6 +226,8 @@ class ARIMA211(object):
             self.cov_params = cov_params + cov_params.T - \
                               np.diag(np.diag(cov_params))
             self.bse = np.diag(np.sqrt(self.cov_params))
+            # these bse are approx [0.248376, 0.102617, 0.0871312, 0.0696346]
+
             self.forecast = forecast_results['fc211c'][-25:]
             self.forecasterr = forecast_results['fc211cse'][-25:]
             self.forecast_dyn = forecast_results['fc211cdyn'][-25:]
@@ -235,7 +241,7 @@ class ARIMA211(object):
             self.sigma2 = self.sigma**2
             self.aic = self.icstats[4]
             self.bic = self.icstats[5]
-            self.fittedvalues = self.xb[1:] # no idea why this initial value
+            self.fittedvalues = self.xb[1:]  # no idea why this initial value
             self.linear = self.y[1:]
             self.k_diff = 1
 
@@ -289,6 +295,7 @@ class ARIMA112(object):
             self.cov_params = cov_params + cov_params.T - \
                             np.diag(np.diag(cov_params))
             self.bse = np.diag(np.sqrt(self.cov_params))
+
             # from gretl
             self.forecast = forecast_results['fc112c'][-25:]
             self.forecasterr = forecast_results['fc112cse'][-25:]
@@ -302,16 +309,17 @@ class ARIMA112(object):
             self.sigma2 = self.sigma**2
             self.aic = self.icstats[4]
             self.bic = self.icstats[5]
-            self.fittedvalues = self.xb[1:] # no idea why this initial value
+            self.fittedvalues = self.xb[1:]  # no idea why this initial value
             self.linear = self.y[1:]
-            #their bse are OPG
-            #self.bse = np.diag(self.cov_params) ** .5
-        else: #NOTE: this looks like a "hard" problem
-            #unable to replicate stata's results even with their starting
-            #values
+            # stata bse are OPG
+            # self.bse = np.diag(self.cov_params) ** .5
+        else:
+            # NOTE: this looks like a "hard" problem
+            #  unable to replicate stata's results even with their starting
+            #   values
             # unable to replicate x12 results in stata using their starting
-            # values. x-12 has better likelihood and we can replicate so
-            # use their results
+            #   values. x-12 has better likelihood and we can replicate so
+            #   use their results
             #from arima112_css_results import results
 
             # taken from R using X12-arima values as init params
