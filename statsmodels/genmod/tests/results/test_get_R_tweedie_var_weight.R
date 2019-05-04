@@ -30,11 +30,17 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     cat("None\n")
   } else {
     cat("np.array([")
+    cat("\n    ")
     i <- 1
     for (val in arr) {
       cat(val)
-      if (i %% 3 == 0) {
-        cat(",\n ")
+      if (i == length(arr)) {
+        if (i %% 3 != 1) {
+          cat("\n")
+        }
+      }
+      else if (i %% 3 == 0) {
+        cat(",\n    ")
       }
       else {
         cat(", ")
@@ -44,14 +50,19 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     cat("])")
     if (!is.null(dim(arr))) {
       cat(".reshape((")
+      j <- 1
       for (size in dim(arr)) {
-        cat(sprintf("%s, ", size))
+        cat(sprintf("%s", size))
+        if (j < length(dim(arr))) {
+          cat(", ")
+        }
+        j <- 1 + j
       }
       cat("), order=\"F\")")
     }
   }
   if (!is.null(suffix)) {
-    cat(sprintf("%s \n", suffix))
+    cat(sprintf("%s\n", suffix))
   }
   else {
     cat("\n")
@@ -63,25 +74,25 @@ cat("
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
 ")
 
 out2py <- function(model, name, resid_csv = FALSE){
-  cat("res = dict() \n")
+  cat("\nres = dict()\n")
   pyprint(model$coefficients, prefix = "res['params'] = ")
   pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
-  cat(sprintf("res['deviance'] = %f \n", model$deviance))
+  cat(sprintf("res['deviance'] = %f\n", model$deviance))
   
   ll = logLik(model)
   
   if (is.na(ll)) {
-    cat("res['ll'] = np.nan \n")
+    cat("res['ll'] = np.nan\n")
   } else {
-    cat(sprintf("res['ll'] = %f \n", ll))
+    cat(sprintf("res['ll'] = %f\n", ll))
   }
   
-  cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working'] \n" )
+  cat("res['resids_colnames'] = [\n    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']\n" )
   
   r <- cbind(residuals.glm(model, 'response'),
              residuals.glm(model, 'pearson'),
@@ -90,18 +101,18 @@ out2py <- function(model, name, resid_csv = FALSE){
   
   if (is.character(resid_csv)) {
     write.csv(r, resid_csv, row.names = FALSE)
-    cat(sprintf("csv_path = dir_path + '/%s'\n", resid_csv))
+    cat(sprintf("csv_path = os.path.join(dir_path, '%s')\n", resid_csv))
     cat(sprintf("resids = np.array(pd.read_csv(csv_path))\n"))
     cat(sprintf("res['resids'] = resids\n"))
   } else {
     pyprint(r, "res['resids'] = ")
   }
-  cat(sprintf("%s = Bunch(**res) \n \n", name))
+  cat(sprintf("%s = Bunch(**res)\n", name))
 }
 
 control <- glm.control(epsilon = 1e-25, maxit = 100)
 
-data = read.csv('../statsmodels/datasets/fair/fair.csv')
+data = read.csv('../../../datasets/fair/fair.csv')
 data$weights <- rep(1, length(data$rate_marriage))
 data$weights[seq(1, length(data$rate_marriage), 5)] <- 5
 data$weights[seq(1, length(data$rate_marriage), 13)] <- 3
@@ -114,7 +125,7 @@ model <- glm(affairs ~ 1 + age + yrs_married,
 
 out2py(model, "results_tweedie_aweights_nonrobust", "results_tweedie_aweights_nonrobust.csv")
 
-data <- read.csv('../statsmodels/genmod/tests/results/stata_cancer_glm.csv')
+data <- read.csv('stata_cancer_glm.csv')
 data$weights <- rep(1, length(data$studytime))
 data$weights[seq(1, length(data$studytime), 5)] <- 5
 data$weights[seq(1, length(data$studytime), 13)] <- 3
@@ -128,7 +139,7 @@ model <- glm(studytime ~ 1 + age + drug,
 
 out2py(model, "results_gamma_aweights_nonrobust")
 
-data <- read.csv('../statsmodels/datasets/cpunish/cpunish.csv')
+data <- read.csv('../../../datasets/cpunish/cpunish.csv')
 data$INCOME <- data$INCOME / 1000
 data$weight <- c(1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1)
 
