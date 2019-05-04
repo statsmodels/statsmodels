@@ -20,7 +20,7 @@ import pandas as pd
 from scipy import stats
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-from statsmodels.formula.api import logit, probit, poisson, ols
+from statsmodels.formula.api import logit
 
 print(sm.datasets.fair.SOURCE)
 

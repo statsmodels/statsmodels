@@ -18,7 +18,7 @@ from __future__ import print_function
 from statsmodels.compat import urlopen
 import numpy as np
 np.set_printoptions(precision=4, suppress=True)
-import statsmodels.api as sm
+
 import pandas as pd
 pd.set_option("display.width", 100)
 import matplotlib.pyplot as plt

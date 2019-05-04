@@ -98,7 +98,7 @@ mean_forecast_err(dta.SUNACTIVITY, predict_sunspots)
 
 # ### Simulated ARMA(4,1): Model Identification is Difficult
 
-from statsmodels.tsa.arima_process import arma_generate_sample, ArmaProcess
+from statsmodels.tsa.arima_process import ArmaProcess
 
 np.random.seed(1234)
 # include zero-th lag
