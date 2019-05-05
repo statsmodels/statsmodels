@@ -312,7 +312,7 @@ class SimpleTable(list):
         fmt.update(fmt_dict)
         ncols = max(len(row) for row in self)
         request = fmt.get('colwidths')
-        if request is 0:  # assume no extra space desired (e.g, CSV)
+        if request == 0:  # assume no extra space desired (e.g, CSV)
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
             request = [0] * ncols

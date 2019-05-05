@@ -120,9 +120,9 @@ class Term(object):
         Formula(self) * Formula(other)
         """
 
-        if isinstance(other, Term) and other.name is 'intercept':
+        if isinstance(other, Term) and other.name == 'intercept':
             f = Formula(self, namespace=self.namespace)
-        elif self.name is 'intercept':
+        elif self.name == 'intercept':
             f = Formula(other, namespace=other.namespace)
         else:
             other = Formula(other, namespace=other.namespace)
@@ -252,7 +252,7 @@ class Factor(Term):
 
         """
 
-        if isinstance(other, Term) and other.name is 'intercept':
+        if isinstance(other, Term) and other.name == 'intercept':
             return Formula(self, namespace=self.namespace)
         else:
             return Term.__add__(self, other)
@@ -565,10 +565,10 @@ class Formula(object):
                 selfnames = self.terms[i].names()
                 othernames = other.terms[j].names()
 
-                if self.terms[i].name is 'intercept':
+                if self.terms[i].name == 'intercept':
                     _term = other.terms[j]
                     _term.namespace = other.namespace
-                elif other.terms[j].name is 'intercept':
+                elif other.terms[j].name == 'intercept':
                     _term = self.terms[i]
                     _term.namespace = self.namespace
                 else:

@@ -80,13 +80,13 @@ ax = fig.add_subplot(111)
 plot_opts['violin_fc'] = (0.5, 0.5, 0.5)
 plot_opts['bean_show_mean'] = False
 plot_opts['bean_show_median'] = False
-plot_opts['bean_legend_text'] = 'Income < \$30k'
+plot_opts['bean_legend_text'] = r'Income < \$30k'
 plot_opts['cutoff_val'] = 10
 sm.graphics.beanplot(age_lower_income, ax=ax, labels=labels, side='left',
                      jitter=True, plot_opts=plot_opts)
 plot_opts['violin_fc'] = (0.7, 0.7, 0.7)
 plot_opts['bean_color'] = '#009D91'
-plot_opts['bean_legend_text'] = 'Income > \$50k'
+plot_opts['bean_legend_text'] = r'Income > \$50k'
 sm.graphics.beanplot(age_higher_income, ax=ax, labels=labels, side='right',
                      jitter=True, plot_opts=plot_opts)
 
