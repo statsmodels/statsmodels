@@ -407,13 +407,13 @@ class SVAR(tsbase.TimeSeriesModel):
 
         j = 0
         j_d = 0
-        if len(A_solve[A_mask]) is not 0:
+        if len(A_solve[A_mask]) != 0:
             A_vec = np.ravel(A_mask, order='F')
             for k in range(neqs**2):
                 if A_vec[k] == True:
                     S_B[k,j] = -1
                     j += 1
-        if len(B_solve[B_mask]) is not 0:
+        if len(B_solve[B_mask]) != 0:
             B_vec = np.ravel(B_mask, order='F')
             for k in range(neqs**2):
                 if B_vec[k] == True:

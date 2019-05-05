@@ -166,7 +166,7 @@ class _StataMissingValue(object):
     def __init__(self, offset, value):
         self._value = value
         if isinstance(value, (int, long)):
-            self._str = value-offset is 1 and \
+            self._str = value-offset == 1 and \
                     '.' or ('.' + chr(value-offset+96))
         else:
             self._str = '.'

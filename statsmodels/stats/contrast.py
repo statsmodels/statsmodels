@@ -51,7 +51,7 @@ class ContrastResults(object):
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
             self.dist_args = kwds.get('dist_args', ())
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.pvalue = self.dist.sf(self.statistic, df_denom)
                 self.df_denom = df_denom
             else:
@@ -375,11 +375,11 @@ class WaldTestResults(object):
                 self.df_denom = table['df_denom'].values
 
         else:
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.dist = stats.chi2
                 self.df_constraints = self.dist_args[0]  # assumes tuple
                 # using dist_args[0] is a bit dangerous,
-            elif self.distribution is 'F':
+            elif self.distribution == 'F':
                 self.dist = stats.f
                 self.df_constraints, self.df_denom = self.dist_args
 
