@@ -31,10 +31,12 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         method to use for confidence interval,
         currently available methods :
 
-         - `normal` : asymptotic normal approximation
+         - `normal` : asymptotic normal approximation, or Wald method
+         - `normal_cc` : asymptotic normal approximation with continuity correction (cc)
          - `agresti_coull` : Agresti-Coull interval
-         - `beta` : Clopper-Pearson interval based on Beta distribution
+         - `beta` : Clopper-Pearson interval based on Beta distribution, or Exact method
          - `wilson` : Wilson Score interval
+         - `wilson_cc` : Wilson Score interval with continuity correction
          - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : experimental, inversion of binom_test
 
@@ -68,6 +70,9 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     References
     ----------
     http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
+ 
+    Newcombe R.G., Two-sided confidence intervals for the single proportion:
+        comparison of seven methods, Statistics in Medicine, (1998) 17, 857-872
 
     Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
         Estimation for a Binomial Proportion",
@@ -87,8 +92,17 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     alpha_2 = 0.5 * alpha
 
     if method == 'normal':
-        std_ = np.sqrt(q_ * (1 - q_) / nobs)
-        dist = stats.norm.isf(alpha / 2.) * std_
+        se = np.sqrt(q_ * (1 - q_) / nobs)      #standard error
+        z = stats.norm.isf(alpha_2)             #z score
+        dist = z * se
+        ci_low = q_ - dist
+        ci_upp = q_ + dist
+
+    if method == 'normal_cc':
+        se = np.sqrt(q_ * (1 - q_) / nobs)      #standard error
+        z = stats.norm.isf(alpha_2)             #z score
+        cc = 1. / (2. * nobs);                  #continuity correction
+        dist = z * se + cc
         ci_low = q_ - dist
         ci_upp = q_ + dist
 
@@ -117,7 +131,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             ci_upp = ci_upp if (q_ != 1) else 1
 
     elif method == 'agresti_coull':
-        crit = stats.norm.isf(alpha / 2.)
+        crit = stats.norm.isf(alpha_2)
         nobs_c = nobs + crit**2
         q_c = (count + crit**2 / 2.) / nobs_c
         std_c = np.sqrt(q_c * (1. - q_c) / nobs_c)
@@ -126,7 +140,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         ci_upp = q_c + dist
 
     elif method == 'wilson':
-        crit = stats.norm.isf(alpha / 2.)
+        crit = stats.norm.isf(alpha_2)
         crit2 = crit**2
         denom = 1 + crit2 / nobs
         center = (q_ + crit2 / (2 * nobs)) / denom
@@ -134,6 +148,16 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         dist /= denom
         ci_low = center - dist
         ci_upp = center + dist
+
+    elif method == 'wilson_cc':
+        z = stats.norm.isf(alpha_2)             #z score
+        n1 = 2 * count + z**2
+        n12 = z * np.sqrt(z**2 - 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) + 1))
+        n22 = z * np.sqrt(z**2 + 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) - 1))
+        d= 2 * (nobs + z**2)
+
+        ci_low = ( n1 - 1 - n12) / d
+        ci_upp = ( n1 + 1 + n22) / d
 
     # method adjusted to be more forgiving of misspellings or incorrect option name
     elif method[:4] == 'jeff':
