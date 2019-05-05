@@ -1,0 +1,23 @@
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/templates?view=azure-devops#passing-parameters
+
+trigger:
+- master
+
+
+jobs:
+- template: tools/ci/azure_template.yml
+  parameters:
+    name: Linux
+    vmImage: 'ubuntu-16.04'
+
+# TODO: Enable these; they are currently disabled because
+#  test_lme.TestMixedLM.test_compare_numdiff fails on OSX
+# - template: tools/ci/azure_template.yml
+#  parameters:
+#    name: macOS
+#    vmImage: 'macOS-10.13'
+
+- template: tools/ci/azure_template.yml
+  parameters:
+    name: Windows
+    vmImage: 'vs2017-win2016'
