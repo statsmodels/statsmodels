@@ -11,10 +11,11 @@ from statsmodels.regression.mixed_linear_model import (
     MixedLM, MixedLMParams, _smw_solver, _smw_logdet)
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
+
 from statsmodels.base import _penalties as penalties
 import statsmodels.tools.numdiff as nd
 
-from . import lme_r_results
+from .results import lme_r_results
 
 # TODO: add tests with unequal group sizes
 

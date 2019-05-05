@@ -20,15 +20,15 @@ n_max = 5
 dsix = 0
 
 # Number of random effects
-for pr in 1,2:
+for pr in [1, 2]:
 
     re_sd = np.linspace(-0.5, 1.5, pr)
 
     # Number of fixed effects
-    for pf in 1,2,3:
+    for pf in [1, 2, 3]:
 
         # Error standard deviation
-        for sig in 0.5,2:
+        for sig in [0.5, 2]:
 
             params = np.linspace(-1, 1, pf)
 
@@ -43,7 +43,7 @@ for pr in 1,2:
                 x_re = np.zeros((n, pr))
                 u = np.linspace(-1, 1, n)
                 for j in range(pr):
-                    x_re[:,j] = u**j
+                    x_re[:, j] = u**j
 
                 re = np.random.normal(size=pr) * re_sd
 
@@ -59,18 +59,17 @@ for pr in 1,2:
             exog_re = np.concatenate(exog_re, axis=0)
             groups = np.concatenate(groups, axis=0)
 
-            data = np.concatenate((groups[:,None], endog[:,None],
+            data = np.concatenate((groups[:, None], endog[:, None],
                                    exog_fe, exog_re), axis=1)
 
-            header = ["groups,endog",] +\
-                     ["exog_fe_%d" % k for k in range(pf)] +\
-                     ["exog_re_%d" % k for k in range(pr)]
+            header = (["groups,endog"] +
+                      ["exog_fe_%d" % k for k in range(pf)] +
+                      ["exog_re_%d" % k for k in range(pr)])
             header = ",".join(header)
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-            fname = os.path.join(cur_dir, "results",
-                                 "lme%02d.csv" % dsix)
+            fname = os.path.join(cur_dir, "lme%02d.csv" % dsix)
             np.savetxt(fname, data, fmt="%.3f", header=header,
                        delimiter=",", comments="")
             dsix += 1

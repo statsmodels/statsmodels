@@ -3,7 +3,7 @@ library(R2nparray)
 
 # Run the glmnet lasso (elastic net) on all the test data sets
 
-data = read.csv("results/lasso_data.csv", header=FALSE)
+data = read.csv("lasso_data.csv", header=FALSE)
 
 ik = 0
 rslt = list()
