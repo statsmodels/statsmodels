@@ -69,8 +69,8 @@ def test_eval_measures():
                  np.array([ 2.,  2.,  2.,  2.]))
 
 def test_ic():
-    #test information criteria
-    #consistency check
+    # test information criteria
+    # consistency check
 
     ics = [aic, aicc, bic, hqic]
     ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
@@ -87,18 +87,11 @@ def test_ic():
                             ic_sig(2, 10, 2),
                             decimal=14)
 
-
-    #examples penalty directly from formula
+    # examples penalty directly from formula
     n, k = 10, 2
     assert_almost_equal(aic(0, 10, 2), 2*k, decimal=14)
-    #next see Wikipedia
+    # next see Wikipedia
     assert_almost_equal(aicc(0, 10, 2),
                         aic(0, n, k) + 2*k*(k+1.)/(n-k-1.), decimal=14)
     assert_almost_equal(bic(0, 10, 2), np.log(n)*k, decimal=14)
     assert_almost_equal(hqic(0, 10, 2), 2*np.log(np.log(n))*k, decimal=14)
-
-
-
-if __name__ == '__main__':
-    test_eval_measures()
-    test_ic()

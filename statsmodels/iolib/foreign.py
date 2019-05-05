@@ -1183,8 +1183,3 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
         for row in X:
             fh.write(format % tuple(row) + '\n')
-
-if __name__ == "__main__":
-    import os
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')

@@ -205,8 +205,3 @@ class ExpandedNormal(rv_continuous):
                 r = sum(k for (m, k) in p)
                 coef[s + 1 + 2*r] += term
         return coef, mu, sigma
-
-
-if __name__ == "__main__":
-    cum =[1, 1, 1, 1]
-    en = ExpandedNormal(cum)
