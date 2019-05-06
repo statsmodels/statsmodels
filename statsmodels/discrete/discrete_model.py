@@ -421,11 +421,28 @@ class DiscreteModel(base.LikelihoodModel):
         raise NotImplementedError
 
     def _derivative_exog(self, params, exog=None, dummy_idx=None,
-            count_idx=None):
+                         count_idx=None):
         """
         This should implement the derivative of the non-linear function
         """
         raise NotImplementedError
+
+    def _derivative_exog_helper(self, margeff, params, exog, dummy_idx,
+                                count_idx, transform):
+        """
+        Helper for _derivative_exog to wrap results appropriately
+        """
+        from .discrete_margins import _get_count_effects, _get_dummy_effects
+
+        if count_idx is not None:
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                                         self, params)
+        if dummy_idx is not None:
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                                         self, params)
+
+        return margeff
+
 
 class BinaryModel(DiscreteModel):
 
@@ -499,7 +516,7 @@ class BinaryModel(DiscreteModel):
         return dF
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -509,27 +526,22 @@ class BinaryModel(DiscreteModel):
         Not all of these make sense in the presence of discrete regressors,
         but checks are done in the results in get_margeff.
         """
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        # Note: this form should be appropriate for
+        #   group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if exog is None:
             exog = self.exog
-        margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
-                                                          params[None,:])
+
+        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
+                         params[None, :])
+
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+            margeff /= self.predict(params, exog)[:, None]
+
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
+
 
 class MultinomialModel(BinaryModel):
 
@@ -685,7 +697,7 @@ class MultinomialModel(BinaryModel):
         return dFdX
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -705,38 +717,38 @@ class MultinomialModel(BinaryModel):
         margeff.reshape(nobs, K, J, order='F).mean(0) and the marginal effects
         for choice J are in column J
         """
-        J = int(self.J) # number of alternative choices
-        K = int(self.K) # number of variables
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        J = int(self.J)  # number of alternative choices
+        K = int(self.K)  # number of variables
+        # Note: this form should be appropriate for
+        #   group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if exog is None:
             exog = self.exog
-        if params.ndim == 1: # will get flatted from approx_fprime
+        if params.ndim == 1:  # will get flatted from approx_fprime
             params = params.reshape(K, J-1, order='F')
-        zeroparams = np.c_[np.zeros(K), params] # add base in
+
+        zeroparams = np.c_[np.zeros(K), params]  # add base in
 
         cdf = self.cdf(np.dot(exog, params))
-        margeff = np.array([cdf[:,[j]]* (zeroparams[:,j]-np.array([cdf[:,[i]]*
-            zeroparams[:,i] for i in range(int(J))]).sum(0))
-                          for j in range(J)])
-        margeff = np.transpose(margeff, (1,2,0))
+
+        # TODO: meaningful interpretation for `iterm`?
+        iterm = np.array([cdf[:, [i]] * zeroparams[:, i]
+                          for i in range(int(J))]).sum(0)
+
+        margeff = np.array([cdf[:, [j]] * (zeroparams[:, j] - iterm)
+                            for j in range(J)])
+
         # swap the axes to make sure margeff are in order nobs, K, J
+        margeff = np.transpose(margeff, (1, 2, 0))
+
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None,:]
 
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
+        margeff = self._derivative_exog_helper(margeff, params, exog,
+                                               dummy_idx, count_idx, transform)
         return margeff.reshape(len(exog), -1, order='F')
+
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
@@ -830,7 +842,7 @@ class CountModel(DiscreteModel):
         return dF
 
     def _derivative_exog(self, params, exog=None, transform="dydx",
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects. These are the marginal effects
         d F(XB) / dX
@@ -853,17 +865,8 @@ class CountModel(DiscreteModel):
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None]
 
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
