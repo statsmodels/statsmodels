@@ -136,36 +136,35 @@ class TestDataFrames(TestArrays):
         # this makes sure what the wrappers need work but not the wrapped
         # results themselves
         ptesting.assert_series_equal(data.wrap_output(self.col_input,
-                                                  'columns'),
-                                self.col_result)
+                                                      'columns'),
+                                     self.col_result)
         ptesting.assert_series_equal(data.wrap_output(self.row_input, 'rows'),
-                                self.row_result)
+                                     self.row_result)
         ptesting.assert_frame_equal(data.wrap_output(self.cov_input, 'cov'),
-                                self.cov_result)
+                                    self.cov_result)
+
 
 class TestDataFramesWithMultiIndex(TestDataFrames):
     @classmethod
     def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
-        exog = pandas.DataFrame(np.random.random((10,2)),
-                                 columns=pandas.MultiIndex.from_product([['x'], ['1', '2']]))
-        exog_flattened_idx = pandas.Index(['const', 'x.1', 'x.2'])
+        mi = pandas.MultiIndex.from_product([['x'], ['1', '2']])
+        exog = pandas.DataFrame(np.random.random((10, 2)), columns=mi)
+        exog_flattened_idx = pandas.Index(['const', 'x_1', 'x_2'])
         exog.insert(0, 'const', 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
         cls.col_input = np.random.random(nvars)
-        cls.col_result = pandas.Series(cls.col_input,
-                                          index=exog_flattened_idx)
+        cls.col_result = pandas.Series(cls.col_input, index=exog_flattened_idx)
         cls.row_input = np.random.random(nrows)
-        cls.row_result = pandas.Series(cls.row_input,
-                                          index=exog.index)
+        cls.row_result = pandas.Series(cls.row_input, index=exog.index)
         cls.cov_input = np.random.random((nvars, nvars))
         cls.cov_result = pandas.DataFrame(cls.cov_input,
-                                           index = exog_flattened_idx,
-                                           columns = exog_flattened_idx)
-        cls.xnames = ['const', 'x.1', 'x.2']
+                                          index=exog_flattened_idx,
+                                          columns=exog_flattened_idx)
+        cls.xnames = ['const', 'x_1', 'x_2']
         cls.ynames = 'y_1'
         cls.row_labels = cls.exog.index
 
