@@ -22,7 +22,8 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 from .results import results_macro_ols_robust as res
 from .results import results_grunfeld_ols_robust_cluster as res2
-#test_hac_simple():
+# TODO: implement test_hac_simple
+
 
 class CheckOLSRobust(object):
 
@@ -182,15 +183,15 @@ class CheckOLSRobustNewMixin(object):
         assert_allclose(self.cov_robust, self.cov_robust2, rtol=rtol)
         assert_allclose(self.bse_robust, self.bse_robust2, rtol=rtol)
 
-
     def test_fvalue(self):
         if not getattr(self, 'skip_f', False):
             rtol = getattr(self, 'rtol', 1e-10)
             assert_allclose(self.res1.fvalue, self.res2.F, rtol=rtol)
             if hasattr(self.res2, 'Fp'):
-                #only available with ivreg2
+                # only available with ivreg2
                 assert_allclose(self.res1.f_pvalue, self.res2.Fp, rtol=rtol)
-
+        else:
+            raise pytest.skip("TODO: document why this test is skipped")
 
     def test_confint(self):
         rtol = getattr(self, 'rtol', 1e-10)
@@ -335,14 +336,14 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         self.small = False
         self.res2 = res.results_ivhc0_large
 
-
-    # TODO: skipping next two for now, not refactored yet for `large`
+    @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_fvalue(self):
-        pass
+        super(TestOLSRobust2LargeNew, self).test_fvalue()
 
-
+    @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_confint(self):
-        pass
+        super(TestOLSRobust2LargeNew, self).test_confint()
+
 
 #######################################################
 #    cluster robust standard errors
@@ -499,9 +500,9 @@ class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtol = 1e-6
         self.rtolh = 1e-10
 
-    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
+    @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
     def test_f_value(self):
-        pass
+        super(TestOLSRobustCluster2Large, self).test_fvalue()
 
 
 class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
@@ -530,10 +531,9 @@ class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixi
         self.rtol = 1e-6
         self.rtolh = 1e-10
 
-    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
-    def t_est_fvalue(self):
-        pass
-
+    @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
+    def test_fvalue(self):
+        super(TestOLSRobustCluster2LargeFit, self).test_fvalue()
 
 
 class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
