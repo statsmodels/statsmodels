@@ -9,9 +9,10 @@ from statsmodels.regression.linear_model import OLS
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
 
+
 class TestSimpleTable(object):
-    def test_SimpleTable_1(self):
-        # Basic test, test_SimpleTable_1
+    def test_simple_table_1(self):
+        # Basic test, test_simple_table_1
         desired = '''
 =====================
       header1 header2
@@ -28,7 +29,7 @@ stub2 1.95038 2.65765
         actual = '\n%s\n' % actual.as_text()
         assert_equal(desired, str(actual))
 
-    def test_SimpleTable_2(self):
+    def test_simple_table_2(self):
         #  Test SimpleTable.extend_right()
         desired = '''
 =============================================================
@@ -50,7 +51,7 @@ stub R2 C1  90.30312  90.73999 stub R2 C2  40.95038  40.65765
         actual = '\n%s\n' % actual1.as_text()
         assert_equal(desired, str(actual))
 
-    def test_SimpleTable_3(self):
+    def test_simple_table_3(self):
         # Test SimpleTable.extend() as in extend down
         desired = '''
 ==============================
@@ -76,8 +77,8 @@ stub R2 C2  40.95038  40.65765
         actual = '\n%s\n' % actual1.as_text()
         assert_equal(desired, str(actual))
 
-    def test_SimpleTable_4(self):
-        # Basic test, test_SimpleTable_4 test uses custom txt_fmt
+    def test_simple_table_4(self):
+        # Basic test, test_simple_table_4 test uses custom txt_fmt
         txt_fmt1 = dict(data_fmts = ['%3.2f', '%d'],
                         empty_cell = ' ',
                         colwidths = 1,
@@ -121,6 +122,7 @@ stub R2 C2  40.95038  40.65765
             #print(actual)
             #print(desired)
             assert_equal(actual, desired)
+
         def test_ltx_fmt1(self):
             # Limited test of custom ltx_fmt
             desired = r"""
@@ -145,6 +147,7 @@ stub R2 C2  40.95038  40.65765
 """ % desired[1:-1]
             actual_centered = '\n%s\n' % tbl.as_latex_tabular()
             assert_equal(actual_centered, desired_centered)
+
         def test_html_fmt1(self):
             # Limited test of custom html_fmt
             desired = """
@@ -165,8 +168,9 @@ stub R2 C2  40.95038  40.65765
         test_txt_fmt1(self)
         test_ltx_fmt1(self)
         test_html_fmt1(self)
-    def test_SimpleTable_special_chars(self):
-    # Simple table with characters: (%, >, |, _, $, &, #)
+
+    def test_simple_table_special_chars(self):
+        # Simple table with characters: (%, >, |, _, $, &, #)
         cell0c_data = 22
         cell1c_data = 1053
         row0c_data = [cell0c_data, cell1c_data]
@@ -190,31 +194,32 @@ stub R2 C2  40.95038  40.65765
             actual = '\n%s\n' % tbl_c.as_latex_tabular(center=False)
             assert_equal(actual, desired)
         test_ltx_special_chars(self)
-    def test_regression_with_tuples(self):
-        i = pandas.Series( [1,2,3,4]*10 , name="i")
-        y = pandas.Series( [1,2,3,4,5]*8, name="y")
-        x = pandas.Series( [1,2,3,4,5,6,7,8]*5, name="x")
 
-        df = pandas.DataFrame( index=i.index )
-        df = df.join( i )
-        endo = df.join( y )
-        exo = df.join( x )
+    def test_regression_with_tuples(self):
+        i = pandas.Series([1, 2, 3, 4] * 10, name="i")
+        y = pandas.Series([1, 2, 3, 4, 5] * 8, name="y")
+        x = pandas.Series([1, 2, 3, 4, 5, 6, 7, 8] * 5, name="x")
+
+        df = pandas.DataFrame(index=i.index)
+        df = df.join(i)
+        endo = df.join(y)
+        exo = df.join(x)
         endo_groups = endo.groupby("i")
         exo_groups = exo.groupby("i")
-        exo_Df = exo_groups.agg( [np.sum, np.max] )
-        endo_Df = endo_groups.agg( [np.sum, np.max] )
-        reg = OLS(exo_Df[[("x", "sum")]],endo_Df).fit()
+        exo_df = exo_groups.agg([np.sum, np.max])
+        endo_df = endo_groups.agg([np.sum, np.max])
+        reg = OLS(exo_df[[("x", "sum")]], endo_df).fit()
         interesting_lines = []
         import warnings
         with warnings.catch_warnings():
             # Catch ominormal warning, not interesting here
             warnings.simplefilter("ignore")
-            for line in str( reg.summary() ).splitlines():
-                if "('" in line:
-                    interesting_lines.append( line[:38] )
+            for line in str(reg.summary()).splitlines():
+                if "_" in line:
+                    interesting_lines.append(line[:38])
 
-        desired = ["Dep. Variable:           ('x', 'sum') ",
-                   "('y', 'sum')      1.4595      0.209   ",
-                   "('y', 'amax')     0.2432      0.035   "]
+        desired = ["Dep. Variable:                  x_sum ",
+                   "y_sum          1.4595      0.209      ",
+                   "y_amax         0.2432      0.035      "]
 
-        assert_equal(sorted(desired), sorted(interesting_lines)  )
+        assert_equal(sorted(desired), sorted(interesting_lines))

@@ -3,10 +3,12 @@ Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+
 import numpy as np
-from pandas import DataFrame, Series, isnull
-from statsmodels.tools.decorators import cache_readonly, cache_writable
+from pandas import DataFrame, Series, isnull, MultiIndex
+
 import statsmodels.tools.data as data_util
+from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 
@@ -365,7 +367,12 @@ class ModelData(object):
 
     def _get_names(self, arr):
         if isinstance(arr, DataFrame):
-            return list(arr.columns)
+            if isinstance(arr.columns, MultiIndex):
+                # Flatten MultiIndexes into "simple" column names
+                return ['_'.join((level for level in c if level))
+                        for c in arr.columns]
+            else:
+                return list(arr.columns)
         elif isinstance(arr, Series):
             if arr.name:
                 return [arr.name]
