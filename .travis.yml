@@ -84,10 +84,6 @@ matrix:
         - PANDAS=0.22
         - MATPLOTLIB=2.0
         - LINT=true
-    # Standard pip install
-    - python: 3.6
-      env:
-        - BUILD_INIT=tools/ci/travis_pip.sh
     # Latest pre-release packages
     - python: 3.7
       env:
