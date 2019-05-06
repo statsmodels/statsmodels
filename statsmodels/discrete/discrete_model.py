@@ -427,8 +427,8 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _wrap_derivative_exog(self, margeff, params, exog, dummy_idx,
-                              count_idx, transform):
+    def _derivative_exog_helper(self, margeff, params, exog, dummy_idx,
+                                count_idx, transform):
         """
         Helper for _derivative_exog to wrap results appropriately
         """
@@ -539,8 +539,8 @@ class BinaryModel(DiscreteModel):
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:, None]
 
-        return self._wrap_derivative_exog(margeff, params, exog,
-                                          dummy_idx, count_idx, transform)
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
 
 
 class MultinomialModel(BinaryModel):
@@ -745,8 +745,8 @@ class MultinomialModel(BinaryModel):
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None,:]
 
-        margeff = self._wrap_derivative_exog(margeff, params, exog,
-                                             dummy_idx, count_idx, transform)
+        margeff = self._derivative_exog_helper(margeff, params, exog,
+                                               dummy_idx, count_idx, transform)
         return margeff.reshape(len(exog), -1, order='F')
 
 
@@ -865,8 +865,8 @@ class CountModel(DiscreteModel):
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None]
 
-        return self._wrap_derivative_exog(margeff, params, exog,
-                                          dummy_idx, count_idx, transform)
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
