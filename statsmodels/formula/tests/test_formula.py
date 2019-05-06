@@ -1,4 +1,4 @@
-from statsmodels.compat.python import iteritems, StringIO
+from statsmodels.compat.python import iteritems, StringIO, PY3
 import warnings
 
 from statsmodels.formula.api import ols
@@ -10,6 +10,8 @@ from statsmodels.datasets import cpunish
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
 import numpy as np
+import pandas as pd
+import patsy
 import pytest
 
 
@@ -210,3 +212,14 @@ def test_patsy_missing_data():
         assert 'nan values have been dropped' in repr(w[-1].message)
     # Frist record will be dropped in both cases
     assert_equal(res.fittedvalues, res2)
+
+
+def test_predict_nondataframe():
+    df = pd.DataFrame([[3, 0.030], [10, 0.060], [20, 0.120]],
+                      columns=['BSA', 'Absorbance'])
+
+    model = ols('Absorbance ~ BSA', data=df)
+    fit = model.fit()
+    error = patsy.PatsyError if PY3 else TypeError
+    with pytest.raises(error):
+        fit.predict([0.25])
