@@ -353,11 +353,12 @@ def test_tukeyhsd():
     pairs, reject, meandiffs, std_pairs, confint, q_crit = myres[:6]
     assert_almost_equal(meandiffs, res[:, 0], decimal=5)
     assert_almost_equal(confint, res[:, 1:3], decimal=2)
-    assert_equal(reject, res[:, 3]<0.05)
+    assert_equal(reject, res[:, 3] < 0.05)
 
     # check p-values (divergence of high values is expected)
     small_pvals_idx = [2, 5, 7, 9]
-    assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3], rtol=1e-3)
+    assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
+                    rtol=1e-3)
 
 
 def test_local_fdr():
