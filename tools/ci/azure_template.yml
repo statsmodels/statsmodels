@@ -43,6 +43,7 @@ jobs:
       python -m pip install --upgrade pip
       pip install -r requirements.txt
       pip install -r requirements-dev.txt
+      pip install pytest-xdist
     displayName: 'Install dependencies'
 
   - script: |
@@ -50,7 +51,7 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - script: |
-      pytest statsmodels --junitxml=junit/test-results.xml --skip-examples
+      pytest statsmodels --junitxml=junit/test-results.xml --skip-examples -n 2
     displayName: 'pytest'
 
   - task: PublishTestResults@2
