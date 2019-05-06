@@ -8,11 +8,12 @@ Author: Josef Perktold
 from statsmodels.sandbox.stats.multicomp import (  # noqa:F401
     tukeyhsd, MultiComparison)
 
+__all__ = ['tukeyhsd', 'MultiComparison']
+
 
 def pairwise_tukeyhsd(endog, groups, alpha=0.05):
-    '''calculate all pairwise comparisons with TukeyHSD confidence intervals
-
-    this is just a wrapper around tukeyhsd method of MultiComparison
+    """
+    Calculate all pairwise comparisons with TukeyHSD confidence intervals
 
     Parameters
     ----------
@@ -27,14 +28,17 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
     -------
     results : TukeyHSDResults instance
         A results class containing relevant data and some post-hoc
-        calculations
+        calculations, including adjusted p-value
+
+    Notes
+    -----
+    This is just a wrapper around tukeyhsd method of MultiComparison
 
     See Also
     --------
     MultiComparison
     tukeyhsd
     statsmodels.sandbox.stats.multicomp.TukeyHSDResults
-
-    '''
+    """
 
     return MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
