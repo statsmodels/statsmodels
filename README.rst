@@ -1,4 +1,4 @@
-|Travis Build Status| |Appveyor Build Status| |Coveralls Coverage|
+|Travis Build Status| |Azure CI Build Status| |Appveyor Build Status| |Coveralls Coverage|
 
 About Statsmodels
 =================
@@ -163,6 +163,8 @@ https://github.com/statsmodels/statsmodels/issues
 
 .. |Travis Build Status| image:: https://travis-ci.org/statsmodels/statsmodels.svg?branch=master
    :target: https://travis-ci.org/statsmodels/statsmodels
+.. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branch=master
+   :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branch=master
 .. |Appveyor Build Status| image:: https://ci.appveyor.com/api/projects/status/gx18sd2wc63mfcuc/branch/master?svg=true
    :target: https://ci.appveyor.com/project/josef-pkt/statsmodels/branch/master
 .. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=master
