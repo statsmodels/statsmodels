@@ -1,8 +1,5 @@
-from collections import namedtuple
 import numpy as np
 from statsmodels.tools.tools import Bunch
-
-_MinimalWLSModel = namedtuple('_MinimalWLSModel', ['weights'])
 
 
 class _MinimalWLS(object):
@@ -22,25 +19,37 @@ class _MinimalWLS(object):
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
         is 1 and WLS reults are the same as OLS.
+    check_endog : bool, optional
+        Flag indicating whether to check for inf/nan in endog.
+        If True and any are found, ValueError is raised.
+    check_weights : bool, optional
+        Flag indicating whether to check for inf/nan in weights.
+        If True and any are found, ValueError is raised.
 
     Notes
     -----
-    Need resid, scale, fittedvalues, model.weights!
-        history['scale'].append(tmp_results.scale)
-        if conv == 'dev':
-            history['deviance'].append(self.deviance(tmp_results))
-        elif conv == 'sresid':
-            history['sresid'].append(tmp_results.resid/tmp_results.scale)
-        elif conv == 'weights':
-            history['weights'].append(tmp_results.model.weights)
-    Does not perform and checks on the input data
+    Provides only resid, scale, fittedvalues, model.weights which are used by
+    methods that iteratively apply WLS.
+
+    Does not perform any checks on the input data for type or shape
+    compatibility
     """
 
-    def __init__(self, endog, exog, weights=1.0):
+    msg = 'NaN, inf or invalid value detected in {0}, estimation infeasible.'
+
+    def __init__(self, endog, exog, weights=1.0, check_endog=False,
+                 check_weights=False):
         self.endog = endog
         self.exog = exog
         self.weights = weights
         w_half = np.sqrt(weights)
+        if check_weights:
+            if not np.all(np.isfinite(w_half)):
+                raise ValueError(self.msg.format('weights'))
+
+        if check_endog:
+            if not np.all(np.isfinite(endog)):
+                raise ValueError(self.msg.format('endog'))
 
         self.wendog = w_half * endog
         if np.isscalar(weights):
