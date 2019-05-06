@@ -1,4 +1,7 @@
+from statsmodels.compat.python import HTTPError
+
 import os
+
 import numpy as np
 from numpy.testing import assert_, assert_array_equal
 import pytest
@@ -38,7 +41,10 @@ def test_webuse():
     internet_available = check_internet(base_gh)
     if not internet_available:
         pytest.skip('Unable to retrieve file - skipping test')
-    res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
+    try:
+        res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
+    except HTTPError:
+        pytest.skip('Failed with HTTP Error, these are random')
     assert_array_equal(res1, res2)
 
 
@@ -51,6 +57,9 @@ def test_webuse_pandas():
     internet_available = check_internet(base_gh)
     if not internet_available:
         pytest.skip('Unable to retrieve file - skipping test')
-    res1 = webuse('macrodata', baseurl=base_gh)
+    try:
+        res1 = webuse('macrodata', baseurl=base_gh)
+    except HTTPError:
+        pytest.skip('Failed with HTTP Error, these are random')
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
