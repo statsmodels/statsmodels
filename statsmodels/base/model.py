@@ -993,7 +993,15 @@ class Results(object):
                     exog = pd.DataFrame(exog).T
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
-            exog = dmatrix(design_info, exog, return_type="dataframe")
+            try:
+                exog = dmatrix(design_info, exog, return_type="dataframe")
+            except Exception as exc:
+                msg = ('predict requires that you use a DataFrame when '
+                       'predicting from a model\nthat was created using the '
+                       'formula api.'
+                       '\n\nThe original error message returned by patsy is:\n'
+                       '{0}'.format(str(str(exc))))
+                raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
                 import warnings
                 if exog_index is None:
