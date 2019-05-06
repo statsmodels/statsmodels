@@ -12,6 +12,7 @@ Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.python import range
+from statsmodels.compat.platform import PLATFORM_OSX
 
 import numpy as np
 import pandas as pd
@@ -112,7 +113,13 @@ class CheckGenericMixin(object):
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
             # atol discussion at gh-5158
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10, atol=1e-12)
+            rtol = 1e-10
+            atol = 1e-12
+            if PLATFORM_OSX:
+                # GH 5628
+                rtol = 1e-8
+                atol = 1e-10
+            assert_allclose(res1.resid, res2.resid, rtol=rtol, atol=atol)
 
         ex = self.results.model.exog.mean(0)
         predicted1 = res1.predict(ex, **self.predict_kwds)

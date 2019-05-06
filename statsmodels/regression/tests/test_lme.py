@@ -1,3 +1,5 @@
+from statsmodels.compat.platform import PLATFORM_OSX
+
 import os
 import csv
 import warnings
@@ -86,6 +88,8 @@ def loglike_function(model, profile_fe, has_fe):
 class TestMixedLM(object):
 
     # Test analytic scores and Hessian using numeric differentiation
+    @pytest.mark.skipif(PLATFORM_OSX, reason='known to fail on OSX due to '
+                                             'numerical differences')
     @pytest.mark.slow
     @pytest.mark.parametrize("use_sqrt", [False, True])
     @pytest.mark.parametrize("reml", [False, True])
