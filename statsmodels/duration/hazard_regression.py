@@ -1570,8 +1570,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -1639,6 +1638,7 @@ class PHRegResults(base.LikelihoodModelResults):
             smry.add_text("Standard errors do not account for the regularization")
 
         return smry
+
 
 class rv_discrete_float(object):
     """

@@ -546,7 +546,7 @@ class DiscreteMargins(object):
         exog_names = model.exog_names[:] # copy
         smry = Summary()
 
-        # sigh, we really need to hold on to this in _data...
+        # TODO: sigh, we really need to hold on to this in _data...
         _, const_idx = _get_const_index(model.exog)
         if const_idx is not None:
             exog_names.pop(const_idx[0])
@@ -564,7 +564,7 @@ class DiscreteMargins(object):
         smry.add_table_2cols(self, gleft=top_left, gright=[],
                 yname=yname, xname=exog_names, title=title)
 
-        #NOTE: add_table_params is not general enough yet for margeff
+        # NOTE: add_table_params is not general enough yet for margeff
         # could use a refactor with getattr instead of hard-coded params
         # tvalues etc.
         table = []
@@ -585,7 +585,6 @@ class DiscreteMargins(object):
                 header = ['', _transform_names[method], 'std err', 'z',
                         'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
                 tble.insert_header_row(0, header)
-                #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 table.append(tble)
 
             table = table_extend(table, keep_headers=True)

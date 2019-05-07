@@ -3595,9 +3595,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
@@ -3605,7 +3603,6 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                     ]
 
@@ -3625,9 +3622,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         yname, yname_list = self._get_endog_name(yname, yname_list)
+
         # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
+
         # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
                               use_t=self.use_t)
@@ -3636,10 +3635,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             smry.add_extra_txt(['Model has been estimated subject to linear '
                                 'equality constraints.'])
 
-        #diagnostic table not used yet
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
@@ -3849,19 +3844,18 @@ class BinaryResults(DiscreteResults):
         bins = np.array([0, 0.5, 1])
         return np.histogram2d(actual, pred, bins=bins)[0]
 
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
-                     yname_list)
+                                                  yname_list)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
         predclose_sum = (absprederror < 1e-4).sum()
         predclose_frac = predclose_sum / len(fittedvalues)
 
-        #add warnings/notes
+        # add warnings/notes
         etext = []
-        if predclose_sum == len(fittedvalues): #nobs?
+        if predclose_sum == len(fittedvalues):  # TODO: nobs?
             wstr = "Complete Separation: The results show that there is"
             wstr += "complete separation.\n"
             wstr += "In this case the Maximum Likelihood Estimator does "
@@ -4122,9 +4116,7 @@ class MultinomialResults(DiscreteResults):
 
         See Also
         --------
-        statsmodels.iolib.summary2.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -4134,14 +4126,18 @@ class MultinomialResults(DiscreteResults):
         eqn = self.params.shape[1]
         confint = self.conf_int(alpha)
         for i in range(eqn):
-            coefs = summary2.summary_params((self, self.params[:,i],
-                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i],
-                    confint[i]), alpha=alpha)
+            coefs = summary2.summary_params((self, self.params[:, i],
+                                             self.bse[:, i],
+                                             self.tvalues[:, i],
+                                             self.pvalues[:, i],
+                                             confint[i]),
+                                            alpha=alpha)
             # Header must show value of endog
             level_str =  self.model.endog_names + ' = ' + str(i)
             coefs[level_str] = coefs.index
-            coefs = coefs.iloc[:,[-1,0,1,2,3,4,5]]
-            smry.add_df(coefs, index=False, header=True, float_format=float_format)
+            coefs = coefs.iloc[:, [-1, 0, 1, 2, 3, 4, 5]]
+            smry.add_df(coefs, index=False, header=True,
+                        float_format=float_format)
             smry.add_title(results=self)
         return smry
 

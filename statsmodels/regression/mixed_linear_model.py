@@ -2514,8 +2514,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -2525,14 +2524,17 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Model:"] = "MixedLM"
         if yname is None:
             yname = self.model.endog_names
+
         param_names = self.model.data.param_names[:]
         k_fe_params = len(self.fe_params)
         k_re_params = len(param_names) - len(self.fe_params)
+
         if xname_fe is not None:
             if len(xname_fe) != k_fe_params:
                 msg = "xname_fe should be a list of length %d" % k_fe_params
                 raise ValueError(msg)
             param_names[:k_fe_params] = xname_fe
+
         if xname_re is not None:
             if len(xname_re) != k_re_params:
                 msg = "xname_re should be a list of length %d" % k_re_params
