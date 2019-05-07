@@ -2432,3 +2432,17 @@ def test_endog_int():
     resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
     assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
     assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)
+
+
+def test_multidim_endog(reset_randomstate):
+    y = np.random.randn(1000, 2)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))
+
+    y = np.random.randn(1000, 1, 2)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))
+
+    y = np.random.randn(1000, 1, 1)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))

@@ -430,6 +430,10 @@ class ARMA(tsbase.TimeSeriesModel):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
         super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
+        # GH 2575
+        _endog = endog if hasattr(endog, 'ndim') else np.asarray(endog)
+        if (_endog.ndim == 2 and _endog.shape[1] != 1) or _endog.ndim > 2:
+            raise ValueError('endog must be 1-d or 2-d with 1 column')
         exog = self.data.exog  # get it after it's gone through processing
         _check_estimable(len(self.endog), sum(order))
         self.k_ar = k_ar = order[0]
