@@ -7,7 +7,7 @@ import sys
 filename = sys.argv[1]
 try:
     static_path = sys.argv[2]
-except:
+except IndexError:
     static_path = '_static'
 doc = open(filename, encoding='utf8').read()
 
@@ -26,7 +26,7 @@ pre = '''<div class="toctree-wrapper compound">
 post = '''<div class="toctree-wrapper compound">
 <a onclick="expandTree('toctree#')" href="javascript:void(0);">Expand all. </a>
 <a onclick="collapseTree('toctree#')" href="javascript:void(0);">Collapse all.</a>
-<ul class="mktree" id="toctree#">'''
+<ul class="mktree" id="toctree#">'''  # noqa:E501
 toc_n = doc.count('toctree-wrapper')
 for i in range(toc_n):
     post_n = re.sub('#', str(i), post)
