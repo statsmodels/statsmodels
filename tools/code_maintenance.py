@@ -7,7 +7,7 @@ import os
 # This is a function, not a test case, because it has to be run from inside
 # the source tree to work well.
 
-mod_strs = ['IPython', 'pylab', 'matplotlib', 'scipy','Pdb']
+mod_strs = ['IPython', 'pylab', 'matplotlib', 'scipy', 'Pdb']
 
 dep_files = {}
 for mod_str in mod_strs:
@@ -19,7 +19,7 @@ def remove_whitespace(fname):
     fd = open(fname, mode='U')  # open in universal newline mode
     lines = []
     for line in fd.readlines():
-        lines.append( line.rstrip() )
+        lines.append(line.rstrip())
     fd.close()
 
     fd = open(fname, mode='w')
@@ -27,7 +27,6 @@ def remove_whitespace(fname):
     for line in lines:
         fd.write(line+'\n')
     fd.close()
-
 
 
 def find_whitespace(fname):
@@ -45,7 +44,7 @@ print_only = True
 # = Strip whitespace =
 # ====================
 for dirname, dirs, files in os.walk('.'):
-    if dirname[1:].find('.')==-1:
+    if dirname[1:].find('.') == -1:
         for fname in files:
             if (fname[-2:] in ['c', 'f'] or
                     fname[-3:] == '.py' or
