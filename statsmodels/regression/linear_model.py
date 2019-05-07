@@ -2252,12 +2252,10 @@ class RegressionResults(base.LikelihoodModelResults):
         except in the case of cov_type `HCx`
         """
         import statsmodels.stats.sandwich_covariance as sw
+        from statsmodels.base.covtype import normalize_cov_type, descriptions
 
-        # normalize names
-        if cov_type == 'nw-panel':
-            cov_type = 'hac-panel'
-        if cov_type == 'nw-groupsum':
-            cov_type = 'hac-groupsum'
+        cov_type = normalize_cov_type(cov_type)
+
         if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
         if 'weights_func' in kwds and not callable(kwds['weights_func']):
@@ -2295,18 +2293,15 @@ class RegressionResults(base.LikelihoodModelResults):
         #       other models
         # TODO: make it DRYer   repeated code for checking kwds
         if cov_type in ['fixed scale', 'fixed_scale']:
-            res.cov_kwds['description'] = ('Standard Errors are based on ' +
-                                           'fixed scale')
+            res.cov_kwds['description'] = descriptions['fixed_scale']
 
             res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
             res.cov_params_default = scale * res.normalized_cov_params
         elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
-                raise ValueError('heteroscedasticity robust covarians ' +
+                raise ValueError('heteroscedasticity robust covariance '
                                  'does not use keywords')
-            res.cov_kwds['description'] = (
-                'Standard Errors are heteroscedasticity ' +
-                'robust ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions[cov_type.upper()]
             # TODO cannot access cov without calling se first
             getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
@@ -2317,11 +2312,9 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['weights_func'] = weights_func
             use_correction = kwds.get('use_correction', False)
             res.cov_kwds['use_correction'] = use_correction
-            res.cov_kwds['description'] = (
-                'Standard Errors are heteroscedasticity and ' +
-                'autocorrelation robust (HAC) using %d lags and %s small ' +
-                'sample correction') % (maxlags,
-                                        ['without', 'with'][use_correction])
+            res.cov_kwds['description'] = descriptions['HAC'].format(
+                maxlags=maxlags,
+                correction=['without', 'with'][use_correction])
 
             res.cov_params_default = sw.cov_hac_simple(
                 self, nlags=maxlags, weights_func=weights_func,
@@ -2363,9 +2356,7 @@ class RegressionResults(base.LikelihoodModelResults):
                     self, groups, use_correction=use_correction)[0]
             else:
                 raise ValueError('only two groups are supported')
-            res.cov_kwds['description'] = (
-                'Standard Errors are robust to' +
-                'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['cluster']
 
         elif cov_type.lower() == 'hac-panel':
             # cluster robust standard errors
@@ -2396,9 +2387,8 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                      weights_func=weights_func,
                                                      use_correction=use_correction)
-            res.cov_kwds['description'] = (
-                'Standard Errors are robust to' +
-                'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['HAC-Panel']
+
         elif cov_type.lower() == 'hac-groupsum':
             # Driscoll-Kraay standard errors
             res.cov_kwds['time'] = time = kwds['time']
@@ -2418,9 +2408,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_nw_groupsum(
                 self, maxlags, time, weights_func=weights_func,
                 use_correction=use_correction)
-            res.cov_kwds['description'] = (
-                        'Driscoll and Kraay Standard Errors are robust to ' +
-                        'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['HAC-Groupsum']
         else:
             raise ValueError('cov_type not recognized. See docstring for ' +
                              'available options and spelling')
