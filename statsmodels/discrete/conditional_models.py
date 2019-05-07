@@ -243,6 +243,9 @@ class ConditionalLogit(_ConditionalModel):
             msg = "endog must be coded as 0, 1"
             raise ValueError(msg)
 
+        self.K = self.exog.shape[1]
+        # i.e. self.k_params, for compatibility with MNLogit
+
     def loglike(self, params):
 
         ll = 0
