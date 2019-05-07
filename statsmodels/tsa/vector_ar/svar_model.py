@@ -74,8 +74,8 @@ class SVAR(tsbase.TimeSeriesModel):
         self.A_original = A
         self.B_original = B
 
-        #initialize A, B as I if not given
-        #Initialize SVAR masks
+        # initialize A, B as I if not given
+        # Initialize SVAR masks
         if A is None:
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
@@ -684,17 +684,15 @@ class SVARResults(SVARProcess, VARResults):
             sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
                               steps=nobs + burn)
             sim = sim[burn:]
-            if cum == True:
+            if cum is True:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
                                B=B_pass).fit(maxlags=k_ar,
                                              A_guess=A[A_mask],
                                              B_guess=B[B_mask])
 
-                    g_list.append(np.append(sol.A[sol.A_mask].\
-                                            tolist(),
-                                            sol.B[sol.B_mask].\
-                                            tolist()))
+                    g_list.append(np.append(sol.A[sol.A_mask]. tolist(),
+                                            sol.B[sol.B_mask]. tolist()))
                     ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
                 elif i >= 10:
                     if i == 10:
@@ -707,7 +705,7 @@ class SVARResults(SVARProcess, VARResults):
                     sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
                     ma_coll[i] = sres.svar_ma_rep(maxn=T).cumsum(axis=0)
 
-            elif cum == False:
+            elif cum is False:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
                                B=B_pass).fit(maxlags=k_ar,
@@ -728,9 +726,9 @@ class SVARResults(SVARProcess, VARResults):
                     sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
                     ma_coll[i] = sres.svar_ma_rep(maxn=T)
 
-        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
+        ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         index = (int(round(signif / 2 * repl) - 1),
                  int(round((1 - signif / 2) * repl) - 1))
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper

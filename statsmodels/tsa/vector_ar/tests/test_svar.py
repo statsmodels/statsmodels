@@ -66,5 +66,4 @@ class TestSVAR(object):
         irf = res1.irf()
         errband2 = irf.errband_mc(orth=False, svar=True, repl=50,
                                   signif=0.05, seed=987123, burn=100)
-        # on my Windows environment those two are equal
         assert_allclose(errband1, errband2, rtol=1e-8, atol=1e-20)
