@@ -6,6 +6,8 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
+from statsmodels.compat.platform import PLATFORM_WIN
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -26,8 +28,6 @@ realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
 
 coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
-
-IS_WINDOWS = os.name == 'nt'
 
 
 class TestSARIMAXStatsmodels(object):
@@ -1058,7 +1058,7 @@ class SARIMAXCoverageTest(object):
         model2 = sarimax.SARIMAX(endog, exog, **kwargs)
         res1 = self.model.filter(self.true_params)
         res2 = model2.filter(self.true_params)
-        rtol = 1e-6 if IS_WINDOWS else 1e-13
+        rtol = 1e-6 if PLATFORM_WIN else 1e-13
         assert_allclose(res2.llf, res1.llf, rtol=rtol)
 
 
@@ -1183,7 +1183,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
 
         res1 = self.model.filter(self.true_params)
         res2 = model2.filter(self.true_params)
-        rtol = 1e-6 if IS_WINDOWS else 1e-13
+        rtol = 1e-6 if PLATFORM_WIN else 1e-13
         assert_allclose(res2.llf, res1.llf, rtol=rtol)
 
 
