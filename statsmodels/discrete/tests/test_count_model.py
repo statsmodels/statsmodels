@@ -81,8 +81,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
 class TestZeroInflatedModel_probit(CheckGeneric):
@@ -99,8 +98,7 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'probit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_probit()
+        res2 = RandHIE.zero_inflated_poisson_probit
         cls.res2 = res2
 
 class TestZeroInflatedModel_offset(CheckGeneric):
@@ -118,8 +116,7 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_offset()
+        res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
 
     def test_exposure(self):
@@ -186,8 +183,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
     def test_names(self):
@@ -252,8 +248,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 1}
-        res2 = RandHIE()
-        res2.zero_inflated_generalized_poisson()
+        res2 = RandHIE.zero_inflated_generalized_poisson
         cls.res2 = res2
 
     def test_bse(self):
@@ -359,8 +354,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 2}
-        res2 = RandHIE()
-        res2.zero_inflated_negative_binomial()
+        res2 = RandHIE.zero_inflated_negative_binomial
         cls.res2 = res2
 
     def test_params(self):

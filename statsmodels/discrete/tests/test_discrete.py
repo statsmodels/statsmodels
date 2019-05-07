@@ -345,8 +345,7 @@ class TestProbitNewton(CheckBinaryResults):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
 
     #def test_predict(self):
@@ -362,8 +361,7 @@ class TestProbitBFGS(CheckBinaryResults):
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
             disp=0)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
 
 
@@ -373,8 +371,7 @@ class TestProbitNM(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="nm",
             disp=0, maxiter=500)
@@ -386,8 +383,7 @@ class TestProbitPowell(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="powell",
             disp=0, ftol=1e-8)
@@ -399,8 +395,7 @@ class TestProbitCG(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
 
         # fmin_cg fails to converge on some machines - reparameterize
@@ -427,8 +422,7 @@ class TestProbitNCG(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
                                                      disp=0, avextol=1e-8,
@@ -442,8 +436,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
         np.random.seed(1)
@@ -457,8 +450,7 @@ class TestProbitMinimizeDefault(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
         cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8)
@@ -470,8 +462,7 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
         cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8,
@@ -484,8 +475,7 @@ class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.probit()
+        res2 = Spector.probit
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="minimize", disp=0,
                                                      maxiter=500,
@@ -529,8 +519,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, trim_mode='auto',
             auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
-        res2 = DiscreteL1()
-        res2.probit()
+        res2 = DiscreteL1.probit
         cls.res2 = res2
 
     def test_cov_params(self):
@@ -551,8 +540,7 @@ class TestMNLogitL1(CheckLikelihoodModelL1):
         cls.res1 = mlogit_mod.fit_regularized(
                 method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
                 acc=1e-10, disp=0)
-        res2 = DiscreteL1()
-        res2.mnlogit()
+        res2 = DiscreteL1.mnlogit
         cls.res2 = res2
 
 
@@ -566,8 +554,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=cls.alpha, disp=0, trim_mode='size',
             size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
-        res2 = DiscreteL1()
-        res2.logit()
+        res2 = DiscreteL1.logit
         cls.res2 = res2
 
     def test_cov_params(self):
@@ -609,8 +596,7 @@ class TestSweepAlphaL1(object):
                    [[0.1, 0.1, 0.1, 0.1],
                     [0.4, 0.4, 0.5, 0.5],
                     [0.5, 0.5, 1, 1]]) #/ data.exog.shape[0]
-        cls.res1 = DiscreteL1()
-        cls.res1.sweep()
+        cls.res1 = DiscreteL1.sweep
 
     def test_sweep_alpha(self):
         for i in range(3):
@@ -906,8 +892,7 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
-        res2 = Spector()
-        res2.logit()
+        res2 = Spector.logit
         cls.res2 = res2
 
     def test_resid_pearson(self):
@@ -953,8 +938,7 @@ class TestLogitNewtonPrepend(CheckMargEff):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
-        res2 = Spector()
-        res2.logit()
+        res2 = Spector.logit
         cls.res2 = res2
         cls.slice = np.roll(np.arange(len(cls.res1.params)), 1) #.astype(int)
 
@@ -998,8 +982,7 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
-        res2 = Spector()
-        res2.logit()
+        res2 = Spector.logit
         cls.res2 = res2
         cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs", disp=0)
 
@@ -1011,8 +994,7 @@ class TestPoissonNewton(CheckModelResults):
         data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
-        res2 = RandHIE()
-        res2.poisson()
+        res2 = RandHIE.poisson
         cls.res2 = res2
 
     def test_margeff_overall(self):
@@ -1065,8 +1047,7 @@ class TestNegativeBinomialNB2Newton(CheckNegBinMixin, CheckModelResults):
         data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='newton', disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb2_bfgs()
+        res2 = RandHIE.negativebinomial_nb2_bfgs
         cls.res2 = res2
 
     #NOTE: The bse is much closer precitions to stata
@@ -1114,8 +1095,7 @@ class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
                                                             method="newton",
                                                                  maxiter=100,
                                                                  disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb1_bfgs()
+        res2 = RandHIE.negativebinomial_nb1_bfgs
         cls.res2 = res2
 
     def test_zstat(self):
@@ -1152,8 +1132,7 @@ class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
                                                 method='bfgs', disp=0,
                                                 maxiter=1000)
-        res2 = RandHIE()
-        res2.negativebinomial_nb2_bfgs()
+        res2 = RandHIE.negativebinomial_nb2_bfgs
         cls.res2 = res2
 
     #NOTE: The bse is much closer precitions to stata
@@ -1200,8 +1179,7 @@ class TestNegativeBinomialNB1BFGS(CheckNegBinMixin, CheckModelResults):
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="bfgs",
                                                                  maxiter=100,
                                                                  disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb1_bfgs()
+        res2 = RandHIE.negativebinomial_nb1_bfgs
         cls.res2 = res2
 
     def test_zstat(self):
@@ -1241,8 +1219,7 @@ class TestNegativeBinomialGeometricBFGS(CheckNegBinMixin, CheckModelResults):
         exog = sm.add_constant(data.exog, prepend=False)
         mod = NegativeBinomial(data.endog, exog, 'geometric')
         cls.res1 = mod.fit(method='bfgs', disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_geometric_bfgs()
+        res2 = RandHIE.negativebinomial_geometric_bfgs
         cls.res2 = res2
 
     # the following are regression tests, could be inherited instead
@@ -1409,8 +1386,7 @@ class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
         cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
-        res2 = Anes()
-        res2.mnlogit_basezero()
+        res2 = Anes.mnlogit_basezero
         cls.res2 = res2
 
 
@@ -1428,8 +1404,7 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
                 #m=30, pgtol=1e-9, factr=1e1, # 1 failure
                 m=40, pgtol=1e-10, factr=5e0,
                 loglike_and_score=mymodel.loglike_and_score)
-        res2 = Anes()
-        res2.mnlogit_basezero()
+        res2 = Anes.mnlogit_basezero
         cls.res2 = res2
 
 
@@ -1653,8 +1628,7 @@ class TestGeneralizedPoisson_p2(object):
         data.exog = sm.add_constant(data.exog, prepend=False)
         mod = GeneralizedPoisson(data.endog, data.exog, p=2)
         cls.res1 = mod.fit(method='newton', disp=0)
-        res2 = RandHIE()
-        res2.generalizedpoisson_gp2()
+        res2 = RandHIE.generalizedpoisson_gp2
         cls.res2 = res2
 
     def test_bse(self):
@@ -1704,8 +1678,7 @@ class TestGeneralizedPoisson_transparams(object):
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
             method='newton', disp=0)
-        res2 = RandHIE()
-        res2.generalizedpoisson_gp2()
+        res2 = RandHIE.generalizedpoisson_gp2
         cls.res2 = res2
 
     def test_bse(self):
@@ -1874,8 +1847,7 @@ class TestNegativeBinomialPNB2Newton(CheckNegBinMixin, CheckModelResults):
         exog = sm.add_constant(data.exog, prepend=False)
         mod = NegativeBinomialP(data.endog, exog, p=2)
         cls.res1 = mod.fit(method='newton', disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb2_bfgs()
+        res2 = RandHIE.negativebinomial_nb2_bfgs
         cls.res2 = res2
 
     #NOTE: The bse is much closer precitions to stata
@@ -1923,8 +1895,7 @@ class TestNegativeBinomialPNB1Newton(CheckNegBinMixin, CheckModelResults):
         exog = sm.add_constant(data.exog, prepend=False)
         mod = NegativeBinomialP(data.endog, exog, p=1)
         cls.res1 = mod.fit(method="newton", maxiter=100, disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb1_bfgs()
+        res2 = RandHIE.negativebinomial_nb1_bfgs
         cls.res2 = res2
 
     def test_zstat(self):
@@ -1966,8 +1937,7 @@ class TestNegativeBinomialPNB2BFGS(CheckNegBinMixin, CheckModelResults):
         cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(
                                                 method='bfgs', disp=0,
                                                 maxiter=1000)
-        res2 = RandHIE()
-        res2.negativebinomial_nb2_bfgs()
+        res2 = RandHIE.negativebinomial_nb2_bfgs
         cls.res2 = res2
 
     #NOTE: The bse is much closer precitions to stata
@@ -2020,8 +1990,7 @@ class TestNegativeBinomialPNB1BFGS(CheckNegBinMixin, CheckModelResults):
         cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="bfgs",
                                                                  maxiter=100,
                                                                  disp=0)
-        res2 = RandHIE()
-        res2.negativebinomial_nb1_bfgs()
+        res2 = RandHIE.negativebinomial_nb1_bfgs
         cls.res2 = res2
 
     def test_bse(self):
