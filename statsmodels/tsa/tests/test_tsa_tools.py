@@ -104,6 +104,11 @@ def test_vech():
     assert (np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
 
 
+def test_ar_transparams():
+    arr = np.array([-1000.0, -100.0, -10.0, 1.0, 0.0, 1.0, 10.0, 100.0, 1000.0])
+    assert (not np.isnan(tools._ar_transparams(arr)).any())
+
+
 class TestLagmat(object):
     @classmethod
     def setup_class(cls):
