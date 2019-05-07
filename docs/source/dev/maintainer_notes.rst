@@ -272,10 +272,3 @@ the following::
     REL: Release related commit
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
     REF: Refactoring changes
-
-
-.. Notes: vbench is not currently available and it is unclear whether it will return
-.. vbench
-.. ------
-..
-.. See :ref:`vbenchdoc` notes for working with the `statsmodels vbench suite <https://www.statsmodels.org/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.
