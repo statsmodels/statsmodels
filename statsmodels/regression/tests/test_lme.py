@@ -1206,7 +1206,9 @@ def check_smw_logdet(p, q, r, s):
 
     _, bd = np.linalg.slogdet(B)
     d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
-    assert_allclose(d1, d2)
+    # GH 5642, OSX OpenBlas tolerance increase
+    rtol = 1e-6 if PLATFORM_OSX else 1e-7
+    assert_allclose(d1, d2, rtol=rtol)
 
 
 class TestSMWLogdet(object):

@@ -2,6 +2,8 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.platform import PLATFORM_OSX
+
 import os
 import warnings
 
@@ -331,7 +333,9 @@ def test_basin_hopping(reset_randomstate):
     mod = ExponentialSmoothing(housing_data, trend='add')
     res = mod.fit()
     res2 = mod.fit(use_basinhopping=True)
-    assert res2.sse <= res.sse
+    # GH 5642
+    tol = 1e-6 if PLATFORM_OSX else 0.0
+    assert res2.sse <= res.sse + tol
 
 
 def test_debiased():
