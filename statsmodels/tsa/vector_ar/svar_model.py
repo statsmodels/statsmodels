@@ -679,52 +679,34 @@ class SVARResults(SVARProcess, VARResults):
 
         g_list = []
 
+        def agg(impulses):
+            if cum:
+                return impulses.cumsum(axis=0)
+            return impulses
+
+        opt_A = A[A_mask]
+        opt_B = B[B_mask]
         for i in range(repl):
             # discard first hundred to correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
                               steps=nobs + burn)
             sim = sim[burn:]
-            if cum is True:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar,
-                                             A_guess=A[A_mask],
-                                             B_guess=B[B_mask])
 
-                    g_list.append(np.append(sol.A[sol.A_mask]. tolist(),
-                                            sol.B[sol.B_mask]. tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A_pass[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
+            smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
+            if i == 10:
+                # Use first 10 to update starting val for remainder of fits
+                mean_AB = np.mean(g_list, axis=0)
+                split = len(A[A_mask])
+                opt_A = mean_AB[:split]
+                opt_B = mean_AB[split:]
 
-                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
-                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
-                    ma_coll[i] = sres.svar_ma_rep(maxn=T).cumsum(axis=0)
+            sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
 
-            elif cum is False:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar,
-                                             A_guess=A[A_mask],
-                                             B_guess=B[B_mask])
-
-                    g_list.append(np.append(sol.A[A_mask].tolist(),
-                                            sol.B[B_mask].tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
-
-                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
-                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
-                    ma_coll[i] = sres.svar_ma_rep(maxn=T)
+            if i < 10:
+                # save estimates for starting val if in first 10
+                g_list.append(np.append(sres.A[A_mask].tolist(),
+                                        sres.B[B_mask].tolist()))
+            ma_coll[i] = agg(sres.svar_ma_rep(maxn=T))
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         index = (int(round(signif / 2 * repl) - 1),

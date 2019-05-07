@@ -1,11 +1,12 @@
 """
 Test SVAR estimation
 """
-
-import statsmodels.api as sm
-from statsmodels.tsa.vector_ar.svar_model import SVAR
 from numpy.testing import assert_almost_equal, assert_allclose
 import numpy as np
+import pytest
+
+import statsmodels.datasets.macrodata
+from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -15,11 +16,11 @@ DECIMAL_4 = 4
 class TestSVAR(object):
     @classmethod
     def setup_class(cls):
-        mdata = sm.datasets.macrodata.load_pandas().data
-        mdata = mdata[['realgdp','realcons','realinv']]
+        mdata = statsmodels.datasets.macrodata.load_pandas().data
+        mdata = mdata[['realgdp', 'realcons', 'realinv']]
         data = mdata.values
         data = np.diff(np.log(data), axis=0)
-        A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
+        A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]])
         B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
         results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
         cls.res1 = results
@@ -56,6 +57,7 @@ class TestSVAR(object):
         assert_allclose(res1.bic - corr_const, res2.sbic_var, atol=1e-12)
         assert_allclose(res1.hqic - corr_const, res2.hqic_var, atol=1e-12)
 
+    @pytest.mark.smoke
     def test_irf(self):
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
