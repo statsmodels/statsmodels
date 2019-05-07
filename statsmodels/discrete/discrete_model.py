@@ -1647,17 +1647,11 @@ class GeneralizedPoisson(CountModel):
                            2 * a3 * (a4 + 1) / a1**2 -
                            a4 * p / (mu * a1) +
                            a3 * p * a2 / (mu * a1**2) +
-                           a4 / (mu * a1) -
-                           a3 * a2 / (mu * a1**2) +
                            (y - 1) * a4 * (p - 1) / (a2 * mu) -
                            (y - 1) * (1 + a4)**2 / a2**2 -
-                           a4 * (p - 1) / (a1 * mu) -
-                           1 / mu**2) +
-                     (-a4 / a1 +
-                      a3 * a2 / a1**2 +
-                      (y - 1) * (1 + a4) / a2 -
-                      (1 + a4) / a1 +
-                      1 / mu)), axis=0)
+                           a4 * (p - 1) / (a1 * mu)) +
+                     ((y - 1) * (1 + a4) / a2 -
+                      (1 + a4) / a1)), axis=0)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -3045,14 +3039,14 @@ class NegativeBinomialP(CountModel):
         a4 = p * a1 / mu
 
         dgpart = digamma(a3) - digamma(a1)
+        dgterm = dgpart + np.log(a1 / a2) + 1 - a3 / a2
+        # TODO: better name/interpretation for dgterm?
 
-        dparams = ((a4 * dgpart -
-                   a3 / a2) +
-                   y / mu + a4 * (1 - a3 / a2 + np.log(a1 / a2)))
+        dparams = (a4 * dgterm -
+                   a3 / a2 +
+                   y / mu)
         dparams = (self.exog.T * mu * dparams).T
-        dalpha = (-a1 / alpha * (dgpart +
-                                 np.log(a1 / a2) +
-                                 1 - a3 / a2))
+        dalpha = -a1 / alpha * dgterm
 
         return np.concatenate((dparams, np.atleast_2d(dalpha).T),
                               axis=1)
@@ -3109,40 +3103,43 @@ class NegativeBinomialP(CountModel):
         a2 = mu + a1
         a3 = y + a1
         a4 = p * a1 / mu
-        a5 = a4 * p / mu
 
+        prob = a1 / a2
+        lprob = np.log(prob)
         dgpart = digamma(a3) - digamma(a1)
+        pgpart = polygamma(1, a3) - polygamma(1, a1)
 
         dim = exog.shape[1]
         hess_arr = np.zeros((dim + 1, dim + 1))
 
         coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
-                          a3 * (a5 - a4 / mu) / a2 -
+                          a3 / a2 * (p - 1) * a4 / mu -
                           y / mu**2 -
                           2 * a4 * (1 + a4) / a2 +
-                          a5 * (np.log(a1) - np.log(a2) + dgpart + 2) -
-                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1) / mu -
-                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                          p * a4 / mu * (lprob + dgpart + 2) -
+                          a4 / mu * (lprob + dgpart + 1) +
+                          a4**2 * pgpart) +
                          (-(1 + a4) * a3 / a2 +
                           y / mu +
-                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1)) / mu)
+                          a4 * (lprob + dgpart + 1)) / mu)
 
         for i in range(dim):
-            hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
+            hess_arr[i, :-1] = np.sum(self.exog[:, :].T * self.exog[:, i] * coeff, axis=1)
 
 
-        hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
+        hess_arr[-1,:-1] = (self.exog[:, :].T * mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
-                 p * (np.log(a1 / a2) + dgpart + 2) / mu +
-                 p * (a3 / mu + a4) / a2 +
-                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum(axis=1)
+                 p * (lprob + dgpart + 2) / mu +
+                 p / mu * (a3 + p * a1) / a2 -
+                 a4 * pgpart) / alpha).sum(axis=1)
 
 
-        da2 = (a1 * (2 * np.log(a1 / a2) +
+        da2 = (a1 * (2 * lprob +
                      2 * dgpart + 3 -
-                     2 * a3 / a2 - a1 * polygamma(1, a1) +
-                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
-                     a1 * a3 / a2**2) / alpha**2)
+                     2 * a3 / a2
+                     + a1 * pgpart
+                     - 2 * prob +
+                     prob * a3 / a2) / alpha**2)
 
         hess_arr[-1, -1] = da2.sum()
 
