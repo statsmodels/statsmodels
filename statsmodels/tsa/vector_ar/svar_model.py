@@ -71,8 +71,11 @@ class SVAR(tsbase.TimeSeriesModel):
 
         svar_ckerr(svar_type, A, B)
 
-        #initialize A, B as I if not given
-        #Initialize SVAR masks
+        self.A_original = A
+        self.B_original = B
+
+        # initialize A, B as I if not given
+        # Initialize SVAR masks
         if A is None:
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
@@ -670,64 +673,44 @@ class SVARResults(SVARProcess, VARResults):
         B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_pass = np.zeros(A.shape, dtype='|S1')
-        B_pass = np.zeros(B.shape, dtype='|S1')
-        A_pass[~A_mask] = A[~A_mask]
-        B_pass[~B_mask] = B[~B_mask]
-        A_pass[A_mask] = 'E'
-        B_pass[B_mask] = 'E'
-        if A_mask.sum() == 0:
-            s_type = 'B'
-        elif B_mask.sum() == 0:
-            s_type = 'A'
-        else:
-            s_type = 'AB'
+        A_pass = self.model.A_original
+        B_pass = self.model.B_original
+        s_type = self.model.svar_type
+
         g_list = []
 
+        def agg(impulses):
+            if cum:
+                return impulses.cumsum(axis=0)
+            return impulses
+
+        opt_A = A[A_mask]
+        opt_B = B[B_mask]
         for i in range(repl):
-            #discard first hundred to correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            # discard first hundred to correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
+                              steps=nobs + burn)
             sim = sim[burn:]
-            if cum == True:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
-                    g_list.append(np.append(sol.A[sol.A_mask].\
-                                            tolist(),
-                                            sol.B[sol.B_mask].\
-                                            tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A_pass[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
 
-                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
-                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
-                    ma_coll[i] = sres.svar_ma_rep(maxn=T).cumsum(axis=0)
+            smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
+            if i == 10:
+                # Use first 10 to update starting val for remainder of fits
+                mean_AB = np.mean(g_list, axis=0)
+                split = len(A[A_mask])
+                opt_A = mean_AB[:split]
+                opt_B = mean_AB[split:]
 
-            elif cum == False:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
-                    g_list.append(np.append(sol.A[A_mask].tolist(),
-                                            sol.B[B_mask].tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
+            sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
 
-                    smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
-                    sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
-                    ma_coll[i] = sres.svar_ma_rep(maxn=T)
+            if i < 10:
+                # save estimates for starting val if in first 10
+                g_list.append(np.append(sres.A[A_mask].tolist(),
+                                        sres.B[B_mask].tolist()))
+            ma_coll[i] = agg(sres.svar_ma_rep(maxn=T))
 
-        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
+        index = (int(round(signif / 2 * repl) - 1),
+                 int(round((1 - signif / 2) * repl) - 1))
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
