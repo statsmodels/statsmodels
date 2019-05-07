@@ -59,6 +59,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/statespace/tests/results/results_var_R.py \
         statsmodels/tsa/statespace/tests/test_var.py \
         statsmodels/conftest.py \
+        tools/ \
         setup.py
     if [ $? -ne "0" ]; then
         echo "Previously passing files failed linting."

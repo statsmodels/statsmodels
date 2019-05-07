@@ -8,9 +8,9 @@ import subprocess
 # Ours
 import hash_funcs
 
-#----------------------------------------------------
+# ----------------------------------------------------
 # Globals
-#----------------------------------------------------
+# ----------------------------------------------------
 # these files do not get made into .rst files because of
 # some problems, they may need a simple cleaning up
 exclude_list = ['run_all.py',
@@ -18,13 +18,13 @@ exclude_list = ['run_all.py',
                 'example_ols_tftest.py',
                 'example_glsar.py',
                 'example_ols_table.py',
-                #not finished yet
+                # not finished yet
                 'example_arima.py',
                 'try_wls.py']
 
 file_path = os.path.dirname(__file__)
-docs_rst_dir = os.path.realpath(os.path.join(file_path,
-                                             '../docs/source/examples/generated/'))
+gen_dir = os.path.join(file_path, '../docs/source/examples/generated/')
+docs_rst_dir = os.path.realpath(gen_dir)
 example_dir = os.path.realpath(os.path.join(file_path, '../examples/'))
 
 
@@ -40,10 +40,10 @@ def check_script(filename):
     file_to_run += "execfile(r'%s')\"" % os.path.join(example_dir, filename)
     proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    #NOTE: use communicate to wait for process termination
+    # NOTE: use communicate to wait for process termination
     stdout, stderr = proc.communicate()
     result = proc.returncode
-    if result != 0: # raised an error
+    if result != 0:  # raised an error
         msg = "Not generating reST from %s. An error occurred.\n" % filename
         msg += stderr
         print(msg)
@@ -60,7 +60,7 @@ def parse_docstring(block):
     try:
         start = re.search(ds, block).end()
         end = re.search(ds, block[start:]).start()
-    except: #TODO: make more informative
+    except AttributeError:  # TODO: make more informative
         raise IOError("File %s does not have a docstring?")
     docstring = block[start:start+end]
     block = block[start+end+3:]
@@ -74,21 +74,18 @@ def parse_file(block):
     docstring, block = parse_docstring(block)
     # just get the first line from the docstring
     docstring = docstring.split('\n')[0] or docstring.split('\n')[1]
-    outfile = [docstring,'='*len(docstring),'']
+    outfile = [docstring, '='*len(docstring), '']
     block = block.split('\n')
 
     # iterate through the rest of block, anything in comments is stripped of #
     # anything else is fair game to go in an ipython directive
     code_snippet = False
     for line in block:
-        #if not len(line):
-        #    continue
-        # preserve blank lines
 
         if line.startswith('#') and not (line.startswith('#%') or
                                          line.startswith('#@')):
             # on some ReST text
-            if code_snippet: # were on a code snippet
+            if code_snippet:  # we're on a code snippet
                 outfile.append('')
                 code_snippet = False
             line = line.strip()
@@ -96,10 +93,10 @@ def parse_file(block):
             line = re.sub(r"(?<=#) (?!\s)", "", line)
             # make sure commented out things have a space
             line = re.sub(r"#\.\.(?!\s)", "#.. ", line)
-            line = re.sub("^#+", "", line) # strip multiple hashes
+            line = re.sub("^#+", "", line)  # strip multiple hashes
             outfile.append(line)
         else:
-            if not code_snippet: # new code block
+            if not code_snippet:  # new code block
                 outfile.append('\n.. ipython:: python\n')
                 code_snippet = True
             # handle decorators and magic functions
@@ -144,12 +141,12 @@ if __name__ == "__main__":
     if not os.path.exists(docs_rst_dir):
         os.makedirs(docs_rst_dir)
 
-    if len(sys.argv) > 1: # given a file,files to process, no help flag yet
+    if len(sys.argv) > 1:  # given a file,files to process, no help flag yet
         for example_file in sys.argv[1:]:
             whole_file = open(example_file, 'r').read()
             restify(whole_file, None, example_file)
 
-    else: # process the whole directory
+    else:  # process the whole directory
         for root, dirnames, filenames in os.walk(example_dir):
             if 'notebooks' in root:
                 continue

@@ -26,8 +26,8 @@ except ImportError:
 else:
     requests_cache.install_cache("gh_api")
 
-# Keyring stores passwords by a 'username', but we're not storing a username and
-# password
+# Keyring stores passwords by a 'username', but we're not storing a username
+# and password
 fake_username = 'statsmodels_tools'
 
 
@@ -69,7 +69,7 @@ def get_auth_token():
         "gist"
       ],
       "note": "Statsmodels tools - {}".format(datetime.now().isoformat()),
-      "note_url": "https://github.com/statsmodels/statsmodels/tree/master/tools",
+      "note_url": "https://github.com/statsmodels/statsmodels/tree/master/tools",  # noqa:E501
     }
     response = requests.post('https://api.github.com/authorizations',
                              auth=(user, pw), data=json.dumps(auth_request))
@@ -84,7 +84,8 @@ def make_auth_header():
 
 
 def post_issue_comment(project, num, body):
-    url = 'https://api.github.com/repos/{project}/issues/{num}/comments'.format(project=project, num=num)
+    url = ('https://api.github.com/repos/{project}/issues/{num}/comments'
+           .format(project=project, num=num))
     payload = json.dumps({'body': body})
     requests.post(url, data=payload, headers=make_auth_header())
 
@@ -102,7 +103,8 @@ def post_gist(content, description='', filename='file', auth=False):
     }).encode('utf-8')
 
     headers = make_auth_header() if auth else {}
-    response = requests.post("https://api.github.com/gists", data=post_data, headers=headers)
+    response = requests.post("https://api.github.com/gists",
+                             data=post_data, headers=headers)
     response.raise_for_status()
     response_data = json.loads(response.text)
     return response_data['html_url']
@@ -111,7 +113,8 @@ def post_gist(content, description='', filename='file', auth=False):
 def get_pull_request(project, num, auth=False):
     """get pull request info  by number
     """
-    url = "https://api.github.com/repos/{project}/pulls/{num}".format(project=project, num=num)
+    url = ("https://api.github.com/repos/{project}/pulls/{num}"
+           .format(project=project, num=num))
     if auth:
         header = make_auth_header()
     else:
@@ -123,7 +126,8 @@ def get_pull_request(project, num, auth=False):
 
 def get_pull_request_files(project, num, auth=False):
     """get list of files in a pull request"""
-    url = "https://api.github.com/repos/{project}/pulls/{num}/files".format(project=project, num=num)
+    url = ("https://api.github.com/repos/{project}/pulls/{num}/files"
+           .format(project=project, num=num))
     if auth:
         header = make_auth_header()
     else:
@@ -154,7 +158,8 @@ def get_paged_request(url, headers=None, **params):
 def get_pulls_list(project, auth=False, **params):
     """get pull request list"""
     params.setdefault("state", "closed")
-    url = "https://api.github.com/repos/{project}/pulls".format(project=project)
+    url = ("https://api.github.com/repos/{project}/pulls"
+           .format(project=project))
     if auth:
         headers = make_auth_header()
     else:
@@ -166,7 +171,8 @@ def get_pulls_list(project, auth=False, **params):
 def get_issues_list(project, auth=False, **params):
     """get issues list"""
     params.setdefault("state", "closed")
-    url = "https://api.github.com/repos/{project}/issues".format(project=project)
+    url = ("https://api.github.com/repos/{project}/issues"
+           .format(project=project))
     if auth:
         headers = make_auth_header()
     else:
@@ -176,7 +182,8 @@ def get_issues_list(project, auth=False, **params):
 
 
 def get_milestones(project, auth=False, **params):
-    url = "https://api.github.com/repos/{project}/milestones".format(project=project)
+    url = ("https://api.github.com/repos/{project}/milestones"
+           .format(project=project))
     if auth:
         headers = make_auth_header()
     else:
@@ -205,16 +212,18 @@ def is_pull_request(issue):
 
 def iter_fields(fields):
     fields = fields.copy()
-    for key in ('key', 'acl', 'Filename', 'success_action_status', 'AWSAccessKeyId',
-                'Policy', 'Signature', 'Content-Type', 'file'):
+    for key in ('key', 'acl', 'Filename', 'success_action_status',
+                'AWSAccessKeyId', 'Policy', 'Signature',
+                'Content-Type', 'file'):
         yield (key, fields.pop(key))
-    for (k,v) in fields.items():
-        yield k,v
+    for (k, v) in fields.items():
+        yield k, v
 
 
 def encode_multipart_formdata(fields, boundary=None):
     """
-    Encode a dictionary of ``fields`` using the multipart/form-data mime format.
+    Encode a dictionary of ``fields`` using the multipart/form-data mime
+    format.
 
     :param fields:
         Dictionary of fields or list of (key, value) field tuples.  The key is
@@ -275,7 +284,8 @@ def post_download(project, filename, name=None, description=""):
     with open(filename, 'rb') as f:
         filedata = f.read()
 
-    url = "https://api.github.com/repos/{project}/downloads".format(project=project)
+    url = ("https://api.github.com/repos/{project}/downloads"
+           .format(project=project))
 
     payload = json.dumps(dict(name=name, size=len(filedata),
                               description=description))
@@ -296,5 +306,6 @@ def post_download(project, filename, name=None, description=""):
     )
     fields['Content-Type'] = reply['mime_type']
     data, content_type = encode_multipart_formdata(fields)
-    s3r = requests.post(s3_url, data=data, headers={'Content-Type': content_type})
+    s3r = requests.post(s3_url, data=data,
+                        headers={'Content-Type': content_type})
     return s3r

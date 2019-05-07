@@ -67,29 +67,30 @@ def backport_pr(branch, num, project='statsmodels/statsmodels'):
     fname = "PR%i.patch" % num
     if os.path.exists(fname):
         print("using patch from {fname}".format(**locals()))
-        with open(fname) as f:
-            patch = f.read()
+        with open(fname) as fd:
+            patch = fd.read()
     else:
         req = urlopen(patch_url)
         patch = req.read()
 
     msg = "Backport PR #%i: %s" % (num, title) + '\n\n' + description
     check = Popen(['git', 'apply', '--check', '--verbose'], stdin=PIPE)
-    a,b = check.communicate(patch)
+    a, b = check.communicate(patch)
 
     if check.returncode:
         print("patch did not apply, saving to {fname}".format(**locals()))
-        print("edit {fname} until `cat {fname} | git apply --check` succeeds".format(**locals()))
+        print("edit {fname} until `cat {fname} | git apply --check` succeeds"
+              .format(**locals()))
         print("then run tools/backport_pr.py {num} again".format(**locals()))
         if not os.path.exists(fname):
-            with open(fname, 'wb') as f:
-                f.write(patch)
+            with open(fname, 'wb') as fd:
+                fd.write(patch)
         return 1
 
     p = Popen(['git', 'apply'], stdin=PIPE)
-    a,b = p.communicate(patch)
+    a, b = p.communicate(patch)
 
-    filenames = [ f['filename'] for f in files ]
+    filenames = [f['filename'] for f in files]
 
     check_call(['git', 'add'] + filenames)
 
@@ -112,7 +113,8 @@ backport_re = re.compile(r"[Bb]ackport.*?(\d+)")
 def already_backported(branch, since_tag=None):
     """return set of PRs that have been backported already"""
     if since_tag is None:
-        since_tag = check_output(['git','describe', branch, '--abbrev=0']).decode('utf8').strip()
+        btag = check_output(['git', 'describe', branch, '--abbrev=0'])
+        since_tag = btag.decode('utf8').strip()
     cmd = ['git', 'log', '%s..%s' % (since_tag, branch), '--oneline']
     lines = check_output(cmd).decode('utf8')
     return set(int(num) for num in backport_re.findall(lines))
@@ -163,7 +165,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         branch = sys.argv[1]
         already = already_backported(branch)
-        #NOTE: change this to the label you've used for marking a backport
+        # NOTE: change this to the label you've used for marking a backport
         should = should_backport(milestone="0.5.1")
         print("The following PRs should be backported:")
         to_backport = []

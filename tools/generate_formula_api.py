@@ -30,7 +30,7 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
         _seen = set()
     try:
         subs = cls.__subclasses__()
-    except TypeError: # fails only when cls is type
+    except TypeError:  # fails only when cls is type
         subs = cls.__subclasses__(cls)
     for sub in subs:
         if sub not in _seen and sub.__name__ not in template_classes:
@@ -58,17 +58,18 @@ def write_formula_api(directory):
     for model in iter_subclasses(Model, template_classes=template_classes):
         print("Generating API for %s" % model.__name__)
         fout.write(
-                'from '+model.__module__+' import ' + model.__name__ + '\n'
-                )
+            'from ' + model.__module__ + ' import ' + model.__name__ + '\n'
+        )
         fout.write(
-                model.__name__.lower() +' = '+ model.__name__ +'.from_formula\n'
-                )
+            model.__name__.lower() + ' = ' + model.__name__ + '.from_formula\n'
+        )
     fout.close()
 
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    print("Generating formula API for statsmodels version %s" % sm.version.full_version)
+    print("Generating formula API for statsmodels version %s"
+          % sm.version.full_version)
     directory = sys.argv[1]
     cur_dir = os.path.dirname(__file__)
     os.chdir(directory)
