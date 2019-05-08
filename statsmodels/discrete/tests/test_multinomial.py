@@ -52,7 +52,7 @@ def test_pdf_equiv():
 
 # Used as an alternative implementation to double-check MNLogit.pdf
 def mnlogit_pdf(Xb):
-    """
+    r"""
     A broadcasting-based implementation of MNLogit.pdf that is surprisingly
     slower than the loop-based version.  This is retained for testing
     and exposition.
