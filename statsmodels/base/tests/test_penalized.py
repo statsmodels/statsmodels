@@ -94,7 +94,10 @@ class CheckPenalizedPoisson(object):
 
     @pytest.mark.smoke
     def test_summary2(self):
-        self.res1.summary2()
+        summ = self.res1.summary2()
+        assert isinstance(summ.as_latex(), str)
+        assert isinstance(summ.as_html(), str)
+        assert isinstance(summ.as_text(), str)
 
     def test_numdiff(self):
         res1 = self.res1

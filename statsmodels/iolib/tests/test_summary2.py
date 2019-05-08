@@ -21,7 +21,6 @@ class TestSummaryLatex(object):
 \hline
       &   y I    &   y II    \\
 \midrule
-\midrule
 const & 7.7500   & 12.4231   \\
       & (1.1058) & (3.1872)  \\
 x1    & -0.7500  & -1.5769   \\
