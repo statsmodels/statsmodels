@@ -1,6 +1,8 @@
 """
 Test SVAR estimation
 """
+from statsmodels.compat.platform import PLATFORM_WIN
+
 from numpy.testing import assert_almost_equal, assert_allclose
 import numpy as np
 import pytest
@@ -69,4 +71,5 @@ class TestSVAR(object):
         errband2 = irf.errband_mc(orth=False, svar=True, repl=50,
                                   signif=0.05, seed=987123, burn=100)
         # Windows precision limits require non-zero atol
-        assert_allclose(errband1, errband2, rtol=1e-8, atol=1e-8)
+        atol = 1e-6 if PLATFORM_WIN else 1e-8
+        assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
