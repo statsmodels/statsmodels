@@ -38,6 +38,7 @@ jobs:
     # TODO(py27): This is only necessary for the py27 build, can be removed
     #  once py27 is dropped
     - script: choco install vcpython27
+      displayName: 'Install compiler'
 
   - script: |
       python -m pip install --upgrade pip
@@ -52,7 +53,13 @@ jobs:
 
   - script: |
       pytest statsmodels --junitxml=junit/test-results.xml --skip-examples -n 2
-    displayName: 'pytest'
+    displayName: 'Running pytest'
+
+  - ${{ if eq(parameters.name, 'Linux') }}:
+    # Only lint on Linux
+    - script: |
+        LINT=true ./lint.sh
+      displayName: 'Checking code format (linting)'
 
   - task: PublishTestResults@2
     inputs:
