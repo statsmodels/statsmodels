@@ -40,6 +40,30 @@ x1    & -0.7500  & -1.5769   \\
         actual = '\n%s\n' % actual
         assert_equal(desired, actual)
 
+    def test_summarycol_float_format(self):
+        # Test for latex output of summary_col object
+        desired = r"""
+=================
+       y I   y II
+-----------------
+const 7.7   12.4 
+      (1.1) (3.2)
+x1    -0.7  -1.6 
+      (0.2) (0.7)
+=================
+Standard errors
+in parentheses.
+"""
+        x = [1, 5, 7, 3, 5]
+        x = add_constant(x)
+        y1 = [6, 4, 2, 7, 4]
+        y2 = [8, 5, 0, 12, 4]
+        reg1 = OLS(y1, x).fit()
+        reg2 = OLS(y2, x).fit()
+        actual = summary_col([reg1, reg2], float_format='%0.1f').as_text()
+        actual = '%s\n' % actual
+        assert_equal(actual, desired)
+
     def test_summarycol_drop_omitted(self):
         # gh-3702
         x = [1, 5, 7, 3, 5]
