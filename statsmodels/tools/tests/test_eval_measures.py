@@ -4,10 +4,11 @@ Created on Tue Nov 08 22:28:48 2011
 
 @author: josef
 """
+import pytest
 
 from statsmodels.compat.python import zip
 import numpy as np
-from numpy.testing import assert_equal, assert_almost_equal, assert_
+from numpy.testing import assert_equal, assert_almost_equal
 
 from statsmodels.tools.eval_measures import (
     maxabs, meanabs, medianabs, medianbias, mse, rmse, stde, vare,
@@ -68,27 +69,33 @@ def test_eval_measures():
     assert_equal(vare(x, y, axis=1),
                  np.array([ 2.,  2.,  2.,  2.]))
 
-def test_ic():
-    # test information criteria
+
+ics = [aic, aicc, bic, hqic]
+ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
+
+
+@pytest.mark.parametrize('ic,ic_sig', zip(ics, ics_sig))
+def test_ic_equivalence(ic, ic_sig):
     # consistency check
 
-    ics = [aic, aicc, bic, hqic]
-    ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
+    assert ic(np.array(2), 10, 2).dtype == np.float
+    assert ic_sig(np.array(2), 10, 2).dtype == np.float
 
-    for ic, ic_sig in zip(ics, ics_sig):
-        assert_(ic(np.array(2),10,2).dtype == np.float, msg=repr(ic))
-        assert_(ic_sig(np.array(2),10,2).dtype == np.float, msg=repr(ic_sig) )
+    assert_almost_equal(ic(-10./2.*np.log(2.), 10, 2)/10,
+                        ic_sig(2, 10, 2),
+                        decimal=14)
 
-        assert_almost_equal(ic(-10./2.*np.log(2.),10,2)/10,
-                            ic_sig(2, 10, 2),
-                            decimal=14)
+    assert_almost_equal(ic_sig(np.log(2.), 10, 2, islog=True),
+                        ic_sig(2, 10, 2),
+                        decimal=14)
 
-        assert_almost_equal(ic_sig(np.log(2.),10,2, islog=True),
-                            ic_sig(2, 10, 2),
-                            decimal=14)
+
+def test_ic():
+    # test information criteria
 
     # examples penalty directly from formula
-    n, k = 10, 2
+    n = 10
+    k = 2
     assert_almost_equal(aic(0, 10, 2), 2*k, decimal=14)
     # next see Wikipedia
     assert_almost_equal(aicc(0, 10, 2),

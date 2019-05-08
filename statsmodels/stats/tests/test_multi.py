@@ -12,15 +12,15 @@ are tested against R:multtest
     consistency only
 
 '''
-from statsmodels.compat.python import iteritems
+import pytest
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                          assert_allclose)
+from numpy.testing import (assert_almost_equal, assert_equal,
+                           assert_allclose)
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
                                          NullDistribution,
-                                         local_fdr)
+                                         local_fdr, multitest_methods_names)
 from statsmodels.stats.multicomp import tukeyhsd
 from scipy.stats.distributions import norm
 
@@ -181,19 +181,26 @@ res0_large = np.array([
 
 
 class CheckMultiTestsMixin(object):
+
+    @pytest.mark.parametrize('key,val', list(rmethods.items()))
+    def test_multi_pvalcorrection_rmethods(self, key, val):
+        # test against R package multtest mt.rawp2adjp
+
+        res_multtest = self.res2
+        pval0 = res_multtest[:, 0]
+
+        if val[1] in self.methods:
+            reject, pvalscorr = multipletests(pval0,
+                                              alpha=self.alpha,
+                                              method=val[1])[:2]
+            assert_almost_equal(pvalscorr, res_multtest[:, val[0]], 15)
+            assert_equal(reject, pvalscorr <= self.alpha)
+
     def test_multi_pvalcorrection(self):
         #test against R package multtest mt.rawp2adjp
 
         res_multtest = self.res2
         pval0 = res_multtest[:,0]
-
-        for k,v in iteritems(rmethods):
-            if v[1] in self.methods:
-                reject, pvalscorr = multipletests(pval0,
-                                                  alpha=self.alpha,
-                                                  method=v[1])[:2]
-                assert_almost_equal(pvalscorr, res_multtest[:,v[0]], 15)
-                assert_equal(reject, pvalscorr <= self.alpha)
 
         pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
         assert_almost_equal(pvalscorr, res_multtest[:,7], 15)
@@ -234,23 +241,24 @@ class TestMultiTests4(CheckMultiTestsMixin):
         cls.alpha = 0.05
         cls.res2 = res_multtest3
 
-def test_pvalcorrection_reject():
+
+@pytest.mark.parametrize('alpha', [0.01, 0.05, 0.1])
+@pytest.mark.parametrize('method', ['b', 's', 'sh', 'hs', 'h', 'hommel',
+                                    'fdr_i', 'fdr_n', 'fdr_tsbky',
+                                    'fdr_tsbh', 'fdr_gbs'])
+@pytest.mark.parametrize('ii', list(range(11)))
+def test_pvalcorrection_reject(alpha, method, ii):
     # consistency test for reject boolean and pvalscorr
 
-    for alpha in [0.01, 0.05, 0.1]:
-        for method in ['b', 's', 'sh', 'hs', 'h', 'hommel', 'fdr_i', 'fdr_n',
-                       'fdr_tsbky', 'fdr_tsbh', 'fdr_gbs']:
-            for ii in range(11):
-                pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
-                                   np.linspace(0.05001, 0.11, 10 - ii)))
-                # using .05001 instead of 0.05 to avoid edge case issue #768
-                reject, pvalscorr = multipletests(pval1, alpha=alpha,
-                                                  method=method)[:2]
-                #print 'reject.sum', v[1], reject.sum()
-                msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
-                                 method, alpha, reject.sum(), pval1, pvalscorr)
-                assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
-                #yield assert_equal, reject, pvalscorr <= alpha  #, msg
+    pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
+                       np.linspace(0.05001, 0.11, 10 - ii)))
+    # using .05001 instead of 0.05 to avoid edge case issue #768
+    reject, pvalscorr = multipletests(pval1, alpha=alpha,
+                                      method=method)[:2]
+
+    msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
+                     method, alpha, reject.sum(), pval1, pvalscorr)
+    assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
 
 
 def test_hommel():
@@ -301,10 +309,11 @@ def test_fdr_bky():
     assert_equal(8, res_tst[0].sum())
     #print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
 
-def test_issorted():
+
+@pytest.mark.parametrize('method', multitest_methods_names)
+def test_issorted(method):
     # test that is_sorted keyword works correctly
     # the fdrcorrection functions are tested indirectly
-    from statsmodels.stats.multitest import multitest_methods_names
 
     # data generated as random numbers np.random.beta(0.2, 0.5, size=10)
     pvals = np.array([31, 9958111, 7430818, 8653643, 9892855, 876, 2651691,
@@ -313,11 +322,10 @@ def test_issorted():
     sortrevind = sortind.argsort()
     pvals_sorted = pvals[sortind]
 
-    for method in multitest_methods_names:
-        res1 = multipletests(pvals, method=method, is_sorted=False)
-        res2 = multipletests(pvals_sorted, method=method, is_sorted=True)
-        assert_equal(res2[0][sortrevind], res1[0])
-        assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
+    res1 = multipletests(pvals, method=method, is_sorted=False)
+    res2 = multipletests(pvals_sorted, method=method, is_sorted=True)
+    assert_equal(res2[0][sortrevind], res1[0])
+    assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
 
 
 def test_tukeyhsd():
@@ -401,7 +409,10 @@ def test_null_distribution():
                     rtol=1e-13)
 
 
-def test_null_constrained():
+@pytest.mark.parametrize('estimate_prob', [True, False])
+@pytest.mark.parametrize('estimate_scale', [True, False])
+@pytest.mark.parametrize('estimate_mean', [True, False])
+def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
 
     # Create a mixed population of Z-scores: 1000 standard normal and
     # 20 uniformly distributed between 3 and 4.
@@ -410,23 +421,19 @@ def test_null_constrained():
     z1 = np.linspace(3, 4, 20)
     zs = np.concatenate((z0, z1))
 
-    for estimate_mean in False,True:
-        for estimate_scale in False,True:
-            for estimate_prob in False,True:
+    emp_null = NullDistribution(zs, estimate_mean=estimate_mean,
+                                estimate_scale=estimate_scale,
+                                estimate_null_proportion=estimate_prob)
 
-                emp_null = NullDistribution(zs, estimate_mean=estimate_mean,
-                                            estimate_scale=estimate_scale,
-                                            estimate_null_proportion=estimate_prob)
+    if not estimate_mean:
+        assert_allclose(emp_null.mean, 0, atol=1e-5, rtol=1e-5)
+    if not estimate_scale:
+        assert_allclose(emp_null.sd, 1, atol=1e-5, rtol=1e-2)
+    if not estimate_prob:
+        assert_allclose(emp_null.null_proportion, 1, atol=1e-5, rtol=1e-2)
 
-                if not estimate_mean:
-                    assert_allclose(emp_null.mean, 0, atol=1e-5, rtol=1e-5)
-                if not estimate_scale:
-                    assert_allclose(emp_null.sd, 1, atol=1e-5, rtol=1e-2)
-                if not estimate_prob:
-                    assert_allclose(emp_null.null_proportion, 1, atol=1e-5, rtol=1e-2)
-
-                # consistency check
-                assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
-                                norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
-                                         scale=emp_null.sd),
-                                rtol=1e-13)
+    # consistency check
+    assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
+                    norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
+                             scale=emp_null.sd),
+                    rtol=1e-13)

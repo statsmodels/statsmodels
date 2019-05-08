@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 import warnings
 
+import pytest
 import numpy as np
 import pandas as pd
 import pytest
@@ -55,7 +56,8 @@ def test_confint_proportion():
                                 err_msg=repr(case) + method)
 
 
-def test_confint_proportion_ndim():
+@pytest.mark.parametrize('method', probci_methods)
+def test_confint_proportion_ndim(method):
     # check that it works with 1-D, 2-D and pandas
 
     count = np.arange(6).reshape(2, 3)
@@ -64,33 +66,32 @@ def test_confint_proportion_ndim():
     count_pd = pd.DataFrame(count)
     nobs_pd =  pd.DataFrame(nobs)
 
-    for method in probci_methods:
-        ci_arr = proportion_confint(count, nobs, alpha=0.05, method=method)
-        ci_pd = proportion_confint(count_pd, nobs_pd, alpha=0.05,
-                                   method=method)
-        assert_allclose(ci_arr, (ci_pd[0].values, ci_pd[1].values), rtol=1e-13)
-        # spot checking one value
-        ci12 = proportion_confint(count[1, 2], nobs[1, 2], alpha=0.05,
-                                  method=method)
-        assert_allclose((ci_pd[0].values[1, 2], ci_pd[1].values[1, 2]), ci12,
-                        rtol=1e-13)
-        assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
+    ci_arr = proportion_confint(count, nobs, alpha=0.05, method=method)
+    ci_pd = proportion_confint(count_pd, nobs_pd, alpha=0.05,
+                               method=method)
+    assert_allclose(ci_arr, (ci_pd[0].values, ci_pd[1].values), rtol=1e-13)
+    # spot checking one value
+    ci12 = proportion_confint(count[1, 2], nobs[1, 2], alpha=0.05,
+                              method=method)
+    assert_allclose((ci_pd[0].values[1, 2], ci_pd[1].values[1, 2]), ci12,
+                    rtol=1e-13)
+    assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
-        # check that lists work as input
-        ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05,
-                                   method=method)
-        assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
+    # check that lists work as input
+    ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05,
+                               method=method)
+    assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
 
-        # check pandas Series, 1-D
-        ci_pds = proportion_confint(count_pd.iloc[0], nobs_pd.iloc[0],
-                                    alpha=0.05, method=method)
-        assert_allclose((ci_pds[0].values, ci_pds[1].values),
-                        (ci_pd[0].values[0], ci_pd[1].values[0]), rtol=1e-13)
+    # check pandas Series, 1-D
+    ci_pds = proportion_confint(count_pd.iloc[0], nobs_pd.iloc[0],
+                                alpha=0.05, method=method)
+    assert_allclose((ci_pds[0].values, ci_pds[1].values),
+                    (ci_pd[0].values[0], ci_pd[1].values[0]), rtol=1e-13)
 
-        # check scalar nobs, verifying one value
-        ci_arr2 = proportion_confint(count, nobs[1, 2], alpha=0.05,
-                                     method=method)
-        assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
+    # check scalar nobs, verifying one value
+    ci_arr2 = proportion_confint(count, nobs[1, 2], alpha=0.05,
+                                 method=method)
+    assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
 
 def test_samplesize_confidenceinterval_prop():
