@@ -3,6 +3,12 @@
 trigger:
 - master
 
+variables:
+  MKL_NUM_THREADS: 1
+  NUMEXPR_NUM_THREADS: 1
+  OMP_NUM_THREADS: 1
+  OPENBLAS_NUM_THREADS: 1
+  PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
 
 jobs:
 - template: tools/ci/azure_template.yml
