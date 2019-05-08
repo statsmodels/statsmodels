@@ -535,7 +535,8 @@ class ConditionalMNLogit(_ConditionalModel):
         self.df_model = (self.k_cat - 1) * self.exog.shape[1]
         self.df_resid = self.nobs - self.df_model
         self._ynames_map = {j: str(j) for j in range(self.k_cat)}
-        self.J = self.k_cat # Unfortunate name, needed for results
+        self.J = self.k_cat  # Unfortunate name, needed for results
+        self.K = self.exog.shape[1]  # for compatibility with MNLogit
 
         if self.endog.min() < 0:
             msg = "endog may not contain negative values"
