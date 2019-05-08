@@ -1,3 +1,5 @@
+from statsmodels.tools._testing import PytestTester
+
 from .python import (
     PY3, PY37,
     bytes, str, unicode, string_types,
@@ -20,4 +22,6 @@ __all__ = ['PY3', 'PY37', 'bytes', 'str', 'unicode', 'string_types',
            'StringIO', 'BytesIO', 'cPickle', 'pickle', 'iteritems',
            'iterkeys', 'itervalues', 'urlopen', 'urljoin', 'urlencode',
            'HTTPError', 'URLError', 'reduce', 'long', 'unichr', 'zip_longest',
-           'builtins', 'getargspec', 'next', 'get_class']
+           'builtins', 'getargspec', 'next', 'get_class', 'test']
+
+test = PytestTester()

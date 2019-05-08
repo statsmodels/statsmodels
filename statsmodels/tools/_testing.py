@@ -8,12 +8,40 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
+import os
+import sys
+from distutils.version import LooseVersion
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_
 
 import pandas as pd
 import pandas.util.testing as tm
-import pytest
+
+
+class PytestTester(object):
+    def __init__(self):
+        f = sys._getframe(1)
+        package_path = f.f_locals.get('__file__', None)
+        if package_path is None:
+            raise ValueError('Unable to determine path')
+        self.package_path = os.path.dirname(package_path)
+        self.package_name = f.f_locals.get('__name__', None)
+
+    def __call__(self, extra_args=None, exit=False):
+        try:
+            import pytest
+            if not LooseVersion(pytest.__version__) >= LooseVersion('3.0'):
+                raise ImportError
+            if extra_args is None:
+                extra_args = ['--tb=short', '--disable-pytest-warnings']
+            cmd = [self.package_path] + extra_args
+            print('Running pytest ' + ' '.join(cmd))
+            status = pytest.main(cmd)
+            if exit:
+                sys.exit(status)
+        except ImportError:
+            raise ImportError('pytest>=3 required to run the test')
 
 
 def assert_equal(left, right):
@@ -114,6 +142,8 @@ def check_ftest_pvalues(results):
 
 
 def check_fitted(results):
+    import pytest
+
     # ignore wrapper for isinstance check
     from statsmodels.genmod.generalized_linear_model import GLMResults
     from statsmodels.discrete.discrete_model import DiscreteResults
