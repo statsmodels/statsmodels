@@ -35,7 +35,7 @@ jobs:
   - ${{ if eq(parameters.name, 'Windows') }}:
     # We need to install a C compiler, see
     #  https://github.com/Microsoft/azure-pipelines-tasks/issues/9674
-    # TODO(py27): This is only necessary for the py27 build, can be removed
+    # TODO: This is only necessary for the py27 build, can be removed
     #  once py27 is dropped
     - script: choco install vcpython27
       displayName: 'Install compiler'
@@ -53,7 +53,7 @@ jobs:
 
   - script: |
       pytest statsmodels --junitxml=junit/test-results.xml --skip-examples -n 2
-    displayName: 'Running pytest'
+    displayName: 'pytest'
 
   - ${{ if eq(parameters.name, 'Linux') }}:
     # Only lint on Linux
