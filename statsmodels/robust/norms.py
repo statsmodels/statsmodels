@@ -628,7 +628,9 @@ class Hampel(RobustNorm):
         """
 
         z = np.fabs(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
@@ -659,7 +661,9 @@ class Hampel(RobustNorm):
             psi(z) = 0                            for \|z\| > c
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
         z = np.fabs(z)
@@ -692,7 +696,9 @@ class Hampel(RobustNorm):
 
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         v = (t1 +
             t2 * a/np.fabs(z) +

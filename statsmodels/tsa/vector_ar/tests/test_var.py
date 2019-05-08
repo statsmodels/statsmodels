@@ -161,7 +161,9 @@ def setup_module():
 
 class CheckIRF(object):
 
-    ref = None; res = None; irf = None
+    ref = None
+    res = None
+    irf = None
     k = None
 
     #---------------------------------------------------------------------------

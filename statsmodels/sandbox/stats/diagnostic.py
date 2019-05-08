@@ -727,7 +727,7 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = 'larger'
     else:
-        fval = 1./fval;
+        fval = 1./fval
         fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = 'smaller'
 
@@ -832,7 +832,7 @@ class HetGoldfeldQuandt(object):
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
-            fval = fval;
+            fval = fval
             fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:

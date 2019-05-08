@@ -43,7 +43,7 @@ def hpfilter(X, lamb=1600):
     >>> import matplotlib.pyplot as plt
     >>> fig, ax = plt.subplots()
     >>> gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax,
-    ...                                                      fontsize=16);
+    ...                                                      fontsize=16)
     >>> plt.show()
 
     .. plot:: plots/hpf_plot.py

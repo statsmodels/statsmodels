@@ -98,7 +98,7 @@ ax.legend()
 # Does the prediction table look better? Much difference in marginal
 # effects?
 
-# ### Genarlized Linear Model Example
+# ### Generalized Linear Model Example
 
 print(sm.datasets.star98.SOURCE)
 

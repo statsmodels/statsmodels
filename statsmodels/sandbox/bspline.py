@@ -514,7 +514,9 @@ class SmoothingSpline(BSpline):
         self.resid = y * self.weights - np.dot(self.coef, bt)
         self.pen = pen
 
-        del(bty); del(mask); del(bt)
+        del(bty)
+        del(mask)
+        del(bt)
 
     def smooth(self, y, x=None, weights=None):
 

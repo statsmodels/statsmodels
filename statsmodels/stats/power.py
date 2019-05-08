@@ -210,7 +210,7 @@ class Power(object):
         #    nicer but requires inspect? and not generic across tests
         #    I'm duplicating this in the subclass to get informative docstring
         key = [k for k,v in iteritems(kwds) if v is None]
-        #print kwds, key;
+        #print kwds, key
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
         key = key[0]
