@@ -101,9 +101,12 @@ class TestADFNoConstant(CheckADF):
         cls.res1 = adfuller(cls.x, regression="nc", autolag=None,
                 maxlag=4)
         cls.teststat = 3.5227498
-        cls.pvalue = .99999 # Stata does not return a p-value for noconstant.
-                        # Tau^max in MacKinnon (1994) is missing, so it is
-                        # assumed that its right-tail is well-behaved
+
+        cls.pvalue = .99999
+        # Stata does not return a p-value for noconstant.
+        # Tau^max in MacKinnon (1994) is missing, so it is
+        # assumed that its right-tail is well-behaved
+
         cls.critvalues = [-2.587, -1.950, -1.617]
 
 

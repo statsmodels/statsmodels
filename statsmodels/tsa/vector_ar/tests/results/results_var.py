@@ -33,20 +33,22 @@ class MacrodataResults(object):
         self.rmse_3 = .0395942039671031
         self.rsquared_3 = .2955406949737428
         self.llf_3 = 365.5895183036045
-# These are from Stata.  They use the LL based definition
-# We return Lutkepohl statistics.  See Stata TS manual page 436
-#        self.bic = -19.06939794312953
-#        self.aic = -19.41572126661708
-#        self.hqic = -19.27556951526737
-# These are from R.  See var.R in macrodata folder
+        # These are from Stata.  They use the LL based definition
+        # We return Lutkepohl statistics.  See Stata TS manual page 436
+        #        self.bic = -19.06939794312953
+        #        self.aic = -19.41572126661708
+        #        self.hqic = -19.27556951526737
+        # These are from R.  See var.R in macrodata folder
         self.bic = -2.758301611618373e+01
         self.aic = -2.792933943967127e+01
         self.hqic = -2.778918768832157e+01
         self.fpe = 7.421287668357018e-13
         self.detsig = 6.01498432283e-13
         self.llf = 1962.572126661708
-        self.chi2_1 = 75.44775165699033 # don't know how they calculate this
-                                        # it's not -2 * (ll1 - ll0)
+
+        self.chi2_1 = 75.44775165699033
+        # don't know how they calculate this;  it's not -2 * (ll1 - ll0)
+
         self.chi2_2 = 33.19878716815366
         self.chi2_3 = 83.90568280242312
         bse = [.1666662376, .1704584393, .1289691456, .1433308696, .0257313781,
