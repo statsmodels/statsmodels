@@ -1,4 +1,5 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.platform import PLATFORM_OSX
 
 import os
 import warnings
@@ -2260,18 +2261,21 @@ def test_arima_exog_predict():
          7.73245950636, 7.74935432862, 7.74449584691, 7.69589103679,
          7.59412746880, 7.59021764836, 7.59739267775])
 
+    # Relax tolerance on OSX due to frequent small failures
+    # GH 4657
+    tol = 1e-3 if PLATFORM_OSX else 1e-4
     assert_allclose(predicted_arma_dp,
-                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+                    res_d101[-len(predicted_arma_d):], atol=tol)
     assert_allclose(predicted_arma_fp,
-                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+                    res_f101[-len(predicted_arma_f):], atol=tol)
     assert_allclose(predicted_arma_d,
-                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+                    res_d101[-len(predicted_arma_d):], atol=tol)
     assert_allclose(predicted_arma_f,
-                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+                    res_f101[-len(predicted_arma_f):], atol=tol)
     assert_allclose(predicted_arima_d / endog_scale,
-                    res_d111[-len(predicted_arima_d):], rtol=1e-4, atol=1e-4)
+                    res_d111[-len(predicted_arima_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arima_f / endog_scale,
-                    res_f111[-len(predicted_arima_f):], rtol=1e-4, atol=1e-4)
+                    res_f111[-len(predicted_arima_f):], rtol=tol, atol=tol)
 
     # test for forecast with 0 ar fix in #2457 numbers again from Stata
 
@@ -2302,15 +2306,15 @@ def test_arima_exog_predict():
     # TODO: Checking other results
     forecast_002 = forecast_002[0]
     assert_allclose(fpredict_002, res_f002[-len(fpredict_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
     assert_allclose(forecast_002, res_f002[-len(forecast_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
 
     # dynamic predict
     dpredict_002 = res_002.predict(start=193, end=202,
                                    exog=exog_full.values[197:], dynamic=True)
     assert_allclose(dpredict_002, res_d002[-len(dpredict_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
 
     # in-sample dynamic predict should not need exog, #2982
     predict_3a = res_002.predict(start=100, end=120, dynamic=True)
