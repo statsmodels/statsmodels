@@ -88,8 +88,6 @@ def loglike_function(model, profile_fe, has_fe):
 class TestMixedLM(object):
 
     # Test analytic scores and Hessian using numeric differentiation
-    @pytest.mark.skipif(PLATFORM_OSX, reason='known to fail on OSX due to '
-                                             'numerical differences')
     @pytest.mark.slow
     @pytest.mark.parametrize("use_sqrt", [False, True])
     @pytest.mark.parametrize("reml", [False, True])
@@ -136,34 +134,43 @@ class TestMixedLM(object):
         loglike = loglike_function(
             model, profile_fe=profile_fe, has_fe=not profile_fe)
 
-        # Test the score at several points.
-        for kr in range(5):
-            fe_params = np.random.normal(size=k_fe)
-            cov_re = np.random.normal(size=(k_re, k_re))
-            cov_re = np.dot(cov_re.T, cov_re)
-            vcomp = np.random.normal(size=2)**2
-            params = MixedLMParams.from_components(
-                fe_params, cov_re=cov_re, vcomp=vcomp)
-            params_vec = params.get_packed(
-                has_fe=not profile_fe, use_sqrt=use_sqrt)
+        try:
+            # Test the score at several points.
+            for kr in range(5):
+                fe_params = np.random.normal(size=k_fe)
+                cov_re = np.random.normal(size=(k_re, k_re))
+                cov_re = np.dot(cov_re.T, cov_re)
+                vcomp = np.random.normal(size=2)**2
+                params = MixedLMParams.from_components(
+                    fe_params, cov_re=cov_re, vcomp=vcomp)
+                params_vec = params.get_packed(
+                    has_fe=not profile_fe, use_sqrt=use_sqrt)
 
-            # Check scores
-            gr = -model.score(params, profile_fe=profile_fe)
-            ngr = nd.approx_fprime(params_vec, loglike)
-            assert_allclose(gr, ngr, rtol=1e-3)
+                # Check scores
+                gr = -model.score(params, profile_fe=profile_fe)
+                ngr = nd.approx_fprime(params_vec, loglike)
+                assert_allclose(gr, ngr, rtol=1e-3)
 
-        # Check Hessian matrices at the MLE (we don't have
-        # the profile Hessian matrix and we don't care
-        # about the Hessian for the square root
-        # transformed parameter).
-        if (profile_fe is False) and (use_sqrt is False):
-            hess = -model.hessian(rslt.params_object)
-            params_vec = rslt.params_object.get_packed(
-                use_sqrt=False, has_fe=True)
-            loglike_h = loglike_function(
-                model, profile_fe=False, has_fe=True)
-            nhess = nd.approx_hess(params_vec, loglike_h)
-            assert_allclose(hess, nhess, rtol=1e-3)
+            # Check Hessian matrices at the MLE (we don't have
+            # the profile Hessian matrix and we don't care
+            # about the Hessian for the square root
+            # transformed parameter).
+            if (profile_fe is False) and (use_sqrt is False):
+                hess = -model.hessian(rslt.params_object)
+                params_vec = rslt.params_object.get_packed(
+                    use_sqrt=False, has_fe=True)
+                loglike_h = loglike_function(
+                    model, profile_fe=False, has_fe=True)
+                nhess = nd.approx_hess(params_vec, loglike_h)
+                assert_allclose(hess, nhess, rtol=1e-3)
+        except AssertionError:
+            # See GH#5628; because this test fails unpredictably but only on
+            #  OSX, we only xfail it there.
+            if PLATFORM_OSX:
+                pytest.xfail("fails on OSX due to unresolved "
+                             "numerical differences")
+            else:
+                raise
 
     def test_default_re(self):
 
