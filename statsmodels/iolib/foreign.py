@@ -220,7 +220,7 @@ class _StataVariable(object):
     def label(self):
         """The variable's label"""
         return self._data[6]
-    
+
 
 class StataReader(object):
     """
