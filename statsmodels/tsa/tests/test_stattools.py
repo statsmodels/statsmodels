@@ -1,5 +1,6 @@
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import lrange
 
 import os
@@ -440,9 +441,10 @@ class TestGrangerCausality(object):
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
         gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
-        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'], decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                            decimal=7)
 
-    def test_granger_fails_on_nobs_check(self):
+    def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         X = np.random.rand(10, 2)
         grangercausalitytests(X, 2, verbose=False)  # This should pass.
@@ -466,8 +468,8 @@ class TestKPSS(SetupKPSS):
     macrodata['realgdp'] series.
     """
 
-    def test_fail_nonvector_input(self):
-        with warnings.catch_warnings(record=True) as w:
+    def test_fail_nonvector_input(self, reset_randomstate):
+        with warnings.catch_warnings(record=True):
             kpss(self.x)  # should be fine
 
         x = np.random.rand(20, 2)
@@ -521,7 +523,7 @@ def test_pandasacovf():
     assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
-def test_acovf2d():
+def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
     dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
@@ -772,7 +774,7 @@ def test_innovations_errors():
         innovations_algo(acovf, rtol='none')
 
 
-def test_innovations_filter_brockwell_davis():
+def test_innovations_filter_brockwell_davis(reset_randomstate):
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
@@ -786,7 +788,7 @@ def test_innovations_filter_brockwell_davis():
     assert_allclose(resid, expected)
 
 
-def test_innovations_filter_pandas():
+def test_innovations_filter_pandas(reset_randomstate):
     ma = np.array([-0.9, 0.5])
     acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, _ = innovations_algo(acovf, nobs=10)
@@ -811,7 +813,7 @@ def test_innovations_filter_errors():
         innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
 
 
-def test_innovations_algo_filter_kalman_filter():
+def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
     ar_params = np.array([0.5])
@@ -836,6 +838,8 @@ def test_innovations_algo_filter_kalman_filter():
     res = mod.filter(np.r_[ar_params, ma_params, sigma2])
 
     # Test that the two approaches are identical
-    assert_allclose(u, res.forecasts_error[0])
-    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
-    assert_allclose(llf_obs, res.llf_obs)
+    atol = 1e-6 if PLATFORM_WIN else 0.0
+    assert_allclose(u, res.forecasts_error[0], atol=atol)
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
+                    atol=atol)
+    assert_allclose(llf_obs, res.llf_obs, atol=atol)
