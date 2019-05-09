@@ -1580,11 +1580,13 @@ def kpss(x, regression='c', lags=None, store=False):
         Indicates the null hypothesis for the KPSS test
         * 'c' : The data is stationary around a constant (default)
         * 'ct' : The data is stationary around a trend
-    lags : int
-        Indicates the number of lags to be used. If None (default),
-        lags is calculated with the data-dependent method of Hobijn
-        et al. (1998). See also Andrews (1991), Newey & West (1994),
-        and Schwert (1989).
+    lags : {None, str, int}, optional
+        Indicates the number of lags to be used. If None (default), lags is
+        calculated using the legacy method. If 'auto', lags is calculated
+        using the data-dependent method of Hobijn et al. (1998). See also
+        Andrews (1991), Newey & West (1994), and Schwert (1989). If set to
+        'legacy',  uses int(12 * (n / 100)**(1 / 4)) , as outlined in
+        Schwert (1989).
     store : bool
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
@@ -1661,8 +1663,23 @@ def kpss(x, regression='c', lags=None, store=False):
         raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
+        lags = 'legacy'
+        msg = 'The behavior of using lags=None will change in the next ' \
+              'release. Currently lags=None is the same as ' \
+              'lags=\'legacy\', and so a sample-size lag length is used. ' \
+              'After the next release, the default will change to be the ' \
+              'same as lags=\'auto\' which uses an automatic lag length ' \
+              'selection method. To silence this warning, either use ' \
+              '\'auto\' or \'legacy\''
+        import warnings
+        warnings.warn(msg, DeprecationWarning)
+    if lags == 'legacy':
+        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+    elif lags == 'auto':
         # autolag method of Hobijn et al. (1998)
         lags = _kpss_autolag(resids, nobs)
+    else:
+        lags = int(lags)
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
@@ -1719,7 +1736,7 @@ def _kpss_autolag(resids, nobs):
         resids_prod /= (nobs / 2.)
         s0 += resids_prod
         s1 += i * resids_prod
-    s_hat = s1 / s0;
+    s_hat = s1 / s0
     pwr = 1. / 3.
     gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
     autolags = np.amin([nobs, int(gamma_hat * np.power(nobs, pwr))])

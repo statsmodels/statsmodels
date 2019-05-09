@@ -514,25 +514,41 @@ class TestKPSS(SetupKPSS):
     # test autolag function _kpss_autolag against SAS 9.3
     def test_lags(self):
         # real GDP from macrodata data set
-        with warnings.catch_warnings(record=True) as w:
-            lags = kpss(self.x, 'c')[2]
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='auto')[2]
         assert_equal(lags, 9)
         # real interest rates from macrodata data set
-        with warnings.catch_warnings(record=True) as w:
-            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c')[2]
+        with warnings.catch_warnings(record=True):
+            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c',
+                        lags='auto')[2]
         assert_equal(lags, 7)
         # volumes from nile data set
-        with warnings.catch_warnings(record=True) as w:
-            lags = kpss(nile.load().data['volume'], 'c')[2]
+        with warnings.catch_warnings(record=True):
+            lags = kpss(nile.load().data['volume'], 'c', lags='auto')[2]
         assert_equal(lags, 5)
         # log-coinsurance from randhie data set
-        with warnings.catch_warnings(record=True) as w:
-            lags = kpss(randhie.load().data['lncoins'], 'ct')[2]
+        with warnings.catch_warnings(record=True):
+            lags = kpss(randhie.load().data['lncoins'], 'ct', lags='auto')[2]
         assert_equal(lags, 75)
         # in-vehicle time from modechoice data set
-        with warnings.catch_warnings(record=True) as w:
-            lags = kpss(modechoice.load().data['invt'], 'ct')[2]
+        with warnings.catch_warnings(record=True):
+            lags = kpss(modechoice.load().data['invt'], 'ct', lags='auto')[2]
         assert_equal(lags, 18)
+
+    def test_legacy_lags(self):
+        # Test legacy lags are the same
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='legacy')[2]
+        assert_equal(lags, 15)
+
+    def test_unknown_lags(self):
+        # Test legacy lags are the same
+        with pytest.raises(ValueError):
+            kpss(self.x, 'c', lags='unknown')
+
+    def test_deprecation(self):
+        with pytest.deprecated_call():
+            kpss(self.x, 'c', lags=None)
 
 
 def test_pandasacovf():
