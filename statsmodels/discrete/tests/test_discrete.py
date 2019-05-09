@@ -10,6 +10,7 @@ tests.
 # pylint: disable-msg=E1101
 from statsmodels.compat.pandas import assert_index_equal
 
+from io import BytesIO
 import os
 import warnings
 
@@ -70,6 +71,20 @@ class CheckModelResults(CheckModelMixin):
     res2 should be the test results from RModelWrap
     or the results as defined in model_results_data
     """
+
+    # TODO: implement this check for all Result subclasses
+    def test_pickleable(self):
+        # GH#5677 check that pickling does not raise
+        #  cPickle.PicklingError: Can't pickle <type 'instancemethod'>:\
+        #  attribute lookup __builtin__.instancemethod failed
+        res = self.res1
+
+        c = BytesIO()
+        res.save(c)
+        c.seek(0)
+        type(res).load(c)
+        # TODO: implement equality checks to compare this loaded object with
+        #  the original.
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)

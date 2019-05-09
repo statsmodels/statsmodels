@@ -3574,6 +3574,12 @@ class DiscreteResults(base.LikelihoodModelResults):
                 mle_settings['callback'] = None
             if 'cov_params_func' in mle_settings:
                 mle_settings['cov_params_func'] = None
+            for key in ['minimizer', 'loglike_and_score']:
+                if key in mle_settings:
+                    # GH#5677
+                    # TODO: if we have a dict here (e.g. for 'minimizer',
+                    #  should we recurse and only null-out callable elements?
+                    mle_settings[key] = None
         return self.__dict__
 
     @cache_readonly
