@@ -506,8 +506,13 @@ class BinaryModel(DiscreteModel):
                                           qc_tol=qc_tol,
                                           **kwargs)
 
-        discretefit = L1BinaryResults(self, bnryfit)
-        return L1BinaryResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, bnryfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        raise NotImplementedError("Implemented by subclasses")
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -645,8 +650,10 @@ class MultinomialModel(BinaryModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        mnfit = MultinomialResults(self, mnfit)
-        return MultinomialResultsWrapper(mnfit)
+
+        res_cls, wrap_cls = self._res_classes["fit"]
+        mnfit = res_cls(self, mnfit)
+        return wrap_cls(mnfit)
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -663,8 +670,19 @@ class MultinomialModel(BinaryModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        mnfit = L1MultinomialResults(self, mnfit)
-        return L1MultinomialResultsWrapper(mnfit)
+
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        mnfit = res_cls(self, mnfit)
+        return wrap_cls(mnfit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (MultinomialResults,
+                    MultinomialResultsWrapper),
+            "fit_regularized": (L1MultinomialResults,
+                                L1MultinomialResultsWrapper)
+        }
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
