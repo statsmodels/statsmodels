@@ -909,8 +909,10 @@ class CountModel(DiscreteModel):
                              disp=disp,
                              callback=callback,
                              **kwargs)
-        discretefit = CountResults(self, cntfit)
-        return CountResultsWrapper(discretefit)
+
+        res_cls, wrap_cls = self._res_classes["fit"]
+        discretefit = res_cls(self, cntfit)
+        return wrap_cls(discretefit)
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -932,8 +934,18 @@ class CountModel(DiscreteModel):
                                          qc_tol=qc_tol,
                                          **kwargs)
 
-        discretefit = L1CountResults(self, cntfit)
-        return L1CountResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, cntfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (CountResults,
+                    CountResultsWrapper),
+            "fit_regularized": (L1CountResults,
+                                L1CountResultsWrapper)
+        }
 
 
 # Public Model Classes
@@ -1107,8 +1119,10 @@ class Poisson(CountModel):
             kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
         else:
             kwds = {}
-        discretefit = PoissonResults(self, cntfit, **kwds)
-        return PoissonResultsWrapper(discretefit)
+
+        res_cls, wrap_cls = self._res_classes["fit"]
+        discretefit = res_cls(self, cntfit, **kwds)
+        return wrap_cls(discretefit)
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -1124,8 +1138,18 @@ class Poisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        discretefit = L1PoissonResults(self, cntfit)
-        return L1PoissonResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, cntfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (PoissonResults,
+                    PoissonResultsWrapper),
+            "fit_regularized": (L1PoissonResults,
+                                L1PoissonResultsWrapper)
+        }
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
@@ -1526,8 +1550,9 @@ class GeneralizedPoisson(CountModel):
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-        gpfit = GeneralizedPoissonResults(self, mlefit._results)
-        result = GeneralizedPoissonResultsWrapper(gpfit)
+        res_cls, wrap_cls = self._res_classes["fit"]
+        gpfit = res_cls(self, mlefit._results)
+        result = wrap_cls(gpfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -1572,8 +1597,18 @@ class GeneralizedPoisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        discretefit = L1GeneralizedPoissonResults(self, cntfit)
-        return L1GeneralizedPoissonResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, cntfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (GeneralizedPoissonResults,
+                    GeneralizedPoissonResultsWrapper),
+            "fit_regularized": (L1GeneralizedPoissonResults,
+                                L1GeneralizedPoissonResultsWrapper)
+        }
 
     def score_obs(self, params):
         if self._transparams:
@@ -1965,8 +2000,18 @@ class Logit(BinaryModel):
                               callback=callback,
                               **kwargs)
 
-        discretefit = LogitResults(self, bnryfit)
-        return BinaryResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit"]
+        discretefit = res_cls(self, bnryfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (LogitResults,
+                    BinaryResultsWrapper),
+            "fit_regularized": (L1BinaryResults,
+                                L1BinaryResultsWrapper)
+        }
 
 
 class Probit(BinaryModel):
@@ -2181,6 +2226,7 @@ class Probit(BinaryModel):
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
+
         bnryfit = super().fit(start_params=start_params,
                               method=method,
                               maxiter=maxiter,
@@ -2188,8 +2234,19 @@ class Probit(BinaryModel):
                               disp=disp,
                               callback=callback,
                               **kwargs)
-        discretefit = ProbitResults(self, bnryfit)
-        return BinaryResultsWrapper(discretefit)
+
+        res_cls, wrap_cls = self._res_classes["fit"]
+        discretefit = res_cls(self, bnryfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (ProbitResults,
+                    BinaryResultsWrapper),
+            "fit_regularized": (L1BinaryResults,
+                                L1BinaryResultsWrapper)
+        }
 
 
 class MNLogit(MultinomialModel):
