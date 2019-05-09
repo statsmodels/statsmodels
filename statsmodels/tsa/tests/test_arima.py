@@ -1,5 +1,5 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
-from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import os
 import warnings
@@ -2228,8 +2228,8 @@ def test_arima_exog_predict():
     mod111 = ARIMA(100 * np.asarray(data_sample['loginv']), (1, 1, 1),
                    # Stata differences also the exog
                    exog=ex)
-
-    res111 = mod111.fit(disp=0, solver='bfgs', maxiter=5000)
+    sv = [-0.94771574, 0.5869353, -0.32651653, 0.78066562, -0.68747501]
+    res111 = mod111.fit(start_params=sv, disp=0, solver='bfgs', maxiter=5000)
     exog_full_d = ex_scale * data[['loggdp', 'logcons']].diff()
     res111.predict(start=197, end=202, exog=exog_full_d.values[197:])
 
@@ -2263,15 +2263,15 @@ def test_arima_exog_predict():
 
     # Relax tolerance on OSX due to frequent small failures
     # GH 4657
-    tol = 1e-3 if PLATFORM_OSX else 1e-4
+    tol = 1e-3 if PLATFORM_OSX or PLATFORM_WIN else 1e-4
     assert_allclose(predicted_arma_dp,
-                    res_d101[-len(predicted_arma_d):], atol=tol)
+                    res_d101[-len(predicted_arma_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_fp,
-                    res_f101[-len(predicted_arma_f):], atol=tol)
+                    res_f101[-len(predicted_arma_f):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_d,
-                    res_d101[-len(predicted_arma_d):], atol=tol)
+                    res_d101[-len(predicted_arma_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_f,
-                    res_f101[-len(predicted_arma_f):], atol=tol)
+                    res_f101[-len(predicted_arma_f):], rtol=tol, atol=tol)
     assert_allclose(predicted_arima_d / endog_scale,
                     res_d111[-len(predicted_arima_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arima_f / endog_scale,
