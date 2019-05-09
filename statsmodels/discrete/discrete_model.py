@@ -3313,8 +3313,9 @@ class NegativeBinomialP(CountModel):
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-        nbinfit = NegativeBinomialResults(self, mlefit._results)
-        result = NegativeBinomialResultsWrapper(nbinfit)
+        res_cls, wrap_cls = self._res_classes["fit"]
+        nbinfit = res_cls(self, mlefit._results)
+        result = wrap_cls(nbinfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -3359,9 +3360,19 @@ class NegativeBinomialP(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        discretefit = L1NegativeBinomialResults(self, cntfit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, cntfit)
 
-        return L1NegativeBinomialResultsWrapper(discretefit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        return {
+            "fit": (NegativeBinomialResults,
+                    NegativeBinomialResultsWrapper),
+            "fit_regularized": (L1NegativeBinomialResults,
+                                L1NegativeBinomialResultsWrapper)
+        }
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
