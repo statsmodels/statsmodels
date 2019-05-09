@@ -53,7 +53,7 @@ from statsmodels.compat.python import lrange
 
 import numpy as np
 from scipy import optimize, stats
-
+import pandas as pd
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
@@ -247,6 +247,71 @@ class IVRegressionResults(RegressionResults):
         pval = stats.chi2.sf(H, dof)
 
         return H, pval, dof
+		
+    def Effective_Fstat(self):
+        '''Weak instrument test in 2SLS regressions 
+    Return effective F statistic as presented in Montiel Olea, J.L. and C.E. Pflueger (2013).
+    “A Robust Test for Weak Instruments,” Journal of Business and Economic Statistics 31, 358-369
+        
+
+        Make sure to add a constant to regressors and instruments sets 
+
+        TOD0: *Test versus Stata's weakivtest ado
+              *Add computation of critical values and pvalues
+			  
+		References: Montiel Olea, J.L. and C.E. Pflueger (2013), “A Robust Test for Weak Instruments,” 
+                    Journal of Business and Economic Statistics 31, 358-369
+                    Andrews I, Stock J, Sun L. Weak Instruments in IV Regression: Theory and Practice. 
+	                Annual Reviews of Economics and Statistics. 2018;100(2) :337-348.
+        '''
+
+        y,x,z = self.model.endog, self.model.exog, self.model.instrument
+        # get instrumented variable
+        df = pd.concat([pd.DataFrame(x),pd.DataFrame(z),pd.DataFrame(z)],axis = 1).T
+        x = df.drop_duplicates(keep = False).T
+
+        #normalization of variables
+        y, x, z = pd.DataFrame(y), pd.DataFrame(x), pd.DataFrame(z)
+        y = (y - y.mean())/y.std()
+        x = (x - x.mean())/x.std()
+        z = (z - z.mean())/z.std()
+        #firt stage regression
+        ztz = np.dot(z.T, z)
+        ztx = np.dot(z.T, x)
+        self.xhatparams = xhatparams = np.linalg.solve(ztz, ztx)
+        xhat = np.dot(z, xhatparams)
+
+    ### calculation of non robust Fstat
+        zTzinv = np.linalg.inv(ztz)
+        Pz = np.dot(z,zTzinv)
+        Pz = np.dot(Pz,z.T)  #projection matrix
+        xTPzx = np.dot(x.T,Pz)
+        xTPzx = np.dot(xTPzx,x)
+        eps1 = x - xhat
+        ssr1 = np.dot(eps1.T,eps1)
+        K = np.shape(z)[1]  #number of instruments
+        eps1Var = ssr1/(len(x)- K)
+        F1 = xTPzx/(K*eps1Var)  #non robust Fstat
+        
+        #calculate W2 from Eicker-Huber-White heteroscedasticity robust estimation of covariance matrix
+        resid1 = np.array(eps1)
+        W2 = np.zeros((K,K))
+        for ii in range(len(x)):
+            A = np.asmatrix(z.values[ii])
+            A = np.dot(A.T,A)*float(resid1[ii])*float(resid1[ii])
+            W2 = W2 + A
+        
+        
+        #calculate Effective_Fstat
+        dofAdjust = 1/(len(x) - np.shape(z)[1])
+        traceW2 = np.trace(W2) 
+        effFstat2 = xTPzx / traceW2
+        traceW2 = np.trace(W2) *dofAdjust
+        effFstat = xTPzx/traceW2
+		#ssr1,F1,traceW2, effFstat, F2
+        return  "Fisrt stage Fstat", F1, "Effective Fstat", effFstat
+
+
 
 
 # copied from regression results with small changes, no llf
