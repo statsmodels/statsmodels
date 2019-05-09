@@ -1,5 +1,7 @@
 from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
+from statsmodels.compat.pandas import cache_readonly as CR
+
 import warnings
 
 __all__ = ['cache_readonly', 'cache_writable']
@@ -72,8 +74,6 @@ class cache_writable(_cache_readonly):
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
 #   b) make sure certain values are evaluated before caching (cached_value)
-from pandas.util._decorators import cache_readonly as CR
-
 class cached_data(CR):
     pass
 
