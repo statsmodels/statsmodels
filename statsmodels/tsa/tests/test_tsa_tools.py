@@ -64,28 +64,29 @@ def test_ywcoef():
                                                          method='mle')[0], 8)
 
 
+@pytest.mark.smoke
 def test_yule_walker_inter():
     # see 1869
     x = np.array([1, -1, 2, 2, 0, -2, 1, 0, -3, 0, 0])
     # it works
-    result = sm.regression.yule_walker(x, 3)
+    sm.regression.yule_walker(x, 3)
 
 
-def test_duplication_matrix():
+def test_duplication_matrix(reset_randomstate):
     for k in range(2, 10):
         m = tools.unvech(np.random.randn(k * (k + 1) // 2))
         Dk = tools.duplication_matrix(k)
         assert (np.array_equal(vec(m), np.dot(Dk, vech(m))))
 
 
-def test_elimination_matrix():
+def test_elimination_matrix(reset_randomstate):
     for k in range(2, 10):
         m = np.random.randn(k, k)
         Lk = tools.elimination_matrix(k)
         assert (np.array_equal(vech(m), np.dot(Lk, vec(m))))
 
 
-def test_commutation_matrix():
+def test_commutation_matrix(reset_randomstate):
     m = np.random.randn(4, 3)
     K = tools.commutation_matrix(4, 3)
     assert (np.array_equal(vec(m.T), np.dot(K, vec(m))))
@@ -117,9 +118,8 @@ class TestLagmat(object):
         cols = list(cls.macro_df.columns)
         cls.realgdp_loc = cols.index('realgdp')
         cls.cpi_loc = cols.index('cpi')
+        np.random.seed(12345)
         cls.random_data = np.random.randn(100)
-        year = cls.macro_df['year'].values
-        quarter = cls.macro_df['quarter'].values
 
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]
@@ -563,6 +563,7 @@ class TestLagmat2DS(object):
     def setup_class(cls):
         data = sm.datasets.macrodata.load_pandas()
         cls.macro_df = data.data[['year', 'quarter', 'realgdp', 'cpi']]
+        np.random.seed(12345)
         cls.random_data = np.random.randn(100)
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]

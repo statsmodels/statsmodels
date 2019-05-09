@@ -287,7 +287,7 @@ def test_ar_dates():
     assert_equal(pred.index, predict_dates)
 
 
-def test_ar_named_series():
+def test_ar_named_series(reset_randomstate):
     dates = period_range(start="2011-1", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
     results = sm.tsa.AR(y).fit(2)

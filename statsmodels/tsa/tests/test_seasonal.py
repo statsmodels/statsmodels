@@ -135,13 +135,15 @@ class TestDecompose:
         assert_almost_equal(res_mult.seasonal.values.squeeze(), seasonal, 4)
         assert_almost_equal(res_mult.trend.values.squeeze(), trend, 2)
         assert_almost_equal(res_mult.resid.values.squeeze(), random, 4)
-        assert_almost_equal(res_mult_override.seasonal.values.squeeze(), seasonal, 4)
+        assert_almost_equal(res_mult_override.seasonal.values.squeeze(),
+                            seasonal, 4)
         assert_almost_equal(res_mult_override.trend.values.squeeze(), trend, 2)
-        assert_almost_equal(res_mult_override.resid.values.squeeze(), random, 4)
+        assert_almost_equal(res_mult_override.resid.values.squeeze(), random,
+                            4)
         assert_equal(res_mult.seasonal.index.values.squeeze(),
-                            self.data.index.values)
+                     self.data.index.values)
 
-    def test_pandas_nofreq(self):
+    def test_pandas_nofreq(self, reset_randomstate):
         # issue #3503
         nobs = 100
         dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))
