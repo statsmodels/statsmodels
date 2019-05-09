@@ -20,7 +20,7 @@ from __future__ import division
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import lzip, range
 from statsmodels.compat.scipy import loggamma
 
 import numpy as np
@@ -675,7 +675,8 @@ class MultinomialModel(BinaryModel):
 
         eXB = np.exp(np.dot(exog, params))
         sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = lmap(int, [self.J, self.K])
+        J = int(self.J)
+        K = int(self.K)
         repeat_eXB = np.repeat(eXB, J, axis=1)
         X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
@@ -4009,6 +4010,12 @@ class L1BinaryResults(BinaryResults):
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for multinomial data", "extra_attr" : ""}
+
+    def __init__(self, model, mlefit):
+        super(MultinomialResults, self).__init__(model, mlefit)
+        self.J = model.J
+        self.K = model.K
+
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
         try:
