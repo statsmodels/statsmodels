@@ -2941,8 +2941,9 @@ class NegativeBinomial(CountModel):
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-            nbinfit = NegativeBinomialResults(self, mlefit._results)
-            result = NegativeBinomialResultsWrapper(nbinfit)
+            res_cls, wrap_cls = self._res_classes["fit"]
+            nbinfit = res_cls(self, mlefit._results)
+            result = wrap_cls(nbinfit)
         else:
             result = mlefit
 
@@ -2995,8 +2996,19 @@ class NegativeBinomial(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        discretefit = L1NegativeBinomialResults(self, cntfit)
-        return L1NegativeBinomialResultsWrapper(discretefit)
+        res_cls, wrap_cls = self._res_classes["fit_regularized"]
+        discretefit = res_cls(self, cntfit)
+        return wrap_cls(discretefit)
+
+    @property
+    def _res_classes(self):
+        # TODO: should the `fit` wrapper depend on self.loglike_method?
+        return {
+            "fit": (NegativeBinomialResults,
+                    NegativeBinomialResultsWrapper),
+            "fit_regularized": (L1NegativeBinomialResults,
+                                L1NegativeBinomialResultsWrapper)
+        }
 
 
 class NegativeBinomialP(CountModel):
