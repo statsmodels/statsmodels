@@ -42,6 +42,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/base.py \
         statsmodels/stats/correlation_tools.py \
         statsmodels/stats/knockoff_regeffects.py \
+        statsmodels/stats/moment_helpers.py \
         statsmodels/stats/multicomp.py \
         statsmodels/stats/regularized_covariance.py \
         statsmodels/stats/stattools.py \
@@ -49,6 +50,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_descriptivestats.py \
         statsmodels/stats/tests/test_knockoff.py \
         statsmodels/stats/tests/test_lilliefors.py \
+        statsmodels/stats/tests/test_moment_helpers.py \
         statsmodels/stats/tests/test_qsturng.py \
         statsmodels/stats/tests/test_regularized_covariance.py \
         statsmodels/tools/linalg.py \
