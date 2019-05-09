@@ -3604,7 +3604,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     ('converged:', ["%s" % self.mle_retvals['converged']])
+                     ('converged:', ["%s" % self.mle_retvals['converged']]),
                     ]
 
         top_right = [('No. Observations:', None),
@@ -3615,6 +3615,9 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('LL-Null:', ["%#8.5g" % self.llnull]),
                      ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
                      ]
+
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"

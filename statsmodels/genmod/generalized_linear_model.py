@@ -1869,7 +1869,7 @@ class GLMResults(base.LikelihoodModelResults):
                      ]
 
         if hasattr(self, 'cov_type'):
-            top_right.append(('Covariance Type:', [self.cov_type]))
+            top_left.append(('Covariance Type:', [self.cov_type]))
 
         if title is None:
             title = "Generalized Linear Model Regression Results"
