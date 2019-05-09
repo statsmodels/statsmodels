@@ -1577,15 +1577,23 @@ class GeneralizedPoisson(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+
+            # GH#5255 for TestGeneralizedPoisson_p1.test_fit_regularized we need
+            #  to have the non-optimized start_params passed to Poisson.fit
+            #  TODO: this either indicates a too-tight test precision or an
+            #  over-sensitivity of fit_regularized output to start_params.
+            poi_start = np.zeros(self.exog.shape[1])
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
                 start_params = mod_poi.fit_regularized(
-                    start_params=start_params, method=method, maxiter=maxiter,
+                    start_params=poi_start, method=method, maxiter=maxiter,
                     full_output=full_output, disp=0, callback=callback,
                     alpha=alpha_p, trim_mode=trim_mode,
                     auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
                     qc_tol=qc_tol, **kwargs).params
+
             start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
