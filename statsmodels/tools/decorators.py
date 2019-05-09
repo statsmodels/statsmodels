@@ -72,8 +72,7 @@ class cache_writable(_cache_readonly):
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
 #   b) make sure certain values are evaluated before caching (cached_value)
-from pandas._libs.properties import cache_readonly as CR
-
+from pandas.util._decorators import cache_readonly as CR
 
 class cached_data(CR):
     pass
