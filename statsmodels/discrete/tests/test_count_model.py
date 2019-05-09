@@ -64,7 +64,9 @@ class CheckGeneric(CheckModelMixin):
 
     @pytest.mark.smoke
     def test_summary(self):
-        self.res1.summary()
+        summ = self.res1.summary()
+        # GH 4581
+        assert 'Covariance Type:' in str(summ)
 
 
 class TestZeroInflatedModel_logit(CheckGeneric):
