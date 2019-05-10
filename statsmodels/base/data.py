@@ -114,16 +114,9 @@ class ModelData(object):
         self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):
-        if hasconst is not None:
-            if hasconst:
-                self.k_constant = 1
-                self.const_idx = None
-            else:
-                self.k_constant = 0
-                self.const_idx = None
-        elif self.exog is None:
-            self.const_idx = None
+        if hasconst is False or self.exog is None:
             self.k_constant = 0
+            self.const_idx = None
         else:
             # detect where the constant is
             check_implicit = False

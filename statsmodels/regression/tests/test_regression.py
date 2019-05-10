@@ -933,9 +933,21 @@ def test_const_indicator():
     X = np.random.randint(0, 3, size=30)
     X = categorical(X, drop=True)
     y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
-    modc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
-    mod = OLS(y, X, hasconst=True).fit()
-    assert_almost_equal(modc.rsquared, mod.rsquared, 12)
+    resc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
+    res = OLS(y, X, hasconst=True).fit()
+    assert_almost_equal(resc.rsquared, res.rsquared, 12)
+    assert res.model.data.k_constant == 1
+    assert resc.model.data.k_constant == 1
+
+
+def test_fvalue_const_only():
+    np.random.seed(12345)
+    x = np.random.randint(0, 3, size=30)
+    x = categorical(x, drop=True)
+    x[:, 0] = 1
+    y = np.dot(x, [1., 2., 3.]) + np.random.normal(size=30)
+    res = OLS(y, x, hasconst=True).fit(cov_type='HC1')
+    assert not np.isnan(res.fvalue)
 
 
 def test_conf_int_single_regressor():

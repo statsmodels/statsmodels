@@ -564,6 +564,7 @@ class TestMissingArray(object):
         data = sm_data.handle_data(self.y, self.X, 'none', hasconst=False)
         np.testing.assert_array_equal(data.endog, self.y)
         np.testing.assert_array_equal(data.exog, self.X)
+        assert data.k_constant == 0
 
     def test_endog_only_raise(self):
         np.testing.assert_raises(Exception, sm_data.handle_data,
@@ -635,6 +636,7 @@ class TestMissingPandas(object):
         data = sm_data.handle_data(self.y, self.X, 'none', hasconst=False)
         np.testing.assert_array_equal(data.endog, self.y.values)
         np.testing.assert_array_equal(data.exog, self.X.values)
+        assert data.k_constant == 0
 
     def test_endog_only_raise(self):
         np.testing.assert_raises(Exception, sm_data.handle_data,
