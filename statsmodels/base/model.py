@@ -962,7 +962,7 @@ class Results(object):
         If a formula was used, then exog is processed in the same way as
         the original data. This transformation needs to have key access to the
         same variable names, and can be a pandas DataFrame or a dict like
-        object.
+        object that contains numpy arrays.
 
         If no formula was used, then the provided exog needs to have the
         same number of columns as the original exog in the model. No
