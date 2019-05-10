@@ -832,7 +832,7 @@ class ARMA(tsbase.TimeSeriesModel):
             Starting parameters for ARMA(p,q). If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional
-            Whehter or not to transform the parameters to ensure stationarity.
+            Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
         method : str {'css-mle','mle','css'}
