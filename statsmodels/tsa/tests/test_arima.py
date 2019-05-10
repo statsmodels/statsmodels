@@ -2450,3 +2450,11 @@ def test_multidim_endog(reset_randomstate):
     y = np.random.randn(1000, 1, 1)
     with pytest.raises(ValueError):
         ARMA(y, order=(1, 1))
+
+
+def test_arima_no_full_output():
+    # GH 2752
+    endog = y_arma[:, 6]
+    mod = ARIMA(endog, (1, 0, 1))
+    res = mod.fit(trend="c", disp=-1, full_output=False)
+    assert res.mle_retvals is None

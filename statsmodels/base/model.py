@@ -498,8 +498,8 @@ class LikelihoodModel(Model):
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1., **kwds)
 
         # TODO: hardcode scale?
+        mlefit.mle_retvals = retvals
         if isinstance(retvals, dict):
-            mlefit.mle_retvals = retvals
             if warn_convergence and not retvals['converged']:
                 from warnings import warn
                 from statsmodels.tools.sm_exceptions import ConvergenceWarning
