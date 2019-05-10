@@ -1842,7 +1842,7 @@ class LikelihoodModelResults(Results):
         else:
             # check by exog/params names if there is no formula info
             for col, name in enumerate(result.model.exog_names):
-                constraint_matrix = identity[col]
+                constraint_matrix = np.atleast_2d(identity[col])
 
                 # check if in combined
                 for cname in combine_terms:
