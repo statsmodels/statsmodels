@@ -858,8 +858,10 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
         alternative : string
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -910,8 +912,10 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
         alternative : string
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -1122,8 +1126,10 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
@@ -1177,8 +1183,10 @@ def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     low, upp : float
         equivalence interval low < m1 - m2 < upp
     usevar : string, 'pooled' or 'unequal'
@@ -1250,8 +1258,10 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     Parameters
     ----------
-    x1, x2 : array_like
-        two dependent samples
+    x1 : array_like
+        first of the two independent samples
+    x2 : array_like
+        second of the two independent samples
     low, upp : float
         equivalence interval low < mean of difference < upp
     weights : None or ndarray
@@ -1299,8 +1309,10 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
@@ -1370,8 +1382,10 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
