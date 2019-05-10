@@ -121,20 +121,20 @@ in parentheses.
         assert(result is True)
 
 
-class TestSummaryLabels(object):
+def test_ols_summary_rsquared_label():
+    # Check that the "uncentered" label is correctly added after rsquared
+    x = [1, 5, 7, 3, 5, 2, 5, 3]
+    y = [6, 4, 2, 7, 4, 9, 10, 2]
+    reg_with_constant = OLS(y, add_constant(x)).fit()
+    r2_str = 'R-squared:'
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_with_constant.summary2())
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_with_constant.summary())
 
-    def test_OLSsummary_rsquared_label(self):
-        # Check that the "uncentered" label is correctly added after rsquared
-        x = [1, 5, 7, 3, 5, 2, 5, 3]
-        y = [6, 4, 2, 7, 4, 9, 10, 2]
-        reg_with_constant = OLS(y, x, hasconst=True).fit()
-        with pytest.warns(UserWarning):
-            assert 'R-squared:' in str(reg_with_constant.summary2())
-        with pytest.warns(UserWarning):
-            assert 'R-squared:' in str(reg_with_constant.summary())
-
-        reg_without_constant = OLS(y, x, hasconst=False).fit()
-        with pytest.warns(UserWarning):
-            assert 'R-squared (uncentered):' in str(reg_without_constant.summary2())
-        with pytest.warns(UserWarning):
-            assert 'R-squared (uncentered):' in str(reg_without_constant.summary())
+    reg_without_constant = OLS(y, x, hasconst=False).fit()
+    r2_str = 'R-squared (uncentered):'
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_without_constant.summary2())
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_without_constant.summary())
