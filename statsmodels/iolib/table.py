@@ -691,6 +691,16 @@ class Cell(object):
             raise ValueError('Unknown cell datatype: %s' % datatype)
         return align
 
+    @staticmethod
+    def _latex_escape(data, fmt, output_format):
+        if output_format != 'latex':
+            return data
+        if "replacements" in fmt:
+            if isinstance(data, str):
+                for repl in sorted(fmt["replacements"]):
+                    data = data.replace(repl, fmt["replacements"][repl])
+        return data
+
     def format(self, width, output_format='txt', **fmt_dict):
         """Return string.
         This is the default formatter for cells.
@@ -715,11 +725,10 @@ class Cell(object):
         if isinstance(datatype, (int, long)):
             datatype = datatype % len(data_fmts)  # constrain to indexes
             content = data_fmts[datatype] % (data,)
+            if datatype == 0:
+                content = self._latex_escape(content, fmt, output_format)
         elif datatype in fmt:
-            if "replacements" in fmt:
-                if isinstance(data, str):
-                    for repl in sorted(fmt["replacements"]):
-                        data = data.replace(repl, fmt["replacements"][repl])
+            data = self._latex_escape(data, fmt, output_format)
 
             dfmt = fmt.get(datatype)
             try:
