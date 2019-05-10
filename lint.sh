@@ -26,6 +26,7 @@ if [ "$LINT" == true ]; then
         statsmodels/gam/ \
         statsmodels/genmod/tests/results/test_R_var_weight.py \
         statsmodels/graphics/tsaplots.py \
+        statsmodels/emplike/tests/ \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \

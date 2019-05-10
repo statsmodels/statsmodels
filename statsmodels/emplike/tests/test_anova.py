@@ -5,6 +5,7 @@ from statsmodels.datasets import star98
 from statsmodels.emplike.elanova import ANOVA
 from .results.el_results import ANOVAResults
 
+
 class TestANOVA(object):
     """
     Tests ANOVA difference in means
