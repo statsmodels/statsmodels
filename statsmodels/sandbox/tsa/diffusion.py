@@ -232,7 +232,7 @@ class GeometricBrownian(AffineDiffusion):
     dx_t &= \\mu x_t dt + \\sigma x_t dW_t
 
     $x_t $ stochastic process of Geometric Brownian motion,
-    $\mu $ is the drift,
+    $\\mu $ is the drift,
     $\\sigma $ is the Volatility,
     $W$ is the Wiener process (Brownian motion).
 
