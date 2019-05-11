@@ -102,7 +102,7 @@ def corr2cov(corr, std):
     return cov
 
 
-def whiten_ar(x, ar_coefs):
+def whiten_ar(x, ar_coefs, order):
     """
     Whiten a series of columns according to an AR(p) covariance structure.
 
@@ -117,6 +117,7 @@ def whiten_ar(x, ar_coefs):
         The data to be whitened along axis 0
     ar_coefs : array
         coefficients of AR lag- polynomial,   TODO: ar or ar_coefs?
+    order : int
 
     Returns
     -------
@@ -127,16 +128,16 @@ def whiten_ar(x, ar_coefs):
 
     rho = ar_coefs
 
-    x = np.array(x, np.float64)  #make copy
-    #_x = x.copy()
-    #dimension handling is not DRY
+    x = np.array(x, np.float64)
+    _x = x.copy()
+    # TODO: dimension handling is not DRY
     # I think previous code worked for 2d because of single index rows in np
     if x.ndim == 2:
         rho = rho[:, None]
-    for i in range(self.order):
+    for i in range(order):
         _x[(i+1):] = _x[(i+1):] - rho[i] * x[0:-(i+1)]
 
-    return _x[self.order:]
+    return _x[order:]
 
 
 def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
@@ -189,7 +190,7 @@ class ARCovariance(object):
         return cls(ar_coefs=rho)
 
     def whiten(self, x):
-        return whiten_ar(x, self.ar_coefs)
+        return whiten_ar(x, self.ar_coefs, order=self.order)
 
     def corr(self, k_vars=None):
         if k_vars is None:
