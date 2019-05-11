@@ -16,6 +16,9 @@ outline for GEE.
 
 import numpy as np
 
+from statsmodels.regression.linear_model import yule_walker
+
+
 def corr_equi(k_vars, rho):
     '''create equicorrelated correlation matrix with rho on off diagonal
 
@@ -160,16 +163,8 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
         inverse of the Toepliz matrix
 
     """
-    from scipy.linalg import toeplitz
-
-    R = toeplitz(r[:-1])
-
-    rho = np.linalg.solve(R, r[1:])
-    sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
-        return rho, np.sqrt(sigmasq), np.linalg.inv(R)
-    else:
-        return rho, np.sqrt(sigmasq)
+    return yule_walker(acov, order=order, method=method, df=df, inv=inv,
+                       demean=False)
 
 
 class ARCovariance(object):
