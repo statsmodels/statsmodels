@@ -17,6 +17,7 @@ outline for GEE.
 import numpy as np
 
 from statsmodels.regression.linear_model import yule_walker
+from statsmodels.stats.moment_helpers import cov2corr
 
 
 def corr_equi(k_vars, rho):
@@ -198,4 +199,4 @@ class ARCovariance(object):
         return corr_ar(k_vars, self.ar)
 
     def cov(self, k_vars=None):
-        return cov2corr(corr(self, k_vars=None), self.sigma)
+        return cov2corr(self.corr(k_vars=None), self.sigma)
