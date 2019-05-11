@@ -166,9 +166,6 @@ print("bse diff in percent")
 print((res_norm3.bse[:-1] / res2.bse)*100. - 100)
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 Optimization terminated successfully.
          Current function value: 12.818804
          Iterations 6

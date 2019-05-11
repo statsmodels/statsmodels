@@ -335,9 +335,6 @@ print(res5.summary())
 print(res5.t_test([[1,0]]))
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 0.0686702747648
 0.0164150896481
 0.128121386381
@@ -438,9 +435,6 @@ NameError: name 'mod_para' is not defined
 
 
 #'''
-#C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
-# please delete it from your matplotlibrc file
-#  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 #0.0686702747648
 #0.0164150896481
 #0.128121386381
@@ -1047,10 +1041,6 @@ Traceback (most recent call last):
   File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\examples\ex_generic_mle_tdist.py", line 184, in nloglikeobs
     scale = params[2]
 IndexError: index out of bounds
->>> hasattr(self, 'start_params')
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'self' is not defined
 
 >>> hasattr(mod_par, 'start_params')
 True
@@ -1064,12 +1054,6 @@ array([ 1.,  2.])
 (array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
 >>> stats.pareto.stats(1., moments='mvsk')
 (array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
->>> stats.pareto.stats(0.5., moments='mvsk')
-  File "<stdin>", line 1
-    stats.pareto.stats(0.5., moments='mvsk')
-                           ^
-SyntaxError: invalid syntax
-
 >>> stats.pareto.stats(0.5, moments='mvsk')
 (array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
 >>> stats.pareto.stats(2, moments='mvsk')
@@ -1080,10 +1064,6 @@ SyntaxError: invalid syntax
 array([ 1.07716265,  1.18977526,  1.07093   ,  1.05157081,  1.15991232,
         1.31015589,  1.06675107,  1.08082475,  1.19501243,  1.34967158])
 >>> r = stats.pareto.rvs(10, size=1000)
->>> plt
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'plt' is not defined
 
 >>> import matplotlib.pyplot as plt
 >>> plt.hist(r)

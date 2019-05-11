@@ -355,16 +355,18 @@ standard dev', np.sqrt(res.sigmabygroup)
 
         return templ % resvals
 
-
-
     # a variation of this has been added to RegressionResults as compare_lr
     def lr_test(self):
-        '''generic likelihood ration test between nested models
+        r'''
+        generic likelihood ratio test between nested models
 
-            \begin{align} D & = -2(\ln(\text{likelihood for null model}) - \ln(\text{likelihood for alternative model})) \\ & = -2\ln\left( \frac{\text{likelihood for null model}}{\text{likelihood for alternative model}} \right). \end{align}
+            \begin{align}
+            D & = -2(\ln(\text{likelihood for null model}) - \ln(\text{likelihood for alternative model})) \\
+            & = -2\ln\left( \frac{\text{likelihood for null model}}{\text{likelihood for alternative model}} \right).
+            \end{align}
 
-            is distributed as chisquare with df equal to difference in number of parameters or equivalently
-            difference in residual degrees of freedom  (sign?)
+        is distributed as chisquare with df equal to difference in number of parameters or equivalently
+        difference in residual degrees of freedom  (sign?)
 
         TODO: put into separate function
         '''
