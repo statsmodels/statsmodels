@@ -219,13 +219,22 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     x = np.asarray(x)
     nobs = x.shape[0]
 
+    ntrend = len(regression) if regression != 'nc' else 0
     if maxlag is None:
-        #from Greene referencing Schwert 1989
+        # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
-
+        # -1 for the diff
+        maxlag = min(nobs // 2 - ntrend - 1, maxlag)
+        if maxlag < 0:
+            raise ValueError('sample size is too short to use selected '
+                             'regression component')
+    elif maxlag > nobs // 2 - ntrend - 1:
+        raise ValueError('maxlag must be less than (nobs/2 - 1 - ntrend) '
+                         'where n trend is the number of included '
+                         'deterministic regressors')
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim='both', original='in')
-    nobs = xdall.shape[0]  # pylint: disable=E1103
+    nobs = xdall.shape[0]
 
     xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
@@ -237,10 +246,11 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1  # 1 for level  # pylint: disable=E1103
-        #search for lag length with smallest information criteria
-        #Note: use the same number of observations to have comparable IC
-        #aic and bic: smaller is better
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1
+        # 1 for level
+        # search for lag length with smallest information criteria
+        # Note: use the same number of observations to have comparable IC
+        # aic and bic: smaller is better
 
         if not regresults:
             icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
@@ -253,9 +263,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
         bestlag -= startlag  # convert to lag not column index
 
-        #rerun ols with best autolag
+        # rerun ols with best autolag
         xdall = lagmat(xdiff[:, None], bestlag, trim='both', original='in')
-        nobs = xdall.shape[0]   # pylint: disable=E1103
+        nobs = xdall.shape[0]
         xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag

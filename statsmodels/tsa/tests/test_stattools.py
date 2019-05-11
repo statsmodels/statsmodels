@@ -876,3 +876,21 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
                     atol=atol)
     assert_allclose(llf_obs, res.llf_obs, atol=atol)
+
+
+def test_adfuller_short_series(reset_randomstate):
+    y = np.random.standard_normal(7)
+    res = adfuller(y, store=True)
+    assert res[-1].maxlag == 1
+    y = np.random.standard_normal(2)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y)
+    y = np.random.standard_normal(3)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y, regression='ct')
+
+
+def test_adfuller_maxlag_too_large(reset_randomstate):
+    y = np.random.standard_normal(100)
+    with pytest.raises(ValueError, match='maxlag must be less than'):
+        adfuller(y, maxlag=51)
