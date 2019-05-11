@@ -75,7 +75,8 @@ class ModelData(object):
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
-        # this has side-effects, attaches k_constant and const_idx
+        self.const_idx = None
+        self.k_constant = 0
         self._handle_constant(hasconst)
         self._check_integrity()
         self._cache = {}
@@ -159,7 +160,7 @@ class ModelData(object):
                 # shouldn't be here
                 pass
 
-            if check_implicit:
+            if check_implicit and not hasconst:
                 # look for implicit constant
                 # Compute rank of augmented matrix
                 augmented_exog = np.column_stack(
@@ -168,6 +169,10 @@ class ModelData(object):
                 rank_orig = np.linalg.matrix_rank(self.exog)
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
+            elif hasconst:
+                # Ensure k_constant is 1 any time hasconst is True
+                # even if one isn't found
+                self.k_constant = 1
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
