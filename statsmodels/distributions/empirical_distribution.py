@@ -132,15 +132,18 @@ class ECDF(StepFunction):
     array([ 0.75,  1.  ,  0.  ,  0.25])
     """
     def __init__(self, x, side='right'):
-        step = True
-        if step: #TODO: make this an arg and have a linear interpolation option?
-            x = np.array(x, copy=True)
-            x.sort()
-            nobs = len(x)
-            y = np.linspace(1./nobs,1,nobs)
-            super(ECDF, self).__init__(x, y, side=side, sorted=True)
-        else:
-            return interp1d(x,y,drop_errors=False,fill_values=ival)
+        x = np.array(x, copy=True)
+        x.sort()
+        nobs = len(x)
+        y = np.linspace(1./nobs,1,nobs)
+        super(ECDF, self).__init__(x, y, side=side, sorted=True)
+        # TODO: make `step` an arg and have a linear interpolation option?
+        # This is the path with `step` is True
+        # If `step` is False, a previous version of the code read
+        #  `return interp1d(x,y,drop_errors=False,fill_values=ival)`
+        # which would have raised a NameError if hit, so would need to be
+        # fixed.  See GH#5701.
+
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
