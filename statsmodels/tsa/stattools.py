@@ -903,8 +903,8 @@ def periodogram(X):
     return pergr
 
 
-#copied from nitime and statsmodels\sandbox\tsa\examples\try_ld_nitime.py
-#TODO: check what to return, for testing and trying out returns everything
+# moved from sandbox.tsa.examples.try_ld_nitime, via nitime
+# TODO: check what to return, for testing and trying out returns everything
 def levinson_durbin(s, nlags=10, isacov=False):
     """
     Levinson-Durbin recursion for autoregressive processes
