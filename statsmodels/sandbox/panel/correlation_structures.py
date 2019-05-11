@@ -41,6 +41,7 @@ def corr_equi(k_vars, rho):
     corr[np.diag_indices_from(corr)] = 1
     return corr
 
+
 def corr_ar(k_vars, ar):
     '''create autoregressive correlation matrix
 
@@ -80,7 +81,8 @@ def corr_arma(k_vars, ar, ma):
     from scipy.linalg import toeplitz
     from statsmodels.tsa.arima_process import arma2ar
 
-    ar = arma2ar(ar, ma, lags=k_vars)[:k_vars]  #bug in arma2ar
+    # TODO: flesh out the comment below about a bug in arma2ar
+    ar = arma2ar(ar, ma, lags=k_vars)[:k_vars]  # bug in arma2ar
 
     return toeplitz(ar)
 
@@ -99,7 +101,7 @@ def corr2cov(corr, std):
     '''
     if np.size(std) == 1:
         std = std*np.ones(corr.shape[0])
-    cov = corr * std[:,None] * std[None, :]  #same as outer product
+    cov = corr * std[:, None] * std[None, :]  # same as outer product
     return cov
 
 
@@ -195,7 +197,7 @@ class ARCovariance(object):
 
     def corr(self, k_vars=None):
         if k_vars is None:
-            k_vars = len(self.ar)   #this could move into corr_arr
+            k_vars = len(self.ar)   # TODO: this could move into corr_arr
         return corr_ar(k_vars, self.ar)
 
     def cov(self, k_vars=None):
