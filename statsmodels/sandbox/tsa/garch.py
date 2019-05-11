@@ -84,6 +84,7 @@ import matplotlib.pyplot as plt
 import numdifftools as ndt
 
 from statsmodels.base.model import Model, LikelihoodModelResults
+from statsmodels.tsa.filters.filtertools import miso_lfilter
 from statsmodels.sandbox import tsa
 
 
@@ -1027,70 +1028,6 @@ def loglike_GARCH11(params, y):
 
     llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2)
     return llvalues.sum(), llvalues, ht
-
-from statsmodels.tsa.filters.filtertools import miso_lfilter
-#copied to statsmodels.tsa.filters.filtertools
-def miso_lfilter_old(ar, ma, x, useic=False): #[0.1,0.1]):
-    '''
-    use nd convolution to merge inputs,
-    then use lfilter to produce output
-
-    arguments for column variables
-    return currently 1d
-
-    Parameters
-    ----------
-    ar : array_like, 1d, float
-        autoregressive lag polynomial including lag zero, ar(L)y_t
-    ma : array_like, same ndim as x, currently 2d
-        moving average lag polynomial ma(L)x_t
-    x : array_like, 2d
-        input data series, time in rows, variables in columns
-
-    Returns
-    -------
-    y : array, 1d
-        filtered output series
-    inp : array, 1d
-        combined input series
-
-    Notes
-    -----
-    currently for 2d inputs only, no choice of axis
-    Use of signal.lfilter requires that ar lag polynomial contains
-    floating point numbers
-    does not cut off invalid starting and final values
-
-    miso_lfilter find array y such that::
-
-            ar(L)y_t = ma(L)x_t
-
-    with shapes y (nobs,), x (nobs,nvars), ar (narlags,), ma (narlags,nvars)
-
-    '''
-    ma = np.asarray(ma)
-    ar = np.asarray(ar)
-    #inp = signal.convolve(x, ma, mode='valid')
-    #inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
-    #Note: convolve mixes up the variable left-right flip
-    #I only want the flip in time direction
-    #this might also be a mistake or problem in other code where I
-    #switched from correlate to convolve
-    # correct convolve version, for use with fftconvolve in other cases
-    inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
-    inp = signal.correlate(x, ma[::-1,:])[:, (x.shape[1]+1)//2]
-    assert_almost_equal(inp2, inp)
-    nobs = x.shape[0]
-    # cut of extra values at end
-
-    #todo initialize also x for correlate
-    if useic:
-        return signal.lfilter([1], ar, inp,
-                #zi=signal.lfilter_ic(np.array([1.,0.]),ar, ic))[0][:nobs], inp[:nobs]
-                zi=signal.lfiltic(np.array([1.,0.]),ar, useic))[0][:nobs], inp[:nobs]
-    else:
-        return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
-    #return signal.lfilter([1], ar, inp), inp
 
 
 def test_misofilter():
