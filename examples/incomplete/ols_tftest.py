@@ -13,6 +13,7 @@ This example was written mostly for cross-checks and refactoring.
 
 import numpy as np
 import numpy.testing as npt
+from scipy import stats
 import statsmodels.api as sm
 
 print('\n\n Example 1: Longley Data, high multicollinearity')
@@ -27,22 +28,22 @@ Ftest = res.f_test(R2)
 print(repr((Ftest.fvalue, Ftest.pvalue)))  # use repr to get more digits
 # 9.740461873303655 0.0056052885317360301
 
-##Compare to R (after running R_lm.s in the longley folder)
-##
-##> library(car)
-##> linear.hypothesis(m1, c("GNP = UNEMP","POP = YEAR"))
-##Linear hypothesis test
-##
-##Hypothesis:
-##GNP - UNEMP = 0
-##POP - YEAR = 0
-##
-##Model 1: TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR
-##Model 2: restricted model
-##
-## Res.Df      RSS Df Sum of Sq      F   Pr(>F)
-##1      9   836424
-##2     11  2646903 -2  -1810479 9.7405 0.005605 **
+# Compare to R (after running R_lm.s in the longley folder)
+#
+# > library(car)
+# > linear.hypothesis(m1, c("GNP = UNEMP","POP = YEAR"))
+# Linear hypothesis test
+#
+# Hypothesis:
+# GNP - UNEMP = 0
+# POP - YEAR = 0
+#
+# Model 1: TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR
+# Model 2: restricted model
+#
+#  Res.Df      RSS Df Sum of Sq      F   Pr(>F)
+# 1      9   836424
+# 2     11  2646903 -2  -1810479 9.7405 0.005605 **
 
 print('Regression Results Summary')
 print(res.summary())
@@ -117,9 +118,8 @@ print(repr((Ftest2b.fvalue, Ftest2b.pvalue)))
 print('\nequality of t-test and F-test')
 print(t2a**2 - np.array((Ftest2a.fvalue, Ftest2b.fvalue)))
 npt.assert_almost_equal(t2a**2, np.vstack((Ftest2a.fvalue, Ftest2b.fvalue)))
-#npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
-npt.assert_almost_equal(t2pval * 2, np.c_[Ftest2a.pvalue,
-    Ftest2b.pvalue].squeeze())
+npt.assert_almost_equal(t2pval * 2,
+                        np.c_[Ftest2a.pvalue, Ftest2b.pvalue].squeeze())
 
 
 print('\n\n Example 2: Artificial Data')
@@ -157,7 +157,6 @@ np.dot(R5, res2.params)
 Ftest = res2.f_test(R5)
 print(repr((Ftest.fvalue, Ftest.pvalue)))
 ttest = res2.t_test(R5)
-#print(repr((ttest.t, ttest.pvalue))
 print(repr((ttest.tvalue, ttest.pvalue)))
 
 R6 = np.atleast_2d([1, -1, 0, 0])
@@ -165,7 +164,6 @@ np.dot(R6, res2.params)
 Ftest = res2.f_test(R6)
 print(repr((Ftest.fvalue, Ftest.pvalue)))
 ttest = res2.t_test(R6)
-#print(repr((ttest.t, ttest.pvalue))
 print(repr((ttest.tvalue, ttest.pvalue)))
 
 R7 = np.atleast_2d([1, 0, 0, 0])
@@ -173,7 +171,6 @@ np.dot(R7, res2.params)
 Ftest = res2.f_test(R7)
 print(repr((Ftest.fvalue, Ftest.pvalue)))
 ttest = res2.t_test(R7)
-#print(repr((ttest.t, ttest.pvalue))
 print(repr((ttest.tvalue, ttest.pvalue)))
 
 
@@ -188,12 +185,10 @@ Ftest = res2.f_test(R8)
 print(repr((Ftest.fvalue, Ftest.pvalue)))
 print(repr((np.sqrt(Ftest.fvalue), Ftest.pvalue)))
 ttest = res2.t_test(R8)
-#print(repr(ttest.t), ttest.pvalue)))
 print(repr((ttest.tvalue, ttest.pvalue)))
 
 
-from scipy import stats
 print(stats.glm(y[xcat < 2].ravel(), xcat[xcat < 2].ravel()))
 print(stats.ttest_ind(y[xcat == 0], y[xcat == 1]))
 
-#TODO: compare with f_oneway
+# TODO: compare with f_oneway

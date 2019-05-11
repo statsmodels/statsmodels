@@ -66,6 +66,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/statespace/tests/test_var.py \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \
+        examples/ \
         tools/ \
         setup.py
     if [ $? -ne "0" ]; then
