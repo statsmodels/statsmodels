@@ -129,9 +129,6 @@ NameError: name 'beta' is not defined
 '''
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 repr(start_params) array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
 Optimization terminated successfully.
          Current function value: 91.897859

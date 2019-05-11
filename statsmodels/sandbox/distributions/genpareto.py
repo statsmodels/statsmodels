@@ -160,9 +160,6 @@ print(rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean())
 
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 [ 1.   0.5  0.   0.   0. ]
 [ 1.   0.5  0.   0.   0. ]
 [ 0.    0.75  1.    1.    1.  ]
