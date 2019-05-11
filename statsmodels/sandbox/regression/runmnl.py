@@ -162,7 +162,7 @@ class TryNCLogit(object):
         #not yet sure how to keep track of branches during walking of tree
         ivs = []
         for b in branches:
-            probs, iv = loglike_leafbranch(self, params, tau)
+            probs, iv = self.loglike_leafbranch(params, tau)
             ivs.append(iv)
 
         #ivs = np.array(ivs)   #note ivs is (nobs,nbranchchoices)
