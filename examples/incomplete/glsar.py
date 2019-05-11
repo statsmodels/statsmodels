@@ -4,8 +4,8 @@ Generalized Least Squares with AR Errors
 6 examples for GLSAR with artificial data
 """
 
-#.. note: These examples were written mostly to cross-check results.  It is still being
-#    written, and GLSAR is still being worked on.
+# .. note: These examples were written mostly to cross-check results.  It is
+#    still being written, and GLSAR is still being worked on.
 
 
 import numpy as np
@@ -36,8 +36,8 @@ if 0 in examples:
     model0if = GLSAR(Y, X, 2)
     res = model0if.iterative_fit(6)
     print('iterativefit beta', res.params)
-    results.tvalues   # XXX is this correct? it does equal params/bse
-    # but isn't the same as the AR example (which was wrong in the first place..)
+    results.tvalues   # TODO: is this correct? it does equal params/bse
+    # but isn't the same as the AR example (which was wrong in the first place)
     print(results.t_test([0, 1]))  # are sd and t correct? vs
     print(results.f_test(np.eye(2)))
 
@@ -51,9 +51,9 @@ x = np.arange(nsample)
 X1 = sm.add_constant(x, prepend=False)
 
 wnoise = noiseratio * np.random.randn(nsample + nlags)
-#.. noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
+# .. noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
 
-#.. find my drafts for univariate ARMA functions
+# .. find my drafts for univariate ARMA functions
 # generate AR(p)
 if np.size(rhotrue) == 1:
     # replace with scipy.signal.lfilter, keep for testing
@@ -78,7 +78,6 @@ if 1 in examples:
     mod1 = GLSAR(y1, X1, 2)
     for i in range(5):
         res1 = mod1.iterative_fit(2)
-#        mod1.fit()
         print(mod1.rho)
         print(res1.params)
 
@@ -88,8 +87,6 @@ if 2 in examples:
     parold = par0
     mod0 = GLSAR(Y, X, 1)
     for i in range(5):
-        #print(mod0.wexog.sum())
-        #print(mod0.pinv_wexog.sum())
         res0 = mod0.iterative_fit(1)
         print('rho', mod0.rho)
         parnew = res0.params
@@ -100,8 +97,8 @@ if 2 in examples:
 # generate pure AR(p) process
 Y = noise
 
-#example with no regressor,
-#results now have same estimated rho as yule-walker directly
+# example with no regressor,
+# results now have same estimated rho as yule-walker directly
 
 if 3 in examples:
     print('\nExample 3: pure AR(2), GLSAR versus Yule_Walker')

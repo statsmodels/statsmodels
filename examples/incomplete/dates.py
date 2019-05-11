@@ -42,4 +42,4 @@ print(ar_res.data.predict_dates)
 
 # This attribute only exists if predict has been called. It holds the dates
 # associated with the last call to predict.
-#..TODO: should this be attached to the results instance?
+# TODO: should this be attached to the results instance?

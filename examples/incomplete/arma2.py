@@ -2,6 +2,7 @@
 Autoregressive Moving Average (ARMA) Model
 """
 import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 
 # Generate some data from an ARMA process
@@ -21,7 +22,6 @@ y = arma_generate_sample(ar, ma, nobs)
 
 # Now, optionally, we can add some dates information. For this example,
 # we'll use a pandas time series.
-import pandas as pd
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)
 y = pd.Series(y, index=dates)
 arma_mod = sm.tsa.ARMA(y, order=(2, 2))
