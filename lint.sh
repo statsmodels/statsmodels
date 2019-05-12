@@ -38,6 +38,7 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/tests/results/generate_lasso.py \
         statsmodels/regression/tests/results/generate_lme.py \
         statsmodels/robust/tests/ \
+        statsmodels/sandbox/distributions/try_pot.py \
         statsmodels/sandbox/panel/correlation_structures.py \
         statsmodels/stats/__init__.py \
         statsmodels/stats/_knockoff.py \
