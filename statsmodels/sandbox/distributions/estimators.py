@@ -640,9 +640,6 @@ if __name__ == '__main__':
     print('\n\nExample: Lomax, Pareto, Generalized Pareto Distributions')
     print(    '--------------------------------------------------------')
 
-
-
-    #p2rvs = np.random.pareto(2,size=500)# + 1
     p2rvs = stats.genpareto.rvs(2, size=500)
     #Note: is Lomax without +1; and classical Pareto with +1
     p2rvssorted = np.sort(p2rvs)
@@ -668,29 +665,14 @@ if __name__ == '__main__':
     gpdparest_gmmbinelidentity = fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
     print('gpdparest_mlebinel', gpdparest_mlebinel)
     print('gpdparest_gmmbinelidentity', gpdparest_gmmbinelidentity)
-    gpdparest_gmmquantile2 = fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
+    gpdparest_gmmquantile2 = fitquantilesgmm(
+        stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
     print('gpdparest_gmmquantile2', gpdparest_gmmquantile2)
-    #something wrong : something hard coded ?
-    '''
-    >>> fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
-    Traceback (most recent call last):
-      File "<pyshell#6>", line 1, in <module>
-        fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in fitquantilesgmm
-        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
-      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 183, in fmin
-        fsim[0] = func(x0)
-      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 103, in function_wrapper
-        return function(x, *args)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in <lambda>
-        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 210, in momentcondquant
-        cdfdiff = distfn.cdf(xq, *params) - pq
-    ValueError: shape mismatch: objects cannot be broadcast to a single shape
-    '''
+
     print(fitquantilesgmm(stats.genpareto, p2rvs, start=x0p,
                           pquant=np.linspace(0.01,0.99,10), frozen=None))
-    fp2, bp2 = np.histogram(p2rvs,
-                    bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
+    fp2, bp2 = np.histogram(
+        p2rvs,
+        bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
     print('fitbinnedgmm equal weight bins')
     print(fitbinnedgmm(stats.genpareto, fp2, bp2, x0p))
