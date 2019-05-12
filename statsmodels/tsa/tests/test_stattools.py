@@ -535,6 +535,12 @@ class TestKPSS(SetupKPSS):
             lags = kpss(modechoice.load().data['invt'], 'ct', lags='auto')[2]
         assert_equal(lags, 18)
 
+    def test_kpss_fails_on_nobs_check(self):
+        # Test that if lags exceeds number of observations KPSS raises a clear error
+        nobs = len(self.x)
+        with pytest.raises(ValueError, match="lags \({}\) must be <= number of observations \({}\)".format(nobs+1, nobs)):
+            kpss(self.x, 'c', lags=nobs+1)
+
     def test_legacy_lags(self):
         # Test legacy lags are the same
         with warnings.catch_warnings(record=True):
