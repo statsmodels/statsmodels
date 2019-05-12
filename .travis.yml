@@ -139,6 +139,7 @@ before_install:
   # Source recipe to install packages
   - source $BUILD_INIT
   - pip install pytest pip pytest-randomly nose
+  - [ "$TRAVIS_OS_NAME" = "osx" ] && pip install pytest
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
@@ -167,8 +168,9 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
-  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
-  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export XDIST_OPTS="-n 2"; else export XDIST_OPTS=""; fi;
+  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples "$XDIST_OPTS"
+  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples "$XDIST_OPTS"; fi;
   - ./lint.sh
 
 after_success:
