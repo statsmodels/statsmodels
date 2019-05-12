@@ -182,7 +182,7 @@ res0_large = np.array([
 
 class CheckMultiTestsMixin(object):
 
-    @pytest.mark.parametrize('key,val', list(rmethods.items()))
+    @pytest.mark.parametrize('key,val', sorted(rmethods.items()))
     def test_multi_pvalcorrection_rmethods(self, key, val):
         # test against R package multtest mt.rawp2adjp
 
@@ -310,7 +310,7 @@ def test_fdr_bky():
     #print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
 
 
-@pytest.mark.parametrize('method', multitest_methods_names)
+@pytest.mark.parametrize('method', sorted(multitest_methods_names))
 def test_issorted(method):
     # test that is_sorted keyword works correctly
     # the fdrcorrection functions are tested indirectly
