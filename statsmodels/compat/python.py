@@ -20,7 +20,7 @@ if PY3:
     pickle = cPickle
     import urllib.request
     import urllib.parse
-    from urllib.request import HTTPError, URLError
+    from urllib.error import HTTPError, URLError
     bytes = bytes
     str = str
     unicode = str

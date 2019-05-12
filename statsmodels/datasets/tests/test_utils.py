@@ -57,8 +57,8 @@ def test_webuse():
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
-    except HTTPError:
-        pytest.skip('Failed with HTTP Error, these are random')
+    except (HTTPError, URLError):
+        pytest.skip('Failed with HTTPError or URLError, these are random')
     assert_array_equal(res1, res2)
 
 
@@ -74,7 +74,7 @@ def test_webuse_pandas():
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh)
-    except HTTPError:
+    except (HTTPError, URLError):
         pytest.skip('Failed with HTTP Error, these are random')
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
