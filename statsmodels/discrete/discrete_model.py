@@ -649,6 +649,13 @@ class MultinomialModel(BinaryModel):
         return MultinomialResultsWrapper(mnfit)
 
     def _get_start_params_l1(self, **kwargs):
+        """
+        If no `start_params` are given by the user, find reasonable defaults.
+
+        Returns
+        -------
+        start_params : ndarray
+        """
         return np.zeros((self.K * (self.J - 1)))
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
@@ -1545,6 +1552,13 @@ class GeneralizedPoisson(CountModel):
             maxiter='defined_by_method', full_output=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+        """
+        If no `start_params` are given by the user, find reasonable defaults.
+
+        Returns
+        -------
+        start_params : ndarray
+        """
 
         alpha_p = alpha
         if self.k_extra and np.size(alpha) > 1:
@@ -2982,6 +2996,13 @@ class NegativeBinomial(CountModel):
             maxiter='defined_by_method', full_output=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+        """
+        If no `start_params` are given by the user, find reasonable defaults.
+
+        Returns
+        -------
+        start_params : ndarray
+        """
 
         # Use poisson fit as first guess.
         # TODO, Warning: this assumes exposure is logged
@@ -3373,6 +3394,13 @@ class NegativeBinomialP(CountModel):
             maxiter='defined_by_method', full_output=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+        """
+        If no `start_params` are given by the user, find reasonable defaults.
+
+        Returns
+        -------
+        start_params : ndarray
+        """
 
         alpha_p = alpha
         if self.k_extra and np.size(alpha) > 1:
