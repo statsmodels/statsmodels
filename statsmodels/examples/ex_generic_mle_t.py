@@ -110,10 +110,6 @@ print(tmp.shape)
 8
 >>> tmp.shape
 (100, 100)
->>> np.dot(modp.exog, beta).shape
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'beta' is not defined
 
 >>> params = modp.start_value
 >>> beta = params[:-2]
@@ -254,10 +250,7 @@ array([ 31.93524822,  22.0333515 ,          NaN,  29.90198792,
 >>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-8)
 >>> np.sqrt(np.diag(np.linalg.inv(hb)))
 Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 423, in inv
-    return wrap(solve(a, identity(a.shape[0], dtype=a.dtype)))
-  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 306, in solve
+  [...]
     raise LinAlgError, 'Singular matrix'
 numpy.linalg.linalg.LinAlgError: Singular matrix
 >>> resp.params
