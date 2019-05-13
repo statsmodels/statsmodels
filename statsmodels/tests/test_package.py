@@ -1,4 +1,3 @@
-import pytest
 import subprocess
 
 from statsmodels.compat.platform import PLATFORM_WIN
@@ -20,7 +19,6 @@ def test_lazy_imports():
     assert rc == 0
 
 
-@pytest.mark.xfail(reason="scipy.stats raises at import-time with -OO")
 def test_docstring_optimization_compat():
     # GH#5235 check that importing with stripped docstrings doesn't raise
     p = subprocess.Popen('python -OO -c "import statsmodels.api as sm"',
