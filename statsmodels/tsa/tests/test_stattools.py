@@ -538,7 +538,9 @@ class TestKPSS(SetupKPSS):
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a clear error
         nobs = len(self.x)
-        with pytest.raises(ValueError, match="lags \({}\) must be <= number of observations \({}\)".format(nobs+1, nobs)):
+        msg = (r"lags \({}\) must be <= number of observations \({}\)"
+               .format(nobs+1, nobs))
+        with pytest.raises(ValueError, match=msg):
             kpss(self.x, 'c', lags=nobs+1)
 
     def test_legacy_lags(self):
