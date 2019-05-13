@@ -372,25 +372,11 @@ repr(start_params) array([ 1.,  2.])
 Warning: Maximum number of function evaluations has been exceeded.
 >>> res_par.params
 array([  7.42705803e+152,   2.17339053e+153])
->>> mod_par.loglike(mod_p.start_params)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'mod_p' is not defined
 
 >>> mod_par.loglike(mod_par.start_params)
 -1085.1993430947232
->>> np.log(mod_par.pdf(mod_par.start_params))
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-TypeError: pdf() takes exactly 3 arguments (2 given)
-
 >>> np.log(mod_par.pdf(*mod_par.start_params))
 0.69314718055994529
->>> mod_par.loglike(*mod_par.start_params)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-TypeError: loglike() takes exactly 2 arguments (3 given)
-
 >>> mod_par.loglike(mod_par.start_params)
 -1085.1993430947232
 >>> np.log(stats.pareto.pdf(y[0],*mod_par.start_params))
@@ -408,10 +394,6 @@ array([ 1.,  2.])
 0.087533156771285828
 >>> y[0]
 12.182956907488885
->>> mod_para.endog[0]
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'mod_para' is not defined
 
 >>> mod_par.endog[0]
 12.182956907488885
@@ -471,145 +453,20 @@ NameError: name 'mod_para' is not defined
 #repr(start_params) array([ 1.,  2.])
 #Warning: Maximum number of function evaluations has been exceeded.
 #repr(start_params) array([  3.06504406e+302,   3.29325579e+303])
-#Traceback (most recent call last):
-#  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\examples\ex_generic_mle_tdist.py", line 222, in <module>
-#    res_par2 = mod_par.fit(start_params=res_par.params, method='newton', maxfun=10000, maxiter=5000)
-#  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 547, in fit
-#    disp=disp, callback=callback, **kwargs)
-#  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 262, in fit
-#    newparams = oldparams - np.dot(np.linalg.inv(H),
-#  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 423, in inv
-#    return wrap(solve(a, identity(a.shape[0], dtype=a.dtype)))
-#  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 306, in solve
-#    raise LinAlgError, 'Singular matrix'
-#numpy.linalg.linalg.LinAlgError: Singular matrix
 #
 #>>> mod_par.fixed_params
 #array([ NaN,  10.,  NaN])
 #>>> mod_par.start_params
 #array([ 1.,  2.])
-#>>> np.source(stats.pareto.fit_fr)
-#In file: c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\distributions_patch.py
 #
-#def fit_fr(self, data, *args, **kwds):
-#    '''estimate distribution parameters by MLE taking some parameters as fixed
-#
-#    Parameters
-#    ----------
-#    data : array, 1d
-#        data for which the distribution parameters are estimated,
-#    args : list ? check
-#        starting values for optimization
-#    kwds :
-#
-#      - 'frozen' : array_like
-#           values for frozen distribution parameters and, for elements with
-#           np.nan, the corresponding parameter will be estimated
-#
-#    Returns
-#    -------
-#    argest : array
-#        estimated parameters
-#
-#
-#    Examples
-#    --------
-#    generate random sample
-#    >>> np.random.seed(12345)
-#    >>> x = stats.gamma.rvs(2.5, loc=0, scale=1.2, size=200)
-#
-#    estimate all parameters
-#    >>> stats.gamma.fit(x)
-#    array([ 2.0243194 ,  0.20395655,  1.44411371])
-#    >>> stats.gamma.fit_fr(x, frozen=[np.nan, np.nan, np.nan])
-#    array([ 2.0243194 ,  0.20395655,  1.44411371])
-#
-#    keep loc fixed, estimate shape and scale parameters
-#    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, np.nan])
-#    array([ 2.45603985,  1.27333105])
-#
-#    keep loc and scale fixed, estimate shape parameter
-#    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, 1.0])
-#    array([ 3.00048828])
-#    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, 1.2])
-#    array([ 2.57792969])
-#
-#    estimate only scale parameter for fixed shape and loc
-#    >>> stats.gamma.fit_fr(x, frozen=[2.5, 0.0, np.nan])
-#    array([ 1.25087891])
-#
-#    Notes
-#    -----
-#    self is an instance of a distribution class. This can be attached to
-#    scipy.stats.distributions.rv_continuous
-#
-#    *Todo*
-#
-#    * check if docstring is correct
-#    * more input checking, args is list ? might also apply to current fit method
-#
-#    '''
-#    loc0, scale0 = map(kwds.get, ['loc', 'scale'],[0.0, 1.0])
-#    Narg = len(args)
-#
-#    if Narg == 0 and hasattr(self, '_fitstart'):
-#        x0 = self._fitstart(data)
-#    elif Narg > self.numargs:
-#        raise ValueError("Too many input arguments.")
-#    else:
-#        args += (1.0,)*(self.numargs-Narg)
-#        # location and scale are at the end
-#        x0 = args + (loc0, scale0)
-#
-#    if 'frozen' in kwds:
-#        frmask = np.array(kwds['frozen'])
-#        if len(frmask) != self.numargs+2:
-#            raise ValueError("Incorrect number of frozen arguments.")
-#        else:
-#            # keep starting values for not frozen parameters
-#            x0  = np.array(x0)[np.isnan(frmask)]
-#    else:
-#        frmask = None
-#
-#    #print x0
-#    #print frmask
-#    return optimize.fmin(self.nnlf_fr, x0,
-#                args=(np.ravel(data), frmask), disp=0)
-#
-#>>> stats.pareto.fit_fr(y, 1., frozen=[np.nan, loc, np.nan])
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#NameError: name 'loc' is not defined
 #
 #>>> stats.pareto.fit_fr(y, 1., frozen=[np.nan, 10., np.nan])
 #array([ 1.0346268 ,  2.00184808])
-#>>> stats.pareto.fit_fr(y, (1.,2), frozen=[np.nan, 10., np.nan])
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\distributions_patch.py", line 273, in fit_fr
-#    x0  = np.array(x0)[np.isnan(frmask)]
-#ValueError: setting an array element with a sequence.
-#
-#>>> stats.pareto.fit_fr(y, [1.,2], frozen=[np.nan, 10., np.nan])
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\distributions_patch.py", line 273, in fit_fr
-#    x0  = np.array(x0)[np.isnan(frmask)]
-#ValueError: setting an array element with a sequence.
 #
 #>>> stats.pareto.fit_fr(y, frozen=[np.nan, 10., np.nan])
 #array([ 1.03463526,  2.00184809])
 #>>> stats.pareto.pdf(y, 1.03463526, 10, 2.00184809).sum()
 #173.33947284555239
-#>>> mod_par(1.03463526, 10, 2.00184809)
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#TypeError: 'MyPareto' object is not callable
-#
-#>>> mod_par.loglike(1.03463526, 10, 2.00184809)
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#TypeError: loglike() takes exactly 2 arguments (4 given)
 #
 #>>> mod_par.loglike((1.03463526, 10, 2.00184809))
 #-962.21623668859741
@@ -635,82 +492,13 @@ NameError: name 'mod_para' is not defined
 #-963.2513896113644
 #>>> maxabs(y, mod_par.endog)
 #0.0
-#>>> np.source(stats.pareto.logpdf)
-#In file: C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6579.win32\Programs\Python25\Lib\site-packages\scipy\stats\distributions.py
-#
-#    def logpdf(self, x, *args, **kwds):
-#        """
-#        Log of the probability density function at x of the given RV.
-#
-#        This uses more numerically accurate calculation if available.
-#
-#        Parameters
-#        ----------
-#        x : array-like
-#            quantiles
-#        arg1, arg2, arg3,... : array-like
-#            The shape parameter(s) for the distribution (see docstring of the
-#            instance object for more information)
-#        loc : array-like, optional
-#            location parameter (default=0)
-#        scale : array-like, optional
-#            scale parameter (default=1)
-#
-#        Returns
-#        -------
-#        logpdf : array-like
-#            Log of the probability density function evaluated at x
-#
-#        """
-#        loc,scale=map(kwds.get,['loc','scale'])
-#        args, loc, scale = self._fix_loc_scale(args, loc, scale)
-#        x,loc,scale = map(arr,(x,loc,scale))
-#        args = tuple(lmap(arr,args))
-#        x = arr((x-loc)*1.0/scale)
-#        cond0 = self._argcheck(*args) & (scale > 0)
-#        cond1 = (scale > 0) & (x >= self.a) & (x <= self.b)
-#        cond = cond0 & cond1
-#        output = empty(shape(cond),'d')
-#        output.fill(NINF)
-#        putmask(output,(1-cond0)*array(cond1,bool),self.badvalue)
-#        goodargs = argsreduce(cond, *((x,)+args+(scale,)))
-#        scale, goodargs = goodargs[-1], goodargs[:-1]
-#        place(output,cond,self._logpdf(*goodargs) - log(scale))
-#        if output.ndim == 0:
-#            return output[()]
-#        return output
-#
-#>>> np.source(stats.pareto._logpdf)
-#In file: C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6579.win32\Programs\Python25\Lib\site-packages\scipy\stats\distributions.py
-#
-#    def _logpdf(self, x, *args):
-#        return log(self._pdf(x, *args))
-#
-#>>> np.source(stats.pareto._pdf)
-#In file: C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6579.win32\Programs\Python25\Lib\site-packages\scipy\stats\distributions.py
-#
-#    def _pdf(self, x, b):
-#        return b * x**(-b-1)
 #
 #>>> stats.pareto.a
 #1.0
-#>>> (1-loc)/scale
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#NameError: name 'loc' is not defined
 #
 #>>> b, loc, scale = (1.03463526, 9.99, 2.00184809)
 #>>> (1-loc)/scale
 #-4.4908502522786327
-#>>> (x-loc)/scale == 1
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#NameError: name 'x' is not defined
-#
-#>>> (lb-loc)/scale == 1
-#Traceback (most recent call last):
-#  File "<stdin>", line 1, in <module>
-#NameError: name 'lb' is not defined
 #
 #>>> lb = scale + loc
 #>>> lb
@@ -742,9 +530,6 @@ Optimization terminated successfully.
 '''
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 0.0686702747648
 0.0164150896481
 0.128121386381
@@ -996,13 +781,9 @@ array([[ NaN,  NaN,  NaN],
        [ NaN,  NaN,  NaN],
        [ NaN,  NaN,  NaN]])
 >>> mod_par.hessian(res_parks)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 533, in hessian
-    return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 118, in approx_hess
-    xh = x + h
-TypeError: can only concatenate tuple (not "float") to tuple
+array([[ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN]])
 
 >>> mod_par.hessian(np.array(res_parks))
 array([[ NaN,  NaN,  NaN],
@@ -1019,28 +800,8 @@ array([[-890.48553491,           NaN,           NaN],
 -2626.6322080820569
 >>> mod_par.bsejac
 Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
-    _cachedval = self.fget(obj)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 592, in bsejac
-    return np.sqrt(np.diag(self.covjac))
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
-    _cachedval = self.fget(obj)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 574, in covjac
-    jacv = self.jacv
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
-    _cachedval = self.fget(obj)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 557, in jacv
-    return self.jac(self._results.params)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 530, in jac
-    return approx_fprime1(params, self.loglikeobs, **kwds)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 80, in approx_fprime1
-    f0 = f(*((xk,)+args))
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 522, in loglikeobs
-    return -self.nloglikeobs(params)
-  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\examples\ex_generic_mle_tdist.py", line 184, in nloglikeobs
-    scale = params[2]
-IndexError: index out of bounds
+  [...]
+AttributeError: 'MyPareto' object has no attribute 'bsejac'
 
 >>> hasattr(mod_par, 'start_params')
 True
