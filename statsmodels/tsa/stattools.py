@@ -1681,8 +1681,7 @@ def kpss(x, regression='c', lags=None, store=False):
               'same as lags=\'auto\' which uses an automatic lag length ' \
               'selection method. To silence this warning, either use ' \
               '\'auto\' or \'legacy\''
-        import warnings
-        warnings.warn(msg, DeprecationWarning)
+        warn(msg, DeprecationWarning)
     if lags == 'legacy':
         lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
     elif lags == 'auto':
@@ -1690,6 +1689,9 @@ def kpss(x, regression='c', lags=None, store=False):
         lags = _kpss_autolag(resids, nobs)
     else:
         lags = int(lags)
+
+    if lags > nobs:
+        raise ValueError("lags ({}) must be <= number of observations ({})".format(lags, nobs))
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
