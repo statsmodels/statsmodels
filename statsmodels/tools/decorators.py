@@ -24,18 +24,10 @@ class CachedAttribute(object):
         # Get the name of the attribute to set and cache
         name = self.name
         _cachedval = _cache.get(name, None)
-        # print("[_cachedval=%s]" % _cachedval)
         if _cachedval is None:
-            # Call the "fget" function
             _cachedval = self.fget(obj)
-            # Set the attribute in obj
-            # print("Setting %s in cache to %s" % (name, _cachedval))
-            try:
-                _cache[name] = _cachedval
-            except KeyError:
-                setattr(_cache, name, _cachedval)
-        # else:
-        # print("Reading %s from cache (%s)" % (name, _cachedval))
+            _cache[name] = _cachedval
+
         return _cachedval
 
     def __set__(self, obj, value):
@@ -47,10 +39,7 @@ class CachedWritableAttribute(CachedAttribute):
     def __set__(self, obj, value):
         _cache = getattr(obj, self.cachename)
         name = self.name
-        try:
-            _cache[name] = value
-        except KeyError:
-            setattr(_cache, name, value)
+        _cache[name] = value
 
 
 class _cache_readonly(object):
