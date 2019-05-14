@@ -4,8 +4,10 @@ import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
 from pandas.util import testing as tm
+from scipy import sparse
 
 from statsmodels.tools.grouputils import (
+    dummy_sparse,
     Grouping, Group, combine_indices, group_sums)
 from statsmodels.tools.tools import categorical
 from statsmodels.datasets import grunfeld, anes96
@@ -303,3 +305,33 @@ def test_group_class():
     mygroup.group_int
     mygroup.group_sums(x)
     mygroup.labels()
+
+
+def test_dummy_sparse():
+    # See GH#5687
+
+    g = np.array([0, 0, 2, 1, 1, 2, 0])
+    indi = dummy_sparse(g)
+    assert isinstance(indi, sparse.csr.csr_matrix)
+    result = indi.todense()
+    expected = np.matrix([[1, 0, 0],
+                          [1, 0, 0],
+                          [0, 0, 1],
+                          [0, 1, 0],
+                          [0, 1, 0],
+                          [0, 0, 1],
+                          [1, 0, 0]], dtype=np.int8)
+    assert_equal(result, expected)
+
+
+    # current behavior with missing groups
+    g = np.array([0, 0, 2, 0, 2, 0])
+    indi = dummy_sparse(g)
+    result = indi.todense()
+    expected = np.matrix([[1, 0, 0],
+                          [1, 0, 0],
+                          [0, 0, 1],
+                          [1, 0, 0],
+                          [0, 0, 1],
+                          [1, 0, 0]], dtype=np.int8)
+    assert_equal(result, expected)
