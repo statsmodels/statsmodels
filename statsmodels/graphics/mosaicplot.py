@@ -540,8 +540,8 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         dataset, that holds a reference to the coordinates of the
         tile and the Rectangle that represent it
 
-    See Also
-    ----------
+    Notes
+    -----
     A Brief History of the Mosaic Display
         Michael Friendly, York University, Psychology Department
         Journal of Computational and Graphical Statistics, 2001

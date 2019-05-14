@@ -154,7 +154,6 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
-
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -743,8 +742,7 @@ class GLM(base.LikelihoodModel):
 
         See Also
         --------
-        statsmodels.genmod.generalized_linear_model.GLM.fit for more
-        information
+        statsmodels.genmod.generalized_linear_model.GLM.fit
         """
         if not self.scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson,
@@ -983,23 +981,20 @@ class GLM(base.LikelihoodModel):
             The number of IRLS iterations used to obtain starting
             values for gradient optimization.  Only relevant if
             `method` is set to something other than 'IRLS'.
-
-        If IRLS fitting used, the following additional parameters are
-        available:
-
         atol : float, optional
-            The absolute tolerance criterion that must be satisfied. Defaults
-            to ``tol``. Convergence is attained when:
-            :math:`rtol * prior + atol > abs(current - prior)`
+            (available with IRLS fits) The absolute tolerance criterion that
+            must be satisfied. Defaults to ``tol``. Convergence is attained
+            when: :math:`rtol * prior + atol > abs(current - prior)`
         rtol : float, optional
-            The relative tolerance criterion that must be satisfied. Defaults
-            to 0 which means ``rtol`` is not used. Convergence is attained
-            when:
+            (available with IRLS fits) The relative tolerance criterion that
+            must be satisfied. Defaults to 0 which means ``rtol`` is not used.
+            Convergence is attained when:
             :math:`rtol * prior + atol > abs(current - prior)`
         tol_criterion : str, optional
-            Defaults to ``'deviance'``. Can optionally be ``'params'``.
+            (available with IRLS fits) Defaults to ``'deviance'``. Can
+            optionally be ``'params'``.
         wls_method : str, optional
-            options are 'lstsq', 'pinv' and 'qr'
+            (available with IRLS fits) options are 'lstsq', 'pinv' and 'qr'
             specifies which linear algebra function to use for the irls
             optimization. Default is `lstsq` which uses the same underlying
             svd based approach as 'pinv', but is faster during iterations.
@@ -1007,14 +1002,11 @@ class GLM(base.LikelihoodModel):
             near-singular cases by truncating small singular values based
             on `rcond` of the respective numpy.linalg function. 'qr' is
             only valied for cases that are not singular nor near-singular.
-
-        If a scipy optimizer is used, the following additional parameter is
-        available:
-
         optim_hessian : {'eim', 'oim'}, optional
-            When 'oim', the default, the observed Hessian is used in fitting.
-            'eim' is the expected Hessian. This may provide more stable fits,
-            but adds assumption that the Hessian is correctly specified.
+            (available with scipy optimizer fits) When 'oim'--the default--the
+            observed Hessian is used in fitting. 'eim' is the expected Hessian.
+            This may provide more stable fits, but adds assumption that the
+            Hessian is correctly specified.
 
         Notes
         -----

@@ -635,7 +635,9 @@ class WLS(RegressionModel):
     weights : array
         The stored weights supplied as an argument.
 
-    See regression.GLS
+    See also
+    --------
+    regression.GLS
 
     Examples
     --------

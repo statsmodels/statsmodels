@@ -1442,8 +1442,6 @@ class GeneralizedPoisson(CountModel):
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         """
-        Parameters
-        ----------
         use_transparams : bool
             This parameter enable internal transformation to impose non-negativity.
             True to enable. Default is False.
@@ -3195,8 +3193,6 @@ class NegativeBinomialP(CountModel):
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         """
-        Parameters
-        ----------
         use_transparams : bool
             This parameter enable internal transformation to impose non-negativity.
             True to enable. Default is False.
