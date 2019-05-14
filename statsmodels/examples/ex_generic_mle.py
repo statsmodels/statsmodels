@@ -1,5 +1,7 @@
 
 from __future__ import print_function
+from functools import partial
+
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
@@ -25,13 +27,14 @@ def probitloglike(params, endog, exog):
     X = exog
     return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
 
-mod = GenericLikelihoodModel(data.endog, data.exog, loglike=probitloglike)
-res = mod.fit(method="nm", fargs=(data.endog,data.exog), maxiter=500)
+
+model_loglike = partial(probitloglike, endog=data.endog, exog=data.exog)
+mod = GenericLikelihoodModel(data.endog, data.exog, loglike=model_loglike)
+res = mod.fit(method="nm", maxiter=500)
 print(res)
 
 
-#np.allclose(res.params, probit_res.params)
-
+np.allclose(res.params, probit_res.params, rtol=1e-4)
 print(res.params, probit_res.params)
 
 #datal = sm.datasets.longley.load(as_pandas=False)
@@ -69,10 +72,11 @@ if show_error2:
         #print xb.shape, stats.norm.logpdf(endog, loc=xb, scale=sigma).shape
         return stats.norm.logpdf(endog, loc=xb, scale=sigma).sum()
 
-    mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, loglike_norm_xb)
+    model_loglike3 = partial(loglike_norm_xb,
+                             endog=datal.endog, exog=datal.exog)
+    mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, model_loglike3)
     res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1),
-                            method="nm", maxiter = 5000,
-                            fargs=(datal.endog, datal.exog))
+                            method="nm", maxiter = 5000)
 
     print(res_norm.params)
 
@@ -93,6 +97,7 @@ class MygMLE(GenericLikelihoodModel):
 mod_norm2 = MygMLE(datal.endog, datal.exog)
 #res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1), method="nm", maxiter = 500)
 res_norm2 = mod_norm2.fit(start_params=[1.]*datal.exog.shape[1]+[1], method="nm", maxiter = 500)
+np.allclose(res_norm.params, res_norm2.params)
 print(res_norm2.params)
 
 res2 = sm.OLS(datal.endog, datal.exog).fit()
@@ -102,7 +107,7 @@ res_norm3 = mod_norm2.fit(start_params=start_params, method="nm", maxiter = 500,
 print(start_params)
 print(res_norm3.params)
 print(res2.bse)
-#print res_norm3.bse   # not available
+print(res_norm3.bse)
 print('llf', res2.llf, res_norm3.llf)
 
 bse = np.sqrt(np.diag(np.linalg.inv(res_norm3.model.hessian(res_norm3.params))))
@@ -110,36 +115,9 @@ res_norm3.model.score(res_norm3.params)
 
 #fprime in fit option cannot be overwritten, set to None, when score is defined
 # exception is fixed, but I don't think score was supposed to be called
-'''
->>> mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None, maxiter
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 316, in fit
-    disp=disp, retall=retall, callback=callback)
-  File "C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6
-579.win32\Programs\Python25\Lib\site-packages\scipy\optimize\optimize.py", line
-710, in fmin_bfgs
-    gfk = myfprime(x0)
-  File "C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6
-579.win32\Programs\Python25\Lib\site-packages\scipy\optimize\optimize.py", line
-103, in function_wrapper
-    return function(x, *args)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 240, in <lambda>
-    score = lambda params: -self.score(params)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 480, in score
-    return approx_fprime1(params, self.nloglike)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\sandbox\regression\numdiff.py", line 81, in approx_fprime1
-    nobs = np.size(f0) #len(f0)
-TypeError: object of type 'numpy.float64' has no len()
-
-'''
 
 res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
-maxiter = 500, retall=0)
+                         maxiter=500, retall=0)
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
@@ -266,11 +244,13 @@ array([   5.47162086,   75.03147114,    6.98192136,   82.60858536,
 >>> res_norm3.conf_int
 <bound method LikelihoodModelResults.conf_int of <statsmodels.model.LikelihoodModelResults object at 0x021317F0>>
 >>> res_norm3.conf_int()
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 993, in conf_int
-    lower = self.params - dist.ppf(1-alpha/2,self.model.df_resid) *\
-AttributeError: 'MygMLE' object has no attribute 'df_resid'
+array([[0.96421437, 1.01999835],
+       [0.99251725, 1.04863332],
+       [0.95721328, 1.01246222],
+       [0.97134549, 1.02695393],
+       [0.97050081, 1.02660988],
+       [0.97773434, 1.03290028],
+       [0.97529207, 1.01428874]])
 
 >>> res_norm3.params
 array([  -3.08181304,  234.34701361,  -14.99684381,   27.94088692,
