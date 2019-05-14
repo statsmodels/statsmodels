@@ -50,9 +50,10 @@ from .tools.print_version import show_versions
 from .tools.web import webdoc
 
 import os
-
 chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
 if os.path.exists(chmpath):
+    # As of 0.10.0, this is not reached.  See GH#5134
+
     def open_help(chmpath=chmpath):
         from subprocess import Popen
 
