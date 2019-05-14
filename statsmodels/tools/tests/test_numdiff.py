@@ -194,7 +194,7 @@ class CheckDerivativeMixin(object):
             gtrue = self.gradtrue(test_params)
             fun = self.fun()
 
-            epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
+            # default epsilon of 1e-6 is not precise enough here
             gfd = numdiff.approx_fprime(test_params, fun, epsilon=1e-8,
                                          args=self.args, centered=True)
             assert_almost_equal(gtrue, gfd, decimal=DEC5)
