@@ -24,7 +24,7 @@ if debug_warnings:
     if PY3:
         # ResourceWarning doesn't exist in python 2
         # we have currently many ResourceWarnings in the datasets on python 3.4
-        warnings.simplefilter("ignore", ResourceWarning)
+        warnings.simplefilter("ignore", ResourceWarning)  # noqa:F821
 
 test = PytestTester()
 

@@ -663,4 +663,4 @@ class SmoothingSpline(BSpline):
             a = self.gcv()
             return a
 
-        a = golden(_gcv, args=(y,x), brack=bracket, tol=tol)
+        a = golden(_gcv, args=(y,x), brack=brack, tol=tol)
