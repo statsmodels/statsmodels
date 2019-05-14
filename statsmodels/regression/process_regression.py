@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 This module implements maximum likelihood-based estimation (MLE) of
 Gaussian models for finite-dimensional observations made on
