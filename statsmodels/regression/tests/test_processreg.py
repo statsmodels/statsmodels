@@ -183,6 +183,7 @@ def test_score_numdiff():
 
     def loglike(x):
         return preg.loglike(x)
+
     q = x_mean.shape[1] + x_sc.shape[1] + x_sm.shape[1] + x_no.shape[1]
 
     np.random.seed(342)

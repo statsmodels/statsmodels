@@ -3,6 +3,7 @@ import pandas as pd
 from statsmodels.regression.dimred import (SIR, SAVE, PHD)
 from numpy.testing import (assert_equal)
 
+
 def test_sir_poisson():
 
     np.random.seed(43242)
@@ -29,8 +30,12 @@ def test_sir_poisson():
             model = SAVE(y, xmat, bc=True)
             rslt = model.fit(slice_n=100)
         elif method == 3:
-            df = pd.DataFrame({"y": y, "x0": xmat[:, 0], "x1": xmat[:, 1],
-                   "x2": xmat[:, 2], "x3": xmat[:, 3], "x4": xmat[:, 4]})
+            df = pd.DataFrame({"y": y,
+                               "x0": xmat[:, 0],
+                               "x1": xmat[:, 1],
+                               "x2": xmat[:, 2],
+                               "x3": xmat[:, 3],
+                               "x4": xmat[:, 4]})
             model = SIR.from_formula("y ~ 0 + x0 + x1 + x2 + x3 + x4", data=df)
             rslt = model.fit()
         elif method == 4:

@@ -2,6 +2,7 @@ import numpy as np
 from statsmodels.base import model
 import statsmodels.base.wrapper as wrap
 
+
 class DimReductionRegression(model.Model):
 
     def __init__(self, endog, exog, **kwargs):
@@ -41,10 +42,6 @@ class SIR(DimReductionRegression):
     KC Li (1991).  Sliced inverse regression for dimension reduction.
     JASA 86, 316-342.
     """
-
-    def __init__(self, endog, exog, **kwargs):
-        super(SIR, self).__init__(endog, exog, **kwargs)
-
 
     def fit(self, **kwargs):
         """
@@ -97,10 +94,6 @@ class PHD(DimReductionRegression):
     Visualization and Dimension Reduction: Another application
     of Stein's lemma. JASA 87:420.
     """
-
-    def __init__(self, endog, exog, **kwargs):
-        super(PHD, self).__init__(endog, exog, **kwargs)
-
 
     def fit(self, **kwargs):
         """
@@ -170,7 +163,7 @@ class SAVE(DimReductionRegression):
         super(SAVE, self).__init__(endog, exog, **kwargs)
 
         self.bc = False
-        if "bc" in kwargs.keys() and kwargs["bc"] == True:
+        if "bc" in kwargs and kwargs["bc"] is True:
             self.bc = True
 
     def fit(self, **kwargs):
@@ -253,5 +246,5 @@ class DimReductionResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_attrs = _attrs
 
-wrap.populate_wrapper(DimReductionResultsWrapper,
+wrap.populate_wrapper(DimReductionResultsWrapper,  # noqa:E305
                       DimReductionResults)
