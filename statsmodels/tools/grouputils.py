@@ -125,6 +125,8 @@ def group_sums_dummy(x, group_dummy):
         return x.T * group_dummy
 
 
+# TODO: See if this can be entirely replaced by Grouping.dummy_sparse;
+#  see GH#5687
 def dummy_sparse(groups):
     """create a sparse indicator from a group array with integer labels
 
@@ -176,7 +178,7 @@ def dummy_sparse(groups):
 
     indptr = np.arange(len(groups)+1)
     data = np.ones(len(groups), dtype=np.int8)
-    indi = sparse.csr_matrix((data, g, indptr))
+    indi = sparse.csr_matrix((data, groups, indptr))
 
     return indi
 

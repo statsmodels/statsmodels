@@ -100,7 +100,7 @@ z_star_ctt = [-20.7,-25.3,-29.9,-34.4,-38.5,-44.2]
 # Z* is the largest value for which it is appropriate to use these
 # approximations
 # the left tail approximation is
-# p = norm.cdf(d_0 + d_1*log(abs(z)) + d_2*log(abs(z))**2 + d_3*log(abs(z))**3
+# p = norm.cdf(d_0 + d_1*log(abs(z)) + d_2*log(abs(z))**2 + d_3*log(abs(z))**3)
 # there is no Z-min, ie., it is well-behaved in the left tail
 
 z_nc_smallp = array([[.0342, -.6376,0,-.03872],

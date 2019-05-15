@@ -101,8 +101,7 @@ class CheckModelResults(CheckModelMixin):
                             self.res2.llr_pvalue,
                             DECIMAL_4)
 
-    @pytest.mark.xfail(reason="No idea!  But until this test is actually "
-                              "written, it is considered broken.",
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
                        strict=True, raises=NotImplementedError)
     def test_normalized_cov_params(self):
         raise NotImplementedError
@@ -1116,11 +1115,15 @@ class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
                             DECIMAL_2)
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_predict(self):
-        pass
+        raise NotImplementedError
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_predict_xb(self):
-        pass
+        raise NotImplementedError
 
 
 class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
@@ -1200,11 +1203,15 @@ class TestNegativeBinomialNB1BFGS(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
                             DECIMAL_2)
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_predict(self):
-        pass
+        raise NotImplementedError
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_predict_xb(self):
-        pass
+        raise NotImplementedError
 
 
 class TestNegativeBinomialGeometricBFGS(CheckNegBinMixin, CheckModelResults):

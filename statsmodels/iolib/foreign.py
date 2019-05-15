@@ -19,6 +19,7 @@ import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 import statsmodels.tools.data as data_util
 from pandas import isnull
+from pandas.io.stata import StataMissingValue
 from statsmodels.iolib.openfile import get_file_obj
 
 _date_formats = ["%tc", "%tC", "%td", "%tw", "%tm", "%tq", "%th", "%ty"]
@@ -142,40 +143,8 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     else:
         raise ValueError("Date fmt %s not understood" % fmt)
 
+
 ### Helper classes for StataReader ###
-
-class _StataMissingValue(object):
-    """
-    An observation's missing value.
-
-    Parameters
-    ----------
-    offset
-    value
-
-    Attributes
-    ----------
-    string
-    value
-
-    Notes
-    -----
-    More information: <http://www.stata.com/help.cgi?missing>
-    """
-
-    def __init__(self, offset, value):
-        self._value = value
-        if isinstance(value, (int, long)):
-            self._str = value-offset == 1 and \
-                    '.' or ('.' + chr(value-offset+96))
-        else:
-            self._str = '.'
-    string = property(lambda self: self._str, doc="The Stata representation of \
-the missing value: '.', '.a'..'.z'")
-    value = property(lambda self: self._value, doc='The binary representation \
-of the missing value.')
-    def __str__(self): return self._str
-    __str__.__doc__ = string.__doc__
 
 class _StataVariable(object):
     """
@@ -377,7 +346,7 @@ class StataReader(object):
         Notes
         -----
         If missing_values is True during instantiation of StataReader then
-        observations with _StataMissingValue(s) are not filtered and should
+        observations with StataMissingValue(s) are not filtered and should
         be handled by your applcation.
         """
 
@@ -519,7 +488,7 @@ class StataReader(object):
             nmin, nmax = self.MISSING_VALUES[fmt[-1]]
             if d < nmin or d > nmax:
                 if self._missing_values:
-                    return _StataMissingValue(nmax, d)
+                    return StataMissingValue(nmax, d)
                 else:
                     return None
         return d
