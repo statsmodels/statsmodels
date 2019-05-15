@@ -548,8 +548,5 @@ class Grouping(object):
                 [0, 0, 1],
                 [1, 0, 0]], dtype=int8)
         """
-        from scipy import sparse
-        groups = self.labels[level]
-        indptr = np.arange(len(groups)+1)
-        data = np.ones(len(groups), dtype=np.int8)
-        self._dummies = sparse.csr_matrix((data, groups, indptr))
+        indi = dummy_sparse(self.labels[level])
+        self._dummies = indi
