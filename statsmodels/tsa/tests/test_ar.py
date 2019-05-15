@@ -12,7 +12,7 @@ from .results import results_ar
 import pytest
 import numpy as np
 import numpy.testing as npt
-from pandas import Series, Index, DatetimeIndex, date_range, period_range
+from pandas import Series, Index, date_range, period_range
 
 
 DECIMAL_6 = 6

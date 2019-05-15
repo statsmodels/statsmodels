@@ -13,7 +13,6 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd

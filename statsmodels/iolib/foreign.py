@@ -15,8 +15,8 @@ from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
 import sys
+
 import numpy as np
-from numpy.lib._iotools import _is_string_like, easy_dtype
 import statsmodels.tools.data as data_util
 from pandas import isnull
 from pandas.io.stata import StataMissingValue

@@ -147,8 +147,9 @@ What's currently there?
 from __future__ import print_function
 import numpy as np
 
-from statsmodels.sandbox.distributions.multivariate import (
-                mvstdtprob, mvstdnormcdf, mvnormcdf)
+from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+from .extras import mvnormcdf
+
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
     '''calculate expected value of function by Monte Carlo integration

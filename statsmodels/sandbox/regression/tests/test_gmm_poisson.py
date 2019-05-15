@@ -7,7 +7,6 @@ TestGMMMultTwostepDefault() has lower precision
 from statsmodels.compat.python import lmap
 import numpy as np
 import pandas
-import scipy
 from scipy import stats
 import pytest
 

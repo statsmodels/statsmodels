@@ -2,10 +2,7 @@
 
 '''
 
-from statsmodels.compat.python import range
 import numpy as np
-
-from statsmodels.tsa.stattools import acovf
 
 import nitime.utils as ut
 

@@ -3,7 +3,7 @@ import pytest
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_raises
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
-                  plot_partregress, plot_regress_exog, abline_plot,
+                  plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
                   plot_added_variable, plot_partial_residuals,
                   plot_ceres_residuals, influence_plot, plot_leverage_resid2)

@@ -40,7 +40,7 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
+from statsmodels.tools.tools import chain_dot, pinv_extended
 from statsmodels.tools.decorators import (cache_readonly,
                                           cache_writable)
 import statsmodels.base.model as base

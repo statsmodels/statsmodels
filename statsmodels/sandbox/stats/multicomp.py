@@ -82,12 +82,10 @@ ValueError: zero-size array to ufunc.reduce without identity
 #import xlwt
 from __future__ import print_function
 from statsmodels.compat.python import lzip, range, lrange, zip
-import scipy.stats
 import numpy
 import numpy as np
 import math
 import copy
-from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
@@ -1497,7 +1495,6 @@ def contrast_diff_mean(nm):
 
 def tukey_pvalues(std_range, nm, df):
     #corrected but very slow with warnings about integration
-    from statsmodels.sandbox.distributions.multivariate import mvstdtprob
     #nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T)/2.

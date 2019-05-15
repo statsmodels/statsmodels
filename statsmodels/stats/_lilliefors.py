@@ -36,7 +36,6 @@ Journal of the American Statistical Association, Vol 64, No. 325. (1969), pp. 38
 """
 from statsmodels.compat.python import string_types
 import numpy as np
-from scipy.interpolate import interp1d
 from scipy import stats
 from .tabledist import TableDist
 
@@ -423,6 +422,7 @@ crit_greater30 = lambda n: np.array([0.736, 0.768, 0.805, 0.886, 1.031])/np.sqrt
 alpha_greater30 = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])
 
 
+from scipy.interpolate import interp1d
 n_alpha = 6
 polyn = [interp1d(size, crit[:,i]) for i in range(n_alpha)]
 

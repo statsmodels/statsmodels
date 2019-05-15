@@ -9,13 +9,9 @@ from statsmodels.compat.python import range
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-import matplotlib.mlab as mlab
-
 from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
 from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
-#from movstat import acf, acovf
-#from statsmodels.sandbox.tsa import acf, acovf, pacf
-from statsmodels.tsa.stattools import acf, acovf, pacf
+from statsmodels.tsa.stattools import acf, acovf
 from statsmodels.graphics.tsaplots import plotacf
 
 ar = [1., -0.6]

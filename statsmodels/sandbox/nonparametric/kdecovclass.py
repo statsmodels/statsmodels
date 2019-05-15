@@ -62,8 +62,10 @@ def plotkde(covfact):
     plt.title('Kernel Density Estimation - ' + str(gkde.covfact))
     plt.legend()
 
-from numpy.testing import assert_array_almost_equal, \
-               assert_almost_equal, assert_
+
+from numpy.testing import assert_almost_equal, assert_
+
+
 def test_kde_1d():
     np.random.seed(8765678)
     n_basesample = 500

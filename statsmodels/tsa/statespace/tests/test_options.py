@@ -50,7 +50,6 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.simulation_smoother import (
     SimulationSmoother,
     SIMULATION_STATE,
-    SIMULATION_DISTURBANCE,
     SIMULATION_ALL
 )
 from numpy.testing import assert_equal

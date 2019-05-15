@@ -11,7 +11,6 @@ from statsmodels.datasets.macrodata import data
 dta = data.load(as_pandas=False)
 gdp = np.log(dta.data['realgdp'])
 
-from numpy import polynomial
 from scipy import special
 
 

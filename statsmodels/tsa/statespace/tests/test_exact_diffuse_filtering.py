@@ -47,11 +47,9 @@ import pandas as pd
 import pytest
 import os
 
-from statsmodels.tools.tools import Bunch
 from statsmodels import datasets
 from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
-from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.structural import UnobservedComponents

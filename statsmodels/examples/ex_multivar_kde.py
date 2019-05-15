@@ -1,12 +1,3 @@
-
-from __future__ import print_function
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from mpl_toolkits.mplot3d import axes3d
-
-import statsmodels.api as sm
-
 """
 This example illustrates the nonparametric estimation of a
 bivariate bi-modal distribution that is a mixture of two normal
@@ -14,6 +5,13 @@ distributions.
 
 author: George Panterov
 """
+from __future__ import print_function
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
+import statsmodels.api as sm
+
 if __name__ == '__main__':
     np.random.seed(123456)
 

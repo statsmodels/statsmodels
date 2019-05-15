@@ -3,17 +3,8 @@
 """
 from statsmodels.compat.pandas import testing as pdt
 
-import re
-
 import numpy.testing as npt
 import pandas
-
-
-# local copies, all unchanged
-from numpy.testing import (assert_allclose, assert_almost_equal,
-     assert_approx_equal, assert_array_almost_equal,
-     assert_array_almost_equal_nulp, assert_array_equal, assert_array_less,
-     assert_array_max_ulp, assert_raises, assert_string_equal, assert_warns)
 
 
 # adjusted functions

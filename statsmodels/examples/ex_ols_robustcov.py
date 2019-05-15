@@ -1,10 +1,9 @@
 
 from __future__ import print_function
 import numpy as np
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
-import statsmodels.regression.tests.results.results_macro_ols_robust as res
 
 
 d2 = macrodata.load(as_pandas=False).data

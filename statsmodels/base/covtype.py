@@ -7,7 +7,7 @@ License: BSD-3
 
 """
 
-from statsmodels.compat.python import lrange, lzip, range
+from statsmodels.compat.python import lzip
 
 import numpy as np
 

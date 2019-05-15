@@ -779,7 +779,6 @@ def test_outlier_influence_funcs(reset_randomstate):
 
 def test_influence_wrapped():
     from pandas import DataFrame
-    from pandas.util.testing import assert_series_equal
 
     d = macrodata.load_pandas().data
     #growth rates

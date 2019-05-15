@@ -22,7 +22,6 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
-from statsmodels.base import model
 
 from ._regressionplots_doc import (
     _plot_added_variable_doc,

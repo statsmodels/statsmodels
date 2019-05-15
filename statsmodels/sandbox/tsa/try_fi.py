@@ -10,10 +10,10 @@ only examples left
 '''
 from __future__ import print_function
 import numpy as np
-from scipy.special import gamma, gammaln
+from scipy.special import gamma
 from scipy import signal
 
-from statsmodels.tsa.arima_process import (lpol_fiar, lpol_fima, lpol_sdiff,
+from statsmodels.tsa.arima_process import (lpol_fiar, lpol_fima,
                                            ar2arma, arma_impulse_response)
 
 
@@ -23,7 +23,6 @@ if __name__ == '__main__':
     n = 1000
     j = np.arange(n*10)
     ri0 = gamma(d+j)/(gamma(j+1)*gamma(d))
-    #ri = np.exp(gammaln(d+j) - gammaln(j+1) - gammaln(d))   (d not -d)
     ri = lpol_fima(d, n=n)  # get_ficoefs(d, n=n) old naming?
     riinv = signal.lfilter([1], ri, [1]+[0]*(n-1))#[[5,10,20,25]]
     '''

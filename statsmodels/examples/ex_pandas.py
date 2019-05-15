@@ -44,7 +44,6 @@ print(hub_results.summary())
 
 
 import matplotlib.pyplot as plt
-from matplotlib import cm
 import matplotlib as mpl
 
 def plot_acf_multiple(ys, lags=20):

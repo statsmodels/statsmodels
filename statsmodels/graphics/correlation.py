@@ -67,8 +67,6 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         create_colorbar = False
 
     fig, ax = utils.create_mpl_ax(ax)
-    import matplotlib as mpl
-    from matplotlib import cm
 
     nvars = dcorr.shape[0]
 

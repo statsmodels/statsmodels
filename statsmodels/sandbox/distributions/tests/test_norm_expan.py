@@ -14,9 +14,7 @@ from scipy import stats
 
 from numpy.testing import assert_allclose, assert_array_less
 
-from statsmodels.sandbox.distributions.extras import (SkewNorm_gen,
-                                       NormExpan_gen, pdf_moments)
-from statsmodels.stats.moment_helpers import mc2mvsk, mnc2mc
+from statsmodels.sandbox.distributions.extras import NormExpan_gen
 
 
 class CheckDistribution(object):

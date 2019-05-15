@@ -29,11 +29,10 @@ missing:
 
 """
 from __future__ import print_function
-from statsmodels.compat.python import iteritems, lrange, map, long
+from statsmodels.compat.python import iteritems, map, long
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
 

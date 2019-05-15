@@ -1,8 +1,3 @@
-from statsmodels.compat.python import lrange
-import numpy as np
-#from numpy import linalg as npla
-from scipy import stats, optimize
-
 '''
 Working with categorical data
 =============================
@@ -16,6 +11,8 @@ scipy.ndimage stats is missing count
 
 new: np.bincount can also be used for calculating values per label
 '''
+from statsmodels.compat.python import lrange
+import numpy as np
 
 from scipy import ndimage
 

@@ -17,9 +17,9 @@ import os
 from statsmodels import datasets
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
+    FILTER_UNIVARIATE)
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
+    SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_equal, assert_allclose

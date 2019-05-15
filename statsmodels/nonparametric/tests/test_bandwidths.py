@@ -11,9 +11,7 @@ from scipy import stats
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 from statsmodels.nonparametric.bandwidths import select_bandwidth
-
 
 
 from numpy.testing import assert_allclose

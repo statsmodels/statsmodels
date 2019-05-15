@@ -699,6 +699,6 @@ if __name__ == '__main__':
                      value=0.576/ (1 + 4./nobs - 25./nobs**2),
                      batch_size=10) for _ in range(10)]
     resu3 = np.array(resu).mean()
-    from numpy.testing import assert_almost_equal, assert_array_almost_equal
+    from numpy.testing import assert_array_almost_equal
     assert_array_almost_equal(resu1, resu2, 15)
     assert_array_almost_equal(resu2, resu3, 15)

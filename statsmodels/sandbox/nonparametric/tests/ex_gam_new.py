@@ -20,7 +20,6 @@ np.seterr(all='raise')
 
 from scipy import stats
 
-from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod.families import family
 from statsmodels.genmod.generalized_linear_model import GLM

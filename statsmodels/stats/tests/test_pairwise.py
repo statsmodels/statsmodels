@@ -5,7 +5,6 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.numpy import NP_LT_114
 from statsmodels.compat.python import BytesIO, asbytes, range
 
 import warnings

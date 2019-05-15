@@ -8,7 +8,7 @@ License: BSD-3
 
 """
 
-import numpy as np
+import numpy as np  # noqa:F401 --> needed for patsy
 
 from statsmodels.formula.api import ols, glm, poisson
 from statsmodels.discrete.discrete_model import Poisson

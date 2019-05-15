@@ -5,10 +5,8 @@ from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range, long
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
-from scipy.linalg import svdvals
 import pandas as pd
 
-from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 

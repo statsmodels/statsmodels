@@ -7,8 +7,6 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.tsa.arima_process as tsp
-from statsmodels.sandbox.tsa.fftarma import ArmaFft as FftArmaProcess
-import statsmodels.tsa.stattools as tss
 from statsmodels.graphics.tsaplots import plotacf
 
 np.set_printoptions(precision=2)
@@ -29,6 +27,7 @@ for arcoef in arcoefs[:-1]:
         ar = np.r_[1., -arcoef]
         ma = np.r_[1.,  macoef]
 
+        #from statsmodels.sandbox.tsa.fftarma import ArmaFft as FftArmaProcess
         #y = tsp.arma_generate_sample(ar,ma,nsample, sig, burnin)
         #armaprocess = FftArmaProcess(ar, ma, nsample) #TODO: make n optional
         #armaprocess.plot4()

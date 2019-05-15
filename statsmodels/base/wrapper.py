@@ -1,7 +1,6 @@
 import inspect
 import functools
 
-import numpy as np
 from statsmodels.compat.python import iteritems, getargspec
 
 
