@@ -85,7 +85,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         Whether or not keep the categorical variable in the returned matrix.
 
     Returns
-    --------
+    -------
     dummy_matrix, [dictnames, optional]
         A matrix of dummy (indicator/binary) float variables for the
         categorical data.  If dictnames is True, then the dictionary

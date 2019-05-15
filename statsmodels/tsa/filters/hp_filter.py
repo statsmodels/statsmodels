@@ -28,7 +28,7 @@ def hpfilter(X, lamb=1600):
         The estimated trend in the data given lamb.
 
     Examples
-    ---------
+    --------
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data

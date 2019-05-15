@@ -992,7 +992,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     :class:`ExponentialSmoothing`.
 
     See Also
-    ---------
+    --------
     ExponentialSmoothing
     Holt
 
@@ -1071,7 +1071,7 @@ class Holt(ExponentialSmoothing):
     per [1]. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
 
     See Also
-    ---------
+    --------
     ExponentialSmoothing
     SimpleExpSmoothing
 

@@ -187,7 +187,7 @@ exogenous variables.  Got length %s" % len(sys))
         SUR whiten method.
 
         Parameters
-        -----------
+        ----------
         X : list of arrays
             Data to be whitened.
 

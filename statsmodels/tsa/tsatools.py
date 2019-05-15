@@ -46,7 +46,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
     no checking for an existing trend.
 
-    See also
+    See Also
     --------
     statsmodels.tools.tools.add_constant
     """

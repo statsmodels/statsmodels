@@ -273,7 +273,7 @@ class RegressionModel(base.LikelihoodModel):
         A RegressionResults class instance.
 
         See Also
-        ---------
+        --------
         regression.linear_model.RegressionResults
         regression.linear_model.RegressionResults.get_robustcov_results
 
@@ -496,7 +496,7 @@ class GLS(RegressionModel):
         GLS whiten method.
 
         Parameters
-        -----------
+        ----------
         X : array-like
             Data to be whitened.
 
@@ -638,7 +638,7 @@ class WLS(RegressionModel):
     See regression.GLS
 
     Examples
-    ---------
+    --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
     >>> Y = [1,3,4,5,2,3,4]
@@ -2432,7 +2432,7 @@ class RegressionResults(base.LikelihoodModelResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -2562,7 +2562,7 @@ class RegressionResults(base.LikelihoodModelResults):
         """Experimental summary function to summarize the regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -2658,7 +2658,7 @@ class OLSResults(RegressionResults):
             the instance has methods to calculate the main influence and
             outlier measures for the OLS regression
 
-        See also
+        See Also
         --------
         statsmodels.stats.outliers_influence.OLSInfluence
         """

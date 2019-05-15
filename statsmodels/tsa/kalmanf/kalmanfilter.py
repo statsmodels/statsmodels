@@ -20,7 +20,7 @@ Harvey uses Durbin and Koopman notation.
 # Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
-# e.g., with a DSGE model.  See also
+# e.g., with a DSGE model.  See Also
 # http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)

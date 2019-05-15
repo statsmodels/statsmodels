@@ -506,7 +506,7 @@ class MVElliptical(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -549,7 +549,7 @@ class MVElliptical(object):
         '''standardize the random variable, i.e. subtract mean and whiten
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -582,7 +582,7 @@ class MVElliptical(object):
         The distribution will have zero mean and sigma equal to correlation
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -726,7 +726,7 @@ class MVNormal0(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
+        ----------
         X : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector

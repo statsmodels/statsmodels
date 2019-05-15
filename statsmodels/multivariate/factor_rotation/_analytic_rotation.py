@@ -128,7 +128,7 @@ def promax(A, k=2):
     Then, oblique target rotation is performed towards the target.
 
     Parameters
-    ---------
+    ----------
     A : numpy matrix
         non rotated factors
     k : float

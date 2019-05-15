@@ -83,7 +83,7 @@ class RLM(base.LikelihoodModel):
 
 
     Examples
-    ---------
+    --------
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
@@ -378,7 +378,7 @@ class RLMResults(base.LikelihoodModelResults):
         The reported weights are determined by passing the scaled residuals
         from the last weighted least squares fit in the IRLS algortihm.
 
-    See also
+    See Also
     --------
     statsmodels.base.model.LikelihoodModelResults
     """

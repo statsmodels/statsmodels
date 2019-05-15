@@ -822,7 +822,7 @@ class MixedLM(base.LikelihoodModel):
         model : Model instance
 
         Notes
-        ------
+        -----
         `data` must define __getitem__ with the keys in the formula
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
@@ -2493,7 +2493,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Summarize the mixed model regression results.
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname_fe : list of strings, optional

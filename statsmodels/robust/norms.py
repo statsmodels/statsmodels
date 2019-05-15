@@ -90,7 +90,7 @@ class LeastSquares(RobustNorm):
     """
     Least squares rho for M-estimation and its derived functions.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm for the methods.
     """
@@ -100,7 +100,7 @@ class LeastSquares(RobustNorm):
         The least squares estimator rho function
 
         Parameters
-        -----------
+        ----------
         z : array
             1d array
 
@@ -177,7 +177,7 @@ class HuberT(RobustNorm):
         The tuning constant for Huber's t function. The default value is
         1.345.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -281,7 +281,7 @@ class RamsayE(RobustNorm):
         The tuning constant for Ramsay's Ea function.  The default value is
         0.3.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -370,7 +370,7 @@ class AndrewWave(RobustNorm):
         The tuning constant for Andrew's Wave function.  The default value is
         1.339.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -478,7 +478,7 @@ class TrimmedMean(RobustNorm):
         The tuning constant for Ramsay's Ea function.  The default value is
         2.0.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -586,7 +586,7 @@ class Hampel(RobustNorm):
         The tuning constants for Hampel's function.  The default values are
         a,b,c = 2, 4, 8.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -842,7 +842,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         Toleration for convergence.  The default is 1e-06.
 
     Returns
-    --------
+    -------
     mu : array
         Estimate of location
     """

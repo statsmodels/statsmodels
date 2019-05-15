@@ -436,7 +436,7 @@ class ConditionalResults(base.LikelihoodModelResults):
         Summarize the fitted model.
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

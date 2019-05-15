@@ -17,11 +17,11 @@ def durbin_watson(resids, axis=0):
     Calculates the Durbin-Watson statistic
 
     Parameters
-    -----------
+    ----------
     resids : array-like
 
     Returns
-    --------
+    -------
     dw : float, array-like
         The Durbin-Watson statistic.
 
@@ -52,7 +52,7 @@ def omni_normtest(resids, axis=0):
     Omnibus test for normality
 
     Parameters
-    -----------
+    ----------
     resid : array-like
     axis : int, optional
         Default is 0
@@ -79,7 +79,7 @@ def jarque_bera(resids, axis=0):
     Calculates the Jarque-Bera test for normality
 
     Parameters
-    -----------
+    ----------
     data : array-like
         Data to test for normality
     axis : int, optional

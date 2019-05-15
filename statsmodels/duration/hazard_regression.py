@@ -1551,7 +1551,7 @@ class PHRegResults(base.LikelihoodModelResults):
         Summarize the proportional hazards regression results.
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

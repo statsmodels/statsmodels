@@ -97,7 +97,7 @@ class OptAFT(_OptFuncts):
         Uses EM algorithm to compute the maximum likelihood of a test
 
         Parameters
-        ---------
+        ----------
 
         Nuisance Params: array
             Vector of values to be used as nuisance params.
@@ -161,7 +161,7 @@ class OptAFT(_OptFuncts):
         parameter and some critical value.
 
         Parameters
-        ---------
+        ----------
         b0: float
             Value of a regression parameter
 
@@ -177,7 +177,7 @@ class emplikeAFT(object):
     Class for estimating and conducting inference in an AFT model.
 
     Parameters
-    ---------
+    ----------
 
     endog: nx1 array
         Response variables that are subject to random censoring
@@ -347,7 +347,7 @@ class emplikeAFT(object):
         Fits an AFT model and returns results instance
 
         Parameters
-        ---------
+        ----------
         None
 
 
@@ -377,7 +377,7 @@ class AFTResults(OptAFT):
         Fits an AFT model and returns parameters.
 
         Parameters
-        ---------
+        ----------
         None
 
 
@@ -428,7 +428,7 @@ class AFTResults(OptAFT):
             The log-likelihood and p-pvalue of the test.
 
         Notes
-        ----
+        -----
 
         The function will warn if the EM reaches the maxiter.  However, when
         optimizing over nuisance parameters, it is possible to reach a
@@ -439,7 +439,7 @@ class AFTResults(OptAFT):
         infinity.
 
         Examples
-        -------
+        --------
 
         >>> import statsmodels.api as sm
         >>> import numpy as np
@@ -513,7 +513,7 @@ class AFTResults(OptAFT):
         parameter in the AFT model.
 
         Parameters
-        ---------
+        ----------
 
         param_num: int
             Parameter number of interest
@@ -528,7 +528,7 @@ class AFTResults(OptAFT):
             Significance level.  Default is .05
 
         Notes
-        ----
+        -----
         If the function returns f(a) and f(b) must have different signs,
         consider widening the search area by adjusting beta_low and
         beta_high.

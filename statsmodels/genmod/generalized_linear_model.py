@@ -56,7 +56,7 @@ class GLM(base.LikelihoodModel):
     GLM inherits from statsmodels.base.model.LikelihoodModel
 
     Parameters
-    -----------
+    ----------
     endog : array-like
         1d array of endogenous response variable.  This array can be 1d or 2d.
         Binomial family models accept a 2d array with two columns. If
@@ -93,34 +93,67 @@ class GLM(base.LikelihoodModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     df_model : float
-        `p` - 1, where `p` is the number of regressors including the intercept.
+        Model degrees of freedom is equal to p - 1, where p is the number
+        of regressors.  Note that the intercept is not reported as a
+        degree of freedom.
     df_resid : float
-        The number of observation `n` minus the number of regressors `p`.
+        Residual degrees of freedom is equal to the number of observation n
+        minus the number of regressors p.
     endog : array
-        See Parameters.
+        See Notes.  Note that `endog` is a reference to the data so that if
+        data is already an array and it is changed, then `endog` changes
+        as well.
+    exposure : array-like
+        Include ln(exposure) in model with coefficient constrained to 1. Can
+        only be used if the link is the logarithm function.
     exog : array
-        See Parameters.
-    family : family class instance
-        A pointer to the distribution family of the model.
+        See Notes.  Note that `exog` is a reference to the data so that if
+        data is already an array and it is changed, then `exog` changes
+        as well.
     freq_weights : array
-        See Parameters.
+        See Notes. Note that `freq_weights` is a reference to the data so that
+        if data is already an array and it is changed, then `freq_weights`
+        changes as well.
     var_weights : array
-        See Parameters.
+        See Notes. Note that `var_weights` is a reference to the data so that
+        if data is already an array and it is changed, then `var_weights`
+        changes as well.
+    iteration : int
+        The number of iterations that fit has run.  Initialized at 0.
+    family : family class instance
+        The distribution family of the model. Can be any family in
+        statsmodels.families.  Default is Gaussian.
     mu : array
-        The estimated mean response of the transformed variable.
+        The mean response of the transformed variable.  `mu` is the value of
+        the inverse of the link function at lin_pred, where lin_pred is the
+        linear predicted value of the WLS fit of the transformed variable.
+        `mu` is only available after fit is called.  See
+        statsmodels.families.family.fitted of the distribution family for more
+        information.
     n_trials : array
-        See Parameters.
+        See Notes. Note that `n_trials` is a reference to the data so that if
+        data is already an array and it is changed, then `n_trials` changes
+        as well. `n_trials` is the number of binomial trials and only available
+        with that distribution. See statsmodels.families.Binomial for more
+        information.
     normalized_cov_params : array
-        `p` x `p` normalized covariance of the design / exogenous data.
+        The p x p normalized covariance of the design / exogenous data.
+        This is approximately equal to (X.T X)^(-1)
+    offset : array-like
+        Include offset in model with coefficient constrained to 1.
     scale : float
-        The estimate of the scale / dispersion.  Available after fit is called.
+        The estimate of the scale / dispersion of the model fit.  Only
+        available after fit is called.  See GLM.fit and GLM.estimate_scale
+        for more information.
     scaletype : str
-        The scaling used for fitting the model.  Available after fit is called.
+        The scaling used for fitting the model.  This is only available after
+        fit is called.  The default is None.  See GLM.fit for more information.
     weights : array
-        The value of the weights after the last iteration of fit.
-
+        The value of the weights after the last iteration of fit.  Only
+        available after fit is called.  See statsmodels.families.family for
+        the specific distribution weighting functions.
 
     Examples
     --------
@@ -146,7 +179,7 @@ class GLM(base.LikelihoodModel):
     >>> gamma_results.llf
     -83.017202161073527
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`families`
@@ -223,69 +256,6 @@ class GLM(base.LikelihoodModel):
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
 
-    Attributes
-    ----------
-
-    df_model : float
-        Model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not reported as a
-        degree of freedom.
-    df_resid : float
-        Residual degrees of freedom is equal to the number of observation n
-        minus the number of regressors p.
-    endog : array
-        See above.  Note that `endog` is a reference to the data so that if
-        data is already an array and it is changed, then `endog` changes
-        as well.
-    exposure : array-like
-        Include ln(exposure) in model with coefficient constrained to 1. Can
-        only be used if the link is the logarithm function.
-    exog : array
-        See above.  Note that `exog` is a reference to the data so that if
-        data is already an array and it is changed, then `exog` changes
-        as well.
-    freq_weights : array
-        See above. Note that `freq_weights` is a reference to the data so that
-        if data is already an array and it is changed, then `freq_weights`
-        changes as well.
-    var_weights : array
-        See above. Note that `var_weights` is a reference to the data so that
-        if data is already an array and it is changed, then `var_weights`
-        changes as well.
-    iteration : int
-        The number of iterations that fit has run.  Initialized at 0.
-    family : family class instance
-        The distribution family of the model. Can be any family in
-        statsmodels.families.  Default is Gaussian.
-    mu : array
-        The mean response of the transformed variable.  `mu` is the value of
-        the inverse of the link function at lin_pred, where lin_pred is the
-        linear predicted value of the WLS fit of the transformed variable.
-        `mu` is only available after fit is called.  See
-        statsmodels.families.family.fitted of the distribution family for more
-        information.
-    n_trials : array
-        See above. Note that `n_trials` is a reference to the data so that if
-        data is already an array and it is changed, then `n_trials` changes
-        as well. `n_trials` is the number of binomial trials and only available
-        with that distribution. See statsmodels.families.Binomial for more
-        information.
-    normalized_cov_params : array
-        The p x p normalized covariance of the design / exogenous data.
-        This is approximately equal to (X.T X)^(-1)
-    offset : array-like
-        Include offset in model with coefficient constrained to 1.
-    scale : float
-        The estimate of the scale / dispersion of the model fit.  Only
-        available after fit is called.  See GLM.fit and GLM.estimate_scale
-        for more information.
-    scaletype : str
-        The scaling used for fitting the model.  This is only available after
-        fit is called.  The default is None.  See GLM.fit for more information.
-    weights : array
-        The value of the weights after the last iteration of fit.  Only
-        available after fit is called.  See statsmodels.families.family for
-        the specific distribution weighting functions.
     """ % {'extra_params': base._missing_param_doc}
 
     def __init__(self, endog, exog, family=None, offset=None,
@@ -771,7 +741,7 @@ class GLM(base.LikelihoodModel):
         families is 1.  The default for the other families is Pearson's
         Chi-Square estimate.
 
-        See also
+        See Also
         --------
         statsmodels.genmod.generalized_linear_model.GLM.fit for more
         information
@@ -1749,7 +1719,7 @@ class GLMResults(base.LikelihoodModelResults):
             The instance has methods to calculate the main influence and
             outlier measures as attributes.
 
-        See also
+        See Also
         --------
         statsmodels.stats.outliers_influence.GLMInfluence
         """
@@ -1826,7 +1796,7 @@ class GLMResults(base.LikelihoodModelResults):
         Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -1892,7 +1862,7 @@ class GLMResults(base.LikelihoodModelResults):
         """Experimental summary for regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string
             Name of the dependent variable (optional)
         xname : List of strings of length equal to the number of parameters

@@ -341,7 +341,7 @@ class QuantRegResults(RegressionResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

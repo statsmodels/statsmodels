@@ -43,7 +43,7 @@ def load(as_pandas=None):
         or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
-    --------
+    -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
@@ -54,7 +54,7 @@ def load_pandas():
     Load the stack loss data and returns a Dataset class instance.
 
     Returns
-    --------
+    -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
