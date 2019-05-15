@@ -44,7 +44,7 @@ class GenericZeroInflated(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -467,7 +467,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -633,7 +633,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array

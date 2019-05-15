@@ -391,7 +391,7 @@ class MIResults(LikelihoodModelResults):
         Summarize the results of running multiple imputation.
 
         Parameters
-        -----------
+        ----------
         title : string, optional
             Title for the top table. If not None, then this replaces
             the default title

@@ -18,7 +18,7 @@ def descstats(data, cols=None, axis=0):
     Prints descriptive statistics for one or multiple variables.
 
     Parameters
-    ------------
+    ----------
     data: numpy array
         `x` is the data
 

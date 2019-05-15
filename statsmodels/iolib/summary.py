@@ -56,7 +56,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
             returns='text', model_info=None):
     """
     Parameters
-    -----------
+    ----------
     yname : string
             optional, Default is `Y`
     xname : list of strings

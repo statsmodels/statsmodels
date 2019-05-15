@@ -214,7 +214,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             matrix with weights, entries can either be one or zero
 
     Examples
-    -------
+    --------
     >>> A = np.random.randn(8,2)
     >>> L, T = rotate_factors(A,'varimax')
     >>> np.allclose(L,A.dot(T))

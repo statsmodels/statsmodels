@@ -218,13 +218,13 @@ class Family(object):
         Fitted values based on linear predictors lin_pred.
 
         Parameters
-        -----------
+        ----------
         lin_pred : array
             Values of the linear predictor of the model.
             :math:`X \cdot \beta` in a classical linear model.
 
         Returns
-        --------
+        -------
         mu : array
             The mean response variables given by the inverse of the link
             function.
@@ -844,7 +844,7 @@ class Binomial(Family):
             1d array of frequency weights
 
         Returns
-        --------
+        -------
         If `endog` is binary, returns `endog`
 
         If `endog` is a 2d array, then the input is assumed to be in the format

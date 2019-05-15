@@ -113,12 +113,12 @@ class Logit(Link):
         Clip logistic values to range (eps, 1-eps)
 
         Parameters
-        -----------
+        ----------
         p : array-like
             Probabilities
 
         Returns
-        --------
+        -------
         pclip : array
             Clipped probabilities
         """
@@ -309,7 +309,7 @@ class Power(Link):
             Mean parameters
 
         Returns
-        --------
+        -------
         g'(p) : array
             Derivative of power transform of `p`
 
@@ -332,7 +332,7 @@ class Power(Link):
             Mean parameters
 
         Returns
-        --------
+        -------
         g''(p) : array
             Second derivative of the power transform of `p`
 
@@ -873,7 +873,7 @@ class NegativeBinomial(Link):
         Inverse of the negative binomial transform
 
         Parameters
-        -----------
+        ----------
         z : array-like
             The value of the inverse of the negative binomial link at `p`.
 
@@ -936,7 +936,7 @@ class NegativeBinomial(Link):
         Derivative of the inverse of the negative binomial transform
 
         Parameters
-        -----------
+        ----------
         z : array-like
             Usually the linear predictor for a GLM or GEE model
 

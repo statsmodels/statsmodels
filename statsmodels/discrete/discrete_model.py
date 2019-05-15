@@ -909,7 +909,7 @@ class Poisson(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -934,7 +934,7 @@ class Poisson(CountModel):
         Poisson model cumulative distribution function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the model.  See notes.
 
@@ -962,7 +962,7 @@ class Poisson(CountModel):
         Poisson model probability mass function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the model.  See notes.
 
@@ -1319,7 +1319,7 @@ class GeneralizedPoisson(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1724,7 +1724,7 @@ class Logit(BinaryModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1746,10 +1746,13 @@ class Logit(BinaryModel):
         1/(1 + exp(-X))
 
         Notes
-        ------
+        -----
         In the logit model,
 
-        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=\\text{Prob}\\left(Y=1|x\\right)=\\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=
+                  \\text{Prob}\\left(Y=1|x\\right)=
+                  \\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+
         """
         X = np.asarray(X)
         return 1/(1+np.exp(-X))
@@ -1759,7 +1762,7 @@ class Logit(BinaryModel):
         The logistic probability density function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the logit model.  See notes.
 
@@ -1783,7 +1786,7 @@ class Logit(BinaryModel):
         Log-likelihood of logit model.
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the logit model.
 
@@ -1794,8 +1797,11 @@ class Logit(BinaryModel):
             See notes.
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i}\\ln\\Lambda
+           \\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         logistic distribution is symmetric.
@@ -1809,7 +1815,7 @@ class Logit(BinaryModel):
         Log-likelihood of logit model for each observation.
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the logit model.
 
@@ -1820,8 +1826,11 @@ class Logit(BinaryModel):
             at `params`. See Notes
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i}\\ln\\Lambda
+           \\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         for observations :math:`i=1,...,n`
 
@@ -1926,7 +1935,7 @@ class Probit(BinaryModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1944,7 +1953,7 @@ class Probit(BinaryModel):
             The linear predictor of the model (XB).
 
         Returns
-        --------
+        -------
         cdf : ndarray
             The cdf evaluated at `X`.
 
@@ -1964,7 +1973,7 @@ class Probit(BinaryModel):
             The linear predictor of the model (XB).
 
         Returns
-        --------
+        -------
         pdf : ndarray
             The value of the normal density function for each point of X.
 
@@ -2196,7 +2205,7 @@ class MNLogit(MultinomialModel):
             The linear predictor of the model XB.
 
         Returns
-        --------
+        -------
         cdf : ndarray
             The cdf evaluated at `X`.
 
@@ -2224,8 +2233,13 @@ class MNLogit(MultinomialModel):
             See notes.
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln
+           \\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}
+           {\\sum_{k=0}^{J}
+           \\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
@@ -2251,8 +2265,13 @@ class MNLogit(MultinomialModel):
             at `params`. See Notes
 
         Notes
-        ------
-        .. math:: \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        -----
+        .. math::
+
+           \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln
+           \\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}
+           {\\sum_{k=0}^{J}
+           \\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
 
         for observations :math:`i=1,...,n`
 
@@ -2274,7 +2293,7 @@ class MNLogit(MultinomialModel):
             The parameters of the multinomial logit model.
 
         Returns
-        --------
+        -------
         score : ndarray, (K * (J-1),)
             The 2-d score vector, i.e. the first derivative of the
             loglikelihood function, of the multinomial logit model evaluated at
@@ -2320,7 +2339,7 @@ class MNLogit(MultinomialModel):
             The parameters of the multinomial logit model.
 
         Returns
-        --------
+        -------
         jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params` .
@@ -2346,7 +2365,7 @@ class MNLogit(MultinomialModel):
         Multinomial logit Hessian matrix of the log-likelihood
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the model
 
@@ -2457,7 +2476,7 @@ class NegativeBinomial(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -2921,7 +2940,7 @@ class NegativeBinomialP(CountModel):
     %(params)s
     %(extra_params)s
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -3577,7 +3596,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -3646,7 +3665,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         """Experimental function to summarize regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -3837,7 +3856,7 @@ class BinaryResults(DiscreteResults):
             considered 1 and below which a prediction is considered 0.
 
         Notes
-        ------
+        -----
         pred_table[i,j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
@@ -4111,7 +4130,7 @@ class MultinomialResults(DiscreteResults):
         """Experimental function to summarize regression results
 
         Parameters
-        -----------
+        ----------
         alpha : float
             significance level for the confidence intervals
         float_format: string

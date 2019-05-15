@@ -149,7 +149,7 @@ class _StataMissingValue(object):
     An observation's missing value.
 
     Parameters
-    -----------
+    ----------
     offset
     value
 
@@ -186,7 +186,7 @@ class _StataVariable(object):
     variable_data
 
     Attributes
-    -----------
+    ----------
     format : str
         Stata variable format.  See notes for more information.
     index : int
@@ -244,7 +244,7 @@ class StataReader(object):
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
 
-    See also
+    See Also
     --------
     statsmodels.iolib.foreign.genfromdta
     pandas.read_stata

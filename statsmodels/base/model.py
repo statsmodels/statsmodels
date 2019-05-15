@@ -129,7 +129,7 @@ class Model(object):
         model : Model instance
 
         Notes
-        ------
+        -----
         data must define __getitem__ with the keys in the formula terms
         args and kwargs are passed on to the model instantiation. E.g.,
         a numpy structured or rec array, a dictionary, or a pandas DataFrame.
@@ -1039,7 +1039,7 @@ class LikelihoodModelResults(Results):
     Class to contain results from likelihood models
 
     Parameters
-    -----------
+    ----------
     model : LikelihoodModel instance or subclass instance
         LikelihoodModelResults holds a reference to the model that is fit.
     params : 1d array_like
@@ -1458,7 +1458,7 @@ class LikelihoodModelResults(Results):
         ==============================================================================
 
         See Also
-        ---------
+        --------
         tvalues : individual t statistics
         f_test : for F tests
         patsy.DesignInfo.linear_constraint
@@ -1968,7 +1968,7 @@ class LikelihoodModelResults(Results):
 
 
         Returns
-        --------
+        -------
         conf_int : array
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
@@ -2362,7 +2362,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

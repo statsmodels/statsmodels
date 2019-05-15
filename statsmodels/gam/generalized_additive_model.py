@@ -595,7 +595,7 @@ class GLMGam(PenalizedMixin, GLM):
             penalization weight
 
         Returns
-        ----------
+        -------
         alpha : list
             penalization weight, list with length equal to the number of
             smooth terms

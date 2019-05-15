@@ -433,7 +433,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         -------
         MLEResults
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         MLEResults
@@ -1109,7 +1109,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional arguments to the `loglike` method.
 
         Returns
-        ----------
+        -------
         score : array
             Score per observation, evaluated at `params`.
 

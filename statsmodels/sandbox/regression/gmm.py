@@ -254,7 +254,7 @@ class IVRegressionResults(RegressionResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -1291,7 +1291,7 @@ class GMMResults(LikelihoodModelResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

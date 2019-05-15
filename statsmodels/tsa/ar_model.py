@@ -514,7 +514,7 @@ class AR(tsbase.TimeSeriesModel):
             series with missing observations."  `Technometrics`.  22.3.
             389-95.
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         """

@@ -221,7 +221,7 @@ def _detection_limit_index(obs, cohn):
     det_limit_index : int
         The index of the corresponding detection limit in `cohn`
 
-    See also
+    See Also
     --------
     cohn_numbers
 
@@ -300,7 +300,7 @@ def _ros_plot_pos(row, censorship, cohn):
     -------
     plotting_position : float
 
-    See also
+    See Also
     --------
     cohn_numbers
 
@@ -360,7 +360,7 @@ def plotting_positions(df, censorship, cohn):
     -------
     plotting_position : array of float
 
-    See also
+    See Also
     --------
     cohn_numbers
 

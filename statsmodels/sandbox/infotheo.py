@@ -160,7 +160,7 @@ def shannonentropy(px, logbase=2):
     This is Shannon's entropy
 
     Parameters
-    -----------
+    ----------
     logbase, int or np.e
         The base of the log
     px : 1d or 2d array_like

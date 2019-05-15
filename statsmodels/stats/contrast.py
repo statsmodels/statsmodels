@@ -103,7 +103,7 @@ class ContrastResults(object):
         """Summarize the Results of the hypothesis test
 
         Parameters
-        -----------
+        ----------
 
         xname : list of strings, optional
             Default is `c_##` for ## in p the number of regressors

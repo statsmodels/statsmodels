@@ -172,7 +172,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         it with exponentially decreasing gaps
 
     Returns
-    ----------
+    ---------
     base_rect : dict
         A dictionary containing the result of the split.
         To each key is associated a 4-tuple of coordinates
@@ -532,7 +532,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         each axis can have a different rotation
 
     Returns
-    ----------
+    ---------
     fig : matplotlib.Figure
         The generate figure
     rects : dict

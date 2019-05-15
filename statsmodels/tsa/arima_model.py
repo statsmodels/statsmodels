@@ -884,14 +884,14 @@ class ARMA(tsbase.TimeSeriesModel):
         -------
         statsmodels.tsa.arima_model.ARMAResults class
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit : for more information
             on using the solvers.
         ARMAResults : results class returned by fit
 
         Notes
-        ------
+        -----
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
         unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
@@ -1138,14 +1138,14 @@ class ARIMA(ARMA):
         -------
         `statsmodels.tsa.arima.ARIMAResults` class
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit : for more information
             on using the solvers.
         ARIMAResults : results class returned by fit
 
         Notes
-        ------
+        -----
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
         unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
@@ -1287,7 +1287,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         Optional argument to scale the variance covariance matrix.
 
     Returns
-    --------
+    -------
     **Attributes**
 
     aic : float
@@ -1685,7 +1685,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         """Experimental summary function for ARIMA Results
 
         Parameters
-        -----------
+        ----------
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title

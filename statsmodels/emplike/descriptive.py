@@ -377,7 +377,7 @@ class _OptFuncts(object):
         nuisance parameters mu and sigma
 
         Parameters
-        -----------
+        ----------
         nuis_params : 1darray
             An array with a nuisance mean and variance parameter
 
@@ -424,7 +424,7 @@ class _OptFuncts(object):
     def _ci_limits_kurt(self, kurt):
         """
         Parameters
-        ---------
+        ----------
         skew0 : float
             Hypothesized value of kurtosis
 
@@ -617,7 +617,7 @@ class DescStatUV(_OptFuncts):
             likelihood of observing sig2_0. Default is False
 
         Returns
-        --------
+        -------
         test_results : tuple
             The  log-likelihood ratio and the p_value  of sig2_0
 
@@ -662,7 +662,7 @@ class DescStatUV(_OptFuncts):
             The significance level. Default is .05
 
         Returns
-        --------
+        -------
         Interval : tuple
             Confidence interval for the variance
 
@@ -760,7 +760,7 @@ class DescStatUV(_OptFuncts):
             maximize the likelihood ratio. Default is False.
 
         Returns
-        --------
+        -------
         test_results : tuple
             The log-likelihood ratio and p_value of skew0
         """
@@ -901,7 +901,7 @@ class DescStatUV(_OptFuncts):
             Default is .99 confidence limit assuming normality.
 
         Returns
-        --------
+        -------
         Interval : tuple
             Lower and upper confidence limit
 

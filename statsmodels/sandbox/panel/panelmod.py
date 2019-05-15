@@ -88,7 +88,7 @@ class PanelModel(object):
     An abstract statistical model class for panel (longitudinal) datasets.
 
     Parameters
-    ---------
+    ----------
     endog : array-like or str
         If a pandas object is used then endog should be the name of the
         endogenous variable as a string.
@@ -252,7 +252,7 @@ class PanelModel(object):
 
 
         Notes
-        ------
+        -----
         This is unfinished.  None of the method arguments work yet.
         Only oneway effects should work.
         """

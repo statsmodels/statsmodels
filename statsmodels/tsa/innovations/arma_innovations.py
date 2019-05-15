@@ -197,7 +197,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ----------
+    ---------
     score : array
         Score, evaluated at the given parameters.
 
@@ -245,7 +245,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ----------
+    ---------
     scoreobs : array
         Score per observation, evaluated at the given parameters.
 

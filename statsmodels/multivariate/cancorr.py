@@ -29,7 +29,7 @@ class CanCorr(Model):
     and the correlation between x1 and y1 is maximized.
 
     Attributes
-    -----------
+    ----------
     endog : array
         See Parameters.
     exog : array
@@ -158,7 +158,7 @@ class CanCorrTestResults(object):
     Canonical correlation results class
 
     Attributes
-    -----------
+    ----------
     stats : DataFrame
         Contain statistical tests results for each canonical correlation
     stats_mv : DataFrame

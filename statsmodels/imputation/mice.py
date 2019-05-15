@@ -1303,7 +1303,7 @@ class MICEResults(LikelihoodModelResults):
         Summarize the results of running MICE.
 
         Parameters
-        -----------
+        ----------
         title : string, optional
             Title for the top table. If not None, then this replaces
             the default title

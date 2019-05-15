@@ -460,7 +460,7 @@ def q_stat(x, nobs, type="ljungbox"):
         P-value of the Q statistic
 
     Notes
-    ------
+    -----
     Written to be used with acf.
     """
     x = np.asarray(x)
@@ -580,7 +580,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     pacf : 1d array
         partial autocorrelations, maxlag+1 elements
 
-    See also
+    See Also
     --------
     statsmodels.tsa.stattools.pacf
     statsmodels.tsa.stattools.pacf_burg
@@ -618,7 +618,7 @@ def pacf_burg(x, nlags=None, demean=True):
         Residual variance estimates where the value in position m is the
         residual variance in an AR model that includes m lags
 
-    See also
+    See Also
     --------
     statsmodels.tsa.stattools.pacf
     statsmodels.tsa.stattools.pacf_yw
@@ -699,7 +699,7 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
     OLS estimation of the pacf does not guarantee that all pacf values are
     between -1 and 1.
 
-    See also
+    See Also
     --------
     statsmodels.tsa.stattools.pacf
     statsmodels.tsa.stattools.pacf_yw
@@ -775,7 +775,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     confint : array, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
-    See also
+    See Also
     --------
     statsmodels.tsa.stattools.acf
     statsmodels.tsa.stattools.pacf_yw
@@ -1070,7 +1070,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
     >>> nobs = activity.shape[0]
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
 
-    See also
+    See Also
     --------
     innovations_filter
 
@@ -1143,7 +1143,7 @@ def innovations_filter(endog, theta):
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
     >>> resid = innovations_filter(rgdpg, theta)
 
-    See also
+    See Also
     --------
     innovations_algo
 

@@ -672,7 +672,7 @@ class GEE(base.Model):
         model : GEE model instance
 
         Notes
-        ------
+        -----
         `data` must define __getitem__ with the keys in the formula
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
@@ -2015,7 +2015,7 @@ class GEEResults(base.LikelihoodModelResults):
         Summarize the GEE regression results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional

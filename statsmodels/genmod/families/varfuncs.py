@@ -20,7 +20,7 @@ class VarianceFunction(object):
     Alias for VarianceFunction:
     constant = VarianceFunction()
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family
     """
@@ -30,7 +30,7 @@ class VarianceFunction(object):
         Default variance function
 
         Parameters
-        -----------
+        ----------
         mu : array-like
             mean parameters
 
@@ -179,7 +179,7 @@ class Binomial(object):
         Binomial variance function
 
         Parameters
-        -----------
+        ----------
         mu : array-like
             mean parameters
 

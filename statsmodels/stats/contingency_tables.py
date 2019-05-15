@@ -90,7 +90,7 @@ class Table(object):
     table_orig : array-like
         The original table is cached as `table_orig`.
 
-    See also
+    See Also
     --------
     statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency

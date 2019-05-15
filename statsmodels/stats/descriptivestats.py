@@ -39,7 +39,7 @@ _sign_test_doc = '''
         default, but it is common to set it to the median.
 
     Returns
-    ---------
+    --------
     M, p-value
 
     Notes
@@ -57,7 +57,7 @@ _sign_test_doc = '''
     equals N(+) + N(-).
 
     See Also
-    ---------
+    --------
     scipy.stats.wilcoxon
     '''
 
@@ -180,7 +180,7 @@ class Describe(object):
         Return a summary of descriptive statistics.
 
         Parameters
-        -----------
+        ----------
         stats: list or str
             The desired statistics, Accepts 'basic' or 'all' or a list.
                'basic' = ('obs', 'mean', 'std', 'min', 'max')

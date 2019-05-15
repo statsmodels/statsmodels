@@ -68,10 +68,11 @@ class ProbPlot(object):
 
     Examples
     --------
-    >>> import statsmodels.api as sm
-    >>> from matplotlib import pyplot as plt
+    The first example shows a Q-Q plot for regression residuals
 
     >>> # example 1
+    >>> import statsmodels.api as sm
+    >>> from matplotlib import pyplot as plt
     >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> model = sm.OLS(data.endog, data.exog)
@@ -109,7 +110,7 @@ class ProbPlot(object):
     >>> h = plt.title('Ex. 4 - qqplot - resids vs. quantiles of fitted t-dist')
     >>> plt.show()
 
-    A second `ProbPlot` object can be used to compare two seperate sample
+    A second `ProbPlot` object can be used to compare two separate sample
     sets by using the `other` kwarg in the `qqplot` and `ppplot` methods.
 
     >>> # example 5
@@ -127,27 +128,21 @@ class ProbPlot(object):
     size of the first by interpolation
 
     >>> # example 6
-    >>> import numpy as np
     >>> x = np.random.normal(loc=8.25, scale=2.75, size=37)
     >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
     >>> pp_x = sm.ProbPlot(x, fit=True)
     >>> pp_y = sm.ProbPlot(y, fit=True)
-    >>> fig = pp_y.qqplot(other=pp_x)
-    Traceback (most recent call last):
-        ...
-    ValueError: Sample size of `other` must be equal or larger than ...
     >>> fig = pp_x.qqplot(line='45', other=pp_y)
-    >>> title 'Ex. 6 - qqplot - compare two data sets with diff. sample size'
+    >>> title = 'Ex. 6 - qqplot - compare different sample sizes'
     >>> h = plt.title(title)
     >>> plt.show()
 
-   In ppplot, sample size of `other` and the first can be different. `other`
-   will be used to estimate an empirical cumulative distribution function
-   (ECDF). ECDF(x) will be plotted against p(x)=0.5/n, 1.5/n, ..., (n-0.5)/n
-   where x are sorted samples from the first.
+    In ppplot, sample size of `other` and the first can be different. `other`
+    will be used to estimate an empirical cumulative distribution function
+    (ECDF). ECDF(x) will be plotted against p(x)=0.5/n, 1.5/n, ..., (n-0.5)/n
+    where x are sorted samples from the first.
 
     >>> # example 7
-    >>> import numpy as np
     >>> x = np.random.normal(loc=8.25, scale=2.75, size=37)
     >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
     >>> pp_x = sm.ProbPlot(x, fit=True)
@@ -240,28 +235,31 @@ class ProbPlot(object):
 
         Parameters
         ----------
-        xlabel, ylabel : str or None, optional
-            User-provided lables for the x-axis and y-axis. If None (default),
+        xlabel : str or None, optional
+            User-provided lables for the x-axis. If None (default),
+            other values are used depending on the status of the kwarg `other`.
+        ylabel : str or None, optional
+            User-provided lables for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
 
-            - '45' - 45-degree line
-            - 's' - standardized line, the expected order statistics are scaled
-              by the standard deviation of the given sample and have the mean
-              added to them
-            - 'r' - A regression line is fit
-            - 'q' - A line is fit through the quartiles.
-            - None - by default no reference line is added to the plot.
+                - '45': 45-degree line
+                - 's': standardized line, the expected order statistics are
+                  scaled by the standard deviation of the given sample and have
+                  the mean added to them
+                - 'r': A regression line is fit
+                - 'q': A line is fit through the quartiles.
+                - None: by default no reference line is added to the plot.
 
-        other : `ProbPlot` instance, array-like, or None, optional
+        other : ProbPlot, array-like, or None, optional
             If provided, ECDF(x) will be plotted against p(x) where x are
-            sorted samples from `self`, ECDF is an empirical cumulative
+            sorted samples from `self`. ECDF is an empirical cumulative
             distribution function estimated from `other` and
-            p(x) = 0.5/n, 1.5/n, ..., [n-0.5]/n (n is the number of samples
-            in `self`). If an array-object is provided, it will be turned into
-            a `ProbPlot` instance default parameters. If not provided
-            (default), `self.dist`(x) will be plotted against p(x).
+            p(x) = 0.5/n, 1.5/n, ..., (n-0.5)/n where n is the number of
+            samples in `self`. If an array-object is provided, it will be
+            turned into a `ProbPlot` instance default parameters. If not
+            provided (default), `self.dist(x)` is be plotted against p(x).
 
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
@@ -754,7 +752,7 @@ def plotting_pos(nobs, a):
     The plotting positions are given by (i - a)/(nobs - 2*a + 1) for i in
     range(0,nobs+1)
 
-    See also
+    See Also
     --------
     scipy.stats.mstats.plotting_positions
     """

@@ -109,7 +109,7 @@ def pcasvd(data, keepdim=0, demean=True):
         eigenvectors, normalized if normalize is true
 
     See Also
-    -------
+    --------
     pca : principal component analysis using eigenvector decomposition
 
     Notes

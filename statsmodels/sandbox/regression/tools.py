@@ -241,7 +241,7 @@ def tstd_dlldy(y, df):
     '''derivative of log pdf of standardized t with respect to y
 
         Parameters
-    ----------
+        ----------
     y : array_like
         data points of random variable at which loglike is evaluated
     df : array_like
