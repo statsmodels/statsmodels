@@ -21,6 +21,7 @@ if [ "$LINT" == true ]; then
         statsmodels/interface/ \
         statsmodels/compat/ \
         statsmodels/datasets/tests/ \
+        statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
         statsmodels/formula/ \
         statsmodels/gam/ \
