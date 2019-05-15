@@ -1,52 +1,52 @@
 import numpy as np
 
 est = dict(
-           rank = 3,
-           N = 34,
-           ic = 1,
-           k = 3,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           N_clust = 5,
-           ll = -354.2436413025559,
-           k_eq_model = 1,
-           ll_0 = -356.2029100704882,
-           df_m = 2,
-           chi2 = 5.204189583786304,
-           p = .0741181533729996,
-           r2_p = .0055004288638308,
-           cmdline = "poisson accident yr_con op_75_79, vce(cluster ship)",
-           cmd = "poisson",
-           predict = "poisso_p",
-           estat_cmd = "poisson_estat",
-           gof = "poiss_g",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           clustvar = "ship",
-           vce = "cluster",
-           title = "Poisson regression",
-           user = "poiss_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=3,
+           N=34,
+           ic=1,
+           k=3,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           N_clust=5,
+           ll=-354.2436413025559,
+           k_eq_model=1,
+           ll_0=-356.2029100704882,
+           df_m=2,
+           chi2=5.204189583786304,
+           p=.0741181533729996,
+           r2_p=.0055004288638308,
+           cmdline="poisson accident yr_con op_75_79, vce(cluster ship)",
+           cmd="poisson",
+           predict="poisso_p",
+           estat_cmd="poisson_estat",
+           gof="poiss_g",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           clustvar="ship",
+           vce="cluster",
+           title="Poisson regression",
+           user="poiss_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
-params_table = np.array([
+params_table=np.array([
     -.02172061893549,  .19933709357097, -.10896426022065,  .91323083771076,
     -.41241414311748,  .36897290524649, np.nan,  1.9599639845401,
                    0,  .22148585072024,  .11093628220713,  1.9965140918162,
      .04587799343723,  .00405473301549,  .43891696842499, np.nan,
      1.9599639845401,                0,  2.2697077143215,  1.1048569901548,
       2.054299999499,  .03994666479943,  .10422780555076,  4.4351876230922,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -55,7 +55,7 @@ params_table_rownames = 'yr_con op_75_79 _cons'.split()
 cov = np.array([
      .03973527687332,  .00976206273414, -.21171095768584,  .00976206273414,
      .01230685870994, -.06297293767114, -.21171095768584, -.06297293767114,
-     1.2207089686939]).reshape(3,3)
+     1.2207089686939]).reshape(3, 3)
 
 cov_colnames = 'yr_con op_75_79 _cons'.split()
 
@@ -66,8 +66,8 @@ class Bunch(dict):
         dict.__init__(self, kw)
         self.__dict__ = self
 
-        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:,i]
+        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
+            self[att] = self.params_table[:, i]
 
 
 results_poisson_clu = Bunch(
@@ -81,40 +81,40 @@ results_poisson_clu = Bunch(
                 )
 
 est = dict(
-           rank = 3,
-           N = 34,
-           ic = 1,
-           k = 3,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -354.2436413025559,
-           k_eq_model = 1,
-           ll_0 = -356.2029100704882,
-           df_m = 2,
-           chi2 = .1635672212515404,
-           p = .9214713337295277,
-           r2_p = .0055004288638308,
-           cmdline = "poisson accident yr_con op_75_79, vce(robust)",
-           cmd = "poisson",
-           predict = "poisso_p",
-           estat_cmd = "poisson_estat",
-           gof = "poiss_g",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           vce = "robust",
-           title = "Poisson regression",
-           user = "poiss_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=3,
+           N=34,
+           ic=1,
+           k=3,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-354.2436413025559,
+           k_eq_model=1,
+           ll_0=-356.2029100704882,
+           df_m=2,
+           chi2=.1635672212515404,
+           p=.9214713337295277,
+           r2_p=.0055004288638308,
+           cmdline="poisson accident yr_con op_75_79, vce(robust)",
+           cmd="poisson",
+           predict="poisso_p",
+           estat_cmd="poisson_estat",
+           gof="poiss_g",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           vce="robust",
+           title="Poisson regression",
+           user="poiss_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -124,7 +124,7 @@ params_table = np.array([
      .68878332380143,  -.8624017657564,  1.3053734671969, np.nan,
      1.9599639845401,                0,  2.2697077143215,  .66532523368388,
      3.4114258702533,  .00064624070669,  .96569421829539,  3.5737212103476,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -133,7 +133,7 @@ params_table_rownames = 'yr_con op_75_79 _cons'.split()
 cov = np.array([
      .03699357253114, -.01521223175214, -.09585501859714, -.01521223175214,
      .30582453697607,  -.1649339692102, -.09585501859714,  -.1649339692102,
-     .44265766657651]).reshape(3,3)
+     .44265766657651]).reshape(3, 3)
 
 cov_colnames = 'yr_con op_75_79 _cons'.split()
 
@@ -151,40 +151,40 @@ results_poisson_hc1 = Bunch(
                 )
 
 est = dict(
-           rank = 3,
-           N = 34,
-           ic = 4,
-           k = 3,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -91.28727940081573,
-           k_eq_model = 1,
-           ll_0 = -122.0974139280415,
-           df_m = 2,
-           chi2 = 61.62026905445154,
-           p = 4.16225408420e-14,
-           r2_p = .2523405986746273,
-           cmdline = "poisson accident yr_con op_75_79, exposure(service)",
-           cmd = "poisson",
-           predict = "poisso_p",
-           estat_cmd = "poisson_estat",
-           offset = "ln(service)",
-           gof = "poiss_g",
-           chi2type = "LR",
-           opt = "moptimize",
-           vce = "oim",
-           title = "Poisson regression",
-           user = "poiss_lf",
-           crittype = "log likelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=3,
+           N=34,
+           ic=4,
+           k=3,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-91.28727940081573,
+           k_eq_model=1,
+           ll_0=-122.0974139280415,
+           df_m=2,
+           chi2=61.62026905445154,
+           p=4.16225408420e-14,
+           r2_p=.2523405986746273,
+           cmdline="poisson accident yr_con op_75_79, exposure(service)",
+           cmd="poisson",
+           predict="poisso_p",
+           estat_cmd="poisson_estat",
+           offset="ln(service)",
+           gof="poiss_g",
+           chi2type="LR",
+           opt="moptimize",
+           vce="oim",
+           title="Poisson regression",
+           user="poiss_lf",
+           crittype="log likelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -194,7 +194,7 @@ params_table = np.array([
      .00340079035234,  .11775219034206,  .59409240182785, np.nan,
      1.9599639845401,                0,  -6.974712802772,  .13252425018256,
     -52.629709605328,                0,  -7.234455560208,  -6.714970045336,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -203,7 +203,7 @@ params_table_rownames = 'yr_con op_75_79 _cons'.split()
 cov = np.array([
      .00335337279036, -.00315267340017, -.00589654294427, -.00315267340017,
       .0147665254054, -.00165060980569, -.00589654294427, -.00165060980569,
-     .01756267688645]).reshape(3,3)
+     .01756267688645]).reshape(3, 3)
 
 cov_colnames = 'yr_con op_75_79 _cons'.split()
 
@@ -221,41 +221,41 @@ results_poisson_exposure_nonrobust = Bunch(
                 )
 
 est = dict(
-           rank = 3,
-           N = 34,
-           ic = 4,
-           k = 3,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -91.28727940081573,
-           k_eq_model = 1,
-           ll_0 = -122.0974139280415,
-           df_m = 2,
-           chi2 = 15.1822804640621,
-           p = .0005049050167458,
-           r2_p = .2523405986746273,
-           cmdline = "poisson accident yr_con op_75_79, exposure(service) vce(robust)",
-           cmd = "poisson",
-           predict = "poisso_p",
-           estat_cmd = "poisson_estat",
-           offset = "ln(service)",
-           gof = "poiss_g",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           vce = "robust",
-           title = "Poisson regression",
-           user = "poiss_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=3,
+           N=34,
+           ic=4,
+           k=3,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-91.28727940081573,
+           k_eq_model=1,
+           ll_0=-122.0974139280415,
+           df_m=2,
+           chi2=15.1822804640621,
+           p=.0005049050167458,
+           r2_p=.2523405986746273,
+           cmdline="poisson accident yr_con op_75_79, exposure(service) vce(robust)",
+           cmd="poisson",
+           predict="poisso_p",
+           estat_cmd="poisson_estat",
+           offset="ln(service)",
+           gof="poiss_g",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           vce="robust",
+           title="Poisson regression",
+           user="poiss_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -265,7 +265,7 @@ params_table = np.array([
      .02709040275274,  .04029888299621,  .67154570917369, np.nan,
      1.9599639845401,                0,  -6.974712802772,   .2558675415017,
     -27.259076168227,  1.29723387e-163, -7.4762039689282, -6.4732216366159,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -274,7 +274,7 @@ params_table_rownames = 'yr_con op_75_79 _cons'.split()
 cov = np.array([
      .00836211050535,  .00098797681063, -.01860743122756,  .00098797681063,
      .02593237192942, -.02395236210603, -.01860743122756, -.02395236210603,
-     .06546819879413]).reshape(3,3)
+     .06546819879413]).reshape(3, 3)
 
 cov_colnames = 'yr_con op_75_79 _cons'.split()
 
@@ -292,43 +292,43 @@ results_poisson_exposure_hc1 = Bunch(
                 )
 
 est = dict(
-           rank = 3,
-           N = 34,
-           ic = 4,
-           k = 3,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           N_clust = 5,
-           ll = -91.28727940081573,
-           k_eq_model = 1,
-           ll_0 = -122.0974139280415,
-           df_m = 2,
-           chi2 = 340.7343047354823,
-           p = 1.02443835269e-74,
-           r2_p = .2523405986746273,
-           cmdline = "poisson accident yr_con op_75_79, exposure(service) vce(cluster ship)",
-           cmd = "poisson",
-           predict = "poisso_p",
-           estat_cmd = "poisson_estat",
-           offset = "ln(service)",
-           gof = "poiss_g",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           clustvar = "ship",
-           vce = "cluster",
-           title = "Poisson regression",
-           user = "poiss_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=3,
+           N=34,
+           ic=4,
+           k=3,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           N_clust=5,
+           ll=-91.28727940081573,
+           k_eq_model=1,
+           ll_0=-122.0974139280415,
+           df_m=2,
+           chi2=340.7343047354823,
+           p=1.02443835269e-74,
+           r2_p=.2523405986746273,
+           cmdline="poisson accident yr_con op_75_79, exposure(service) vce(cluster ship)",
+           cmd="poisson",
+           predict="poisso_p",
+           estat_cmd="poisson_estat",
+           offset="ln(service)",
+           gof="poiss_g",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           clustvar="ship",
+           vce="cluster",
+           title="Poisson regression",
+           user="poiss_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -338,7 +338,7 @@ params_table = np.array([
      .00011191448109,  .17534760892947,  .53649698324044, np.nan,
      1.9599639845401,                0,  -6.974712802772,   .0968656626603,
     -72.003975518463,                0, -7.1645660129248, -6.7848595926192,
-    np.nan,  1.9599639845401,                0]).reshape(3,9)
+    np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -347,7 +347,7 @@ params_table_rownames = 'yr_con op_75_79 _cons'.split()
 cov = np.array([
       .0014574789737, -.00277745275086,  .00108765624666, -.00277745275086,
      .00848823823534, -.00469929607507,  .00108765624666, -.00469929607507,
-     .00938295660262]).reshape(3,3)
+     .00938295660262]).reshape(3, 3)
 
 cov_colnames = 'yr_con op_75_79 _cons'.split()
 
@@ -365,45 +365,45 @@ results_poisson_exposure_clu = Bunch(
                 )
 
 est = dict(
-           rank = 4,
-           N = 34,
-           ic = 2,
-           k = 4,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           N_clust = 5,
-           ll = -109.0877965183258,
-           k_eq_model = 1,
-           ll_0 = -109.1684720604314,
-           rank0 = 2,
-           df_m = 2,
-           chi2 = 5.472439553195301,
-           p = .0648148991694882,
-           k_aux = 1,
-           alpha = 2.330298308905143,
-           cmdline = "nbreg accident yr_con op_75_79, vce(cluster ship)",
-           cmd = "nbreg",
-           predict = "nbreg_p",
-           dispers = "mean",
-           diparm_opt2 = "noprob",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           clustvar = "ship",
-           vce = "cluster",
-           title = "Negative binomial regression",
-           diparm1 = "lnalpha, exp label(",
-           user = "nbreg_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=4,
+           N=34,
+           ic=2,
+           k=4,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           N_clust=5,
+           ll=-109.0877965183258,
+           k_eq_model=1,
+           ll_0=-109.1684720604314,
+           rank0=2,
+           df_m=2,
+           chi2=5.472439553195301,
+           p=.0648148991694882,
+           k_aux=1,
+           alpha=2.330298308905143,
+           cmdline="nbreg accident yr_con op_75_79, vce(cluster ship)",
+           cmd="nbreg",
+           predict="nbreg_p",
+           dispers="mean",
+           diparm_opt2="noprob",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           clustvar="ship",
+           vce="cluster",
+           title="Negative binomial regression",
+           diparm1="lnalpha, exp label(",
+           user="nbreg_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -418,7 +418,7 @@ params_table = np.array([
      1.2866569517975, np.nan,  1.9599639845401,                0,
      2.3302983089051,  .52392329936749, np.nan, np.nan,
      1.4998057895818,  3.6206622525444, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -429,7 +429,7 @@ cov = np.array([
     -.00421355148283,  .00994498835661,  .00992613461881, -.00714955450361,
     -.32663130963457,  .00992613461881,  1.5217160378218, -.09288283512096,
      .02015715724983, -.00714955450361, -.09288283512096,  .05054897861465
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 
@@ -447,44 +447,44 @@ results_negbin_clu = Bunch(
                 )
 
 est = dict(
-           rank = 4,
-           N = 34,
-           ic = 2,
-           k = 4,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -109.0877965183258,
-           k_eq_model = 1,
-           ll_0 = -109.1684720604314,
-           rank0 = 2,
-           df_m = 2,
-           chi2 = .1711221347493475,
-           p = .9179970816706797,
-           r2_p = .0007390003778831,
-           k_aux = 1,
-           alpha = 2.330298308905143,
-           cmdline = "nbreg accident yr_con op_75_79, vce(robust)",
-           cmd = "nbreg",
-           predict = "nbreg_p",
-           dispers = "mean",
-           diparm_opt2 = "noprob",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           vce = "robust",
-           title = "Negative binomial regression",
-           diparm1 = "lnalpha, exp label(",
-           user = "nbreg_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=4,
+           N=34,
+           ic=2,
+           k=4,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-109.0877965183258,
+           k_eq_model=1,
+           ll_0=-109.1684720604314,
+           rank0=2,
+           df_m=2,
+           chi2=.1711221347493475,
+           p=.9179970816706797,
+           r2_p=.0007390003778831,
+           k_aux=1,
+           alpha=2.330298308905143,
+           cmdline="nbreg accident yr_con op_75_79, vce(robust)",
+           cmd="nbreg",
+           predict="nbreg_p",
+           dispers="mean",
+           diparm_opt2="noprob",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           vce="robust",
+           title="Negative binomial regression",
+           diparm1="lnalpha, exp label(",
+           user="nbreg_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -499,7 +499,7 @@ params_table = np.array([
      1.3164993699629, np.nan,  1.9599639845401,                0,
      2.3302983089051,  .55940442919073, np.nan, np.nan,
      1.4557092049439,  3.7303399539165, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -510,7 +510,7 @@ cov = np.array([
     -.03840590969835,  .31635366072297, -.11049674936104, -.02643483668568,
     -.16217402790798, -.11049674936104,  .57821136454093, -.03915049342584,
      .02098165591138, -.02643483668568, -.03915049342584,  .05762736490753
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 
@@ -528,47 +528,47 @@ results_negbin_hc1 = Bunch(
                 )
 
 est = dict(
-           rank = 4,
-           N = 34,
-           ic = 4,
-           k = 4,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -82.49115612464289,
-           k_eq_model = 1,
-           ll_0 = -84.68893065247886,
-           rank0 = 2,
-           df_m = 2,
-           chi2 = 4.39554905567195,
-           p = .1110500222994781,
-           ll_c = -91.28727940081573,
-           chi2_c = 17.5922465523457,
-           r2_p = .0259511427397111,
-           k_aux = 1,
-           alpha = .2457422083490335,
-           cmdline = "nbreg accident yr_con op_75_79, exposure(service)",
-           cmd = "nbreg",
-           predict = "nbreg_p",
-           offset = "ln(service)",
-           dispers = "mean",
-           diparm_opt2 = "noprob",
-           chi2_ct = "LR",
-           chi2type = "LR",
-           opt = "moptimize",
-           vce = "oim",
-           title = "Negative binomial regression",
-           diparm1 = "lnalpha, exp label(",
-           user = "nbreg_lf",
-           crittype = "log likelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=4,
+           N=34,
+           ic=4,
+           k=4,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-82.49115612464289,
+           k_eq_model=1,
+           ll_0=-84.68893065247886,
+           rank0=2,
+           df_m=2,
+           chi2=4.39554905567195,
+           p=.1110500222994781,
+           ll_c=-91.28727940081573,
+           chi2_c=17.5922465523457,
+           r2_p=.0259511427397111,
+           k_aux=1,
+           alpha=.2457422083490335,
+           cmdline="nbreg accident yr_con op_75_79, exposure(service)",
+           cmd="nbreg",
+           predict="nbreg_p",
+           offset="ln(service)",
+           dispers="mean",
+           diparm_opt2="noprob",
+           chi2_ct="LR",
+           chi2type="LR",
+           opt="moptimize",
+           vce="oim",
+           title="Negative binomial regression",
+           diparm1="lnalpha, exp label(",
+           user="nbreg_lf",
+           crittype="log likelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -583,7 +583,7 @@ params_table = np.array([
     -.39789555725363, np.nan,  1.9599639845401,                0,
      .24574220834903,  .12608018984282, np.nan, np.nan,
        .089900758997,  .67173218155228, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -594,7 +594,7 @@ cov = np.array([
     -.01097939549632,  .07606867141895,  -.0197375670989, -.00926008351523,
     -.05127649084781,  -.0197375670989,  .16314986568722,  .02198323898312,
      .00045725833006, -.00926008351523,  .02198323898312,  .26322927930229
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 
@@ -612,46 +612,46 @@ results_negbin_exposure_nonrobust = Bunch(
                 )
 
 est = dict(
-           rank = 4,
-           N = 34,
-           ic = 4,
-           k = 4,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           N_clust = 5,
-           ll = -82.49115612464289,
-           k_eq_model = 1,
-           ll_0 = -84.68893065247886,
-           rank0 = 2,
-           df_m = 2,
-           chi2 = 5.473741859983782,
-           p = .0647727084656973,
-           k_aux = 1,
-           alpha = .2457422083490335,
-           cmdline = "nbreg accident yr_con op_75_79, exposure(service) vce(cluster ship)",
-           cmd = "nbreg",
-           predict = "nbreg_p",
-           offset = "ln(service)",
-           dispers = "mean",
-           diparm_opt2 = "noprob",
-           chi2type = "Wald",
-           opt = "moptimize",
-           vcetype = "Robust",
-           clustvar = "ship",
-           vce = "cluster",
-           title = "Negative binomial regression",
-           diparm1 = "lnalpha, exp label(",
-           user = "nbreg_lf",
-           crittype = "log pseudolikelihood",
-           ml_method = "e2",
-           singularHmethod = "m-marquardt",
-           technique = "nr",
-           which = "max",
-           depvar = "accident",
-           properties = "b V",
+           rank=4,
+           N=34,
+           ic=4,
+           k=4,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           N_clust=5,
+           ll=-82.49115612464289,
+           k_eq_model=1,
+           ll_0=-84.68893065247886,
+           rank0=2,
+           df_m=2,
+           chi2=5.473741859983782,
+           p=.0647727084656973,
+           k_aux=1,
+           alpha=.2457422083490335,
+           cmdline="nbreg accident yr_con op_75_79, exposure(service) vce(cluster ship)",
+           cmd="nbreg",
+           predict="nbreg_p",
+           offset="ln(service)",
+           dispers="mean",
+           diparm_opt2="noprob",
+           chi2type="Wald",
+           opt="moptimize",
+           vcetype="Robust",
+           clustvar="ship",
+           vce="cluster",
+           title="Negative binomial regression",
+           diparm1="lnalpha, exp label(",
+           user="nbreg_lf",
+           crittype="log pseudolikelihood",
+           ml_method="e2",
+           singularHmethod="m-marquardt",
+           technique="nr",
+           which="max",
+           depvar="accident",
+           properties="b V",
           )
 
 params_table = np.array([
@@ -666,7 +666,7 @@ params_table = np.array([
      .29345290577817, np.nan,  1.9599639845401,                0,
      .24574220834903,  .21276213878894, np.nan, np.nan,
       .0450313052935,  1.3410500222158, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
 params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -677,7 +677,7 @@ cov = np.array([
     -.00330004038514,  .03238987328148, -.03020509748676, -.09492663454187,
     -.08114367170947, -.03020509748676,  .39115952018952,  .43276143586693,
     -.07133030733881, -.09492663454187,  .43276143586693,  .74959931564018
-    ]).reshape(4,4)
+    ]).reshape(4, 4)
 
 cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 

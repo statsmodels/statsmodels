@@ -33,7 +33,7 @@ class Anes(object):
                 1.3469616, -.01790407, .21693885, .08095841, -7.0604782,
                 -.14088069, 2.0700801, -.00943265, .3219257, .10889408,
                 -12.105751]
-        obj.params = np.reshape(params, (6,-1), order='F')
+        obj.params = np.reshape(params, (6, -1), order='F')
         bse = [.0342823657, .093626795, .0065248584, .0735865799,
                 .0176336937, .6298376313, .0391615553, .1082386919,
                 .0079144618, .0852893563, .0222809297, .7631899491,
@@ -43,9 +43,9 @@ class Anes(object):
                 .0393516553, .1171860107, .0076110152, .0850070091,
                 .0229760791, .8443638283, .042138047, .1434089089,
                 .0081338625, .0910979921, .025300888, 1.059954821]
-        obj.bse = np.reshape(bse, (6,-1), order='F')
-        obj.yhat = np.loadtxt(os.path.join(cur_dir,'yhat_mnlogit.csv'))
-        obj.phat = np.loadtxt(os.path.join(cur_dir,'phat_mnlogit.csv'))
+        obj.bse = np.reshape(bse, (6, -1), order='F')
+        obj.yhat = np.loadtxt(os.path.join(cur_dir, 'yhat_mnlogit.csv'))
+        obj.phat = np.loadtxt(os.path.join(cur_dir, 'phat_mnlogit.csv'))
         obj.cov_params = None
         obj.llf = -1461.922747312
         obj.llnull = -1750.34670999
@@ -67,7 +67,7 @@ class Anes(object):
             -2.370538224, 11.49421878, -2.352389066, 2.552011323,
             3.523595639, -8.361890935, -3.34331327, 14.43480847,
             -1.159676452, 3.533839715, 4.303962885, -11.42100649]
-        obj.z = np.reshape(z, (6,-1), order='F')
+        obj.z = np.reshape(z, (6, -1), order='F')
         pvalues = [0.7364947525, 0.0014737744, 0.0001317999, 0.2622827367,
             0.7682272401, 0.5532789548, 0.0234348654, 0.0002962422,
             0.0038138191, 0.0337799420, 0.0316619538, 0.0031844460,
@@ -77,7 +77,7 @@ class Anes(object):
             0.0177622072, 1.41051e-30, 0.0186532528, 0.0107103038,
             0.0004257334, 6.17209e-17, 0.0008278439, 3.12513e-47,
             0.2461805610, 0.0004095694, 0.0000167770, 3.28408e-30]
-        obj.pvalues = np.reshape(pvalues, (6,-1), order='F')
+        obj.pvalues = np.reshape(pvalues, (6, -1), order='F')
         conf_int = [[[-0.0787282, 0.0556562], [0.1142092, 0.4812195],
             [-0.0377335, -0.0121565], [-0.0617356, 0.2267185], [-0.0293649,
             0.0397580], [-1.6078610, 0.8610574]], [[-0.1655059, -0.0119954],
@@ -85,7 +85,7 @@ class Anes(object):
             0.3482068], [0.0042042, 0.0915438], [-3.7467380, -0.7550884]],
             [[-0.2177596, 0.0058262], [0.2627019,   0.8841991], [-0.0370602,
             0.0073578], [-0.2546789, 0.2403740], [-0.0083075, 0.1234578],
-            [-5.9323630,-1.3988040]],[[-0.1773841, -0.0057293], [1.0261390,
+            [-5.9323630, -1.3988040]], [[-0.1773841, -0.0057293], [1.0261390,
             1.5314040], [-0.0251818, 0.0078191], [0.0153462,    0.3843097],
             [0.0331544, 0.1358423], [-9.4906670, -5.7370190]], [[-0.1704124,
             -0.0161568], [1.1172810,    1.5766420], [-0.0328214, -0.0029868],
@@ -211,7 +211,7 @@ class Anes(object):
                 .3727166284]]).T
 
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir,'mnlogit_resid.csv'),
+        obj.resid = np.loadtxt(os.path.join(cur_dir, 'mnlogit_resid.csv'),
                                 delimiter=",")
         return obj
 
@@ -312,7 +312,7 @@ class DiscreteL1(object):
             mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 
             alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
-            alpha[-1,:] = 0
+            alpha[-1, :] = 0
             mlogit_l1_res = mlogit_mod.fit_regularized(
             method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
             acc=1e-10)
@@ -512,74 +512,74 @@ class Spector(object):
         obj.aic = 33.779266930667
         obj.bic = 39.642210541866
         obj.z = [2.237723415, 0.6722348408, 2.234423721, -2.640537645]
-        obj.conf_int = [[.3507938,5.301432],[-.1822835,.3725988],[.29218,
-                4.465195],[-22.68657,-3.35613]]
+        obj.conf_int = [[.3507938, 5.301432], [-.1822835, .3725988], [.29218,
+                4.465195], [-22.68657, -3.35613]]
         obj.pvalues = [.0252390974, .5014342039, .0254552063, .0082774596]
 
         # taken from margins command
-        obj.margeff_nodummy_dydx = [.36258084688424,.01220841099085,
+        obj.margeff_nodummy_dydx = [.36258084688424, .01220841099085,
                 .30517768382304]
         obj.margeff_nodummy_dydx_se = [.1094412, .0177942, .0923796]
-        obj.margeff_nodummy_dydxmean = [.53385885781692,.01797548988961,
+        obj.margeff_nodummy_dydxmean = [.53385885781692, .01797548988961,
                 .44933926079386]
         obj.margeff_nodummy_dydxmean_se = [.237038, .0262369, .1967626]
-        obj.margeff_nodummy_dydxmedian = [.25009492465091,.00842091261329,
+        obj.margeff_nodummy_dydxmedian = [.25009492465091, .00842091261329,
                 .2105003352955]
         obj.margeff_nodummy_dydxmedian_se = [.1546708, .0134314, .0928183]
-        obj.margeff_nodummy_dydxzero = [6.252993785e-06,2.105437138e-07,
+        obj.margeff_nodummy_dydxzero = [6.252993785e-06, 2.105437138e-07,
                 5.263030788e-06]
         obj.margeff_nodummy_dydxzero_se = [.0000288,  9.24e-07, .000025]
-        obj.margeff_nodummy_dyex = [1.1774000792198,.27896245178384,
+        obj.margeff_nodummy_dyex = [1.1774000792198, .27896245178384,
                 .16960002159996]
         obj.margeff_nodummy_dyex_se = [.3616481, .4090679, .0635583]
-        obj.margeff_nodummy_dyexmean = [1.6641381583512,.39433730945339,
+        obj.margeff_nodummy_dyexmean = [1.6641381583512, .39433730945339,
                 .19658592659731]
         obj.margeff_nodummy_dyexmean_se = [.7388917, .5755722, .0860836]
         #NOTE: PSI at median should be a NaN or 'omitted'
-        obj.margeff_nodummy_dyexmedian = [.76654095836557,.18947053379898,0]
+        obj.margeff_nodummy_dyexmedian = [.76654095836557, .18947053379898, 0]
         obj.margeff_nodummy_dyexmedian_se = [ .4740659, .302207, 0]
         #NOTE: all should be NaN
-        obj.margeff_nodummy_dyexzero = [0,0,0]
-        obj.margeff_nodummy_dyexzero_se = [0,0,0]
+        obj.margeff_nodummy_dyexzero = [0, 0, 0]
+        obj.margeff_nodummy_dyexzero_se = [0, 0, 0]
 
-        obj.margeff_nodummy_eydx = [1.8546366266779,.06244722072812,
+        obj.margeff_nodummy_eydx = [1.8546366266779, .06244722072812,
                 1.5610138123033]
         obj.margeff_nodummy_eydx_se = [.847903, .0930901, .7146715]
-        obj.margeff_nodummy_eydxmean = [2.1116143062702,.0710998816585,
+        obj.margeff_nodummy_eydxmean = [2.1116143062702, .0710998816585,
                 1.7773072368626]
         obj.margeff_nodummy_eydxmean_se = [ 1.076109, .1081501, .9120842]
-        obj.margeff_nodummy_eydxmedian = [2.5488082240624,.0858205793373,
+        obj.margeff_nodummy_eydxmedian = [2.5488082240624, .0858205793373,
                 2.1452853812126]
         obj.margeff_nodummy_eydxmedian_se = [1.255377, .1283771, 1.106872]
-        obj.margeff_nodummy_eydxzero = [2.8261067189993,.0951574597115,
+        obj.margeff_nodummy_eydxzero = [2.8261067189993, .0951574597115,
                 2.3786824653103]
         obj.margeff_nodummy_eydxzero_se = [1.262961, .1415544, 1.064574]
-        obj.margeff_nodummy_eyex = [5.4747106798973,1.3173389907576,
+        obj.margeff_nodummy_eyex = [5.4747106798973, 1.3173389907576,
                 .44600395466634]
         obj.margeff_nodummy_eyex_se = [2.44682, 1.943525, .1567618]
-        obj.margeff_nodummy_eyexmean = [6.5822977203268,1.5597536538833,
+        obj.margeff_nodummy_eyexmean = [6.5822977203268, 1.5597536538833,
                 .77757191612739]
         obj.margeff_nodummy_eyexmean_se = [3.354433, 2.372543, .3990368]
-        obj.margeff_nodummy_eyexmedian = [7.8120973525952,1.9309630350892,0]
+        obj.margeff_nodummy_eyexmedian = [7.8120973525952, 1.9309630350892, 0]
         obj.margeff_nodummy_eyexmedian_se = [3.847731951, 2.888485089, 0]
 
-        obj.margeff_nodummy_eyexzero = [0,0,0]
-        obj.margeff_nodummy_eyexzero_se = [0,0,0]
+        obj.margeff_nodummy_eyexzero = [0, 0, 0]
+        obj.margeff_nodummy_eyexzero_se = [0, 0, 0]
 
         # for below GPA = 2.0, psi = 1
-        obj.margeff_nodummy_atexog1 = [.1456333017086,.00490359933927,
+        obj.margeff_nodummy_atexog1 = [.1456333017086, .00490359933927,
                 .12257689308426]
         obj.margeff_nodummy_atexog1_se = [.145633, .0111226, .1777101]
         # for below GPA at mean, tuce = 21, psi = 0
-        obj.margeff_nodummy_atexog2 = [.25105129214546,.00845311433473,
+        obj.margeff_nodummy_atexog2 = [.25105129214546, .00845311433473,
                 .2113052923675]
         obj.margeff_nodummy_atexog2_se = [.1735778, .012017, .0971515]
 
         # must get this from older margeff or i.psi then margins
-        obj.margeff_dummy_dydx = [.36258084688424,.01220841099085,
+        obj.margeff_dummy_dydx = [.36258084688424, .01220841099085,
                 .35751515254729]
         obj.margeff_dummy_dydx_se = [.1094412, .0177942, .1420034]
-        obj.margeff_dummy_dydxmean = [.53385885781692,.01797548988961,
+        obj.margeff_dummy_dydxmean = [.53385885781692, .01797548988961,
                 .4564984096959]
         obj.margeff_dummy_dydxmean_se = [.237038, .0262369, .1810537]
         #obj.margeff_dummy_dydxmedian
@@ -590,12 +590,12 @@ class Spector(object):
                                                    .1792363708]
 
         # estimate with i.psi for the below then use margins
-        obj.margeff_dummy_eydx = [1.8546366266779,.06244722072812,
+        obj.margeff_dummy_eydx = [1.8546366266779, .06244722072812,
                 1.5549034398832]
         obj.margeff_dummy_eydx_se = [.847903, .0930901, .7283702]
         # ie
         #  margins, eydx(*) at((mean) _all)
-        obj.margeff_dummy_eydxmean = [2.1116143062702,.0710998816585,
+        obj.margeff_dummy_eydxmean = [2.1116143062702, .0710998816585,
                 1.6631775707188]
         obj.margeff_dummy_eydxmean_se = [1.076109, .1081501, .801205]
 
@@ -647,7 +647,7 @@ class Spector(object):
                                                .1810536852 ]
 
         # for below GPA = 2.0, psi = 1
-        obj.margeff_dummy_atexog1 = [.1456333017086,.00490359933927,
+        obj.margeff_dummy_atexog1 = [.1456333017086, .00490359933927,
                 .0494715429937]
         obj.margeff_dummy_atexog1_se = [.145633, .0111226, .0731368]
         # for below GPA at mean, tuce = 21, psi = 0
@@ -683,8 +683,8 @@ class Spector(object):
         obj.aic = 33.637606649867
         obj.bic = 39.500550261066
         obj.z = [ 2.343062695, .6166263836, 2.397044489, -2.931131182]
-        obj.conf_int = [[.2658255,2.985795],[-.1126929,.2161508],[.2600795,
-            2.592585],[-12.43547,-2.469166]]
+        obj.conf_int = [[.2658255, 2.985795], [-.1126929, .2161508], [.2600795,
+            2.592585], [-12.43547, -2.469166]]
         obj.pvalues = [.0191261688, .537481188, .0165279168, .0033773013]
         obj.phat = [.0181707, .0530805, .1899263, .0185707, .5545748,
                         .0272331, .0185033, .0445714, .1088081, .6631207,
@@ -772,8 +772,8 @@ class RandHIE(object):
                 .01116266712362]
         predict = np.loadtxt(os.path.join(cur_dir, 'yhat_poisson.csv'),
                    delimiter=",")
-        obj.phat = predict[:,0]
-        obj.yhat = predict[:,1]
+        obj.phat = predict[:, 0]
+        obj.yhat = predict[:, 1]
         obj.llf = -62419.588535018
         obj.llnull = -66647.181687959
         obj.df_model = 9
@@ -786,10 +786,10 @@ class RandHIE(object):
         obj.z = [-18.21612769, -23.27219872, 19.30180524, -21.43878101,
                 22.20041672, 60.09840604, -1.36585953, 3.53081538, 7.84325525,
                 62.74063980]
-        obj.conf_int = [[ -.0581876, -.0468826],[-0.2678962, -0.2262774],
-                [0.0317067, 0.0388737],[-0.0377386, -0.0314164],
-                [0.2477257, 0.2957022], [0.0328346, 0.0350484],[-0.0307659,
-                    0.0054958], [0.0240495, 0.0840631],[0.1546087, 0.2576216],
+        obj.conf_int = [[ -.0581876, -.0468826], [-0.2678962, -0.2262774],
+                [0.0317067, 0.0388737], [-0.0377386, -0.0314164],
+                [0.2477257, 0.2957022], [0.0328346, 0.0350484], [-0.0307659,
+                    0.0054958], [0.0240495, 0.0840631], [0.1546087, 0.2576216],
                 [0.6784745, 0.7222313]]
         obj.pvalues = [3.84415e-74, 8.4800e-120, 5.18652e-83, 5.8116e-102,
                 3.4028e-109, 0, .1719830562, .0004142808, 4.39014e-15, 0]
@@ -817,7 +817,7 @@ class RandHIE(object):
                                            .0264611158, .0437974779,
                                            .0752099666]
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir,'poisson_resid.csv'),
+        obj.resid = np.loadtxt(os.path.join(cur_dir, 'poisson_resid.csv'),
                                 delimiter=",")
         return obj
 
@@ -830,7 +830,7 @@ class RandHIE(object):
         obj.params = [-0.0579469537244314,
                 -0.267787718814838, 0.0412060770911646, -0.0381376804392121,
                 0.268915772213171, 0.0381637446219235, -0.0441338846217674,
-                0.0172521803400544, 0.177960787443151,0.663556087183864,
+                0.0172521803400544, 0.177960787443151, 0.663556087183864,
                 # lnalpha from stata
                 1.292953339909746]
         # alpha and stderr from stata
@@ -909,7 +909,7 @@ class RandHIE(object):
         obj.bse = [0.00536019929563678,
                 0.0196998350459769, 0.00335779098766272, 0.00301145915122889,
                 0.0237984097096245, 0.00107360844112751, 0.0167174614755359,
-                0.0298037989274781, 0.0546838603596457,0.0214703279904911,
+                0.0298037989274781, 0.0546838603596457, 0.0214703279904911,
                 0.0630011409376052]
         obj.z = [-12.1842008660173, -15.0263292419148,
                 12.2617548393554, -10.6413707601675, 8.0187518663633,
@@ -924,13 +924,13 @@ class RandHIE(object):
                 #77.968995
 
         obj.conf_int = [
-            [-0.075815736,-0.0548037543],
-            [-0.334627884,-0.2574045307],
+            [-0.075815736, -0.0548037543],
+            [-0.334627884, -0.2574045307],
             [ 0.034591140, 0.0477536802],
-            [-0.037948513,-0.0261435934],
+            [-0.037948513, -0.0261435934],
             [ 0.144188659, 0.2374784253],
             [ 0.029752351, 0.0339608958],
-            [-0.065963506,-0.0004310568],
+            [-0.065963506, -0.0004310568],
             [-0.106884601, 0.0099462908],
             [ 0.004791495, 0.2191522271],
             [ 3.607387349, 3.8543518219],
@@ -1023,7 +1023,7 @@ class RandHIE(object):
         obj.lnalpha = -0.8027716
         obj.bse = [0.00634704, 0.02381906, 0.00443871, 0.00355094,
                    0.0334247, 0.00166303, 0.02102142, 0.0390845,
-                   0.087821,0.02626823,  0.00562825]
+                   0.087821, 0.02626823,  0.00562825]
         obj.df_model = 9
         obj.aic = 86674.854401865
         obj.conf_int = [

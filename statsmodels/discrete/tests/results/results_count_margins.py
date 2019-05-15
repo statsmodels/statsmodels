@@ -1,39 +1,39 @@
 import numpy as np
 
 est = dict(
-           rank = 7,
-           N = 17,
-           ic = 6,
-           k = 7,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -28.46285727296058,
-           k_eq_model = 1,
-           ll_0 = -101.6359341820935,
-           df_m = 6,
-           chi2 = 146.3461538182658,
-           p = 4.58013206701e-29,
-           r2_p = .719952814897477,
-           properties = "b V",
-           depvar = "sexecutions",
-           which = "max",
-           technique = "nr",
-           singularHmethod = "m-marquardt",
-           ml_method = "e2",
-           crittype = "log likelihood",
-           user = "poiss_lf",
-           title = "Poisson regression",
-           vce = "oim",
-           opt = "moptimize",
-           chi2type = "LR",
-           gof = "poiss_g",
-           estat_cmd = "poisson_estat",
-           predict = "poisso_p",
-           cmd = "poisson",
-           cmdline = "poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
+           rank=7,
+           N=17,
+           ic=6,
+           k=7,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-28.46285727296058,
+           k_eq_model=1,
+           ll_0=-101.6359341820935,
+           df_m=6,
+           chi2=146.3461538182658,
+           p=4.58013206701e-29,
+           r2_p=.719952814897477,
+           properties="b V",
+           depvar="sexecutions",
+           which="max",
+           technique="nr",
+           singularHmethod="m-marquardt",
+           ml_method="e2",
+           crittype="log likelihood",
+           user="poiss_lf",
+           title="Poisson regression",
+           vce="oim",
+           opt="moptimize",
+           chi2type="LR",
+           gof="poiss_g",
+           estat_cmd="poisson_estat",
+           predict="poisso_p",
+           cmd="poisson",
+           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
           )
 
 margins_table = np.array([
@@ -50,7 +50,7 @@ margins_table = np.array([
      5.7183265290336,  15.987506197244, np.nan,  1.9599639845401,
                    0, -26.588397789444,  7.6315578612519, -3.4840065780596,
      .00049396734722, -41.545976343431, -11.630819235457, np.nan,
-     1.9599639845401,                0]).reshape(6,9)
+     1.9599639845401,                0]).reshape(6, 9)
 
 margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -69,7 +69,7 @@ margins_cov = np.array([
      1.8964947971413, -.98869834020742,  2.8490197200257,  .05265352402592,
      4.0773252373088,   -4.46154120848, -12.321063650937, -9.0063087868006,
      .41772084541889, -21.269786576194,   1.461997775289,   -4.46154120848,
-     37.559994394326]).reshape(7,7)
+     37.559994394326]).reshape(7, 7)
 
 margins_cov_colnames = 'sincome sperpoverty sperblack LN_VC100k96 south sdegree _cons'.split()
 
@@ -80,8 +80,8 @@ class Bunch(dict):
         dict.__init__(self, kw)
         self.__dict__ = self
 
-        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.margins_table[:,i]
+        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
+            self[att] = self.margins_table[:, i]
 
 
 results_poisson_margins_cont = Bunch(
@@ -95,46 +95,46 @@ results_poisson_margins_cont = Bunch(
                 )
 
 est = dict(
-           alpha = 1.1399915663048,
-           rank = 8,
-           N = 17,
-           ic = 6,
-           k = 8,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 0,
-           ll = -27.58269157281191,
-           k_eq_model = 1,
-           ll_0 = -32.87628220135203,
-           rank0 = 2,
-           df_m = 6,
-           chi2 = 10.58718125708024,
-           p = .1020042170100994,
-           ll_c = -28.46285727296058,
-           chi2_c = 1.760331400297339,
-           r2_p = .1610154881905236,
-           k_aux = 1,
-           properties = "b V",
-           depvar = "sexecutions",
-           which = "max",
-           technique = "nr",
-           singularHmethod = "m-marquardt",
-           ml_method = "e2",
-           crittype = "log likelihood",
-           user = "nbreg_lf",
-           diparm1 = "lnalpha, exp label(",
-           title = "Negative binomial regression",
-           vce = "oim",
-           opt = "moptimize",
-           chi2type = "LR",
-           chi2_ct = "LR",
-           diparm_opt2 = "noprob",
-           dispers = "mean",
-           predict = "nbreg_p",
-           cmd = "nbreg",
-           cmdline = "nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
+           alpha=1.1399915663048,
+           rank=8,
+           N=17,
+           ic=6,
+           k=8,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=0,
+           ll=-27.58269157281191,
+           k_eq_model=1,
+           ll_0=-32.87628220135203,
+           rank0=2,
+           df_m=6,
+           chi2=10.58718125708024,
+           p=.1020042170100994,
+           ll_c=-28.46285727296058,
+           chi2_c=1.760331400297339,
+           r2_p=.1610154881905236,
+           k_aux=1,
+           properties="b V",
+           depvar="sexecutions",
+           which="max",
+           technique="nr",
+           singularHmethod="m-marquardt",
+           ml_method="e2",
+           crittype="log likelihood",
+           user="nbreg_lf",
+           diparm1="lnalpha, exp label(",
+           title="Negative binomial regression",
+           vce="oim",
+           opt="moptimize",
+           chi2type="LR",
+           chi2_ct="LR",
+           diparm_opt2="noprob",
+           dispers="mean",
+           predict="nbreg_p",
+           cmd="nbreg",
+           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 south sdegree",
           )
 
 margins_table = np.array([
@@ -151,7 +151,7 @@ margins_table = np.array([
     -5.4210798500881,  19.430975094149, np.nan,  1.9599639845401,
                    0, -25.128303596214,  23.247820190364, -1.0808885904335,
        .279746674501, -70.693193888391,  20.436586695964, np.nan,
-     1.9599639845401,                0]).reshape(6,9)
+     1.9599639845401,                0]).reshape(6, 9)
 
 margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -174,7 +174,7 @@ margins_cov = np.array([
      -3.029543334606, -6.5839965105886,  111.12618806587,  .88600743091011,
      .36347806905257,  .51706617429388,  .27439267406128, -1.1433180909155,
     -.34297224102579, -.61952491151176,  .88600743091011,  .71851239110057
-    ]).reshape(8,8)
+    ]).reshape(8, 8)
 
 margins_cov_colnames = 'sincome sperpoverty sperblack LN_VC100k96 south sdegree _cons _cons'.split()
 
@@ -192,39 +192,39 @@ results_negbin_margins_cont = Bunch(
                 )
 
 est = dict(
-           rank = 7,
-           N = 17,
-           ic = 6,
-           k = 8,
-           k_eq = 1,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 1,
-           ll = -28.46285727296058,
-           k_eq_model = 1,
-           ll_0 = -101.6359341820935,
-           df_m = 6,
-           chi2 = 146.3461538182658,
-           p = 4.58013206701e-29,
-           r2_p = .719952814897477,
-           properties = "b V",
-           depvar = "sexecutions",
-           which = "max",
-           technique = "nr",
-           singularHmethod = "m-marquardt",
-           ml_method = "e2",
-           crittype = "log likelihood",
-           user = "poiss_lf",
-           title = "Poisson regression",
-           vce = "oim",
-           opt = "moptimize",
-           chi2type = "LR",
-           gof = "poiss_g",
-           estat_cmd = "poisson_estat",
-           predict = "poisso_p",
-           cmd = "poisson",
-           cmdline = "poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
+           rank=7,
+           N=17,
+           ic=6,
+           k=8,
+           k_eq=1,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=1,
+           ll=-28.46285727296058,
+           k_eq_model=1,
+           ll_0=-101.6359341820935,
+           df_m=6,
+           chi2=146.3461538182658,
+           p=4.58013206701e-29,
+           r2_p=.719952814897477,
+           properties="b V",
+           depvar="sexecutions",
+           which="max",
+           technique="nr",
+           singularHmethod="m-marquardt",
+           ml_method="e2",
+           crittype="log likelihood",
+           user="poiss_lf",
+           title="Poisson regression",
+           vce="oim",
+           opt="moptimize",
+           chi2type="LR",
+           gof="poiss_g",
+           estat_cmd="poisson_estat",
+           predict="poisso_p",
+           cmd="poisson",
+           cmdline="poisson sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
           )
 
 margins_table = np.array([
@@ -243,7 +243,7 @@ margins_table = np.array([
      .02536631788468,  1.5907160498956,  24.198315321648, np.nan,
      1.9599639845401,                0, -26.588397789444,  7.6315578608763,
     -3.4840065782311,  .00049396734691, -41.545976342695, -11.630819236193,
-    np.nan,  1.9599639845401,                0]).reshape(7,9)
+    np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
 margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -266,7 +266,7 @@ margins_cov = np.array([
                    0,  .05265352402609,  4.0773252373089, -4.4615412084808,
     -12.321063650942, -9.0063087868012,  .41772084541996, -21.269786576207,
                    0,  1.4619977752889, -4.4615412084808,  37.559994394343
-    ]).reshape(8,8)
+    ]).reshape(8, 8)
 
 margins_cov_colnames = 'sincome sperpoverty sperblack LN_VC100k96 0b.south 1.south sdegree _cons'.split()
 
@@ -284,46 +284,46 @@ results_poisson_margins_dummy = Bunch(
                 )
 
 est = dict(
-           alpha = 1.139991566304804,
-           rank = 8,
-           N = 17,
-           ic = 6,
-           k = 9,
-           k_eq = 2,
-           k_dv = 1,
-           converged = 1,
-           rc = 0,
-           k_autoCns = 1,
-           ll = -27.58269157281191,
-           k_eq_model = 1,
-           ll_0 = -32.87628220135203,
-           rank0 = 2,
-           df_m = 6,
-           chi2 = 10.58718125708025,
-           p = .1020042170100991,
-           ll_c = -28.46285727296058,
-           chi2_c = 1.760331400297339,
-           r2_p = .1610154881905237,
-           k_aux = 1,
-           properties = "b V",
-           depvar = "sexecutions",
-           which = "max",
-           technique = "nr",
-           singularHmethod = "m-marquardt",
-           ml_method = "e2",
-           crittype = "log likelihood",
-           user = "nbreg_lf",
-           diparm1 = "lnalpha, exp label(",
-           title = "Negative binomial regression",
-           vce = "oim",
-           opt = "moptimize",
-           chi2type = "LR",
-           chi2_ct = "LR",
-           diparm_opt2 = "noprob",
-           dispers = "mean",
-           predict = "nbreg_p",
-           cmd = "nbreg",
-           cmdline = "nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
+           alpha=1.139991566304804,
+           rank=8,
+           N=17,
+           ic=6,
+           k=9,
+           k_eq=2,
+           k_dv=1,
+           converged=1,
+           rc=0,
+           k_autoCns=1,
+           ll=-27.58269157281191,
+           k_eq_model=1,
+           ll_0=-32.87628220135203,
+           rank0=2,
+           df_m=6,
+           chi2=10.58718125708025,
+           p=.1020042170100991,
+           ll_c=-28.46285727296058,
+           chi2_c=1.760331400297339,
+           r2_p=.1610154881905237,
+           k_aux=1,
+           properties="b V",
+           depvar="sexecutions",
+           which="max",
+           technique="nr",
+           singularHmethod="m-marquardt",
+           ml_method="e2",
+           crittype="log likelihood",
+           user="nbreg_lf",
+           diparm1="lnalpha, exp label(",
+           title="Negative binomial regression",
+           vce="oim",
+           opt="moptimize",
+           chi2type="LR",
+           chi2_ct="LR",
+           diparm_opt2="noprob",
+           dispers="mean",
+           predict="nbreg_p",
+           cmd="nbreg",
+           cmdline="nbreg sexecutions sincome sperpoverty sperblack LN_VC100k96 i.south sdegree",
           )
 
 margins_table = np.array([
@@ -342,7 +342,7 @@ margins_table = np.array([
      .36447199739385, -9.3339850666211,  25.410095585229, np.nan,
      1.9599639845401,                0,  -25.12830359621,  23.247820207656,
     -1.0808885896294,  .27974667485873, -70.693193922279,  20.436586729858,
-    np.nan,  1.9599639845401,                0]).reshape(7,9)
+    np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
 margins_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 
@@ -369,7 +369,7 @@ margins_cov = np.array([
     -3.0295433346046, -6.5839965105912,  111.12618806584,  .88600743090998,
      .36347806905277,  .51706617429393,  .27439267406129, -1.1433180909154,
                    0, -.34297224102581, -.61952491151187,  .88600743090998,
-     .71851239110059]).reshape(9,9)
+     .71851239110059]).reshape(9, 9)
 
 margins_cov_colnames = 'sincome sperpoverty sperblack LN_VC100k96 0b.south 1.south sdegree _cons _cons'.split()
 
