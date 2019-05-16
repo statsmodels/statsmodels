@@ -531,18 +531,26 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         cls.res = mod.fit(use_t=False)
 
     def test_noformula(self):
+        # this verifies single and composite constraints against explicit
+        #     wald test
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
         exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
-        wa = res.wald_test_terms(skip_single=True,
+        wa = res.wald_test_terms(skip_single=False,
                                  combine_terms=['Duration', 'Weight'])
         eye = np.eye(len(res.params))
+
+        c_single = [row for row in eye]
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 
-        compare_waldres(res, wa, [c_duration, c_weight])
+        compare_waldres(res, wa, c_single + [c_duration, c_weight])
+
+        # assert correct df_constraints, see #5475 for bug in single constraint
+        df_constraints = [1] * len(c_single) + [3, 4]
+        assert_equal(wa.df_constraints, df_constraints)
 
 
 class TestWaldAnovaOLSF(CheckAnovaMixin):
