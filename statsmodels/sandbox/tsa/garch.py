@@ -1212,7 +1212,6 @@ if __name__ == '__main__':
 
     if 'garch' in examples:
         err,h = generate_kindofgarch(nobs, [1.0, -0.95], [1.0,  0.1], mu=0.5)
-        import matplotlib.pyplot as plt
         plt.figure()
         plt.subplot(211)
         plt.plot(err)

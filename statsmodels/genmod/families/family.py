@@ -798,13 +798,13 @@ class Binomial(Family):
     Notes
     -----
     endog for Binomial can be specified in one of three ways:
-    A 1d array of 0 or 1 values, indicating failure or success 
+    A 1d array of 0 or 1 values, indicating failure or success
     respectively.
-    A 2d array, with two columns. The first column represents the 
-    success count and the second column represents the failure 
+    A 2d array, with two columns. The first column represents the
+    success count and the second column represents the failure
     count.
-    A 1d array of proportions, indicating the proportion of 
-    successes, with parameter `var_weights` containing the 
+    A 1d array of proportions, indicating the proportion of
+    successes, with parameter `var_weights` containing the
     number of trials for each row.
     """
 

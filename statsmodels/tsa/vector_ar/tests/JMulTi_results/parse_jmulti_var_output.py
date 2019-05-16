@@ -5,7 +5,7 @@ from io import open
 import numpy as np
 
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
-    import sublists, stringify_var_names, dt_s_tup_to_string
+    import sublists, stringify_var_names
 
 debug_mode = False
 

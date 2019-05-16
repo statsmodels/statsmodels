@@ -359,8 +359,8 @@ if __name__ == "__main__":
             t2 = Describe(data2)
             print(t2.summary())
 
-        def test_basic_3(self):
-            print('test_basic_3')
+        def test_describe_summary_float_ndarray(self):
+            print('test_describe_summary_float_ndarray')
             t1 = Describe(data3)
             print(t1.summary())
 

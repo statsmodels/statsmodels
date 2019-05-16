@@ -23,7 +23,6 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_equal, assert_allclose
-import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

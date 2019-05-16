@@ -10,7 +10,6 @@ if __name__ == '__main__':
     import statsmodels.api as sm
     #from statsmodels.datasets.longley import load
     from statsmodels.datasets.stackloss import load
-    import numpy as np
 
     data = load(as_pandas=False)
     data.exog = sm.tools.add_constant(data.exog, prepend=False)

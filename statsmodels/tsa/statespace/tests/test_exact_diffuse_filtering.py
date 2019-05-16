@@ -54,7 +54,6 @@ from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from numpy.testing import assert_equal, assert_allclose
-import pytest
 
 from . import kfas_helpers
 

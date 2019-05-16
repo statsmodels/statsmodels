@@ -41,8 +41,6 @@ print(eve)
 print(fact[:5])
 print(f0[:5])
 
-import statsmodels.api as sm
-
 res = sm.OLS(y0, sm.add_constant(x0, prepend=False)).fit()
 print('OLS on original data')
 print(res.params)

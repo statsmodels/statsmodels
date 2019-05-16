@@ -10,7 +10,6 @@ import warnings
 import pytest
 import numpy as np
 import pandas as pd
-import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
                            assert_raises, assert_allclose)
 

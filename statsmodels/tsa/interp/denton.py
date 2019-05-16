@@ -236,7 +236,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
 
 if __name__ == "__main__":
-    import numpy as np
     #these will be the tests
     # from IMF paper
 

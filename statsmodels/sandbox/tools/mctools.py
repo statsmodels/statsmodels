@@ -450,7 +450,6 @@ class StatTestMC(object):
 
 if __name__ == '__main__':
     from scipy import stats
-    from statsmodels.iolib.table import SimpleTable
 
     from statsmodels.sandbox.stats.diagnostic import (
                     acorr_ljungbox, unitroot_adf)
@@ -472,7 +471,6 @@ if __name__ == '__main__':
 #    print(mc1.quantiles()
 
     print('\nLjung Box')
-    from statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
         s,p = acorr_ljungbox(x, lags=4)

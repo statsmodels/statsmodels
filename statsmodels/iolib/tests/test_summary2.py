@@ -53,7 +53,7 @@ x1    -0.7  -1.6
 =================
 Standard errors
 in parentheses.
-"""
+"""  # noqa:W291
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
         y1 = [6, 4, 2, 7, 4]
