@@ -25,7 +25,7 @@ if [ "$LINT" == true ]; then
         statsmodels/duration/__init__.py \
         statsmodels/formula/ \
         statsmodels/gam/ \
-        statsmodels/genmod/tests/results/test_R_var_weight.py \
+        statsmodels/genmod/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
         statsmodels/examples/tests/ \
