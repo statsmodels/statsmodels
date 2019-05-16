@@ -1047,7 +1047,8 @@ def spec_white(resid, exog):
     exog = np.delete(x[:,i0] * x[:,i1], 0, 1)
 
     # collinearity check - see _fit_collinear
-    atol=1e-14; rtol=1e-13
+    atol=1e-14
+    rtol=1e-13
     tol = atol + rtol * exog.var(0)
     r = np.linalg.qr(exog, mode='r')
     mask = np.abs(r.diagonal()) < np.sqrt(tol)
