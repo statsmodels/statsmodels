@@ -215,11 +215,3 @@ def c_sjt(n, p):
         raise ValueError('invalid p')
 
     return jc
-
-
-if __name__ == '__main__':
-    for p in range(-2, 3, 1):
-        for n in range(12):
-            print(n, p)
-            print(c_sja(n, p))
-            print(c_sjt(n, p))

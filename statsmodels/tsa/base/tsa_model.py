@@ -615,18 +615,3 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
                                      _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
                       TimeSeriesModelResults)
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    import pandas
-
-    data = sm.datasets.macrodata.load(as_pandas=False)
-
-    #make a DataFrame
-    #TODO: attach a DataFrame to some of the datasets, for quicker use
-    dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in data.data[['year','quarter']]]
-
-    df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
-    ex_mod = TimeSeriesModel(df)
