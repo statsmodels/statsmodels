@@ -48,8 +48,6 @@ from scipy import signal
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-import statsmodels.api as sm
-
 
 def expandarr(x,k):
     #make it work for 2D or nD with axis

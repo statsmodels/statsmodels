@@ -102,7 +102,6 @@ Statistics 90, no. 3 (2008): 414–427.
 
 """
 from statsmodels.compat.python import range
-import pandas as pd
 import numpy as np
 
 from statsmodels.tools.grouputils import combine_indices, group_sums

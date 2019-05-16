@@ -140,7 +140,7 @@ if 'ex1' in examples:
     print('mean_abs_perc  ', mean_abs_perc)
     print('median_abs_perc', median_abs_perc)
     print('rmse_perc (std)', rmse_perc)
-    from numpy.testing import assert_almost_equal
+    #from numpy.testing import assert_almost_equal
     #assert is for n_units=100 in original example
     #I changed random number generation, so this won't work anymore
     #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)

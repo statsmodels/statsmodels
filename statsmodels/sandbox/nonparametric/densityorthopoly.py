@@ -130,7 +130,6 @@ class ChebyTPoly(object):
 
 
 
-from statsmodels.compat.scipy import factorial
 from scipy import special
 
 logpi2 = np.log(np.pi)/2
@@ -399,7 +398,6 @@ class DensityOrthoPoly(object):
 
 #old version as a simple function
 def density_orthopoly(x, polybase, order=5, xeval=None):
-    from scipy.special import legendre, hermitenorm, chebyt, chebyu, hermite
     #polybase = legendre  #chebyt #hermitenorm#
     #polybase = chebyt
     #polybase = FPoly

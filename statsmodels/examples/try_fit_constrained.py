@@ -130,8 +130,6 @@ if __name__ == '__main__':
                                      transf3.R, transf3.q)
     tp = transform_params_constraint(res2.params, res2.cov_params(), transf3.R, transf3.q)
 
-
-    from statsmodels.discrete.discrete_model import Poisson
     import statsmodels.api as sm
     rand_data = sm.datasets.randhie.load(as_pandas=False)
     rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)

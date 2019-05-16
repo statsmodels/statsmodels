@@ -19,7 +19,6 @@ Princeton, N.J.: Princeton University Press.
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat import cPickle
 
-from distutils.version import LooseVersion
 import copy
 
 import numpy as np
@@ -30,7 +29,6 @@ import pytest
 from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _representation, _kalman_filter
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose

@@ -1,9 +1,3 @@
-import numpy as np
-from statsmodels.base import model
-import statsmodels.base.model as base
-from statsmodels.tools.decorators import cache_readonly
-from scipy.optimize import brent
-
 """
 Implementation of proportional hazards regression models for duration
 data that may be censored ("Cox models").
@@ -20,6 +14,10 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+import numpy as np
+from statsmodels.base import model
+import statsmodels.base.model as base
+from statsmodels.tools.decorators import cache_readonly
 
 
 _predict_docstring = """
@@ -1282,8 +1280,6 @@ class PHReg(model.LikelihoodModel):
         # TODO: this returns a Python list of rv_discrete objects, so
         # nothing can be vectorized.  It appears that rv_discrete does
         # not allow vectorization.
-
-        from scipy.stats.distributions import rv_discrete
 
         surv = self.surv
         bhaz = self.baseline_cumulative_hazard(params)

@@ -1,3 +1,4 @@
+# flake8: noqa
 from .functional import hdrboxplot, fboxplot, rainbowplot
 from .correlation import plot_corr, plot_corr_grid
 from .gofplots import qqplot

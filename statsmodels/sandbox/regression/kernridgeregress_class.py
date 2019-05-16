@@ -3,7 +3,6 @@
 
 import numpy as np
 from scipy import spatial as ssp
-from numpy.testing import assert_equal
 import matplotlib.pylab as plt
 
 

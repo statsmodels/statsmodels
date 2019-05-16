@@ -18,7 +18,6 @@ TODO:
 from __future__ import print_function
 from scipy import stats
 import numpy as np
-import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 #stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)

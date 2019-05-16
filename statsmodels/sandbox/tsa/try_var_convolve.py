@@ -143,11 +143,6 @@ print(y0ar, x[1:] + x[:-1])
 yres = arfilter(x,a3f[:,:,:2])
 print(np.all(yres == (x[1:,:].sum(1) + x[:-1].sum(1))[:,None]))
 
-# don't do these imports, here just for copied fftconvolve
-from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
-     ifftn, fftfreq
-from numpy import product,array
-
 
 yff = fftconvolve(x.astype(float)[:,:,None],a3f)
 

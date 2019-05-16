@@ -41,6 +41,6 @@ fc_out = np.array([VAR(data[:t]).fit(2).forecast(data[t-20:t], h)[-1]
 print(fc_out - data[nobs_all-6:nobs_all])  #out-of-sample forecast error
 print(fc_out - res.fittedvalues[-6:])
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 res.plot_forecast(20)
 #plt.show()

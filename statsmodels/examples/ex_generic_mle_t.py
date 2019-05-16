@@ -9,7 +9,7 @@ Author: josef-pktd
 from __future__ import print_function
 import numpy as np
 
-from scipy import stats, special
+from scipy import special
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 
@@ -92,7 +92,7 @@ resp = modp.fit(start_params = modp.start_value)
 print(resp.params)
 print(resp.bse)
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_hess
 
 hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_value)

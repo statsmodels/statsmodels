@@ -10,7 +10,6 @@ from statsmodels.compat.python import range
 import numpy as np
 from scipy import stats
 
-from numpy import exp
 
 def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     '''calculate anderson-darling A2 statistic

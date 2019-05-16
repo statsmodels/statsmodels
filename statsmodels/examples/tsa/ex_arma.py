@@ -11,9 +11,6 @@ from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.arma_mle import Arma as Arma
 from statsmodels.tsa.arima_process import ARIMA as ARIMA_old
 from statsmodels.sandbox.tsa.garch import Arma as Armamle_old
-from statsmodels.tsa.arima import ARMA as ARMA_kf
-
-
 
 
 print("\nExample 1")
@@ -34,6 +31,7 @@ print('truelhs', np.r_[ar[1:], ma[1:]])
 ###bug in current version, fixed in Skipper and 1 more
 ###arr[1:q,:] = params[p+k:p+k+q]  # p to p+q short params are MA coeffs
 ###ValueError: array dimensions are not compatible for copy
+##from statsmodels.tsa.arima import ARMA as ARMA_kf
 ##arma22 = ARMA_kf(y22, constant=False, order=(2,2))
 ##res = arma22.fit(start_params=start_params)
 ##print res.params

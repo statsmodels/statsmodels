@@ -215,9 +215,10 @@ def test_getframe_smoke():
 
     # The Styler option require jinja2, skip if not available
     try:
-        from jinja2 import Template
+        from jinja2 import Template  # noqa:F401
     except ImportError:
         return
+        # TODO: separate this and do pytest.skip?
 
     try:
         from pandas.io import formats as pd_formats

@@ -7,10 +7,8 @@ Author: Josef Perktold
 """
 
 from __future__ import print_function
-import numpy as np
 
 import statsmodels.stats.power as smp
-import statsmodels.stats.proportion as smpr
 
 sigma=1
 d=0.3

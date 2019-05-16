@@ -1,4 +1,4 @@
-from statsmodels.compat.python import PY37, lrange
+from statsmodels.compat.python import PY37
 
 import numpy as np
 from numpy.testing import assert_equal

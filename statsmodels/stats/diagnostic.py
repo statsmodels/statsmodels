@@ -1,3 +1,5 @@
+# flake8: noqa
+
 # collect some imports of verified (at least one example) functions
 from statsmodels.sandbox.stats.diagnostic import (
     acorr_ljungbox, breaks_cusumolsresid, breaks_hansen, CompareCox, CompareJ,

@@ -28,12 +28,11 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
-from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             ConvergenceWarning)
+from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from scipy.stats import nbinom
 
 try:
-    import cvxopt
+    import cvxopt  # noqa:F401
     has_cvxopt = True
 except ImportError:
     has_cvxopt = False

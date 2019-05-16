@@ -2,7 +2,7 @@
 from __future__ import print_function
 import numpy as np
 
-from scipy import stats, special, optimize
+from scipy import stats
 import statsmodels.api as sm
 from statsmodels.miscmodels import TLinearModel
 
@@ -69,7 +69,7 @@ print('using Newton')
 print(resp2.params)
 print(resp2.bse)
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_hess
 
 hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_params)

@@ -1,4 +1,3 @@
-import numpy as np
 import statsmodels.api as sm
 from scipy.stats import poisson, nbinom
 from numpy.testing import assert_allclose

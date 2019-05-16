@@ -1,5 +1,5 @@
-from statsmodels.compat.python import zip
 import warnings
+
 
 def _est_regression_summary():
     #little luck getting this test to pass (It should?), can be used for

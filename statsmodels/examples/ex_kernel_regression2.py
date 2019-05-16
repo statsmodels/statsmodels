@@ -8,7 +8,6 @@ Author: Josef Perktold
 
 from __future__ import print_function
 import numpy as np
-import numpy.testing as npt
 import statsmodels.nonparametric.api as nparam
 
 if __name__ == '__main__':

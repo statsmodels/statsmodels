@@ -13,7 +13,7 @@ import os
 import re
 
 import warnings
-from statsmodels.tsa.statespace import mlemodel, varmax
+from statsmodels.tsa.statespace import varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_raises, assert_allclose
 from statsmodels.iolib.summary import forg

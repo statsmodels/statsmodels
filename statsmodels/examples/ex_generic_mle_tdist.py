@@ -137,7 +137,7 @@ print('using Newton')
 print(resp2.params)
 print(resp2.bse)
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_hess
 
 hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_params)
@@ -161,7 +161,9 @@ print(pp.max(0))
 
 #import for kstest based estimation
 #should be replace
-import statsmodels.sandbox.distributions.sppatch
+# FIXME: importing these patches scipy distribution classes in-place.
+#  Don't do this.
+import statsmodels.sandbox.distributions.sppatch  # noqa:F401
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution

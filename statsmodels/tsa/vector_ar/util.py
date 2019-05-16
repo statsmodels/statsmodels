@@ -165,7 +165,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     start_date = offset.rollforward(datetime(year, 1, 1)) + inc
 
     offset = offsets[freq]
-    from pandas import DatetimeIndex   # pylint: disable=E0611
     date_range = pd.date_range(start=start_date, freq=offset, periods=n)
 
     return data, date_range

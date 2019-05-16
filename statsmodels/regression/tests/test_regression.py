@@ -24,7 +24,7 @@ DECIMAL_7 = 7
 DECIMAL_0 = 0
 
 try:
-    import cvxopt
+    import cvxopt  # noqa:F401
     has_cvxopt = True
 except ImportError:
     has_cvxopt = False

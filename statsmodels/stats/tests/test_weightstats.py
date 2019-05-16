@@ -18,12 +18,10 @@ License: BSD (3-clause)
 import numpy as np
 from scipy import stats
 import pandas as pd
-from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_allclose)
+from numpy.testing import assert_, assert_almost_equal, assert_allclose
 
 from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
                                            ttest_ind, ztest, zconfint)
-# import statsmodels.stats.weightstats as smws
 
 
 class Holder(object):

@@ -11,7 +11,7 @@ from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 from statsmodels.stats.contingency_tables import mcnemar, cochrans_q, SquareTable
-from statsmodels.sandbox.stats.runs import (Runs, symmetry_bowker,
+from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
 

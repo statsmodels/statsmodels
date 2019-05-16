@@ -5,7 +5,6 @@ TODO: compare standard error of parameter estimates
 
 from scipy import optimize
 import numpy as np
-import statsmodels.base.model as models
 
 print('\nExample 1: Artificial Data')
 print('--------------------------\n')

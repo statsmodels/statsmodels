@@ -54,7 +54,7 @@ from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import optimize, stats
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
 from statsmodels.regression.linear_model import (OLS, RegressionResults,

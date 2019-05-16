@@ -22,7 +22,6 @@ from statsmodels.compat.python import range
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
-import pdb  # pdb.set_trace()
 
 
 ## Load the data from Spector and Mazzeo (1980)

@@ -8,7 +8,7 @@ import warnings
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less, dec)
+                           assert_allclose, assert_, assert_array_less)
 import pytest
 from scipy import stats
 
@@ -18,8 +18,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
-from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
-                                       approx_hess)
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.datasets import cpunish
 
 # Test Precisions
@@ -1020,7 +1019,6 @@ def check_score_hessian(results):
     # avoid checking score at MLE, score close to zero
     sc = results.model.score(params * 0.98, scale=1)
     # cs currently (0.9) does not work for all families
-    # sc2 = approx_fprime_cs(params * 0.98, results.model.loglike)
     llfunc = lambda x: results.model.loglike(x, scale=1)
     sc2 = approx_fprime(params * 0.98, llfunc)
     assert_allclose(sc, sc2, rtol=0.05)

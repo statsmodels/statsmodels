@@ -7,13 +7,11 @@ Author: josef-pktd
 
 from __future__ import print_function
 import numpy as np
-#from scipy import special #, stats
 from scipy import linalg
-from scipy.linalg import norm, toeplitz
+from scipy.linalg import toeplitz
 
 import statsmodels.api as sm
-from statsmodels.base.model import (GenericLikelihoodModel,
-        LikelihoodModel)
+from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
 
 

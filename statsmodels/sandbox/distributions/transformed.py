@@ -40,9 +40,8 @@ License: BSD
 '''
 from __future__ import print_function
 from statsmodels.compat.python import iteritems
-from scipy import integrate # for scipy 0.6.0
 
-from scipy import stats, info
+from scipy import stats
 from scipy.stats import distributions
 import numpy as np
 

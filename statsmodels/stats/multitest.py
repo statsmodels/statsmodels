@@ -8,7 +8,6 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 from collections import OrderedDict
-from ._knockoff import RegressionFDR
 import numpy as np
 
 

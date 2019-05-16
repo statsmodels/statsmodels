@@ -10,9 +10,9 @@ methods.
 from __future__ import print_function
 import numpy as np
 from scipy import stats
-#Note the following import attaches methods to scipy.stats.distributions
+# Note the following import attaches methods to scipy.stats.distributions
 #     and adds bounds to stats.vonmises
-from statsmodels.sandbox.distributions import sppatch
+# from statsmodels.sandbox.distributions import sppatch
 
 
 np.random.seed(12345)
