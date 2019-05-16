@@ -808,7 +808,39 @@ class DynamicFactor(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True, complex_step=False):
+    def _validate_can_fix_params(self, param_names):
+        super(DynamicFactor, self)._validate_can_fix_params(param_names)
+
+        ix = np.cumsum(list(self.parameters.values()))[:-1]
+        (loadings_names, exog_names, error_cov_names, factor_transition_names,
+         error_transition_names) = [
+            arr.tolist() for arr in np.array_split(self.param_names, ix)]
+
+        if self.enforce_stationarity and self.factor_order > 0:
+            if self.k_factors > 1 or self.factor_order > 1:
+                fix_all = param_names.issuperset(factor_transition_names)
+                fix_any = (
+                    len(param_names.intersection(factor_transition_names)) > 0)
+                if fix_any and not fix_all:
+                    raise ValueError(
+                        'Cannot fix individual factor transition parameters'
+                        ' when `enforce_stationarity=True`. In this case,'
+                        ' must either fix all factor transition parameters or'
+                        ' none.')
+        if self.enforce_stationarity and self.error_order > 0:
+            if self.error_var or self.error_order > 1:
+                fix_all = param_names.issuperset(error_transition_names)
+                fix_any = (
+                    len(param_names.intersection(error_transition_names)) > 0)
+                if fix_any and not fix_all:
+                    raise ValueError(
+                        'Cannot fix individual error transition parameters'
+                        ' when `enforce_stationarity=True`. In this case,'
+                        ' must either fix all error transition parameters or'
+                        ' none.')
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
         """
         Update the parameters of the model
 
@@ -852,8 +884,8 @@ class DynamicFactor(MLEModel):
           second :math:`m^2` parameters fill the second matrix, etc.
 
         """
-        params = super(DynamicFactor, self).update(
-            params, transformed=transformed, complex_step=complex_step)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         # 1. Factor loadings
         # Update the design / factor loading matrix

@@ -5,6 +5,7 @@ State Space Model
 Author: Chad Fulton
 License: Simplified-BSD
 """
+import contextlib
 import warnings
 
 from collections import OrderedDict
@@ -126,6 +127,13 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Initialize the state-space representation
         self.initialize_statespace(**kwargs)
+
+        # Setup holder for fixed parameters
+        self._has_fixed_params = False
+        self._fixed_params = None
+        self._params_index = None
+        self._fixed_params_index = None
+        self._free_params_index = None
 
     def prepare_data(self):
         """
@@ -351,7 +359,48 @@ class MLEModel(tsbase.TimeSeriesModel):
     def tolerance(self, value):
         self.ssm.tolerance = value
 
-    def fit(self, start_params=None, transformed=True,
+    def _validate_can_fix_params(self, param_names):
+        for param_name in param_names:
+            if param_name not in self.param_names:
+                raise ValueError('Invalid parameter name passed: "%s".'
+                                 % param_name)
+
+    @contextlib.contextmanager
+    def fix_params(self, params):
+        k_params = len(self.param_names)
+        # Initialization (this is done here rather than in the constructor
+        # because param_names may not be available at that point)
+        if self._fixed_params is None:
+            self._fixed_params = {}
+            self._params_index = OrderedDict(
+                zip(self.param_names, np.arange(k_params)))
+
+        # Cache the current fixed parameters
+        cache_fixed_params = self._fixed_params.copy()
+        cache_has_fixed_params = self._has_fixed_params
+        cache_fixed_params_index = self._fixed_params_index
+        cache_free_params_index = self._free_params_index
+
+        # Validate parameter names and values
+        self._validate_can_fix_params(set(params.keys()))
+
+        # Set the new fixed parameters
+        self._fixed_params.update(params)
+        self._has_fixed_params = True
+        self._fixed_params_index = [self._params_index[key]
+                                    for key in params.keys()]
+        self._free_params_index = list(
+            set(np.arange(k_params)).difference(self._fixed_params_index))
+
+        yield
+
+        # Reset the fixed parameters
+        self._has_fixed_params = cache_has_fixed_params
+        self._fixed_params = cache_fixed_params
+        self._fixed_params_index = cache_fixed_params_index
+        self._free_params_index = cache_free_params_index
+
+    def fit(self, start_params=None, transformed=True, includes_fixed=False,
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
             optim_score=None, optim_complex_step=None, optim_hessian=None,
@@ -460,6 +509,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         if start_params is None:
             start_params = self.start_params
             transformed = True
+            includes_fixed = True
 
         # Update the score method
         if optim_score is None and method == 'lbfgs':
@@ -475,41 +525,62 @@ class MLEModel(tsbase.TimeSeriesModel):
             raise ValueError('Cannot use complex step derivatives when data'
                              ' or parameters are complex.')
 
+        # Standardize starting parameters
+        start_params = self.handle_params(start_params, transformed=True,
+                                          includes_fixed=includes_fixed)
+
         # Unconstrain the starting parameters
         if transformed:
-            start_params = self.untransform_params(np.array(start_params))
+            start_params = self.untransform_params(start_params)
 
-        # Maximum likelihood estimation
-        if flags is None:
-            flags = {}
-        flags.update({
-            'transformed': False,
-            'score_method': optim_score,
-            'approx_complex_step': optim_complex_step
-        })
-        if optim_hessian is not None:
-            flags['hessian_method'] = optim_hessian
-        fargs = (flags,)
-        mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                           fargs=fargs,
-                                           maxiter=maxiter,
-                                           full_output=full_output,
-                                           disp=disp, callback=callback,
-                                           skip_hessian=True, **kwargs)
+        # Remove any fixed parameters
+        if self._has_fixed_params:
+            start_params = start_params[self._free_params_index]
+
+        # If all parameters are fixed, we are done
+        if self._has_fixed_params and len(start_params) == 0:
+            mlefit = Bunch(params=[], mle_retvals=None,
+                           mle_settings=None)
+        else:
+            # Maximum likelihood estimation
+            if flags is None:
+                flags = {}
+            flags.update({
+                'transformed': False,
+                'includes_fixed': False,
+                'score_method': optim_score,
+                'approx_complex_step': optim_complex_step
+            })
+            if optim_hessian is not None:
+                flags['hessian_method'] = optim_hessian
+            fargs = (flags,)
+            mlefit = super(MLEModel, self).fit(start_params, method=method,
+                                               fargs=fargs,
+                                               maxiter=maxiter,
+                                               full_output=full_output,
+                                               disp=disp, callback=callback,
+                                               skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
-            return self.transform_params(mlefit.params)
+            return self.handle_params(mlefit.params, transformed=False,
+                                      includes_fixed=False)
         # Otherwise construct the results class if desired
         else:
             res = self.smooth(mlefit.params, transformed=False,
-                              cov_type=cov_type, cov_kwds=cov_kwds)
+                              includes_fixed=False, cov_type=cov_type,
+                              cov_kwds=cov_kwds)
 
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
 
             return res
+
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+        with self.fix_params(constraints):
+            res = self.fit(start_params, **fit_kwds)
+        return res
 
     @property
     def _res_classes(self):
@@ -534,9 +605,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             result = wrapper_class(res)
         return result
 
-    def filter(self, params, transformed=True, complex_step=False,
-               cov_type=None, cov_kwds=None, return_ssm=False,
-               results_class=None, results_wrapper_class=None, **kwargs):
+    def filter(self, params, transformed=True, includes_fixed=False,
+               complex_step=False, cov_type=None, cov_kwds=None,
+               return_ssm=False, results_class=None,
+               results_wrapper_class=None, **kwargs):
         """
         Kalman filtering
 
@@ -560,11 +632,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        params = np.array(params, ndmin=1)
-
-        if not transformed:
-            params = self.transform_params(params)
-        self.update(params, transformed=True, complex_step=complex_step)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
+        self.update(params, transformed=True, includes_fixed=True,
+                    complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -580,9 +651,10 @@ class MLEModel(tsbase.TimeSeriesModel):
                                   cov_kwds, results_class,
                                   results_wrapper_class)
 
-    def smooth(self, params, transformed=True, complex_step=False,
-               cov_type=None, cov_kwds=None, return_ssm=False,
-               results_class=None, results_wrapper_class=None, **kwargs):
+    def smooth(self, params, transformed=True, includes_fixed=False,
+               complex_step=False, cov_type=None, cov_kwds=None,
+               return_ssm=False, results_class=None,
+               results_wrapper_class=None, **kwargs):
         """
         Kalman smoothing
 
@@ -606,11 +678,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        params = np.array(params, ndmin=1)
-
-        if not transformed:
-            params = self.transform_params(params)
-        self.update(params, transformed=True, complex_step=complex_step)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
+        self.update(params, transformed=True, includes_fixed=True,
+                    complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -626,8 +697,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                                   cov_kwds, results_class,
                                   results_wrapper_class)
 
-    _loglike_param_names = ['transformed', 'complex_step']
-    _loglike_param_defaults = [True, False]
+    _loglike_param_names = ['transformed', 'includes_fixed', 'complex_step']
+    _loglike_param_defaults = [True, False, False]
 
     def loglike(self, params, *args, **kwargs):
         """
@@ -660,14 +731,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         update : modifies the internal state of the state space model to
                  reflect new params
         """
-        transformed, complex_step, kwargs = _handle_args(
+        transformed, includes_fixed, complex_step, kwargs = _handle_args(
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
             *args, **kwargs)
 
-        if not transformed:
-            params = self.transform_params(params)
-
-        self.update(params, transformed=True, complex_step=complex_step)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
+        self.update(params, transformed=True, includes_fixed=True,
+                    complex_step=complex_step)
 
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
@@ -679,8 +750,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         # automatically in the base model `fit` method
         return loglike
 
-    def loglikeobs(self, params, transformed=True, complex_step=False,
-                   **kwargs):
+    def loglikeobs(self, params, transformed=True, includes_fixed=False,
+                   complex_step=False, **kwargs):
         """
         Loglikelihood evaluation
 
@@ -710,15 +781,16 @@ class MLEModel(tsbase.TimeSeriesModel):
         --------
         update : modifies the internal state of the Model to reflect new params
         """
-        if not transformed:
-            params = self.transform_params(params)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
 
-        self.update(params, transformed=True, complex_step=complex_step)
+        self.update(params, transformed=True, includes_fixed=True,
+                    complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
 
@@ -838,6 +910,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         return partials_forecasts_error, partials_forecasts_error_cov
 
     def observed_information_matrix(self, params, transformed=True,
+                                    includes_fixed=False,
                                     approx_complex_step=None,
                                     approx_centered=False, **kwargs):
         """
@@ -882,7 +955,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                              " with untransformed parameters.")
 
         # Get values at the params themselves
-        self.update(params, transformed=transformed,
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
+        self.update(params, transformed=True, includes_fixed=True,
                     complex_step=approx_complex_step)
         # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
@@ -927,7 +1002,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
     def opg_information_matrix(self, params, transformed=True,
-                               approx_complex_step=None, **kwargs):
+                               includes_fixed=False, approx_complex_step=None,
+                               **kwargs):
         """
         Outer product of gradients information matrix
 
@@ -956,6 +1032,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                              " with untransformed parameters.")
 
         score_obs = self.score_obs(params, transformed=transformed,
+                                   includes_fixed=includes_fixed,
                                    approx_complex_step=approx_complex_step,
                                    **kwargs).transpose()
         return (
@@ -1047,9 +1124,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return -partials / 2.
 
-    _score_param_names = ['transformed', 'score_method',
+    _score_param_names = ['transformed', 'includes_fixed', 'score_method',
                           'approx_complex_step', 'approx_centered']
-    _score_param_defaults = [True, 'approx', None, False]
+    _score_param_defaults = [True, False, 'approx', None, False]
 
     def score(self, params, *args, **kwargs):
         """
@@ -1078,9 +1155,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         args (for example `scipy.optimize.fmin_l_bfgs`).
         """
-        params = np.array(params, ndmin=1)
-
-        transformed, method, approx_complex_step, approx_centered, kwargs = (
+        (transformed, includes_fixed, method, approx_complex_step,
+         approx_centered, kwargs) = (
             _handle_args(MLEModel._score_param_names,
                          MLEModel._score_param_defaults, *args, **kwargs))
         # For fit() calls, the method is called 'score_method' (to distinguish
@@ -1095,16 +1171,22 @@ class MLEModel(tsbase.TimeSeriesModel):
             raise ValueError('Cannot use complex step derivatives when data'
                              ' or parameters are complex.')
 
-        if not transformed:
-            transform_score = self.transform_jacobian(params)
-            params = self.transform_params(params)
+        out = self.handle_params(
+            params, transformed=transformed, includes_fixed=includes_fixed,
+            return_jacobian=not transformed)
+        if transformed:
+            params = out
+        else:
+            params, transform_score = out
 
         if method == 'harvey':
             score = self._score_harvey(
                 params, approx_complex_step=approx_complex_step, **kwargs)
         elif method == 'approx' and approx_complex_step:
+            kwargs['includes_fixed'] = True
             score = self._score_complex_step(params, **kwargs)
         elif method == 'approx':
+            kwargs['includes_fixed'] = True
             score = self._score_finite_difference(
                 params, approx_centered=approx_centered, **kwargs)
         else:
@@ -1116,7 +1198,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return score
 
     def score_obs(self, params, method='approx', transformed=True,
-                  approx_complex_step=None, approx_centered=False, **kwargs):
+                  includes_fixed=False, approx_complex_step=None,
+                  approx_centered=False, **kwargs):
         """
         Compute the score per observation, evaluated at params
 
@@ -1137,8 +1220,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
         """
-        params = np.array(params, ndmin=1)
-
         if not transformed and approx_complex_step:
             raise ValueError("Cannot use complex-step approximations to"
                              " calculate the score at each observation"
@@ -1150,19 +1231,21 @@ class MLEModel(tsbase.TimeSeriesModel):
             raise ValueError('Cannot use complex step derivatives when data'
                              ' or parameters are complex.')
 
+        params = self.handle_params(params, transformed=True,
+                                    includes_fixed=includes_fixed)
+        kwargs['transformed'] = transformed
+        kwargs['includes_fixed'] = True
+
         if method == 'harvey':
             score = self._score_obs_harvey(
-                params, transformed=transformed,
-                approx_complex_step=approx_complex_step, **kwargs)
+                params, approx_complex_step=approx_complex_step, **kwargs)
         elif method == 'approx' and approx_complex_step:
             # the default epsilon can be too small
             epsilon = _get_epsilon(params, 2., None, len(params))
             kwargs['complex_step'] = True
-            kwargs['transformed'] = True
             score = approx_fprime_cs(params, self.loglikeobs, epsilon=epsilon,
                                      kwargs=kwargs)
         elif method == 'approx':
-            kwargs['transformed'] = transformed
             score = approx_fprime(params, self.loglikeobs, kwargs=kwargs,
                                   centered=approx_centered)
         else:
@@ -1388,7 +1471,37 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         return np.array(constrained, ndmin=1)
 
-    def update(self, params, transformed=True, complex_step=False):
+    def handle_params(self, params, transformed=True, includes_fixed=False,
+                      return_jacobian=False):
+        params = np.array(params, ndmin=1)
+
+        if not includes_fixed and self._has_fixed_params:
+            k_params = len(self.param_names)
+            new_params = np.zeros(k_params, dtype=params.dtype) * np.nan
+            new_params[self._free_params_index] = params
+            params = new_params
+
+        if not transformed:
+            # It may be the case that the transformation relies on having
+            # "some" (non-NaN) values for the fixed parameters, even if we will
+            # not actually be transforming the fixed parameters (as they will)
+            # be set below regardless
+            if not includes_fixed and self._has_fixed_params:
+                params[self._fixed_params_index] = (
+                    list(self._fixed_params.values()))
+
+            if return_jacobian:
+                transform_score = self.transform_jacobian(params)
+            params = self.transform_params(params)
+
+        if not includes_fixed and self._has_fixed_params:
+            params[self._fixed_params_index] = (
+                list(self._fixed_params.values()))
+
+        return (params, transform_score) if return_jacobian else params
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
         """
         Update the parameters of the model
 
@@ -1410,12 +1523,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         Since Model is a base class, this method should be overridden by
         subclasses to perform actual updating steps.
         """
-        params = np.array(params, ndmin=1)
-
-        if not transformed:
-            params = self.transform_params(params)
-
-        return params
+        return self.handle_params(params=params, transformed=transformed,
+                                  includes_fixed=includes_fixed)
 
     def simulate(self, params, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
@@ -1564,14 +1673,30 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-    def __init__(self, model, params, results, cov_type='opg',
-                 cov_kwds=None, **kwargs):
+    def __init__(self, model, params, results, cov_type='opg', cov_kwds=None,
+                 **kwargs):
         self.data = model.data
         scale = results.scale
 
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
                                                scale=scale)
+
+        # Save the fixed parameters
+        self._has_fixed_params = self.model._has_fixed_params
+        self._fixed_params_index = self.model._fixed_params_index
+        self._free_params_index = self.model._free_params_index
+        # TODO: seems like maybe self.fixed_params should be the dictionary
+        # itself, not just the keys?
+        if self._has_fixed_params:
+            self._fixed_params = self.model._fixed_params.copy()
+            self.fixed_params = list(self._fixed_params.keys())
+        else:
+            self._fixed_params = None
+            self.fixed_params = []
+        self.param_names = [
+            '%s (fixed)' % name if name in self.fixed_params else name
+            for name in (self.data.param_names or [])]
 
         # Save the state space representation output
         self.filter_results = results
@@ -1603,8 +1728,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.k_diffuse_states = 0 if P is None else np.sum(np.diagonal(P) == 1)
 
         # Degrees of freedom (see DK 2012, section 7.4)
-        self.df_model = (self.params.size + self.k_diffuse_states +
-                         self.filter_results.filter_concentrated)
+        k_free_params = self.params.size - len(self.fixed_params)
+        self.df_model = (k_free_params + self.k_diffuse_states
+                         + self.filter_results.filter_concentrated)
         self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
@@ -1632,7 +1758,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
-        self.model.update(self.params)
+        self.model.update(self.params, transformed=True, includes_fixed=True)
 
         # References of filter and smoother output
         extra_arrays = [
@@ -1793,9 +1919,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # TODO: Case with "not approx_complex_step" is not hit in
         # tests as of 2017-05-19
 
-        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+            neg_cov[mask] = tmp
+        else:
+            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self.model.update(self.params)
+        self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
@@ -1815,9 +1947,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
-        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+            neg_cov[mask] = tmp
+        else:
+            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self.model.update(self.params)
+        self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
@@ -1833,13 +1971,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def _cov_params_opg(self, approx_complex_step=True, approx_centered=False):
         evaluated_hessian = self.nobs_effective * self.model._hessian_opg(
-            self.params, transformed=True,
+            self.params, transformed=True, includes_fixed=True,
             approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
-        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+            neg_cov[mask] = tmp
+        else:
+            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self.model.update(self.params)
+        self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
@@ -1871,11 +2015,22 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
-        cov_params, singular_values = pinv_extended(
-            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
-        )
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            cov_params = np.zeros_like(evaluated_hessian) * np.nan
 
-        self.model.update(self.params)
+            cov_opg = cov_opg[mask]
+            evaluated_hessian = evaluated_hessian[mask]
+
+            tmp, singular_values = pinv_extended(
+                np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian))
+
+            cov_params[mask] = tmp
+        else:
+            (cov_params, singular_values) = pinv_extended(
+                np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian))
+
+        self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
@@ -1900,11 +2055,22 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # TODO: Case with "not approx_complex_step" is not
         # hit in tests as of 2017-05-19
 
-        (cov_params, singular_values) = pinv_extended(
-            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
-        )
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            cov_params = np.zeros_like(evaluated_hessian) * np.nan
 
-        self.model.update(self.params)
+            cov_opg = cov_opg[mask]
+            evaluated_hessian = evaluated_hessian[mask]
+
+            tmp, singular_values = pinv_extended(
+                np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian))
+
+            cov_params[mask] = tmp
+        else:
+            (cov_params, singular_values) = pinv_extended(
+                np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian))
+
+        self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
@@ -2050,7 +2216,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         coefficients. Note that the coefficients are assumed to have a Normal
         distribution.
         """
-        return norm.sf(np.abs(self.zvalues)) * 2
+        pvalues = np.zeros_like(self.zvalues) * np.nan
+        mask = self._free_params_index
+        pvalues[mask] = norm.sf(np.abs(self.zvalues[mask])) * 2
+        return pvalues
 
     @cache_readonly
     def resid(self):
@@ -2594,7 +2763,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                 **kwargs)
         return irfs
 
-    def append(self, endog, exog=None, refit=False, **kwargs):
+    def append(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
         """
         Recreate the results object with new data appended to the original data
 
@@ -2686,7 +2855,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
 
         if refit:
-            res = mod.fit(start_params=self.params)
+            if fit_kwargs is None:
+                fit_kwargs = {}
+            fit_kwargs.setdefault('start_params', self.params)
+            if self._has_fixed_params:
+                fit_kwargs.setdefault('includes_fixed', True)
+                res = mod.fit_constrained(self._fixed_params, **fit_kwargs)
+            else:
+                res = mod.fit(**fit_kwargs)
         elif self.smoother_results is not None:
             res = mod.smooth(self.params)
         else:
@@ -2779,7 +2955,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
-    def apply(self, endog, exog=None, refit=False, **kwargs):
+    def apply(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
         """
         Apply the fitted parameters to new data unrelated to the original data
 
@@ -2858,7 +3034,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
         if refit:
-            res = mod.fit(start_params=self.params)
+            if fit_kwargs is None:
+                fit_kwargs = {}
+            fit_kwargs.setdefault('start_params', self.params)
+            if self._has_fixed_params:
+                fit_kwargs.setdefault('includes_fixed', True)
+                res = mod.fit_constrained(self._fixed_params, **fit_kwargs)
+            else:
+                res = mod.fit(**fit_kwargs)
         elif self.smoother_results is not None:
             res = mod.smooth(self.params)
         else:
@@ -3068,7 +3251,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                 title=title)
         if len(self.params) > 0 and display_params:
             summary.add_table_params(self, alpha=alpha,
-                                     xname=self.data.param_names, use_t=False)
+                                     xname=self.param_names, use_t=False)
         summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                                 title="")
 
@@ -3076,10 +3259,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         etext = []
         if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
             etext.append(self.cov_kwds['description'])
-        if self._rank < len(self.params):
+        if self._rank < (len(self.params) - len(self.fixed_params)):
+            cov_params = self.cov_params()
+            if len(self.fixed_params) > 0:
+                mask = np.ix_(self._free_params_index, self._free_params_index)
+                cov_params = cov_params[mask]
             etext.append("Covariance matrix is singular or near-singular,"
                          " with condition number %6.3g. Standard errors may be"
-                         " unstable." % np.linalg.cond(self.cov_params()))
+                         " unstable." % np.linalg.cond(cov_params))
 
         if etext:
             etext = ["[{0}] {1}".format(i + 1, text)

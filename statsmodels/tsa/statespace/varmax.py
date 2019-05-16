@@ -439,23 +439,26 @@ class VARMAX(MLEModel):
     @property
     def param_names(self):
         param_names = []
+        endog_names = self.endog_names
+        if not isinstance(self.endog_names, list):
+            endog_names = [endog_names]
 
         # 1. Intercept terms
         if self.k_trend > 0:
             for i in self.polynomial_trend.nonzero()[0]:
                 if i == 0:
-                    param_names += ['intercept.%s' % self.endog_names[j]
+                    param_names += ['intercept.%s' % endog_names[j]
                                     for j in range(self.k_endog)]
                 elif i == 1:
-                    param_names += ['drift.%s' % self.endog_names[j]
+                    param_names += ['drift.%s' % endog_names[j]
                                     for j in range(self.k_endog)]
                 else:
-                    param_names += ['trend.%d.%s' % (i, self.endog_names[j])
+                    param_names += ['trend.%d.%s' % (i, endog_names[j])
                                     for j in range(self.k_endog)]
 
         # 2. AR terms
         param_names += [
-            'L%d.%s.%s' % (i+1, self.endog_names[k], self.endog_names[j])
+            'L%d.%s.%s' % (i+1, endog_names[k], endog_names[j])
             for j in range(self.k_endog)
             for i in range(self.k_ar)
             for k in range(self.k_endog)
@@ -463,7 +466,7 @@ class VARMAX(MLEModel):
 
         # 3. MA terms
         param_names += [
-            'L%d.e(%s).%s' % (i+1, self.endog_names[k], self.endog_names[j])
+            'L%d.e(%s).%s' % (i+1, endog_names[k], endog_names[j])
             for j in range(self.k_endog)
             for i in range(self.k_ma)
             for k in range(self.k_endog)
@@ -471,7 +474,7 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         param_names += [
-            'beta.%s.%s' % (self.exog_names[j], self.endog_names[i])
+            'beta.%s.%s' % (self.exog_names[j], endog_names[i])
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
@@ -479,13 +482,13 @@ class VARMAX(MLEModel):
         # 5. State covariance terms
         if self.error_cov_type == 'diagonal':
             param_names += [
-                'sigma2.%s' % self.endog_names[i]
+                'sigma2.%s' % endog_names[i]
                 for i in range(self.k_endog)
             ]
         elif self.error_cov_type == 'unstructured':
             param_names += [
-                ('sqrt.var.%s' % self.endog_names[i] if i == j else
-                 'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
+                ('sqrt.var.%s' % endog_names[i] if i == j else
+                 'sqrt.cov.%s.%s' % (endog_names[j], endog_names[i]))
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -493,7 +496,7 @@ class VARMAX(MLEModel):
         # 5. Measurement error variance terms
         if self.measurement_error:
             param_names += [
-                'measurement_variance.%s' % self.endog_names[i]
+                'measurement_variance.%s' % endog_names[i]
                 for i in range(self.k_endog)
             ]
 
@@ -659,8 +662,41 @@ class VARMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, **kwargs):
-        params = super(VARMAX, self).update(params, **kwargs)
+    def _validate_can_fix_params(self, param_names):
+        super(VARMAX, self)._validate_can_fix_params(param_names)
+
+        ix = np.cumsum(list(self.parameters.values()))[:-1]
+        (trend_names, ar_names, ma_names, regression_names, state_cov_names,
+         obs_cov_names) = [
+            arr.tolist() for arr in np.array_split(self.param_names, ix)]
+
+        if self.enforce_stationarity and self.k_ar > 0:
+            if self.k_endog > 1 or self.k_ar > 1:
+                fix_all = param_names.issuperset(ar_names)
+                fix_any = (
+                    len(param_names.intersection(ar_names)) > 0)
+                if fix_any and not fix_all:
+                    raise ValueError(
+                        'Cannot fix individual autoregressive parameters'
+                        ' when `enforce_stationarity=True`. In this case,'
+                        ' must either fix all autoregressive parameters or'
+                        ' none.')
+        if self.enforce_invertibility and self.k_ma > 0:
+            if self.k_endog or self.k_ma > 1:
+                fix_all = param_names.issuperset(ma_names)
+                fix_any = (
+                    len(param_names.intersection(ma_names)) > 0)
+                if fix_any and not fix_all:
+                    raise ValueError(
+                        'Cannot fix individual moving average parameters'
+                        ' when `enforce_invertibility=True`. In this case,'
+                        ' must either fix all moving average parameters or'
+                        ' none.')
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         # 1. State intercept
         # - Exog
@@ -967,11 +1003,15 @@ class VARMAXResults(MLEResults):
                        self.zvalues[mask], self.pvalues[mask],
                        self.conf_int(alpha)[mask])
 
-                param_names = [
-                    '.'.join(name.split('.')[:-1]) if strip_end else name
-                    for name in
-                    np.array(self.data.param_names)[mask].tolist()
-                ]
+                param_names = []
+                for name in np.array(self.data.param_names)[mask].tolist():
+                    if strip_end:
+                        param_name = '.'.join(name.split('.')[:-1])
+                    else:
+                        param_name = name
+                    if name in self.fixed_params:
+                        param_name = '%s (fixed)' % param_name
+                    param_names.append(param_name)
 
                 return summary_params(res, yname=None, xname=param_names,
                                       alpha=alpha, use_t=False, title=title)
@@ -1023,7 +1063,10 @@ class VARMAXResults(MLEResults):
                 mask = np.concatenate(masks)
                 endog_masks.append(mask)
 
-                title = "Results for equation %s" % self.model.endog_names[i]
+                endog_names = self.model.endog_names
+                if not isinstance(endog_names, list):
+                    endog_names = [endog_names]
+                title = "Results for equation %s" % endog_names[i]
                 table = make_table(self, mask, title)
                 summary.tables.append(table)
 
