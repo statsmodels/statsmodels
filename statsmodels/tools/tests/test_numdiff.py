@@ -336,9 +336,6 @@ if __name__ == '__main__':
     print(maxabs(g, gt))
     print(maxabs(gd, gt))
 
-
-    import statsmodels.api as sm
-
     data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)

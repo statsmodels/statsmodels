@@ -9,7 +9,6 @@ from statsmodels.compat.platform import PLATFORM_WIN32
 
 import pytest
 import numpy as np
-import pytest
 import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (

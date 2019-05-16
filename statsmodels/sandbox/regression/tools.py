@@ -150,16 +150,6 @@ def norm_dlldy(y):
     '''
     return -y
 
-def ts_dlldy(y, df):
-    '''derivative of log pdf of standardized (?) t with respect to y
-
-    Notes
-    -----
-    parameterized for garch, with mean 0 and variance 1
-    '''
-    #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
-    #return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
-    return -(df+1)/(df) / (1 + y**2/(df)) * y
 
 def tstd_pdf(x, df):
     '''pdf for standardized (not standard) t distribution, variance is one

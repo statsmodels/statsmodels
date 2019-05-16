@@ -11,8 +11,6 @@ from statsmodels.datasets.macrodata import data
 dta = data.load(as_pandas=False)
 gdp = np.log(dta.data['realgdp'])
 
-from scipy import special
-
 
 maxorder = 20
 polybase = special.chebyt

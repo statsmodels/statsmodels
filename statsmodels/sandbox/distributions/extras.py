@@ -488,7 +488,6 @@ License: BSD
 
 '''
 
-from scipy import stats
 from scipy.stats import distributions
 
 
@@ -581,7 +580,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy import stats
 from scipy.stats import distributions
 import numpy as np
 

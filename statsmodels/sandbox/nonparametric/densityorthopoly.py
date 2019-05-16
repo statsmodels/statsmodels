@@ -450,7 +450,6 @@ if __name__ == '__main__':
         f_hat, grid, coeffs, polys = density_orthopoly(obs_dist, ChebyTPoly, order=20, xeval=None)
         #f_hat /= f_hat.sum() * (grid.max() - grid.min())/len(grid)
         f_hat0 = f_hat
-        from scipy import integrate
         fint = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
         #f_hat -= fint/2.
         print('f_hat.min()', f_hat.min())
