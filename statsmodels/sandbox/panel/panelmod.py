@@ -218,13 +218,13 @@ class PanelModel(object):
             mean = np.dot(dummy,X)/dummy.sum(1)[:,None]
         else:
             mean = np.dot(dummy,X)/dummy.sum(1)
-        if counts == False and dummies == False:
+        if counts is False and dummies is False:
             return mean
-        elif counts == True and dummies == False:
+        elif counts is True and dummies is False:
             return mean, dummy.sum(1)
-        elif counts == True and dummies == True:
+        elif counts is True and dummies is True:
             return mean, dummy.sum(1), dummy
-        elif counts == False and dummies == True:
+        elif counts is False and dummies is True:
             return mean, dummy
 
 #TODO: Use kwd arguments or have fit_method methods?

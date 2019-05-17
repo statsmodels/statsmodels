@@ -140,7 +140,7 @@ class BaseIRAnalysis(object):
         else:
             title = 'Impulse responses'
 
-        if plot_stderr == False:
+        if plot_stderr is False:
             stderr = None
 
         elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
@@ -294,7 +294,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if svar == True:
+        if svar:
             return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
                                          signif=signif, seed=seed,
                                          burn=burn, cum=False)

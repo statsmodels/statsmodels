@@ -356,7 +356,7 @@ class SVAR(tsbase.TimeSeriesModel):
         A[A_mask] = start_params[:A_len]
         B[B_mask] = start_params[A_len:]
 
-        if override == False:
+        if not override:
             J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
@@ -413,13 +413,13 @@ class SVAR(tsbase.TimeSeriesModel):
         if len(A_solve[A_mask]) != 0:
             A_vec = np.ravel(A_mask, order='F')
             for k in range(neqs**2):
-                if A_vec[k] == True:
+                if A_vec[k]:
                     S_B[k,j] = -1
                     j += 1
         if len(B_solve[B_mask]) != 0:
             B_vec = np.ravel(B_mask, order='F')
             for k in range(neqs**2):
-                if B_vec[k] == True:
+                if B_vec[k]:
                     S_D[k,j_d] = 1
                     j_d +=1
 

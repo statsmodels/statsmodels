@@ -441,7 +441,7 @@ def _glm_basic_scr(result, exog, alpha):
     from scipy.optimize import brentq
 
     c, rslt = brentq(func, 1, 10, full_output=True)
-    if rslt.converged == False:
+    if not rslt.converged:
         raise ValueError("Root finding error in basic SCR")
 
     return sigma, c
