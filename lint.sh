@@ -23,6 +23,7 @@ if [ "$LINT" == true ]; then
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
+        statsmodels/duration/tests/results/ \
         statsmodels/formula/ \
         statsmodels/gam/ \
         statsmodels/genmod/tests/results/ \
