@@ -71,6 +71,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/kalmanf/ \
         statsmodels/tsa/regime_switching/ \
         statsmodels/tsa/vector_ar/dynamic.py \
+        statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/tests/results/results_var_R.py \
         statsmodels/tsa/statespace/tests/test_var.py \
         statsmodels/conftest.py \
