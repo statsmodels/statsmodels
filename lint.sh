@@ -23,6 +23,7 @@ if [ "$LINT" == true ]; then
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
+        statsmodels/duration/tests/results/ \
         statsmodels/formula/ \
         statsmodels/gam/ \
         statsmodels/genmod/tests/results/ \
@@ -31,7 +32,9 @@ if [ "$LINT" == true ]; then
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \
+        statsmodels/iolib/tests/results/ \
         statsmodels/multivariate/pca.py \
+        statsmodels/multivariate/tests/results/ \
         statsmodels/regression/dimred.py \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/regression/process_regression.py \
