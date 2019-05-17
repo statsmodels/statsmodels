@@ -39,7 +39,7 @@ class Pca(object):
         self._colors= np.tile(self._colors,int((p-1)/len(self._colors))+1)[:p]
         if names is not None and len(names) != p:
             raise ValueError('names must match data dimension')
-        self.names = None if names is None else tuple([str(n) for n in names])
+        self.names = None if names is None else tuple([str(x) for x in names])
 
 
     def getCovarianceMatrix(self):

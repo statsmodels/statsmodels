@@ -70,8 +70,8 @@ if example == 3:
     f = family.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
-    #p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)], float)
-    p = np.asarray([stats.poisson.rvs(p) for p in f.link.inverse(z)], float)
+    p = np.asarray([stats.poisson.rvs(val) for val in f.link.inverse(z)],
+                   float)
     p.shape = y.shape
     m = GAM(p, d, family=f)
     toc = time.time()

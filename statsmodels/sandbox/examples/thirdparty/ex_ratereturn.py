@@ -67,7 +67,7 @@ plot_corr(residcorr, xnames=ticksym, title='Correlation Residuals',
           normcolor=normcolor, ax=ax3)
 
 import matplotlib as mpl
-images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
+images = [c for fig_ax in fig.axes for c in fig_ax.get_children() if isinstance(c, mpl.image.AxesImage)]
 print(images)
 print(ax.get_children())
 #cax = fig.add_subplot(2,2,2)
@@ -117,7 +117,7 @@ if has_sklearn:
         plot_corr(c, xnames=None, title=titles[i],
               normcolor=normcolor, ax=ax)
 
-    images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
+    images = [c for fig_ax in fig.axes for c in fig_ax.get_children() if isinstance(c, mpl.image.AxesImage)]
     fig. subplots_adjust(bottom=0.1, right=0.9, top=0.9)
     cax = fig.add_axes([0.9, 0.1, 0.025, 0.8])
     fig.colorbar(images[0], cax=cax)

@@ -109,9 +109,9 @@ if 'ex1' in examples:
         #X = np.hstack((X,Z))
         X = np.hstack((X, time_dummies))
 
-        #create units and append to list
-        unit = Unit(Y, X, Z)
-        units.append(unit)
+        # create units and append to list
+        new_unit = Unit(Y, X, Z)
+        units.append(new_unit)
 
 
     m = OneWayMixed(units)

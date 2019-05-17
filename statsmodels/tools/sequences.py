@@ -206,7 +206,7 @@ def halton(dim, n_sample, bounds=None, start_index=0):
     base = n_primes(dim)
 
     # Generate a sample using a Van der Corput sequence per dimension.
-    sample = [van_der_corput(n_sample + 1, dim, start_index) for dim in base]
+    sample = [van_der_corput(n_sample + 1, bdim, start_index) for bdim in base]
     sample = np.array(sample).T[1:]
 
     # Sample scaling from unit hypercube to feature range

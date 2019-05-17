@@ -1882,7 +1882,7 @@ if __name__ == '__main__':
         xli = [X[X[:,1]==k,0] for k in range(1,5)]
         xranks = stats.rankdata(X[:,0])
         xranksli = [xranks[X[:,1]==k] for k in range(1,5)]
-        xnobs = np.array([len(x) for x in xli])
+        xnobs = np.array([len(xval) for xval in xli])
         meanranks = [item.mean() for item in xranksli]
         sumranks = [item.sum() for item in xranksli]
         # equivalent function

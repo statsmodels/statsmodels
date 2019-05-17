@@ -1011,8 +1011,8 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         # make the dtype for the datetime types
         cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
         dtype = data.dtype.descr
-        dtype = [(dt[0], object) if i in cols else dt for i,dt in
-                 enumerate(dtype)]
+        dtype = [(sub_dtype[0], object) if i in cols else sub_dtype
+                  for i, sub_dtype in enumerate(dtype)]
         data = data.astype(dtype) # have to copy
         for col in cols:
             def convert(x):
