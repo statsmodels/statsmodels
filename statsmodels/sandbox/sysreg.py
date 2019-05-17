@@ -131,7 +131,7 @@ exogenous variables.  Got length %s" % len(sys))
 # Deal with sigma, check shape earlier if given
         if np.any(sigma):
             sigma = np.asarray(sigma) # check shape
-        elif sigma == None:
+        elif sigma is None:
             resids = []
             for i in range(M):
                 resids.append(GLS(endog[i],exog[:,

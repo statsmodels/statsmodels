@@ -1607,7 +1607,7 @@ class PHRegResults(base.LikelihoodModelResults):
         param.loc[:, a] = np.exp(param.loc[:, a])
         a = "%.3f]" % (1 - alpha / 2)
         param.loc[:, a] = np.exp(param.loc[:, a])
-        if xname != None:
+        if xname is not None:
             param.index = xname
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)

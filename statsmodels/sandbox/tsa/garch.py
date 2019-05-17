@@ -804,7 +804,7 @@ class AR(LikelihoodModel):
                     maxiter=maxiter, tol=tol)
         else:
             bounds = [(-.999,.999)]   # assume stationarity
-            if start_params == None:
+            if start_params is None:
                 start_params = np.array([0]) #TODO: assumes AR(1)
             if method == 'bfgs-b':
                 retval = optimize.fmin_l_bfgs_b(minfunc, start_params,

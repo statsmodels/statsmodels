@@ -162,7 +162,7 @@ class NBin(GenericLikelihoodModel):
             return -self.ll_func(self.endog, self.exog, beta, alph)
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
-        if start_params==None:
+        if start_params is None:
             countfit = super(NBin, self).fit(start_params=self.start_params_default,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         else:

@@ -199,7 +199,7 @@ class TestMICEData(object):
             x = idata.next_sample()
             assert(isinstance(x, pd.DataFrame))
 
-        assert(all([x == (299, 4) for x in hist]))
+        assert(all([val == (299, 4) for val in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.

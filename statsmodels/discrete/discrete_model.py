@@ -400,8 +400,8 @@ class DiscreteModel(base.LikelihoodModel):
         """
         H = likelihood_model.hessian(xopt)
         trimmed = retvals['trimmed']
-        nz_idx = np.nonzero(trimmed == False)[0]
-        nnz_params = (trimmed == False).sum()
+        nz_idx = np.nonzero(~trimmed)[0]
+        nnz_params = (~trimmed).sum()
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
@@ -3767,7 +3767,7 @@ class L1CountResults(DiscreteResults):
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
 
         # Set degrees of freedom.  In doing so,
         # adjust for extra parameter in NegativeBinomial nb1 and nb2
@@ -4024,7 +4024,7 @@ class L1BinaryResults(BinaryResults):
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
         self.df_model = self.nnz_params - 1
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
@@ -4179,7 +4179,7 @@ class L1MultinomialResults(MultinomialResults):
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = mlefit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
 
         # Note: J-1 constants
         self.df_model = self.nnz_params - (self.model.J - 1)

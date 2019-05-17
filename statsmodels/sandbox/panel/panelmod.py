@@ -103,7 +103,7 @@ class PanelModel(object):
     """
     def __init__(self, endog=None, exog=None, panel=None, time=None,
             xtnames=None, equation=None, panel_data=None):
-        if panel_data == None:
+        if panel_data is None:
 #            if endog == None and exog == None and panel == None and \
 #                    time == None:
 #                raise ValueError("If pandel_data is False then endog, exog, \
@@ -184,7 +184,7 @@ class PanelModel(object):
         self.panel_data = panel_data
         endog = panel_data[endog_name].values # does this create a copy?
         self.endog = np.squeeze(endog)
-        if exog_name == None:
+        if exog_name is None:
             exog_name = panel_data.columns.tolist()
             exog_name.remove(endog_name)
         self.exog = panel_data.filterItems(exog_name).values # copy?
@@ -218,13 +218,13 @@ class PanelModel(object):
             mean = np.dot(dummy,X)/dummy.sum(1)[:,None]
         else:
             mean = np.dot(dummy,X)/dummy.sum(1)
-        if counts == False and dummies == False:
+        if counts is False and dummies is False:
             return mean
-        elif counts == True and dummies == False:
+        elif counts is True and dummies is False:
             return mean, dummy.sum(1)
-        elif counts == True and dummies == True:
+        elif counts is True and dummies is True:
             return mean, dummy.sum(1), dummy
-        elif counts == False and dummies == True:
+        elif counts is False and dummies is True:
             return mean, dummy
 
 #TODO: Use kwd arguments or have fit_method methods?

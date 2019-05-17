@@ -86,7 +86,7 @@ def movorder(x, order = 'med', windsize=3, lag='lagged'):
         lead = -windsize//2 +1
     else:
         raise ValueError
-    if np.isfinite(order) == True: #if np.isnumber(order):
+    if np.isfinite(order): #if np.isnumber(order):
         ord = order   # note: ord is a builtin function
     elif order == 'med':
         ord = (windsize - 1)/2

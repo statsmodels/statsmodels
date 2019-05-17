@@ -140,7 +140,7 @@ class BaseIRAnalysis(object):
         else:
             title = 'Impulse responses'
 
-        if plot_stderr == False:
+        if plot_stderr is False:
             stderr = None
 
         elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
@@ -294,7 +294,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if svar == True:
+        if svar:
             return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
                                          signif=signif, seed=seed,
                                          burn=burn, cum=False)
@@ -342,7 +342,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)
 
-        if component != None:
+        if component is not None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
@@ -398,7 +398,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
-        if component != None:
+        if component is not None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
@@ -471,7 +471,7 @@ class IRAnalysis(BaseIRAnalysis):
         eigva = np.zeros((neqs, periods*neqs))
         k = np.zeros((neqs))
 
-        if component != None:
+        if component is not None:
             if np.size(component) != (neqs):
                 raise ValueError("Component array must be of length " + str(neqs))
             if np.argmax(component) >= neqs*periods:

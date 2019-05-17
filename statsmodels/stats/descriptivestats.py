@@ -166,12 +166,12 @@ class Describe(object):
             except (TypeError, ValueError):
                 return False
             return True
-        if number_like()==True and string_like()==False:
+        if number_like() and not string_like():
             return 'number'
-        elif number_like()==False and string_like()==True:
+        elif not number_like() and string_like():
             return 'string'
         else:
-            assert (number_like()==True or string_like()==True), '\
+            assert (number_like() or string_like()), '\
             Not sure of dtype'+str(self.dataset[col][0])
 
     #@property
@@ -196,7 +196,7 @@ class Describe(object):
         # standard array: Specifiy column numbers (NEED TO TEST)
         # percentiles currently broken
         # mode requires mode_val and mode_bin separately
-        if self._arraytype == None:
+        if self._arraytype is None:
             self._array_typer()
 
         if stats == 'basic':
