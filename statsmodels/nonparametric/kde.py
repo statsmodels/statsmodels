@@ -319,7 +319,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     nobs = len(X) # after trim
 
-    if gridsize == None:
+    if gridsize is None:
         gridsize = max(nobs,50) # don't need to resize if no FFT
 
         # handle weights
@@ -459,7 +459,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     nobs = len(X) # after trim
 
     # 1 Make grid and discretize the data
-    if gridsize == None:
+    if gridsize is None:
         gridsize = np.max((nobs, 512.))
     gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
 

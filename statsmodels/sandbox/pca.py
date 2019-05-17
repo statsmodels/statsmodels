@@ -152,7 +152,7 @@ class Pca(object):
 
         returns n,p(>threshold) dimension array
         """
-        nonnones = sum([e != None for e in (enthresh,nPCs,cumen)])
+        nonnones = sum([e is not None for e in (enthresh, nPCs, cumen)])
         if nonnones == 0:
             m = slice(None)
         elif nonnones > 1:

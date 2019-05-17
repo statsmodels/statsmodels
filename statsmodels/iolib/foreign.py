@@ -263,7 +263,7 @@ class StataReader(object):
             (-1.798e+308, +8.988e+307) }
 
     def __init__(self, fname, missing_values=False, encoding=None):
-        if encoding == None:
+        if encoding is None:
             import locale
             self._encoding = locale.getpreferredencoding()
         else:
@@ -477,7 +477,7 @@ class StataReader(object):
         if len(self._col_sizes) == 0:
             self._col_sizes = lmap(lambda x: self._calcsize(x),
                     self._header['typlist'])
-        if k == None:
+        if k is None:
             return self._col_sizes
         else:
             return self._col_sizes[k]

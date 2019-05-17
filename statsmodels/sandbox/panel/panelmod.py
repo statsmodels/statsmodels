@@ -103,7 +103,7 @@ class PanelModel(object):
     """
     def __init__(self, endog=None, exog=None, panel=None, time=None,
             xtnames=None, equation=None, panel_data=None):
-        if panel_data == None:
+        if panel_data is None:
 #            if endog == None and exog == None and panel == None and \
 #                    time == None:
 #                raise ValueError("If pandel_data is False then endog, exog, \
@@ -184,7 +184,7 @@ class PanelModel(object):
         self.panel_data = panel_data
         endog = panel_data[endog_name].values # does this create a copy?
         self.endog = np.squeeze(endog)
-        if exog_name == None:
+        if exog_name is None:
             exog_name = panel_data.columns.tolist()
             exog_name.remove(endog_name)
         self.exog = panel_data.filterItems(exog_name).values # copy?

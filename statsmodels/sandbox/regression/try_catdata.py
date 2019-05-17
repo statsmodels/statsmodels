@@ -77,7 +77,7 @@ def convertlabels(ys, indices=None):
     '''convert labels based on multiple variables or string labels to unique
     index labels 0,1,2,...,nk-1 where nk is the number of distinct labels
     '''
-    if indices == None:
+    if indices is None:
         ylabel = ys
     else:
         idx = np.array(indices)

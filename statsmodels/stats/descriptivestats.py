@@ -196,7 +196,7 @@ class Describe(object):
         # standard array: Specifiy column numbers (NEED TO TEST)
         # percentiles currently broken
         # mode requires mode_val and mode_bin separately
-        if self._arraytype == None:
+        if self._arraytype is None:
             self._array_typer()
 
         if stats == 'basic':
