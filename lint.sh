@@ -68,6 +68,9 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/filters/tests/ \
+        statsmodels/tsa/innovations/ \
+        statsmodels/tsa/kalmanf/ \
+        statsmodels/tsa/regime_switching/ \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/statespace/tests/results/results_var_R.py \
         statsmodels/tsa/statespace/tests/test_var.py \
