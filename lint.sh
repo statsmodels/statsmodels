@@ -60,6 +60,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_moment_helpers.py \
         statsmodels/stats/tests/test_qsturng.py \
         statsmodels/stats/tests/test_regularized_covariance.py \
+        statsmodels/stats/tests/results/ \
         statsmodels/tools/linalg.py \
         statsmodels/tools/web.py \
         statsmodels/tools/tests/test_linalg.py \
