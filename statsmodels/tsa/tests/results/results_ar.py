@@ -86,11 +86,8 @@ class ARResultsOLS(object):
             # TODO: remove one of the files
             filename = os.path.join(cur_dir, "AROLSConstantPredict.csv")
             predictresults = np.loadtxt(filename)
-            fv = predictresults[:300,0]
-            pv = predictresults[300:,1]
-            pv_lb = predictresults[300:,2]
-            pv_ub = predictresults[300:,3]
-            pv_se = predictresults[300:,4]
+            fv = predictresults[:300, 0]
+            pv = predictresults[300:, 1]
             del predictresults
 
             # cases - in sample predict
@@ -103,19 +100,19 @@ class ARResultsOLS(object):
             # n = 200, start = 0
             self.FVOLSn200start0 = fv[:192]
             # n = 200, start = 200
-            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:101-9]))
+            self.FVOLSn200start200 = np.hstack((fv[200-9:], pv[:101-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = np.hstack((fv[-1],pv))
+            self.FVOLSn100start325 = np.hstack((fv[-1], pv))
             # n = 301, start = 9
-            self.FVOLSn301start9 = np.hstack((fv,pv[:2]))
+            self.FVOLSn301start9 = np.hstack((fv, pv[:2]))
             # n = 301, start = 0
             self.FVOLSdefault = fv
             # n = 4, start = 312
-            self.FVOLSn4start312 = np.hstack((fv[-1],pv[:8]))
+            self.FVOLSn4start312 = np.hstack((fv[-1], pv[:8]))
             # n = 15, start = 312
-            self.FVOLSn15start312 = np.hstack((fv[-1],pv[:19]))
+            self.FVOLSn15start312 = np.hstack((fv[-1], pv[:19]))
 
         elif not constant:
             self.params = [
@@ -123,7 +120,7 @@ class ARResultsOLS(object):
                 -0.15813796884843, 0.16620079925202,
                 -0.08570200254617, 0.01876298948686,
                 0.06130211910707, -0.08461507700047,
-                 0.27995084653313]
+                0.27995084653313]
             self.bse_stata = [
                 .055645055, .088579237, .0912031179, .0909032462,
                 .0911161784, .0908611473, .0907743174, .0880993504,
@@ -136,18 +133,15 @@ class ARResultsOLS(object):
             self.sigma = 226.9820074869752
             self.llf = -1239.41217278661
             # See note above; TODO: be more specific about "above"
-            # self.bic =  8.433861292817106
-            # self.hqic =  8.367215591385756
-            # self.aic =  8.322747818577421
-            self.fpe =  241.0221316614273
+            # self.bic = 8.433861292817106
+            # self.hqic = 8.367215591385756
+            # self.aic = 8.322747818577421
+            self.fpe = 241.0221316614273
 
             filename = os.path.join(cur_dir, "AROLSNoConstantPredict.csv")
             predictresults = np.loadtxt(filename)
-            fv = predictresults[:300,0]
-            pv = predictresults[300:,1]
-            pv_lb = predictresults[300:,2]
-            pv_ub = predictresults[300:,3]
-            pv_se = predictresults[300:,4]
+            fv = predictresults[:300, 0]
+            pv = predictresults[300:, 1]
             del predictresults
 
             # cases - in sample predict
@@ -160,19 +154,19 @@ class ARResultsOLS(object):
             # n = 200, start = 0
             self.FVOLSn200start0 = fv[:192]
             # n = 200, start = 200
-            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:101-9]))
+            self.FVOLSn200start200 = np.hstack((fv[200-9:], pv[:101-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = np.hstack((fv[-1],pv))
+            self.FVOLSn100start325 = np.hstack((fv[-1], pv))
             # n = 301, start = 9
-            self.FVOLSn301start9 = np.hstack((fv,pv[:2]))
+            self.FVOLSn301start9 = np.hstack((fv, pv[:2]))
             # n = 301, start = 0
             self.FVOLSdefault = fv
             # n = 4, start = 312
-            self.FVOLSn4start312 = np.hstack((fv[-1],pv[:8]))
+            self.FVOLSn4start312 = np.hstack((fv[-1], pv[:8]))
             # n = 15, start = 312
-            self.FVOLSn15start312 = np.hstack((fv[-1],pv[:19]))
+            self.FVOLSn15start312 = np.hstack((fv[-1], pv[:19]))
 
 
 class ARResultsMLE(object):
@@ -190,8 +184,7 @@ class ARResultsMLE(object):
             filename2 = os.path.join(cur_dir,
                                      'results_ar_forecast_mle_dynamic.csv')
             predictresults = np.loadtxt(filename, delimiter=",")
-            year = predictresults[:,0]
-            pv = predictresults[:,1]
+            pv = predictresults[:, 1]
             dynamicpv = np.genfromtxt(filename2, delimiter=",", skip_header=1)
 
             # cases - in sample predict
@@ -216,10 +209,10 @@ class ARResultsMLE(object):
             # end = 7, start = 2
             self.FVMLEstart2end7 = pv[2:8]
 
-            self.fcdyn = dynamicpv[:,0]
-            self.fcdyn2 = dynamicpv[:,1]
-            self.fcdyn3 = dynamicpv[:,2]
-            self.fcdyn4 = dynamicpv[:,3]
+            self.fcdyn = dynamicpv[:, 0]
+            self.fcdyn2 = dynamicpv[:, 1]
+            self.fcdyn3 = dynamicpv[:, 2]
+            self.fcdyn4 = dynamicpv[:, 3]
 
         else:
             pass
