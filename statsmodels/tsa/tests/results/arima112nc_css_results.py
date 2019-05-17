@@ -2,21 +2,21 @@ import numpy as np
 
 llf = np.array([-239.75290561974])
 
-nobs = np.array([             202])
+nobs = np.array([202])
 
-k = np.array([               4])
+k = np.array([4])
 
-k_exog = np.array([               1])
+k_exog = np.array([1])
 
-sigma = np.array([ .79291203639424])
+sigma = np.array([.79291203639424])
 
-chi2 = np.array([ 35036.682546665])
+chi2 = np.array([35036.682546665])
 
-df_model = np.array([               3])
+df_model = np.array([3])
 
-k_ar = np.array([               1])
+k_ar = np.array([1])
 
-k_ma = np.array([               2])
+k_ma = np.array([2])
 
 params = np.array([
     .99954097483478,
@@ -40,7 +40,7 @@ cov_params = np.array([
     8.040251506e-06,
     -.0000145011098,
     .00030686101903,
-    .00067796985496]).reshape(4,4)
+    .00067796985496]).reshape(4, 4)
 
 xb = np.array([
     0,
@@ -1287,4 +1287,23 @@ class Bunch(dict):
         self.__dict__ = self
 
 
-results = Bunch(llf=llf, nobs=nobs, k=k, k_exog=k_exog, sigma=sigma, chi2=chi2, df_model=df_model, k_ar=k_ar, k_ma=k_ma, params=params, cov_params=cov_params, xb=xb, y=y, resid=resid, yr=yr, mse=mse, stdp=stdp, icstats=icstats, )
+results = Bunch(
+    llf=llf,
+    nobs=nobs,
+    k=k,
+    k_exog=k_exog,
+    sigma=sigma,
+    chi2=chi2,
+    df_model=df_model,
+    k_ar=k_ar,
+    k_ma=k_ma,
+    params=params,
+    cov_params=cov_params,
+    xb=xb,
+    y=y,
+    resid=resid,
+    yr=yr,
+    mse=mse,
+    stdp=stdp,
+    icstats=icstats
+)

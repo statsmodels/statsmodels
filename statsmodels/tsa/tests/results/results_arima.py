@@ -34,7 +34,7 @@ class ARIMA111(object):
             self.sigma2 = self.sigma**2
             self.aic = self.icstats[4]
             self.bic = self.icstats[5]
-            self.fittedvalues = self.xb[1:] # no idea why this initial value
+            self.fittedvalues = self.xb[1:]  # no idea why this initial value
             self.linear = self.y[1:]
             # stata bse are OPG
             # self.bse = np.diag(self.cov_params) ** .5
@@ -66,8 +66,6 @@ class ARIMA111(object):
             self.forecast_dyn = forecast_results['fc111cdyn']
             self.forecasterr_dyn = forecast_results['fc111cdynse']
         else:
-            #from arima111_css_results import results
-
             # coefs, bse, tvalues, and pvalues taken from R because gretl
             # uses mean not constant
             self.bse = [0.21583833, 0.03844939, 0.08566390]
@@ -76,9 +74,9 @@ class ARIMA111(object):
             self.tvalues = [4.673524, 24.591788, -9.364311]
             self.pvalues = [5.464467e-06, 0, 0]
             self.cov_params = np.array([
-                [ 0.046586183,  0.002331183, -0.004647432 ],
-                [ 0.002331183,  0.001478356, -0.002726201 ],
-                [-0.004647432, -0.002726201,  0.007338304 ]])
+                [0.046586183,  0.002331183, -0.004647432],
+                [0.002331183,  0.001478356, -0.002726201],
+                [-0.004647432, -0.002726201,  0.007338304]])
 
             # from gretl
             self.llf = -239.6601
@@ -204,7 +202,7 @@ class ARIMA211(object):
             self.sigma2 = self.sigma**2
             self.aic = self.icstats[4]
             self.bic = self.icstats[5]
-            self.fittedvalues = self.xb[1:] # no idea why this initial value
+            self.fittedvalues = self.xb[1:]  # no idea why this initial value
             self.linear = self.y[1:]
             self.k_diff = 1
 
@@ -212,7 +210,7 @@ class ARIMA211(object):
             # self.bse = np.diag(self.cov_params) ** .5
 
             # from gretl
-            self.arroots = [1.027 + 0j, 5.7255+ 0j]
+            self.arroots = [1.027 + 0j, 5.7255 + 0j]
             self.maroots = [1.1442+0j]
             self.hqic = 496.5314
             self.aic_gretl = 489.8388
@@ -222,8 +220,8 @@ class ARIMA211(object):
             cov_params = np.array([
                 [0.0616906,  -0.00250187, 0.0010129,    0.00260485],
                 [0, 0.0105302,   -0.00867819,   -0.00525614],
-                [ 0 ,0,         0.00759185,    0.00361962],
-                [ 0 ,0,0,                      0.00484898]])
+                [0, 0,         0.00759185,    0.00361962],
+                [0, 0, 0,                      0.00484898]])
             self.cov_params = (
                 cov_params + cov_params.T - np.diag(np.diag(cov_params)))
             self.bse = np.diag(np.sqrt(self.cov_params))
@@ -254,7 +252,7 @@ class ARIMA211(object):
             self.bic_gretl = 499.1402
             self.tvalues = [.7206, 22.54, -19.04]
             self.pvalues = [.4712, 1.52e-112, 2.19e-10, 8.00e-81]
-            cov_parmas = np.array([
+            cov_params = np.array([
                 [8.20496e-04, -0.0011992, 4.57078e-04, 0.00109907],
                 [0, 0.00284432, -0.0016752, -0.00220223],
                 [0, 0, 0.00119783, 0.00108868],
@@ -321,29 +319,28 @@ class ARIMA112(object):
             # unable to replicate x12 results in stata using their starting
             #   values. x-12 has better likelihood and we can replicate so
             #   use their results
-            #from arima112_css_results import results
 
             # taken from R using X12-arima values as init params
             self.bse = [0.07727588, 0.09356658, 0.10503567, 0.07727970]
-            self.params = [ 0.9053219, -0.692412, 1.0736728, 0.1720008]
+            self.params = [0.9053219, -0.692412, 1.0736728, 0.1720008]
             self.sigma2 = 0.6820727
             self.tvalues = [11.715452, -7.400215, 10.221983,  2.225692]
             self.pvalues = [0, 3.791634e-12, 0, 2.716275e-02]
             self.cov_params = np.array([
-                [ 0.0059715623, 0.001327824, -0.001592129, -0.0008061933],
-                [ 0.0013278238, 0.008754705, -0.008024634, -0.0045933413],
-                [-0.0015921293,-0.008024634,  0.011032492,  0.0072509641],
-                [-0.0008061933,-0.004593341,  0.007250964,  0.0059721516]])
+                [0.0059715623, 0.001327824, -0.001592129, -0.0008061933],
+                [0.0013278238, 0.008754705, -0.008024634, -0.0045933413],
+                [-0.0015921293, -0.008024634,  0.011032492,  0.0072509641],
+                [-0.0008061933, -0.004593341,  0.007250964,  0.0059721516]])
 
             # from x12arima via gretl
             # gretl did not converge for this model...
             self.llf = -246.7534
             self.nobs = 202
-            #self.params = [.905322, -.692425, 1.07366, 0.172024]
-            #self.sigma2 = 0.682072819129
-            #self.bse = [0.0756430, 0.118440, 0.140691, 0.105266]
+            # self.params = [.905322, -.692425, 1.07366, 0.172024]
+            # self.sigma2 = 0.682072819129
+            # self.bse = [0.0756430, 0.118440, 0.140691, 0.105266]
 
-            self.resid = resid = [
+            self.resid = [
                 -1.214477, -0.069772, -1.064510, -0.249555,
                 -0.874206, -0.322177, -1.003579, -0.310040, -0.890506,
                 -0.421211, -0.715219, -0.564119, -0.636560, -0.580912,
@@ -433,16 +430,18 @@ class ARIMA112(object):
             self.hqic = 510.1902
             self.aic = 503.5069
             self.bic = 520.0234
-            #self.tvalues = [11.97, -5.846, 7.631, 1.634]
-            #self.pvalues = [5.21e-33, 5.03e-9, 2.32e-14, .1022]
-            #cov_params = np.array([
+            # TODO: Document source for these non-used results
+            #  (and why they are not used)
+            # self.tvalues = [11.97, -5.846, 7.631, 1.634]
+            # self.pvalues = [5.21e-33, 5.03e-9, 2.32e-14, .1022]
+            # cov_params = np.array([
             #         [0.0620096, -0.00172172, 0.00181301, 0.00103271],
             #         [0, 9.69682e-04, -9.70767e-04, -8.99814e-04],
             #         [0, 0, 0.00698068, -0.00443871],
             #         [0, 0, 0, 0.00713662]])
-            #self.cov_params = cov_params + cov_params.T - \
+            # self.cov_params = cov_params + cov_params.T - \
             #                np.diag(np.diag(cov_params))
-            #self.bse = np.diag(np.sqrt(self.cov_params))
+            # self.bse = np.diag(np.sqrt(self.cov_params))
             self.forecast = forecast_results['fc112c_css'][-25:]
             self.forecasterr = forecast_results['fc112cse_css'][-25:]
             self.forecast_dyn = forecast_results['fc112cdyn_css']

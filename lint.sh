@@ -74,6 +74,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/tests/results/results_var_R.py \
         statsmodels/tsa/statespace/tests/test_var.py \
+        statsmodels/tsa/tests/results/ \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \
         examples/ \
