@@ -1875,7 +1875,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Handle covariance matrix calculation
         if cov_kwds is None:
-                cov_kwds = {}
+            cov_kwds = {}
         self._cov_approx_complex_step = (
             cov_kwds.pop('approx_complex_step', True))
         self._cov_approx_centered = cov_kwds.pop('approx_centered', False)
