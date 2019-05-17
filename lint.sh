@@ -32,6 +32,7 @@ if [ "$LINT" == true ]; then
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \
         statsmodels/multivariate/pca.py \
+        statsmodels/multivariate/tests/results/ \
         statsmodels/regression/dimred.py \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/regression/process_regression.py \
