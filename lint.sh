@@ -44,6 +44,10 @@ if [ "$LINT" == true ]; then
         statsmodels/robust/tests/ \
         statsmodels/sandbox/distributions/try_pot.py \
         statsmodels/sandbox/panel/correlation_structures.py \
+        statsmodels/sandbox/regression/tests/results_gmm_griliches.py \
+        statsmodels/sandbox/regression/tests/results_gmm_griliches_iter.py \
+        statsmodels/sandbox/regression/tests/results_gmm_poisson.py \
+        statsmodels/sandbox/regression/tests/results_ivreg2_griliches.py \
         statsmodels/stats/__init__.py \
         statsmodels/stats/_knockoff.py \
         statsmodels/stats/base.py \
