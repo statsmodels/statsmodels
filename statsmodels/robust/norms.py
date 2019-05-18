@@ -28,8 +28,7 @@ class RobustNorm(object):
 
     See Also
     --------
-    statsmodels.rlm for more information on how the estimators are used
-    and the inputs for the methods of RobustNorm and subclasses.
+    statsmodels.rlm
 
     Notes
     -----
@@ -92,7 +91,7 @@ class LeastSquares(RobustNorm):
 
     See Also
     --------
-    statsmodels.robust.norms.RobustNorm for the methods.
+    statsmodels.robust.norms.RobustNorm
     """
 
     def rho(self, z):

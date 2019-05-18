@@ -109,7 +109,6 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     --------
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
-    mpl_examples/pylab_examples/xcorr_demo.py
 
     Notes
     -----
@@ -216,7 +215,6 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
     --------
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
-    mpl_examples/pylab_examples/xcorr_demo.py
 
     Notes
     -----

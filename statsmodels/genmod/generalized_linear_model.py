@@ -90,7 +90,6 @@ class GLM(base.LikelihoodModel):
         array of 1's with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    %(extra_params)s
 
     Attributes
     ----------
@@ -154,6 +153,7 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -255,7 +255,7 @@ class GLM(base.LikelihoodModel):
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
 
-    """ % {'extra_params': base._missing_param_doc}
+    """
 
     def __init__(self, endog, exog, family=None, offset=None,
                  exposure=None, freq_weights=None, var_weights=None,

@@ -28,16 +28,17 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 
-# Add any Sphinx extension module names here, as strings. They can be extensions
-# coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
+# Add any Sphinx extension module names here, as strings. They can be
+# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',
+              'numpydoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               # One of mathjax or imgmath
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              'sphinx.ext.autosummary',
+              # 'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
@@ -45,7 +46,6 @@ extensions = ['sphinx.ext.autodoc',
               'github',  # for GitHub links,
               # numpydoc or sphinx.ext.napoleon, but not both
               # 'sphinx.ext.napoleon'
-              'numpydoc'
               ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -318,6 +318,9 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # napoleon_use_rtype = True
 # napoleon_use_keyword = True
 # napoleon_custom_sections = None
+
+# Numpydoc options
+numpydoc_attributes_as_param_list = True
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
