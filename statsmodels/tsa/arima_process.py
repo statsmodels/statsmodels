@@ -466,6 +466,10 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
     return ar_app, ma_app, res
 
 
+_arma_docs = {'ar': arma2ar.__doc__,
+              'ma': arma2ma.__doc__}
+
+
 def lpol2index(ar):
     """
     Remove zeros from lag polynomial
@@ -815,13 +819,13 @@ class ArmaProcess(object):
         lags = lags or self.lags
         return arma2ma(self.ar, self.ma, lags=lags)
 
-    arma2ma.__doc__ = arma2ma.__doc__
+    arma2ma.__doc__ = _arma_docs['ma']
 
     def arma2ar(self, lags=None):
         lags = lags or self.lags
         return arma2ar(self.ar, self.ma, lags=lags)
 
-    arma2ar.__doc__ = arma2ar.__doc__
+    arma2ar.__doc__ = _arma_docs['ar']
 
     @property
     def arroots(self):

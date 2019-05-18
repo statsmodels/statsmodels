@@ -255,7 +255,7 @@ to one way ANOVA, but still in developement
    local_fdr
    fdrcorrection_twostage
    NullDistribution
-   RegressionFDR
+   statsmodels.stats._knockoff.RegressionFDR
 
 The following functions are not (yet) public
 
