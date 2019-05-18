@@ -19,6 +19,26 @@ tau_star_ctt = [-3.21, -3.51, -3.81, -3.83, -4.12, -4.63]
 tau_min_ctt = [-17.17, -21.1, -24.33, -24.03, -24.33, -28.22]
 tau_max_ctt = [0.54, 0.79, 1.08, 1.43, 3.49, 1.92]
 
+_tau_maxs = {
+    "nc": tau_max_nc,
+    "c": tau_max_c,
+    "ct": tau_max_ct,
+    "ctt": tau_max_ctt,
+}
+_tau_mins = {
+    "nc": tau_min_nc,
+    "c": tau_min_c,
+    "ct": tau_min_ct,
+    "ctt": tau_min_ctt,
+}
+_tau_stars = {
+    "nc": tau_star_nc,
+    "c": tau_star_c,
+    "ct": tau_star_ct,
+    "ctt": tau_star_ctt,
+}
+
+
 small_scaling = array([1, 1, 1e-2])
 tau_nc_smallp = [
     [0.6344, 1.2378, 3.2496],
@@ -56,6 +76,14 @@ tau_ctt_smallp = [
     [5.9296, 1.5929, 2.8223]]
 tau_ctt_smallp = asarray(tau_ctt_smallp)*small_scaling
 
+_tau_smallps = {
+    "nc": tau_nc_smallp,
+    "c": tau_c_smallp,
+    "ct": tau_ct_smallp,
+    "ctt": tau_ctt_smallp,
+}
+
+
 large_scaling = array([1, 1e-1, 1e-1, 1e-2])
 tau_nc_largep = [
     [0.4797, 9.3557, -0.6999, 3.3066],
@@ -92,6 +120,13 @@ tau_ctt_largep = [
     [4.6679, 8.2618, -1.822, -1.9147],
     [5.0009, 8.3735, -1.6994, -1.6928]]
 tau_ctt_largep = asarray(tau_ctt_largep)*large_scaling
+
+_tau_largeps = {
+    "nc": tau_nc_largep,
+    "c": tau_c_largep,
+    "ct": tau_ct_largep,
+    "ctt": tau_ctt_largep,
+}
 
 
 # NOTE: The Z-statistic is used when lags are included to account for
@@ -218,18 +253,18 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
     H_0: AR coefficient = 1
     H_a: AR coefficient < 1
     """
-    maxstat = eval("tau_max_"+regression)
-    minstat = eval("tau_min_"+regression)
-    starstat = eval("tau_star_"+regression)
+    maxstat = _tau_maxs[regression]
+    minstat = _tau_mins[regression]
+    starstat = _tau_stars[regression]
     if teststat > maxstat[N-1]:
         return 1.0
     elif teststat < minstat[N-1]:
         return 0.0
     if teststat <= starstat[N-1]:
-        tau_coef = eval("tau_" + regression + "_smallp["+str(N-1)+"]")
+        tau_coef = _tau_smallps[regression][N-1]
     else:
         # Note: above is only for z stats
-        tau_coef = eval("tau_" + regression + "_largep["+str(N-1)+"]")
+        tau_coef = _tau_largeps[regression][N-1]
     return norm.cdf(polyval(tau_coef[::-1], teststat))
 
 
@@ -361,6 +396,13 @@ tau_ctt_2010 = [
      [-6.22941, -36.9673, -10.868, 418.414]]]
 tau_ctt_2010 = asarray(tau_ctt_2010)
 
+tau_2010s = {
+    "nc": tau_nc_2010,
+    "c": tau_c_2010,
+    "ct": tau_ct_2010,
+    "ctt": tau_ctt_2010,
+}
+
 
 def mackinnoncrit(N=1, regression="c", nobs=inf):
     """
@@ -400,8 +442,9 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
     reg = regression
     if reg not in ['c', 'ct', 'nc', 'ctt']:
         raise ValueError("regression keyword %s not understood" % reg)
+    tau = tau_2010s[reg]
     if nobs is inf:
-        return eval("tau_"+reg+"_2010["+str(N-1)+", :, 0]")
+        return tau[N-1, :, 0]
     else:
-        return polyval(eval("tau_"+reg+"_2010["+str(N-1)+",:,::-1].T"),
-                       1./nobs)
+        val = tau[N-1, :, ::-1]
+        return polyval(val.T, 1./nobs)
