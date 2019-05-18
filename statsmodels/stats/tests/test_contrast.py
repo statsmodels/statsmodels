@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random
 from numpy.testing import assert_almost_equal, assert_equal
-from statsmodels.stats.contrast import Contrast
+from statsmodels.stats.contrast import Contrast, contrast_allpairs
 import statsmodels.stats.contrast as smc
 
 
@@ -66,3 +66,28 @@ def test_constraints():
 
     c1 = smc._contrast_pairs(6, 4, 1)  # k_params, k_level, idx_start
     assert_equal(c1, cpairs2)
+
+
+def test_contrast_allpairs():
+    result = contrast_allpairs(1)
+    assert result.size == 0
+
+    result = contrast_allpairs(2)
+    expected = np.array([[1., -1.]])
+    assert_equal(result, expected)
+
+    result = contrast_allpairs(3)
+    expected = np.array([[1, -1, 0],
+                         [1, 0, -1],
+                         [0, 1, -1]])
+    assert_equal(result, expected)
+
+    for n in range(4, 15):
+        result = contrast_allpairs(n)
+
+        assert (result.sum(1) == 0).all()
+        assert result[:, 0].sum() == n - 1
+
+        rsum = result.sum(0)
+        expsum = range(n-1, -n, -2)
+        assert_equal(rsum, expsum)
