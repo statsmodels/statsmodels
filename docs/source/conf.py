@@ -65,7 +65,7 @@ project = u'statsmodels'
 copyright = u'2009-2018, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
-autosummary_generate = True
+autosummary_generate = ['glm.rst']
 autoclass_content = 'class'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -101,7 +101,7 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['*/autosummary/class.rst', '*/autosummary/glmfamilies.rst']
+exclude_patterns = ['*/autosummary/*.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -320,7 +320,9 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # napoleon_custom_sections = None
 
 # Numpydoc options
-numpydoc_attributes_as_param_list = True
+# numpydoc_attributes_as_param_list = True
+# numpydoc_show_class_members = False
+# numpydoc_show_inherited_class_members = True
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
