@@ -203,13 +203,13 @@ _plot_extras = """alpha : float, optional
 _plot_predict = ("""
         Plot forecasts
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : _plot_extras,
-                      "returns" : """fig : matplotlib.Figure
+    "params": "",
+    "extra_params": _plot_extras,
+    "returns": """fig : matplotlib.Figure
             The plotted Figure instance""",
-                      "extra_section" : ('\n' + _arima_plot_predict_example +
-                                         '\n' + _results_notes)
-                      }
+    "extra_section": ('\n' + _arima_plot_predict_example +
+                       '\n' + _results_notes)
+}
 
 _arima_plot_predict = ("""
         Plot forecasts

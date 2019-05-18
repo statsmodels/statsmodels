@@ -27,10 +27,14 @@ dta = np.genfromtxt('dftest3.data')
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
-vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((
-                ('breed', int), ('sex', int), ('litter', int),
-               ('pen', int), ('pig', int), ('age', float),
-               ('bage', float), ('y', float))))
+vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((('breed', int),
+                                                         ('sex', int),
+                                                         ('litter', int),
+                                                         ('pen', int),
+                                                         ('pig', int),
+                                                         ('age', float),
+                                                         ('bage', float),
+                                                         ('y', float))))
 
 datavarnames = 'y sex age'.split()
 #possible to avoid temporary array ?
