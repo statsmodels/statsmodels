@@ -76,18 +76,17 @@ ValueError: zero-size array to ufunc.reduce without identity
 
 
 '''
-
-
-#import xlrd
-#import xlwt
 from __future__ import print_function
-from statsmodels.compat.python import lzip, range, lrange, zip
-import numpy
-import numpy as np
-import math
+
 import copy
-from statsmodels.iolib.table import SimpleTable
+import math
+
+import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+from scipy import stats, interpolate
+
+from statsmodels.compat.python import lzip, range, lrange, zip
+from statsmodels.iolib.table import SimpleTable
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
@@ -127,7 +126,7 @@ crows = c[:,0]
 cv005 = c[:, 1::2]
 cv001 = c[:, 2::2]
 
-from scipy import interpolate
+
 def get_tukeyQcrit(k, df, alpha=0.05):
     '''
     return critical values for Tukey's HSD (Q)
@@ -201,14 +200,14 @@ def Tukeythreegene(first, second, third):
     # qcrittable = qwb.sheet_by_name(u'Sheet1')
 
     # means of the three arrays
-    firstmean = numpy.mean(first)
-    secondmean = numpy.mean(second)
-    thirdmean = numpy.mean(third)
+    firstmean = np.mean(first)
+    secondmean = np.mean(second)
+    thirdmean = np.mean(third)
 
     # standard deviations of the threearrays
-    firststd = numpy.std(first)
-    secondstd = numpy.std(second)
-    thirdstd = numpy.std(third)
+    firststd = np.std(first)
+    secondstd = np.std(second)
+    thirdstd = np.std(third)
 
     # standard deviation squared of the three arrays
     firsts2 = math.pow(firststd, 2)
@@ -274,16 +273,16 @@ def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three ge
     means = []
     stds = []
     for gene in genes:
-        means.append(numpy.mean(gene))
-        std.append(numpy.std(gene))
+        means.append(np.mean(gene))
+        std.append(np.std(gene))
 
-    #firstmean = numpy.mean(first) #means of the three arrays
-    #secondmean = numpy.mean(second)
-    #thirdmean = numpy.mean(third)
+    #firstmean = np.mean(first) #means of the three arrays
+    #secondmean = np.mean(second)
+    #thirdmean = np.mean(third)
 
-    #firststd = numpy.std(first) #standard deviations of the three arrays
-    #secondstd = numpy.std(second)
-    #thirdstd = numpy.std(third)
+    #firststd = np.std(first) #standard deviations of the three arrays
+    #secondstd = np.std(second)
+    #thirdstd = np.std(third)
 
     stds2 = []
     for std in stds:
@@ -962,7 +961,6 @@ class MultiComparison(object):
                               ('pval',float),
                               ('pval_corr',float),
                               ('reject', np.bool8)])
-        from statsmodels.iolib.table import SimpleTable
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
                           'Test Multiple Comparison %s \n%s%4.2f method=%s'
@@ -1832,7 +1830,6 @@ if __name__ == '__main__':
                        dtype=[('mean',float),
                               ('pval',float),
                               ('reject', np.bool8)])
-        #from statsmodels.iolib import SimpleTable
         print(SimpleTable(res, headers=res.dtype.names))
         print(fdrcorrection_bak(tpval, alpha=0.05))
         print(reject)
