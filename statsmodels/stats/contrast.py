@@ -344,6 +344,30 @@ def contrastfromcols(L, D, pseudo=None):
     return np.squeeze(C)
 
 
+def contrast_allpairs(nm):
+    """
+    contrast or restriction matrix for all pairs of nm variables
+
+    Parameters
+    ----------
+    nm : int
+
+    Returns
+    -------
+    contr : ndarray, 2d, (nm*(nm-1)/2, nm)
+       contrast matrix for all pairwise comparisons
+
+    """
+    contr = []
+    for i in range(nm):
+        for j in range(i+1, nm):
+            contr_row = np.zeros(nm)
+            contr_row[i] = 1
+            contr_row[j] = -1
+            contr.append(contr_row)
+    return np.array(contr)
+
+
 # TODO: this is currently a minimal version, stub
 class WaldTestResults(object):
     # for F and chi2 tests of joint hypothesis, mainly for vectorized
@@ -580,9 +604,8 @@ def _constraints_factor(encoding_matrix, comparison='pairwise', k_params=None,
     cm = encoding_matrix
     k_level, k_p = cm.shape
 
-    import statsmodels.sandbox.stats.multicomp as mc
     if comparison in ['pairwise', 'pw', 'pairs']:
-        c_all = -mc.contrast_allpairs(k_level)
+        c_all = -contrast_allpairs(k_level)
     else:
         raise NotImplementedError('currentlyonly pairwise comparison')
 
@@ -665,8 +688,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     k_params = len(result.params)
     labels = _get_pairs_labels(k_level, cat)
 
-    import statsmodels.sandbox.stats.multicomp as mc
-    c_all_pairs = -mc.contrast_allpairs(k_level)
+    c_all_pairs = -contrast_allpairs(k_level)
     contrasts_sub = c_all_pairs.dot(cm)
     contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
     res_df = t_test_multi(result, contrasts, method=method, ci_method=None,
