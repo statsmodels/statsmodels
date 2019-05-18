@@ -62,10 +62,10 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2018, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2019, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
-autosummary_generate = ['glm.rst']
+autosummary_generate = True
 autoclass_content = 'class'
 
 # The version info for the project you're documenting, acts as replacement for

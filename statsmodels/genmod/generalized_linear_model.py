@@ -154,6 +154,8 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
+    exog_names
+    endog_names
 
     Examples
     --------
