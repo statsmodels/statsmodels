@@ -75,6 +75,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
+        statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/filters/tests/ \
         statsmodels/tsa/innovations/ \
