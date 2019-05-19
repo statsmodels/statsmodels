@@ -963,10 +963,10 @@ class MultiComparison(object):
                               ('reject', np.bool8)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
-                          'Test Multiple Comparison %s \n%s%4.2f method=%s'
-                              % (testfunc.__name__, 'FWER=', alpha, method) +
-                          '\nalphacSidak=%4.2f, alphacBonf=%5.3f'
-                              % (alphacSidak, alphacBonf))
+            'Test Multiple Comparison %s \n%s%4.2f method=%s'
+            % (testfunc.__name__, 'FWER=', alpha, method) +
+            '\nalphacSidak=%4.2f, alphacBonf=%5.3f'
+            % (alphacSidak, alphacBonf))
 
         return results_table, (res, reject, pvals_corrected,
                                alphacSidak, alphacBonf), resarr

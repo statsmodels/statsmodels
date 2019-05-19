@@ -3720,10 +3720,11 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for NegativeBinomial 1 and 2",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for NegativeBinomial 1 and 2",
+        "extra_attr": ""}
 
     @cache_readonly
     def lnalpha(self):
@@ -3746,10 +3747,11 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
+
 class GeneralizedPoissonResults(NegativeBinomialResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Generalized Poisson",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Generalized Poisson",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -3971,10 +3973,12 @@ class BinaryResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+
 class LogitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Logit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Logit Model",
+        "extra_attr": ""}
+
     @cache_readonly
     def resid_generalized(self):
         """
@@ -3992,10 +3996,12 @@ class LogitResults(BinaryResults):
         # Generalized residuals
         return self.model.endog - self.predict()
 
+
 class ProbitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Probit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Probit Model",
+        "extra_attr": ""}
+
     @cache_readonly
     def resid_generalized(self):
         """

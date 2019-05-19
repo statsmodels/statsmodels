@@ -704,8 +704,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Poisson",
-                    "extra_attr" : ""}
+    "one_line_description": "A results class for Zero Inflated Poisson",
+    "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -714,7 +714,7 @@ class ZeroInflatedPoissonResults(CountResults):
         return (1 + w * np.exp(mu))
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -740,8 +740,8 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 
 class ZeroInflatedGeneralizedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Generalized Poisson",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Generalized Poisson",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -752,7 +752,7 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
         return ((1 + alpha * mu**p)**2 + w * mu)
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -781,8 +781,8 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Genaralized Negative Binomial",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Genaralized Negative Binomial",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):

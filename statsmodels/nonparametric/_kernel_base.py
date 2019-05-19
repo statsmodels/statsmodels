@@ -212,7 +212,7 @@ class GenericKDE (object):
                 joblib.delayed(_compute_subset)(
                     class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
                     n_sub, class_vars, self.randomize, bounds[i]) \
-                    for i in range(n_blocks))
+                for i in range(n_blocks))
         else:
             res = []
             for i in range(n_blocks):

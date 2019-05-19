@@ -1089,10 +1089,8 @@ class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
     def setup_class(cls):
         data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(
-                                                            method="newton",
-                                                                 maxiter=100,
-                                                                 disp=0)
+        model = NegativeBinomial(data.endog, exog, 'nb1')
+        cls.res1 = model.fit(method="newton", maxiter=100, disp=0)
         res2 = RandHIE.negativebinomial_nb1_bfgs
         cls.res2 = res2
 

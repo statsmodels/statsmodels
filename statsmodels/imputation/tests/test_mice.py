@@ -8,7 +8,7 @@ import warnings
 
 try:
     import matplotlib.pyplot as plt
-except:
+except ImportError:
     pass
 
 pdf_output = False
