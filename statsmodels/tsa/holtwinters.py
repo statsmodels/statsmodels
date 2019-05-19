@@ -632,7 +632,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         if np.ndim(y) != 1:
             raise ValueError('Only 1 dimensional data supported')
         self._y = y
-        l = np.zeros(self.nobs)
+        lvals = np.zeros(self.nobs)
         b = np.zeros(self.nobs)
         s = np.zeros(self.nobs + m - 1)
         p = np.zeros(6 + m)
@@ -671,7 +671,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 txi = txi.astype(np.bool)
                 bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
                                    (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
-                args = (txi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                args = (txi.astype(np.uint8), p, y, lvals, b, s, m, self.nobs, max_seen)
                 if start_params is None and np.any(txi) and use_brute:
                     res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
                     p[txi], max_seen, _, _ = res
@@ -682,13 +682,13 @@ class ExponentialSmoothing(TimeSeriesModel):
                             raise ValueError('start_params must have {0} values but '
                                              'has {1} instead'.format(len(xi), len(start_params)))
                         p[xi] = start_params
-                    args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                    args = (xi.astype(np.uint8), p, y, lvals, b, s, m, self.nobs, max_seen)
                     max_seen = func(np.ascontiguousarray(p[xi]), *args)
                 # alpha, beta, gamma, l0, b0, phi = p[:6]
                 # s0 = p[6:]
                 # bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),
                 # (0.0,None),(0.8,1.0)] + [(None,None),]*m)
-                args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                args = (xi.astype(np.uint8), p, y, lvals, b, s, m, self.nobs, max_seen)
                 if use_basinhopping:
                     # Take a deeper look in the local minimum we are in to find the best
                     # solution to parameters, maybe hop around to try escape the local
@@ -834,10 +834,10 @@ class ExponentialSmoothing(TimeSeriesModel):
         if seasoning:
             gammac = 1 - gamma
             y_gamma[:] = gamma * y
-        l = np.zeros((self.nobs + h + 1,))
+        lvals = np.zeros((self.nobs + h + 1,))
         b = np.zeros((self.nobs + h + 1,))
         s = np.zeros((self.nobs + h + m + 1,))
-        l[0] = initial_level
+        lvals[0] = initial_level
         b[0] = initial_slope
         s[:m] = initial_seasons
         phi_h = np.cumsum(np.repeat(phi, h + 1)**np.arange(1, h + 1 + 1)
@@ -857,57 +857,57 @@ class ExponentialSmoothing(TimeSeriesModel):
         nobs = self.nobs
         if seasonal == 'mul':
             for i in range(1, nobs + 1):
-                l[i] = y_alpha[i - 1] / s[i - 1] + \
-                       (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
+                lvals[i] = y_alpha[i - 1] / s[i - 1] + \
+                       (alphac * trended(lvals[i - 1], dampen(b[i - 1], phi)))
                 if trending:
-                    b[i] = (beta * detrend(l[i], l[i - 1])) + \
+                    b[i] = (beta * detrend(lvals[i], lvals[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
-                s[i + m - 1] = y_gamma[i - 1] / trended(l[i - 1], dampen(b[i - 1], phi)) + \
+                s[i + m - 1] = y_gamma[i - 1] / trended(lvals[i - 1], dampen(b[i - 1], phi)) + \
                     (gammac * s[i - 1])
             slope = b[1:nobs + 1].copy()
             season = s[m:nobs + m].copy()
-            l[nobs:] = l[nobs]
+            lvals[nobs:] = lvals[nobs]
             if trending:
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
-            trend = trended(l, b)
+            trend = trended(lvals, b)
             s[nobs + m - 1:] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend * s[:-m]
         elif seasonal == 'add':
             for i in range(1, nobs + 1):
-                l[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
+                lvals[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
                        (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
-                    b[i] = (beta * detrend(l[i], l[i - 1])) + \
+                    b[i] = (beta * detrend(lvals[i], lvals[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] - \
-                    (gamma * trended(l[i - 1], dampen(b[i - 1], phi))) + \
+                    (gamma * trended(lvals[i - 1], dampen(b[i - 1], phi))) + \
                     (gammac * s[i - 1])
             slope = b[1:nobs + 1].copy()
             season = s[m:nobs + m].copy()
-            l[nobs:] = l[nobs]
+            lvals[nobs:] = lvals[nobs]
             if trending:
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
-            trend = trended(l, b)
+            trend = trended(lvals, b)
             s[nobs + m - 1:] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend + s[:-m]
         else:
             for i in range(1, nobs + 1):
-                l[i] = y_alpha[i - 1] + \
+                lvals[i] = y_alpha[i - 1] + \
                        (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
             slope = b[1:nobs + 1].copy()
             season = s[m:nobs + m].copy()
-            l[nobs:] = l[nobs]
+            lvals[nobs:] = lvals[nobs]
             if trending:
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
-            trend = trended(l, b)
+            trend = trended(lvals, b)
             fitted = trend
-        level = l[1:nobs + 1].copy()
+        level = lvals[1:nobs + 1].copy()
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
             level = inv_boxcox(level, lamda)
@@ -935,7 +935,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                        'smoothing_slope': beta,
                        'smoothing_seasonal': gamma,
                        'damping_slope': phi,
-                       'initial_level': l[0],
+                       'initial_level': lvals[0],
                        'initial_slope': b[0],
                        'initial_seasons': s[:m],
                        'use_boxcox': use_boxcox,
@@ -949,7 +949,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                'initial_level', 'initial_slope', 'damping_slope']
         idx += ['initial_seasons.{0}'.format(i) for i in range(m)]
 
-        formatted = [alpha, beta, gamma, l[0], b[0], phi]
+        formatted = [alpha, beta, gamma, lvals[0], b[0], phi]
         formatted += s[:m].tolist()
         formatted = list(map(lambda v: np.nan if v is None else v, formatted))
         formatted = np.array(formatted)

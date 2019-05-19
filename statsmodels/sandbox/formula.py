@@ -549,13 +549,13 @@ class Formula(object):
         selftermnames = self.termnames()
         othertermnames = other.termnames()
 
-        I = len(selftermnames)
+        n_term_names = len(selftermnames)
         J = len(othertermnames)
 
         terms = []
         termnames = []
 
-        for i in range(I):
+        for i in range(n_term_names):
             for j in range(J):
                 termname = '%s*%s' % (str(selftermnames[i]), str(othertermnames[j]))
                 pieces = sorted(termname.split('*'))
@@ -693,7 +693,7 @@ def isnested(A, B, namespace=None):
 def _intercept_fn(nrow=1, **extra):
     return np.ones((1,nrow))
 
-I = Term('intercept', func=_intercept_fn)
+I = Term('intercept', func=_intercept_fn)  # noqa:E741
 I.__doc__ = """
 Intercept term in a formula. If intercept is the
 only term in the formula, then a keyword argument
@@ -733,7 +733,7 @@ def interactions(terms, order=[1,2]):
     >>>
 
     """
-    l = len(terms)
+    n_terms = len(terms)
 
     values = {}
 
@@ -743,19 +743,19 @@ def interactions(terms, order=[1,2]):
     # First order
 
     for o in order:
-        I = np.indices((l,)*(o))
-        I.shape = (I.shape[0], np.product(I.shape[1:]))
-        for m in range(I.shape[1]):
+        I_n = np.indices((n_terms,)*(o))
+        I_n.shape = (I_n.shape[0], np.product(I_n.shape[1:]))
+        for m in range(I_n.shape[1]):
 
             # only keep combinations that have unique entries
 
-            if (np.unique(I[:,m]).shape == I[:,m].shape and
-                    np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
-                ll = [terms[j] for j in I[:,m]]
+            if (np.unique(I_n[:,m]).shape == I_n[:,m].shape and
+                    np.alltrue(np.equal(np.sort(I_n[:,m]), I_n[:,m]))):
+                ll = [terms[j] for j in I_n[:,m]]
                 v = ll[0]
                 for ii in range(len(ll)-1):
                     v *= ll[ii+1]
-                values[tuple(I[:,m])] = v
+                values[tuple(I_n[:,m])] = v
 
     key = list(iterkeys(values))[0]
     value = values[key]

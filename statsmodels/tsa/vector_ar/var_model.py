@@ -1634,8 +1634,8 @@ class VARResults(VARProcess):
         upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
-        I = np.eye(lower_dim)
-        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
+        I_ld = np.eye(lower_dim)
+        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I_ld,
                                  np.zeros((lower_dim, self.neqs))))
 
         return np.vstack((upper, self.params.T, lower))

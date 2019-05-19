@@ -215,14 +215,14 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     # make partitioned matrices
     #TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m,n+m))
-    I[:n,:n] = W
-    I[:n,n:] = B
-    I[n:,:n] = B.T
+    I_nm = zeros((n+m,n+m))
+    I_nm[:n,:n] = W
+    I_nm[:n,n:] = B
+    I_nm[n:,:n] = B.T
 
     A = zeros((m+n,1)) # zero first-order constraints
     A[-m:] = benchmark # adding up constraints
-    X = solve(I,A)
+    X = solve(I_nm,A)
     X = X[:-m]  # drop the lagrange multipliers
 
     # handle extrapolation

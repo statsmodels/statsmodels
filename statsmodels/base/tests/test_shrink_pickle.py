@@ -57,7 +57,7 @@ class RemoveDataPickle(object):
 
         #check pickle unpickle works on full results
         #TODO: drop of load save is tested
-        res, l = check_pickle(results._results)
+        res, lbytes = check_pickle(results._results)
 
         #remove data arrays, check predict still works
         with warnings.catch_warnings(record=True) as w:
@@ -73,14 +73,14 @@ class RemoveDataPickle(object):
             np.testing.assert_equal(pred2, pred1)
 
         #pickle, unpickle reduced array
-        res, l = check_pickle(results._results)
+        res, lbytes = check_pickle(results._results)
 
         #for testing attach res
         self.res = res
 
         #Note: l_max is just a guess for the limit on the length of the pickle
         l_max = self.l_max
-        assert_(l < l_max, msg='pickle length not %d < %d' % (l, l_max))
+        assert_(lbytes < l_max, msg='pickle length not %d < %d' % (lbytes, l_max))
 
         pred3 = results.predict(xf, **pred_kwds)
 
