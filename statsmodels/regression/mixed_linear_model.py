@@ -2231,10 +2231,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     ----------
     See statsmodels.LikelihoodModelResults
 
-    Returns
-    -------
-    **Attributes**
-
+    Attributes
+    ----------
     model : class instance
         Pointer to MixedLM model instance that called fit.
     normalized_cov_params : array
@@ -2609,6 +2607,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     @cache_readonly
     def aic(self):
+        """Akaike information criterion"""
         if self.reml:
             return np.nan
         if self.freepat is not None:
@@ -2619,6 +2618,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     @cache_readonly
     def bic(self):
+        """Bayesian information criterion"""
         if self.reml:
             return np.nan
         if self.freepat is not None:

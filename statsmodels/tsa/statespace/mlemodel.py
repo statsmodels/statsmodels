@@ -292,12 +292,15 @@ class MLEModel(tsbase.TimeSeriesModel):
         self.ssm.set_smoother_output(smoother_output, **kwargs)
 
     def initialize_known(self, initial_state, initial_state_cov):
+        """Initialize known"""
         self.ssm.initialize_known(initial_state, initial_state_cov)
 
     def initialize_approximate_diffuse(self, variance=None):
+        """Initialize approximate diffuse"""
         self.ssm.initialize_approximate_diffuse(variance)
 
     def initialize_stationary(self):
+        """Initialize stationary"""
         self.ssm.initialize_stationary()
 
     @property

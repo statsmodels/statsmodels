@@ -121,6 +121,7 @@ class PredictionResults(object):
         return ci
 
     def summary_frame(self, what='all', alpha=0.05):
+        """Summary frame"""
         # TODO: finish and cleanup
         import pandas as pd
         from collections import OrderedDict

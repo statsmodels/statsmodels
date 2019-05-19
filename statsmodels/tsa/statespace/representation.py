@@ -588,7 +588,7 @@ class Representation(object):
 
     def initialize(self, initialization, approximate_diffuse_variance=None,
                    constant=None, stationary_cov=None):
-        # Create an Initialization object if necessary
+        """Create an Initialization object if necessary"""
         if initialization == 'known':
             initialization = Initialization(self.k_states, 'known',
                                             constant=constant,
@@ -845,6 +845,7 @@ class FrozenRepresentation(object):
         self.update_representation(model)
 
     def update_representation(self, model):
+        """Update model Representation"""
         # Model
         self.model = model
 

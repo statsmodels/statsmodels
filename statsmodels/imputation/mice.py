@@ -84,7 +84,7 @@ There are two main classes in the module:
   specification.  It runs the multiple imputation, fits the analysis
   models, and combines the results to produce a `MICEResults` object.
   The summary method of this results object can be used to see the key
-  estimands and inferential quantities..
+  estimands and inferential quantities.
 
 Notes
 -----
@@ -1086,13 +1086,11 @@ class MICEData(object):
 
 
 _mice_example_1 = """
->>> imp = mice.MICEData(data)
->>> fml = 'y ~ x1 + x2 + x3 + x4'
->>> mice = mice.MICE(fml, sm.OLS, imp)
->>> results = mice.fit(10, 10)
->>> print(results.summary())
-
-::
+    >>> imp = mice.MICEData(data)
+    >>> fml = 'y ~ x1 + x2 + x3 + x4'
+    >>> mice = mice.MICE(fml, sm.OLS, imp)
+    >>> results = mice.fit(10, 10)
+    >>> print(results.summary())
 
                               Results: MICE
     =================================================================
@@ -1108,57 +1106,57 @@ _mice_example_1 = """
     x3        -1.0260   0.0328 -31.2706 0.0000 -1.0903 -0.9617 0.0169
     x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
     =================================================================
-"""
+    """
 
 _mice_example_2 = """
->>> imp = mice.MICEData(data)
->>> fml = 'y ~ x1 + x2 + x3 + x4'
->>> mice = mice.MICE(fml, sm.OLS, imp)
->>> results = []
->>> for k in range(10):
->>>     x = mice.next_sample()
->>>     results.append(x)
-"""
+    >>> imp = mice.MICEData(data)
+    >>> fml = 'y ~ x1 + x2 + x3 + x4'
+    >>> mice = mice.MICE(fml, sm.OLS, imp)
+    >>> results = []
+    >>> for k in range(10):
+    >>>     x = mice.next_sample()
+    >>>     results.append(x)
+    """
 
 
 class MICE(object):
 
     __doc__ = """\
-Multiple Imputation with Chained Equations.
+    Multiple Imputation with Chained Equations.
 
-This class can be used to fit most Statsmodels models to data sets
-with missing values using the 'multiple imputation with chained
-equations' (MICE) approach..
+    This class can be used to fit most Statsmodels models to data sets
+    with missing values using the 'multiple imputation with chained
+    equations' (MICE) approach..
 
-Parameters
-----------
-model_formula : string
-    The model formula to be fit to the imputed data sets.  This
-    formula is for the 'analysis model'.
-model_class : statsmodels model
-    The model to be fit to the imputed data sets.  This model
-    class if for the 'analysis model'.
-data : MICEData instance
-    MICEData object containing the data set for which
-    missing values will be imputed
-n_skip : int
-    The number of imputed datasets to skip between consecutive
-    imputed datasets that are used for analysis.
-init_kwds : dict-like
-    Dictionary of keyword arguments passed to the init method
-    of the analysis model.
-fit_kwds : dict-like
-    Dictionary of keyword arguments passed to the fit method
-    of the analysis model.
+    Parameters
+    ----------
+    model_formula : string
+        The model formula to be fit to the imputed data sets.  This
+        formula is for the 'analysis model'.
+    model_class : statsmodels model
+        The model to be fit to the imputed data sets.  This model
+        class if for the 'analysis model'.
+    data : MICEData instance
+        MICEData object containing the data set for which
+        missing values will be imputed
+    n_skip : int
+        The number of imputed datasets to skip between consecutive
+        imputed datasets that are used for analysis.
+    init_kwds : dict-like
+        Dictionary of keyword arguments passed to the init method
+        of the analysis model.
+    fit_kwds : dict-like
+        Dictionary of keyword arguments passed to the fit method
+        of the analysis model.
 
-Examples
---------
-Run all MICE steps and obtain results:
-%(mice_example_1)s
+    Examples
+    --------
+    Run all MICE steps and obtain results::
+    %(mice_example_1)s
 
-Obtain a sequence of fitted analysis models without combining
-to obtain summary:
-%(mice_example_2)s
+    Obtain a sequence of fitted analysis models without combining
+    to obtain summary::
+    %(mice_example_2)s
     """ % {'mice_example_1': _mice_example_1,
            'mice_example_2': _mice_example_2}
 

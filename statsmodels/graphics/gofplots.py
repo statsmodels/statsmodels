@@ -194,10 +194,12 @@ class ProbPlot(object):
 
     @cache_readonly
     def theoretical_percentiles(self):
+        """Theoretical percentiles"""
         return plotting_pos(self.nobs, self.a)
 
     @cache_readonly
     def theoretical_quantiles(self):
+        """Theoretical quantiles"""
         try:
             return self.dist.ppf(self.theoretical_percentiles)
         except TypeError:
@@ -210,12 +212,14 @@ class ProbPlot(object):
 
     @cache_readonly
     def sorted_data(self):
+        """sorted data"""
         sorted_data = np.array(self.data, copy=True)
         sorted_data.sort()
         return sorted_data
 
     @cache_readonly
     def sample_quantiles(self):
+        """sample quantiles"""
         if self.fit and self.loc != 0 and self.scale != 1:
             return (self.sorted_data-self.loc)/self.scale
         else:
@@ -223,6 +227,7 @@ class ProbPlot(object):
 
     @cache_readonly
     def sample_percentiles(self):
+        """Sample percentiles"""
         quantiles = \
             (self.sorted_data - self.fit_params[-2])/self.fit_params[-1]
         return self.dist.cdf(quantiles)

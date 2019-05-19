@@ -563,6 +563,7 @@ class GroupsStats(object):
 
 
     def runbasic_old(self, useranks=False):
+        """runbasic_old"""
         #check: refactoring screwed up case useranks=True
 
         #groupxsum = np.bincount(intlab, weights=X[:,0])
@@ -580,6 +581,7 @@ class GroupsStats(object):
         #return grouprankmean[intlab]
 
     def runbasic(self, useranks=False):
+        """runbasic"""
         #check: refactoring screwed up case useranks=True
 
         #groupxsum = np.bincount(intlab, weights=X[:,0])
@@ -600,13 +602,16 @@ class GroupsStats(object):
         #return grouprankmean[intlab]
 
     def groupdemean(self):
+        """groupdemean"""
         return self.xx - self.groupmeanfilter
 
     def groupsswithin(self):
+        """groupsswithin"""
         xtmp = self.groupdemean()
         return np.bincount(self.intlab, weights=xtmp**2)
 
     def groupvarwithin(self):
+        """groupvarwithin"""
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
 class TukeyHSDResults(object):
@@ -1575,7 +1580,11 @@ class StepDown(object):
         #self.accepted = []  #store accepted sets, not unique
 
     def get_crit(self, alpha):
-        #currently tukey Q, add others
+        """
+        get_tukeyQcrit
+
+        currently tukey Q, add others
+        """
         q_crit = get_tukeyQcrit(self.n_vals, self.df, alpha=alpha)
         return q_crit * np.ones(self.n_vals)
 
@@ -1588,6 +1597,7 @@ class StepDown(object):
         self.distance_matrix = dres[0]
 
     def iter_subsets(self, indices):
+        """Iteratre substeps"""
         for ii in range(len(indices)):
             idxsub = copy.copy(indices)
             idxsub.pop(ii)
@@ -1612,6 +1622,7 @@ class StepDown(object):
             return res
 
     def stepdown(self, indices):
+        """stepdown"""
         print(indices)
         if self.check_set(indices): # larger than critical distance
             if (len(indices) > 2):  # step down into subsets if more than 2 elements

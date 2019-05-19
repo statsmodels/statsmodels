@@ -775,9 +775,6 @@ class VARProcess(object):
         If it is None, then coefs_exog are assumed to be for the intercept and
         trend.
 
-    Returns
-    -------
-    **Attributes**:
     """
     def __init__(self, coefs, coefs_exog, sigma_u, names=None, _params_info=None):
         self.k_ar = len(coefs)
@@ -1108,6 +1105,7 @@ class VARProcess(object):
         return point_forecast, forc_lower, forc_upper
 
     def to_vecm(self):
+        """to_vecm"""
         k = self.coefs.shape[1]
         p = self.coefs.shape[0]
         A = self.coefs
@@ -1139,54 +1137,29 @@ class VARResults(VARProcess):
     dates
     exog : array
 
-
-    Returns
-    -------
-    **Attributes**
-    aic
-    bic
-    bse
+    Attributes
+    ----------
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    cov_params
     dates
-    detomega
-    df_model : int
-    df_resid : int
     endog
     endog_lagged
-    fittedvalues
-    fpe
-    intercept
-    info_criteria
     k_ar : int
+        Order of VAR process
     k_trend : int
-    llf
     model
     names
     neqs : int
         Number of variables (equations)
     nobs : int
     n_totobs : int
-    params
-    k_ar : int
-        Order of VAR process
     params : ndarray (Kp + 1) x K
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalues
     names : list
         variables names
     resid
-    roots : array
-        The roots of the VAR process are the solution to
-        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
-        Note that the inverse roots are returned, and stability requires that
-        the roots lie outside the unit circle.
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
-    stderr
-    trenorder
     tvalues
     y :
     ys_lagged
@@ -1266,9 +1239,11 @@ class VARResults(VARProcess):
         return self.y[self.k_ar:] - self.fittedvalues
 
     def sample_acov(self, nlags=1):
+        """Sample acov"""
         return _compute_acov(self.y[self.k_ar:], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
+        """Sample acorr"""
         acovs = self.sample_acov(nlags=nlags)
         return _acovs_to_acorrs(acovs)
 
@@ -1403,11 +1378,13 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def stderr_endog_lagged(self):
+        """Stderr_endog_lagged"""
         start = self.k_exog
         return self.stderr[start:]
 
     @cache_readonly
     def stderr_dt(self):
+        """Stderr_dt"""
         end = self.k_exog
         return self.stderr[:end]
 
@@ -1420,11 +1397,13 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def tvalues_endog_lagged(self):
+        """tvalues_endog_lagged"""
         start = self.k_exog
         return self.tvalues[start:]
 
     @cache_readonly
     def tvalues_dt(self):
+        """tvalues_dt"""
         end = self.k_exog
         return self.tvalues[:end]
 
@@ -1437,11 +1416,13 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues_endog_lagged(self):
+        """pvalues_endog_laggd"""
         start = self.k_exog
         return self.pvalues[start:]
 
     @cache_readonly
     def pvalues_dt(self):
+        """pvalues_dt"""
         end = self.k_exog
         return self.pvalues[:end]
 
@@ -2084,6 +2065,12 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def roots(self):
+        """
+        The roots of the VAR process are the solution to
+        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
+        Note that the inverse roots are returned, and stability requires that
+        the roots lie outside the unit circle.
+        """
         neqs = self.neqs
         k_ar = self.k_ar
         p = neqs * k_ar

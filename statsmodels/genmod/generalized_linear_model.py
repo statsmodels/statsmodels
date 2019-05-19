@@ -154,8 +154,6 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
-    exog_names
-    endog_names
 
     Examples
     --------
@@ -1378,23 +1376,8 @@ class GLMResults(base.LikelihoodModelResults):
 
     GLMResults inherits from statsmodels.LikelihoodModelResults
 
-    Parameters
+    Attributes
     ----------
-    See statsmodels.LikelihoodModelReesults
-
-    Returns
-    -------
-    **Attributes**
-
-    aic : float
-        Akaike Information Criterion
-        -2 * `llf` + 2*(`df_model` + 1)
-    bic : float
-        Bayes Information Criterion
-        `deviance` - `df_resid` * log(`nobs`)
-    deviance : float
-        See statsmodels.families.family for the distribution-specific deviance
-        functions.
     df_model : float
         See GLM.df_model
     df_resid : float
@@ -1402,58 +1385,18 @@ class GLMResults(base.LikelihoodModelResults):
     fit_history : dict
         Contains information about the iterations. Its keys are `iterations`,
         `deviance` and `params`.
-    fittedvalues : array
-        Linear predicted values for the fitted model.
-        dot(exog, params)
-    llf : float
-        Value of the loglikelihood function evalued at params.
-        See statsmodels.families.family for distribution-specific
-        loglikelihoods.
     model : class instance
         Pointer to GLM model instance that called fit.
-    mu : array
-        See GLM docstring.
     nobs : float
         The number of observations n.
     normalized_cov_params : array
         See GLM docstring
-    null_deviance : float
-        The value of the deviance function for the model fit with a constant
-        as the only regressor.
     params : array
         The coefficients of the fitted model.  Note that interpretation
         of the coefficients often depends on the distribution family and the
         data.
-    pearson_chi2 : array
-        Pearson's Chi-Squared statistic is defined as the sum of the squares
-        of the Pearson residuals.
     pvalues : array
         The two-tailed p-values for the parameters.
-    resid_anscombe : array
-        Anscombe residuals.  See statsmodels.families.family for distribution-
-        specific Anscombe residuals. Currently, the unscaled residuals are
-        provided. In a future version, the scaled residuals will be provided.
-    resid_anscombe_scaled : array
-        Scaled Anscombe residuals.  See statsmodels.families.family for
-        distribution-specific Anscombe residuals.
-    resid_anscombe_unscaled : array
-        Unscaled Anscombe residuals.  See statsmodels.families.family for
-        distribution-specific Anscombe residuals.
-    resid_deviance : array
-        Deviance residuals.  See statsmodels.families.family for distribution-
-        specific deviance residuals.
-    resid_pearson : array
-        Pearson residuals.  The Pearson residuals are defined as
-        (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
-        specific variance function.  See statsmodels.families.family and
-        statsmodels.families.varfuncs for more information.
-    resid_response : array
-        Respnose residuals.  The response residuals are defined as
-        `endog` - `fittedvalues`
-    resid_working : array
-        Working residuals.  The working residuals are defined as
-        `resid_response`/link'(`mu`).  See statsmodels.family.links for the
-        derivatives of the link functions.  They are defined analytically.
     scale : float
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
@@ -1531,16 +1474,31 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_response(self):
+        """
+        Respnose residuals.  The response residuals are defined as
+        `endog` - `fittedvalues`
+        """
         return self._n_trials * (self._endog-self.mu)
 
     @cache_readonly
     def resid_pearson(self):
+        """
+        Pearson residuals.  The Pearson residuals are defined as
+        (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
+        specific variance function.  See statsmodels.families.family and
+        statsmodels.families.varfuncs for more information.
+        """
         return (np.sqrt(self._n_trials) * (self._endog-self.mu) *
                 np.sqrt(self._var_weights) /
                 np.sqrt(self.family.variance(self.mu)))
 
     @cache_readonly
     def resid_working(self):
+        """
+        Working residuals.  The working residuals are defined as
+        `resid_response`/link'(`mu`).  See statsmodels.family.links for the
+        derivatives of the link functions.  They are defined analytically.
+        """
         # Isn't self.resid_response is already adjusted by _n_trials?
         val = (self.resid_response * self.family.link.deriv(self.mu))
         val *= self._n_trials
@@ -1548,6 +1506,11 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_anscombe(self):
+        """
+        Anscombe residuals.  See statsmodels.families.family for distribution-
+        specific Anscombe residuals. Currently, the unscaled residuals are
+        provided. In a future version, the scaled residuals will be provided.
+        """
         import warnings
         warnings.warn('Anscombe residuals currently unscaled. In a future '
                       'release, they will be scaled.', category=FutureWarning)
@@ -1557,18 +1520,30 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_anscombe_scaled(self):
+        """
+        Scaled Anscombe residuals.  See statsmodels.families.family for
+        distribution-specific Anscombe residuals.
+        """
         return self.family.resid_anscombe(self._endog, self.fittedvalues,
                                           var_weights=self._var_weights,
                                           scale=self.scale)
 
     @cache_readonly
     def resid_anscombe_unscaled(self):
+        """
+        Unscaled Anscombe residuals.  See statsmodels.families.family for
+        distribution-specific Anscombe residuals.
+        """
         return self.family.resid_anscombe(self._endog, self.fittedvalues,
                                           var_weights=self._var_weights,
                                           scale=1.)
 
     @cache_readonly
     def resid_deviance(self):
+        """
+        Deviance residuals.  See statsmodels.families.family for distribution-
+        specific deviance residuals.
+        """
         dev = self.family.resid_dev(self._endog, self.fittedvalues,
                                     var_weights=self._var_weights,
                                     scale=1.)
@@ -1576,6 +1551,10 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def pearson_chi2(self):
+        """
+        Pearson's Chi-Squared statistic is defined as the sum of the squares
+        of the Pearson residuals.
+        """
         chisq = (self._endog - self.mu)**2 / self.family.variance(self.mu)
         chisq *= self._iweights * self._n_trials
         chisqsum = np.sum(chisq)
@@ -1583,14 +1562,24 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
+        """
+        Linear predicted values for the fitted model.
+        dot(exog, params)
+        """
         return self.mu
 
     @cache_readonly
     def mu(self):
+        """
+        See GLM docstring.
+        """
         return self.model.predict(self.params)
 
     @cache_readonly
     def null(self):
+        """
+        Fitted values of the null model
+        """
         endog = self._endog
         model = self.model
         exog = np.ones((len(endog), 1))
@@ -1608,16 +1597,25 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def deviance(self):
+        """
+        See statsmodels.families.family for the distribution-specific deviance
+        functions.
+        """
         return self.family.deviance(self._endog, self.mu, self._var_weights,
                                     self._freq_weights)
 
     @cache_readonly
     def null_deviance(self):
+        """The value of the deviance function for the model fit with a constant
+        as the only regressor."""
         return self.family.deviance(self._endog, self.null, self._var_weights,
                                     self._freq_weights)
 
     @cache_readonly
     def llnull(self):
+        """
+        Log-likelihood of the model fit with a constant as the only regressor
+        """
         return self.family.loglike(self._endog, self.null,
                                    var_weights=self._var_weights,
                                    freq_weights=self._freq_weights,
@@ -1625,6 +1623,11 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llf(self):
+        """
+        Value of the loglikelihood function evalued at params.
+        See statsmodels.families.family for distribution-specific
+        loglikelihoods.
+        """
         _modelfamily = self.family
         if (isinstance(self.family, families.Gaussian) and
                 isinstance(self.family.link, families.links.Power) and
@@ -1641,10 +1644,18 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
+        """
+        Akaike Information Criterion
+        -2 * `llf` + 2*(`df_model` + 1)
+        """
         return -2 * self.llf + 2 * (self.df_model + 1)
 
     @cache_readonly
     def bic(self):
+        """
+        Bayes Information Criterion
+        `deviance` - `df_resid` * log(`nobs`)
+        """
         return (self.deviance -
                 (self.model.wnobs - self.df_model - 1) *
                 np.log(self.model.wnobs))

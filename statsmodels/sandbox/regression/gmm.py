@@ -113,6 +113,7 @@ class IV2SLS(LikelihoodModel):
         self.wexog = self.exog
 
     def whiten(self, X):
+        """Not implemented"""
         pass
 
     def fit(self):
@@ -442,9 +443,8 @@ class GMM(Model):
         this is mainly if additional variables need to be stored for the
         calculations of the moment conditions
 
-    Returns
-    -------
-    *Attributes*
+    Attributes
+    ----------
     results : instance of GMMResults
         currently just a storage class for params and cov_params without it's
         own methods
@@ -812,6 +812,7 @@ class GMM(Model):
         return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
     def start_weights(self, inv=True):
+        """Create identity matrix for starting weights"""
         return np.eye(self.nmoms)
 
     def gmmobjective(self, params, weights):
@@ -1105,14 +1106,14 @@ class GMM(Model):
         return gradmoms
 
     def score(self, params, weights, epsilon=None, centered=True):
-
+        """Score"""
         deriv = approx_fprime(params, self.gmmobjective, args=(weights,),
                               centered=centered, epsilon=epsilon)
 
         return deriv
 
     def score_cu(self, params, epsilon=None, centered=True):
-
+        """Score cu"""
         deriv = approx_fprime(params, self.gmmobjective_cu, args=(),
                               centered=centered, epsilon=epsilon)
 
@@ -1133,20 +1134,17 @@ class GMMResults(LikelihoodModelResults):
 
         self.cov_params_default = self._cov_params()
 
-
     @cache_readonly
     def q(self):
+        """Objective function at params"""
         return self.model.gmmobjective(self.params, self.weights)
-
 
     @cache_readonly
     def jval(self):
-        # nobs_moms attached by momcond_mean
+        """nobs_moms attached by momcond_mean"""
         return self.q * self.model.nobs_moms
 
-
     def _cov_params(self, **kwds):
-
         #TODO add options ???)
         # this should use by default whatever options have been specified in
         # fit
@@ -1372,10 +1370,11 @@ class IVGMM(GMM):
     results_class = 'IVGMMResults'
 
     def fitstart(self):
+        """Create array of zeros"""
         return np.zeros(self.exog.shape[1])
 
-
     def start_weights(self, inv=True):
+        """Starting weights"""
         zz = np.dot(self.instrument.T, self.instrument)
         nobs = self.instrument.shape[0]
         if inv:
@@ -1383,21 +1382,21 @@ class IVGMM(GMM):
         else:
             return np.linalg.pinv(zz / nobs)
 
-
     def get_error(self, params):
+        """Get error at params"""
         return self.endog - self.predict(params)
 
-
     def predict(self, params, exog=None):
-
+        """Get prediction at params"""
         if exog is None:
             exog = self.exog
 
         return np.dot(exog, params)
 
     def momcond(self, params):
+        """Error times instrument"""
         instrument = self.instrument
-        return instrument * self.get_error(params)[:,None]
+        return instrument * self.get_error(params)[:, None]
 
 
 class LinearIVGMM(IVGMM):
@@ -1612,22 +1611,24 @@ class NonlinearIVGMM(IVGMM):
 
 
 class IVGMMResults(GMMResults):
-
-
+    """Results class of IVGMM"""
     # this assumes that we have an additive error model `(y - f(x, params))`
 
     @cache_readonly
     def fittedvalues(self):
+        """Fitted values"""
         return self.model.predict(self.params)
 
 
     @cache_readonly
     def resid(self):
+        """Residuals"""
         return self.model.endog - self.fittedvalues
 
 
     @cache_readonly
     def ssr(self):
+        """Sum of square errors"""
         return (self.resid * self.resid).sum(0)
 
 
