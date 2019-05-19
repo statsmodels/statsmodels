@@ -352,10 +352,8 @@ def covent(px,py,pxpy,logbase=2):
     if pxpy is None:
         pxpy = np.outer(py,px)
 
-    # FIXME: these should be `condentropy`, not `condent`
-    return (condent(px, py, pxpy, logbase=logbase)  # noqa:F821  See GH#5756
-            + condent(py, px, pxpy, logbase=logbase))  # noqa:F821  See GH#5756
-
+    return (condentropy(px, py, pxpy, logbase=logbase)
+            + condentropy(py, px, pxpy, logbase=logbase))
 
 
 #### Generalized Entropies ####

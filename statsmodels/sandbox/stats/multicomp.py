@@ -274,7 +274,7 @@ def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three ge
     stds = []
     for gene in genes:
         means.append(np.mean(gene))
-        std.append(np.std(gene))  # noqa:F821  See GH#5756
+        stds.append(np.std(gene))
 
     #firstmean = np.mean(first) #means of the three arrays
     #secondmean = np.mean(second)
@@ -1424,14 +1424,22 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         raise ValueError('not supposed to be here')
 
     #meandiffs_ = mean_all[:,None] - mean_all
-    meandiffs = mean_all - mean_all[:,None]  #reverse sign, check with R example
-    std_pairs = np.sqrt(var_pairs)
+    meandiffs_ = mean_all - mean_all[:,None]  #reverse sign, check with R example
+    std_pairs_ = np.sqrt(var_pairs)
 
     idx1, idx2 = np.triu_indices(n_means, 1)
     if triu:
-        #select all pairs from upper triangle of matrix
-        meandiffs = meandiffs_[idx1, idx2]  # noqa: F821  See GH#5756
-        std_pairs = std_pairs_[idx1, idx2]  # noqa: F821  See GH#5756
+        # select all pairs from upper triangle of matrix
+        meandiffs = meandiffs_[idx1, idx2]
+        std_pairs = std_pairs_[idx1, idx2]
+    else:
+        # Note: in a previous version these variables were undefined,
+        #  which would have led to a NameError.  These definitions
+        #  appear to be the most likely intent, but this needs to be
+        #  confirmed before this is moved out of the sandbox.
+        #  See GH#5756.
+        meandiffs = meandiffs_
+        std_pairs = std_pairs_
 
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 

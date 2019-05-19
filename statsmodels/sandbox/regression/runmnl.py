@@ -155,12 +155,12 @@ class TryNCLogit(object):
         sumexpxb = expxb.sum(1)#[:,None]
         logsumexpxb = np.log(sumexpxb)
         #loglike = (self.endog * xb).sum(1) - logsumexpxb
-        probs = expxb/sumexpxb[:,None]
-        return probs, logsumexpxp  # noqa:F821  See GH#5756
+        probs = expxb/sumexpxb[:, None]
+        return probs, logsumexpxb
         #if self.endog where index then xb[self.endog]
         #return -loglike.sum()   #return sum for now not for each observation
 
-    def loglike_branch(self, params, tau):
+    def loglike_branch(self, params, tau, branches):
         #not yet sure how to keep track of branches during walking of tree
         ivs = []
         for b in branches:  # noqa:F821  See GH#5756
@@ -171,8 +171,7 @@ class TryNCLogit(object):
         ivs = np.column_stack(ivs) # this way ?
         exptiv = np.exp(tau*ivs)
         sumexptiv = exptiv.sum(1)
-        logsumexpxb = np.log(sumexpxb)  # noqa:F821  See GH#5756
-        probs = exptiv/sumexptiv[:,None]
+        probs = exptiv/sumexptiv[:, None]
 
 
 ####### obsolete version to try out attaching data,

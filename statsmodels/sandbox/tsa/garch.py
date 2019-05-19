@@ -658,7 +658,7 @@ def gjrconvertparams(self, params, nar, nma):
 
     mu = params[-1]
     params2 = (ar, ma) #(mu, ar, ma)
-    return paramsclass  # noqa:F821  # See GH#5756
+    return params2
 
 
 #TODO: this should be generalized to ARMA?
