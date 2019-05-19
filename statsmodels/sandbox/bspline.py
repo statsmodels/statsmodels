@@ -128,10 +128,12 @@ def _triangle2unit(tb, lower=0):
     if lower: d = tb[0].copy()
     else: d = tb[-1].copy()
 
-    if lower: return d, (tb / d)
+    if lower:
+        return d, (tb / d)
     else:
-        l = _upper2lower(tb)
-        return d, _lower2upper(l / d)
+        lnum = _upper2lower(tb)
+        return d, _lower2upper(lnum / d)
+
 
 def _trace_symbanded(a, b, lower=0):
     """

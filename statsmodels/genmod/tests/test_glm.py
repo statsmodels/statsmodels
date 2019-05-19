@@ -1692,28 +1692,28 @@ def test_wtd_patsy_missing():
 
 class CheckTweedie(object):
     def test_resid(self):
-        l = len(self.res1.resid_response) - 1
-        l2 = len(self.res2.resid_response) - 1
+        idx1 = len(self.res1.resid_response) - 1
+        idx2 = len(self.res2.resid_response) - 1
         assert_allclose(np.concatenate((self.res1.resid_response[:17],
-                                        [self.res1.resid_response[l]])),
+                                        [self.res1.resid_response[idx1]])),
                         np.concatenate((self.res2.resid_response[:17],
-                                        [self.res2.resid_response[l2]])),
+                                        [self.res2.resid_response[idx2]])),
                         rtol=1e-5, atol=1e-5)
         assert_allclose(np.concatenate((self.res1.resid_pearson[:17],
-                                        [self.res1.resid_pearson[l]])),
+                                        [self.res1.resid_pearson[idx1]])),
                         np.concatenate((self.res2.resid_pearson[:17],
-                                        [self.res2.resid_pearson[l2]])),
+                                        [self.res2.resid_pearson[idx2]])),
                         rtol=1e-5, atol=1e-5)
         assert_allclose(np.concatenate((self.res1.resid_deviance[:17],
-                                        [self.res1.resid_deviance[l]])),
+                                        [self.res1.resid_deviance[idx1]])),
                         np.concatenate((self.res2.resid_deviance[:17],
-                                        [self.res2.resid_deviance[l2]])),
+                                        [self.res2.resid_deviance[idx2]])),
                         rtol=1e-5, atol=1e-5)
 
         assert_allclose(np.concatenate((self.res1.resid_working[:17],
-                                        [self.res1.resid_working[l]])),
+                                        [self.res1.resid_working[idx1]])),
                         np.concatenate((self.res2.resid_working[:17],
-                                        [self.res2.resid_working[l2]])),
+                                        [self.res2.resid_working[idx2]])),
                         rtol=1e-5, atol=1e-5)
 
 
@@ -1733,12 +1733,12 @@ class CheckTweedie(object):
         assert_equal(self.res1.df_resid, self.res2.df_resid)
 
     def test_fittedvalues(self):
-        l = len(self.res1.fittedvalues) - 1
-        l2 = len(self.res2.resid_response) - 1
+        idx1 = len(self.res1.fittedvalues) - 1
+        idx2 = len(self.res2.resid_response) - 1
         assert_allclose(np.concatenate((self.res1.fittedvalues[:17],
-                                        [self.res1.fittedvalues[l]])),
+                                        [self.res1.fittedvalues[idx1]])),
                         np.concatenate((self.res2.fittedvalues[:17],
-                                        [self.res2.fittedvalues[l2]])),
+                                        [self.res2.fittedvalues[idx2]])),
                         atol=1e-4, rtol=1e-4)
 
     def test_summary(self):

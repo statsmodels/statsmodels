@@ -1634,7 +1634,7 @@ class VARResults(VARProcess):
         upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
-        I = np.eye(lower_dim)
+        I = np.eye(lower_dim)  # noqa:E741
         lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
                                  np.zeros((lower_dim, self.neqs))))
 

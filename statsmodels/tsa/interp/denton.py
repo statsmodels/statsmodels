@@ -214,8 +214,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     W = dot(dot(Zinv,HTH),Zinv)
 
     # make partitioned matrices
-    #TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m,n+m))
+    # TODO: break this out so that we can simplify the linalg?
+    I = zeros((n+m, n+m))  # noqa:E741
     I[:n,:n] = W
     I[:n,n:] = B
     I[n:,:n] = B.T

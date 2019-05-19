@@ -30,25 +30,25 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     Simple, slow, direct implementation of double exp smoothing for testing
     """
     n = x.shape[0]
-    l = np.zeros(n)
+    lvals = np.zeros(n)
     b = np.zeros(n)
     xhat = np.zeros(n)
     f = np.zeros(nforecast)
-    l[0] = l0
+    lvals[0] = l0
     b[0] = b0
     # Special case the 0 observations since index -1 is not available
     xhat[0] = l0 + b0
-    l[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
-    b[0] = beta * (l[0] - l0) + (1 - beta) * b0
+    lvals[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
+    b[0] = beta * (lvals[0] - l0) + (1 - beta) * b0
     for t in range(1, n):
         # Obs in index t is the time t forecast for t + 1
-        l[t] = alpha * x[t] + (1 - alpha) * (l[t - 1] + b[t - 1])
-        b[t] = beta * (l[t] - l[t - 1]) + (1 - beta) * b[t - 1]
+        lvals[t] = alpha * x[t] + (1 - alpha) * (lvals[t - 1] + b[t - 1])
+        b[t] = beta * (lvals[t] - lvals[t - 1]) + (1 - beta) * b[t - 1]
 
-    xhat[1:] = l[0:-1] + b[0:-1]
-    f[:] = l[-1] + np.arange(1, nforecast + 1) * b[-1]
+    xhat[1:] = lvals[0:-1] + b[0:-1]
+    f[:] = lvals[-1] + np.arange(1, nforecast + 1) * b[-1]
     err = x - xhat
-    return l, b, f, err, xhat
+    return lvals, b, f, err, xhat
 
 
 class TestHoltWinters(object):
@@ -363,7 +363,7 @@ def test_equivalence_cython_python(trend, seasonal):
     nobs = housing_data.shape[0]
     y = np.squeeze(np.asarray(housing_data))
     m = 12 if seasonal else 0
-    l = np.zeros(nobs)
+    lvals = np.zeros(nobs)
     b = np.zeros(nobs)
     s = np.zeros(nobs + m - 1)
     p = np.zeros(6 + m)
@@ -382,8 +382,8 @@ def test_equivalence_cython_python(trend, seasonal):
     py_func = PY_SMOOTHERS[(seasonal, trend)]
     cy_func = SMOOTHERS[(seasonal, trend)]
     p_copy = p.copy()
-    sse_cy = cy_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
-    sse_py = py_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
+    sse_cy = cy_func(p, xi, p_copy, y, lvals, b, s, m, nobs, max_seen)
+    sse_py = py_func(p, xi, p_copy, y, lvals, b, s, m, nobs, max_seen)
     assert_allclose(sse_py, sse_cy)
 
 
