@@ -19,6 +19,7 @@ from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ValueWarning
 from numpy.testing import assert_equal, assert_raises, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -304,7 +305,9 @@ def test_plots(close_figures):
 
 
 def test_from_formula():
-    mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+    with pytest.warns(ValueWarning, match="No frequency information"):
+        mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+
     res = mod.fit()
 
     # Test the RLS estimates against OLS estimates

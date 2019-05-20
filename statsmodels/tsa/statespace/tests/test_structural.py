@@ -138,6 +138,9 @@ def test_local_level(close_figures):
 
 
 def test_fixed_slope(close_figures):
+    # TODO: once PY3- only, check
+    # pytest.warns(SpecificationWarning, match="irregular component added"):
+    # See GH#5760
     run_ucm('fixed_slope')
 
 
