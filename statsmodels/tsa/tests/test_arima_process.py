@@ -12,7 +12,6 @@ import pytest
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
                                            ArmaProcess, lpol2index, index2lpol)
-from statsmodels.sandbox.tsa.fftarma import ArmaFft
 
 from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
 from statsmodels.tsa.tests.results import results_arma_acf
@@ -173,39 +172,6 @@ def test_arma_impulse_response():
     assert_array_almost_equal(armarep.marep.ravel(), marep, 14)
     # difference in sign convention to matlab for AR term
     assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
-
-
-@pytest.mark.parametrize('ar', arlist)
-@pytest.mark.parametrize('ma', malist)
-def test_spectrum(ar, ma):
-    nfreq = 20
-    w = np.linspace(0, np.pi, nfreq, endpoint=False)
-
-    arma = ArmaFft(ar, ma, 20)
-    spdr, wr = arma.spdroots(w)
-    spdp, wp = arma.spdpoly(w, 200)
-    spdd, wd = arma.spddirect(nfreq * 2)
-    assert_equal(w, wr)
-    assert_equal(w, wp)
-    assert_almost_equal(w, wd[:nfreq], decimal=14)
-    assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
-                        err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
-    assert_almost_equal(spdr, spdp, decimal=7,
-                        err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
-
-
-@pytest.mark.parametrize('ar', arlist)
-@pytest.mark.parametrize('ma', malist)
-def test_armafft(ar, ma):
-    # test other methods
-    nfreq = 20
-    w = np.linspace(0, np.pi, nfreq, endpoint=False)
-
-    arma = ArmaFft(ar, ma, 20)
-    ac1 = arma.invpowerspd(1024)[:10]
-    ac2 = arma.acovf(10)[:10]
-    assert_allclose(ac1, ac2, atol=1e-15,
-                    err_msg='acovf not equal for %s, %s' % (ar, ma))
 
 
 def test_lpol2index_index2lpol():

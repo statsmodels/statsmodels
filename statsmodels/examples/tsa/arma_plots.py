@@ -27,10 +27,6 @@ for arcoef in arcoefs[:-1]:
         ar = np.r_[1., -arcoef]
         ma = np.r_[1.,  macoef]
 
-        #from statsmodels.sandbox.tsa.fftarma import ArmaFft as FftArmaProcess
-        #y = tsp.arma_generate_sample(ar,ma,nsample, sig, burnin)
-        #armaprocess = FftArmaProcess(ar, ma, nsample) #TODO: make n optional
-        #armaprocess.plot4()
         armaprocess = tsp.ArmaProcess(ar, ma)
         acf = armaprocess.acf(20)[:20]
         pacf = armaprocess.pacf(20)[:20]

@@ -12,13 +12,12 @@ from pandas import DatetimeIndex, date_range, period_range
 import pytest
 
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
-import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tests.results import results_arma, results_arima
-from statsmodels.tsa.arima_process import arma_generate_sample
+from statsmodels.tsa.arima_process import arma_generate_sample, ArmaProcess
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -42,8 +41,8 @@ def test_compare_arma():
     #for now without random.seed
 
     np.random.seed(9876565)
-    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
-            burnin=1000)
+    x = ArmaProcess([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
+                                                              burnin=1000)
 
     # this used kalman filter through descriptive
     #d = ARMA(x)
@@ -2379,8 +2378,8 @@ def test_long_ar_start_params():
 
 def test_arma_pickle():
     np.random.seed(9876565)
-    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
-                                                             burnin=1000)
+    x = ArmaProcess([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
+                                                              burnin=1000)
     mod = ARMA(x, (1, 1))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 

@@ -4,11 +4,12 @@ from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 import matplotlib.pyplot as plt
-import statsmodels.sandbox.tsa.fftarma as fa
+
+from statsmodels.tsa.arima_process import ArmaProcess
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
 
-x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200, burnin=1000)
+x = ArmaProcess([1, -0.5], [1., 0.4], 40).generate_sample(size=200, burnin=1000)
 d = TsaDescriptive(x)
 d.plot4()
 
