@@ -122,8 +122,7 @@ dta = np.recfromtxt(StringIO(ss), names=("Rust","Brand","Replication"))
 dta2 = np.recfromtxt(StringIO(ss2), names = ("idx", "Treatment", "StressReduction"))
 dta3 = np.recfromtxt(StringIO(ss3), names = ("Brand", "Relief"))
 
-from statsmodels.sandbox.stats.multicomp import tukeyhsd
-import statsmodels.sandbox.stats.multicomp as multi
+from statsmodels.stats.multicomp import tukeyhsd, MultiComparison
 #print tukeyhsd(dta['Brand'], dta['Rust'])
 
 def get_thsd(mci):
@@ -137,15 +136,15 @@ def get_thsd(mci):
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
-mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
+mc = MultiComparison(dta['Rust'], dta['Brand'])
 res = mc.tukeyhsd()
 print(res)
 
-mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
+mc2 = MultiComparison(dta2['StressReduction'], dta2['Treatment'])
 res2 = mc2.tukeyhsd()
 print(res2)
 
-mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
+mc2s = MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
 print(res2s)
 res2s_001 = mc2s.tukeyhsd(alpha=0.01)
@@ -153,11 +152,11 @@ res2s_001 = mc2s.tukeyhsd(alpha=0.01)
 tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
 assert_almost_equal(res2s_001.confint, tukeyhsd2s[:,1:3], decimal=3)
 
-mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
+mc3 = MultiComparison(dta3['Relief'], dta3['Brand'])
 res3 = mc3.tukeyhsd()
 print(res3)
 
-tukeyhsd4 = multi.MultiComparison(cylinders, cyl_labels, group_order=["Sweden", "Japan", "Germany", "France", "USA"])
+tukeyhsd4 = MultiComparison(cylinders, cyl_labels, group_order=["Sweden", "Japan", "Germany", "France", "USA"])
 res4 = tukeyhsd4.tukeyhsd()
 print(res4)
 try:
