@@ -10,7 +10,7 @@ from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.tools import pca
-from statsmodels.sandbox.tools.cross_val import LeaveOneOut
+from statsmodels.nonparametric._kernel_base import LeaveOneOut
 
 #converting example Principal Component Regression to a class
 #from sandbox/example_pca_regression.py
@@ -109,7 +109,7 @@ class FactorModelUnivariate(object):
 
             if not skip_crossval:
                 if cv_iter is None:
-                    cv_iter = LeaveOneOut(len(y0))
+                    cv_iter = LeaveOneOut(range(len(y0)))
                 prederr2 = 0.
                 for inidx, outidx in cv_iter:
                     res_l1o = sm.OLS(y0[inidx], fact[inidx,:]).fit()

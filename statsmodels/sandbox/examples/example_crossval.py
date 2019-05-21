@@ -2,6 +2,7 @@
 import numpy as np
 
 from statsmodels.sandbox.tools import cross_val
+from statsmodels.nonparametric._kernel_base import LeaveOneOut
 
 
 if __name__ == '__main__':
@@ -17,7 +18,7 @@ if __name__ == '__main__':
     resols = sm.OLS(data.endog, data.exog).fit()
 
     print('\n OLS leave 1 out')
-    for inidx, outidx in cross_val.LeaveOneOut(len(data.endog)):
+    for inidx, outidx in LeaveOneOut(range(len(data.endog))):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
         print(data.endog[outidx], res.model.predict(res.params, data.exog[outidx,:], end=' '))
         print(data.endog[outidx] - res.model.predict(res.params, data.exog[outidx,:]))

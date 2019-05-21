@@ -18,59 +18,6 @@ import numpy as np
 from itertools import combinations
 
 
-################################################################################
-class LeaveOneOut(object):
-    """
-    Leave-One-Out cross validation iterator:
-    Provides train/test indexes to split data in train test sets
-    """
-
-    def __init__(self, n):
-        """
-        Leave-One-Out cross validation iterator:
-        Provides train/test indexes to split data in train test sets
-
-        Parameters
-        ----------
-        n: int
-            Total number of elements
-
-        Examples
-        --------
-        >>> from scikits.learn import cross_val
-        >>> X = [[1, 2], [3, 4]]
-        >>> y = [1, 2]
-        >>> loo = cross_val.LeaveOneOut(2)
-        >>> for train_index, test_index in loo:
-        ...    print "TRAIN:", train_index, "TEST:", test_index
-        ...    X_train, X_test, y_train, y_test = cross_val.split(train_index, test_index, X, y)
-        ...    print X_train, X_test, y_train, y_test
-        TRAIN: [False  True] TEST: [ True False]
-        [[3 4]] [[1 2]] [2] [1]
-        TRAIN: [ True False] TEST: [False  True]
-        [[1 2]] [[3 4]] [1] [2]
-        """
-        self.n = n
-
-
-    def __iter__(self):
-        n = self.n
-        for i in range(n):
-            test_index  = np.zeros(n, dtype=np.bool)
-            test_index[i] = True
-            train_index = np.logical_not(test_index)
-            yield train_index, test_index
-
-
-    def __repr__(self):
-        return '%s.%s(n=%i)' % (self.__class__.__module__,
-                                self.__class__.__name__,
-                                self.n,
-                                )
-
-
-
-################################################################################
 class LeavePOut(object):
     """
     Leave-P-Out cross validation iterator:

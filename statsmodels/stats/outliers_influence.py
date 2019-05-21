@@ -16,6 +16,8 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import maybe_unwrap_results
 
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
+from statsmodels.nonparametric._kernel_base import LeaveOneOut
+
 
 # outliers test convenience wrapper
 
@@ -905,12 +907,10 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         not yet used
         '''
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-
         endog = self.results.model.endog
         exog = self.exog
 
-        cv_iter = LeaveOneOut(self.k_vars)
+        cv_iter = LeaveOneOut(range(self.k_vars))
         res_loo = defaultdict(list)
         for inidx, outidx in cv_iter:
             for att in attributes:
@@ -930,7 +930,6 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         this uses a nobs loop, only attributes of the OLS instance are stored.
         '''
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
 
         endog = self.results.model.endog
@@ -940,7 +939,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         mse_resid = np.zeros(endog.shape, dtype=np.float)
         det_cov_params = np.zeros(endog.shape, dtype=np.float)
 
-        cv_iter = LeaveOneOut(self.nobs)
+        cv_iter = LeaveOneOut(range(self.nobs))
         for inidx, outidx in cv_iter:
             res_i = self.model_class(endog[inidx], exog[inidx]).fit()
             params[outidx] = res_i.params
@@ -1310,7 +1309,6 @@ class GLMInfluence(MLEInfluence):
         Warning: This will need refactoring and API changes to be able to
         add options.
         """
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
 
         endog = self.results.model.endog
@@ -1336,7 +1334,7 @@ class GLMInfluence(MLEInfluence):
         scale = np.zeros(endog.shape, dtype=np.float)
         det_cov_params = np.zeros(endog.shape, dtype=np.float)
 
-        cv_iter = LeaveOneOut(self.nobs)
+        cv_iter = LeaveOneOut(range(self.nobs))
         for inidx, outidx in cv_iter:
             if offset is not None:
                 offset_ = offset[inidx]
