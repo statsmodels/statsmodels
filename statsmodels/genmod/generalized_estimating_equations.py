@@ -446,6 +446,23 @@ _gee_nominal_example = """
     >>> print(result.summary())
 """
 
+def _check_args(endog, exog, groups, time, offset, exposure):
+
+    if endog.size != exog.shape[0]:
+        raise ValueError("Leading dimension of 'exog' should match length of 'endog'")
+
+    if groups.size != endog.size:
+        raise ValueError("'groups' and 'endog' should have the same size")
+
+    if time is not None and (time.size != endog.size):
+        raise ValueError("'time' and 'endog' should have the same size")
+
+    if offset is not None and (offset.size != endog.size):
+        raise ValueError("'offset and 'endog' should have the same size")
+
+    if exposure is not None and (exposure.size != endog.size):
+        raise ValueError("'exposure' and 'endog' should have the same size")
+
 
 class GEE(base.Model):
 
@@ -472,6 +489,24 @@ class GEE(base.Model):
                                          family.__class__.__name__),
                               DomainWarning)
 
+        groups = np.asarray(groups)  # in case groups is pandas
+
+        if "missing_idx" in kwargs and kwargs["missing_idx"] is not None:
+            # If here, we are entering from super.from_formula; missing
+            # has already been dropped from endog and exog, but not from
+            # the other variables.
+            ii = ~kwargs["missing_idx"]
+            groups = groups[ii]
+            if time is not None:
+                time = time[ii]
+            if offset is not None:
+                offset = offset[ii]
+            if exposure is not None:
+                exposure = exposure[ii]
+            del kwargs["missing_idx"]
+
+        _check_args(endog, exog, groups, time, offset, exposure)
+
         self.missing = missing
         self.dep_data = dep_data
         self.constraint = constraint
@@ -482,7 +517,6 @@ class GEE(base.Model):
                              'dep_params': [],
                              'cov_adjust': []}
 
-        groups = np.array(groups)  # in case groups is pandas
         # Pass groups, time, offset, and dep_data so they are
         # processed for missing data along with endog and exog.
         # Calling super creates self.exog, self.endog, etc. as
@@ -677,10 +711,6 @@ class GEE(base.Model):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-
-        This method currently does not correctly handle missing
-        values, so missing values should be explicitly dropped from
-        the DataFrame before calling this method.
         """ % {'missing_param_doc': base._missing_param_doc}
 
         groups_name = "Groups"
