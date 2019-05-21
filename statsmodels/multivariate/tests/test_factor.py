@@ -15,7 +15,7 @@ try:
     missing_matplotlib = False
     plt.switch_backend('Agg')
 
-except ImportError:
+except ImportError:  # pragma: no cover
     missing_matplotlib = True
 
 # Example data

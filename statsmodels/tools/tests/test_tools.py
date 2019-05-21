@@ -365,7 +365,8 @@ class TestCategoricalString(TestCategoricalNumerical):
 
     @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
                               "this commented out with the comment "
-                              "'comment out until we have type coercion'")
+                              "'comment out until we have type coercion'",
+                              strict=False)
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = tools.categorical(des, col=2)
@@ -374,7 +375,8 @@ class TestCategoricalString(TestCategoricalNumerical):
 
     @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
                               "this commented out with the comment "
-                              "'comment out until we have type coercion'")
+                              "'comment out until we have type coercion'",
+                              strict=False)
     def test_array1d(self):
         des = tools.categorical(self.instr)
         assert_array_equal(des[:, -5:], self.dummy)
@@ -382,7 +384,8 @@ class TestCategoricalString(TestCategoricalNumerical):
 
     @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
                               "this commented out with the comment "
-                              "'comment out until we have type coercion'")
+                              "'comment out until we have type coercion'",
+                              strict=False)
     def test_array2d_drop(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = tools.categorical(des, col=2, drop=True)

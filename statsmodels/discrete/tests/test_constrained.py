@@ -528,7 +528,7 @@ class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
         cls.constraints_rq = (R, q)
 
 
-def junk():
+def junk():  # FIXME: make this into a test, or move/remove
     # Singular Matrix in mod1a.fit()
 
     formula1 = 'deaths ~ smokes + C(agecat)'

@@ -10,7 +10,7 @@ from statsmodels.graphics.functional import \
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 

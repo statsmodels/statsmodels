@@ -77,6 +77,7 @@ class TestQsturng(object):
         for p,r,v,q in cases:
             assert_almost_equal(q, qsturng(p,r,v), 5)
 
+    # TODO: do something with this?
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
     @pytest.mark.skip
@@ -196,6 +197,3 @@ class TestPsturng(object):
         errors = estimates - actuals
 
         assert_equal(np.array([]), np.where(errors > 1e-5)[0])
-
-##     def test_more_exotic_stuff(self, level=3):
-##         something_obscure_and_expensive()

@@ -537,11 +537,12 @@ class CheckSSMResults(object):
 
     # - Smoothed intermediate tests ------------------------------------------
 
-    # This isn't computed in the univariate method or by KFAS
-    # def test_smoothing_error(self, rtol_diffuse=None):
-    #     actual = self.results_a.smoothing_error
-    #     desired = self.results_b.smoothing_error
-    #     self.check_object(actual, desired, rtol_diffuse)
+    @pytest.mark.skip("This isn't computed in the univariate method or "
+                      "by KFAS.")
+    def test_smoothing_error(self, rtol_diffuse=None):
+        actual = self.results_a.smoothing_error
+        desired = self.results_b.smoothing_error
+        self.check_object(actual, desired, rtol_diffuse)
 
     def test_scaled_smoothed_estimator(self, rtol_diffuse=1e-5):
         actual = self.results_a.scaled_smoothed_estimator
@@ -566,6 +567,7 @@ class CheckSSMResults(object):
         desired = self.results_b.predicted_diffuse_state_cov
         self.check_object(actual, desired, rtol_diffuse)
 
+    # TODO: do something with this other than commenting it out?
     # We don't currently store this array
     # def test_kalman_gain_diffuse(self, rtol_diffuse=None):
     #     actual = self.results_a.
@@ -589,20 +591,26 @@ class CheckSSMResults(object):
 
     # - Simulation smoother results tests ------------------------------------
 
-    # def test_simulation_smoothed_state(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_state,
-    #         self.sim_a.simulated_state)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_state(self):
+        assert_allclose(
+            self.sim_a.simulated_state,
+            self.sim_a.simulated_state)
 
-    # def test_simulation_smoothed_measurement_disturbance(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_measurement_disturbance,
-    #         self.sim_a.simulated_measurement_disturbance)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_measurement_disturbance(self):
+        assert_allclose(
+            self.sim_a.simulated_measurement_disturbance,
+            self.sim_a.simulated_measurement_disturbance)
 
-    # def test_simulation_smoothed_state_disturbance(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_state_disturbance,
-    #         self.sim_a.simulated_state_disturbance)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.sim_a.simulated_state_disturbance,
+            self.sim_a.simulated_state_disturbance)
 
 
 class CheckApproximateDiffuseMixin(object):
@@ -944,6 +952,8 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
     # numerical errors (e.g. 1e10 doesn't pass)
     approximate_diffuse_variance = 1e9
 
+
+# FIXME: don't leave this commented-out
 # Note: we cannot test against KFAS, since it doesn't support collapsed
 # filtering
 # class TestDFMCollapsed_KFAS(CheckKFASMixin, TestDFMCollapsed):

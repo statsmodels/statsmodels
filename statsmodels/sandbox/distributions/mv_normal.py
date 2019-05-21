@@ -928,10 +928,9 @@ class MVNormal(MVElliptical):
 
         Returns
         -------
-        mvt : instance of MVT
-            instance of multivariate t distribution given by affine
+        mvt : instance of MVNormal
+            instance of multivariate normal distribution given by affine
             transformation
-
 
         Notes
         -----

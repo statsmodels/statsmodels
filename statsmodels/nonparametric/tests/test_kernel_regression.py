@@ -60,7 +60,7 @@ class KernelRegressionTestBase(object):
              0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
              0, 0, 0, 0]
 
-    def write2file(self, file_name, data):
+    def write2file(self, file_name, data):  # pragma: no cover
         """Write some data to a csv file.  Only use for debugging!"""
         import csv
 

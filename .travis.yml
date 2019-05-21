@@ -111,7 +111,7 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install pytest pip pytest-randomly nose
+  - pip install pytest pip pytest-randomly nose cvxopt jupyter_client nbformat
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install pytest-xdist; fi;
   - |
     if [ ${COVERAGE} = true ]; then

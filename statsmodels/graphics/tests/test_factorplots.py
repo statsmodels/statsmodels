@@ -7,7 +7,7 @@ from statsmodels.graphics.factorplots import interaction_plot, _recode
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 

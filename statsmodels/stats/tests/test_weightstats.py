@@ -32,6 +32,7 @@ class CheckExternalMixin(object):
     def get_descriptives(cls, ddof=0):
         cls.descriptive = DescrStatsW(cls.data, cls.weights, ddof)
 
+    # TODO: not a test, belongs elsewhere?
     @classmethod
     def save_data(cls, fname="data.csv"):
         # Utility to get data into another package.

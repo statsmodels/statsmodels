@@ -278,6 +278,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         # low precision because of badly scaled exog
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
 
+# FIXME: enable or delete
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -331,6 +332,7 @@ class TestGaussianLog(CheckModelResultsMixin):
         from .results.results_glm import GaussianLog
         cls.res2 = GaussianLog()
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
@@ -361,6 +363,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         from .results.results_glm import GaussianInverse
         cls.res2 = GaussianInverse()
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -389,6 +392,8 @@ class TestGlmBinomial(CheckModelResultsMixin):
 
         cls.res2 = Star98()
 
+
+# FIXME: enable/xfail/skip or delete
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
 #slightly changed
@@ -526,6 +531,7 @@ class TestGlmGammaLog(CheckModelResultsMixin):
             family=sm.families.Gamma(link=sm.families.links.log())).fit()
         cls.res2 = res2
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -551,6 +557,7 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
             cls.res1 = GLM(res2.endog, res2.exog, family=fam).fit()
         cls.res2 = res2
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -620,6 +627,7 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
                 link=sm.families.links.log())).fit()
         cls.res2 = res2
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -646,6 +654,7 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
         from .results.results_glm import InvGaussIdentity
         cls.res2 = InvGaussIdentity()
 
+# FIXME: enable or delete
 #    def setup(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
@@ -683,6 +692,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         res2.aic_R += 2 # They don't count a degree of freedom for the scale
         cls.res2 = res2
 
+# FIXME: enable or delete
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
@@ -691,12 +701,15 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 #                family=r.negative_binomial(1))
 #        self.res2.null_deviance = 27.8110469364343
 
+# FIXME: enable/xfail/skip or delete
 #class TestGlmNegbinomial_log(CheckModelResultsMixin):
 #    pass
 
+# FIXME: enable/xfail/skip or delete
 #class TestGlmNegbinomial_power(CheckModelResultsMixin):
 #    pass
 
+# FIXME: enable/xfail/skip or delete
 #class TestGlmNegbinomial_nbinom(CheckModelResultsMixin):
 #    pass
 

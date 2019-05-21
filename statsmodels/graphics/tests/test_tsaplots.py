@@ -13,7 +13,7 @@ import statsmodels.tsa.arima_process as tsp
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 

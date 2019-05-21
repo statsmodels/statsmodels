@@ -527,6 +527,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
         assert_raises(ValueError, GLS, self.endog, self.exog,
                       sigma=np.ones((n-1, n-1)))
 
+# FIXME: don't leave commented-out, use or move/remove
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
@@ -771,16 +772,17 @@ class TestWLSScalarVsArray(CheckRegressionResults):
         cls.res1 = wls_scalar
         cls.res2 = wls_array
 
-#class TestWLS_GLS(CheckRegressionResults):
-#    @classmethod
-#    def setup_class(cls):
-#        from statsmodels.datasets.ccard import load
-#        data = load(as_pandas=False)
-#        cls.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
-#        cls.res2 = GLS(data.endog, data.exog, sigma = data.exog[:,2]).fit()
-#
-#    def check_confidenceintervals(self, conf1, conf2):
-#        assert_almost_equal(conf1, conf2(), DECIMAL_4)
+
+class TestWLS_GLS(CheckRegressionResults):
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.ccard import load
+        data = load(as_pandas=False)
+        cls.res1 = WLS(data.endog, data.exog, weights=1/data.exog[:, 2]).fit()
+        cls.res2 = GLS(data.endog, data.exog, sigma=data.exog[:,2 ]).fit()
+
+    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
+        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
 def test_wls_missing():
@@ -803,7 +805,7 @@ class TestWLS_OLS(CheckRegressionResults):
         cls.res1 = OLS(data.endog, data.exog).fit()
         cls.res2 = WLS(data.endog, data.exog).fit()
 
-    def check_confidenceintervals(self, conf1, conf2):
+    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
@@ -815,12 +817,14 @@ class TestGLS_OLS(CheckRegressionResults):
         cls.res1 = GLS(data.endog, data.exog).fit()
         cls.res2 = OLS(data.endog, data.exog).fit()
 
-    def check_confidenceintervals(self, conf1, conf2):
+    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
+
+# FIXME: don't leave this commented-out sitting here
 # TODO: test AR
 # why the two-stage in AR?
-# class test_ar(object):
+# class TestAR(object):
 #     from statsmodels.datasets.sunspots import load
 #     data = load(as_pandas=False)
 #     model = AR(data.endog, rho=4).fit()
@@ -867,7 +871,7 @@ class TestDataDimensions(CheckRegressionResults):
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
 
-    def check_confidenceintervals(self, conf1, conf2):
+    def check_confidenceintervals(self, conf1, conf2):  # FIXME: never called
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
