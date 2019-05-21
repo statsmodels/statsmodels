@@ -9,6 +9,8 @@ See also
 ---------
 numpy.lib.io
 """
+import warnings
+
 from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
                                        asbytes, asstr, range, PY3)
 from struct import unpack, calcsize, pack
@@ -263,6 +265,12 @@ class StataReader(object):
             (-1.798e+308, +8.988e+307) }
 
     def __init__(self, fname, missing_values=False, encoding=None):
+        warnings.warn(
+            "StataReader is deprecated as of 0.10.0 and will be removed in a "
+            "future version.  Use pandas.read_stata or "
+            "pandas.io.stata.StataReader instead.",
+            FutureWarning)
+
         if encoding is None:
             import locale
             self._encoding = locale.getpreferredencoding()
@@ -686,6 +694,11 @@ class StataWriter(object):
                        'd': 8.98846567431158e+307}
     def __init__(self, fname, data, convert_dates=None, encoding="latin-1",
                  byteorder=None):
+        warnings.warn(
+            "StataWriter is deprecated as of 0.10.0 and will be removed in a "
+            "future version.  Use pandas.DataFrame.to_stata or "
+            "pandas.io.stata.StatWriter instead.",
+            FutureWarning)
 
         self._convert_dates = convert_dates
         # attach nobs, nvars, data, varlist, typlist
@@ -956,6 +969,11 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         If convert_dates is True, then Stata formatted dates will be converted
         to datetime types according to the variable's format.
     """
+    warnings.warn(
+        "genfromdta is deprecated as of 0.10.0 and will be removed in a "
+        "future version.  Use pandas.read_stata instead.",
+        FutureWarning)
+
     if isinstance(fname, string_types):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
                           encoding=encoding)
