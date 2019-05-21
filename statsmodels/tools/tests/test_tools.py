@@ -321,7 +321,7 @@ class TestCategoricalNumerical(object):
     def test_arraylike2d_drop(self):
         des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
         test_des = des[:,-5:]
-        assert_array_equal(test__des, self.dummy)
+        assert_array_equal(test_des, self.dummy)
         assert_equal(des.shape[1], 8)
 
     @pytest.mark.xfail(reason="Call to tools.categorical raises "
