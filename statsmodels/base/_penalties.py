@@ -32,7 +32,7 @@ def _check_wts(weights, wts):
         warnings.warn('`wts` method is deprecated. Use `weights` instead',
                       DeprecationWarning)
     weights = weights if weights is not None else wts
-    return wts
+    return weights
 
 
 class Penalty(object):
