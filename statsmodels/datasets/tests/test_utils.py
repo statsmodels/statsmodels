@@ -21,7 +21,7 @@ def test_get_rdataset():
     test_url = "https://raw.githubusercontent.com/vincentarelbundock/" \
                "Rdatasets/master/csv/datasets/cars.csv"
     internet_available = check_internet(test_url)
-    if not internet_available:
+    if not internet_available:  # pragma: no cover
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         duncan = get_rdataset("Duncan", "carData", cache=cur_dir)
@@ -58,7 +58,7 @@ def test_webuse():
     base_gh = "https://github.com/statsmodels/statsmodels/raw/master/" \
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
-    if not internet_available:
+    if not internet_available:  # pragma: no cover
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
@@ -75,7 +75,7 @@ def test_webuse_pandas():
     base_gh = "https://github.com/statsmodels/statsmodels/raw/master/" \
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
-    if not internet_available:
+    if not internet_available:  # pragma: no cover
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh)
