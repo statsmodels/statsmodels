@@ -532,7 +532,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search('Results for error equation e\(%s\)' % name,
+            assert re.search(r'Results for error equation e\(%s\)' % name,
                              table)
 
             # -> Make sure it's the right size
@@ -542,8 +542,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
                 assert re.search(
-                    'L1.e\(%s\) +%s' % (name,
-                                        forg(params[offset + j], prec=4)),
+                    r'L1.e\(%s\) +%s' % (name,
+                                         forg(params[offset + j], prec=4)),
                     table)
 
         # Check the Error covariance matrix output

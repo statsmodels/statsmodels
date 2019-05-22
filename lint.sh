@@ -85,6 +85,13 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/*.py \
         statsmodels/tsa/statespace/tests/results/ \
+        statsmodels/tsa/statespace/tests/test_collapsed.py \
+        statsmodels/tsa/statespace/tests/test_concentrated.py \
+        statsmodels/tsa/statespace/tests/test_dynamic_factor.py \
+        statsmodels/tsa/statespace/tests/test_exact_diffuse_filtering.py \
+        statsmodels/tsa/statespace/tests/test_impulse_responses.py \
+        statsmodels/tsa/statespace/tests/test_initialization.py \
+        statsmodels/tsa/statespace/tests/test_kalman.py \
         statsmodels/tsa/statespace/tests/test_var.py \
         statsmodels/tsa/statespace/tests/test_varmax.py \
         statsmodels/tsa/tests/results/ \
