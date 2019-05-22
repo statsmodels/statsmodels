@@ -381,7 +381,7 @@ class TestGEE(object):
                     if k2:
                         kwargs["time"] = np.zeros(18)
                     with assert_raises(ValueError):
-                        mod1 = gee.GEE(endog, exog, **kwargs)
+                        gee.GEE(endog, exog, **kwargs)
 
     def test_default_time(self):
         # Check that the time defaults work correctly.
