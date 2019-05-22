@@ -362,6 +362,27 @@ class TestGEE(object):
             assert_almost_equal(rslt1.params.values, rslt2.params.values)
             assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
 
+    def test_invalid_args(self):
+
+        for j in range(3):
+            for k1 in False, True:
+                for k2 in False, True:
+
+                    p = [20, 20, 20]
+                    p[j] = 18
+
+                    endog = np.zeros(p[0])
+                    exog = np.zeros((p[1], 2))
+
+                    kwargs = {}
+                    kwargs["groups"] = np.zeros(p[2])
+                    if k1:
+                        kwargs["exposure"] = np.zeros(18)
+                    if k2:
+                        kwargs["time"] = np.zeros(18)
+                    with assert_raises(ValueError):
+                        mod1 = gee.GEE(endog, exog, **kwargs)
+
     def test_default_time(self):
         # Check that the time defaults work correctly.
 
