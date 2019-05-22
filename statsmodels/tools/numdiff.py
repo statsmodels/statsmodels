@@ -247,7 +247,7 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
 
 
 @Substitution(
-    scale="3", 
+    scale="3",
     extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,

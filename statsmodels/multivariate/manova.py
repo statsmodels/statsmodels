@@ -96,7 +96,7 @@ class MANOVA(Model):
         hypotheses test each included exogenous variable, one at a time. In
         most applications with categorical variables, the ``from_formula``
         interface should be preferred when specifying a model since it
-        provides knowledge about the model when specifying the hypotheses. 
+        provides knowledge about the model when specifying the hypotheses.
         """
         if hypotheses is None:
             if (hasattr(self, 'data') and self.data is not None and
