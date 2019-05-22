@@ -11,9 +11,9 @@ from numpy.testing import assert_array_equal, assert_, assert_equal
 import numpy as np
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
+import pytest
 
 from statsmodels.compat.python import BytesIO, asbytes
-import statsmodels.api as sm
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
 from statsmodels.datasets import macrodata
@@ -27,20 +27,25 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_genfromdta():
-    #Test genfromdta vs. results/macrodta.npy created with genfromtxt.
-    #NOTE: Stata handles data very oddly.  Round tripping from csv to dta
+    # Test genfromdta vs. results/macrodta.npy created with genfromtxt.
+    # NOTE: Stata handles data very oddly.  Round tripping from csv to dta
     #    to ndarray 2710.349 (csv) -> 2510.2491 (stata) -> 2710.34912109375
     #    (dta/ndarray)
     from .results.macrodata import macrodata_result as res2
-    res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
+    with pytest.warns(FutureWarning):
+        res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
     assert_array_equal(res1 == res2, True)
+
 
 def test_genfromdta_pandas():
     from pandas.util.testing import assert_frame_equal
     dta = macrodata.load_pandas().data
     curdir = os.path.dirname(os.path.abspath(__file__))
-    res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta',
-                        pandas=True)
+
+    with pytest.warns(FutureWarning):
+        res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta',
+                          pandas=True)
+
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
 
@@ -53,10 +58,15 @@ def test_stata_writer_structured():
     if not PY3:  # Remove unicode
         dt = [(name.encode('ascii'), typ) for name, typ in dt]
     dta = dta.astype(np.dtype(dt))
-    writer = StataWriter(buf, dta)
+
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta)
+
     writer.write_file()
     buf.seek(0)
-    dta2 = genfromdta(buf)
+    with pytest.warns(FutureWarning):
+        dta2 = genfromdta(buf)
+
     assert_array_equal(dta, dta2)
 
 
@@ -65,29 +75,40 @@ def test_stata_writer_array():
     dta = macrodata.load(as_pandas=False).data
     dta = DataFrame.from_records(dta)
     dta.columns = ["v%d" % i for i in range(1,15)]
-    writer = StataWriter(buf, dta.values)
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta.values)
+
     writer.write_file()
     buf.seek(0)
-    dta2 = genfromdta(buf)
+    with pytest.warns(FutureWarning):
+        dta2 = genfromdta(buf)
     dta = dta.to_records(index=False)
     assert_array_equal(dta, dta2)
+
 
 def test_missing_roundtrip():
     buf = BytesIO()
     dta = np.array([(np.nan, np.inf, "")],
-                      dtype=[("double_miss", float), ("float_miss", np.float32),
-                              ("string_miss", "a1")])
-    writer = StataWriter(buf, dta)
+                   dtype=[("double_miss", float),
+                          ("float_miss", np.float32),
+                          ("string_miss", "a1")])
+
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta)
+
     writer.write_file()
     buf.seek(0)
-    dta = genfromdta(buf, missing_flt=np.nan)
+    with pytest.warns(FutureWarning):
+        dta = genfromdta(buf, missing_flt=np.nan)
     assert_(isnull(dta[0][0]))
     assert_(isnull(dta[0][1]))
     assert_(dta[0][2] == asbytes(""))
 
-    dta = genfromdta(os.path.join(curdir, "results/data_missing.dta"),
-            missing_flt=-999)
+    with pytest.warns(FutureWarning):
+        dta = genfromdta(os.path.join(curdir, "results/data_missing.dta"),
+                         missing_flt=-999)
     assert_(np.all([dta[0][i] == -999 for i in range(5)]))
+
 
 def test_stata_writer_pandas():
     buf = BytesIO()
@@ -97,12 +118,17 @@ def test_stata_writer_pandas():
         dta[col] = dta[col].astype(np.int64)
         dta4[col] = dta4[col].astype(np.int32)
     # dta is int64 'i8'  given to Stata writer
-    writer = StataWriter(buf, dta)
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta)
+
     with warnings.catch_warnings(record=True) as w:
         writer.write_file()
         assert len(w) == 0
     buf.seek(0)
-    dta2 = genfromdta(buf)
+
+    with pytest.warns(FutureWarning):
+        dta2 = genfromdta(buf)
+
     dta5 = DataFrame.from_records(dta2)
     # dta2 is int32 'i4'  returned from Stata reader
 
@@ -138,6 +164,7 @@ def test_genfromdta_datetime():
     assert_array_equal(dta.iloc[0].tolist(), results[0])
     assert_array_equal(dta.iloc[1].tolist(), results[1])
 
+
 def test_date_converters():
     ms = [-1479597200000, -1e6, -1e5, -100, 1e5, 1e6, 1479597200000]
     days = [-1e5, -1200, -800, -365, -50, 0, 50, 365, 800, 1200, 1e5]
@@ -168,22 +195,35 @@ def test_date_converters():
         assert_equal(_datetime_to_stata_elapsed(
                      _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
 
+
 def test_datetime_roundtrip():
     dta = np.array([(1, datetime(2010, 1, 1), 2),
                     (2, datetime(2010, 2, 1), 3),
                     (4, datetime(2010, 3, 1), 5)],
                     dtype=[('var1', float), ('var2', object), ('var3', float)])
     buf = BytesIO()
-    writer = StataWriter(buf, dta, {"var2" : "tm"})
+
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta, {"var2" : "tm"})
+
     writer.write_file()
     buf.seek(0)
-    dta2 = genfromdta(buf)
+
+    with pytest.warns(FutureWarning):
+        dta2 = genfromdta(buf)
+
     assert_equal(dta, dta2)
 
     dta = DataFrame.from_records(dta)
     buf = BytesIO()
-    writer = StataWriter(buf, dta, {"var2" : "tm"})
+
+    with pytest.warns(FutureWarning):
+        writer = StataWriter(buf, dta, {"var2" : "tm"})
+
     writer.write_file()
     buf.seek(0)
-    dta2 = genfromdta(buf, pandas=True)
+
+    with pytest.warns(FutureWarning):
+        dta2 = genfromdta(buf, pandas=True)
+
     ptesting.assert_frame_equal(dta, dta2.drop('index', axis=1))
