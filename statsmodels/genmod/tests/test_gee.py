@@ -327,25 +327,61 @@ class TestGEE(object):
         endog[5:7] = np.nan
         exog2[10:12] = np.nan
 
-        data = pd.DataFrame({"endog": endog, "exog1": exog1, "exog2": exog2,
-                             "exog3": exog3, "groups": groups})
+        data0 = pd.DataFrame({"endog": endog, "exog1": exog1, "exog2": exog2,
+                                "exog3": exog3, "groups": groups})
 
-        mod1 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                    groups, data, missing='drop')
-        rslt1 = mod1.fit()
+        for k in 0, 1:
+            data = data0.copy()
+            kwargs = {}
+            if k == 1:
+                data["offset"] = 0
+                data["time"] = 0
+                kwargs["offset"] = "offset"
+                kwargs["time"] = "time"
 
-        assert_almost_equal(len(mod1.endog), 95)
-        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
+            mod1 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                        groups="groups", data=data,
+                                        missing='drop', **kwargs)
+            rslt1 = mod1.fit()
 
-        data = data.dropna()
-        groups = groups[data.index.values]
+            assert_almost_equal(len(mod1.endog), 95)
+            assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
 
-        mod2 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                    groups, data, missing='none')
-        rslt2 = mod2.fit()
+            data = data.dropna()
 
-        assert_almost_equal(rslt1.params.values, rslt2.params.values)
-        assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
+            kwargs = {}
+            if k == 1:
+                kwargs["offset"] = data["offset"]
+                kwargs["time"] = data["time"]
+
+            mod2 = gee.GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                        groups=data["groups"], data=data,
+                                        missing='none', **kwargs)
+            rslt2 = mod2.fit()
+
+            assert_almost_equal(rslt1.params.values, rslt2.params.values)
+            assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
+
+    def test_invalid_args(self):
+
+        for j in range(3):
+            for k1 in False, True:
+                for k2 in False, True:
+
+                    p = [20, 20, 20]
+                    p[j] = 18
+
+                    endog = np.zeros(p[0])
+                    exog = np.zeros((p[1], 2))
+
+                    kwargs = {}
+                    kwargs["groups"] = np.zeros(p[2])
+                    if k1:
+                        kwargs["exposure"] = np.zeros(18)
+                    if k2:
+                        kwargs["time"] = np.zeros(18)
+                    with assert_raises(ValueError):
+                        gee.GEE(endog, exog, **kwargs)
 
     def test_default_time(self):
         # Check that the time defaults work correctly.
