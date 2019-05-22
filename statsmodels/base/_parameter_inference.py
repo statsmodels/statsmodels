@@ -8,8 +8,9 @@ Created on Wed May 30 15:11:09 2018
 import numpy as np
 from scipy import stats
 
+from statsmodels.stats._diagnostic_other import lm_robust
 
-# this is a copy from stats._diagnostic_other
+
 def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
                cov_params=None):
     '''general formula for score/LM test
@@ -47,32 +48,12 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
         score/lagrange multiplier statistic
     p-value : float
         p-value of the LM test based on chisquare distribution
-
-    Notes
-    -----
-
+    k_constraints : int
+        number of constraints
     '''
-    # shorthand alias
-    R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
-
-    k_constraints = np.linalg.matrix_rank(R)
-    tmp = R.dot(Ainv)
-    wscore = tmp.dot(score)  # C Ainv score
-
-    if B is None and V is None:
-        # only Ainv is given, so we assume information matrix identity holds
-        # computational short cut, should be same if Ainv == inv(B)
-        lm_stat = score.dot(Ainv.dot(score))
-    else:
-        # information matrix identity does not hold
-        if V is None:
-            inner = tmp.dot(B).dot(tmp.T)
-        else:
-            inner = R.dot(V).dot(R.T)
-
-        #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
-        # Let's assume inner is invertible, TODO: check if usecase for pinv exists
-        lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
+    lm_stat = lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
+                        cov_params=cov_params)
+    k_constraints = np.linalg.matrix_rank(constraint_matrix)
     pval = stats.chi2.sf(lm_stat, k_constraints)
     return lm_stat, pval, k_constraints
 
