@@ -1691,11 +1691,12 @@ def kpss(x, regression='c', lags=None, store=False):
         lags = int(lags)
 
     if lags > nobs:
-        raise ValueError("lags ({}) must be <= number of observations ({})".format(lags, nobs))
+        raise ValueError("lags ({}) must be <= number of observations ({})"
+                         .format(lags, nobs))
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
-    eta = sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
+    eta = np.sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
     s_hat = _sigma_est_kpss(resids, nobs, lags)
 
     kpss_stat = eta / s_hat
@@ -1727,7 +1728,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
     consistent estimator for the variance.
     """
-    s_hat = sum(resids**2)
+    s_hat = np.sum(resids**2)
     for i in range(1, lags + 1):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
@@ -1741,7 +1742,7 @@ def _kpss_autolag(resids, nobs):
     (1994), and Schwert (1989). Assumes Bartlett / Newey-West kernel.
     """
     covlags = int(np.power(nobs, 2. / 9.))
-    s0 = sum(resids**2) / nobs
+    s0 = np.sum(resids**2) / nobs
     s1 = 0
     for i in range(1, covlags + 1):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
