@@ -83,8 +83,10 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/regime_switching/ \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/tests/results/ \
-        statsmodels/tsa/statespace/tests/results/results_var_R.py \
+        statsmodels/tsa/statespace/*.py \
+        statsmodels/tsa/statespace/tests/results/ \
         statsmodels/tsa/statespace/tests/test_var.py \
+        statsmodels/tsa/statespace/tests/test_varmax.py \
         statsmodels/tsa/tests/results/ \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \
