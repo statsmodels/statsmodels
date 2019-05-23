@@ -26,6 +26,8 @@ output_results = pd.read_csv(os.path.join(current_path, output_path))
 
 
 class CheckDynamicFactor(object):
+    init_powell = True  # switch for test_mle
+
     @classmethod
     def setup_class(cls, true, k_factors, factor_order, cov_type='approx',
                     included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
@@ -76,7 +78,7 @@ class CheckDynamicFactor(object):
         assert_allclose(actual, model.start_params)
 
     def test_results(self, close_figures):
-        # Smoke test for creating the summary
+        # Smoke test for creating the summary  # TODO: pytest.mark.smoke
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.results.summary()
@@ -116,11 +118,11 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
-    def test_mle(self, init_powell=True):
+    def test_mle(self):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter('always')
             start_params = self.model.start_params
-            if init_powell:
+            if self.init_powell:
                 results = self.model.fit(method='powell',
                                          maxiter=100, disp=False)
                 start_params = results.params
@@ -714,6 +716,8 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     the errors are vector autocorrelated, but innovations are uncorrelated.
 
     """
+    init_powell = False  # switch for test_mle
+
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
@@ -742,9 +746,6 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors,
               self).test_dynamic_predict(exog=exog)
-
-    def test_mle(self):
-        super(TestSUR_autocorrelated_errors, self).test_mle(init_powell=False)
 
 
 def test_misspecification():
