@@ -23,7 +23,8 @@ filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.d
 
 
 def getnist(filename):
-    fname = os.path.abspath(os.path.join('./data', filename))
+    here = os.path.dirname(__file__)
+    fname = os.path.abspath(os.path.join(here, 'data', filename))
     with open(fname, 'r') as fd:
         content = fd.read().split('\n')
 
@@ -93,7 +94,14 @@ if __name__ == '__main__':
         print(fn)
         y, x, cert, certified, caty = getnist(fn)
         res = anova_oneway(y, x)
-        print(np.array(res) - cert)
+        # TODO: figure out why these results are less accurate/precise
+        #  than others
+        rtol = {
+            "SmLs08.dat": .027,
+            "SmLs07.dat": 1.7e-3,
+            "SmLs09.dat": 1e-4
+        }.get(fn, 1e-7)
+        np.testing.assert_allclose(np.array(res), cert, rtol=rtol)
 
     print('\n using stats ANOVA f_oneway')
     for fn in filenameli:
