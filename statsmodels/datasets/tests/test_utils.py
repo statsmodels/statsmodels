@@ -1,6 +1,8 @@
 from statsmodels.compat.python import HTTPError, URLError
 
 import os
+from ssl import SSLError
+from socket import timeout
 
 import numpy as np
 from numpy.testing import assert_, assert_array_equal
@@ -20,7 +22,7 @@ def test_get_rdataset():
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         duncan = get_rdataset("Duncan", "carData", cache=cur_dir)
-    except (HTTPError, URLError):
+    except (HTTPError, URLError, SSLError, timeout):
         pytest.skip('Failed with HTTPError or URLError, these are random')
     assert_(isinstance(duncan, utils.Dataset))
     duncan = get_rdataset("Duncan", "carData", cache=cur_dir)
@@ -32,7 +34,7 @@ def test_get_rdataset_write_read_cache():
     # test writing and reading cache
     try:
         guerry = get_rdataset("Guerry", "HistData", cache=cur_dir)
-    except (HTTPError, URLError):
+    except (HTTPError, URLError, SSLError, timeout):
         pytest.skip('Failed with HTTPError or URLError, these are random')
 
     assert_(guerry.from_cache is False)
@@ -57,7 +59,7 @@ def test_webuse():
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
-    except (HTTPError, URLError):
+    except (HTTPError, URLError, SSLError, timeout):
         pytest.skip('Failed with HTTPError or URLError, these are random')
     assert_array_equal(res1, res2)
 
@@ -74,7 +76,7 @@ def test_webuse_pandas():
         pytest.skip('Unable to retrieve file - skipping test')
     try:
         res1 = webuse('macrodata', baseurl=base_gh)
-    except (HTTPError, URLError):
+    except (HTTPError, URLError, SSLError, timeout):
         pytest.skip('Failed with HTTP Error, these are random')
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
