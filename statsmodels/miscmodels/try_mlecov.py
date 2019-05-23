@@ -12,8 +12,9 @@ from scipy.linalg import toeplitz
 
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
-
+from statsmodels.tsa.arima_process import (
+    arma_acovf, arma_generate_sample, ArmaProcess
+)
 
 def mvn_loglike_sum(x, sigma):
     '''loglike multivariate normal
@@ -111,19 +112,11 @@ def mvn_nloglike_obs(x, sigma):
 
     return llike
 
+
 def invertibleroots(ma):
-    import numpy.polynomial as poly
-    pr = poly.polyroots(ma)
-    insideroots = np.abs(pr)<1
-    if insideroots.any():
-        pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
-        pnew = poly.Polynomial.fromroots(pr)
-        mainv = pn.coef/pnew.coef[0]
-        wasinvertible = False
-    else:
-        mainv = ma
-        wasinvertible = True
-    return mainv, wasinvertible
+    proc = ArmaProcess(ma=ma)
+    return proc.invertroots(retnew=False)
+
 
 def getpoly(self, params):
     ar = np.r_[[1], -params[:self.nar]]

@@ -526,8 +526,8 @@ def asquare(cdfvals, axis=0):
     islice = [None] * ndim
     islice[axis] = slice(None)
     slice_reverse[axis] = slice(None, None, -1)
-    asqu = -((2. * np.arange(1., nobs+1)[islice] - 1) *
-            (np.log(cdfvals) + np.log(1-cdfvals[slice_reverse]))/nobs).sum(axis) \
+    asqu = -((2. * np.arange(1., nobs+1)[tuple(islice)] - 1) *
+            (np.log(cdfvals) + np.log(1-cdfvals[tuple(slice_reverse)]))/nobs).sum(axis) \
             - nobs
 
     return asqu
@@ -638,6 +638,7 @@ class NewNorm(object):
 
 
 
+
 if __name__ == '__main__':
     from scipy import stats
     #rvs = np.random.randn(1000)
@@ -686,19 +687,3 @@ if __name__ == '__main__':
     [0.1545, 0.10009999999999999, 0.049000000000000002, 0.023, 0.0104]
     >>>
     '''
-
-    #test equality of loop, vectorized, batch-vectorized
-    np.random.seed(8765679)
-    resu1 = bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=100,
-                      value=0.576/(1 + 4./nobs - 25./nobs**2))
-    np.random.seed(8765679)
-    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1) for _ in range(100)]
-    resu2 = (np.array(tmp) > 0.576/(1 + 4./nobs - 25./nobs**2)).mean()
-    np.random.seed(8765679)
-    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1,
-                     value=0.576/ (1 + 4./nobs - 25./nobs**2),
-                     batch_size=10) for _ in range(10)]
-    resu3 = np.array(resu).mean()
-    from numpy.testing import assert_array_almost_equal
-    assert_array_almost_equal(resu1, resu2, 15)
-    assert_array_almost_equal(resu2, resu3, 15)

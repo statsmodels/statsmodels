@@ -124,9 +124,14 @@ class PoissonGMLE(GenericLikelihoodModel):
     def predict_distribution(self, exog):
         '''return frozen scipy.stats distribution with mu at estimated prediction
         '''
-        if not hasattr(self, result):
+        if not hasattr(self, "result"):
+            # TODO: why would this be ValueError instead of AttributeError?
+            # TODO: Why even make this a Model attribute in the first place?
+            #  It belongs on the Results class
             raise ValueError
         else:
+            result = self.result
+            params = result.params
             mu = np.exp(np.dot(exog, params))
             return stats.poisson(mu, loc=0)
 
