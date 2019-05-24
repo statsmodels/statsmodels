@@ -45,7 +45,8 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     except NotImplementedError
-    except (HTTPError, URLError)
+    except ImportError
+    except (HTTPError, URLError, SSLError, timeout)
     # Ignore pass
     pass
 
