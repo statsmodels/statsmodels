@@ -266,9 +266,9 @@ class NIG(object):
             if t>1:
                 Dt=ts[t]-ts[t-1]
 
-            l = 1/k*(Dt**2)
+            lfrac = 1/k*(Dt**2)
             m = Dt
-            DS = IG().simulate(l,m,nrepl)
+            DS = IG().simulate(lfrac, m, nrepl)
             N = np.random.randn(nrepl)
 
             DX = s*N*np.sqrt(DS) + th*DS

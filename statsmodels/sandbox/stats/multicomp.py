@@ -1978,8 +1978,8 @@ if __name__ == '__main__':
 
 
         xli=[[8,10,9,10,9],[7,8,5,8,5],[4,8,7,5,7]]
-        x,l = catstack(xli)
-        gs4 = GroupsStats(np.column_stack([x,l]))
+        x, labels = catstack(xli)
+        gs4 = GroupsStats(np.column_stack([x, labels]))
         print(gs4.groupvarwithin())
 
 

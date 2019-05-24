@@ -87,7 +87,7 @@ def hpfilter(X, lamb=1600):
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
-    I = sparse.eye(nobs,nobs)
+    I = sparse.eye(nobs, nobs)  # noqa:E741
     offsets = np.array([0,1,2])
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
     K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))

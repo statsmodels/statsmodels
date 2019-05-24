@@ -875,15 +875,15 @@ class TestRegCoefD(TestRegCoefC):
 
         m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
-        I = np.zeros((n, 1))
+        zvec = np.zeros((n, 1))  # noqa:E741
         for i in dom_x[1:] :
             X1[:, self.test_vars] = i
             m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
-            I += (m1 - m0) ** 2
+            zvec += (m1 - m0) ** 2  # noqa:E741
 
-        I = I.sum(axis=0) / float(n)
-        return I
+        avg = zvec.sum(axis=0) / float(n)
+        return avg
 
     def _compute_sig(self):
         """Calculates the significance level of the variable tested"""

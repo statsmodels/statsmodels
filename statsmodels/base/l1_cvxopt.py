@@ -169,7 +169,7 @@ def _get_G(k_params):
     """
     The linear inequality constraint matrix.
     """
-    I = np.eye(k_params)
+    I = np.eye(k_params)  # noqa:E741
     A = np.concatenate((-I, -I), axis=1)
     B = np.concatenate((I, -I), axis=1)
     C = np.concatenate((A, B), axis=0)
