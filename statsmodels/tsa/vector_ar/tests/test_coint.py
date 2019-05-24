@@ -10,6 +10,8 @@ import warnings
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+import pandas as pd
+import pytest
 
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
@@ -120,8 +122,32 @@ class TestCointJoh25(CheckCointJoh):
             cls.res = coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
 
-        #Note: critical values not available if trend>1
-        cls.res1_m = np.array([270.1887263915158,  171.6870096307863,  107.8613367358704,  70.82424032233558,  44.62551818267534,  25.74352073857572,  14.17882426926978,  4.288656185006764,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  0])
+        # Note: critical values not available if trend>1
+        cls.res1_m = np.array([270.1887263915158, 171.6870096307863,
+                               107.8613367358704, 70.82424032233558,
+                               44.62551818267534, 25.74352073857572,
+                               14.17882426926978, 4.288656185006764,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0])
         cls.res1_m[cls.res1_m == 0] = np.nan
-        cls.res2_m = np.array([98.50171676072955,  63.82567289491584,  37.03709641353485,  26.19872213966024,  18.88199744409963,  11.56469646930594,  9.890168084263012,  4.288656185006764,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  0])
+        cls.res2_m = np.array([98.50171676072955, 63.82567289491584,
+                               37.03709641353485, 26.19872213966024,
+                               18.88199744409963, 11.56469646930594,
+                               9.890168084263012, 4.288656185006764,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0])
         cls.res2_m[cls.res2_m == 0] = np.nan
+
+
+@pytest.mark.smoke
+def test_coint_johansen_0lag(reset_randomstate):
+    # GH 5731
+    x_diff = np.random.normal(0, 1, 1000)
+    x = pd.Series(np.cumsum(x_diff))
+    e1 = np.random.normal(0, 1, 1000)
+    y = x + 5 + e1
+    data = pd.concat([x, y], axis=1)
+    result = coint_johansen(data, det_order=-1, k_ar_diff=0)
+    assert result.eig.shape == (2,)

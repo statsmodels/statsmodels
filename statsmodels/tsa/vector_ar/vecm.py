@@ -623,6 +623,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
         r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
         return r
 
+    endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
@@ -641,11 +642,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = endog[:-k_ar_diff]
+    # GH 5731, [:-0] does not work, need [:t-0]
+    lx = endog[:(endog.shape[0]-k_ar_diff)]
     lx = lx[1:]
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
+    # Level covariance after filtering k_ar_diff
     skk = np.dot(rkt.T, rkt) / rkt.shape[0]
+    # Covariacne between filtered and unfiltered
     sk0 = np.dot(rkt.T, r0t) / rkt.shape[0]
     s00 = np.dot(r0t.T, r0t) / r0t.shape[0]
     sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
