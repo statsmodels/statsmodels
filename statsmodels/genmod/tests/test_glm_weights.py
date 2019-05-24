@@ -244,11 +244,22 @@ class TestGlmPoissonAwHC(CheckWeight):
         nobs = len(cpunish_data.endog)
         aweights = fweights / wsum * nobs
 
-        # This is really close when corr_fact = (wsum - 1.) / wsum, but to
-        # avoid having loosen precision of the assert_allclose, I'm doing this
-        # manually. Its *possible* lowering the IRLS convergence criterion
-        # in stata and here will make this less sketchy.
-        cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
+        # GH#5785 corr_fact was previously set manually as
+        #  cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
+        #  with the comment
+        #   This is really close when corr_fact = (wsum - 1.) / wsum, but to
+        #   avoid having loosen precision of the assert_allclose, I'm doing
+        #   manually. Its *possible* lowering the IRLS convergence criterion
+        #   in stata and here will make this less sketchy.
+        #  Note that (wsum - 1.) / wsum gives 0.9696969696969697
+        #  while the formula used here
+        #   (that matches the Stata results without manual adjustment)
+        #   gives 0.9701425001453319
+        # TODO: figure out why Stata appears to not use weights for this
+        #
+        # Note: corr_fact here matches one of the two ways it can be defined
+        #  in test_sandwich_cov.
+        cls.corr_fact = np.sqrt((nobs - 1.) / nobs)
         mod = GLM(cpunish_data.endog, cpunish_data.exog,
                   family=sm.families.Poisson(),
                   var_weights=aweights)
