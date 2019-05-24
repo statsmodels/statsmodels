@@ -15,7 +15,7 @@ from itertools import product
 
 try:
     import matplotlib.pyplot as plt  # noqa:F401
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 # the main drawing function

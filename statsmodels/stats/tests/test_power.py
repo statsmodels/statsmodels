@@ -23,7 +23,7 @@ from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 try:
     import matplotlib.pyplot as plt  # noqa:F401
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 

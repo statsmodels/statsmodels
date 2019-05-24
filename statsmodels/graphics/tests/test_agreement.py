@@ -7,7 +7,7 @@ from statsmodels.graphics.agreement import mean_diff_plot
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 

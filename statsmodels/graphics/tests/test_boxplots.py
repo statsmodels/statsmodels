@@ -6,7 +6,7 @@ from statsmodels.datasets import anes96
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 

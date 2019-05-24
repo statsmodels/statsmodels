@@ -9,7 +9,7 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 

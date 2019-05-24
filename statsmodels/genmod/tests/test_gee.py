@@ -29,7 +29,7 @@ import warnings
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:  # pragma: no cover
+except ImportError:
     pass
 
 pdf_output = False
