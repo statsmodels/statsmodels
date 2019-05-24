@@ -3,7 +3,6 @@
 Test VAR Model
 """
 import warnings
-# pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
 
@@ -37,6 +36,24 @@ DECIMAL_5 = 5
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
+
+
+@pytest.fixture()
+def bivariate_var_data(reset_randomstate):
+    """A bivariate dataset for VAR estimation"""
+    e = np.random.standard_normal((252, 2))
+    y = np.zeros_like(e)
+    y[:2] = e[:2]
+    for i in range(2, 252):
+        y[i] = .2 * y[i - 1] + .1 * y[i - 2] + e[i]
+    return y
+
+
+@pytest.fixture()
+def bivariate_var_result(bivariate_var_data):
+    """A bivariate VARResults for reuse"""
+    mod = VAR(bivariate_var_data)
+    return mod.fit()
 
 
 class CheckVAR(object):
@@ -400,10 +417,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         acorrs = self.res.acorr(10)
 
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        point = self.res.forecast(self.res.endog[-5:], 5)
 
     def test_forecast_interval(self):
-        y = self.res.y[:-self.p:]
+        y = self.res.endog[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     @pytest.mark.matplotlib
@@ -767,3 +784,9 @@ class TestVARExtras(object):
         assert_allclose(fci2, fci1, rtol=1e-12)
         assert_allclose(fci3, fci1, rtol=1e-12)
         assert_allclose(fci3, fci2, rtol=1e-12)
+
+
+@pytest.mark.parametrize('attr', ['y', 'ys_lagged'])
+def test_deprecated_attributes_varresults(bivariate_var_result, attr):
+    with pytest.warns(FutureWarning):
+        getattr(bivariate_var_result, attr)
