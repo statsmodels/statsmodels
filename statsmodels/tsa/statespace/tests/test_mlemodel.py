@@ -40,7 +40,7 @@ def get_dummy_mod(fit=True, pandas=False):
         endog = pd.Series(endog, index=index)
         exog = pd.Series(exog, index=index)
 
-    mod = sarimax.SARIMAX(endog, exog=exog, order=(0,0,0), time_varying_regression=True, mle_regression=False)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(0, 0, 0), time_varying_regression=True, mle_regression=False)
 
     if fit:
         with warnings.catch_warnings():
@@ -161,7 +161,7 @@ def test_fit_misc():
     true = results_sarimax.wpi1_stationary
     endog = np.diff(true['data'])[1:]
 
-    mod = sarimax.SARIMAX(endog, order=(1,0,1), trend='c')
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1), trend='c')
 
     # Test optim_hessian={'opg','oim','approx'}
     with warnings.catch_warnings():
@@ -189,14 +189,14 @@ def test_score_misc():
 
 
 def test_from_formula():
-    assert_raises(NotImplementedError, lambda: MLEModel.from_formula(1,2,3))
+    assert_raises(NotImplementedError, lambda: MLEModel.from_formula(1, 2, 3))
 
 
 def test_score_analytic_ar1():
     # Test the score against the analytic score for an AR(1) model with 2
     # observations
     # Let endog = [1, 0.5], params=[0, 1]
-    mod = sarimax.SARIMAX([1, 0.5], order=(1,0,0))
+    mod = sarimax.SARIMAX([1, 0.5], order=(1, 0, 0))
 
     def partial_phi(phi, sigma2):
         return -0.5 * (phi**2 + 2*phi*sigma2 - 1) / (sigma2 * (1 - phi**2))
@@ -284,10 +284,10 @@ def test_score_analytic_ar1():
     params = np.r_[0.5, 1.]
 
     def hessian(phi, sigma2):
-        hessian = np.zeros((2,2))
-        hessian[0,0] = (-phi**2 - 1) / (phi**2 - 1)**2
-        hessian[1,0] = hessian[0,1] = -1 / (2 * sigma2**2)
-        hessian[1,1] = (sigma2 + phi - 1.25) / sigma2**3
+        hessian = np.zeros((2, 2))
+        hessian[0, 0] = (-phi**2 - 1) / (phi**2 - 1)**2
+        hessian[1, 0] = hessian[0, 1] = -1 / (2 * sigma2**2)
+        hessian[1, 1] = (sigma2 + phi - 1.25) / sigma2**3
         return hessian
 
     analytic_hessian = hessian(params[0], params[1])
@@ -331,7 +331,7 @@ def test_cov_params():
 
 def test_transform():
     # The transforms in MLEModel are noops
-    mod = MLEModel([1,2], **kwargs)
+    mod = MLEModel([1, 2], **kwargs)
 
     # Test direct transform, untransform
     assert_allclose(mod.transform_params([2, 3]), [2, 3])
@@ -380,7 +380,7 @@ def test_filter():
 
 
 def test_params():
-    mod = MLEModel([1,2], **kwargs)
+    mod = MLEModel([1, 2], **kwargs)
 
     # By default start_params raises NotImplementedError
     assert_raises(NotImplementedError, lambda: mod.start_params)
@@ -415,7 +415,7 @@ def test_results(pandas=False):
 
 def test_predict():
     dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='AS')
-    endog = pd.Series([1,2], index=dates)
+    endog = pd.Series([1, 2], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
 
@@ -432,14 +432,14 @@ def test_predict():
     # assert_raises(ValueError, res.predict, dynamic='1982-01-01')
 
     # Test for passing a string to predict when dates are not set
-    mod = MLEModel([1,2], **kwargs)
+    mod = MLEModel([1, 2], **kwargs)
     res = mod.filter([])
     assert_raises(KeyError, res.predict, dynamic='string')
 
 
 def test_forecast():
     # Numpy
-    mod = MLEModel([1,2], **kwargs)
+    mod = MLEModel([1, 2], **kwargs)
     res = mod.filter([])
     forecast = res.forecast(steps=10)
     assert_allclose(forecast, np.ones((10,)) * 2)
@@ -447,7 +447,7 @@ def test_forecast():
 
     # Pandas
     index = pd.date_range('1960-01-01', periods=2, freq='MS')
-    mod = MLEModel(pd.Series([1,2], index=index), **kwargs)
+    mod = MLEModel(pd.Series([1, 2], index=index), **kwargs)
     res = mod.filter([])
     assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
     assert_allclose(res.forecast(steps='1960-12-01'), np.ones((10,)) * 2)
@@ -456,7 +456,7 @@ def test_forecast():
 
 def test_summary():
     dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
-    endog = pd.Series([1,2,3,4,5], index=dates)
+    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
 
@@ -528,15 +528,15 @@ def test_basic_endog():
     assert_raises(ValueError, mod.filter, [])
 
     # Check that a different iterable tpyes give the expected result
-    endog = [1.,2.]
+    endog = [1., 2.]
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
-    endog = [[1.],[2.]]
+    endog = [[1.], [2.]]
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
-    endog = (1.,2.)
+    endog = (1., 2.)
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
@@ -553,7 +553,7 @@ def test_numpy_endog():
     assert_equal(mod.data.orig_endog.base is not endog, True)
     endog[0] = 2
     # there is no link to mod.endog
-    assert_equal(mod.endog, np.r_[1, 2].reshape(2,1))
+    assert_equal(mod.endog, np.r_[1, 2].reshape(2, 1))
     # there remains a link to mod.data.orig_endog
     assert_equal(mod.data.orig_endog, endog)
 
@@ -565,7 +565,7 @@ def test_numpy_endog():
     assert_raises(TypeError, check_endog, endog, **kwargs)
 
     # Example : 1-dim array, both C- and F-contiguous, length 2
-    endog = np.array([1.,2.])
+    endog = np.array([1., 2.])
     assert_equal(endog.ndim, 1)
     assert_equal(endog.flags['C_CONTIGUOUS'], True)
     assert_equal(endog.flags['F_CONTIGUOUS'], True)
@@ -667,7 +667,7 @@ def test_pandas_endog():
     # Example (failure): pandas.DataFrame with 2 columns
     endog = pd.DataFrame({'a': [1., 2.], 'b': [3., 4.]}, index=dates)
     # raises error because 2-columns means k_endog=2, but the design matrix
-    # set in **kwargs is shaped (1,1)
+    # set in **kwargs is shaped (1, 1)
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Check behavior of the link maintained between passed `endog` and
@@ -679,7 +679,7 @@ def test_pandas_endog():
     assert_equal(mod.data.orig_endog.values.base is not endog, True)
     endog.iloc[0, 0] = 2
     # there is no link to mod.endog
-    assert_equal(mod.endog, np.r_[1, 2].reshape(2,1))
+    assert_equal(mod.endog, np.r_[1, 2].reshape(2, 1))
     # there remains a link to mod.data.orig_endog
     assert_allclose(mod.data.orig_endog, endog)
 

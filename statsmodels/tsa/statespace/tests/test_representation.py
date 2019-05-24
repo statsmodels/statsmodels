@@ -523,7 +523,7 @@ class TestClark1989PartialMissing(Clark1989):
     def setup_class(cls):
         super(TestClark1989PartialMissing, cls).setup_class()
         endog = cls.model.endog
-        endog[1,-51:] = np.NaN
+        endog[1, -51:] = np.NaN
         cls.model.bind(endog)
 
         cls.results = cls.run_filter()
@@ -537,7 +537,7 @@ class TestClark1989PartialMissing(Clark1989):
 
     def test_predicted_state(self):
         assert_allclose(
-            self.results.predicted_state.T[1:], clark1989_results.iloc[:,1:],
+            self.results.predicted_state.T[1:], clark1989_results.iloc[:, 1:],
             atol=1e-8
         )
 
@@ -556,7 +556,7 @@ def test_slice_notation():
         mod['designs'] = 1
 
     def set_designs2():
-        mod['designs',0,0] = 1
+        mod['designs', 0, 0] = 1
 
     def set_designs3():
         mod[0] = 1
@@ -567,22 +567,22 @@ def test_slice_notation():
 
     # Test invalid __getitem__
     assert_raises(IndexError, lambda: mod['designs'])
-    assert_raises(IndexError, lambda: mod['designs',0,0,0])
+    assert_raises(IndexError, lambda: mod['designs', 0, 0, 0])
     assert_raises(IndexError, lambda: mod[0])
 
     # Test valid __setitem__, __getitem__
-    assert_equal(mod.design[0,0,0], 0)
-    mod['design',0,0,0] = 1
+    assert_equal(mod.design[0, 0, 0], 0)
+    mod['design', 0, 0, 0] = 1
     assert_equal(mod['design'].sum(), 1)
-    assert_equal(mod.design[0,0,0], 1)
-    assert_equal(mod['design',0,0,0], 1)
+    assert_equal(mod.design[0, 0, 0], 1)
+    assert_equal(mod['design', 0, 0, 0], 1)
 
     # Test valid __setitem__, __getitem__ with unspecified time index
     mod['design'] = np.zeros(mod['design'].shape)
-    assert_equal(mod.design[0,0], 0)
-    mod['design',0,0] = 1
-    assert_equal(mod.design[0,0], 1)
-    assert_equal(mod['design',0,0], 1)
+    assert_equal(mod.design[0, 0], 0)
+    mod['design', 0, 0] = 1
+    assert_equal(mod.design[0, 0], 1)
+    assert_equal(mod['design', 0, 0], 1)
 
 
 def test_representation():
@@ -595,7 +595,7 @@ def test_representation():
 
     # Test an invalid endogenous array
     def empty_endog():
-        endog = np.zeros((0,0))
+        endog = np.zeros((0, 0))
         mod = Representation(endog, k_states=2)
     assert_raises(ValueError, empty_endog)
 
@@ -603,7 +603,7 @@ def test_representation():
     # wide format: k_endog x nobs)
     nobs = 10
     k_endog = 2
-    endog = np.asfortranarray(np.arange(nobs*k_endog).reshape(k_endog,nobs)*1.)
+    endog = np.asfortranarray(np.arange(nobs*k_endog).reshape(k_endog, nobs)*1.)
     mod = Representation(endog, k_states=2)
     assert_equal(mod.nobs, nobs)
     assert_equal(mod.k_endog, k_endog)
@@ -612,7 +612,7 @@ def test_representation():
     # tall format: nobs x k_endog)
     nobs = 10
     k_endog = 2
-    endog = np.arange(nobs*k_endog).reshape(nobs,k_endog)*1.
+    endog = np.arange(nobs*k_endog).reshape(nobs, k_endog)*1.
     mod = Representation(endog, k_states=2)
     assert_equal(mod.nobs, nobs)
     assert_equal(mod.k_endog, k_endog)
@@ -629,31 +629,31 @@ def test_bind():
     mod = Representation(2, k_states=2)
 
     # Test invalid endogenous array (it must be ndarray)
-    assert_raises(ValueError, lambda: mod.bind([1,2,3,4]))
+    assert_raises(ValueError, lambda: mod.bind([1, 2, 3, 4]))
 
     # Test valid (nobs x 1) endogenous array
-    mod.bind(np.arange(10).reshape((5,2))*1.)
+    mod.bind(np.arange(10).reshape((5, 2))*1.)
     assert_equal(mod.nobs, 5)
 
     # Test valid (k_endog x 0) endogenous array
-    mod.bind(np.zeros((0,2),dtype=np.float64))
+    mod.bind(np.zeros((0, 2), dtype=np.float64))
 
     # Test invalid (3-dim) endogenous array
-    assert_raises(ValueError, lambda: mod.bind(np.arange(12).reshape(2,2,3)*1.))
+    assert_raises(ValueError, lambda: mod.bind(np.arange(12).reshape(2, 2, 3)*1.))
 
     # Test valid F-contiguous
-    mod.bind(np.asfortranarray(np.arange(10).reshape(2,5)))
+    mod.bind(np.asfortranarray(np.arange(10).reshape(2, 5)))
     assert_equal(mod.nobs, 5)
 
     # Test valid C-contiguous
-    mod.bind(np.arange(10).reshape(5,2))
+    mod.bind(np.arange(10).reshape(5, 2))
     assert_equal(mod.nobs, 5)
 
     # Test invalid F-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(5,2))))
+    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(5, 2))))
 
     # Test invalid C-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(2,5)))
+    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(2, 5)))
 
 
 def test_initialization():
@@ -674,7 +674,7 @@ def test_initialization():
     # Test invalid initial_state
     initial_state = np.zeros(10,)
     assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
-    initial_state = np.zeros((10,10))
+    initial_state = np.zeros((10, 10))
     assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
 
     # Test invalid initial_state_cov
@@ -743,7 +743,7 @@ def test_cython():
 
     # Force creating new ?Statespace and ?KalmanFilter, by changing the
     # time-varying character of an array
-    mod.design = np.zeros((1,1,2))
+    mod.design = np.zeros((1, 1, 2))
     mod._initialize_filter()
     assert_equal(mod._kalman_filter == kf, False)
     kf = mod._kalman_filters['d']
@@ -758,7 +758,7 @@ def test_cython():
 def test_filter():
     # Tests of invalid calls to the filter function
 
-    endog = np.ones((10,1))
+    endog = np.ones((10, 1))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
     mod['selection', :] = 1
@@ -772,7 +772,7 @@ def test_filter():
 def test_loglike():
     # Tests of invalid calls to the loglike function
 
-    endog = np.ones((10,1))
+    endog = np.ones((10, 1))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
     mod['selection', :] = 1
@@ -789,10 +789,10 @@ def test_predict():
 
     warnings.simplefilter("always")
 
-    endog = np.ones((10,1))
+    endog = np.ones((10, 1))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
-    mod['obs_intercept'] = np.zeros((1,10))
+    mod['obs_intercept'] = np.zeros((1, 10))
     mod['selection', :] = 1
     mod['state_cov', :] = 1
 
@@ -828,7 +828,7 @@ def test_predict():
 
     # Check that dynamic > nobs is an warning
     with warnings.catch_warnings(record=True) as w:
-        res.predict(end=11, dynamic=11, obs_intercept=np.zeros((1,1)))
+        res.predict(end=11, dynamic=11, obs_intercept=np.zeros((1, 1)))
         message = ('Dynamic prediction specified to begin during'
                    ' out-of-sample forecasting period, and so has no'
                    ' effect.')
@@ -836,7 +836,7 @@ def test_predict():
 
     # Check for a warning when providing a non-used statespace matrix
     with warnings.catch_warnings(record=True) as w:
-        res.predict(end=res.nobs+1, design=True, obs_intercept=np.zeros((1,1)))
+        res.predict(end=res.nobs+1, design=True, obs_intercept=np.zeros((1, 1)))
         message = ('Model has time-invariant design matrix, so the design'
                    ' argument to `predict` has been ignored.')
         assert_equal(str(w[0].message), message)
@@ -856,7 +856,7 @@ def test_predict():
                   obs_intercept=np.zeros(2))
 
     # Check that start=None gives start=0 and end=None gives end=nobs
-    assert_equal(res.predict().forecasts.shape, (1,res.nobs))
+    assert_equal(res.predict().forecasts.shape, (1, res.nobs))
 
     # Check that dynamic=True begins dynamic prediction immediately
     # TODO just a smoke test
@@ -909,15 +909,15 @@ def test_predict():
     # is given
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
-    mod['obs_cov'] = np.zeros((1,1,10))
+    mod['obs_cov'] = np.zeros((1, 1, 10))
     mod['selection', :] = 1
     mod['state_cov', :] = 1
     res = mod.filter()
 
     assert_raises(ValueError, res.predict, end=res.nobs+1,
-                  obs_cov=np.zeros((1,1)))
+                  obs_cov=np.zeros((1, 1)))
     assert_raises(ValueError, res.predict, end=res.nobs+1,
-                  obs_cov=np.zeros((1,1,2)))
+                  obs_cov=np.zeros((1, 1, 2)))
 
 
 def test_standardized_forecasts_error():
@@ -934,13 +934,13 @@ def test_standardized_forecasts_error():
     )
     data['lgdp'] = np.log(data['GDP'])
 
-    # Fit an ARIMA(1,1,0) to log GDP
-    mod = sarimax.SARIMAX(data['lgdp'], order=(1,1,0))
+    # Fit an ARIMA(1, 1, 0) to log GDP
+    mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
     res = mod.fit(disp=-1)
 
     standardized_forecasts_error = (
         res.filter_results.forecasts_error[0] /
-        np.sqrt(res.filter_results.forecasts_error_cov[0,0])
+        np.sqrt(res.filter_results.forecasts_error_cov[0, 0])
     )
 
     assert_allclose(
@@ -1028,7 +1028,7 @@ def test_simulate():
     assert_raises(ValueError, mod.simulate, nsimulations+1, measurement_shocks,
                   state_shocks)
 
-    # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
+    # ARMA(1, 1): phi = [0.1], theta = [0.5], sigma^2 = 2
     phi = 0.1
     theta = 0.5
     mod = sarimax.SARIMAX([0], order=(1, 0, 1))
@@ -1042,7 +1042,7 @@ def test_simulate():
 
     assert_allclose(actual, desired)
 
-    # SARIMAX(1,0,1)x(1,0,1,4), this time using the results object call
+    # SARIMAX(1, 0, 1)x(1, 0, 1, 4), this time using the results object call
     mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1, 0, 1),
                           seasonal_order=(1, 0, 1, 4))
     res = mod.filter([0.1, 0.5, 0.2, -0.3, 1])
@@ -1136,7 +1136,7 @@ def test_impulse_responses():
     # a multivariate or empty "impulse" is sent
     mod = KalmanFilter(k_endog=1, k_states=1)
     assert_raises(ValueError, mod.impulse_responses, impulse=1)
-    assert_raises(ValueError, mod.impulse_responses, impulse=[1,1])
+    assert_raises(ValueError, mod.impulse_responses, impulse=[1, 1])
     assert_raises(ValueError, mod.impulse_responses, impulse=[])
 
     # Univariate model with two uncorrelated shocks
@@ -1151,23 +1151,23 @@ def test_impulse_responses():
     actual = mod.impulse_responses(steps=10, impulse=0)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[1,0])
+    actual = mod.impulse_responses(steps=10, impulse=[1, 0])
     assert_allclose(actual, desired)
 
     actual = mod.impulse_responses(steps=10, impulse=1)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[0,1])
+    actual = mod.impulse_responses(steps=10, impulse=[0, 1])
     assert_allclose(actual, desired)
 
     # In this case (with sigma=sigma^2=1), orthogonalized is the same as not
     actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[1,0], orthogonalized=True)
+    actual = mod.impulse_responses(steps=10, impulse=[1, 0], orthogonalized=True)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[0,1], orthogonalized=True)
+    actual = mod.impulse_responses(steps=10, impulse=[0, 1], orthogonalized=True)
     assert_allclose(actual, desired)
 
     # Univariate model with two correlated shocks
@@ -1220,7 +1220,7 @@ def test_impulse_responses():
     assert_allclose(actual, np.c_[zeros, ones])
 
     # AR(1) model generates a geometrically declining series
-    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1,0,0))
+    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1, 0, 0))
     phi = 0.5
     mod.update([phi, 1])
 
@@ -1238,7 +1238,7 @@ def test_impulse_responses():
 
 def test_missing():
     # Datasets
-    endog = np.arange(10).reshape(10,1)
+    endog = np.arange(10).reshape(10, 1)
     endog_pre_na = np.ascontiguousarray(np.c_[
         endog.copy() * np.nan, endog.copy() * np.nan, endog, endog])
     endog_post_na = np.ascontiguousarray(np.c_[

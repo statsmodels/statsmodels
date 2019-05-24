@@ -621,7 +621,7 @@ def test_misspecification():
     endog = np.arange(20).reshape(10, 2)
 
     # Too few endog
-    assert_raises(ValueError, dynamic_factor.DynamicFactor, endog[:,0], k_factors=0, factor_order=0)
+    assert_raises(ValueError, dynamic_factor.DynamicFactor, endog[:, 0], k_factors=0, factor_order=0)
 
     # Too many factors
     assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=2, factor_order=1)

@@ -82,20 +82,20 @@ class Trivariate(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):
@@ -454,7 +454,7 @@ class TestDFM(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:] * 400
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:] * 400
 
         if which == 'all':
             obs.iloc[:50, :] = np.nan
@@ -526,20 +526,20 @@ class TestDFM(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):

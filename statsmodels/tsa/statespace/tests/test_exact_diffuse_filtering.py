@@ -179,7 +179,7 @@ def model_common_level(endog=None, params=None, restricted=False):
 def model_var1(endog=None, params=None, measurement_error=False, init=None):
     if endog is None:
         endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
     if params is None:
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
         if measurement_error:
@@ -200,7 +200,7 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
 def model_dfm(endog=None, params=None, factor_order=2):
     if endog is None:
         endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
     if params is None:
         params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
 
@@ -746,7 +746,7 @@ class CheckVAR1Missing(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
         endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
         kwargs['endog'] = endog
@@ -964,13 +964,13 @@ def test_irrelevant_state():
     endog = macrodata.infl
 
     spec = {
-        'freq_seasonal': [{'period':8, 'harmonics': 6},
+        'freq_seasonal': [{'period': 8, 'harmonics': 6},
                           {'period': 36, 'harmonics': 6}]
     }
 
     # Approximate diffuse version
     mod = UnobservedComponents(endog, 'llevel', **spec)
-    mod.ssm.initialization = Initialization(mod.k_states,'approximate_diffuse')
+    mod.ssm.initialization = Initialization(mod.k_states, 'approximate_diffuse')
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version
