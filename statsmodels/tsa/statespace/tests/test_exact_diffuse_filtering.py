@@ -178,8 +178,8 @@ def model_common_level(endog=None, params=None, restricted=False):
 
 def model_var1(endog=None, params=None, measurement_error=False, init=None):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
         if measurement_error:
@@ -199,8 +199,8 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
 
 def model_dfm(endog=None, params=None, factor_order=2):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
 
@@ -623,8 +623,10 @@ class CheckApproximateDiffuseMixin(object):
         # Get the approximate diffuse results
         kappa = cls.approximate_diffuse_variance
         if init_approx is None:
-            init_approx = Initialization(cls.ssm.k_states,
-                'approximate_diffuse', approximate_diffuse_variance=kappa)
+            init_approx = Initialization(
+                cls.ssm.k_states,
+                'approximate_diffuse',
+                approximate_diffuse_variance=kappa)
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
 
@@ -735,7 +737,8 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(current_path, 'results',
+    results_path = os.path.join(
+        current_path, 'results',
         'results_exact_initial_var1_measurement_error_R.csv')
 
 
@@ -745,8 +748,8 @@ class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
 class CheckVAR1Missing(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        endog = (np.log(
-            macrodata[['realgdp', 'realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
         kwargs['endog'] = endog
@@ -970,7 +973,8 @@ def test_irrelevant_state():
 
     # Approximate diffuse version
     mod = UnobservedComponents(endog, 'llevel', **spec)
-    mod.ssm.initialization = Initialization(mod.k_states, 'approximate_diffuse')
+    mod.ssm.initialization = Initialization(mod.k_states,
+                                            'approximate_diffuse')
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version

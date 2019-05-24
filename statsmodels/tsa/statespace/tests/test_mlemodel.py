@@ -6,18 +6,22 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-import numpy as np
-import pandas as pd
 import os
 import re
-
 import warnings
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from statsmodels.tsa.statespace import (sarimax, varmax, kalman_filter,
                                         kalman_smoother)
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.datasets import nile
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
-from statsmodels.tsa.statespace.tests.results import results_sarimax, results_var_misc
+from numpy.testing import (
+    assert_almost_equal, assert_equal, assert_allclose, assert_raises)
+from statsmodels.tsa.statespace.tests.results import (
+    results_sarimax, results_var_misc)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -40,7 +44,9 @@ def get_dummy_mod(fit=True, pandas=False):
         endog = pd.Series(endog, index=index)
         exog = pd.Series(exog, index=index)
 
-    mod = sarimax.SARIMAX(endog, exog=exog, order=(0, 0, 0), time_varying_regression=True, mle_regression=False)
+    mod = sarimax.SARIMAX(
+        endog, exog=exog, order=(0, 0, 0),
+        time_varying_regression=True, mle_regression=False)
 
     if fit:
         with warnings.catch_warnings():
@@ -113,7 +119,9 @@ def test_wrapping():
 
     # The defaults are as follows:
     assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
-    assert_equal(mod.ssm.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
+    assert_equal(
+        mod.ssm.stability_method,
+        kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(mod.ssm.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
     assert_equal(mod.ssm.smoother_output, kalman_smoother.SMOOTHER_ALL)
 
@@ -166,8 +174,10 @@ def test_fit_misc():
     # Test optim_hessian={'opg','oim','approx'}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res1 = mod.fit(method='ncg', disp=0, optim_hessian='opg', optim_complex_step=False)
-        res2 = mod.fit(method='ncg', disp=0, optim_hessian='oim', optim_complex_step=False)
+        res1 = mod.fit(method='ncg', disp=0, optim_hessian='opg',
+                       optim_complex_step=False)
+        res2 = mod.fit(method='ncg', disp=0, optim_hessian='oim',
+                       optim_complex_step=False)
     # Check that the Hessians broadly result in the same optimum
     assert_allclose(res1.llf, res2.llf, rtol=1e-2)
 
@@ -177,10 +187,11 @@ def test_fit_misc():
         warnings.simplefilter("ignore")
         res_params = mod.fit(disp=-1, return_params=True)
 
-    # 5 digits necessary to accommodate 32-bit numpy / scipy with OpenBLAS 0.2.18
+    # 5 digits necessary to accommodate 32-bit numpy/scipy with OpenBLAS 0.2.18
     assert_almost_equal(res_params, [0, 0], 5)
 
 
+@pytest.mark.smoke
 def test_score_misc():
     mod, res = get_dummy_mod()
 
@@ -266,7 +277,7 @@ def test_score_analytic_ar1():
     approx_fd_centered = (
         mod.score(uparams, transformed=False, approx_complex_step=False,
                   approx_centered=True))
-    assert_allclose(approx_fd, analytic_score, atol=1e-5)
+    assert_allclose(approx_fd_centered, analytic_score, atol=1e-5)
 
     harvey_cs = mod.score(uparams, transformed=False, method='harvey',
                           approx_complex_step=True)
@@ -307,26 +318,57 @@ def test_cov_params():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = mod.fit(res.params, disp=-1, cov_type='none')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix not calculated.')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Covariance matrix not calculated.')
+
         res = mod.fit(res.params, disp=-1, cov_type='approx')
         assert_equal(res.cov_type, 'approx')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical (complex-step) differentiation.')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Covariance matrix calculated using numerical (complex-step) '
+            'differentiation.')
+
         res = mod.fit(res.params, disp=-1, cov_type='oim')
         assert_equal(res.cov_type, 'oim')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the observed information matrix (complex-step) described in Harvey (1989).')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Covariance matrix calculated using the observed information '
+            'matrix (complex-step) described in Harvey (1989).')
+
         res = mod.fit(res.params, disp=-1, cov_type='opg')
         assert_equal(res.cov_type, 'opg')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the outer product of gradients (complex-step).')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Covariance matrix calculated using the outer product of '
+            'gradients (complex-step).')
+
         res = mod.fit(res.params, disp=-1, cov_type='robust')
         assert_equal(res.cov_type, 'robust')
-        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix (complex-step) described in Harvey (1989).')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Quasi-maximum likelihood covariance matrix used for robustness '
+            'to some misspecifications; calculated using the observed '
+            'information matrix (complex-step) described in Harvey (1989).')
+
         res = mod.fit(res.params, disp=-1, cov_type='robust_oim')
         assert_equal(res.cov_type, 'robust_oim')
-        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix (complex-step) described in Harvey (1989).')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Quasi-maximum likelihood covariance matrix used for robustness '
+            'to some misspecifications; calculated using the observed '
+            'information matrix (complex-step) described in Harvey (1989).')
+
         res = mod.fit(res.params, disp=-1, cov_type='robust_approx')
         assert_equal(res.cov_type, 'robust_approx')
-        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using numerical (complex-step) differentiation.')
-        assert_raises(NotImplementedError, mod.fit, res.params, disp=-1, cov_type='invalid_cov_type')
+        assert_equal(
+            res.cov_kwds['description'],
+            'Quasi-maximum likelihood covariance matrix used for robustness '
+            'to some misspecifications; calculated using numerical '
+            '(complex-step) differentiation.')
+
+        with pytest.raises(NotImplementedError):
+            mod.fit(res.params, disp=-1, cov_type='invalid_cov_type')
 
 
 def test_transform():
@@ -451,7 +493,8 @@ def test_forecast():
     res = mod.filter([])
     assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
     assert_allclose(res.forecast(steps='1960-12-01'), np.ones((10,)) * 2)
-    assert_allclose(res.get_forecast(steps=10).predicted_mean, np.ones((10,)) * 2)
+    assert_allclose(res.get_forecast(steps=10).predicted_mean,
+                    np.ones((10,)) * 2)
 
 
 def test_summary():
@@ -715,17 +758,21 @@ def test_diagnostics():
     desired = res.test_heteroskedasticity(method='breakvar')
     assert_allclose(actual, desired)
 
-    assert_raises(ValueError, res.test_heteroskedasticity, method=None, alternative='invalid')
-    assert_raises(NotImplementedError, res.test_heteroskedasticity, method='invalid')
+    with pytest.raises(ValueError):
+        res.test_heteroskedasticity(method=None, alternative='invalid')
+    with pytest.raises(NotImplementedError):
+        res.test_heteroskedasticity(method='invalid')
 
     actual = res.test_serial_correlation(method=None)
     desired = res.test_serial_correlation(method='ljungbox')
     assert_allclose(actual, desired)
 
-    assert_raises(NotImplementedError, res.test_serial_correlation, method='invalid')
+    with pytest.raises(NotImplementedError):
+        res.test_serial_correlation(method='invalid')
 
     # Smoke tests for other options
-    actual = res.test_heteroskedasticity(method=None, alternative='d', use_f=False)
+    actual = res.test_heteroskedasticity(method=None, alternative='d',
+                                         use_f=False)
     desired = res.test_serial_correlation(method='boxpierce')
 
 
@@ -739,7 +786,8 @@ def test_diagnostics_nile_eviews():
     niledata = nile.data.load_pandas().data
     niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
 
-    mod = MLEModel(niledata['volume'], k_states=1,
+    mod = MLEModel(
+        niledata['volume'], k_states=1,
         initialization='approximate_diffuse', initial_variance=1e15,
         loglikelihood_burn=1)
     mod.ssm['design', 0, 0] = 1
@@ -766,7 +814,8 @@ def test_diagnostics_nile_durbinkoopman():
     niledata = nile.data.load_pandas().data
     niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
 
-    mod = MLEModel(niledata['volume'], k_states=1,
+    mod = MLEModel(
+        niledata['volume'], k_states=1,
         initialization='approximate_diffuse', initial_variance=1e15,
         loglikelihood_burn=1)
     mod.ssm['design', 0, 0] = 1
@@ -794,13 +843,14 @@ def test_diagnostics_nile_durbinkoopman():
     assert_allclose(actual, [0.61], atol=1e-2)
 
 
+@pytest.mark.smoke
 def test_prediction_results():
     # Just smoke tests for the PredictionResults class, which is copied from
     # elsewhere in Statsmodels
 
     mod, res = get_dummy_mod()
     predict = res.get_prediction()
-    summary_frame = predict.summary_frame()
+    predict.summary_frame()
 
 
 def test_lutkepohl_information_criteria():
@@ -814,7 +864,7 @@ def test_lutkepohl_information_criteria():
     dta['dln_consump'] = np.log(dta['consump']).diff()
 
     endog = dta.loc['1960-04-01':'1978-10-01',
-                   ['dln_inv', 'dln_inc', 'dln_consump']]
+                    ['dln_inv', 'dln_inc', 'dln_consump']]
 
     # AR model - SARIMAX
     # (use loglikelihood_burn=1 to mimic conditional MLE used by Stata's var

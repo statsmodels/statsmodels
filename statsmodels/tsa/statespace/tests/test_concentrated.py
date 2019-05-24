@@ -104,7 +104,6 @@ def test_concentrated_predict_sarimax():
     nobs = 30
     np.random.seed(28953)
     endog = np.random.normal(size=nobs)
-    kwargs = {}
 
     # Typical model
     out = get_sarimax_models(endog)

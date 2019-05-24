@@ -14,22 +14,25 @@ MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
 
+import os
 import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
-import os
 
 from statsmodels.tsa.statespace.representation import Representation
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults, PredictionResults
+from statsmodels.tsa.statespace.kalman_filter import (
+    KalmanFilter, FilterResults, PredictionResults)
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from numpy.testing import (
+    assert_equal, assert_almost_equal, assert_raises, assert_allclose)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-clark1989_path = 'results' + os.sep + 'results_clark1989_R.csv'
-clark1989_results = pd.read_csv(current_path + os.sep + clark1989_path)
+clark1989_path = os.path.join('results', 'results_clark1989_R.csv')
+clark1989_results = pd.read_csv(os.path.join(current_path, clark1989_path))
 
 
 class Clark1987(object):
@@ -590,20 +593,21 @@ def test_representation():
 
     # Test an invalid number of states
     def zero_kstates():
-        mod = Representation(1, 0)
+        Representation(1, 0)
     assert_raises(ValueError, zero_kstates)
 
     # Test an invalid endogenous array
     def empty_endog():
         endog = np.zeros((0, 0))
-        mod = Representation(endog, k_states=2)
+        Representation(endog, k_states=2)
     assert_raises(ValueError, empty_endog)
 
     # Test a Fortran-ordered endogenous array (which will be assumed to be in
     # wide format: k_endog x nobs)
     nobs = 10
     k_endog = 2
-    endog = np.asfortranarray(np.arange(nobs*k_endog).reshape(k_endog, nobs)*1.)
+    arr = np.arange(nobs*k_endog).reshape(k_endog, nobs)*1.
+    endog = np.asfortranarray(arr)
     mod = Representation(endog, k_states=2)
     assert_equal(mod.nobs, nobs)
     assert_equal(mod.k_endog, k_endog)
@@ -639,7 +643,8 @@ def test_bind():
     mod.bind(np.zeros((0, 2), dtype=np.float64))
 
     # Test invalid (3-dim) endogenous array
-    assert_raises(ValueError, lambda: mod.bind(np.arange(12).reshape(2, 2, 3)*1.))
+    with pytest.raises(ValueError):
+        mod.bind(np.arange(12).reshape(2, 2, 3)*1.)
 
     # Test valid F-contiguous
     mod.bind(np.asfortranarray(np.arange(10).reshape(2, 5)))
@@ -650,7 +655,8 @@ def test_bind():
     assert_equal(mod.nobs, 5)
 
     # Test invalid F-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(5, 2))))
+    with pytest.raises(ValueError):
+        mod.bind(np.asfortranarray(np.arange(10).reshape(5, 2)))
 
     # Test invalid C-contiguous
     assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(2, 5)))
@@ -673,14 +679,17 @@ def test_initialization():
 
     # Test invalid initial_state
     initial_state = np.zeros(10,)
-    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+    with pytest.raises(ValueError):
+        mod.initialize_known(initial_state, initial_state_cov)
     initial_state = np.zeros((10, 10))
-    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+    with pytest.raises(ValueError):
+        mod.initialize_known(initial_state, initial_state_cov)
 
     # Test invalid initial_state_cov
     initial_state = np.zeros(2,) + 1.5
     initial_state_cov = np.eye(3)
-    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+    with pytest.raises(ValueError):
+        mod.initialize_known(initial_state, initial_state_cov)
 
 
 def test_no_endog():
@@ -715,7 +724,7 @@ def test_cython():
         # Test that a dKalmanFilter instance was created
         assert_equal(prefix in mod._kalman_filters, True)
         kf = mod._kalman_filters[prefix]
-        assert_equal(isinstance(kf, tools.prefix_kalman_filter_map[prefix]), True)
+        assert isinstance(kf, tools.prefix_kalman_filter_map[prefix])
 
         # Test that the default returned _kalman_filter is the above instance
         assert_equal(mod._kalman_filter, kf)
@@ -836,7 +845,8 @@ def test_predict():
 
     # Check for a warning when providing a non-used statespace matrix
     with warnings.catch_warnings(record=True) as w:
-        res.predict(end=res.nobs+1, design=True, obs_intercept=np.zeros((1, 1)))
+        res.predict(end=res.nobs+1, design=True,
+                    obs_intercept=np.zeros((1, 1)))
         message = ('Model has time-invariant design matrix, so the design'
                    ' argument to `predict` has been ignored.')
         assert_equal(str(w[0].message), message)
@@ -1164,10 +1174,12 @@ def test_impulse_responses():
     actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[1, 0], orthogonalized=True)
+    actual = mod.impulse_responses(
+        steps=10, impulse=[1, 0], orthogonalized=True)
     assert_allclose(actual, desired)
 
-    actual = mod.impulse_responses(steps=10, impulse=[0, 1], orthogonalized=True)
+    actual = mod.impulse_responses(
+        steps=10, impulse=[0, 1], orthogonalized=True)
     assert_allclose(actual, desired)
 
     # Univariate model with two correlated shocks
