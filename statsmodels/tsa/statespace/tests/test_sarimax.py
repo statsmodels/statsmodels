@@ -48,8 +48,8 @@ class TestSARIMAXStatsmodels(object):
         cls.result_a = cls.model_a.fit(disp=-1)
 
         cls.model_b = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
-                                       simple_differencing=True,
-                                       hamilton_representation=True)
+                                      simple_differencing=True,
+                                      hamilton_representation=True)
         cls.result_b = cls.model_b.fit(disp=-1)
 
     def test_loglike(self):
@@ -97,7 +97,7 @@ class TestRealGDPARStata(object):
     def setup_class(cls):
         dlgdp = np.log(realgdp_results['value']).diff()[1:].values
         cls.model = sarimax.SARIMAX(dlgdp, order=(12, 0, 0), trend='n',
-                                     hamilton_representation=True)
+                                    hamilton_representation=True)
         # Estimated by Stata
         params = [
             .40725515, .18782621, -.01514009, -.01027267, -.03642297,
@@ -174,7 +174,7 @@ class ARIMA(SARIMAXStataTests):
         kwargs.setdefault('hamilton_representation', True)
 
         cls.model = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
-                                     *args, **kwargs)
+                                    *args, **kwargs)
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
         # the intercept of the process. Get the intercept.
@@ -735,7 +735,7 @@ class TestFriedmanStateRegression(Friedman):
         )
 
         cls.true_params = np.r_[true['params_exog'], true['params_ar'],
-                                 true['params_ma'], true['params_variance']]
+                                true['params_ma'], true['params_variance']]
 
         cls.result = cls.model.filter(cls.true_params)
 

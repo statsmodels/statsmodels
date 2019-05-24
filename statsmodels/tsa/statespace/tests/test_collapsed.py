@@ -56,10 +56,10 @@ class Trivariate(object):
 
         # Update matrices with test parameters
         cls.model['design'] = np.array([[0.5, 0.2],
-                                         [0,   0.8],
-                                         [1,  -0.5]])
+                                        [0,   0.8],
+                                        [1,  -0.5]])
         cls.model['transition'] = np.array([[0.4, 0.5],
-                                             [1,   0]])
+                                            [1,   0]])
         cls.model['obs_cov'] = np.diag([0.2, 1.1, 0.5])
         cls.model['state_cov'] = np.diag([2., 1])
 

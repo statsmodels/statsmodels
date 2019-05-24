@@ -62,8 +62,8 @@ class Clark1987(object):
 
         cls.model.design[:, :, 0] = [1, 1, 0, 0]
         cls.model.transition[([0, 0, 1, 1, 2, 3],
-                               [0, 3, 1, 2, 1, 3],
-                               [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+                              [0, 3, 1, 2, 1, 3],
+                              [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
         cls.model.selection = np.eye(cls.model.k_states)
 
         # Update matrices with given parameters
