@@ -15,21 +15,21 @@ from statsmodels.genmod.families import Gaussian
 
 from statsmodels.genmod.tests import gee_gaussian_simulation_check as gees
 
-da,va = gees.gen_gendat_ar0(0.6)()
+da, va = gees.gen_gendat_ar0(0.6)()
 ga = Gaussian()
 lhs = np.array([[0., 1, 1, 0, 0],])
 rhs = np.r_[0.,]
 
 example = []
 if 'constraint' in example:
-    md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                     constraint=(lhs, rhs))
+    md = GEE(da.endog, da.exog, da.group, da.time[:, 0], ga, va,
+             constraint=(lhs, rhs))
     mdf = md.fit()
     print(mdf.summary())
 
 
-md2 = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                 constraint=None)
+md2 = GEE(da.endog, da.exog, da.group, da.time[:, 0], ga, va,
+          constraint=None)
 mdf2 = md2.fit()
 print('\n\n')
 print(mdf2.summary())
@@ -71,9 +71,10 @@ bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse, mdf_bc.bse))
 print(bse)
 
 print("\nimplemented `standard_errors`")
-bse2 = np.column_stack((mdf2.bse, mdf2.standard_errors(),
-                                 mdf2.standard_errors(covariance_type='naive'),
-                                 mdf2.standard_errors(covariance_type='bias_reduced')))
+bse2 = np.column_stack((mdf2.bse,
+                        mdf2.standard_errors(),
+                        mdf2.standard_errors(cov_type='naive'),
+                        mdf2.standard_errors(cov_type='bias_reduced')))
 print(bse2)
 print("bse and `standard_errors` agree:", np.allclose(bse, bse2))
 

@@ -6,52 +6,50 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import urlretrieve
+
+import pandas as pd
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
 import statsmodels.stats.sandwich_covariance as sw
 
-#http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta
+# The data used for this example come from:
+#  http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta
 
 import statsmodels.iolib.foreign as dta
 
 try:
-    srs = dta.genfromdta("srs.dta")
+    srs = pd.read_stata("srs.dta")
     print('using local file')
 except IOError:
     urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
     print('downloading file')
-    srs = dta.genfromdta("srs.dta")
+    srs = pd.read_stata("srs.dta")
 #    from statsmodels.datasets import webuse
 #    srs = webuse('srs', 'http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/')
 #    #does currently not cache file
 
 y = srs['api00']
-#older numpy don't reorder
-#x = srs[['growth', 'emer', 'yr_rnd']].view(float).reshape(len(y), -1)
-#force sequence
-x = np.column_stack([srs[ii] for ii in ['growth', 'emer', 'yr_rnd']])
+x = srs[['growth', 'emer', 'yr_rnd']]
 group = srs['dnum']
 
 #xx = sm.add_constant(x, prepend=True)
 xx = sm.add_constant(x, prepend=False) #const at end for Stata compatibility
 
-#remove nan observation
-mask = (xx!=-999.0).all(1)   #nan code in dta file
+# Remove nan observation
+mask = (xx!=-999.0).all(1)   # nan code in dta file
 mask.shape
 y = y[mask]
 xx = xx[mask]
 group = group[mask]
 
-#run OLS
-
+# Run OLS
 res_srs = sm.OLS(y, xx).fit()
 print('params    ', res_srs.params)
 print('bse_OLS   ', res_srs.bse)
 
-#get cluster robust standard errors and compare with STATA
-
+# Get cluster robust standard errors and compare with STATA
 cov_cr = sw.cov_cluster(res_srs, group.astype(int))
 bse_cr = sw.se_cov(cov_cr)
 print('bse_rob   ', bse_cr)
@@ -68,6 +66,6 @@ res_stata = np.rec.array(
 print('diff Stata', bse_cr - res_stata.bse)
 assert_almost_equal(bse_cr, res_stata.bse, decimal=6)
 
-#We see that in this case the robust standard errors of the parameter estimates
-#are larger than those of OLS by 8 to 35 %
+# We see that in this case the robust standard errors of the parameter
+#  estimates are larger than those of OLS by 8 to 35 %
 print('reldiff to OLS', bse_cr/res_srs.bse - 1)

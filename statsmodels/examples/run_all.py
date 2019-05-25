@@ -32,6 +32,7 @@ use_glob = True
 if use_glob:
     import glob
     filelist = glob.glob(os.path.join(here, '*.py'))
+    # TODO: get examples/tsa/ in there too
 
 print(lzip(range(len(filelist)), filelist))
 

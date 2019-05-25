@@ -13,8 +13,8 @@ import statsmodels.api as sm
 
 import statsmodels.stats.sandwich_covariance as sw
 
-#requires Petersen's test_data
-#http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt
+# requires Petersen's test_data
+# http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt
 try:
     pet = np.genfromtxt("test_data.txt")
     print('using local file')

@@ -36,7 +36,7 @@ proc.nobs = nobs
 # TODO: bug nobs is None, not needed ?, used in ArmaProcess.__repr__
 print(proc.ar, proc.ma)
 
-print(proc.arroots(), proc.maroots())
+print(proc.arroots, proc.maroots)
 
 modn = Arma(x)
 resn = modn.fit_mle(order=order)
@@ -73,4 +73,4 @@ fv = res[2]['fvec']  #resid returned from leastsq?
 plt.plot(x, 'o', alpha=0.5)
 plt.plot(x-resid)
 plt.plot(x-fv)
-#plt.show()
+# plt.show()  # Manually re-enable if desired
