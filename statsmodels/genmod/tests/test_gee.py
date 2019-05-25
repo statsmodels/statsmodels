@@ -636,9 +636,9 @@ class TestGEE(object):
         mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
 
-        for f in False, True:
+        for call_fit in [False, True]:
             mod = gee.GEE(endog, exog, group, cov_struct=cov_struct())
-            if f:
+            if call_fit:
                 # Should work with or without fitting the parent model
                 mod.fit()
             score_results = mod.compare_score_test(res_sub)
