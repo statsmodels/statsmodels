@@ -798,6 +798,9 @@ class GEE(base.Model):
         if self.exog.shape[0] != submod.exog.shape[0]:
             msg = "Model and submodel have different numbers of cases."
             raise ValueError(msg)
+        if self.exog.shape[1] == submod.exog.shape[1]:
+            msg = "Model and submodel have the same number of variables"
+            warnings.warn(msg)
         if not isinstance(self.family, type(submod.family)):
             msg = "Model and submodel have different GLM families."
             warnings.warn(msg)

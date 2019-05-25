@@ -687,6 +687,14 @@ class TestGEE(object):
             mod = gee.GEE(endog, exog, group)
             _ = mod.compare_score_test(res_sub)
 
+        # Parent and submodel are the same dimension
+        with assert_warns(UserWarning):
+            w = np.random.uniform(size=n)
+            mod_sub = gee.GEE(endog, exog, group)
+            res_sub = mod_sub.fit()
+            mod = gee.GEE(endog, exog, group)
+            _ = mod.compare_score_test(res_sub)
+
     def test_constraint_covtype(self):
         # Test constraints with different cov types
         np.random.seed(6432)
