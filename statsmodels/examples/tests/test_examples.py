@@ -20,14 +20,18 @@ for n, path in enumerate(test_files):
     elif 'koul_and_mc' in path:
         param = pytest.param(
             path,
+            # Note: we cannot specify raises=IOError because that is in
+            #  the subprocess, not the test itself.
             marks=pytest.mark.xfail(reason="rverify.csv file does not exist",
-                                    strict=True, raises=IOError))
+                                    strict=True))
         test_files[n] = param
     elif 'ex_sandwich2' in path:
         param = pytest.param(
             path,
+            # Note: we cannot specify raises=ValueError because that is in
+            #  the subprocess, not the test itself.
             marks=pytest.mark.xfail(reason="Invalid stata file",
-                                    strict=True, raises=ValueError))
+                                    strict=True))
         test_files[n] = param
 
 
