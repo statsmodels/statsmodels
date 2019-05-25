@@ -49,23 +49,25 @@ def run_example(path):
 def run_all():
     # temporarily disable show
     plt_show = plt.show
+
     def noop(*args):
         pass
+
     plt.show = noop
 
     has_errors = []
     for run_all_f in filelist:
-            print("\n\nExecuting example file", run_all_f)
-            print("-----------------------" + "-"*len(run_all_f))
-            rc = run_example(run_all_f)
-            if rc != 0:
-                print("**********************" + "*"*len(run_all_f))
-                print("ERROR in example file", run_all_f)
-                print("**********************" + "*"*len(run_all_f))
-                has_errors.append(run_all_f)
-                if stop_on_error:
-                    # FIXME: kludge to re-raise the exception
-                    exec(open(run_all_f).read())
+        print("\n\nExecuting example file", run_all_f)
+        print("-----------------------" + "-"*len(run_all_f))
+        rc = run_example(run_all_f)
+        if rc != 0:
+            print("**********************" + "*"*len(run_all_f))
+            print("ERROR in example file", run_all_f)
+            print("**********************" + "*"*len(run_all_f))
+            has_errors.append(run_all_f)
+            if stop_on_error:
+                # FIXME: kludge to re-raise the exception
+                exec(open(run_all_f).read())
 
     print('\nModules that raised exception:')
     print(has_errors)
