@@ -635,14 +635,19 @@ class TestGEE(object):
 
         mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
-        mod = gee.GEE(endog, exog, group, cov_struct=cov_struct())
-        score_results = mod.compare_score_test(res_sub)
-        assert_almost_equal(score_results["statistic"],
-            mod_lr.score_test_results["statistic"])
-        assert_almost_equal(score_results["p-value"],
-            mod_lr.score_test_results["p-value"])
-        assert_almost_equal(score_results["df"],
-            mod_lr.score_test_results["df"])
+
+        for f in False, True:
+            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct())
+            if f:
+                # Should work with or without fitting the parent model
+                mod.fit()
+            score_results = mod.compare_score_test(res_sub)
+            assert_almost_equal(score_results["statistic"],
+                mod_lr.score_test_results["statistic"])
+            assert_almost_equal(score_results["p-value"],
+                mod_lr.score_test_results["p-value"])
+            assert_almost_equal(score_results["df"],
+                mod_lr.score_test_results["df"])
 
     def test_compare_score_test_warnings(self):
 
