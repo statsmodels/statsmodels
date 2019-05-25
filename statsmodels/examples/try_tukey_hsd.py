@@ -7,10 +7,10 @@ Author: Josef Perktold
 """
 
 from __future__ import print_function
-from statsmodels.compat.python import StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats
+from six import StringIO
 
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import tukeyhsd, MultiComparison
