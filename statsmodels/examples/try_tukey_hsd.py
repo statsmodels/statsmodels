@@ -10,8 +10,10 @@ from __future__ import print_function
 from statsmodels.compat.python import StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+from scipy import stats
 
 from statsmodels.stats.libqsturng import qsturng
+from statsmodels.stats.multicomp import tukeyhsd, MultiComparison
 
 ss = '''\
   43.9  1   1
@@ -55,7 +57,7 @@ ss = '''\
   40.9  4   9
   39.7  4  10'''
 
-#idx   Treatment StressReduction
+# idx   Treatment StressReduction
 ss2 = '''\
 1     mental               2
 2     mental               2
@@ -105,59 +107,82 @@ ss3 = '''\
 3 26.2
 3 27.8'''
 
-cylinders = np.array([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 6, 6, 6, 4, 4,
-                    4, 4, 4, 4, 6, 8, 8, 8, 8, 4, 4, 4, 4, 8, 8, 8, 8, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6,
-                    6, 6, 4, 4, 4, 4, 4, 8, 4, 6, 6, 8, 8, 8, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-                    4, 4, 4, 4, 4, 4, 4, 6, 6, 4, 6, 4, 4, 4, 4, 4, 4, 4, 4])
-cyl_labels = np.array(['USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'France',
-    'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Japan',
-    'Germany', 'France', 'Germany', 'Sweden', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
-    'USA', 'USA', 'France', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
-    'Japan', 'USA', 'USA', 'USA', 'USA', 'Germany', 'Japan', 'Japan', 'USA', 'Sweden', 'USA', 'France',
-    'Japan', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA',
-    'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA',
-    'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Germany', 'USA', 'USA', 'USA'])
+cylinders = np.array([
+    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8,
+    8, 8, 8, 8, 8, 8, 8, 4, 6, 6, 6, 4, 4,
+    4, 4, 4, 4, 6, 8, 8, 8, 8, 4, 4, 4, 4,
+    8, 8, 8, 8, 6, 6, 6, 6, 4, 4, 4, 4, 6,
+    6, 6, 6, 4, 4, 4, 4, 4, 8, 4, 6, 6, 8,
+    8, 8, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 4, 6,
+    4, 4, 4, 4, 4, 4, 4, 4])
+cyl_labels = np.array([
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA',
+    'USA', 'USA', 'USA', 'USA', 'France',
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA',
+    'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Japan',
+    'Germany', 'France', 'Germany', 'Sweden',
+    'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
+    'USA', 'USA', 'France', 'USA', 'USA', 'USA',
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
+    'Japan', 'USA', 'USA', 'USA', 'USA', 'Germany',
+    'Japan', 'Japan', 'USA', 'Sweden', 'USA', 'France',
+    'Japan', 'Germany', 'USA', 'USA', 'USA', 'USA',
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA',
+    'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan',
+    'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA',
+    'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA',
+    'Germany', 'USA', 'USA', 'USA'])
 
-dta = np.recfromtxt(StringIO(ss), names=("Rust","Brand","Replication"))
-dta2 = np.recfromtxt(StringIO(ss2), names = ("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(StringIO(ss3), names = ("Brand", "Relief"))
+dta = np.recfromtxt(StringIO(ss),
+                    names=("Rust", "Brand", "Replication"))
+dta2 = np.recfromtxt(StringIO(ss2),
+                     names=("idx", "Treatment", "StressReduction"))
+dta3 = np.recfromtxt(StringIO(ss3),
+                     names=("Brand", "Relief"))
 
-from statsmodels.sandbox.stats.multicomp import tukeyhsd
-import statsmodels.sandbox.stats.multicomp as multi
-#print tukeyhsd(dta['Brand'], dta['Rust'])
 
 def get_thsd(mci):
     var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
     means = mci.groupstats.groupmean
     nobs = mci.groupstats.groupnobs
-    resi = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=qsturng(0.95, len(means), (nobs-1).sum()))
+    resi = tukeyhsd(means, nobs, var_,
+                    df=None, alpha=0.05,
+                    q_crit=qsturng(0.95, len(means), (nobs-1).sum()))
     print(resi[4])
-    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
-                                                        / (nobs - 1).sum()
+    var2 = (mci.groupstats.groupvarwithin() * (nobs-1)).sum() / (nobs-1).sum()
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
-mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
+
+mc = MultiComparison(dta['Rust'], dta['Brand'])
 res = mc.tukeyhsd()
 print(res)
 
-mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
+mc2 = MultiComparison(dta2['StressReduction'], dta2['Treatment'])
 res2 = mc2.tukeyhsd()
 print(res2)
 
-mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
+mc2s = MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
 print(res2s)
-res2s_001 = mc2s.tukeyhsd(alpha=0.01)
-#R result
-tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
-assert_almost_equal(res2s_001.confint, tukeyhsd2s[:,1:3], decimal=3)
 
-mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
+res2s_001 = mc2s.tukeyhsd(alpha=0.01)
+# R result for comparison
+tukeyhsd2s = np.array([
+    1.888889,    0.8888889, -1,
+    0.2658549,  -0.5908785, -2.587133,
+    3.511923,    2.368656,   0.5871331,
+    0.002837638, 0.150456,   0.1266072]).reshape(3, 4, order='F')
+assert_almost_equal(res2s_001.confint, tukeyhsd2s[:, 1:3], decimal=3)
+
+mc3 = MultiComparison(dta3['Relief'], dta3['Brand'])
 res3 = mc3.tukeyhsd()
 print(res3)
 
-tukeyhsd4 = multi.MultiComparison(cylinders, cyl_labels, group_order=["Sweden", "Japan", "Germany", "France", "USA"])
+tukeyhsd4 = MultiComparison(
+    cylinders, cyl_labels,
+    group_order=["Sweden", "Japan", "Germany", "France", "USA"])
 res4 = tukeyhsd4.tukeyhsd()
 print(res4)
 try:
@@ -170,14 +195,14 @@ except Exception as e:
 for mci in [mc, mc2, mc3]:
     get_thsd(mci)
 
-from scipy import stats
 print(mc2.allpairtest(stats.ttest_ind, method='b')[0])
 
 '''same as SAS:
 >>> np.var(mci.groupstats.groupdemean(), ddof=3)
 4.6773333333333351
 >>> var_ = np.var(mci.groupstats.groupdemean(), ddof=3)
->>> tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=qsturng(0.95, 3, 12))[4]
+>>> tukeyhsd(means, nobs, var_, df=None, alpha=0.05,
+...          q_crit=qsturng(0.95, 3, 12))[4]
 array([[ 0.95263648,  8.24736352],
        [-3.38736352,  3.90736352],
        [-7.98736352, -0.69263648]])
@@ -208,11 +233,13 @@ ss5 = '''\
 1 - 2	-4.600	-8.249	-0.951	***
 1 - 3	-0.260	-3.909	3.389	'''
 
-dta5 = np.recfromtxt(StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
+dta5 = np.recfromtxt(StringIO(ss5),
+                     names=('pair', 'mean', 'lower', 'upper', 'sig'),
+                     delimiter='\t')
 
-sas_ = dta5[[1,3,2]]
+sas_ = dta5[[1, 3, 2]]
 confint1 = res3.confint
-confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
+confint2 = np.array(sas_[['lower', 'upper']].tolist())
 assert_almost_equal(confint1, confint2, decimal=2)
 reject1 = res3.reject
 reject2 = sas_['sig'] == '***'
