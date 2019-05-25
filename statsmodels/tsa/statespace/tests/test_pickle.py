@@ -137,7 +137,8 @@ def test_kalman_filter_pickle(data):
 def test_representation_pickle():
     nobs = 10
     k_endog = 2
-    endog = np.asfortranarray(np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.)
+    arr = np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.
+    endog = np.asfortranarray(arr)
     mod = Representation(endog, k_states=2)
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 

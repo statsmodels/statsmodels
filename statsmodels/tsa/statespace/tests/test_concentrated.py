@@ -104,7 +104,6 @@ def test_concentrated_predict_sarimax():
     nobs = 30
     np.random.seed(28953)
     endog = np.random.normal(size=nobs)
-    kwargs = {}
 
     # Typical model
     out = get_sarimax_models(endog)
@@ -164,7 +163,7 @@ def check_concentrated_scale(filter_univariate=False, missing=False, **kwargs):
     dta['dln_inc'] = np.log(dta['inc']).diff()
     dta['dln_consump'] = np.log(dta['consump']).diff()
 
-    endog = dta.loc['1960-04-01':'1978-10-01',['dln_inv', 'dln_inc']]
+    endog = dta.loc['1960-04-01':'1978-10-01', ['dln_inv', 'dln_inc']]
 
     # Optionally add some missing observations
     if missing:

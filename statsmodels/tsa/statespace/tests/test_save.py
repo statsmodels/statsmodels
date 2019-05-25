@@ -24,7 +24,7 @@ def temp_filename():
     try:
         os.close(fd)
         os.unlink(filename)
-    except Exception as e:
+    except Exception:
         print("Couldn't close or delete file "
               "{filename}.".format(filename=filename))
 
