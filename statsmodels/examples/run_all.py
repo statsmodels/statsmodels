@@ -22,11 +22,12 @@ exe = 'python3' if PY3 else 'python'
 here = os.path.dirname(__file__)
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
-            'example_glm.py', 'example_ols_tftest.py', #'example_rpy.py',
+            'example_glm.py', 'example_ols_tftest.py',
             'example_ols.py', 'example_ols_minimal.py', 'example_rlm.py',
             'example_discrete.py', 'example_predict.py',
             'example_ols_table.py',
             'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py']
+# Note: we have intentionally excluded example_rpy.py
 
 use_glob = True
 if use_glob:
@@ -68,7 +69,9 @@ def run_all():
             has_errors.append(run_all_f)
             if stop_on_error:
                 # FIXME: kludge to re-raise the exception
-                exec(open(run_all_f).read())
+                with open(run_all_f, "rb") as fd:
+                    content = fd.read()
+                exec(content.replace('__name__ == "__main__"', "True"))
 
     print('\nModules that raised exception:')
     print(has_errors)

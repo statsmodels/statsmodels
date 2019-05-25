@@ -124,6 +124,9 @@ if doplots:
     smrp.plot_ccpr_grid(res, exog_idx=[0,1])
 
 
+tp = TestPlot()
+tp.test_plot_fit(False)
+
 fig1 = smrp.plot_partregress_grid(res, exog_idx=[0,1])
 #add lowess
 ax = fig1.axes[0]
@@ -137,4 +140,4 @@ x0 = ax.get_lines()[0]._x
 lres = sm.nonparametric.lowess(y0, x0, frac=0.2)
 ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
 
-#plt.show()
+# plt.show()  # Manually re-enable if desired

@@ -303,7 +303,16 @@ class GenericKDE (object):
         """
         # the initial value for the optimization is the normal_reference
         h0 = self._normal_reference()
-        bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
+
+        def masked_log(x):
+            # like np.log, but without "invalid value encountered in log"
+            out = np.zeros_like(x)
+            mask = x <= 0
+            out[mask] = np.nan
+            out[~mask] = np.log(x[~mask])
+            return out
+
+        bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(masked_log,),
                            maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
         bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw

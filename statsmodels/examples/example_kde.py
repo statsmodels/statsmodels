@@ -15,12 +15,12 @@ obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.norm],
 #..            kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=1,args=(1,.5))))
 
 
-f_hat, grid, bw = kdensityfft(obs_dist, kernel="gauss", bw="scott")
+f_hat, grid, bw = kdensityfft(obs_dist, kernel="gau", bw="scott")
 
 # Check the plot
 
 plt.figure()
-plt.hist(obs_dist, bins=50, normed=True, color='red')
+plt.hist(obs_dist, bins=50, density=True, color='red')
 plt.plot(grid, f_hat, lw=2, color='black')
 plt.show()
 

@@ -28,7 +28,7 @@ mcorr[lrange(nvars), lrange(nvars)] = 1
 mstd = np.arange(1.,nvars+1)/nvars
 mcov = mcorr * np.outer(mstd, mstd)
 evals = np.linalg.eigvalsh(mcov)
-assert evals.min > 0 #assert positive definite
+assert evals.min() > 0, evals.min()  # assert positive definite
 
 nobs = 100
 data = np.random.multivariate_normal(mmean, mcov, size=nobs)

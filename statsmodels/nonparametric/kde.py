@@ -24,9 +24,10 @@ from .linbin import fast_linbin
 #### Kernels Switch for estimators ####
 
 kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
-                    uni=kernels.Uniform, tri=kernels.Triangular,
-                    biw=kernels.Biweight, triw=kernels.Triweight,
-                    cos=kernels.Cosine, cos2=kernels.Cosine2)
+                     uni=kernels.Uniform, tri=kernels.Triangular,
+                     biw=kernels.Biweight, triw=kernels.Triweight,
+                     cos=kernels.Cosine, cos2=kernels.Cosine2)
+
 
 def _checkisfit(self):
     try:
