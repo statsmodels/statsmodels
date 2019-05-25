@@ -4,7 +4,7 @@ import numpy as np
 
 from scipy import stats
 import statsmodels.api as sm
-from statsmodels.miscmodels import TLinearModel
+from statsmodels.miscmodels.api import TLinearModel
 from statsmodels.tools.numdiff import approx_hess
 
 #Example:

@@ -123,8 +123,6 @@ if doplots:
     smrp.plot_ccpr(res, exog_idx=0)
     smrp.plot_ccpr_grid(res, exog_idx=[0,1])
 
-tp = TestPlot()
-tp.test_plot_fit()
 
 fig1 = smrp.plot_partregress_grid(res, exog_idx=[0,1])
 #add lowess

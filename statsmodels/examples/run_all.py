@@ -1,18 +1,25 @@
-'''run all examples to make sure we don't get an exception
+"""
+Run all examples to make sure we don't get an exception.
 
 Note:
 If an example contaings plt.show(), then all plot windows have to be closed
-manually, at least in my setup.
+manually, at least in my [josef's] setup.
 
-uncomment plt.show() to show all plot windows
-
-'''
+Usage Notes
+-----------
+- Un-comment plt.show() to show all plot windows.
+"""
 from __future__ import print_function
-from statsmodels.compat.python import lzip, input
-import matplotlib.pyplot as plt #matplotlib is required for many examples
+import os
+import subprocess
 
-stop_on_error = True
+from statsmodels.compat.python import lzip, PY3
+import matplotlib.pyplot as plt  # matplotlib is required for many examples
 
+stop_on_error = False
+
+exe = 'python3' if PY3 else 'python'
+here = os.path.dirname(__file__)
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             'example_glm.py', 'example_ols_tftest.py', #'example_rpy.py',
@@ -24,46 +31,50 @@ filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
 use_glob = True
 if use_glob:
     import glob
-    filelist = glob.glob('*.py')
+    filelist = glob.glob(os.path.join(here, '*.py'))
 
 print(lzip(range(len(filelist)), filelist))
 
-for fname in ['run_all.py', 'example_rpy.py']:
-    filelist.remove(fname)
-
-#filelist = filelist[15:]
-
+filelist.sort()
+filelist = [x for x in filelist
+            if os.path.split(x)[-1] not in ['run_all.py', 'example_rpy.py']]
 
 
-#temporarily disable show
-plt_show = plt.show
-def noop(*args):
-    pass
-plt.show = noop
+def run_example(path):
+    p = subprocess.Popen([exe, path])
+    p.communicate()
+    return p.returncode
 
-cont = input("""Are you sure you want to run all of the examples?
-This is done mainly to check that they are up to date.
-(y/n) >>> """)
-has_errors = []
-if 'y' in cont.lower():
+
+def run_all():
+    # temporarily disable show
+    plt_show = plt.show
+    def noop(*args):
+        pass
+    plt.show = noop
+
+    has_errors = []
     for run_all_f in filelist:
-        try:
             print("\n\nExecuting example file", run_all_f)
             print("-----------------------" + "-"*len(run_all_f))
-            exec(open(run_all_f).read())
-        except:
-            #f might be overwritten in the executed file
-            print("**********************" + "*"*len(run_all_f))
-            print("ERROR in example file", run_all_f)
-            print("**********************" + "*"*len(run_all_f))
-            has_errors.append(run_all_f)
-            if stop_on_error:
-                raise
+            rc = run_example(run_all_f)
+            if rc != 0:
+                print("**********************" + "*"*len(run_all_f))
+                print("ERROR in example file", run_all_f)
+                print("**********************" + "*"*len(run_all_f))
+                has_errors.append(run_all_f)
+                if stop_on_error:
+                    # FIXME: kludge to re-raise the exception
+                    exec(open(run_all_f).read())
 
-print('\nModules that raised exception:')
-print(has_errors)
+    print('\nModules that raised exception:')
+    print(has_errors)
 
-#reenable show after closing windows
-plt.close('all')
-plt.show = plt_show
-plt.show()
+    # reenable show after closing windows
+    plt.close('all')
+    plt.show = plt_show
+    plt.show()
+
+
+if __name__ == "__main__":
+    run_all()

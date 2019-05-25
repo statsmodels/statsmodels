@@ -696,8 +696,8 @@ class DescStatUV(_OptFuncts):
         return llim, ulim
 
     def plot_contour(self, mu_low, mu_high, var_low, var_high, mu_step,
-                        var_step,
-                        levs=[.2, .1, .05, .01, .001]):
+                     var_step,
+                     levs=[.001, .01, .05, .1, .2]):
         """
         Returns a plot of the confidence region for a univariate
         mean and variance.

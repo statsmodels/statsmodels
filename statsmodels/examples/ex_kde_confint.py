@@ -59,7 +59,7 @@ for ii, kn in enumerate(kernel_names):
     except AttributeError:
         ax.hist(x, bins=10, normed=True, alpha=0.25)
 
-    #reduce bandwidth for Gaussian and Uniform which are to large in example
+    # reduce bandwidth for Gaussian and Uniform which are to large in example
     if kn in ['Gaussian', 'Uniform']:
         args = (0.5,)
     else:

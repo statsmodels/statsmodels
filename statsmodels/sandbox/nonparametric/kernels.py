@@ -261,9 +261,12 @@ class CustomKernel(object):
         from scipy import stats
         crit = stats.norm.isf(alpha / 2.)
         density = np.asarray(density)
-        half_width = crit * np.sqrt(self.density_var(density, nobs))
+        # FIXME: without the `astype` below, density_var can return an object
+        #  dtype array where each entry is a singleton array.
+        arg = self.density_var(density, nobs).astype(float)
+        half_width = crit * np.sqrt(arg)
         conf_int = np.column_stack((density - half_width, density + half_width))
-        return conf_int
+        return conf_int.astype(float)
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values

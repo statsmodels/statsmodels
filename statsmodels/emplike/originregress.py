@@ -155,10 +155,14 @@ class OriginResults(RegressionResults):
 
     """
     def __init__(self, model, params, est_llr, llf_el):
+        # TODO: call super(...).__init__?
+        self.df_model = model.df_model
+        self.k_constant = model.k_constant
         self.model = model
         self.params = np.squeeze(params)
         self.llr = est_llr
         self.llf_el = llf_el
+
     def el_test(self, b0_vals, param_nums, method='nm',
                             stochastic_exog=1, return_weights=0):
         """

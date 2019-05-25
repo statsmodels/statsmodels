@@ -114,6 +114,7 @@ else:
     pickle = cPickle
     import urllib2
     import urlparse
+    from urllib import urlretrieve
 
     bytes = str
     str = str

@@ -36,7 +36,7 @@ proc.nobs = nobs
 # TODO: bug nobs is None, not needed ?, used in ArmaProcess.__repr__
 print(proc.ar, proc.ma)
 
-print(proc.ar_roots(), proc.ma_roots())
+print(proc.arroots(), proc.maroots())
 
 modn = Arma(x)
 resn = modn.fit_mle(order=order)
