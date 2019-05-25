@@ -1908,10 +1908,20 @@ class GEEResults(base.LikelihoodModelResults):
         """
         Returns the QIC and QICu information criteria.
 
-        For families with a scale parameter (e.g. Gaussian),
-        provide as the scale argument the estimated scale
-        from the largest model under consideration.
+        For families with a scale parameter (e.g. Gaussian), provide
+        as the scale argument the estimated scale from the largest
+        model under consideration.
+
+        If the scale parameter is not provided, the estimated scale
+        parameter is used.  Doing this does not allow comparisons of
+        QIC values between models.
         """
+
+        # It is easy to forget to set the scale parameter.  Sometimes
+        # this is intentional, so we warn.
+        if isinstance(self.family, families.Gaussian) and scale is None:
+            msg = "QIC: Using scale=None with Gaussian family"
+            warnings.warn(msg)
 
         if scale is None:
             scale = self.scale

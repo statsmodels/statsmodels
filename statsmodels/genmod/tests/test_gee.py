@@ -1896,8 +1896,10 @@ def test_ql_known(family):
     assert_allclose(ql1, qle1[0], rtol=1e-4)
     assert_allclose(ql2, qle2[0], rtol=1e-4)
 
-    qler1 = result1.qic()
-    qler2 = result2.qic()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        qler1 = result1.qic()
+        qler2 = result2.qic()
     assert_equal(qler1, qle1[1:])
     assert_equal(qler2, qle2[1:])
 
@@ -1935,3 +1937,11 @@ def test_ql_diff(family):
     qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
 
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
+
+def test_qic_warnings():
+    with assert_warns(UserWarning):
+        fam = families.Gaussian()
+        y, x1, x2, g = simple_qic_data(fam)
+        model = gee.GEE(y, x1, family=fam, groups=g)
+        result = model.fit()
+        result.qic()
