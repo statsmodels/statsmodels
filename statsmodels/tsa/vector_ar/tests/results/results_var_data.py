@@ -1,9 +1,6 @@
 from numpy import array, rec
 
-
-class Holder(object):
-    pass
-
+from statsmodels.tools.testing import Holder
 
 var_results = Holder()
 var_results.comment = 'VAR test data converted from vars_results.npz'

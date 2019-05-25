@@ -17,17 +17,16 @@ from statsmodels.stats.proportion import (proportion_confint,
                                           multinomial_proportions_confint)
 import statsmodels.stats.proportion as smprop
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.testing import Holder
 
 
-class Holder(object):
-    pass
-
-probci_methods = {'agresti_coull' : 'agresti-coull',
-                  'normal' : 'asymptotic',
-                  'beta' : 'exact',
-                  'wilson' : 'wilson',
-                  'jeffreys' : 'bayes'
+probci_methods = {'agresti_coull': 'agresti-coull',
+                  'normal': 'asymptotic',
+                  'beta': 'exact',
+                  'wilson': 'wilson',
+                  'jeffreys': 'bayes'
                   }
+
 
 def test_confint_proportion():
     from .results.results_proportion import res_binom, res_binom_methods

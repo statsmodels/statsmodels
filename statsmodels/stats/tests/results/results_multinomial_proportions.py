@@ -8,10 +8,7 @@ Author: Sébastien Lerique
 import collections
 import numpy as np
 
-
-class Holder(object):
-    pass
-
+from statsmodels.tools.testing import Holder
 
 res_multinomial = collections.defaultdict(Holder)
 

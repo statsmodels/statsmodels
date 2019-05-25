@@ -9,10 +9,7 @@ Author: Josef Perktold
 import collections
 import numpy as np
 
-
-class Holder(object):
-    pass
-
+from statsmodels.tools.testing import Holder
 
 # numbers from R package `pwr` pwr.chisq.test
 res_binom = collections.defaultdict(Holder)

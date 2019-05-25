@@ -7,16 +7,18 @@ Author: Josef Perktold
 """
 from statsmodels.compat.platform import PLATFORM_WIN32
 
-import pytest
+import warnings
+
 import numpy as np
-import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
+import scipy.sparse as sparse
+import pytest
+
 from statsmodels.stats.correlation_tools import (
     corr_nearest, corr_clipped, cov_nearest,
     _project_correlation_factors, corr_nearest_factor, _spg_optim,
     corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
-
-import warnings
+from statsmodels.tools.testing import Holder
 
 
 def norm_f(x, y):
@@ -25,8 +27,6 @@ def norm_f(x, y):
     d = ((x - y)**2).sum()
     return np.sqrt(d)
 
-class Holder(object):
-    pass
 
 # R library Matrix results
 cov1_r = Holder()

@@ -122,7 +122,7 @@ class HoldIt(object):
         if header:
             txt = ['import numpy as np\nfrom numpy import array\n\n']
             if useinstant:
-                txt.append('class Holder(object):\n    pass\n\n')
+                txt.append('from statsmodels.tools.testing import Holder\n\n')
         else:
             txt = []
 

@@ -1,9 +1,6 @@
 from numpy import array
 
-
-class Holder(object):
-    pass
-
+from statsmodels.tools.testing import Holder
 
 armarep = Holder()
 armarep.comment = ('mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)'

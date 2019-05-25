@@ -22,10 +22,7 @@ from numpy.testing import assert_, assert_almost_equal, assert_allclose
 
 from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
                                            ttest_ind, ztest, zconfint)
-
-
-class Holder(object):
-    pass
+from statsmodels.tools.testing import Holder
 
 
 # Mixin for tests against other packages.
