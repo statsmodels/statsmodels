@@ -67,18 +67,18 @@ print('\nttest bias corrected')
 print(tt_bc)
 
 print("\nbse after fit option ")
-bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse, mdf_bc.bse))
+bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse))#, mdf_bc.bse))
 print(bse)
 
 print("\nimplemented `standard_errors`")
 bse2 = np.column_stack((mdf2.bse,
                         mdf2.standard_errors(),
                         mdf2.standard_errors(cov_type='naive'),
-                        mdf2.standard_errors(cov_type='bias_reduced')))
+                        ))#mdf2.standard_errors(cov_type='bias_reduced')))
 print(bse2)
 print("bse and `standard_errors` agree:", np.allclose(bse, bse2))
 
 print("\nimplied standard errors in t_test")
-bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd, tt_bc.sd))
+bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd))#, tt_bc.sd))
 print(bse1)
 print("t_test uses correct cov_params:", np.allclose(bse1, bse2))

@@ -28,7 +28,7 @@ X = add_constant(X)
 beta = [5., 0.5, -0.01]
 sig = 0.5
 w = np.ones(nsample)
-w[nsample * 6/10:] = 3
+w[int(nsample * 6/10):] = 3
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + sig * w * e

@@ -4,6 +4,7 @@
 from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
+
 import statsmodels.api as sm
 from statsmodels.iolib.summary import (
     table_extend, summary_params_2d, summary_params_2dflat)
@@ -17,17 +18,17 @@ mlogit_res = mlogit_mod.fit()
 
 # The default method for the fit is Newton-Raphson
 # However, you can use other solvers
-mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
+mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=120)
 # The below needs a lot of iterations to get it right?
 #TODO: Add a technical note on algorithms
 #mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
 
 
-exog_names = [anes_data.exog_name[i] for i in [0, 2]+lrange(5,8)] + ['const']
+exog_names = ['const'] + anes_data.exog_name
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
 print('\n\nMultinomial')
 print(summary_params_2d(mlogit_res, extras=['bse','tvalues'],
-                         endog_names=endog_names, exog_names=exog_names))
+                        endog_names=endog_names, exog_names=exog_names))
 tables, table_all = summary_params_2dflat(mlogit_res,
                                           endog_names=endog_names,
                                           exog_names=exog_names,

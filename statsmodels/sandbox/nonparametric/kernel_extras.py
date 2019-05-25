@@ -94,9 +94,11 @@ class TestFForm(object):
         X = self.exog
         b = self.estimator(Y, X)
         m = self.fform(X, b)
-        n = np.shape(X)[0]
+        nobs = np.shape(X)[0]
         resid = Y - m
         resid = resid - np.mean(resid)  # center residuals
+
+        # FIXME: dont alter in-place like this
         self.test_stat = self._compute_test_stat(resid)
         sqrt5 = np.sqrt(5.)
         fct1 = (1 - sqrt5) / 2.
@@ -108,7 +110,7 @@ class TestFForm(object):
         for j in range(self.nboot):
             u_boot = u2.copy()
 
-            prob = np.random.uniform(0,1, size = (n,))
+            prob = np.random.uniform(0, 1, size=(nobs,))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot
@@ -130,7 +132,7 @@ class TestFForm(object):
     def _compute_test_stat(self, u):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
-        uLOO = LeaveOneOut(u[:,None]).__iter__()
+        uLOO = LeaveOneOut(u[:, None]).__iter__()
         ival = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):

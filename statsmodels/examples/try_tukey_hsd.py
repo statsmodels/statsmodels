@@ -120,10 +120,15 @@ cyl_labels = np.array(['USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', '
     'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA',
     'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Germany', 'USA', 'USA', 'USA'])
 
-dta = np.recfromtxt(StringIO(ss), names=("Rust", "Brand", "Replication"))
+dta = np.recfromtxt(StringIO(ss),
+                    names=("Rust", "Brand", "Replication"),
+                    encoding='ascii')
 dta2 = np.recfromtxt(StringIO(ss2),
-                     names=("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(StringIO(ss3), names=("Brand", "Relief"))
+                     names=("idx", "Treatment", "StressReduction"),
+                     encoding='ascii')
+dta3 = np.recfromtxt(StringIO(ss3),
+                     names=("Brand", "Relief"),
+                     encoding='ascii')
 
 
 def get_thsd(mci):
@@ -213,7 +218,8 @@ ss5 = '''\
 
 dta5 = np.recfromtxt(StringIO(ss5),
                      names=('pair', 'mean', 'lower', 'upper', 'sig'),
-                     delimiter='\t')
+                     delimiter='\t',
+                     encoding='ascii')
 
 sas_ = dta5[[1, 3, 2]]
 confint1 = res3.confint

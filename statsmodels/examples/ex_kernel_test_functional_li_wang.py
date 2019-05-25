@@ -58,20 +58,18 @@ aymp.normal p-value (upper) 0.306629578855
 
 
 """
-
 from __future__ import print_function
+
+import time
+
+import numpy as np
+from scipy import stats
+
+from statsmodels.regression.linear_model import OLS
+import statsmodels.sandbox.nonparametric.kernel_extras as smke
 
 
 if __name__ == '__main__':
-
-    import time
-
-    import numpy as np
-    from scipy import stats
-
-    from statsmodels.regression.linear_model import OLS
-    #from statsmodels.nonparametric.api import KernelReg
-    import statsmodels.sandbox.nonparametric.kernel_extras as smke
 
     seed = np.random.randint(999999)
     #seed = 661176
@@ -99,7 +97,7 @@ if __name__ == '__main__':
         #res_ols = mod_ols.fit()
         #'cv_ls'[1000, 0.5]
         bw_lw = [1./np.sqrt(12.) * nobs**(-0.2)]*2  #(-1. / 5.)
-        tst = smke.TestFForm(endog, exog[:,:1], bw=bw_lw, var_type='c',
+        tst = smke.TestFForm(endog, exog, bw=bw_lw, var_type='c'*len(bw_lw),
                              fform=lambda x,p: mod_ols.predict(p,x),
                              estimator=lambda y,x: OLS(y,x).fit().params,
                              nboot=399)

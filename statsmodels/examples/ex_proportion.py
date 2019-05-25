@@ -7,14 +7,15 @@ Author: Josef Perktold
 """
 
 from __future__ import print_function
-from statsmodels.compat.python import lmap
+
 import numpy as np
+from numpy.testing import assert_almost_equal
 import matplotlib.pyplot as plt
 
+from statsmodels.compat.python import lmap
 import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
 
-from numpy.testing import assert_almost_equal
 
 
 # Region, Eyes, Hair, Count
@@ -37,12 +38,12 @@ xfair = np.repeat([1,0], [228, 762-228])
 # comparing to SAS last output at
 # http://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_freq_sect028.htm
 # confidence interval for tost
-ci01 = smw.confint_ztest(xfair, alpha=0.1)
+ci01 = smw.DescrStatsW(xfair).zconfint_mean(alpha=0.1)
 assert_almost_equal(ci01,  [0.2719, 0.3265], 4)
 res = smw.ztost(xfair, 0.18, 0.38)
 
-assert_almost_equal(res[1][0], 7.1865, 4)
-assert_almost_equal(res[2][0], -4.8701, 4)
+assert_almost_equal(res[1][0], 7.1865, 2)
+assert_almost_equal(res[2][0], -4.8701, 2)
 
 nn = np.arange(200, 351)
 pow_z = sms.power_ztost_prop(0.5, 0.72, nn, 0.6, alpha=0.05)

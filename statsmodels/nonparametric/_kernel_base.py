@@ -509,12 +509,6 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
                 k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
     kertypes = dict(c=ckertype, o=okertype, u=ukertype)
-    #Kval = []
-    #for ii, vtype in enumerate(var_type):
-    #    func = kernel_func[kertypes[vtype]]
-    #    Kval.append(func(bw[ii], data[:, ii], data_predict[ii]))
-
-    #Kval = np.column_stack(Kval)
 
     Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):

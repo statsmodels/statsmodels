@@ -17,6 +17,18 @@ for n, path in enumerate(test_files):
         # All others were below 20 seconds, most of them single-digit.
         param = pytest.param(path, marks=pytest.mark.slow)
         test_files[n] = param
+    elif 'koul_and_mc' in path:
+        param = pytest.param(
+            path,
+            marks=pytest.mark.xfail(reason="rverify.csv file does not exist",
+                                    strict=True, raises=IOError))
+        test_files[n] = param
+    elif 'ex_sandwich2' in path:
+        param = pytest.param(
+            path,
+            marks=pytest.mark.xfail(reason="Invalid stata file",
+                                    strict=True, raises=ValueError))
+        test_files[n] = param
 
 
 @pytest.mark.parametrize('path', test_files)
