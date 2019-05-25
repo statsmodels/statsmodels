@@ -1941,7 +1941,7 @@ def test_ql_diff(family):
 def test_qic_warnings():
     with assert_warns(UserWarning):
         fam = families.Gaussian()
-        y, x1, x2, g = simple_qic_data(fam)
+        y, x1, _, g = simple_qic_data(fam)
         model = gee.GEE(y, x1, family=fam, groups=g)
         result = model.fit()
         result.qic()
