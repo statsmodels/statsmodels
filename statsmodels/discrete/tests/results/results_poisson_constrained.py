@@ -1,14 +1,6 @@
 import numpy as np
 
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
+from statsmodels.tools.testing import ParamsTableTestBunch
 
 est = dict(
            rank=7,
@@ -98,7 +90,7 @@ cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
                 '3.agecat', '4.agecat', '5.agecat', '_cons']
 
 
-results_noexposure_noconstraint = Bunch(
+results_noexposure_noconstraint = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -190,7 +182,7 @@ cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
                 '4.agecat', '5.agecat', '_cons']
 
 
-results_exposure_noconstraint = Bunch(
+results_exposure_noconstraint = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -287,7 +279,7 @@ cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
                 '3.agecat', '4.agecat', '5.agecat', '_cons']
 
 
-results_noexposure_constraint = Bunch(
+results_noexposure_constraint = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -379,7 +371,7 @@ cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
                 '4.agecat', '5.agecat', '_cons']
 
 
-results_exposure_constraint = Bunch(
+results_exposure_constraint = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -476,7 +468,7 @@ cov_rownames = ['lnpyears', 'smokes', '1b.agecat', '2.agecat',
                 '3.agecat', '4.agecat', '5.agecat', '_cons']
 
 
-results_noexposure_constraint2 = Bunch(
+results_noexposure_constraint2 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -568,7 +560,7 @@ cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
                 '4.agecat', '5.agecat', '_cons']
 
 
-results_exposure_constraint2 = Bunch(
+results_exposure_constraint2 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -662,7 +654,7 @@ cov_rownames = ['smokes', '1b.agecat', '2.agecat', '3.agecat',
                 '4.agecat', '5.agecat', '_cons']
 
 
-results_exposure_constraint2_robust = Bunch(
+results_exposure_constraint2_robust = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,

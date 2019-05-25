@@ -1,12 +1,5 @@
-
 import numpy as np
-
-
-class Bunch(dict):
-
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
+from statsmodels.tools.tools import Bunch
 
 
 mpg_bs = Bunch()

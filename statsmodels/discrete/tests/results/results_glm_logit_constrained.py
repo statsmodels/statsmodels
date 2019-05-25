@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
            k_eq_model=0,
            phi=1,
@@ -98,16 +100,7 @@ infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
 infocrit_rownames = '.'.split()
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results_noconstraint = Bunch(
+results_noconstraint = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -218,7 +211,7 @@ infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
 infocrit_rownames = '.'.split()
 
 
-results_noconstraint_robust = Bunch(
+results_noconstraint_robust = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -329,7 +322,7 @@ infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
 infocrit_rownames = '.'.split()
 
 
-results_constraint1 = Bunch(
+results_constraint1 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -485,7 +478,7 @@ predict_hat_colnames = 'predict_hat'.split()
 predict_hat_rownames = ['r'+str(n) for n in range(1, 33)]
 
 
-results_constraint2 = Bunch(
+results_constraint2 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -605,7 +598,7 @@ infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
 infocrit_rownames = '.'.split()
 
 
-results_constraint2_robust = Bunch(
+results_constraint2_robust = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -690,7 +683,7 @@ infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
 infocrit_rownames = '.'.split()
 
 
-results_logit_constraint2 = Bunch(
+results_logit_constraint2 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,

@@ -1,13 +1,6 @@
 import numpy as np
 
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
+from statsmodels.tools.testing import ParamsTableTestBunch
 
 
 est = dict(
@@ -61,7 +54,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster = Bunch(
+results_cluster = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -144,7 +137,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_large = Bunch(
+results_cluster_large = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -196,7 +189,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_nw_groupsum4 = Bunch(
+results_nw_groupsum4 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -246,7 +239,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_nw_panel4 = Bunch(
+results_nw_panel4 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -335,7 +328,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_2groups_small = Bunch(
+results_cluster_2groups_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -422,7 +415,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_2groups_large = Bunch(
+results_cluster_2groups_large = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -510,7 +503,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_nw_groupsum4_ivreg_large = Bunch(
+results_nw_groupsum4_ivreg_large = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -600,7 +593,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_nw_groupsum4_ivreg_small = Bunch(
+results_nw_groupsum4_ivreg_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -665,7 +658,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_hc1_wls_small = Bunch(
+results_hc1_wls_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -728,7 +721,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_wls_small = Bunch(
+results_cluster_wls_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -813,7 +806,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_wls_large = Bunch(
+results_cluster_wls_large = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

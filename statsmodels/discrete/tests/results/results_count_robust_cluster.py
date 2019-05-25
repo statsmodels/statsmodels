@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
            rank=3,
            N=34,
@@ -62,16 +64,7 @@ cov_colnames = 'yr_con op_75_79 _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons'.split()
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results_poisson_clu = Bunch(
+results_poisson_clu = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -141,7 +134,7 @@ cov_colnames = 'yr_con op_75_79 _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons'.split()
 
 
-results_poisson_hc1 = Bunch(
+results_poisson_hc1 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -211,7 +204,7 @@ cov_colnames = 'yr_con op_75_79 _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons'.split()
 
 
-results_poisson_exposure_nonrobust = Bunch(
+results_poisson_exposure_nonrobust = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -282,7 +275,7 @@ cov_colnames = 'yr_con op_75_79 _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons'.split()
 
 
-results_poisson_exposure_hc1 = Bunch(
+results_poisson_exposure_hc1 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -355,7 +348,7 @@ cov_colnames = 'yr_con op_75_79 _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons'.split()
 
 
-results_poisson_exposure_clu = Bunch(
+results_poisson_exposure_clu = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -437,7 +430,7 @@ cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
 
 
-results_negbin_clu = Bunch(
+results_negbin_clu = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -518,7 +511,7 @@ cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
 
 
-results_negbin_hc1 = Bunch(
+results_negbin_hc1 = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -602,7 +595,7 @@ cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
 
 
-results_negbin_exposure_nonrobust = Bunch(
+results_negbin_exposure_nonrobust = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
@@ -685,7 +678,7 @@ cov_colnames = 'yr_con op_75_79 _cons _cons'.split()
 cov_rownames = 'yr_con op_75_79 _cons _cons'.split()
 
 
-results_negbin_exposure_clu = Bunch(
+results_negbin_exposure_clu = ParamsTableTestBunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,

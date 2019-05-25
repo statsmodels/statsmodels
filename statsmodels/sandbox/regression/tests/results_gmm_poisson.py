@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
     rank=8,
     N=3629,
@@ -84,16 +86,7 @@ cov_colnames = ['_cons'] * 8
 cov_rownames = ['_cons'] * 8
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results_addonestep = Bunch(
+results_addonestep = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -187,7 +180,7 @@ cov_colnames = ['_cons'] * 8
 
 cov_rownames = ['_cons'] * 8
 
-results_addtwostep = Bunch(
+results_addtwostep = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -282,7 +275,7 @@ cov_colnames = ['_cons'] * 8
 cov_rownames = ['_cons'] * 8
 
 
-results_multonestep = Bunch(
+results_multonestep = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -376,7 +369,7 @@ cov_colnames = ['_cons'] * 8
 
 cov_rownames = ['_cons'] * 8
 
-results_multtwostep = Bunch(
+results_multtwostep = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -473,7 +466,7 @@ cov_rownames = ['xb_private', 'xb_medicaid', 'xb_aget', 'xb_aget2',
                 'xb_educyr', 'xb_actlim', 'xb_totchr', 'b0']
 
 
-results_multtwostepdefault = Bunch(
+results_multtwostepdefault = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -568,7 +561,7 @@ cov_colnames = ['_cons'] * 8
 cov_rownames = ['_cons'] * 8
 
 
-results_multtwostepcenter = Bunch(
+results_multtwostepcenter = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

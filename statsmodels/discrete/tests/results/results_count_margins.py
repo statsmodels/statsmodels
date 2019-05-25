@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import MarginTableTestBunch
+
 est = dict(
            rank=7,
            N=17,
@@ -79,16 +81,7 @@ margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
                         'south', 'sdegree', '_cons']
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.margins_table[:, i]
-
-
-results_poisson_margins_cont = Bunch(
+results_poisson_margins_cont = MarginTableTestBunch(
                 margins_table=margins_table,
                 margins_table_colnames=margins_table_colnames,
                 margins_table_rownames=margins_table_rownames,
@@ -188,7 +181,7 @@ margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
                         'south', 'sdegree', '_cons', '_cons']
 
 
-results_negbin_margins_cont = Bunch(
+results_negbin_margins_cont = MarginTableTestBunch(
                 margins_table=margins_table,
                 margins_table_colnames=margins_table_colnames,
                 margins_table_rownames=margins_table_rownames,
@@ -283,7 +276,7 @@ margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
                         '0b.south', '1.south', 'sdegree', '_cons']
 
 
-results_poisson_margins_dummy = Bunch(
+results_poisson_margins_dummy = MarginTableTestBunch(
                 margins_table=margins_table,
                 margins_table_colnames=margins_table_colnames,
                 margins_table_rownames=margins_table_rownames,
@@ -390,7 +383,7 @@ margins_cov_rownames = ['sincome', 'sperpoverty', 'sperblack', 'LN_VC100k96',
                         '0b.south', '1.south', 'sdegree', '_cons', '_cons']
 
 
-results_negbin_margins_dummy = Bunch(
+results_negbin_margins_dummy = MarginTableTestBunch(
                 margins_table=margins_table,
                 margins_table_colnames=margins_table_colnames,
                 margins_table_rownames=margins_table_rownames,

@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
     rmse=.0136097497582343,
     r2=.9741055881598619,
@@ -51,16 +53,7 @@ cov_prior_colnames = 'lincome lprice _cons'.split()
 cov_prior_rownames = 'lincome lprice _cons'.split()
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results_theil_textile = Bunch(
+results_theil_textile = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
