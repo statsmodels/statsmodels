@@ -125,6 +125,7 @@ if doplots:
 
 
 tp = TestPlot()
+tp.setup()
 tp.test_plot_fit(False)
 
 fig1 = smrp.plot_partregress_grid(res, exog_idx=[0,1])

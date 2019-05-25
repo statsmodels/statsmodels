@@ -9,8 +9,13 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+# We need to import Axes3D in order for `projection='3d'`
+#  below to work with modern matplotlib.  See:
+#  stackoverflow.com/questions/3810865/matplotlib-unknown-projection-3d-error
+from mpl_toolkits.mplot3d import Axes3D  # noqa:F401
 
 import statsmodels.api as sm
+
 
 if __name__ == '__main__':
     np.random.seed(123456)
