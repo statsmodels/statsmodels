@@ -194,6 +194,7 @@ class TestMixedLM(object):
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
 
+    @pytest.mark.slow
     @pytest.mark.smoke
     def test_profile_inference(self):
         np.random.seed(9814)
@@ -601,6 +602,7 @@ class TestMixedLM(object):
         # BIC(r)
         assert_allclose(result.bic, 264.3718, rtol=1e-3)
 
+    @pytest.mark.slow
     def test_vcomp_formula(self):
 
         np.random.seed(6241)
@@ -712,6 +714,7 @@ class TestMixedLM(object):
             rslt5 = mod5.fit()
         assert_almost_equal(rslt4.params, rslt5.params)
 
+    @pytest.mark.slow
     def test_regularized(self):
 
         np.random.seed(3453)
@@ -969,6 +972,7 @@ def test_random_effects():
     assert_(len(re[0]) == 2)
 
 
+@pytest.mark.slow
 def test_handle_missing():
 
     np.random.seed(23423)

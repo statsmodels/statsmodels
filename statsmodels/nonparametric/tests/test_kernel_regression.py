@@ -170,9 +170,11 @@ class TestKernelReg(KernelRegressionTestBase):
         model = nparam.KernelReg(endog=[Y], exog=[C1, C2, ovals],
                                  reg_type='ll', var_type='cco', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
-        sm_R2 = model.r_squared()  # TODO: add expected result
-        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        # TODO: add expected result
+        sm_R2 = model.r_squared()  # noqa: F841
+        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
 
+    @pytest.mark.slow
     @pytest.mark.xfail(reason="Test doesn't make much sense - always passes "
                               "with very small bw.")
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):

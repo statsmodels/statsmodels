@@ -60,6 +60,7 @@ def test_hdr_basic(close_figures):
     assert_equal(labels[hdr.outliers_idx], outliers)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_basic_brute(close_figures, reset_randomstate):
     try:
@@ -75,6 +76,7 @@ def test_hdr_basic_brute(close_figures, reset_randomstate):
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()

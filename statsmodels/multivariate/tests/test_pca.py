@@ -219,6 +219,7 @@ class TestPCA(object):
         assert_allclose(weights, pc_weights.weights)
         assert_allclose(np.abs(pc_weights.factors), np.abs(pc_gls.factors))
 
+    @pytest.mark.slow
     def test_wide(self):
         pc = PCA(self.x_wide)
         assert_equal(pc.factors.shape[1], self.x_wide.shape[0])
@@ -371,6 +372,7 @@ class TestPCA(object):
             rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
         assert_allclose(rsquare, pc.rsquare)
 
+    @pytest.mark.slow
     def test_missing_dataframe(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
