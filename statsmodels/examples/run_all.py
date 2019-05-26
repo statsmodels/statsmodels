@@ -11,15 +11,12 @@ Usage Notes
 """
 from __future__ import print_function
 import os
-import subprocess
-import shlex
 
-from statsmodels.compat.python import lzip, PY3
+from statsmodels.compat.python import lzip
 import matplotlib.pyplot as plt  # matplotlib is required for many examples
 
 stop_on_error = False
 
-exe = 'python3' if PY3 else 'python'
 here = os.path.dirname(__file__)
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
@@ -44,10 +41,10 @@ filelist = [x for x in filelist
 
 
 def run_example(path):
-    cmd = 'export MPL_BACKEND=agg && ' + exe + ' ' + path
-    p = subprocess.Popen(shlex.split(cmd))
-    p.communicate()
-    return p.returncode
+    # FIXME: don't use `exec`
+    with open(path, "rb") as fd:
+        content = fd.read()
+    exec(content.replace('__name__ == "__main__"', "True"))
 
 
 def run_all():
@@ -70,10 +67,7 @@ def run_all():
             print("**********************" + "*"*len(run_all_f))
             has_errors.append(run_all_f)
             if stop_on_error:
-                # FIXME: kludge to re-raise the exception
-                with open(run_all_f, "rb") as fd:
-                    content = fd.read()
-                exec(content.replace('__name__ == "__main__"', "True"))
+                raise
 
     print('\nModules that raised exception:')
     print(has_errors)
