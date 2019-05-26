@@ -14,6 +14,7 @@ import pytest
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
@@ -1662,11 +1663,13 @@ def test_arima_predict_pandas_nofreq():
              589.85, 580.0,587.62]
     data = pd.DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
 
-    #TODO: fix this names bug for non-string names names
-    arma = ARMA(data, order=(1,0)).fit(disp=-1)
+    # TODO: fix this names bug for non-string names names
+    with pytest.warns(ValueWarning, match="it has no associated frequency"):
+        arma = ARMA(data, order=(1, 0)).fit(disp=-1)
 
     # first check that in-sample prediction works
     predict = arma.predict()
+
     assert_(predict.index.equals(data.index))
 
     # check that this raises an exception when date not on index
@@ -1682,10 +1685,14 @@ def test_arima_predict_pandas_nofreq():
     assert_(len(predict) == 8)
     assert_(predict.index.equals(data.index[3:10+1]))
 
-    predict = arma.predict(start="2010-1-7", end=14)
+    with pytest.warns(ValueWarning, match="No supported index is available"):
+        predict = arma.predict(start="2010-1-7", end=14)
+
     assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
-    predict = arma.predict(start=3, end=14)
+    with pytest.warns(ValueWarning, match="No supported index is available"):
+        predict = arma.predict(start=3, end=14)
+
     assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
     # end can be a date if it's in the sample and on the index

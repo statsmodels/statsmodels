@@ -258,8 +258,9 @@ def test_multivariate_penalty():
 
     gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
     gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
-    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
-                                 weights=weights)
+    with pytest.warns(UserWarning, match="weights is currently ignored"):
+        mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
+                                     weights=weights)
 
     for i in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
