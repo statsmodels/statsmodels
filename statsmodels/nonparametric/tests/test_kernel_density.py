@@ -126,17 +126,18 @@ class TestKDEMultivariate(KDETestBase):
 
         # Matches R to 3 decimals; results seem more stable than with R.
         # Can be checked with following code:
-        ## import rpy2.robjects as robjects
-        ## from rpy2.robjects.packages import importr
-        ## NP = importr('np')
-        ## r = robjects.r
-        ## D = {"S1": robjects.FloatVector(c1), "S2":robjects.FloatVector(c2),
-        ##      "S3":robjects.FloatVector(c3), "S4":robjects.FactorVector(o),
-        ##      "S5":robjects.FactorVector(o2)}
-        ## df = robjects.DataFrame(D)
-        ## formula = r('~S1+ordered(S4)+ordered(S5)')
-        ## r_bw = NP.npudensbw(formula, data=df, bwmethod='cv.ls')
+        # import rpy2.robjects as robjects
+        # from rpy2.robjects.packages import importr
+        # NP = importr('np')
+        # r = robjects.r
+        # D = {"S1": robjects.FloatVector(c1), "S2":robjects.FloatVector(c2),
+        #      "S3":robjects.FloatVector(c3), "S4":robjects.FactorVector(o),
+        #      "S5":robjects.FactorVector(o2)}
+        # df = robjects.DataFrame(D)
+        # formula = r('~S1+ordered(S4)+ordered(S5)')
+        # r_bw = NP.npudensbw(formula, data=df, bwmethod='cv.ls')
 
+    @pytest.mark.slow
     def test_pdf_mixeddata_LS_vs_ML(self):
         dens_ls = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
                                          var_type='coo', bw='cv_ls')

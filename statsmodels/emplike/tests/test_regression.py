@@ -63,22 +63,26 @@ class TestRegressionPowell(GenRes):
         assert_almost_equal(beta3res[2], self.res2.test_beta3[2], 4)
 
     # Confidence interval results obtained through hypothesis testing in Matlab
+    @pytest.mark.slow
     def test_ci_beta0(self):
         beta0ci = self.res1.conf_int_el(0, lower_bound=-52.9,
                                         upper_bound=-24.1, method='powell')
         assert_almost_equal(beta0ci, self.res2.test_ci_beta0, 3)
         #  Slightly lower precision.  CI was obtained from nm method.
 
+    @pytest.mark.slow
     def test_ci_beta1(self):
         beta1ci = self.res1.conf_int_el(1, lower_bound=.418, upper_bound=.986,
                                         method='powell')
         assert_almost_equal(beta1ci, self.res2.test_ci_beta1, 4)
 
+    @pytest.mark.slow
     def test_ci_beta2(self):
         beta2ci = self.res1.conf_int_el(2, lower_bound=.59,
                                         upper_bound=2.2, method='powell')
         assert_almost_equal(beta2ci, self.res2.test_ci_beta2, 5)
 
+    @pytest.mark.slow
     def test_ci_beta3(self):
         beta3ci = self.res1.conf_int_el(3, lower_bound=-.39, upper_bound=.01,
                                         method='powell')

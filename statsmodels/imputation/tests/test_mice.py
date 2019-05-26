@@ -352,7 +352,7 @@ class TestMICE(object):
             assert(isinstance(x, GLMResultsWrapper))
             assert(isinstance(x.family, sm.families.Binomial))
 
-
+    @pytest.mark.slow
     def test_combine(self):
 
         np.random.seed(3897)

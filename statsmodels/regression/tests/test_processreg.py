@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+from statsmodels.compat.platform import PLATFORM_OSX
 
 from statsmodels.regression.process_regression import (
        ProcessMLE, GaussianCovariance)
 import numpy as np
 import pandas as pd
+import pytest
+
 import collections
 import statsmodels.tools.numdiff as nd
 from numpy.testing import assert_allclose, assert_equal
@@ -70,6 +73,7 @@ def run_arrays(n, get_model):
     return preg.fit()
 
 
+@pytest.mark.slow
 def test_arrays():
 
     np.random.seed(8234)
@@ -139,6 +143,7 @@ def run_formula(n, get_model):
     return f, df
 
 
+@pytest.mark.slow
 def test_formulas():
 
     np.random.seed(8789)
@@ -188,9 +193,10 @@ def test_score_numdiff():
 
     np.random.seed(342)
 
+    atol = 2e-3 if PLATFORM_OSX else 1e-2
     for _ in range(5):
         par0 = preg._get_start()
         par = par0 + 0.1 * np.random.normal(size=q)
         score = preg.score(par)
         score_nd = nd.approx_fprime(par, loglike, epsilon=1e-7)
-        assert_allclose(score, score_nd, atol=1e-3, rtol=1e-4)
+        assert_allclose(score, score_nd, atol=atol, rtol=1e-4)

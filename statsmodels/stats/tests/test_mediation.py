@@ -51,6 +51,7 @@ df = [['index', 'Estimate', 'Lower CI bound', 'Upper CI bound', 'P-value'],
 framing_moderated_4231 = pd.DataFrame(df[1:], columns=df[0]).set_index('index')
 
 
+@pytest.mark.slow
 def test_framing_example():
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -144,6 +145,7 @@ def test_framing_example_formula():
     assert_allclose(diff, 0, atol=1e-6)
 
 
+@pytest.mark.slow
 def test_framing_example_moderator_formula():
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
