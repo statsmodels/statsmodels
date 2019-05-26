@@ -1919,8 +1919,8 @@ class GEEResults(base.LikelihoodModelResults):
 
         # It is easy to forget to set the scale parameter.  Sometimes
         # this is intentional, so we warn.
-        if (type(self.family) == families.Gaussian) and scale is None:
-            msg = "QIC: Using scale=None with Gaussian family"
+        if scale is None:
+            msg = "QIC values obtained using scale=None are not appropriate for comparing models"
             warnings.warn(msg)
 
         if scale is None:
