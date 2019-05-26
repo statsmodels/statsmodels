@@ -7,9 +7,9 @@ koul_data = np.genfromtxt('/home/justin/rverify.csv', delimiter=';')
 # ^ Change path to where file is located.
 
 
-##################
-#Monte Carlo test#
-##################
+# #################
+# Monte Carlo test#
+# #################
 modrand1 = np.random.RandomState(5676576)
 modrand2 = np.random.RandomState(1543543)
 modrand3 = np.random.RandomState(5738276)
@@ -29,9 +29,9 @@ for i in range(10000):
 
 mc_est = np.mean(np.array(params), axis=0)  # Gives MC parameter estimate
 
-##################
-#Koul replication#
-##################
+# #################
+# Koul replication#
+# #################
 
 koul_y = np.log10(koul_data[:, 0])
 koul_x = sm.add_constant(koul_data[:, 2])

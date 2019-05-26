@@ -17,8 +17,8 @@ from statsmodels.genmod.tests import gee_gaussian_simulation_check as gees
 
 da, va = gees.gen_gendat_ar0(0.6)()
 ga = Gaussian()
-lhs = np.array([[0., 1, 1, 0, 0],])
-rhs = np.r_[0.,]
+lhs = np.array([[0., 1, 1, 0, 0]])
+rhs = np.r_[0.]
 
 example = []
 if 'constraint' in example:
@@ -38,8 +38,8 @@ print(mdf2.summary())
 mdf2.use_t = False
 mdf2.df_resid = np.diff(mdf2.model.exog.shape)
 tt2 = mdf2.t_test(np.eye(len(mdf2.params)))
-# need master to get wald_test
-#print mdf2.wald_test(np.eye(len(mdf2.params))[1:])
+# TODO: need master to get wald_test
+#  print(mdf2.wald_test(np.eye(len(mdf2.params))[1:]))
 
 mdf2.predict(da.exog.mean(0), offset=0)
 # -0.10867809062890971
@@ -67,18 +67,18 @@ print('\nttest bias corrected')
 print(tt_bc)
 
 print("\nbse after fit option ")
-bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse))#, mdf_bc.bse))
+bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse))
 print(bse)
 
 print("\nimplemented `standard_errors`")
 bse2 = np.column_stack((mdf2.bse,
                         mdf2.standard_errors(),
                         mdf2.standard_errors(cov_type='naive'),
-                        ))#mdf2.standard_errors(cov_type='bias_reduced')))
+                        ))
 print(bse2)
 print("bse and `standard_errors` agree:", np.allclose(bse, bse2))
 
 print("\nimplied standard errors in t_test")
-bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd))#, tt_bc.sd))
+bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd))
 print(bse1)
 print("t_test uses correct cov_params:", np.allclose(bse1, bse2))

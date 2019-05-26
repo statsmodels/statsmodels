@@ -88,5 +88,6 @@ print(ci_beta2)
 # Finally, since we initiated an EL model, normal inference is not available
 try:
     originfit.conf_int()
-except:
+except Exception:
+    # TODO: can we catch something more specific?
     print('No normal inference available')

@@ -36,8 +36,9 @@ if __name__ == '__main__':
     x = V[:, 0]
     y = V[:, 1]
 
-    dens = sm.nonparametric.KDEMultivariate(data=[x, y], var_type='cc', bw=BW,
-                                            defaults=sm.nonparametric.EstimatorSettings(efficient=True))
+    dens = sm.nonparametric.KDEMultivariate(
+        data=[x, y], var_type='cc', bw=BW,
+        defaults=sm.nonparametric.EstimatorSettings(efficient=True))
 
     supportx = np.linspace(min(x), max(x), 60)
     supporty = np.linspace(min(y), max(y), 60)
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     fig = plt.figure(1)
     ax = fig.gca(projection='3d')
     surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
-            linewidth=0, antialiased=False)
+                           linewidth=0, antialiased=False)
 
     fig.colorbar(surf, shrink=0.5, aspect=5)
     plt.figure(2)

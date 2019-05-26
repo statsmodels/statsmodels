@@ -10,12 +10,11 @@ Note: uncomment plt.show() to display graphs
 
 from __future__ import print_function
 import numpy as np
-#from scipy import stats
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
-#fix a seed for these examples
+# Fix a seed for these examples
 np.random.seed(98765789)
 
 nsample = 50
@@ -26,7 +25,7 @@ sig = 0.3   # smaller error variance makes OLS<->RLM contrast bigger
 beta = [0.5, 5.]
 y_true2 = np.dot(X, beta)
 y2 = y_true2 + sig*1. * np.random.normal(size=nsample)
-y2[[39,41,43,45,48]] -= 5   # add some outliers (10% of nsample)
+y2[[39, 41, 43, 45, 48]] -= 5   # add some outliers (10% of nsample)
 
 
 # Example: estimate linear function (true is linear)
@@ -46,8 +45,7 @@ plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
 
 
-#compare with robust estimator
-
+# Compare with robust estimator
 resrlm2 = sm.RLM(y2, X).fit()
 print("\nRLM: parameter estimates: slope, constant")
 print(resrlm2.params)

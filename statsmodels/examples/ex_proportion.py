@@ -17,7 +17,6 @@ import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
 
 
-
 # Region, Eyes, Hair, Count
 ss = '''\
 1 blue  fair   23  1 blue  red     7  1 blue  medium 24
@@ -30,10 +29,14 @@ ss = '''\
 2 green dark   23  2 brown fair   56  2 brown red    42
 2 brown medium 53  2 brown dark   54  2 brown black  13'''
 
-dta0 = np.array(ss.split()).reshape(-1,4)
-dta = np.array(lmap(tuple, dta0.tolist()), dtype=[('Region', int), ('Eyes', 'S6'), ('Hair', 'S6'), ('Count', int)])
+dta0 = np.array(ss.split()).reshape(-1, 4)
+dta = np.array(lmap(tuple, dta0.tolist()),
+               dtype=[('Region', int),
+                      ('Eyes', 'S6'),
+                      ('Hair', 'S6'),
+                      ('Count', int)])
 
-xfair = np.repeat([1,0], [228, 762-228])
+xfair = np.repeat([1, 0], [228, 762-228])
 
 # comparing to SAS last output at
 # http://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_freq_sect028.htm

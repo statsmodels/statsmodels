@@ -3,8 +3,8 @@
 Author: Padarn Wilson
 
 Performance of normal reference plug-in estimator vs silverman. Sample is drawn
-from a mixture of gaussians. Distribution has been chosen to be reasoanbly close
-to normal.
+from a mixture of gaussians. Distribution has been chosen to be reasonably
+close to normal.
 """
 
 from __future__ import print_function
@@ -22,19 +22,19 @@ x = mixture_rvs([.1, .9], size=200, dist=[stats.norm, stats.norm],
 kde = npar.KDEUnivariate(x)
 
 
-kernel_names = ['Gaussian', 'Epanechnikov', 'Biweight',
-                'Triangular', 'Triweight', 'Cosine'
-                ]
+kernel_names = [
+    'Gaussian', 'Epanechnikov', 'Biweight',
+    'Triangular', 'Triweight', 'Cosine'
+]
 
-kernel_switch = ['gau', 'epa', 'tri', 'biw',
-                 'triw', 'cos'
-                 ]
+kernel_switch = ['gau', 'epa', 'tri', 'biw', 'triw', 'cos']
 
 
 def true_pdf(x):
     pdf = 0.1 * stats.norm.pdf(x, loc=0, scale=0.5)
     pdf += 0.9 * stats.norm.pdf(x, loc=1, scale=0.5)
     return pdf
+
 
 fig = plt.figure()
 for ii, kn in enumerate(kernel_switch):

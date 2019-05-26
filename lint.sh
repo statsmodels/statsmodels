@@ -31,6 +31,16 @@ if [ "$LINT" == true ]; then
         statsmodels/genmod/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
+        statsmodels/examples/ex_emplike_2.py \
+        statsmodels/examples/ex_emplike_3.py \
+        statsmodels/examples/ex_kde_normalreference.py \
+        statsmodels/examples/ex_multivar_kde.py \
+        statsmodels/examples/example_ols_minimal_comp.py \
+        statsmodels/examples/koul_and_mc.py \
+        statsmodels/examples/try_gee.py \
+        statsmodels/examples/tut_ols_ancova.py \
+        statsmodels/examples/tut_ols_rlm_short.py \
+        statsmodels/examples/tsa/ex_coint.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \
