@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.tools import Bunch
+
 cov_clu_stata = np.array([
     .00025262993207,
     -.00065043385106,
@@ -76,12 +78,6 @@ cov_dk4_stata = np.array([
     -.06728261073866,
     -.32394785247278,
     148.60456447156]).reshape(3, 3)
-
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
 
 
 results = Bunch(

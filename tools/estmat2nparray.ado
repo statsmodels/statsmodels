@@ -50,10 +50,7 @@ program define estmat2nparray
     foreach mat of local namelist {
         mkarray `mat' `myfile' `format'
     }
-    file write `myfile' "class Bunch(dict):" _n
-    file write `myfile' "    def __init__(self, **kw):" _n
-    file write `myfile' "        dict.__init__(self, kw)" _n
-    file write `myfile' "        self.__dict__ = self" _n _n
+    file write `myfile' "from statsmodels.tools.tools import Bunch" _n
 
 	if "`noest'" == "" {
 		file write `myfile' "        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):" _n

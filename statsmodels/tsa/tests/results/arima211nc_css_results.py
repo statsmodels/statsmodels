@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.tools import Bunch
+
 llf = np.array([-240.21658671417])
 
 nobs = np.array([202])
@@ -1279,12 +1281,6 @@ icstats = np.array([
     4,
     488.43317342834,
     501.66624421795])
-
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
 
 
 results = Bunch(

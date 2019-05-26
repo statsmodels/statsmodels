@@ -1,13 +1,6 @@
 import numpy as np
 
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
+from statsmodels.tools.testing import ParamsTableTestBunch
 
 
 est = dict(
@@ -704,7 +697,7 @@ b_var_colnames = [
 b_var_rownames = 'y1'.split()
 
 
-results_svar1_small = Bunch(
+results_svar1_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

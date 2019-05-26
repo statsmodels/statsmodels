@@ -11,9 +11,7 @@ from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 
 from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
                                            to_table, aggregate_raters)
-
-class Holder(object):
-    pass
+from statsmodels.tools.testing import Holder
 
 
 table0 = np.asarray('''\

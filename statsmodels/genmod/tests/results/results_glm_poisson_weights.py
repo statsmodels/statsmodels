@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 est = dict(
     deviance=18.59164098607571,
     dispers=1.859164098607571,
@@ -167,16 +169,7 @@ resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
 resids_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results_poisson_none_nonrobust = Bunch(
+results_poisson_none_nonrobust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -364,7 +357,7 @@ resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
 resids_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_fweight_nonrobust = Bunch(
+results_poisson_fweight_nonrobust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -552,7 +545,7 @@ resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
 resids_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_aweight_nonrobust = Bunch(
+results_poisson_aweight_nonrobust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -735,7 +728,7 @@ resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
 resids_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_pweight_nonrobust = Bunch(
+results_poisson_pweight_nonrobust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -884,7 +877,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_none_hc1 = Bunch(
+results_poisson_none_hc1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1032,7 +1025,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_fweight_hc1 = Bunch(
+results_poisson_fweight_hc1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1180,7 +1173,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_aweight_hc1 = Bunch(
+results_poisson_aweight_hc1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1328,7 +1321,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_pweight_hc1 = Bunch(
+results_poisson_pweight_hc1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1476,7 +1469,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_none_clu1 = Bunch(
+results_poisson_none_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1626,7 +1619,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_fweight_clu1 = Bunch(
+results_poisson_fweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1776,7 +1769,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_aweight_clu1 = Bunch(
+results_poisson_aweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -1926,7 +1919,7 @@ predicted_colnames = 'predict_mu predict_linpred_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_poisson_pweight_clu1 = Bunch(
+results_poisson_pweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -2038,7 +2031,7 @@ predicted_colnames = 'predict_mu predict_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_wls_aweight_robust = Bunch(
+results_wls_aweight_robust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -2152,7 +2145,7 @@ predicted_colnames = 'predict_mu predict_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_wls_aweight_clu1 = Bunch(
+results_wls_aweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -2266,7 +2259,7 @@ predicted_colnames = 'predict_mu predict_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_wls_fweight_clu1 = Bunch(
+results_wls_fweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -2380,7 +2373,7 @@ predicted_colnames = 'predict_mu predict_std'.split()
 predicted_rownames = ['r'+str(n) for n in range(1, 18)]
 
 
-results_wls_pweight_clu1 = Bunch(
+results_wls_pweight_clu1 = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

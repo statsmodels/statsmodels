@@ -1,8 +1,6 @@
 from numpy import array
 
-
-class Holder(object):
-    pass
+from statsmodels.tools.testing import Holder
 
 
 mlpacf = Holder()

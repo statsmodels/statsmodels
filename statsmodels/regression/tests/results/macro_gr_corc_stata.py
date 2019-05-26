@@ -1,5 +1,6 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
 est = dict(
     N=201,
     df_m=2,
@@ -496,16 +497,7 @@ fittedvalues_se_colnames = 'fittedvalues_se'.split()
 fittedvalues_se_rownames = ['r'+str(n) for n in range(1, 203)]
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results = Bunch(
+results = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

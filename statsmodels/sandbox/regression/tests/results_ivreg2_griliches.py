@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.testing import ParamsTableTestBunch
+
 param_names = [
     's', 'iq', 'expr', 'tenure', 'rns', 'smsa',
     'dyear_67', 'dyear_68', 'dyear_69', 'dyear_70', 'dyear_71', 'dyear_73',
@@ -149,16 +151,7 @@ cov_colnames = param_names
 cov_rownames = param_names
 
 
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i, att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:, i]
-
-
-results = Bunch(
+results = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -311,7 +304,7 @@ cov_colnames = param_names
 cov_rownames = param_names
 
 
-results_robust = Bunch(
+results_robust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -478,7 +471,7 @@ hausman = dict(
     DWH=70.84970589405181
 )
 
-results_small = Bunch(
+results_small = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -634,7 +627,7 @@ cov_colnames = param_names
 cov_rownames = param_names
 
 
-results_small_robust = Bunch(
+results_small_robust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -787,7 +780,7 @@ cov_colnames = param_names
 cov_rownames = param_names
 
 
-results_gmm2s_robust = Bunch(
+results_gmm2s_robust = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,

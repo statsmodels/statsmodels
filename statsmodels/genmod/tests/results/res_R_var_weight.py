@@ -3,14 +3,11 @@
 import numpy as np
 import pandas as pd
 import os
+
+from statsmodels.tools.tools import Bunch
+
 path = os.path.abspath(__file__)
 dir_path = os.path.dirname(path)
-
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
 
 
 res = dict()

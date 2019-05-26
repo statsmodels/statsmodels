@@ -14,6 +14,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
+from statsmodels.tools.testing import Holder
 from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -607,9 +608,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
                       category=HypothesisTestWarning)
 
     from statsmodels.regression.linear_model import OLS
-
-    class Holder(object):
-        pass
 
     def detrend(y, order):
         if order == -1:

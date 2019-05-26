@@ -11,12 +11,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.testing import Holder
 from statsmodels.miscmodels.tmodel import TLinearModel
-
-
-class Holder(object):
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
 
 
 mm = Holder()
