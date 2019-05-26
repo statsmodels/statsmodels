@@ -4,14 +4,14 @@
 Created on Fri Dec 16 12:52:13 2011
 Author: Josef Perktold
 """
-
-from statsmodels.compat.python import urlretrieve
+import os
 
 import pandas as pd
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
+from statsmodels.compat.python import urlretrieve
 import statsmodels.stats.sandwich_covariance as sw
 
 # The data used for this example come from:
@@ -25,7 +25,13 @@ try:
 except IOError:
     urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
     print('downloading file')
-    srs = pd.read_stata("srs.dta")
+    try:
+        srs = pd.read_stata("srs.dta")
+    except ValueError:
+        # The file is invalid.  During testing at least I don't want
+        #  these being left behind after each test run.
+        os.remove("srs.dta")
+        raise
 #    from statsmodels.datasets import webuse
 #    srs = webuse('srs', 'http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/')
 #    #does currently not cache file
