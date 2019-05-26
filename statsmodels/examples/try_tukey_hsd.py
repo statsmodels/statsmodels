@@ -157,7 +157,7 @@ mc2s = MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
 print(res2s)
 res2s_001 = mc2s.tukeyhsd(alpha=0.01)
-# R result or comparison
+# R result for comparison
 tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
 assert_almost_equal(res2s_001.confint, tukeyhsd2s[:, 1:3], decimal=3)
 
