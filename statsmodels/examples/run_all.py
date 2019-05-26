@@ -12,6 +12,7 @@ Usage Notes
 from __future__ import print_function
 import os
 import subprocess
+import shlex
 
 from statsmodels.compat.python import lzip, PY3
 import matplotlib.pyplot as plt  # matplotlib is required for many examples
@@ -43,7 +44,8 @@ filelist = [x for x in filelist
 
 
 def run_example(path):
-    p = subprocess.Popen([exe, path])
+    cmd = 'export MPL_BACKEND=agg && ' + exe + ' ' + path
+    p = subprocess.Popen(shlex.split(cmd))
     p.communicate()
     return p.returncode
 
