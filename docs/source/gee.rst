@@ -112,7 +112,6 @@ The distribution families are the same as for GLM, currently implemented are
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/glmfamilies.rst
 
    Family
    Binomial
