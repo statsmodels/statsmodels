@@ -96,20 +96,21 @@ canada = np.array([
     [418.00298048, 961.02902994,   6.93,       470.01166633],
     [417.26668018, 961.76570981,   6.87,       469.64723444]])
 
-k = 2
-resarch2 = dia.acorr_lm((canada[:, k]-canada[:, k].mean())**2,
-                        maxlag=2, autolag=None, store=1)
-print(resarch2)
-resarch5 = dia.acorr_lm(canada[:, k]**2, maxlag=12, autolag=None, store=1)
 
 template = (
     "        ARCH LM-test; Null hypothesis: no ARCH effects\n\n"
     "Chi-squared = %(chi)-8.4f df = %(df)-4d p-value = %(pval)8.4g\n"
 )
-resarch = resarch5
-print()
-print(template % dict(chi=resarch[2], df=resarch[-1].resols.df_model,
-                      pval=resarch[3]))
+
+
+def run_het_arch(colnum, maxlag):
+    data = canada[:, colnum]
+    res = dia.acorr_lm(data**2, maxlag=maxlag,
+                       autolag=None, store=1)
+    #
+    print(template % dict(chi=res[0],
+                          df=res[-1].resols.df_model,
+                          pval=res[1]))
 
 
 # R:FinTS: ArchTest(as.vector(Canada[,2]), lag=5)
@@ -122,14 +123,14 @@ data:  as.vector(Canada[, 2])
 Chi-squared = 78.8493, df = 5, p-value = 1.4606e-15
 """
 
-# from template above
-'''
+run_het_arch(1, 5)
+"""
+>>> run_het_arch(1, 5)
         ARCH LM-test; Null hypothesis: no ARCH effects
 
-Chi-squared = 78.849   df = 5    p-value = 1.461e-15
-'''
+Chi-squared = 78.8493  df = 5    p-value = 1.461e-15
+"""
 
-# k =2
 # R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
 """
 > ArchTest(as.vector(Canada[,3]), lag=5)
@@ -140,26 +141,27 @@ data:  as.vector(Canada[, 3])
 Chi-squared = 74.6028, df = 5, p-value = 1.1259e-14
 """
 
-# mine
-'''
+run_het_arch(2, 5)
+"""
+>>> run_het_arch(2, 5)
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = 74.6028  df = 5    p-value = 1.126e-14
-'''
+"""
 
 # R:FinTS: ArchTest(as.vector(Canada[,3]), lag=12)
 """
 > ArchTest(as.vector(Canada[,3]), lag=12)
-
     ARCH LM-test; Null hypothesis: no ARCH effects
 
 data:  as.vector(Canada[, 3])
 Chi-squared = 69.6359, df = 12, p-value = 3.7468e-10
 """
 
-# mine:
-'''
+run_het_arch(2, 12)
+"""
+>>> run_het_arch(2, 12)
         ARCH LM-test; Null hypothesis: no ARCH effects
 
 Chi-squared = 69.6359  df = 12   p-value = 3.747e-10
-'''
+"""
