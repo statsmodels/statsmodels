@@ -23,7 +23,8 @@ filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.d
 
 
 def getnist(filename):
-    fname = os.path.abspath(os.path.join('./data', filename))
+    here = os.path.dirname(__file__)
+    fname = os.path.abspath(os.path.join(here, 'data', filename))
     with open(fname, 'r') as fd:
         content = fd.read().split('\n')
 
@@ -52,10 +53,12 @@ def anova_oneway(y, x, seq=0):
     #subracting mean increases numerical accuracy for NIST test data sets
     xrvs = x[:,np.newaxis] - x.mean() #for 1d#- 1e12  trick for 'SmLs09.dat'
 
-    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:,:1], xrvs[:,:1])#, seq=0)  # noqa:F821  See GH#5756
-    #the following does not work as replacement
-    #from .try_catdata import groupsstats_dummy, groupstatsbin
-    #gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)#, seq=0)
+    from .try_catdata import groupsstats_dummy
+    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:, :1],
+                                                        xrvs[:, :1])
+    # TODO: the following does not work as replacement
+    #  from .try_catdata import groupsstats_dummy, groupstatsbin
+    #  gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)
     sswn = np.dot(xdevmeangr.T,xdevmeangr)
     ssbn = np.dot((meang-xrvs.mean())**2, countg.T)
     nobs = yrvs.shape[0]
@@ -91,7 +94,14 @@ if __name__ == '__main__':
         print(fn)
         y, x, cert, certified, caty = getnist(fn)
         res = anova_oneway(y, x)
-        print(np.array(res) - cert)
+        # TODO: figure out why these results are less accurate/precise
+        #  than others
+        rtol = {
+            "SmLs08.dat": .027,
+            "SmLs07.dat": 1.7e-3,
+            "SmLs09.dat": 1e-4
+        }.get(fn, 1e-7)
+        np.testing.assert_allclose(np.array(res), cert, rtol=rtol)
 
     print('\n using stats ANOVA f_oneway')
     for fn in filenameli:
