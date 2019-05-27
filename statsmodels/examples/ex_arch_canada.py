@@ -112,15 +112,17 @@ print()
 print(ss % dict(chi=resarch[2], df=resarch[-1].resols.df_model, pval=resarch[3]))
 
 
-#R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
+# R:FinTS: ArchTest(as.vector(Canada[,2]), lag=5)
 '''
-        ARCH LM-test; Null hypothesis: no ARCH effects
+> ArchTest(as.vector(Canada[,2]), lag=5)
 
-data:  as.vector(Canada[, 3])
-Chi-squared = 78.878, df = 5, p-value = 1.443e-15
+    ARCH LM-test; Null hypothesis: no ARCH effects
+
+data:  as.vector(Canada[, 2])
+Chi-squared = 78.8493, df = 5, p-value = 1.4606e-15
 '''
 
-#from ss above
+# from ss above
 '''
         ARCH LM-test; Null hypothesis: no ARCH effects
 
@@ -128,13 +130,16 @@ Chi-squared = 78.849   df = 5    p-value = 1.461e-15
 '''
 
 #k=2
-#R
+# R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
 '''
-        ARCH LM-test; Null hypothesis: no ARCH effects
+> ArchTest(as.vector(Canada[,3]), lag=5)
 
-data:  as.vector(Canada[, 4])
-Chi-squared = 74.6028, df = 5, p-value = 1.121e-14
+    ARCH LM-test; Null hypothesis: no ARCH effects
+
+data:  as.vector(Canada[, 3])
+Chi-squared = 74.6028, df = 5, p-value = 1.1259e-14
 '''
+
 #mine
 '''
         ARCH LM-test; Null hypothesis: no ARCH effects
@@ -142,13 +147,14 @@ Chi-squared = 74.6028, df = 5, p-value = 1.121e-14
 Chi-squared = 74.6028  df = 5    p-value = 1.126e-14
 '''
 
+# R:FinTS: ArchTest(as.vector(Canada[,3]), lag=12)
 '''
-> ArchTest(as.vector(Canada[,4]), lag=12)
+> ArchTest(as.vector(Canada[,3]), lag=12)
 
-        ARCH LM-test; Null hypothesis: no ARCH effects
+    ARCH LM-test; Null hypothesis: no ARCH effects
 
-data:  as.vector(Canada[, 4])
-Chi-squared = 69.6359, df = 12, p-value = 3.747e-10
+data:  as.vector(Canada[, 3])
+Chi-squared = 69.6359, df = 12, p-value = 3.7468e-10
 '''
 
 #mine:
