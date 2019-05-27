@@ -1092,20 +1092,7 @@ _mice_example_1 = """
     >>> results = mice.fit(10, 10)
     >>> print(results.summary())
 
-                              Results: MICE
-    =================================================================
-    Method:                    MICE       Sample size:           1000
-    Model:                     OLS        Scale                  1.00
-    Dependent variable:        y          Num. imputations       10
-    -----------------------------------------------------------------
-               Coef.  Std.Err.    t     P>|t|   [0.025  0.975]  FMI
-    -----------------------------------------------------------------
-    Intercept -0.0234   0.0318  -0.7345 0.4626 -0.0858  0.0390 0.0128
-    x1         1.0305   0.0578  17.8342 0.0000  0.9172  1.1437 0.0309
-    x2        -0.0134   0.0162  -0.8282 0.4076 -0.0451  0.0183 0.0236
-    x3        -1.0260   0.0328 -31.2706 0.0000 -1.0903 -0.9617 0.0169
-    x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
-    =================================================================
+    .. literalinclude:: ../plots/mice_example_1.py
     """
 
 _mice_example_2 = """
@@ -1151,7 +1138,7 @@ class MICE(object):
 
     Examples
     --------
-    Run all MICE steps and obtain results::
+    Run all MICE steps and obtain results:
     %(mice_example_1)s
 
     Obtain a sequence of fitted analysis models without combining
