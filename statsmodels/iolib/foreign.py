@@ -5,8 +5,8 @@ The Stata input tools were originally written by Joe Presbrey as part of PyDTA.
 
 You can find more information here http://presbrey.mit.edu/PyDTA
 
-See also
----------
+See Also
+--------
 numpy.lib.io
 """
 import warnings
