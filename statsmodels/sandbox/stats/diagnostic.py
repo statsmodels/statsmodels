@@ -348,12 +348,9 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     x = np.asarray(x)
     nobs = x.shape[0]
     if maxlag is None:
-        #for adf from Greene referencing Schwert 1989
+        # for adf from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
 
-
-    xdiff = np.diff(x)
-    #
     xdall = lagmat(x[:,None], maxlag, trim='both')
     nobs = xdall.shape[0]
     xdall = np.c_[np.ones((nobs,1)), xdall]
@@ -362,8 +359,8 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     if store: resstore = ResultsStore()
 
     if autolag:
-        #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
+        # search for lag length with highest information criteria
+        # Note: I use the same number of observations to have comparable IC
         results = {}
         for mlag in range(1, maxlag+1):
             results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
@@ -375,7 +372,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
         else:
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
-        #rerun ols with best ic
+        # Re-run ols with best ic
         xdall = lagmat(x[:,None], icbestlag, trim='both')
         nobs = xdall.shape[0]
         xdall = np.c_[np.ones((nobs,1)), xdall]
@@ -392,7 +389,6 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, usedlag)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    #return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
@@ -400,6 +396,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
         return lm, lmpval, fval, fpval, resstore
     else:
         return lm, lmpval, fval, fpval
+
 
 def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
              ddof=0):
@@ -499,8 +496,6 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
     x = np.concatenate((np.zeros(nlags), x))
 
-    #xdiff = np.diff(x)
-    #
     xdall = lagmat(x[:,None], nlags, trim='both')
     nobs = xdall.shape[0]
     xdall = np.c_[np.ones((nobs,1)), xdall]
@@ -519,7 +514,6 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, nlags)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    #return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
@@ -903,9 +897,9 @@ def linear_harvey_collier(res):
     #B.H. Baltagi, Econometrics, 2011, chapter 8
     #but it matches Gretl and R:lmtest, pvalue at decimal=13
     rr = recursive_olsresiduals(res, skip=3, alpha=0.95)
-    from scipy import stats
 
     return stats.ttest_1samp(rr[3][3:], 0)
+
 
 def linear_rainbow(res, frac = 0.5):
     '''Rainbow test for linearity
@@ -937,9 +931,9 @@ def linear_rainbow(res, frac = 0.5):
     ss_mi = res_mi.ssr
     ss = res.ssr
     fstat = (ss - ss_mi) / (nobs-nobs_mi) / ss_mi  * res_mi.df_resid
-    from scipy import stats
     pval = stats.f.sf(fstat, nobs - nobs_mi, res_mi.df_resid)
     return fstat, pval
+
 
 def linear_lm(resid, exog, func=None):
     '''Lagrange multiplier test for linearity against functional alternative
@@ -975,10 +969,8 @@ def linear_lm(resid, exog, func=None):
     The Null hypothesis is that the linear specification is correct.
 
     '''
-    from scipy import stats
-
     if func is None:
-        func = lambda x: np.power(x, 2)
+        func = np.square
 
     exog_aux = np.column_stack((exog, func(exog[:,1:])))
 
