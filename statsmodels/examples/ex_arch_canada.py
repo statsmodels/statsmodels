@@ -8,7 +8,8 @@ Author: Josef Perktold
 
 from __future__ import print_function
 import numpy as np
-import statsmodels.sandbox.stats.diagnostic as dia
+
+from statsmodels.stats.diagnostic import het_arch
 
 canada = np.array([
     [405.36646643, 929.61051389,   7.53,       386.13610906],
@@ -105,9 +106,9 @@ template = (
 
 def run_het_arch(colnum, maxlag):
     data = canada[:, colnum]
-    res = dia.acorr_lm(data**2, maxlag=maxlag,
-                       autolag=None, store=1)
-    #
+    res = het_arch(data, maxlag=maxlag,
+                   autolag=None, store=1)
+
     print(template % dict(chi=res[0],
                           df=res[-1].resols.df_model,
                           pval=res[1]))
