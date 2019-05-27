@@ -4,6 +4,10 @@
 Created on Sat Dec 24 07:31:47 2011
 
 Author: Josef Perktold
+
+Note: The R results below are obtained after running:
+    library(FinTS)
+    options(digits=8)
 """
 
 from __future__ import print_function
@@ -114,13 +118,13 @@ def run_het_arch(colnum, maxlag):
                           pval=res[1]))
 
 
-# R:FinTS: ArchTest(as.vector(Canada[,2]), lag=5)
+# R:FinTS: ArchTest(as.vector(canada[,2]), lag=5)
 """
-> ArchTest(as.vector(Canada[,2]), lag=5)
+> ArchTest(as.vector(canada[,2]), lag=5)
 
     ARCH LM-test; Null hypothesis: no ARCH effects
 
-data:  as.vector(Canada[, 2])
+data:  as.vector(canada[, 2])
 Chi-squared = 78.8493, df = 5, p-value = 1.4606e-15
 """
 
@@ -132,13 +136,13 @@ run_het_arch(1, 5)
 Chi-squared = 78.8493  df = 5    p-value = 1.461e-15
 """
 
-# R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)
+# R:FinTS: ArchTest(as.vector(canada[,3]), lag=5)
 """
-> ArchTest(as.vector(Canada[,3]), lag=5)
+> ArchTest(as.vector(canada[,3]), lag=5)
 
     ARCH LM-test; Null hypothesis: no ARCH effects
 
-data:  as.vector(Canada[, 3])
+data:  as.vector(canada[, 3])
 Chi-squared = 74.6028, df = 5, p-value = 1.1259e-14
 """
 
@@ -150,12 +154,12 @@ run_het_arch(2, 5)
 Chi-squared = 74.6028  df = 5    p-value = 1.126e-14
 """
 
-# R:FinTS: ArchTest(as.vector(Canada[,3]), lag=12)
+# R:FinTS: ArchTest(as.vector(canada[,3]), lag=12)
 """
-> ArchTest(as.vector(Canada[,3]), lag=12)
+> ArchTest(as.vector(canada[,3]), lag=12)
     ARCH LM-test; Null hypothesis: no ARCH effects
 
-data:  as.vector(Canada[, 3])
+data:  as.vector(canada[, 3])
 Chi-squared = 69.6359, df = 12, p-value = 3.7468e-10
 """
 
