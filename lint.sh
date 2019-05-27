@@ -19,7 +19,11 @@ if [ "$LINT" == true ]; then
     flake8 --isolated \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/base/distributed_estimation.py \
+        statsmodels/base/elastic_net.py \
         statsmodels/base/tests/test_data.py \
+        statsmodels/base/tests/test_transform.py \
+        statsmodels/base/tests/test_distributed_estimation.py \
         statsmodels/compat/ \
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/results/ \
