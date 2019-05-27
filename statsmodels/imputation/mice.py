@@ -1092,7 +1092,7 @@ _mice_example_1 = """
     >>> results = mice.fit(10, 10)
     >>> print(results.summary())
 
-    .. literalinclude:: ../plots/mice_example_1.py
+    .. literalinclude:: ../plots/mice_example_1.txt
     """
 
 _mice_example_2 = """
