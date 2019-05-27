@@ -52,7 +52,7 @@ def anova_oneway(y, x, seq=0):
     #subracting mean increases numerical accuracy for NIST test data sets
     xrvs = x[:,np.newaxis] - x.mean() #for 1d#- 1e12  trick for 'SmLs09.dat'
 
-    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:,:1], xrvs[:,:1])#, seq=0)
+    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:,:1], xrvs[:,:1])#, seq=0)  # noqa:F821  See GH#5756
     #the following does not work as replacement
     #from .try_catdata import groupsstats_dummy, groupstatsbin
     #gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)#, seq=0)
