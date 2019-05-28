@@ -28,7 +28,7 @@ def hpfilter(X, lamb=1600):
         The estimated trend in the data given lamb.
 
     Examples
-    ---------
+    --------
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
@@ -43,7 +43,7 @@ def hpfilter(X, lamb=1600):
     >>> import matplotlib.pyplot as plt
     >>> fig, ax = plt.subplots()
     >>> gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax,
-    ...                                                      fontsize=16);
+    ...                                                      fontsize=16)
     >>> plt.show()
 
     .. plot:: plots/hpf_plot.py
@@ -87,7 +87,7 @@ def hpfilter(X, lamb=1600):
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
-    I = sparse.eye(nobs,nobs)
+    I = sparse.eye(nobs, nobs)  # noqa:E741
     offsets = np.array([0,1,2])
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
     K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))

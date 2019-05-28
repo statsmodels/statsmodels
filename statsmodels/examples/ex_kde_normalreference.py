@@ -12,7 +12,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 import statsmodels.nonparametric.api as npar
-from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # example from test_kde.py mixture of two normal distributions
@@ -41,7 +40,12 @@ fig = plt.figure()
 for ii, kn in enumerate(kernel_switch):
 
     ax = fig.add_subplot(2, 3, ii + 1)   # without uniform
-    ax.hist(x, bins=20, normed=True, alpha=0.25)
+
+    # gh5792. Remove except after matplotlib>2.1 required
+    try:
+        ax.hist(x, bins=20, density=True, alpha=0.25)
+    except AttributeError:
+        ax.hist(x, bins=20, normed=True, alpha=0.25)
 
     kde.fit(kernel=kn, bw='silverman', fft=False)
     ax.plot(kde.support, kde.density)

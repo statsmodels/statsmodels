@@ -160,8 +160,6 @@ class Summary(object):
         pad_col, pad_index, widest = _measure_tables(tables, settings)
 
         rule_equal = widest * '='
-        #TODO: this isn't used anywhere?
-        rule_dash = widest * '-'
 
         simple_tables = _simple_tables(tables, settings, pad_col, pad_index)
         tab = [x.as_text() for x in simple_tables]
@@ -223,7 +221,7 @@ class Summary(object):
 
         if self._merge_latex:
             # create single tabular object for summary_col
-            tab = re.sub(to_replace,r'\\midrule\n\\midrule\n', tab)
+            tab = re.sub(to_replace,r'\\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -256,22 +254,24 @@ def _measure_tables(tables, settings):
 
 
 # Useful stuff
-_model_types = {'OLS' : 'Ordinary least squares',
-                'GLS' : 'Generalized least squares',
+_model_types = {'OLS': 'Ordinary least squares',
+                'GLS': 'Generalized least squares',
                 'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weighted least squares',
-                'RLM' : 'Robust linear model',
+                'WLS': 'Weighted least squares',
+                'RLM': 'Robust linear model',
                 'NBin': 'Negative binomial model',
-                'GLM' : 'Generalized linear model'
+                'GLM': 'Generalized linear model'
                 }
 
 
 def summary_model(results):
     '''Create a dict with information about the model
     '''
+
     def time_now(*args, **kwds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
+
     info = OrderedDict()
     info['Model:'] = lambda x: x.model.__class__.__name__
     info['Model Family:'] = lambda x: x.family.__class.__name__
@@ -306,8 +306,9 @@ def summary_model(results):
     for key, func in iteritems(info):
         try:
             out[key] = func(results)
-        # NOTE: some models don't have loglike defined (RLM), so that's NIE
         except (AttributeError, KeyError, NotImplementedError):
+            # NOTE: some models don't have loglike defined (RLM),
+            #   so raise NotImplementedError
             pass
     return out
 
@@ -567,7 +568,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
 
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
     simple_tables = []
-    float_format = '%.4f'
+    float_format = settings[0]['float_format'] if settings else '%.4f'
     if pad_col is None:
         pad_col = [0] * len(tables)
     if pad_index is None:

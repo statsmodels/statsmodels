@@ -61,9 +61,9 @@ if 'ex1' in examples:
         #effects covariance matrix changes - still need to check details.
         X = np.hstack((X,Z))
 
-        #create units and append to list
-        unit = Unit(Y, X, Z)
-        units.append(unit)
+        # create units and append to list
+        new_unit = Unit(Y, X, Z)
+        units.append(new_unit)
 
 
     m = OneWayMixed(units)
@@ -136,7 +136,7 @@ if 'ex1' in examples:
     print('mean_abs_perc  ', mean_abs_perc)
     print('median_abs_perc', median_abs_perc)
     print('rmse_perc (std)', rmse_perc)
-    from numpy.testing import assert_almost_equal
+    #from numpy.testing import assert_almost_equal
     #assert is for n_units=100 in original example
     #I changed random number generation, so this won't work anymore
     #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)

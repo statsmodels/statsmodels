@@ -8,6 +8,7 @@ Author: Josef Perktold
 from statsmodels.compat.python import lzip, zip
 import numpy as np
 
+
 class AllPairsResults(object):
     '''Results class for pairwise comparisons, based on p-values
 
@@ -35,14 +36,12 @@ class AllPairsResults(object):
 
     '''
 
-
     def __init__(self, pvals_raw, all_pairs, multitest_method='hs',
                  levels=None, n_levels=None):
         self.pvals_raw = pvals_raw
         self.all_pairs = all_pairs
         if n_levels is None:
             # for all_pairs nobs*(nobs-1)/2
-            #self.n_levels = (1. + np.sqrt(1 + 8 * len(all_pairs))) * 0.5
             self.n_levels = np.max(all_pairs) + 1
         else:
             self.n_levels = n_levels
@@ -54,7 +53,7 @@ class AllPairsResults(object):
         else:
             self.all_pairs_names = ['%s-%s' % (levels[pairs[0]],
                                                levels[pairs[1]])
-                                               for pairs in all_pairs]
+                                    for pairs in all_pairs]
 
     def pval_corrected(self, method=None):
         '''p-values corrected for multiple testing problem
@@ -66,7 +65,7 @@ class AllPairsResults(object):
         import statsmodels.stats.multitest as smt
         if method is None:
             method = self.multitest_method
-        #TODO: breaks with method=None
+        # TODO: breaks with method=None
         return smt.multipletests(self.pvals_raw, method=method)[1]
 
     def __str__(self):
@@ -81,7 +80,6 @@ class AllPairsResults(object):
         pvals_mat = np.zeros((k, k))
         # if we don't assume we have all pairs
         pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
-        #pvals_mat[np.triu_indices(k, 1)] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):
@@ -93,9 +91,9 @@ class AllPairsResults(object):
         import statsmodels.stats.multitest as smt
         maxlevel = max((len(ss) for ss in self.all_pairs_names))
 
-        text = 'Corrected p-values using %s p-value correction\n\n' % \
-                        smt.multitest_methods_names[self.multitest_method]
+        text = ('Corrected p-values using %s p-value correction\n\n'
+                % smt.multitest_methods_names[self.multitest_method])
         text += 'Pairs' + (' ' * (maxlevel - 5 + 1)) + 'p-values\n'
         text += '\n'.join(('%s  %6.4g' % (pairs, pv) for (pairs, pv) in
-                zip(self.all_pairs_names, self.pval_corrected())))
+                          zip(self.all_pairs_names, self.pval_corrected())))
         return text

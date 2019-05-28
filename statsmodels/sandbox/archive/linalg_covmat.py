@@ -3,7 +3,6 @@ import math
 import numpy as np
 from scipy import linalg, stats, special
 
-from .linalg_decomp_1 import tiny2zero
 
 #univariate standard normal distribution
 #following from scipy.stats.distributions with adjustments
@@ -75,7 +74,7 @@ class AffineTransform(object):
         return - self.logabsdet + self.dist.logpdf(self.invtransform(x))
 
 
-from .linalg_decomp_1 import SvdArray, OneTimeProperty
+from .linalg_decomp_1 import SvdArray
 
 
 class MultivariateNormalChol(object):
@@ -265,6 +264,7 @@ print(loglike_ar1(x, 0.8))
 mch = MultivariateNormalChol(np.zeros(nobs), sigma)
 print(mch.logpdf(x))
 
+#from .linalg_decomp_1 import tiny2zero
 #print(tiny2zero(mch.cholsigmainv / mch.cholsigmainv[-1,-1])
 
 xw = mch.whiten(x)

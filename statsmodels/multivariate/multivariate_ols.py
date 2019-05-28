@@ -383,7 +383,7 @@ class _MultivariateOLS(Model):
         default)
 
     Attributes
-    -----------
+    ----------
     endog : array
         See Parameters.
     exog : array
@@ -474,7 +474,7 @@ class MultivariateTestResults(object):
     Returned by `mv_test` method of `_MultivariateOLSResults` class
 
     Attributes
-    -----------
+    ----------
     results : dict
        For hypothesis name `key`:
            results[key]['stat'] contains the multivaraite test results

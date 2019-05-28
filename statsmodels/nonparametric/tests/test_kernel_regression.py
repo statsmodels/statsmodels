@@ -157,7 +157,7 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
         nobs = 200
         np.random.seed(1234)
-        O = np.random.binomial(2, 0.5, size=(nobs, ))
+        ovals = np.random.binomial(2, 0.5, size=(nobs, ))
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         noise = np.random.normal(size=(nobs, ))
@@ -165,24 +165,25 @@ class TestKernelReg(KernelRegressionTestBase):
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
-        Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
+        Y = b0+ b1 * C1 + b2*C2+ b3 * ovals + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
-        model = nparam.KernelReg(endog=[Y], exog=[C1, C2, O],
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C2, ovals],
                                  reg_type='ll', var_type='cco', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
-        sm_R2 = model.r_squared()  # TODO: add expected result
-        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        # TODO: add expected result
+        sm_R2 = model.r_squared()  # noqa: F841
+        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
 
-    @pytest.mark.skip(reason="Test doesn't make much sense - always passes "
-                             "with very small bw.")
+    @pytest.mark.slow
+    @pytest.mark.xfail(reason="Test doesn't make much sense - always passes "
+                              "with very small bw.")
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
-        #FIXME
         nobs = 200
         np.random.seed(1234)
-        C1 = np.random.normal(size=(nobs, ))
-        C2 = np.random.normal(2, 1, size=(nobs, ))
+        C1 = np.random.normal(size=(nobs,))
+        C2 = np.random.normal(2, 1, size=(nobs,))
         C3 = np.random.beta(0.5,0.2, size=(nobs,))
-        noise = np.random.normal(size=(nobs, ))
+        noise = np.random.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
         b3 = 2.3
@@ -195,9 +196,10 @@ class TestKernelReg(KernelRegressionTestBase):
         # Theoretical marginal effects
         mfx1 = b1 * C2
         mfx2 = b1 * C1
-        #npt.assert_allclose(sm_mfx[:,0], mfx1, rtol=2e-1)
-        #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
         npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
+
+        npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=2e-1)
+        npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
@@ -283,18 +285,18 @@ class TestKernelReg(KernelRegressionTestBase):
     def test_significance_discrete(self):
         nobs = 200
         np.random.seed(12345)
-        O = np.random.binomial(2, 0.5, size=(nobs, ))
+        ovals = np.random.binomial(2, 0.5, size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         C3 = np.random.beta(0.5,0.2, size=(nobs,))
         noise = np.random.normal(size=(nobs, ))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        Y = b1 * O + b2 * C2 + noise
+        Y = b1 * ovals + b2 * C2 + noise
 
         bw= [3.63473198e+00, 1.21404803e+06]
         # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
-        model = nparam.KernelReg(endog=[Y], exog=[O, C3],
+        model = nparam.KernelReg(endog=[Y], exog=[ovals, C3],
                                  reg_type='ll', var_type='oc', bw=bw)
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples

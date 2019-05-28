@@ -5,14 +5,8 @@ Created on Wed May 30 15:11:09 2018
 @author: josef
 """
 
-import time
 import numpy as np
 from scipy import stats
-
-from statsmodels.regression.linear_model import OLS
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod import families
-import statsmodels.stats._diagnostic_other as diao
 
 
 # this is a copy from stats._diagnostic_other

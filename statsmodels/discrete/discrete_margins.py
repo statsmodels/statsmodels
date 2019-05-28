@@ -1,9 +1,9 @@
 #Splitting out maringal effects to see if they can be generalized
 
-from statsmodels.compat.python import lzip, callable, range
+from statsmodels.compat.python import lzip, range
 import numpy as np
 from scipy.stats import norm
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 
 #### margeff helper functions ####
 #NOTE: todo marginal effects for group 2
@@ -342,8 +342,10 @@ def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
                                               count_ind, method, J)
     return cov_me, np.sqrt(np.diag(cov_me))
 
+
 def margeff():
-    pass
+    raise NotImplementedError
+
 
 
 def _check_at_is_all(method):
@@ -367,13 +369,13 @@ class Margins(object):
     """
     def __init__(self, results, get_margeff, derivative, dist=None,
                        margeff_args=()):
-        self._cache = resettable_cache()
+        self._cache = {}
         self.results = results
         self.dist = dist
         self.get_margeff(margeff_args)
 
     def _reset(self):
-        self._cache = resettable_cache()
+        self._cache = {}
 
     def get_margeff(self, *args, **kwargs):
         self._reset()
@@ -420,12 +422,12 @@ class DiscreteMargins(object):
         results.get_margeff. See there for more information.
     """
     def __init__(self, results, args, kwargs={}):
-        self._cache = resettable_cache()
+        self._cache = {}
         self.results = results
         self.get_margeff(*args, **kwargs)
 
     def _reset(self):
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def tvalues(self):
@@ -544,7 +546,7 @@ class DiscreteMargins(object):
         exog_names = model.exog_names[:] # copy
         smry = Summary()
 
-        # sigh, we really need to hold on to this in _data...
+        # TODO: sigh, we really need to hold on to this in _data...
         _, const_idx = _get_const_index(model.exog)
         if const_idx is not None:
             exog_names.pop(const_idx[0])
@@ -562,7 +564,7 @@ class DiscreteMargins(object):
         smry.add_table_2cols(self, gleft=top_left, gright=[],
                 yname=yname, xname=exog_names, title=title)
 
-        #NOTE: add_table_params is not general enough yet for margeff
+        # NOTE: add_table_params is not general enough yet for margeff
         # could use a refactor with getattr instead of hard-coded params
         # tvalues etc.
         table = []
@@ -583,7 +585,6 @@ class DiscreteMargins(object):
                 header = ['', _transform_names[method], 'std err', 'z',
                         'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
                 tble.insert_header_row(0, header)
-                #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 table.append(tble)
 
             table = table_extend(table, keep_headers=True)

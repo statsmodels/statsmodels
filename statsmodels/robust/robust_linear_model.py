@@ -16,7 +16,7 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
 import numpy as np
 import scipy.stats as stats
 
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
@@ -83,7 +83,7 @@ class RLM(base.LikelihoodModel):
 
 
     Examples
-    ---------
+    --------
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
@@ -242,12 +242,12 @@ class RLM(base.LikelihoodModel):
         results : object
             statsmodels.rlm.RLMresults
         """
-        if not cov.upper() in ["H1","H2","H3"]:
+        if cov.upper() not in ["H1","H2","H3"]:
             raise ValueError("Covariance matrix %s not understood" % cov)
         else:
             self.cov = cov.upper()
         conv = conv.lower()
-        if not conv in ["weights","coefs","dev","sresid"]:
+        if conv not in ["weights","coefs","dev","sresid"]:
             raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
@@ -276,7 +276,8 @@ class RLM(base.LikelihoodModel):
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
-                                                weights=self.weights).fit()
+                                                weights=self.weights,
+                                                check_weights=True).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             history = self._update_history(wls_results, history, conv)
@@ -377,7 +378,7 @@ class RLMResults(base.LikelihoodModelResults):
         The reported weights are determined by passing the scaled residuals
         from the last weighted least squares fit in the IRLS algortihm.
 
-    See also
+    See Also
     --------
     statsmodels.base.model.LikelihoodModelResults
     """
@@ -390,7 +391,7 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
-        self._cache = resettable_cache()
+        self._cache = {}
         #for remove_data
         self.data_in_cache = ['sresid']
 
@@ -459,29 +460,11 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params/self.bse)**2
 
-    def remove_data(self):
-        super(self.__class__, self).remove_data()
-        #self.model.history['sresid'] = None
-        #self.model.history['weights'] = None
-
-    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
-
     def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 return_fmt='text'):
         """
         This is for testing the new summary setup
         """
-
-##        left = [(i, None) for i in (
-##                        'Dependent Variable:',
-##                        'Model type:',
-##                        'Method:',
-##			'Date:',
-##                        'Time:',
-##                        'Number of Obs:',
-##                        'df resid',
-##		        'df model',
-##                         )]
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
                     ('Method:', ['IRLS']),
@@ -497,27 +480,23 @@ class RLMResults(base.LikelihoodModelResults):
                      ('Df Model:', None)
                      ]
 
-        if not title is None:
+        if title is not None:
             title = "Robust linear Model Regression Results"
 
-        #boiler plate
+        # boiler plate
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=self.use_t)
+                              use_t=self.use_t)
 
-        #diagnostic table is not used yet
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
-
-#add warnings/notes, added to text format only
-        etext =[]
-        wstr = \
-'''If the model instance has been used for another fit with different fit
-parameters, then the fit options might not be the correct ones anymore .'''
+        # add warnings/notes, added to text format only
+        etext = []
+        wstr = ("If the model instance has been used for another fit "
+                "with different fit\n"
+               "parameters, then the fit options might not be the correct "
+               "ones anymore .")
         etext.append(wstr)
 
         if etext:
@@ -525,13 +504,12 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         return smry
 
-
     def summary2(self, xname=None, yname=None, title=None, alpha=.05,
-                float_format="%.4f"):
+                 float_format="%.4f"):
         """Experimental summary function for regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -552,22 +530,20 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
-        # Summary
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                xname=xname, yname=yname, title=title)
+                      xname=xname, yname=yname, title=title)
 
         return smry
 
 
 class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(RLMResultsWrapper, RLMResults)
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)  # noqa:E305
+
 
 if __name__=="__main__":
 #NOTE: This is to be removed

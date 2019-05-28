@@ -71,8 +71,11 @@ class SVAR(tsbase.TimeSeriesModel):
 
         svar_ckerr(svar_type, A, B)
 
-        #initialize A, B as I if not given
-        #Initialize SVAR masks
+        self.A_original = A
+        self.B_original = B
+
+        # initialize A, B as I if not given
+        # Initialize SVAR masks
         if A is None:
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
@@ -246,15 +249,15 @@ class SVAR(tsbase.TimeSeriesModel):
         self.sigma_u = omega
 
         A, B = self._solve_AB(start_params, override=override,
-                                                    solver=solver,
-                                                    maxiter=maxiter,
-                                                    maxfun=maxfun)
+                              solver=solver,
+                              maxiter=maxiter,
+                              maxfun=maxfun)
         A_mask = self.A_mask
         B_mask = self.B_mask
 
         return SVARResults(y, z, var_params, omega, lags,
-                            names=self.endog_names, trend=trend,
-                            dates=self.data.dates, model=self,
+                           names=self.endog_names, trend=trend,
+                           dates=self.data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
 
     def loglike(self, params):
@@ -290,9 +293,9 @@ class SVAR(tsbase.TimeSeriesModel):
         sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
-        likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
-                np.log(npl.det(A)**2) + b_slogdet + \
-                np.trace(trc_in))
+        likl = -nobs/2. * (neqs * np.log(2 * np.pi) -
+                           np.log(npl.det(A)**2) + b_slogdet +
+                           np.trace(trc_in))
 
         return likl
 
@@ -319,7 +322,7 @@ class SVAR(tsbase.TimeSeriesModel):
         return approx_hess(AB_mask, loglike)
 
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
-            solver='bfgs'):
+                  solver='bfgs'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -353,7 +356,7 @@ class SVAR(tsbase.TimeSeriesModel):
         A[A_mask] = start_params[:A_len]
         B[B_mask] = start_params[A_len:]
 
-        if override == False:
+        if not override:
             J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
@@ -361,8 +364,9 @@ class SVAR(tsbase.TimeSeriesModel):
             print("Order/rank conditions have not been checked")
 
         retvals = super(SVAR, self).fit(start_params=start_params,
-                    method=solver, maxiter=maxiter,
-                    maxfun=maxfun, ftol=1e-20, disp=0).params
+                                        method=solver, maxiter=maxiter,
+                                        maxfun=maxfun, ftol=1e-20,
+                                        disp=0).params
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
@@ -406,16 +410,16 @@ class SVAR(tsbase.TimeSeriesModel):
 
         j = 0
         j_d = 0
-        if len(A_solve[A_mask]) is not 0:
+        if len(A_solve[A_mask]) != 0:
             A_vec = np.ravel(A_mask, order='F')
             for k in range(neqs**2):
-                if A_vec[k] == True:
+                if A_vec[k]:
                     S_B[k,j] = -1
                     j += 1
-        if len(B_solve[B_mask]) is not 0:
+        if len(B_solve[B_mask]) != 0:
             B_vec = np.ravel(B_mask, order='F')
             for k in range(neqs**2):
-                if B_vec[k] == True:
+                if B_vec[k]:
                     S_D[k,j_d] = 1
                     j_d +=1
 
@@ -602,8 +606,8 @@ class SVARResults(SVARProcess, VARResults):
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
-                             B, names=names)
+        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A, B,
+                                          names=names)
 
     def irf(self, periods=10, var_order=None):
         """
@@ -669,65 +673,44 @@ class SVARResults(SVARProcess, VARResults):
         B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_pass = np.zeros(A.shape, dtype='|S1')
-        B_pass = np.zeros(B.shape, dtype='|S1')
-        A_pass[~A_mask] = A[~A_mask]
-        B_pass[~B_mask] = B[~B_mask]
-        A_pass[A_mask] = 'E'
-        B_pass[B_mask] = 'E'
-        if A_mask.sum() == 0:
-            s_type = 'B'
-        elif B_mask.sum() == 0:
-            s_type = 'A'
-        else:
-            s_type = 'AB'
+        A_pass = self.model.A_original
+        B_pass = self.model.B_original
+        s_type = self.model.svar_type
+
         g_list = []
 
+        def agg(impulses):
+            if cum:
+                return impulses.cumsum(axis=0)
+            return impulses
+
+        opt_A = A[A_mask]
+        opt_B = B[B_mask]
         for i in range(repl):
-            #discard first hundred to correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
-                    steps=nobs+burn)
+            # discard first hundred to correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
+                              steps=nobs + burn)
             sim = sim[burn:]
-            if cum == True:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
-                    g_list.append(np.append(sol.A[sol.A_mask].\
-                                            tolist(),
-                                            sol.B[sol.B_mask].\
-                                            tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A_pass[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                 B=B_pass).fit(maxlags=k_ar,\
-                                 A_guess=opt_A, B_guess=opt_B).\
-                                 svar_ma_rep(maxn=T).cumsum(axis=0)
 
-            elif cum == False:
-                if i < 10:
-                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
-                    g_list.append(np.append(sol.A[A_mask].tolist(),
-                                            sol.B[B_mask].tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T)
-                elif i >= 10:
-                    if i == 10:
-                        mean_AB = np.mean(g_list, axis = 0)
-                        split = len(A[A_mask])
-                        opt_A = mean_AB[:split]
-                        opt_B = mean_AB[split:]
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                 B=B_pass).fit(maxlags=k_ar,\
-                                 A_guess = opt_A, B_guess = opt_B).\
-                                 svar_ma_rep(maxn=T)
+            smod = SVAR(sim, svar_type=s_type, A=A_pass, B=B_pass)
+            if i == 10:
+                # Use first 10 to update starting val for remainder of fits
+                mean_AB = np.mean(g_list, axis=0)
+                split = len(A[A_mask])
+                opt_A = mean_AB[:split]
+                opt_B = mean_AB[split:]
 
-        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+            sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+
+            if i < 10:
+                # save estimates for starting val if in first 10
+                g_list.append(np.append(sres.A[A_mask].tolist(),
+                                        sres.B[B_mask].tolist()))
+            ma_coll[i] = agg(sres.svar_ma_rep(maxn=T))
+
+        ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
+        index = (int(round(signif / 2 * repl) - 1),
+                 int(round((1 - signif / 2) * repl) - 1))
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper

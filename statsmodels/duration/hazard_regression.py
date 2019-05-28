@@ -1,9 +1,3 @@
-import numpy as np
-from statsmodels.base import model
-import statsmodels.base.model as base
-from statsmodels.tools.decorators import cache_readonly
-from scipy.optimize import brent
-
 """
 Implementation of proportional hazards regression models for duration
 data that may be censored ("Cox models").
@@ -20,6 +14,10 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+import numpy as np
+from statsmodels.base import model
+import statsmodels.base.model as base
+from statsmodels.tools.decorators import cache_readonly
 
 
 _predict_docstring = """
@@ -403,7 +401,7 @@ class PHReg(model.LikelihoodModel):
             offset = data[offset]
 
         import re
-        terms = re.split("[+\-~]", formula)
+        terms = re.split(r"[+\-~]", formula)
         for term in terms:
             term = term.strip()
             if term in ("0", "1"):
@@ -458,7 +456,7 @@ class PHReg(model.LikelihoodModel):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters
@@ -1283,8 +1281,6 @@ class PHReg(model.LikelihoodModel):
         # nothing can be vectorized.  It appears that rv_discrete does
         # not allow vectorization.
 
-        from scipy.stats.distributions import rv_discrete
-
         surv = self.surv
         bhaz = self.baseline_cumulative_hazard(params)
 
@@ -1551,7 +1547,7 @@ class PHRegResults(base.LikelihoodModelResults):
         Summarize the proportional hazards regression results.
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -1570,8 +1566,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -1612,7 +1607,7 @@ class PHRegResults(base.LikelihoodModelResults):
         param.loc[:, a] = np.exp(param.loc[:, a])
         a = "%.3f]" % (1 - alpha / 2)
         param.loc[:, a] = np.exp(param.loc[:, a])
-        if xname != None:
+        if xname is not None:
             param.index = xname
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
@@ -1639,6 +1634,7 @@ class PHRegResults(base.LikelihoodModelResults):
             smry.add_text("Standard errors do not account for the regularization")
 
         return smry
+
 
 class rv_discrete_float(object):
     """

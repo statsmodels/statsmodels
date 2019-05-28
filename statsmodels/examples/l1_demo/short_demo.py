@@ -22,7 +22,6 @@ from statsmodels.compat.python import range
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
-import pdb  # pdb.set_trace()
 
 
 ## Load the data from Spector and Mazzeo (1980)
@@ -107,10 +106,12 @@ for n, alpha in enumerate(alphas):
     coeff[n,:] = logit_res.params
 
 ## Plot
-plt.figure(1);plt.clf();plt.grid()
-plt.title('Regularization Path');
-plt.xlabel('alpha');
-plt.ylabel('Parameter value');
+plt.figure(1)
+plt.clf()
+plt.grid()
+plt.title('Regularization Path')
+plt.xlabel('alpha')
+plt.ylabel('Parameter value')
 for i in range(K):
     plt.plot(alphas, coeff[:,i], label='X'+str(i), lw=3)
 plt.legend(loc='best')

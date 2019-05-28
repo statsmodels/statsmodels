@@ -5,37 +5,39 @@ Patsy: Contrast Coding Systems for categorical variables
 
 .. note:: This document is based heavily on `this excellent resource from UCLA <http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm>`__.
 
-A categorical variable of K categories, or levels, usually enters a regression as a sequence of K-1 dummy variables. This amounts to a linear hypothesis on the level means. That is, each test statistic for these variables amounts to testing whether the mean for that level is statistically significantly different from the mean of the base category. This dummy coding is called Treatment coding in R parlance, and we will follow this convention. There are, however, different coding methods that amount to different sets of linear hypotheses. 
+A categorical variable of K categories, or levels, usually enters a regression as a sequence of K-1 dummy variables. This amounts to a linear hypothesis on the level means. That is, each test statistic for these variables amounts to testing whether the mean for that level is statistically significantly different from the mean of the base category. This dummy coding is called Treatment coding in R parlance, and we will follow this convention. There are, however, different coding methods that amount to different sets of linear hypotheses.
 
 In fact, the dummy coding is not technically a contrast coding. This is because the dummy variables add to one and are not functionally independent of the model's intercept. On the other hand, a set of *contrasts* for a categorical variable with `k` levels is a set of `k-1` functionally independent linear combinations of the factor level means that are also independent of the sum of the dummy variables. The dummy coding isn't wrong *per se*. It captures all of the coefficients, but it complicates matters when the model assumes independence of the coefficients such as in ANOVA. Linear regression models do not assume independence of the coefficients and thus dummy coding is often the only coding that is taught in this context.
 
 To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS. First let's load the data.
 
-.. ipython:: python
+.. ipython::
    :suppress:
 
-   import numpy as np
-   np.set_printoptions(precision=4, suppress=True)
+   In [1]: import numpy as np
+      ...: np.set_printoptions(precision=4, suppress=True)
+      ...:
+      ...: from patsy.contrasts import ContrastMatrix
+      ...:
+      ...: def _name_levels(prefix, levels):
+      ...:     return ["[%s%s]" % (prefix, level) for level in levels]
 
-   from patsy.contrasts import ContrastMatrix
-
-   def _name_levels(prefix, levels):
-       return ["[%s%s]" % (prefix, level) for level in levels]
-
-   class Simple(object):
-       def _simple_contrast(self, levels):
-           nlevels = len(levels)
-           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
-           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
-           return contr
-       def code_with_intercept(self, levels):
-           contrast = np.column_stack((np.ones(len(levels)),
-                                       self._simple_contrast(levels)))
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
-       def code_without_intercept(self, levels):
-           contrast = self._simple_contrast(levels)
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
-
+   In [2]: class Simple(object):
+      ...:     def _simple_contrast(self, levels):
+      ...:         nlevels = len(levels)
+      ...:         contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+      ...:         contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+      ...:         return contr
+      ...:
+      ...:     def code_with_intercept(self, levels):
+      ...:         contrast = np.column_stack((np.ones(len(levels)),
+      ...:                                    self._simple_contrast(levels)))
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+      ...:
+      ...:     def code_without_intercept(self, levels):
+      ...:         contrast = self._simple_contrast(levels)
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
+      ...:
 
 Example Data
 ------------
@@ -48,7 +50,7 @@ Example Data
 
 It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
 
-.. ipython::
+.. ipython:: python
 
    hsb2.groupby('race')['write'].mean()
 
@@ -138,7 +140,7 @@ For example, here the coefficient on level 1 is the mean of `write` at level 2 c
 
    res.params["C(race, Diff)[D.1]"]
    hsb2.groupby('race').mean()["write"][2] - \
-        hsb2.groupby('race').mean()["write"][1]
+       hsb2.groupby('race').mean()["write"][1]
 
 Helmert Coding
 --------------
@@ -171,7 +173,7 @@ As you can see, these are only equal up to a constant. Other versions of the Hel
    k = 3
    1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
 
-   
+
 Orthogonal Polynomial Coding
 ----------------------------
 
@@ -207,28 +209,29 @@ User-Defined Coding
 
 If you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a `patsy.contrast.ContrastMatrix` instance.
 
-.. ipython:: python
+.. ipython::
 
-   from patsy.contrasts import ContrastMatrix
+   In [1]: from patsy.contrasts import ContrastMatrix
+      ...:
+      ...: def _name_levels(prefix, levels):
+      ...:     return ["[%s%s]" % (prefix, level) for level in levels]
 
-   def _name_levels(prefix, levels):
-       return ["[%s%s]" % (prefix, level) for level in levels]
+   In [2]: class Simple(object):
+      ...:     def _simple_contrast(self, levels):
+      ...:         nlevels = len(levels)
+      ...:         contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+      ...:         contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+      ...:         return contr
+      ...:
+      ...:     def code_with_intercept(self, levels):
+      ...:         contrast = np.column_stack((np.ones(len(levels)),
+      ...:                                    self._simple_contrast(levels)))
+      ...:         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+      ...:
+      ...:    def code_without_intercept(self, levels):
+      ...:        contrast = self._simple_contrast(levels)
+      ...:        return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
 
-   class Simple(object):
-       def _simple_contrast(self, levels):
-           nlevels = len(levels)
-           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
-           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
-           return contr
-
-       def code_with_intercept(self, levels):
-           contrast = np.column_stack((np.ones(len(levels)),
-                                       self._simple_contrast(levels)))
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
-
-       def code_without_intercept(self, levels):
-           contrast = self._simple_contrast(levels)
-           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
-
-   mod = ols("write ~ C(race, Simple)", data=hsb2)
-   res = mod.fit()
+   In [3]: mod = ols("write ~ C(race, Simple)", data=hsb2)
+      ...: res = mod.fit()
+      ...: print(res.summary())

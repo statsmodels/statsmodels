@@ -1,10 +1,10 @@
 
 import numpy as np
-from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
+from numpy import (dot, eye, diag_indices, zeros, ones, diag,
         asarray, r_)
-from numpy.linalg import inv, solve
+from numpy.linalg import solve
 #from scipy.linalg import block_diag
-from scipy import linalg
+#from scipy import linalg
 
 #def denton(indicator, benchmark, freq="aq", **kwarg):
 #    """
@@ -214,8 +214,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     W = dot(dot(Zinv,HTH),Zinv)
 
     # make partitioned matrices
-    #TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m,n+m))
+    # TODO: break this out so that we can simplify the linalg?
+    I = zeros((n+m, n+m))  # noqa:E741
     I[:n,:n] = W
     I[:n,n:] = B
     I[n:,:n] = B.T
@@ -236,7 +236,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
 
 if __name__ == "__main__":
-    import numpy as np
     #these will be the tests
     # from IMF paper
 

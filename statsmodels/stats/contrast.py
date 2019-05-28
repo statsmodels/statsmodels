@@ -51,7 +51,7 @@ class ContrastResults(object):
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
             self.dist_args = kwds.get('dist_args', ())
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.pvalue = self.dist.sf(self.statistic, df_denom)
                 self.df_denom = df_denom
             else:
@@ -93,26 +93,17 @@ class ContrastResults(object):
         else:
             raise NotImplementedError('Confidence Interval not available')
 
-
-    def __array__(self):
-        if hasattr(self, "fvalue"):
-            return self.fvalue
-        else:
-            return self.tvalue
-
     def __str__(self):
         return self.summary().__str__()
 
-
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
-
 
     def summary(self, xname=None, alpha=0.05, title=None):
         """Summarize the Results of the hypothesis test
 
         Parameters
-        -----------
+        ----------
 
         xname : list of strings, optional
             Default is `c_##` for ## in p the number of regressors
@@ -155,15 +146,17 @@ class ContrastResults(object):
             return summ
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
-            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
+            return ('<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>' %
+                   (repr(self.fvalue), self.pvalue, self.df_denom,
+                    self.df_num))
         elif self.distribution == 'chi2':
-            return '<Wald test (%s): statistic=%s, p-value=%s, df_denom=%d>' % \
-                   (self.distribution, self.statistic, self.pvalue, self.df_denom)
+            return ('<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>' %
+                   (self.distribution, self.statistic, self.pvalue,
+                    self.df_denom))
         else:
             # generic
-            return '<Wald test: statistic=%s, p-value=%s>' % \
-                   (self.statistic, self.pvalue)
+            return ('<Wald test: statistic=%s, p-value=%s>' %
+                   (self.statistic, self.pvalue))
 
 
     def summary_frame(self, xname=None, alpha=0.05):
@@ -373,11 +366,11 @@ class WaldTestResults(object):
                 self.df_denom = table['df_denom'].values
 
         else:
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.dist = stats.chi2
                 self.df_constraints = self.dist_args[0]  # assumes tuple
                 # using dist_args[0] is a bit dangerous,
-            elif self.distribution is 'F':
+            elif self.distribution == 'F':
                 self.dist = stats.f
                 self.df_constraints, self.df_denom = self.dist_args
 

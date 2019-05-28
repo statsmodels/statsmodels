@@ -12,16 +12,17 @@ Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.python import range
+from statsmodels.compat.platform import PLATFORM_OSX
 
 import numpy as np
 import pandas as pd
 import pytest
 import statsmodels.api as sm
+import statsmodels.tools._testing as smt
+from statsmodels.formula.api import ols, glm
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
-
-import platform
 
 
 class CheckGenericMixin(object):
@@ -39,27 +40,10 @@ class CheckGenericMixin(object):
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
+        smt.check_ttest_tvalues(self.results)
+
         res = self.results
         mat = np.eye(len(res.params))
-        tt = res.t_test(mat)
-
-        assert_allclose(tt.effect, res.params, rtol=1e-12)
-        # TODO: tt.sd and tt.tvalue are 2d also for single regressor, squeeze
-        assert_allclose(np.squeeze(tt.sd), res.bse, rtol=1e-10)
-        assert_allclose(np.squeeze(tt.tvalue), res.tvalues, rtol=1e-12)
-        assert_allclose(tt.pvalue, res.pvalues, rtol=5e-10)
-        assert_allclose(tt.conf_int(), res.conf_int(), rtol=1e-10)
-
-        # test params table frame returned by t_test
-        table_res = np.column_stack((res.params, res.bse, res.tvalues,
-                                    res.pvalues, res.conf_int()))
-        table1 = np.column_stack((tt.effect, tt.sd, tt.tvalue, tt.pvalue,
-                                 tt.conf_int()))
-        table2 = tt.summary_frame().values
-        assert_allclose(table2, table_res, rtol=1e-12)
-
-        # move this to test_attributes ?
-        assert_(hasattr(res, 'use_t'))
 
         tt = res.t_test(mat[0])
         string_confint = lambda alpha: "[%4.3F      %4.3F]" % (
@@ -67,10 +51,12 @@ class CheckGenericMixin(object):
         summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
         assert_(string_confint(0.05) in str(summ))
+
         # issue #3116 alpha not used in column headers
         summ = tt.summary(alpha=0.1)
         ss = "[0.05       0.95]"   # different formatting
         assert_(ss in str(summ))
+
         summf = tt.summary_frame(alpha=0.1)
         pvstring_use_t = 'P>|z|' if res.use_t is False else 'P>|t|'
         tstring_use_t = 'z' if res.use_t is False else 't'
@@ -79,105 +65,13 @@ class CheckGenericMixin(object):
         assert_array_equal(summf.columns.values, cols)
 
     def test_ftest_pvalues(self):
-        res = self.results
-        use_t = res.use_t
-        k_vars = len(res.params)
-        # check default use_t
-        pvals = [res.wald_test(np.eye(k_vars)[k], use_f=use_t).pvalue
-                                                   for k in range(k_vars)]
-        assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
+        smt.check_ftest_pvalues(self.results)
 
-        # sutomatic use_f based on results class use_t
-        pvals = [res.wald_test(np.eye(k_vars)[k]).pvalue
-                                                   for k in range(k_vars)]
-        assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
-
-        # label for pvalues in summary
-        string_use_t = 'P>|z|' if use_t is False else 'P>|t|'
-        summ = str(res.summary())
-        assert_(string_use_t in summ)
-
-        # try except for models that don't have summary2
-        try:
-            summ2 = str(res.summary2())
-        except AttributeError:
-            summ2 = None
-        if summ2 is not None:
-            assert_(string_use_t in summ2)
-
-    # TODO The following is not (yet) guaranteed across models
-    #@knownfailureif(True)
     def test_fitted(self):
-        # ignore wrapper for isinstance check
-        from statsmodels.genmod.generalized_linear_model import GLMResults
-        from statsmodels.discrete.discrete_model import DiscreteResults
-        # FIXME: work around GEE has no wrapper
-        if hasattr(self.results, '_results'):
-            results = self.results._results
-        else:
-            results = self.results
-        if isinstance(results, GLMResults) or isinstance(results, DiscreteResults):
-            pytest.skip('Infeasible for {0}'.format(type(results)))
-
-        res = self.results
-        fitted = res.fittedvalues
-        assert_allclose(res.model.endog - fitted, res.resid, rtol=1e-12)
-        assert_allclose(fitted, res.predict(), rtol=1e-12)
+        smt.check_fitted(self.results)
 
     def test_predict_types(self):
-
-        res = self.results
-        # squeeze to make 1d for single regressor test case
-        p_exog = np.squeeze(np.asarray(res.model.exog[:2]))
-
-        # ignore wrapper for isinstance check
-        from statsmodels.genmod.generalized_linear_model import GLMResults
-        from statsmodels.discrete.discrete_model import DiscreteResults
-
-        # FIXME: work around GEE has no wrapper
-        if hasattr(self.results, '_results'):
-            results = self.results._results
-        else:
-            results = self.results
-
-        if isinstance(results, (GLMResults, DiscreteResults)):
-            # SMOKE test only  TODO
-            res.predict(p_exog)
-            res.predict(p_exog.tolist())
-            res.predict(p_exog[0].tolist())
-        else:
-            from pandas.util.testing import assert_series_equal
-
-            fitted = res.fittedvalues[:2]
-            assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
-            # this needs reshape to column-vector:
-            assert_allclose(fitted, res.predict(np.squeeze(p_exog).tolist()),
-                            rtol=1e-12)
-            # only one prediction:
-            assert_allclose(fitted[:1], res.predict(p_exog[0].tolist()),
-                            rtol=1e-12)
-            assert_allclose(fitted[:1], res.predict(p_exog[0]),
-                            rtol=1e-12)
-
-            exog_index = range(len(p_exog))
-            predicted = res.predict(p_exog)
-
-            if p_exog.ndim == 1:
-                predicted_pandas = res.predict(pd.Series(p_exog,
-                                                         index=exog_index))
-            else:
-                predicted_pandas = res.predict(pd.DataFrame(p_exog,
-                                                            index=exog_index))
-
-            if predicted.ndim == 1:
-                assert_(isinstance(predicted_pandas, pd.Series))
-                predicted_expected = pd.Series(predicted, index=exog_index)
-                assert_series_equal(predicted_expected, predicted_pandas)
-
-            else:
-                assert_(isinstance(predicted_pandas, pd.DataFrame))
-                predicted_expected = pd.DataFrame(predicted, index=exog_index)
-                assert_(predicted_expected.equals(predicted_pandas))
+        smt.check_predict_types(self.results)
 
     def test_zero_constrained(self):
         # not completely generic yet
@@ -211,15 +105,23 @@ class CheckGenericMixin(object):
         assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10,
                         atol=1e-10)
         assert_equal(res1.bse[drop_index], 0)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10,
-                        atol=1e-10)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10,
-                        atol=1e-10)
+        # OSX has many slight failures on this test
+        tol = 1e-8 if PLATFORM_OSX else 1e-10
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=tol,
+                        atol=tol)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=tol,
+                        atol=tol)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
             # atol discussion at gh-5158
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10, atol=1e-12)
+            rtol = 1e-10
+            atol = 1e-12
+            if PLATFORM_OSX:
+                # GH 5628
+                rtol = 1e-8
+                atol = 1e-10
+            assert_allclose(res1.resid, res2.resid, rtol=rtol, atol=atol)
 
         ex = self.results.model.exog.mean(0)
         predicted1 = res1.predict(ex, **self.predict_kwds)
@@ -625,34 +527,36 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
     def test_noformula(self):
+        # this verifies single and composite constraints against explicit
+        #     wald test
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
         exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
-        wa = res.wald_test_terms(skip_single=True,
+        wa = res.wald_test_terms(skip_single=False,
                                  combine_terms=['Duration', 'Weight'])
         eye = np.eye(len(res.params))
+
+        c_single = [row for row in eye]
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 
-        compare_waldres(res, wa, [c_duration, c_weight])
+        compare_waldres(res, wa, c_single + [c_duration, c_weight])
+
+        # assert correct df_constraints, see #5475 for bug in single constraint
+        df_constraints = [1] * len(c_single) + [3, 4]
+        assert_equal(wa.df_constraints, df_constraints)
 
 
 class TestWaldAnovaOLSF(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
 
@@ -671,9 +575,6 @@ class TestWaldAnovaGLM(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = glm("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
@@ -710,17 +611,6 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         mod = NegativeBinomial.from_formula(formula, cls.data,
                                             loglike_method='nb1')
         cls.res = mod.fit(cov_type='HC0')
-
-
-class T_estWaldAnovaOLSNoFormula(object):
-
-    @classmethod
-    def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
-        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit()  # default use_t=True
 
 
 class CheckPairwise(object):

@@ -79,8 +79,7 @@ tree2 = ('top',
                     ('B22',['e', 'f', 'g'])
                     ]
               ),
-             ('B3',['h'])
-            ]
+             ('B3',['h'])]
          )
 
 data2 = dict([i for i in zip('abcdefgh',lrange(8))])

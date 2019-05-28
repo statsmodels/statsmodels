@@ -330,9 +330,9 @@ class VARMAX(MLEModel):
             trendexog_params = np.linalg.pinv(exog).dot(endog)
             endog -= np.dot(exog, trendexog_params)
             if self.k_trend > 0:
-                trend_params = trendexog_params[:self.k_trend].T.ravel()
+                trend_params = trendexog_params[:self.k_trend].T
             if self.k_endog > 0:
-                exog_params = trendexog_params[self.k_trend:].T.ravel()
+                exog_params = trendexog_params[self.k_trend:].T
 
         # B. Run a VAR model on endog to get trend, AR parameters
         ar_params = []
@@ -380,9 +380,24 @@ class VARMAX(MLEModel):
                          ' found. Using zeros as starting parameters.')
                     ma_params *= 0
 
+        # Transform trend / exog params from mean form to intercept form
+        if self.k_ar > 0 and self.k_trend > 0 or self.mle_regression:
+            coefficient_matrices = (
+                ar_params.reshape(
+                    self.k_endog * self.k_ar, self.k_endog
+                ).T
+            ).reshape(self.k_endog, self.k_endog, self.k_ar).T
+
+            tmp = np.eye(self.k_endog) - np.sum(coefficient_matrices, axis=0)
+
+            if self.k_trend > 0:
+                trend_params = np.dot(tmp, trend_params)
+            if self.mle_regression > 0:
+                exog_params = np.dot(tmp, exog_params)
+
         # 1. Intercept terms
         if self.k_trend > 0:
-            params[self._params_trend] = trend_params
+            params[self._params_trend] = trend_params.ravel()
 
         # 2. AR terms
         if self.k_ar > 0:
@@ -394,7 +409,7 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         if self.mle_regression:
-            params[self._params_regression] = exog_params
+            params[self._params_regression] = exog_params.ravel()
 
         # 5. State covariance terms
         if self.error_cov_type == 'diagonal':

@@ -23,6 +23,11 @@ DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
 
+try:
+    import cvxopt  # noqa:F401
+    has_cvxopt = True
+except ImportError:
+    has_cvxopt = False
 
 class CheckRegressionResults(object):
     """
@@ -320,7 +325,7 @@ class TestFTest2(object):
 
     def test_pvalue(self):
         assert_almost_equal(self.Ftest1.pvalue, 0.0056052885317493459,
-                DECIMAL_4)
+                            DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ftest1.df_denom, 9)
@@ -928,14 +933,26 @@ def test_const_indicator():
     X = np.random.randint(0, 3, size=30)
     X = categorical(X, drop=True)
     y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
-    modc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
-    mod = OLS(y, X, hasconst=True).fit()
-    assert_almost_equal(modc.rsquared, mod.rsquared, 12)
+    resc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
+    res = OLS(y, X, hasconst=True).fit()
+    assert_almost_equal(resc.rsquared, res.rsquared, 12)
+    assert res.model.data.k_constant == 1
+    assert resc.model.data.k_constant == 1
 
 
-def test_706():
-    # make sure one regressor pandas Series gets passed to DataFrame
-    # for conf_int.
+def test_fvalue_const_only():
+    np.random.seed(12345)
+    x = np.random.randint(0, 3, size=30)
+    x = categorical(x, drop=True)
+    x[:, 0] = 1
+    y = np.dot(x, [1., 2., 3.]) + np.random.normal(size=30)
+    res = OLS(y, x, hasconst=True).fit(cov_type='HC1')
+    assert not np.isnan(res.fvalue)
+
+
+def test_conf_int_single_regressor():
+    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # should get passed to DataFrame for conf_int
     y = pandas.Series(np.random.randn(10))
     x = pandas.Series(np.ones(10))
     res = OLS(y, x).fit()
@@ -944,20 +961,20 @@ def test_706():
     np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
 
 
-def test_summary():
-    # test 734
+def test_summary_as_latex():
+    # GH#734
     import re
     dta = longley.load_pandas()
     X = dta.exog
     X["constant"] = 1
     y = dta.endog
-    with warnings.catch_warnings(record=True):
-        res = OLS(y, X).fit()
+    res = OLS(y, X).fit()
+    with pytest.warns(UserWarning):
         table = res.summary().as_latex()
     # replace the date and time
-    table = re.sub("(?<=\n\\\\textbf\{Date:\}             &).+?&",
+    table = re.sub("(?<=\n\\\\textbf\\{Date:\\}             &).+?&",
                    " Sun, 07 Apr 2013 &", table)
-    table = re.sub("(?<=\n\\\\textbf\{Time:\}             &).+?&",
+    table = re.sub("(?<=\n\\\\textbf\\{Time:\\}             &).+?&",
                    "     13:46:07     &", table)
 
     expected = """\\begin{center}
@@ -974,7 +991,7 @@ def test_summary():
 \\bottomrule
 \\end{tabular}
 \\begin{tabular}{lcccccc}
-                  & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$>$$|$t$|$} & \\textbf{[0.025} & \\textbf{0.975]}  \\\\
+                  & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$> |$t$|$} & \\textbf{[0.025} & \\textbf{0.975]}  \\\\
 \\midrule
 \\textbf{GNPDEFL}  &      15.0619  &       84.915     &     0.177  &         0.863        &     -177.029    &      207.153     \\\\
 \\textbf{GNP}      &      -0.0358  &        0.033     &    -1.070  &         0.313        &       -0.112    &        0.040     \\\\
@@ -1020,7 +1037,7 @@ class TestRegularizedFit(object):
     def test_regularized(self):
 
         import os
-        from . import glmnet_r_results
+        from .results import glmnet_r_results
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         data = np.loadtxt(os.path.join(cur_dir, "results", "lasso_data.csv"),
@@ -1050,9 +1067,6 @@ class TestRegularizedFit(object):
                 mod = cls(endog, exog)
                 rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
                 assert_almost_equal(rslt.params, params, decimal=3)
-
-                # Smoke test for summary
-                rslt.summary()
 
                 # Smoke test for profile likeihood
                 mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
@@ -1119,9 +1133,9 @@ def test_missing_formula_predict():
     # see 2171
     nsample = 30
 
-    data = pandas.DataFrame({'x': np.linspace(0, 10, nsample)})
-    null = pandas.DataFrame({'x': np.array([np.nan])})
-    data = pandas.concat([data, null])
+    data = np.linspace(0, 10, nsample)
+    null = np.array([np.nan])
+    data = pandas.DataFrame({'x': np.concatenate((data, null))})
     beta = np.array([1, 0.1])
     e = np.random.normal(size=nsample+1)
     data['y'] = beta[0] + beta[1] * data['x'] + e
@@ -1275,3 +1289,54 @@ def test_burg_errors():
         burg(np.random.randn(100), 0)
     with pytest.raises(ValueError):
         burg(np.random.randn(100), 'apple')
+
+
+@pytest.mark.skipif(not has_cvxopt, reason="sqrt_lasso requires cvxopt")
+def test_sqrt_lasso():
+
+    np.random.seed(234923)
+
+    # Based on the example in the Belloni paper
+    n = 100
+    p = 500
+    ii = np.arange(p)
+    cx = 0.5 ** np.abs(np.subtract.outer(ii, ii))
+    cxr = np.linalg.cholesky(cx)
+
+    x = np.dot(np.random.normal(size=(n, p)), cxr.T)
+    b = np.zeros(p)
+    b[0:5] = [1, 1, 1, 1, 1]
+
+    from scipy.stats.distributions import norm
+    alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
+
+    # Use very low noise level for a unit test
+    y = np.dot(x, b) + 0.25 * np.random.normal(size=n)
+
+    # At low noise levels, the sqrt lasso should be around a
+    # factor of 3 from the oracle without refit, and should
+    # almost equal the oracle with refit.
+    expected_oracle = {False: 3, True: 1}
+
+    # Used for regression testing
+    expected_params = {False: np.r_[0.87397122, 0.96051874, 0.9905915 , 0.93868953, 0.90771773],
+                       True: np.r_[0.95114241, 1.0302987 , 1.01723074, 0.97587343, 0.99846403]}
+
+    for refit in False, True:
+
+        rslt = OLS(y, x).fit_regularized(method="sqrt_lasso", alpha=alpha, refit=refit)
+        err = rslt.params - b
+        numer = np.sqrt(np.dot(err, np.dot(cx, err)))
+
+        oracle = OLS(y, x[:, 0:5]).fit()
+        oracle_err = np.zeros(p)
+        oracle_err[0:5] = oracle.params - b[0:5]
+        denom = np.sqrt(np.dot(oracle_err, np.dot(cx, oracle_err)))
+
+        # Check performance relative to oracle, should be around
+        assert_allclose(numer / denom, expected_oracle[refit],
+             rtol=0.5, atol=0.1)
+
+        # Regression test the parameters
+        assert_allclose(rslt.params[0:5], expected_params[refit],
+                rtol=1e-5, atol=1e-5)

@@ -106,6 +106,23 @@ def test_local_odds():
                     atol=1e-5, rtol=1e-5)
 
 
+def test_shifting():
+
+    t = np.zeros((3, 4), dtype=np.float64)
+    result = np.full((3, 4), 0.5)
+    assert_equal(ctab.Table(t, shift_zeros=False).table, t)
+    assert_equal(ctab.Table(t, shift_zeros=True).table, result)
+
+    t = np.asarray([[0, 1, 2],
+                    [3, 0, 4],
+                    [5, 6, 0]], dtype=np.float64)
+    r = np.asarray([[0.5, 1, 2],
+                    [3, 0.5, 4],
+                    [5, 6, 0.5]], dtype=np.float64)
+    assert_equal(ctab.Table(t).table, r)
+    assert_equal(ctab.Table(t, shift_zeros=True).table, r)
+
+
 def test_stratified_table_cube():
     # Test that we can pass a rank 3 ndarray or a list of rank 2
     # ndarrays to StratifiedTable and get the same results.

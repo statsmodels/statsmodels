@@ -54,13 +54,13 @@ from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import optimize, stats
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
@@ -254,7 +254,7 @@ class IVRegressionResults(RegressionResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -517,7 +517,7 @@ class GMM(Model):
         # TODO: this is a temporary fix, need
         xnames = self.data.xnames
 
-        if not param_names is None:
+        if param_names is not None:
             if len(params) == len(param_names):
                 self.data.xnames = param_names
             else:
@@ -656,7 +656,7 @@ class GMM(Model):
 
         if optim_args is None:
             optim_args = {}
-        if not 'disp' in optim_args:
+        if 'disp' not in optim_args:
             optim_args['disp'] = 1
 
         if maxiter == 0 or maxiter == 'cue':
@@ -1010,7 +1010,7 @@ class GMM(Model):
         elif weights_method == 'flatkernel':
             #uniform cut-off window
             # This was a trial version, can use HAC with flatkernel
-            if not 'maxlag' in wargs:
+            if 'maxlag' not in wargs:
                 raise ValueError('flatkernel requires maxlag')
 
             maxlag = wargs['maxlag']
@@ -1157,12 +1157,12 @@ class GMMResults(LikelihoodModelResults):
 #             return self._cov_params
 
         # set defaults based on fit arguments
-        if not 'wargs' in kwds:
+        if 'wargs' not in kwds:
             # Note: we don't check the keys in wargs, use either all or nothing
             kwds['wargs'] = self.wargs
-        if not 'weights_method' in kwds:
+        if 'weights_method' not in kwds:
             kwds['weights_method'] = self.options_other['weights_method']
-        if not 'has_optimal_weights' in kwds:
+        if 'has_optimal_weights' not in kwds:
             kwds['has_optimal_weights'] = self.options_other['has_optimal_weights']
 
         gradmoms = self.model.gradient_momcond(self.params)
@@ -1287,12 +1287,11 @@ class GMMResults(LikelihoodModelResults):
             jdiff = - jdiff
         return jdiff, stats.chi2.sf(jdiff, df), df
 
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -1343,13 +1342,13 @@ class GMMResults(LikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
+                             yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=False)
+                              use_t=self.use_t)
 
         return smry
 
@@ -1708,7 +1707,7 @@ class DistQuantilesGMM(GMM):
         self.endog = endog
 
         #make this optional for fit
-        if not 'pquant' in kwds:
+        if 'pquant' not in kwds:
             self.pquant = pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
         else:
             self.pquant = pquant = kwds['pquant']

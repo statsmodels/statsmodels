@@ -58,7 +58,7 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
         fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
     passed = passed_array.min()
     if not passed:
-        num_failed = (passed_array == False).sum()
+        num_failed = (~passed_array).sum()
         message = 'QC check did not pass for %d out of %d parameters' % (
             num_failed, k_params)
         message += '\nTry increasing solver accuracy or number of iterations'\

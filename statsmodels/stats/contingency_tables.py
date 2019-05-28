@@ -26,7 +26,7 @@ identically distributed.
 """
 
 from __future__ import division
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -89,40 +89,8 @@ class Table(object):
     ----------
     table_orig : array-like
         The original table is cached as `table_orig`.
-    marginal_probabilities : tuple of two ndarrays
-        The estimated row and column marginal distributions.
-    independence_probabilities : ndarray
-        Estimated cell probabilities under row/column independence.
-    fittedvalues : ndarray
-        Fitted values under independence.
-    resid_pearson : ndarray
-        The Pearson residuals under row/column independence.
-    standardized_resids : ndarray
-        Residuals for the independent row/column model with approximate
-        unit variance.
-    chi2_contribs : ndarray
-        The contribution of each cell to the chi^2 statistic.
-    local_logodds_ratios : ndarray
-        The local log odds ratios are calculated for each 2x2 subtable
-        formed from adjacent rows and columns.
-    local_oddsratios : ndarray
-        The local odds ratios are calculated from each 2x2 subtable
-        formed from adjacent rows and columns.
-    cumulative_log_oddsratios : ndarray
-        The cumulative log odds ratio at a given pair of thresholds is
-        calculated by reducing the table to a 2x2 table based on
-        dichotomizing the rows and columns at the given thresholds.
-        The table of cumulative log odds ratios presents all possible
-        cumulative log odds ratios that can be formed from a given
-        table.
-    cumulative_oddsratios : ndarray
-        The cumulative odds ratios are calculated by reducing the
-        table to a 2x2 table based on cutting the rows and columns at
-        a given point.  The table of cumulative odds ratios presents
-        all possible cumulative odds ratios that can be formed from a
-        given table.
 
-    See also
+    See Also
     --------
     statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency
@@ -146,7 +114,7 @@ class Table(object):
         self.table = np.asarray(table, dtype=np.float64)
 
         if shift_zeros and (self.table.min() == 0):
-            self.table = self.table + 0.5
+            self.table[self.table == 0] = 0.5
 
     def __str__(self):
         s = ("A %dx%d contingency table with counts:\n" %
@@ -677,24 +645,6 @@ class Table2x2(SquareTable):
         If true, 0.5 is added to all cells of the table if any cell is
         equal to zero.
 
-    Attributes
-    ----------
-    log_oddsratio : float
-        The log odds ratio of the table.
-    log_oddsratio_se : float
-        The asymptotic standard error of the estimated log odds ratio.
-    oddsratio : float
-        The odds ratio of the table.
-    riskratio : float
-        The ratio between the risk in the first row and the risk in
-        the second row.  Column 0 is interpreted as containing the
-        number of occurences of the event of interest.
-    log_riskratio : float
-        The estimated log risk ratio for the table.
-    log_riskratio_se : float
-        The standard error of the estimated log risk ratio for the
-        table.
-
     Notes
     -----
     The inference procedures used here are all based on a sampling
@@ -833,7 +783,7 @@ class Table2x2(SquareTable):
         """
         Returns the risk ratio for a 2x2 table.
 
-        The risk ratio is calcuoated with respec to the rows.
+        The risk ratio is calculated with respect to the rows.
         """
 
         p = self.table[:, 0] / self.table.sum(1)
@@ -842,7 +792,7 @@ class Table2x2(SquareTable):
     @cache_readonly
     def log_riskratio(self):
         """
-        Returns the log od the risk ratio.
+        Returns the log of the risk ratio.
         """
 
         return np.log(self.riskratio)
@@ -937,7 +887,7 @@ class Table2x2(SquareTable):
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 
@@ -978,26 +928,6 @@ class StratifiedTable(object):
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
 
-    Attributes
-    ----------
-    logodds_pooled : float
-        An estimate of the pooled log odds ratio.  This is the
-        Mantel-Haenszel estimate of an odds ratio that is common to
-        all the tables.
-    logodds_pooled_se : float
-        The estimated standard error of the pooled log odds ratio,
-        following Robins, Breslow and Greenland (Biometrics
-        42:311-323).
-    oddsratio_pooled : float
-        An estimate of the pooled odds ratio.  This is the
-        Mantel-Haenszel estimate of an odds ratio that is common to
-        all tables.
-    riskratio_pooled : float
-        An estimate of the pooled risk ratio.  This is an estimate of
-        a risk ratio that is common to all the tables.
-    risk_pooled : float
-        Same as riskratio_pooled, deprecated.
-
     Notes
     -----
     This results are based on a sampling model in which the units are
@@ -1024,7 +954,7 @@ class StratifiedTable(object):
 
         self.table = table
 
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Quantities to precompute.  Table entries are [[a, b], [c,
         # d]], 'ad' is 'a * d', 'apb' is 'a + b', 'dma' is 'd - a',
@@ -1146,6 +1076,9 @@ class StratifiedTable(object):
 
     @cache_readonly
     def riskratio_pooled(self):
+        """
+        Estimate of the pooled risk ratio.
+        """
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1162,6 +1095,15 @@ class StratifiedTable(object):
 
     @cache_readonly
     def logodds_pooled_se(self):
+        """
+        Estimated standard error of the pooled log odds ratio
+
+        References
+        ----------
+        Robins, James, Norman Breslow, and Sander Greenland. "Estimators of
+            the Mantel-Haenszel Variance Consistent in Both Sparse Data and
+            Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
+        """
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
@@ -1304,7 +1246,7 @@ class StratifiedTable(object):
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 

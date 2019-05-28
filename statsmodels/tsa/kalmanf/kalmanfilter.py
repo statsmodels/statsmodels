@@ -20,7 +20,7 @@ Harvey uses Durbin and Koopman notation.
 # Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
-# e.g., with a DSGE model.  See also
+# e.g., with a DSGE model.  See Also
 # http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
@@ -36,7 +36,7 @@ from . import kalman_loglike
 
 
 class KalmanFilter(object):
-    """
+    r"""
     Kalman Filter code intended for use with the ARMA model.
 
     Notes
@@ -45,11 +45,11 @@ class KalmanFilter(object):
 
     The observation equations is
 
-    .. math:: y_{t} = Z_{t}\\alpha_{t} + \\epsilon_{t}
+    .. math:: y_{t} = Z_{t}\alpha_{t} + \epsilon_{t}
 
     The state equation is
 
-    .. math:: \\alpha_{t+1} = T_{t}\\alpha_{t} + R_{t}\\eta_{t}
+    .. math:: \alpha_{t+1} = T_{t}\alpha_{t} + R_{t}\eta_{t}
 
     For the present purposed \epsilon_{t} is assumed to always be zero.
     """

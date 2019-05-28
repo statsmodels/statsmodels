@@ -1,6 +1,10 @@
 from __future__ import absolute_import
-import numpy as np
+from distutils.version import LooseVersion
 
+import numpy as np
+import scipy
+
+SP_GTE_019 = LooseVersion(scipy.__version__) >= LooseVersion('0.19')
 NumpyVersion = np.lib.NumpyVersion
 
 
@@ -113,5 +117,5 @@ except ImportError:
 # Moved in 1.0 to special
 try:
     from scipy.special import logsumexp  # noqa:F401
-except:
+except ImportError:
     from scipy.misc import logsumexp  # noqa:F401

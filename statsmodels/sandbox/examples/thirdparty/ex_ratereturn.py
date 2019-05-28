@@ -10,15 +10,10 @@ Author: josef-pktd
 """
 
 import numpy as np
-import matplotlib.finance as fin
 import matplotlib.pyplot as plt
-import datetime as dt
 
-import pandas as pa
 from statsmodels.compat.python import cPickle
 
-import statsmodels.api as sm
-import statsmodels.sandbox as sb
 import statsmodels.sandbox.tools as sbtools
 
 from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
@@ -72,7 +67,7 @@ plot_corr(residcorr, xnames=ticksym, title='Correlation Residuals',
           normcolor=normcolor, ax=ax3)
 
 import matplotlib as mpl
-images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
+images = [c for fig_ax in fig.axes for c in fig_ax.get_children() if isinstance(c, mpl.image.AxesImage)]
 print(images)
 print(ax.get_children())
 #cax = fig.add_subplot(2,2,2)
@@ -84,7 +79,7 @@ fig.savefig('corrmatrixgrid.png', dpi=120)
 
 has_sklearn = True
 try:
-    import sklearn
+    import sklearn  # noqa:F401
 except ImportError:
     has_sklearn = False
     print('sklearn not available')
@@ -122,7 +117,7 @@ if has_sklearn:
         plot_corr(c, xnames=None, title=titles[i],
               normcolor=normcolor, ax=ax)
 
-    images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
+    images = [c for fig_ax in fig.axes for c in fig_ax.get_children() if isinstance(c, mpl.image.AxesImage)]
     fig. subplots_adjust(bottom=0.1, right=0.9, top=0.9)
     cax = fig.add_axes([0.9, 0.1, 0.025, 0.8])
     fig.colorbar(images[0], cax=cax)

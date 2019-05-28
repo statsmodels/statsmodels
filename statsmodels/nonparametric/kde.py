@@ -16,7 +16,7 @@ from statsmodels.compat.python import range
 import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import (cache_readonly, resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
@@ -153,7 +153,7 @@ class KDEUnivariate(object):
         self.kernel.weights = weights
         if weights is not None:
             self.kernel.weights /= weights.sum()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def cdf(self):
@@ -319,7 +319,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     nobs = len(X) # after trim
 
-    if gridsize == None:
+    if gridsize is None:
         gridsize = max(nobs,50) # don't need to resize if no FFT
 
         # handle weights
@@ -329,7 +329,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     else:
         # ensure weights is a numpy array
         weights = np.asarray(weights)
-        
+
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)
@@ -432,8 +432,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     cross-validation.
 
     References
-    ---------- ::
-
+    ----------
     Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
         curve estimators`. Journal of Computational and Graphical Statistics.
         3.1, 35-56.
@@ -460,7 +459,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     nobs = len(X) # after trim
 
     # 1 Make grid and discretize the data
-    if gridsize == None:
+    if gridsize is None:
         gridsize = np.max((nobs, 512.))
     gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
 

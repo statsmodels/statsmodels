@@ -17,7 +17,6 @@ That is, a dataset is not only data, but also some meta-data. The goal of this
 proposal is to propose common practices for organizing the data, in a way which
 is both straightforward, and does not prevent specific usage of the data.
 
-
 Background
 ----------
 
@@ -41,15 +40,18 @@ data1, you should be able to do::
 The `load` function is expected to return the `Dataset` object, which has certain
 common attributes that make it readily usable in tests and examples. Load can do
 whatever it wants: fetching data from a file (python script, csv file, etc...),
-from the internet, etc.  However, it is strongly recommended that each dataset
-directory contain a csv file with the dataset and its variables in the same form
-as returned by load so that the dataset can easily be loaded into other
-statistical packages.  In addition, an optional (though recommended) sub-directory
-src should contain the dataset in its original form if it was "cleaned" (ie.,
-variable transformations) in order to put it into the format needed for statsmodels.
-Some special variables must be defined for each package, containing a Python string:
+generating random data, downloading from the Internet, etc. The `load` function
+will return the data as a pandas DataFrame.
 
-    - COPYRIGHT: copyright informations
+It is strongly recommended that each dataset directory contain a csv file with
+the dataset and its variables in the same form as returned by load so that the
+dataset can easily be loaded into other statistical packages.  In addition, an
+optional (though recommended) sub-directory src should contain the dataset in
+its original form if it was "cleaned" (ie., variable transformations) in order
+to put it into the format needed for statsmodels. Some special variables must
+be defined for each package, containing a Python string:
+
+    - COPYRIGHT: copyright information
     - SOURCE: where the data are coming from
     - DESCHOSRT: short description
     - DESCLONG: long description
@@ -102,17 +104,14 @@ returned by load has the following conventions and attributes:
     - `endog_name`: the name of the endog attribute
     - `exog_name`: the names of the exog attribute
 
-
 This contains enough information to get all useful information through
 introspection and simple functions. Further, attributes are easily added that
 may be useful for other packages.
-
 
 Adding a dataset
 ----------------
 
 See the :ref:`notes on adding a dataset <add_data>`.
-
 
 Example Usage
 -------------
@@ -120,15 +119,13 @@ Example Usage
 ::
 
   >>> from statsmodels import datasets
-  >>> data = datasets.longley.load()
-
+  >>> data = datasets.longley.load(as_pandas=True)
 
 Remaining problems:
 -------------------
 
-
     - If the dataset is big and cannot fit into memory, what kind of API do
-      we want to avoid loading all the data in memory ? Can we use memory
+      we want to avoid loading all the data in memory? Can we use memory
       mapped arrays ?
     - Missing data: I thought about subclassing both record arrays and
       masked arrays classes, but I don't know if this is feasable, or even
@@ -148,7 +145,7 @@ Note
 ----
 
 Although the datasets package emerged from the learn package, we try to keep it
-independant from everything else, that is once we agree on the remaining
+independent from everything else, that is once we agree on the remaining
 problems and where the package should go, it can easily be put elsewhere
 without too much trouble. If there is interest in re-using the datasets package,
 please contact the developers on the `mailing list <https://groups.google.com/forum/?hl=en#!forum/pystatsmodels>`_.

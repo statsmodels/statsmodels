@@ -11,7 +11,7 @@ from statsmodels.compat.python import iterkeys, cPickle, BytesIO
 import warnings
 
 import numpy as np
-from numpy.testing import assert_, assert_equal
+from numpy.testing import assert_
 import pandas as pd
 
 import statsmodels.api as sm
@@ -37,7 +37,7 @@ class RemoveDataPickle(object):
         x = sm.add_constant(x)
         cls.exog = x
         cls.xf = 0.25 * np.ones((2, 4))
-        cls.l_max = 20000
+        cls.nbytes_max = 20000
         cls.predict_kwds = {}
 
     def test_remove_data_pickle(self):
@@ -57,7 +57,7 @@ class RemoveDataPickle(object):
 
         #check pickle unpickle works on full results
         #TODO: drop of load save is tested
-        res, l = check_pickle(results._results)
+        res, _ = check_pickle(results._results)
 
         #remove data arrays, check predict still works
         with warnings.catch_warnings(record=True) as w:
@@ -72,15 +72,17 @@ class RemoveDataPickle(object):
         else:
             np.testing.assert_equal(pred2, pred1)
 
-        #pickle, unpickle reduced array
-        res, l = check_pickle(results._results)
+        # pickle and unpickle reduced array
+        res, nbytes = check_pickle(results._results)
 
         #for testing attach res
         self.res = res
 
-        #Note: l_max is just a guess for the limit on the length of the pickle
-        l_max = self.l_max
-        assert_(l < l_max, msg='pickle length not %d < %d' % (l, l_max))
+        # Note: nbytes_max is just a guess for the limit on the length
+        #  of the pickle
+        nbytes_max = self.nbytes_max
+        assert_(nbytes < nbytes_max,
+                msg='pickle length not %d < %d' % (nbytes, nbytes_max))
 
         pred3 = results.predict(xf, **pred_kwds)
 
@@ -221,7 +223,7 @@ class TestPickleFormula(RemoveDataPickle):
         cls.exog = pd.DataFrame(x, columns=["A", "B", "C"])
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.exog.columns)
-        cls.l_max = 900000  # have to pickle endo/exog to unpickle form.
+        cls.nbytes_max = 900000  # have to pickle endo/exog to unpickle form.
 
     def setup(self):
         x = self.exog
@@ -244,7 +246,7 @@ class TestPickleFormula2(RemoveDataPickle):
         cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.data.columns[1:])
-        cls.l_max = 900000  # have to pickle endo/exog to unpickle form.
+        cls.nbytes_max = 900000  # have to pickle endo/exog to unpickle form.
 
     def setup(self):
         self.results = sm.OLS.from_formula("Y ~ A + B + C", data=self.data).fit()
@@ -263,7 +265,7 @@ class TestPickleFormula4(TestPickleFormula2):
 
 
 # we need log in module namespace for TestPickleFormula5
-from numpy import log
+from numpy import log  # noqa:F401
 
 
 class TestPickleFormula5(TestPickleFormula2):

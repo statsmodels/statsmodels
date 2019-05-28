@@ -3,11 +3,12 @@ Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+
 import numpy as np
-from pandas import DataFrame, Series, isnull
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
-                                          cache_writable)
+from pandas import DataFrame, Series, isnull, MultiIndex
+
 import statsmodels.tools.data as data_util
+from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 
@@ -74,10 +75,11 @@ class ModelData(object):
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
-        # this has side-effects, attaches k_constant and const_idx
+        self.const_idx = None
+        self.k_constant = 0
         self._handle_constant(hasconst)
         self._check_integrity()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     def __getstate__(self):
         from copy import copy
@@ -113,16 +115,9 @@ class ModelData(object):
         self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):
-        if hasconst is not None:
-            if hasconst:
-                self.k_constant = 1
-                self.const_idx = None
-            else:
-                self.k_constant = 0
-                self.const_idx = None
-        elif self.exog is None:
-            self.const_idx = None
+        if hasconst is False or self.exog is None:
             self.k_constant = 0
+            self.const_idx = None
         else:
             # detect where the constant is
             check_implicit = False
@@ -165,7 +160,7 @@ class ModelData(object):
                 # shouldn't be here
                 pass
 
-            if check_implicit:
+            if check_implicit and not hasconst:
                 # look for implicit constant
                 # Compute rank of augmented matrix
                 augmented_exog = np.column_stack(
@@ -174,6 +169,10 @@ class ModelData(object):
                 rank_orig = np.linalg.matrix_rank(self.exog)
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
+            elif hasconst:
+                # Ensure k_constant is 1 any time hasconst is True
+                # even if one isn't found
+                self.k_constant = 1
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
@@ -366,7 +365,12 @@ class ModelData(object):
 
     def _get_names(self, arr):
         if isinstance(arr, DataFrame):
-            return list(arr.columns)
+            if isinstance(arr.columns, MultiIndex):
+                # Flatten MultiIndexes into "simple" column names
+                return ['_'.join((level for level in c if level))
+                        for c in arr.columns]
+            else:
+                return list(arr.columns)
         elif isinstance(arr, Series):
             if arr.name:
                 return [arr.name]
@@ -481,7 +485,7 @@ class PandasData(ModelData):
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
-        if hasattr(x, 'ix'):
+        if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask].loc[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans_2d(x, nan_mask)

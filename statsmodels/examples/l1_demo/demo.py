@@ -5,8 +5,6 @@ import statsmodels.api as sm
 import scipy as sp
 from scipy import linalg
 from scipy import stats
-import pdb
-# pdb.set_trace()
 
 
 docstr = """

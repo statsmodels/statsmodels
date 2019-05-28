@@ -1,15 +1,13 @@
 from statsmodels.compat.python import range
 
-from distutils.version import LooseVersion
-
 from statsmodels.tsa.arima_model import ARMA
 from unittest import TestCase
 
-import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
                            assert_allclose,
                            assert_equal, assert_raises, assert_)
+import pytest
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
@@ -142,24 +140,24 @@ def _manual_arma_generate_sample(ar, ma, eta):
     return np.array(rep2[max(p, q):])
 
 
-def test_arma_generate_sample():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+@pytest.mark.parametrize('dist', [np.random.randn])
+def test_arma_generate_sample(dist, ar, ma):
     # Test that this generates a true ARMA process
     # (amounts to just a test that scipy.signal.lfilter does what we want)
     T = 100
-    dists = [np.random.randn]
-    for dist in dists:
-        np.random.seed(1234)
-        eta = dist(T)
-        for ar in arlist:
-            for ma in malist:
-                # rep1: from module function
-                np.random.seed(1234)
-                rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
-                # rep2: "manually" create the ARMA process
-                ar_params = -1 * np.array(ar[1:])
-                ma_params = np.array(ma[1:])
-                rep2 = _manual_arma_generate_sample(ar_params, ma_params, eta)
-                assert_array_almost_equal(rep1, rep2, 13)
+    np.random.seed(1234)
+    eta = dist(T)
+
+    # rep1: from module function
+    np.random.seed(1234)
+    rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
+    # rep2: "manually" create the ARMA process
+    ar_params = -1 * np.array(ar[1:])
+    ma_params = np.array(ma[1:])
+    rep2 = _manual_arma_generate_sample(ar_params, ma_params, eta)
+    assert_array_almost_equal(rep1, rep2, 13)
 
 
 def test_fi():
@@ -177,35 +175,37 @@ def test_arma_impulse_response():
     assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
 
 
-def test_spectrum():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+def test_spectrum(ar, ma):
     nfreq = 20
     w = np.linspace(0, np.pi, nfreq, endpoint=False)
-    for ar in arlist:
-        for ma in malist:
-            arma = ArmaFft(ar, ma, 20)
-            spdr, wr = arma.spdroots(w)
-            spdp, wp = arma.spdpoly(w, 200)
-            spdd, wd = arma.spddirect(nfreq * 2)
-            assert_equal(w, wr)
-            assert_equal(w, wp)
-            assert_almost_equal(w, wd[:nfreq], decimal=14)
-            assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
-                                err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
-            assert_almost_equal(spdr, spdp, decimal=7,
-                                err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
+
+    arma = ArmaFft(ar, ma, 20)
+    spdr, wr = arma.spdroots(w)
+    spdp, wp = arma.spdpoly(w, 200)
+    spdd, wd = arma.spddirect(nfreq * 2)
+    assert_equal(w, wr)
+    assert_equal(w, wp)
+    assert_almost_equal(w, wd[:nfreq], decimal=14)
+    assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
+                        err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
+    assert_almost_equal(spdr, spdp, decimal=7,
+                        err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
 
 
-def test_armafft():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+def test_armafft(ar, ma):
     # test other methods
     nfreq = 20
     w = np.linspace(0, np.pi, nfreq, endpoint=False)
-    for ar in arlist:
-        for ma in malist:
-            arma = ArmaFft(ar, ma, 20)
-            ac1 = arma.invpowerspd(1024)[:10]
-            ac2 = arma.acovf(10)[:10]
-            assert_allclose(ac1, ac2, atol=1e-15,
-                            err_msg='acovf not equal for %s, %s' % (ar, ma))
+
+    arma = ArmaFft(ar, ma, 20)
+    ac1 = arma.invpowerspd(1024)[:10]
+    ac2 = arma.acovf(10)[:10]
+    assert_allclose(ac1, ac2, atol=1e-15,
+                    err_msg='acovf not equal for %s, %s' % (ar, ma))
 
 
 def test_lpol2index_index2lpol():

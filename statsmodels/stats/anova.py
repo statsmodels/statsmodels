@@ -295,6 +295,7 @@ def anova_lm(*args, **kwargs):
     -------
     anova : DataFrame
         When args is a single model, return is DataFrame with columns:
+
         sum_sq : float64
             Sum of squares for model terms.
         df : float64
@@ -305,6 +306,7 @@ def anova_lm(*args, **kwargs):
             P-value for significance of adding model terms.
 
         When args is multiple models, return is DataFrame with columns:
+
         df_resid : float64
             Degrees of freedom of residuals in models.
         ssr : float64
@@ -633,7 +635,7 @@ class AnovaResults(object):
 
         Returns
         -------
-        summary : Summary instance
+        summary : summary2.Summary instance
 
         """
         summ = summary2.Summary()
@@ -641,6 +643,7 @@ class AnovaResults(object):
         summ.add_df(self.anova_table)
 
         return summ
+
 
 if __name__ == "__main__":
     import pandas

@@ -212,13 +212,13 @@ the variance functions here:
 .. autosummary::
    :toctree: generated/
 
-  VarianceFunction
-  constant
-  Power
-  mu
-  mu_squared
-  mu_cubed
-  Binomial
-  binary
-  NegativeBinomial
-  nbinom
+   VarianceFunction
+   constant
+   Power
+   mu
+   mu_squared
+   mu_cubed
+   Binomial
+   binary
+   NegativeBinomial
+   nbinom

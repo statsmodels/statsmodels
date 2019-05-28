@@ -31,32 +31,32 @@ dta = [
 
 base_date_indexes = [
     # (usual candidates)
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='D'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='W'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='M'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='Q'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='A'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='D'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='W'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='M'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='Q'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='A'),
     # (some more complicated frequencies)
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='2Q'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='2QS'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='5s'),
-    pd.DatetimeIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+    pd.date_range(start='1950-01-01', periods=nobs, freq='2Q'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='2QS'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='5s'),
+    pd.date_range(start='1950-01-01', periods=nobs, freq='1D10min')]
 
 # Note: we separate datetime indexes and period indexes because the
 # date coercion does not handle string versions of PeriodIndex objects
 # most of the time.
 base_period_indexes = [
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='D'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='W'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='M'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='Q'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='A')]
+    pd.period_range(start='1950-01-01', periods=nobs, freq='D'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='W'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='M'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='Q'),
+    pd.period_range(start='1950-01-01', periods=nobs, freq='A')]
 try:
     # Only later versions of pandas support these
     base_period_indexes += [
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='2Q'),
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='5s'),
-        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+        pd.period_range(start='1950-01-01', periods=nobs, freq='2Q'),
+        pd.period_range(start='1950-01-01', periods=nobs, freq='5s'),
+        pd.period_range(start='1950-01-01', periods=nobs, freq='1D10min')]
 except:
     pass
 
@@ -702,7 +702,7 @@ def test_prediction_increment_pandas_dates():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    desired_index = pd.DatetimeIndex(start='1950-01-02', periods=5, freq='D')
+    desired_index = pd.date_range(start='1950-01-02', periods=5, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
 
     # Date-based keys
@@ -714,14 +714,14 @@ def test_prediction_increment_pandas_dates():
     assert_equal(start, 0)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 3)
-    desired_index = pd.DatetimeIndex(start='1950-01-01', periods=8, freq='D')
+    desired_index = pd.date_range(start='1950-01-01', periods=8, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
 
 
     # Test getting a location that exists in the (internal) index
     loc, index, index_was_expanded = mod._get_index_loc(2)
     assert_equal(loc, 2)
-    desired_index = pd.DatetimeIndex(start='1950-01-01', periods=3, freq='D')
+    desired_index = pd.date_range(start='1950-01-01', periods=3, freq='D')
     assert_equal(index.equals(desired_index), True)
     assert_equal(index_was_expanded, False)
 
@@ -729,7 +729,7 @@ def test_prediction_increment_pandas_dates():
     # when using the function that alternatively falls back to the row labels
     loc, index, index_was_expanded = mod._get_index_label_loc(2)
     assert_equal(loc, 2)
-    desired_index = pd.DatetimeIndex(start='1950-01-01', periods=3, freq='D')
+    desired_index = pd.date_range(start='1950-01-01', periods=3, freq='D')
     assert_equal(index.equals(desired_index), True)
     assert_equal(index_was_expanded, False)
 
@@ -745,8 +745,7 @@ def test_prediction_increment_pandas_dates():
 def test_prediction_increment_pandas_dates_nanosecond():
     # Date-based index
     endog = dta[2].copy()
-    endog.index = pd.DatetimeIndex(start='1970-01-01', periods=len(endog),
-                                   freq='N')
+    endog.index = pd.date_range(start='1970-01-01', periods=len(endog), freq='N')
     mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
@@ -785,8 +784,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    desired_index = pd.DatetimeIndex(start='1970-01-01',
-                                     periods=6, freq='N')[1:]
+    desired_index = pd.date_range(start='1970-01-01', periods=6, freq='N')[1:]
     assert_equal(prediction_index.equals(desired_index), True)
 
     # Date-based keys
@@ -798,7 +796,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 0)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 3)
-    desired_index = pd.DatetimeIndex(start='1970-01-01', periods=8, freq='N')
+    desired_index = pd.date_range(start='1970-01-01', periods=8, freq='N')
     assert_equal(prediction_index.equals(desired_index), True)
 
 

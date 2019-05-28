@@ -13,7 +13,6 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -27,16 +26,20 @@ from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from .results import results_kalman_filter
 
-true = results_kalman_filter.uc_uni
-data = pd.DataFrame(
-    true['data'],
-    index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-    columns=['GDP']
-)
-data['lgdp'] = np.log(data['GDP'])
+
+@pytest.fixture
+def data():
+    true = results_kalman_filter.uc_uni
+    data_ = pd.DataFrame(
+        true['data'],
+        index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
+        columns=['GDP']
+    )
+    data_['lgdp'] = np.log(data_['GDP'])
+    return data_
 
 
-def test_pickle_fit_sarimax():
+def test_pickle_fit_sarimax(data):
     # Fit an ARIMA(1,1,0) to log GDP
     mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
@@ -83,8 +86,9 @@ def test_unobserved_components_pickle():
         assert_allclose(res.impulse_responses(10), res.impulse_responses(10))
 
 
-def test_kalman_filter_pickle():
+def test_kalman_filter_pickle(data):
     # Construct the statespace representation
+    true = results_kalman_filter.uc_uni
     k_states = 4
     model = KalmanFilter(k_endog=1, k_states=k_states)
     model.bind(data['lgdp'].values)
@@ -133,7 +137,8 @@ def test_kalman_filter_pickle():
 def test_representation_pickle():
     nobs = 10
     k_endog = 2
-    endog = np.asfortranarray(np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.)
+    arr = np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.
+    endog = np.asfortranarray(arr)
     mod = Representation(endog, k_states=2)
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 

@@ -28,7 +28,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
         the differences. If `md` is the mean of the differences, and `sd` is
         the standard deviation of those differences, then the limits of
         agreement that will be plotted will be
-                       
+
                        md - sd_limit * sd, md + sd_limit * sd
 
         The default of 1.96 will produce 95% confidence intervals for the means
@@ -59,7 +59,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     Bland JM, Altman DG (1986). "Statistical methods for assessing agreement
     between two methods of clinical measurement"
 
-    Example
+    Examples
     --------
 
     Load relevant libraries.

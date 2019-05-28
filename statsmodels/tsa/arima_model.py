@@ -17,8 +17,7 @@ from scipy.signal import lfilter
 from numpy import dot, log, zeros, pi
 from numpy.linalg import inv
 
-from statsmodels.tools.decorators import (cache_readonly,
-                                          resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, OLS
@@ -32,16 +31,16 @@ from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
-_armax_notes = """
+_armax_notes = r"""
     Notes
     -----
     If exogenous variables are given, then the model that is fit is
 
     .. math::
 
-       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
+       \phi(L)(y_t - X_t\beta) = \theta(L)\epsilon_t
 
-    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    where :math:`\phi` and :math:`\theta` are polynomials in the lag
     operator, :math:`L`. This is the regression model with ARMA errors,
     or ARMAX model. This specification is used, whether or not the model
     is fit using conditional sum of square or maximum-likelihood, using
@@ -204,13 +203,13 @@ _plot_extras = """alpha : float, optional
 _plot_predict = ("""
         Plot forecasts
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : _plot_extras,
-                      "returns" : """fig : matplotlib.Figure
+    "params": "",
+    "extra_params": _plot_extras,
+    "returns": """fig : matplotlib.Figure
             The plotted Figure instance""",
-                      "extra_section" : ('\n' + _arima_plot_predict_example +
-                                         '\n' + _results_notes)
-                      }
+    "extra_section": ('\n' + _arima_plot_predict_example +
+                       '\n' + _results_notes)
+}
 
 _arima_plot_predict = ("""
         Plot forecasts
@@ -431,6 +430,10 @@ class ARMA(tsbase.TimeSeriesModel):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
         super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
+        # GH 2575
+        _endog = endog if hasattr(endog, 'ndim') else np.asarray(endog)
+        if (_endog.ndim == 2 and _endog.shape[1] != 1) or _endog.ndim > 2:
+            raise ValueError('endog must be 1-d or 2-d with 1 column')
         exog = self.data.exog  # get it after it's gone through processing
         _check_estimable(len(self.endog), sum(order))
         self.k_ar = k_ar = order[0]
@@ -829,7 +832,7 @@ class ARMA(tsbase.TimeSeriesModel):
             Starting parameters for ARMA(p,q). If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional
-            Whehter or not to transform the parameters to ensure stationarity.
+            Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
         method : str {'css-mle','mle','css'}
@@ -881,16 +884,16 @@ class ARMA(tsbase.TimeSeriesModel):
         -------
         statsmodels.tsa.arima_model.ARMAResults class
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit : for more information
             on using the solvers.
         ARMAResults : results class returned by fit
 
         Notes
-        ------
+        -----
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1135,16 +1138,16 @@ class ARIMA(ARMA):
         -------
         `statsmodels.tsa.arima.ARIMAResults` class
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit : for more information
             on using the solvers.
         ARIMAResults : results class returned by fit
 
         Notes
-        ------
+        -----
         If fit by 'mle', it is assumed for the Kalman Filter that the initial
-        unkown state is zero, and that the inital variance is
+        unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
@@ -1284,7 +1287,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         Optional argument to scale the variance covariance matrix.
 
     Returns
-    --------
+    -------
     **Attributes**
 
     aic : float
@@ -1393,7 +1396,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         self._ic_df_model = df_model + 1
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def arroots(self):
@@ -1682,7 +1685,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         """Experimental summary function for ARIMA Results
 
         Parameters
-        -----------
+        ----------
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
@@ -1935,7 +1938,7 @@ class ARIMAResults(ARMAResults):
         if plot_insample:
             import re
             k_diff = self.k_diff
-            label = re.sub("D\d*\.", "", self.model.endog_names)
+            label = re.sub(r"D\d*\.", "", self.model.endog_names)
             levels = unintegrate(self.model.endog,
                                  self.model._first_unintegrate)
             ax.plot(x[:end + 1 - start],

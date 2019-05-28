@@ -174,7 +174,7 @@ def nnlf_fr(self, thetash, x, frmask):
     #   where theta are the parameters (including loc and scale)
     #
     try:
-        if frmask != None:
+        if frmask is not None:
             theta = frmask.copy()
             theta[np.isnan(frmask)] = thetash
         else:
@@ -271,6 +271,14 @@ def fit_fr(self, data, *args, **kwds):
             raise ValueError("Incorrect number of frozen arguments.")
         else:
             # keep starting values for not frozen parameters
+            for n in range(len(frmask)):
+                # Troubleshooting ex_generic_mle_tdist
+                if isinstance(frmask[n], np.ndarray) and frmask[n].size == 1:
+                    frmask[n] = frmask[n].item()
+
+            # If there were array elements, then frmask will be object-dtype,
+            #  in which case np.isnan will raise TypeError
+            frmask = frmask.astype(np.float64)
             x0  = np.array(x0)[np.isnan(frmask)]
     else:
         frmask = None

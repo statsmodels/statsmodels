@@ -46,7 +46,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
     no checking for an existing trend.
 
-    See also
+    See Also
     --------
     statsmodels.tools.tools.add_constant
     """
@@ -609,17 +609,15 @@ def _ar_transparams(params):
 
     Parameters
     ----------
-    params : array
+    params : array_like
         The AR coefficients
 
     Reference
     ---------
     Jones(1980)
     """
-    newparams = ((1-np.exp(-params))/
-                (1+np.exp(-params))).copy()
-    tmp = ((1-np.exp(-params))/
-               (1+np.exp(-params))).copy()
+    newparams = np.tanh(params/2)
+    tmp = np.tanh(params/2)
     for j in range(1,len(params)):
         a = newparams[j]
         for kiter in range(j):
@@ -634,10 +632,10 @@ def _ar_invtransparams(params):
 
     Parameters
     ----------
-    params : array
+    params : array_like
         The transformed AR coefficients
     """
-    # AR coeffs
+    params = params.copy()
     tmp = params.copy()
     for j in range(len(params)-1,0,-1):
         a = params[j]
@@ -645,7 +643,7 @@ def _ar_invtransparams(params):
             tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
                     (1-a**2)
         params[:j] = tmp[:j]
-    invarcoefs = -np.log((1-params)/(1+params))
+    invarcoefs = 2*np.arctanh(params)
     return invarcoefs
 
 

@@ -102,7 +102,7 @@ Author: Josef Perktold
 License : BSD (3-clause)
 '''
 from __future__ import print_function
-from statsmodels.compat.python import lzip, iteritems, itervalues, lrange, zip
+from statsmodels.compat.python import iteritems, itervalues, lrange, zip
 import numpy as np
 from pprint import pprint
 
@@ -487,8 +487,7 @@ if __name__ == '__main__':
     tree0 = ('top',
                 [('Fly',['Air']),
                  ('Ground', ['Train', 'Car', 'Bus'])
-                 ]
-            )
+                 ])
 
     ''' this is with real data from Greene's clogit example
     datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
@@ -540,9 +539,7 @@ if __name__ == '__main__':
                         ('B22',['e', 'f', 'g'])
                         ]
                   ),
-                 ('B3',['h'])
-                ]
-             )
+                 ('B3',['h'])])
 
     #Note: dict looses ordering
     paramsind2 = {

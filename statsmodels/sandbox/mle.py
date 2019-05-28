@@ -5,7 +5,7 @@ changes: JP corrections to imports so it runs, comment out print
 '''
 from __future__ import print_function
 import numpy as np
-from numpy import dot,  outer, random, argsort
+from numpy import dot,  outer, random
 from scipy import io, linalg, optimize
 from scipy.sparse import eye as speye
 import matplotlib.pyplot as plt

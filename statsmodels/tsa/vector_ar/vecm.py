@@ -14,6 +14,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
+from statsmodels.tools.testing import Holder
 from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -608,9 +609,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     from statsmodels.regression.linear_model import OLS
 
-    class Holder(object):
-        pass
-
     def detrend(y, order):
         if order == -1:
             return y
@@ -623,6 +621,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
         r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
         return r
 
+    endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
@@ -641,11 +640,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = endog[:-k_ar_diff]
+    # GH 5731, [:-0] does not work, need [:t-0]
+    lx = endog[:(endog.shape[0]-k_ar_diff)]
     lx = lx[1:]
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
+    # Level covariance after filtering k_ar_diff
     skk = np.dot(rkt.T, rkt) / rkt.shape[0]
+    # Covariacne between filtered and unfiltered
     sk0 = np.dot(rkt.T, r0t) / rkt.shape[0]
     s00 = np.dot(r0t.T, r0t) / r0t.shape[0]
     sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
@@ -1387,7 +1389,7 @@ class VECMResults(object):
                                        self.det_coef_coint.shape[0])
         ret_1dim = self.stderr_params[start:start+self.gamma.size]
         return ret_1dim.reshape(self.gamma.shape, order="F")
-    
+
     @cache_readonly
     def stderr_det_coef(self):
         if self.det_coef.size == 0:
@@ -1456,7 +1458,7 @@ class VECMResults(object):
     # confidence intervals
     def _make_conf_int(self, est, stderr, alpha):
         struct_arr = np.zeros(est.shape, dtype=[("lower", float),
-                                               ("upper", float)])
+                                                ("upper", float)])
         struct_arr["lower"] = est - scipy.stats.norm.ppf(1 - alpha/2) * stderr
         struct_arr["upper"] = est + scipy.stats.norm.ppf(1 - alpha/2) * stderr
         return struct_arr
@@ -1537,7 +1539,7 @@ class VECMResults(object):
             start_row = self.neqs**2 + (i-2) * self.neqs**2
             start_col = self.neqs**2 + (i-2) * self.neqs**2
             vecm_var_transformation[start_row:start_row+self.neqs**2,
-                start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
+                                    start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
         # for A_p:
         vecm_var_transformation[-self.neqs**2:, -self.neqs**2:] = -eye
         return chain_dot(vecm_var_transformation, self.cov_params_wo_det,
@@ -1664,7 +1666,7 @@ class VECMResults(object):
             if exog_coint_fc.ndim == 1:
                 exog_coint_fc = exog_coint_fc[:, None]  # make 2-D
             exog_coint_fc = np.vstack((self.exog_coint[-1:],
-                                          exog_coint_fc[:steps-1]))
+                                       exog_coint_fc[:steps-1]))
             exog.append(exog_coint_fc)
             trend_coefs.append(self.alpha.dot(self.exog_coint_coefs.T).T)
 

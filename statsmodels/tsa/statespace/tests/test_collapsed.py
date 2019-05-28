@@ -17,13 +17,12 @@ import os
 from statsmodels import datasets
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.kalman_filter import (
-    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
+    FILTER_UNIVARIATE)
 from statsmodels.tsa.statespace.kalman_smoother import (
-    SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
+    SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_equal, assert_allclose
-import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,10 +56,10 @@ class Trivariate(object):
 
         # Update matrices with test parameters
         cls.model['design'] = np.array([[0.5, 0.2],
-                                         [0,   0.8],
-                                         [1,  -0.5]])
+                                        [0,   0.8],
+                                        [1,  -0.5]])
         cls.model['transition'] = np.array([[0.4, 0.5],
-                                             [1,   0]])
+                                            [1,   0]])
         cls.model['obs_cov'] = np.diag([0.2, 1.1, 0.5])
         cls.model['state_cov'] = np.diag([2., 1])
 
@@ -83,20 +82,20 @@ class Trivariate(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):
@@ -227,7 +226,8 @@ class TestTrivariateConventional(Trivariate):
 class TestTrivariateConventionalAlternate(TestTrivariateConventional):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateConventionalAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateConventionalAlternate, cls).setup_class(
+            alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -236,7 +236,8 @@ class TestTrivariateConventionalAlternate(TestTrivariateConventional):
 class TestTrivariateConventionalPartialMissing(Trivariate):
     @classmethod
     def setup_class(cls, dtype=float, **kwargs):
-        super(TestTrivariateConventionalPartialMissing, cls).setup_class(dtype, **kwargs)
+        super(TestTrivariateConventionalPartialMissing, cls).setup_class(
+            dtype, **kwargs)
         n_disturbance_variates = (
             (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
         )
@@ -262,10 +263,12 @@ class TestTrivariateConventionalPartialMissing(Trivariate):
         )
 
 
-class TestTrivariateConventionalPartialMissingAlternate(TestTrivariateConventionalPartialMissing):
+class TestTrivariateConventionalPartialMissingAlternate(
+        TestTrivariateConventionalPartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateConventionalPartialMissingAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateConventionalPartialMissingAlternate,
+              cls).setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -274,7 +277,8 @@ class TestTrivariateConventionalPartialMissingAlternate(TestTrivariateConvention
 class TestTrivariateConventionalAllMissing(Trivariate):
     @classmethod
     def setup_class(cls, dtype=float, **kwargs):
-        super(TestTrivariateConventionalAllMissing, cls).setup_class(dtype, **kwargs)
+        super(TestTrivariateConventionalAllMissing, cls).setup_class(
+            dtype, **kwargs)
         n_disturbance_variates = (
             (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
         )
@@ -300,10 +304,12 @@ class TestTrivariateConventionalAllMissing(Trivariate):
         )
 
 
-class TestTrivariateConventionalAllMissingAlternate(TestTrivariateConventionalAllMissing):
+class TestTrivariateConventionalAllMissingAlternate(
+        TestTrivariateConventionalAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateConventionalAllMissingAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateConventionalAllMissingAlternate, cls).setup_class(
+            alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -338,7 +344,8 @@ class TestTrivariateUnivariate(Trivariate):
 class TestTrivariateUnivariateAlternate(TestTrivariateUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateUnivariateAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateUnivariateAlternate, cls).setup_class(
+            alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -347,7 +354,8 @@ class TestTrivariateUnivariateAlternate(TestTrivariateUnivariate):
 class TestTrivariateUnivariatePartialMissing(Trivariate):
     @classmethod
     def setup_class(cls, dtype=float, **kwargs):
-        super(TestTrivariateUnivariatePartialMissing, cls).setup_class(dtype, **kwargs)
+        super(TestTrivariateUnivariatePartialMissing, cls).setup_class(
+            dtype, **kwargs)
         n_disturbance_variates = (
             (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
         )
@@ -373,10 +381,12 @@ class TestTrivariateUnivariatePartialMissing(Trivariate):
         )
 
 
-class TestTrivariateUnivariatePartialMissingAlternate(TestTrivariateUnivariatePartialMissing):
+class TestTrivariateUnivariatePartialMissingAlternate(
+        TestTrivariateUnivariatePartialMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateUnivariatePartialMissingAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateUnivariatePartialMissingAlternate,
+              cls).setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -385,7 +395,8 @@ class TestTrivariateUnivariatePartialMissingAlternate(TestTrivariateUnivariatePa
 class TestTrivariateUnivariateAllMissing(Trivariate):
     @classmethod
     def setup_class(cls, dtype=float, **kwargs):
-        super(TestTrivariateUnivariateAllMissing, cls).setup_class(dtype, **kwargs)
+        super(TestTrivariateUnivariateAllMissing, cls).setup_class(
+            dtype, **kwargs)
         n_disturbance_variates = (
             (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
         )
@@ -411,10 +422,12 @@ class TestTrivariateUnivariateAllMissing(Trivariate):
         )
 
 
-class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMissing):
+class TestTrivariateUnivariateAllMissingAlternate(
+        TestTrivariateUnivariateAllMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestTrivariateUnivariateAllMissingAlternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestTrivariateUnivariateAllMissingAlternate, cls).setup_class(
+            alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
@@ -454,8 +467,10 @@ class TestDFM(object):
     def setup_class(cls, which='mixed', *args, **kwargs):
         # Data
         dta = datasets.macrodata.load_pandas().data
-        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:] * 400
+        dta.index = pd.date_range(start='1959-01-01',
+                                  end='2009-7-01', freq='QS')
+        levels = dta[['realgdp', 'realcons', 'realinv']]
+        obs = np.log(levels).diff().iloc[1:] * 400
 
         if which == 'all':
             obs.iloc[:50, :] = np.nan
@@ -527,20 +542,20 @@ class TestDFM(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):

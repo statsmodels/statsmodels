@@ -10,6 +10,7 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
+
 # this is similar to ContrastResults after t_test, partially copied and adjusted
 class PredictionResults(object):
 
@@ -41,7 +42,8 @@ class PredictionResults(object):
 
     def conf_int(self, obs=False, alpha=0.05):
         """
-        Returns the confidence interval of the value, `effect` of the constraint.
+        Returns the confidence interval of the value, `effect` of the
+        constraint.
 
         This is currently only available for t and z tests.
 
@@ -65,7 +67,6 @@ class PredictionResults(object):
         lower = self.predicted_mean - q * se
         upper = self.predicted_mean + q * se
         return np.column_stack((lower, upper))
-
 
     def summary_frame(self, what='all', alpha=0.05):
         # TODO: finish and cleanup
@@ -122,11 +123,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         tables for the prediction of the mean and of new observations.
     """
 
-    ### prepare exog and row_labels, based on base Results.predict
+    # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
         from patsy import dmatrix
-        exog = dmatrix(self.model.data.design_info.builder,
-                       exog)
+        exog = dmatrix(self.model.data.design_info, exog)
 
     if exog is not None:
         if row_labels is None:

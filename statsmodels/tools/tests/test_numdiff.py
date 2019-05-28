@@ -194,7 +194,7 @@ class CheckDerivativeMixin(object):
             gtrue = self.gradtrue(test_params)
             fun = self.fun()
 
-            epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
+            # default epsilon of 1e-6 is not precise enough here
             gfd = numdiff.approx_fprime(test_params, fun, epsilon=1e-8,
                                          args=self.args, centered=True)
             assert_almost_equal(gtrue, gfd, decimal=DEC5)
@@ -212,7 +212,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
@@ -234,7 +234,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 hecs = numdiff.approx_hess_cs(test_params, fun, args=self.args)
                 assert_almost_equal(hetrue, hecs, decimal=DEC6)
@@ -335,9 +335,6 @@ if __name__ == '__main__':
     gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
     print(maxabs(g, gt))
     print(maxabs(gd, gt))
-
-
-    import statsmodels.api as sm
 
     data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)

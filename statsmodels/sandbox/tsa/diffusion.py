@@ -82,7 +82,7 @@ class Diffusion(object):
         return U, Umean, t
 
 class AffineDiffusion(Diffusion):
-    '''
+    r'''
 
     differential equation:
 
@@ -92,7 +92,7 @@ class AffineDiffusion(Diffusion):
     integral:
 
     :math::
-    x_T = x_0 + \\int_{0}^{T}f(t,S)dt + \\int_0^T  \\sigma(t,S)dW_t
+    x_T = x_0 + \int_{0}^{T}f(t,S)dt + \int_0^T  \sigma(t,S)dW_t
 
     TODO: check definition, affine, what about jump diffusion?
 
@@ -132,9 +132,9 @@ class AffineDiffusion(Diffusion):
         W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dW = self.dW
         t = np.linspace(dt, 1, nobs)
-        Dt = Tratio*dt;
-        L = nobs/Tratio;        # L EM steps of size Dt = R*dt
-        Xem = np.zeros((nrepl,L));    # preallocate for efficiency
+        Dt = Tratio*dt
+        L = nobs/Tratio        # L EM steps of size Dt = R*dt
+        Xem = np.zeros((nrepl,L))    # preallocate for efficiency
         Xtemp = xzero
         Xem[:,0] = xzero
         for j in np.arange(1,L):
@@ -232,8 +232,8 @@ class GeometricBrownian(AffineDiffusion):
     dx_t &= \\mu x_t dt + \\sigma x_t dW_t
 
     $x_t $ stochastic process of Geometric Brownian motion,
-    $\mu $ is the drift,
-    $\sigma $ is the Volatility,
+    $\\mu $ is the drift,
+    $\\sigma $ is the Volatility,
     $W$ is the Wiener process (Brownian motion).
 
     '''

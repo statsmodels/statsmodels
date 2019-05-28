@@ -12,9 +12,8 @@ import numpy as np
 import pandas as pd
 from statsmodels.tools.tools import Bunch
 from .results import results_varmax
-from statsmodels.tsa.statespace import (
-    sarimax, structural, dynamic_factor, varmax)
-from numpy.testing import assert_equal, assert_raises, assert_allclose
+from statsmodels.tsa.statespace import sarimax, varmax
+from numpy.testing import assert_raises, assert_allclose
 
 
 def get_sarimax_models(endog, filter_univariate=False, **kwargs):
@@ -105,7 +104,6 @@ def test_concentrated_predict_sarimax():
     nobs = 30
     np.random.seed(28953)
     endog = np.random.normal(size=nobs)
-    kwargs = {}
 
     # Typical model
     out = get_sarimax_models(endog)
@@ -165,7 +163,7 @@ def check_concentrated_scale(filter_univariate=False, missing=False, **kwargs):
     dta['dln_inc'] = np.log(dta['inc']).diff()
     dta['dln_consump'] = np.log(dta['consump']).diff()
 
-    endog = dta.loc['1960-04-01':'1978-10-01',['dln_inv', 'dln_inc']]
+    endog = dta.loc['1960-04-01':'1978-10-01', ['dln_inv', 'dln_inc']]
 
     # Optionally add some missing observations
     if missing:

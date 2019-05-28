@@ -33,7 +33,7 @@ class PanelAR1(object):
         #take this from a super class, no checking is done here
         nobs = endog.shape[0]
         self.endog = endog
-        if not exog is None:
+        if exog is not None:
             self.exog = exog
 
         self.groups_start = (np.diff(groups)!=0)

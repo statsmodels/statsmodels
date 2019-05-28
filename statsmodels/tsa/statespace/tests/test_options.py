@@ -50,7 +50,6 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.simulation_smoother import (
     SimulationSmoother,
     SIMULATION_STATE,
-    SIMULATION_DISTURBANCE,
     SIMULATION_ALL
 )
 from numpy.testing import assert_equal
@@ -82,7 +81,8 @@ class TestOptions(Options):
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
         model.filter_collapsed = True
-        assert_equal(model.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(model.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
         model.filter_conventional = False
         assert_equal(model.filter_method, FILTER_COLLAPSED)
 
@@ -91,7 +91,8 @@ class TestOptions(Options):
         assert_equal(model.filter_method, FILTER_AUGMENTED)
 
         # Try setting via boolean via method
-        model.set_filter_method(filter_conventional=True, filter_augmented=False)
+        model.set_filter_method(filter_conventional=True,
+                                filter_augmented=False)
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
         # Try setting and unsetting all
@@ -118,7 +119,8 @@ class TestOptions(Options):
         model.invert_univariate = True
         assert_equal(model.inversion_method, INVERT_UNIVARIATE)
         model.invert_cholesky = True
-        assert_equal(model.inversion_method, INVERT_UNIVARIATE | INVERT_CHOLESKY)
+        assert_equal(model.inversion_method,
+                     INVERT_UNIVARIATE | INVERT_CHOLESKY)
         model.invert_univariate = False
         assert_equal(model.inversion_method, INVERT_CHOLESKY)
 
@@ -127,8 +129,10 @@ class TestOptions(Options):
         assert_equal(model.inversion_method, INVERT_LU)
 
         # Try setting via boolean via method
-        model.set_inversion_method(invert_cholesky=True, invert_univariate=True, invert_lu=False)
-        assert_equal(model.inversion_method, INVERT_UNIVARIATE | INVERT_CHOLESKY)
+        model.set_inversion_method(invert_cholesky=True,
+                                   invert_univariate=True, invert_lu=False)
+        assert_equal(model.inversion_method,
+                     INVERT_UNIVARIATE | INVERT_CHOLESKY)
 
         # Try setting and unsetting all
         model.inversion_method = 0
@@ -180,7 +184,8 @@ class TestOptions(Options):
         model.memory_no_forecast = True
         assert_equal(model.conserve_memory, MEMORY_NO_FORECAST)
         model.memory_no_filtered = True
-        assert_equal(model.conserve_memory, MEMORY_NO_FORECAST | MEMORY_NO_FILTERED)
+        assert_equal(model.conserve_memory,
+                     MEMORY_NO_FORECAST | MEMORY_NO_FILTERED)
         model.memory_no_forecast = False
         assert_equal(model.conserve_memory, MEMORY_NO_FILTERED)
 
@@ -189,7 +194,8 @@ class TestOptions(Options):
         assert_equal(model.conserve_memory, MEMORY_NO_PREDICTED)
 
         # Try setting via boolean via method
-        model.set_conserve_memory(memory_no_filtered=True, memory_no_predicted=False)
+        model.set_conserve_memory(memory_no_filtered=True,
+                                  memory_no_predicted=False)
         assert_equal(model.conserve_memory, MEMORY_NO_FILTERED)
 
         # Try setting and unsetting all
@@ -223,7 +229,8 @@ class TestOptions(Options):
         model.smoother_state = True
         assert_equal(model.smoother_output, SMOOTHER_STATE)
         model.smoother_disturbance = True
-        assert_equal(model.smoother_output, SMOOTHER_STATE | SMOOTHER_DISTURBANCE)
+        assert_equal(model.smoother_output,
+                     SMOOTHER_STATE | SMOOTHER_DISTURBANCE)
         model.smoother_state = False
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
 
@@ -232,7 +239,8 @@ class TestOptions(Options):
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE_COV)
 
         # Try setting via boolean via method
-        model.set_smoother_output(smoother_disturbance=True, smoother_disturbance_cov=False)
+        model.set_smoother_output(smoother_disturbance=True,
+                                  smoother_disturbance_cov=False)
         assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
 
         # Try setting and unsetting all
@@ -257,5 +265,10 @@ class TestOptions(Options):
         # TODO test changing simulation options in SimulationSmoothResults
         # instance
 
-        assert_equal(self.model.get_simulation_output(SIMULATION_STATE), SIMULATION_STATE)
-        assert_equal(self.model.get_simulation_output(simulate_state=True, simulate_disturbance=True), SIMULATION_ALL)
+        assert_equal(
+            self.model.get_simulation_output(SIMULATION_STATE),
+            SIMULATION_STATE)
+        assert_equal(
+            self.model.get_simulation_output(simulate_state=True,
+                                             simulate_disturbance=True),
+            SIMULATION_ALL)

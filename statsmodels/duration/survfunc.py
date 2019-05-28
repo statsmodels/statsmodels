@@ -596,7 +596,7 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         the risk set on or before the entry time.
 
     Returns
-    --------
+    -------
     chisq : The chi-square (1 degree of freedom) distributed test
             statistic value
     pvalue : The p-value for the chi^2 test

@@ -18,7 +18,6 @@ import patsy
 import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
-from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.base._constraints import fit_constrained
@@ -155,11 +154,17 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         cls.res1m = mod.fit_constrained(constr, start_params=start_params,
                                         method='bfgs', disp=0)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
-        #NOTE: see comment about convergence in llnull for self.res1m
+        # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
         assert_('linear equality constraints' in summ.extra_txt)
+
+    @pytest.mark.smoke
+    def test_summary2(self):
+        # trailing text in summary, assumes it's the first extra string
+        # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary2()
         assert_('linear equality constraints' in summ.extra_txt[0])
 
@@ -472,14 +477,17 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
 
-
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()
         assert_('linear equality constraints' in summ.extra_txt)
+
+    @pytest.mark.smoke
+    def test_summary2(self):
+        # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary2()
         assert_('linear equality constraints' in summ.extra_txt[0])
-
 
     def test_fit_constrained_wrap(self):
         # minimal test

@@ -9,8 +9,8 @@ namespace : dictionary
 
 """
 from collections import OrderedDict
-from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
-                                itervalues, range)
+from statsmodels.compat.python import (iterkeys, lrange, string_types,
+                                       itervalues, range)
 import copy
 import numpy as np
 
@@ -120,9 +120,9 @@ class Term(object):
         Formula(self) * Formula(other)
         """
 
-        if isinstance(other, Term) and other.name is 'intercept':
+        if isinstance(other, Term) and other.name == 'intercept':
             f = Formula(self, namespace=self.namespace)
-        elif self.name is 'intercept':
+        elif self.name == 'intercept':
             f = Formula(other, namespace=other.namespace)
         else:
             other = Formula(other, namespace=other.namespace)
@@ -252,7 +252,7 @@ class Factor(Term):
 
         """
 
-        if isinstance(other, Term) and other.name is 'intercept':
+        if isinstance(other, Term) and other.name == 'intercept':
             return Formula(self, namespace=self.namespace)
         else:
             return Term.__add__(self, other)
@@ -549,13 +549,13 @@ class Formula(object):
         selftermnames = self.termnames()
         othertermnames = other.termnames()
 
-        I = len(selftermnames)
+        n_term_names = len(selftermnames)
         J = len(othertermnames)
 
         terms = []
         termnames = []
 
-        for i in range(I):
+        for i in range(n_term_names):
             for j in range(J):
                 termname = '%s*%s' % (str(selftermnames[i]), str(othertermnames[j]))
                 pieces = sorted(termname.split('*'))
@@ -565,10 +565,10 @@ class Formula(object):
                 selfnames = self.terms[i].names()
                 othernames = other.terms[j].names()
 
-                if self.terms[i].name is 'intercept':
+                if self.terms[i].name == 'intercept':
                     _term = other.terms[j]
                     _term.namespace = other.namespace
-                elif other.terms[j].name is 'intercept':
+                elif other.terms[j].name == 'intercept':
                     _term = self.terms[i]
                     _term.namespace = self.namespace
                 else:
@@ -663,8 +663,10 @@ def isnested(A, B, namespace=None):
     """
 
     if namespace is not None:
-        A = copy.copy(A); A.namespace = namespace
-        B = copy.copy(B); B.namespace = namespace
+        A = copy.copy(A)
+        A.namespace = namespace
+        B = copy.copy(B)
+        B.namespace = namespace
 
     a = A(values=True)[0]
     b = B(values=True)[0]
@@ -691,7 +693,7 @@ def isnested(A, B, namespace=None):
 def _intercept_fn(nrow=1, **extra):
     return np.ones((1,nrow))
 
-I = Term('intercept', func=_intercept_fn)
+I = Term('intercept', func=_intercept_fn)  # noqa:E741
 I.__doc__ = """
 Intercept term in a formula. If intercept is the
 only term in the formula, then a keyword argument
@@ -731,7 +733,7 @@ def interactions(terms, order=[1,2]):
     >>>
 
     """
-    l = len(terms)
+    n_terms = len(terms)
 
     values = {}
 
@@ -741,22 +743,23 @@ def interactions(terms, order=[1,2]):
     # First order
 
     for o in order:
-        I = np.indices((l,)*(o))
-        I.shape = (I.shape[0], np.product(I.shape[1:]))
-        for m in range(I.shape[1]):
+        indices = np.indices((n_terms,)*(o))
+        indices.shape = (indices.shape[0], np.product(indices.shape[1:]))
+        for m in range(indices.shape[1]):
 
             # only keep combinations that have unique entries
 
-            if (np.unique(I[:,m]).shape == I[:,m].shape and
-                    np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
-                ll = [terms[j] for j in I[:,m]]
+            if (np.unique(indices[:,m]).shape == indices[:,m].shape and
+                    np.alltrue(np.equal(np.sort(indices[:,m]), indices[:,m]))):
+                ll = [terms[j] for j in indices[:,m]]
                 v = ll[0]
                 for ii in range(len(ll)-1):
                     v *= ll[ii+1]
-                values[tuple(I[:,m])] = v
+                values[tuple(indices[:,m])] = v
 
     key = list(iterkeys(values))[0]
-    value = values[key]; del(values[key])
+    value = values[key]
+    del(values[key])
 
     for v in itervalues(values):
         value += v

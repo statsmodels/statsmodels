@@ -160,7 +160,7 @@ class ClippedContinuous(object):
         '''helper method to get clip_lower from kwds or attribute
 
         '''
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             clip_lower = kwds.pop('clip_lower')
@@ -177,7 +177,7 @@ class ClippedContinuous(object):
 
     def pdf(self, x, *args, **kwds):
         x = np.atleast_1d(x)
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter
@@ -194,7 +194,7 @@ class ClippedContinuous(object):
         return pdf_raw
 
     def cdf(self, x, *args, **kwds):
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter
@@ -214,7 +214,7 @@ class ClippedContinuous(object):
         return cdf_raw
 
     def sf(self, x, *args, **kwds):
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter

@@ -39,7 +39,7 @@ _sign_test_doc = '''
         default, but it is common to set it to the median.
 
     Returns
-    ---------
+    --------
     M, p-value
 
     Notes
@@ -57,7 +57,7 @@ _sign_test_doc = '''
     equals N(+) + N(-).
 
     See Also
-    ---------
+    --------
     scipy.stats.wilcoxon
     '''
 
@@ -110,19 +110,19 @@ class Describe(object):
             #sign_test_P = [self.sign_test_p, None, None]
         )
 
-        #TODO: Basic stats for strings
-        #self.strings = dict(
-            #unique = [np.unique, None, None],
-            #number_uniq = [len(
-            #most = [
-            #least = [
+        # TODO: Basic stats for strings
+        # self.strings = dict(
+        #    unique = [np.unique, None, None],
+        #    number_uniq = [len(
+        #    most = [
+        #    least = [
 
         #TODO: Multivariate
-        #self.multivariate = dict(
-            #corrcoef(x[, y, rowvar, bias]),
-            #cov(m[, y, rowvar, bias]),
-            #histogram2d(x, y[, bins, range, normed, weights])
-            #)
+        # self.multivariate = dict(
+        #    corrcoef(x[, y, rowvar, bias]),
+        #    cov(m[, y, rowvar, bias]),
+        #    histogram2d(x, y[, bins, range, normed, weights])
+        #    )
         self._arraytype = None
         self._columns_list = None
 
@@ -152,8 +152,8 @@ class Describe(object):
         unknown. `numpy.lib._iotools._is_string_like`
         """
         def string_like():
-        #TODO: not sure what the result is if the first item is some type of
-        #      missing value
+            # TODO: not sure what the result is if the first item is some
+            #   type of missing value
             try:
                 self.dataset[col][0] + ''
             except (TypeError, ValueError):
@@ -166,12 +166,12 @@ class Describe(object):
             except (TypeError, ValueError):
                 return False
             return True
-        if number_like()==True and string_like()==False:
+        if number_like() and not string_like():
             return 'number'
-        elif number_like()==False and string_like()==True:
+        elif not number_like() and string_like():
             return 'string'
         else:
-            assert (number_like()==True or string_like()==True), '\
+            assert (number_like() or string_like()), '\
             Not sure of dtype'+str(self.dataset[col][0])
 
     #@property
@@ -180,7 +180,7 @@ class Describe(object):
         Return a summary of descriptive statistics.
 
         Parameters
-        -----------
+        ----------
         stats: list or str
             The desired statistics, Accepts 'basic' or 'all' or a list.
                'basic' = ('obs', 'mean', 'std', 'min', 'max')
@@ -196,7 +196,7 @@ class Describe(object):
         # standard array: Specifiy column numbers (NEED TO TEST)
         # percentiles currently broken
         # mode requires mode_val and mode_bin separately
-        if self._arraytype == None:
+        if self._arraytype is None:
             self._array_typer()
 
         if stats == 'basic':
@@ -245,7 +245,7 @@ class Describe(object):
                     self._columns_list = self.dataset.dtype.names
                     #self._columns_list = [col for col in
                     #                      self.dataset.dtype.names if
-                            #(self._is_dtype_like(col)=='number')]
+                    #        (self._is_dtype_like(col)=='number')]
                 else:
                     self._columns_list = lrange(self.dataset.shape[1])
             else:
@@ -359,8 +359,8 @@ if __name__ == "__main__":
             t2 = Describe(data2)
             print(t2.summary())
 
-        def test_basic_3(self):
-            print('test_basic_3')
+        def test_describe_summary_float_ndarray(self):
+            print('test_describe_summary_float_ndarray')
             t1 = Describe(data3)
             print(t1.summary())
 

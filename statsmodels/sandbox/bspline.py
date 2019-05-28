@@ -128,10 +128,12 @@ def _triangle2unit(tb, lower=0):
     if lower: d = tb[0].copy()
     else: d = tb[-1].copy()
 
-    if lower: return d, (tb / d)
+    if lower:
+        return d, (tb / d)
     else:
-        l = _upper2lower(tb)
-        return d, _lower2upper(l / d)
+        lnum = _upper2lower(tb)
+        return d, _lower2upper(lnum / d)
+
 
 def _trace_symbanded(a, b, lower=0):
     """
@@ -514,7 +516,9 @@ class SmoothingSpline(BSpline):
         self.resid = y * self.weights - np.dot(self.coef, bt)
         self.pen = pen
 
-        del(bty); del(mask); del(bt)
+        del(bty)
+        del(mask)
+        del(bt)
 
     def smooth(self, y, x=None, weights=None):
 
@@ -661,4 +665,4 @@ class SmoothingSpline(BSpline):
             a = self.gcv()
             return a
 
-        a = golden(_gcv, args=(y,x), brack=bracket, tol=tol)
+        a = golden(_gcv, args=(y,x), brack=brack, tol=tol)

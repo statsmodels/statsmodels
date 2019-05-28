@@ -39,7 +39,7 @@ def getnist(filename):
     return y, x, np.array([f, prob, R2, resstd]), certified, caty
 
 
-from .try_catdata import groupsstats_dummy, groupstatsbin
+
 
 
 def anova_oneway(y, x, seq=0):
@@ -51,6 +51,7 @@ def anova_oneway(y, x, seq=0):
 
     meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:,:1], xrvs[:,:1])#, seq=0)
     #the following does not work as replacement
+    #from .try_catdata import groupsstats_dummy, groupstatsbin
     #gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)#, seq=0)
     sswn = np.dot(xdevmeangr.T,xdevmeangr)
     ssbn = np.dot((meang-xrvs.mean())**2, countg.T)

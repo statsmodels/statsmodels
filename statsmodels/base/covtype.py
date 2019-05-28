@@ -7,9 +7,61 @@ License: BSD-3
 
 """
 
-from statsmodels.compat.python import lrange, lzip, range
+from statsmodels.compat.python import lzip
 
 import numpy as np
+
+descriptions = {
+    'HC0': 'Standard Errors are heteroscedasticity robust (HC0)',
+    'HC1': 'Standard Errors are heteroscedasticity robust (HC1)',
+    'HC2': 'Standard Errors are heteroscedasticity robust (HC2)',
+    'HC3': 'Standard Errors are heteroscedasticity robust (HC3)',
+    'HAC': 'Standard Errors are heteroscedasticity and autocorrelation '
+           'robust (HAC) using {maxlags} lags and '
+           '{correction} small sample correction',
+    'fixed_scale': 'Standard Errors are based on fixed scale',
+    'cluster': 'Standard Errors are robust to cluster correlation (cluster)',
+    'HAC-Panel': 'Standard Errors are robust to '
+                 'cluster correlation (HAC-Panel)',
+    'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
+                    'cluster correlation (HAC-Groupsum)',
+    'none': 'Covariance matrix not calculated.',
+    'approx': 'Covariance matrix calculated using numerical ({approx_type}) '
+              'differentiation.',
+    'OPG': 'Covariance matrix calculated using the outer product of '
+           'gradients ({approx_type}).',
+    'OIM': 'Covariance matrix calculated using the observed information '
+           'matrix ({approx_type}) described in Harvey (1989).',
+    'robust': 'Quasi-maximum likelihood covariance matrix used for '
+              'robustness to some misspecifications; calculated using '
+              'numerical ({approx_type}) differentiation.',
+    'robust-OIM': 'Quasi-maximum likelihood covariance matrix used for '
+                  'robustness to some misspecifications; calculated using the '
+                  'observed information matrix ({approx_type}) described in '
+                  'Harvey (1989).',
+    'robust-approx': 'Quasi-maximum likelihood covariance matrix used for '
+                     'robustness to some misspecifications; calculated using '
+                     'numerical ({approx_type}) differentiation.',
+}
+
+
+def normalize_cov_type(cov_type):
+    """
+    Normalize the cov_type string to a canonical version
+
+    Parameters
+    ----------
+    cov_type : str
+
+    Returns
+    -------
+    normalized_cov_type : str
+    """
+    if cov_type == 'nw-panel':
+        cov_type = 'hac-panel'
+    if cov_type == 'nw-groupsum':
+        cov_type = 'hac-groupsum'
+    return cov_type
 
 
 def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
@@ -134,11 +186,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     import statsmodels.stats.sandwich_covariance as sw
 
-    #normalize names
-    if cov_type == 'nw-panel':
-        cov_type = 'hac-panel'
-    if cov_type == 'nw-groupsum':
-        cov_type = 'hac-groupsum'
+    cov_type = normalize_cov_type(cov_type)
+
     if 'kernel' in kwds:
         kwds['weights_func'] = kwds.pop('kernel')
     if 'weights_func' in kwds and not callable(kwds['weights_func']):
@@ -180,10 +229,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     # TODO: make it DRYer   repeated code for checking kwds
     if cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
         if kwds:
-            raise ValueError('heteroscedasticity robust covarians ' +
+            raise ValueError('heteroscedasticity robust covariance '
                              'does not use keywords')
-        res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
-                                       'robust ' + '(' + cov_type + ')')
+        res.cov_kwds['description'] = descriptions[cov_type.upper()]
 
         res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
         if res.cov_params_default is None:
@@ -197,9 +245,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         use_correction = kwds.get('use_correction', False)
         res.cov_kwds['use_correction'] = use_correction
-        res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
-             'and autocorrelation robust (HAC) using %d lags and %s small ' +
-             'sample correction') % (maxlags, ['without', 'with'][use_correction])
+        res.cov_kwds['description'] =  descriptions['HAC'].format(
+            maxlags=maxlags, correction=['without', 'with'][use_correction])
 
         res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
                                              weights_func=weights_func,
@@ -241,8 +288,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
                                          use_correction=use_correction)[0]
         else:
             raise ValueError('only two groups are supported')
-        res.cov_kwds['description'] = ('Standard Errors are robust to' +
-                            'cluster correlation ' + '(' + cov_type + ')')
+        res.cov_kwds['description'] = descriptions['cluster']
 
     elif cov_type.lower() == 'hac-panel':
         #cluster robust standard errors
@@ -274,8 +320,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                             weights_func=weights_func,
                                             use_correction=use_correction)
-        res.cov_kwds['description'] = ('Standard Errors are robust to' +
-                            'cluster correlation ' + '(' + cov_type + ')')
+        res.cov_kwds['description'] = descriptions['HAC-Panel']
+
     elif cov_type.lower() == 'hac-groupsum':
         # Driscoll-Kraay standard errors
         res.cov_kwds['time'] = time = kwds['time']
@@ -295,9 +341,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
                                         weights_func=weights_func,
                                         use_correction=use_correction)
-        res.cov_kwds['description'] = (
-                    'Driscoll and Kraay Standard Errors are robust to ' +
-                    'cluster correlation ' + '(' + cov_type + ')')
+        res.cov_kwds['description'] = descriptions['HAC-Groupsum']
     else:
         raise ValueError('cov_type not recognized. See docstring for ' +
                          'available options and spelling')

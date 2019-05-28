@@ -18,7 +18,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lzip, lfilter, callable, zip
+from statsmodels.compat.python import lzip, lfilter, zip
 import numpy as np
 import scipy.integrate
 from statsmodels.compat.scipy import factorial

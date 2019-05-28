@@ -17,7 +17,6 @@ TODO
 * refactor to store intermediate results
 * how easy is it to attach a test that is a class to a result instance,
   for example CompareCox as a method compare_cox(self, other) ?
-* StatTestMC has been moved and should be deleted
 
 missing:
 
@@ -30,11 +29,10 @@ missing:
 
 """
 from __future__ import print_function
-from statsmodels.compat.python import iteritems, lrange, map, long
+from statsmodels.compat.python import iteritems, map, long
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
 
@@ -251,7 +249,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         test statistic
     pvalue : float or array
         p-value based on chi-square distribution
-    bpvalue : (optionsal), float or array
+    bpvalue : (optional), float or array
         test statistic for Box-Pierce test
     bppvalue : (optional), float or array
         p-value based for Box-Pierce test on chi-square distribution
@@ -532,14 +530,14 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
 
 def het_breuschpagan(resid, exog_het):
-    '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
+    r'''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+    :math: \sigma_i = \sigma * f(\alpha_0 + \alpha z_i)
 
-    Homoscedasticity implies that $\\alpha=0$
+    Homoscedasticity implies that $\alpha=0$
 
 
     Parameters
@@ -727,7 +725,7 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = 'larger'
     else:
-        fval = 1./fval;
+        fval = 1./fval
         fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = 'smaller'
 
@@ -819,7 +817,7 @@ class HetGoldfeldQuandt(object):
         else:
             start2 = split + drop
 
-        if not idx is None:
+        if idx is not None:
             xsortind = np.argsort(x[:,idx])
             y = y[xsortind]
             x = x[xsortind,:]
@@ -832,7 +830,7 @@ class HetGoldfeldQuandt(object):
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
-            fval = fval;
+            fval = fval
             fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
@@ -990,6 +988,86 @@ def linear_lm(resid, exog, func=None):
     lm = nobs * ls.rsquared
     lm_pval = stats.chi2.sf(lm, k_vars - 1)
     return lm, lm_pval, ftest
+
+
+def spec_white(resid, exog):
+    '''
+    White's Two-Moment Specification Test
+
+    Parameters
+    ----------
+    resid : array_like
+        OLS residuals
+    exog : array_like
+        OLS design matrix
+
+    Returns
+    -------
+    stat : float
+        test statistic
+    pval : float
+        chi-square p-value for test statistic
+    dof : int
+        degrees of freedom
+
+    Notes
+    -----
+    Implements the two-moment specification test described by White's
+    Theorem 2 (1980, p. 823) which compares the standard OLS covariance
+    estimator with White's heteroscedasticity-consistent estimator. The
+    test statistic is shown to be chi-square distributed.
+
+    Null hypothesis is homoscedastic and correctly specified.
+
+    Assumes the OLS design matrix contains an intercept term and at least
+    one variable. The intercept is removed to calculate the test statistic.
+
+    Interaction terms (squares and crosses of OLS regressors) are added to
+    the design matrix to calculate the test statistic.
+
+    Degrees-of-freedom (full rank) = nvar + nvar * (nvar + 1) / 2
+
+    Linearly dependent columns are removed to avoid singular matrix error.
+
+    Reference
+    ---------
+    White, H. (1980). A heteroskedasticity-consistent covariance matrix
+    estimator and a direct test for heteroscedasticity. Econometrica,
+    48: 817-838.
+
+    See also het_white.
+    '''
+    x = np.asarray(exog)
+    e = np.asarray(resid)
+    if x.ndim == 1:
+        raise ValueError('X should have a constant and at least one variable')
+
+    # add interaction terms
+    i0, i1 = np.triu_indices(x.shape[1])
+    exog = np.delete(x[:,i0] * x[:,i1], 0, 1)
+
+    # collinearity check - see _fit_collinear
+    atol=1e-14
+    rtol=1e-13
+    tol = atol + rtol * exog.var(0)
+    r = np.linalg.qr(exog, mode='r')
+    mask = np.abs(r.diagonal()) < np.sqrt(tol)
+    exog = exog[:,np.where(~mask)[0]]
+
+    # calculate test statistic
+    sqe = e * e
+    sqmndevs = sqe - np.mean(sqe)
+    d = np.dot(exog.T, sqmndevs)
+    devx = exog - np.mean(exog, axis=0)
+    devx *= sqmndevs[:, None]
+    b = devx.T.dot(devx)
+    stat = d.dot(np.linalg.solve(b, d))
+
+    # chi-square test
+    dof = devx.shape[1]
+    pval = stats.chi2.sf(stat, dof)
+    return stat, pval, dof
+
 
 def _neweywestcov(resid, x):
     '''
@@ -1211,8 +1289,8 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
     nrr = nobs-skip
     #sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
-            #Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
-    #Gretl uses: by reverse engineering matching their numbers
+    # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
+    # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
     rcusum = rresid_standardized[skip-1:].cumsum()
@@ -1401,99 +1479,6 @@ def breaks_AP(endog, exog, skip):
     pass
 
 
-#delete when testing is finished
-class StatTestMC(object):
-    """class to run Monte Carlo study on a statistical test'''
-
-    TODO
-    print(summary, for quantiles and for histogram
-    draft in trying out script log
-
-
-    this has been copied to tools/mctools.py, with improvements
-
-    """
-
-    def __init__(self, dgp, statistic):
-        self.dgp = dgp #staticmethod(dgp)  #no self
-        self.statistic = statistic # staticmethod(statistic)  #no self
-
-    def run(self, nrepl, statindices=None, dgpargs=[], statsargs=[]):
-        '''run the actual Monte Carlo and save results
-
-
-        '''
-        self.nrepl = nrepl
-        self.statindices = statindices
-        self.dgpargs = dgpargs
-        self.statsargs = statsargs
-
-        dgp = self.dgp
-        statfun = self.statistic # name ?
-
-        #single return statistic
-        if statindices is None:
-            self.nreturn = nreturns = 1
-            mcres = np.zeros(nrepl)
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
-        #more than one return statistic
-        else:
-            self.nreturn = nreturns = len(statindices)
-            self.mcres = mcres = np.zeros((nrepl, nreturns))
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                ret = statfun(x, *statsargs)
-                mcres[ii] = [ret[i] for i in statindices]
-
-        self.mcres = mcres
-
-    def histogram(self, idx=None, critval=None):
-        '''calculate histogram values
-
-        does not do any plotting
-        '''
-        if self.mcres.ndim == 2:
-            if idx is not None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        if critval is None:
-            histo = np.histogram(mcres, bins=10)
-        else:
-            if not critval[0] == -np.inf:
-                bins=np.r_[-np.inf, critval, np.inf]
-            if not critval[0] == -np.inf:
-                bins=np.r_[bins, np.inf]
-            histo = np.histogram(mcres,
-                                 bins=np.r_[-np.inf, critval, np.inf])
-
-        self.histo = histo
-        self.cumhisto = np.cumsum(histo[0])*1./self.nrepl
-        self.cumhistoreversed = np.cumsum(histo[0][::-1])[::-1]*1./self.nrepl
-        return histo, self.cumhisto, self.cumhistoreversed
-
-    def quantiles(self, idx=None, frac=[0.01, 0.025, 0.05, 0.1, 0.975]):
-        '''calculate quantiles of Monte Carlo results
-
-        '''
-
-        if self.mcres.ndim == 2:
-            if not idx is None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        self.frac = frac = np.asarray(frac)
-        self.mcressort = mcressort = np.sort(self.mcres)
-        return frac, mcressort[(self.nrepl*frac).astype(int)]
-
 if __name__ == '__main__':
 
     examples = ['adf']
@@ -1546,40 +1531,6 @@ if __name__ == '__main__':
         print(np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf]))
 
         print(mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)])
-
-
-        def randwalksim(nobs=100, drift=0.0):
-            return (drift+np.random.randn(nobs)).cumsum()
-
-        def normalnoisesim(nobs=500, loc=0.0):
-            return (loc+np.random.randn(nobs))
-
-        def adf20(x):
-            return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
-
-        print('\nResults with MC class')
-        mc1 = StatTestMC(randwalksim, adf20)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26]))
-        print(mc1.quantiles(0))
-
-        print('\nLjung Box')
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=4)
-            return s[-1], p[-1]
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=1)
-            return s[0], p[0]
-
-        print('Results with MC class')
-        mc1 = StatTestMC(normalnoisesim, lb4)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
-        print(mc1.quantiles(1))
-        print(mc1.quantiles(0))
-        print(mc1.histogram(0))
 
     nobs = 100
     x = np.ones((nobs,2))

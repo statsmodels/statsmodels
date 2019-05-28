@@ -79,6 +79,9 @@ Non-Linearity Tests
   - Lagrange Multiplier test for Null hypothesis that linear specification is
     correct. This tests against specific functional alternatives.
 
+:py:func:`spec_white <statsmodels.stats.diagnostic.spec_white>`
+  - White's two-moment specification test with null hypothesis of homoscedastic
+    and correctly specified.
 
 Tests for Structural Change, Parameter Stability
 ------------------------------------------------
@@ -223,5 +226,3 @@ Unit Root Tests
 
 :py:func:`unitroot_adf <statsmodels.stats.diagnostic.unitroot_adf>`
   - same as adfuller but with different signature
-
-

@@ -1,4 +1,5 @@
 from __future__ import division
+from statsmodels.compat.scipy import SP_GTE_019
 
 import numpy as np
 from numpy.testing import (assert_,
@@ -61,9 +62,11 @@ class CheckGeneric(CheckModelMixin):
         assert_equal(np.ptp(exog_null), 0)
         assert_equal(np.ptp(exog_infl_null), 0)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
-        self.res1.summary()
+        summ = self.res1.summary()
+        # GH 4581
+        assert 'Covariance Type:' in str(summ)
 
 
 class TestZeroInflatedModel_logit(CheckGeneric):
@@ -80,8 +83,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
 class TestZeroInflatedModel_probit(CheckGeneric):
@@ -98,8 +100,7 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'probit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_probit()
+        res2 = RandHIE.zero_inflated_poisson_probit
         cls.res2 = res2
 
 class TestZeroInflatedModel_offset(CheckGeneric):
@@ -117,8 +118,7 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_offset()
+        res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
 
     def test_exposure(self):
@@ -185,8 +185,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
     def test_names(self):
@@ -251,8 +250,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 1}
-        res2 = RandHIE()
-        res2.zero_inflated_generalized_poisson()
+        res2 = RandHIE.zero_inflated_generalized_poisson
         cls.res2 = res2
 
     def test_bse(self):
@@ -295,12 +293,15 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
                         atol=1e-3, rtol=0.6)
         assert_(res_dog.mle_retvals['converged'] is True)
 
+        # Ser random_state here to improve reproducibility
+        random_state = np.random.RandomState(1)
+        seed = {'seed': random_state} if SP_GTE_019 else {}
         res_bh = model.fit(start_params=start_params,
-                           method='basinhopping', maxiter=500,
-                           niter_success=3, disp=0)
+                           method='basinhopping', niter=500, stepsize=0.1,
+                           niter_success=None, disp=0, interval=1, **seed)
 
         assert_allclose(res_bh.params, self.res2.params,
-                        atol=1e-4, rtol=3e-5)
+                        atol=1e-4, rtol=1e-4)
         assert_allclose(res_bh.bse, self.res2.bse,
                         atol=1e-3, rtol=0.6)
         # skip, res_bh reports converged is false but params agree
@@ -355,8 +356,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 2}
-        res2 = RandHIE()
-        res2.zero_inflated_negative_binomial()
+        res2 = RandHIE.zero_inflated_negative_binomial
         cls.res2 = res2
 
     def test_params(self):

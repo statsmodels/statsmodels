@@ -4,14 +4,12 @@ from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import tools
-from statsmodels.sandbox.regression.gmm import IV2SLS, IVGMM, DistQuantilesGMM, spec_hausman
+from statsmodels.sandbox.regression.gmm import spec_hausman
 
 from statsmodels.sandbox.regression import gmm
 
 
-
 if __name__ == '__main__':
-    import statsmodels.api as sm
     examples = ['ivols', 'distquant'][:]
 
     if 'ivols' in examples:

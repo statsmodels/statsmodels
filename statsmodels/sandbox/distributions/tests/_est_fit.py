@@ -7,7 +7,6 @@
 #       FAILED (failures=15)
 
 
-import numpy.testing as npt
 import numpy as np
 
 from scipy import stats

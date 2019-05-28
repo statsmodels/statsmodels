@@ -1,0 +1,11 @@
+# build
+cython
+
+# run
+matplotlib
+cvxopt
+
+# test
+pytest
+pytest-randomly
+flake8

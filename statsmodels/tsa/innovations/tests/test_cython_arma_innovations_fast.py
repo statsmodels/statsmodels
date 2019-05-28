@@ -255,6 +255,47 @@ def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     assert_allclose(llf_obs2, res.llf_obs)
 
 
+@pytest.mark.parametrize("ar_params,ma_params,sigma2", [
+    (np.array([]), np.array([]), 1),
+    (np.array([0.]), np.array([0.]), 1),
+    (np.array([0.9]), np.array([]), 1),
+    (np.array([]), np.array([0.9]), 1),
+    (np.array([0.2, -0.4, 0.1, 0.1]), np.array([0.5, 0.1]), 1.123),
+    (np.array([0.5, 0.1]), np.array([0.2, -0.4, 0.1, 0.1]), 1.123),
+])
+def test_innovations_algo_direct_filter_kalman_filter(ar_params, ma_params,
+                                                      sigma2):
+    # Test the innovations algorithm and filter against the Kalman filter
+    # for exact likelihood evaluation of an ARMA process, using the direct
+    # function.
+
+    endog = np.random.normal(size=10)
+
+    # Innovations algorithm approach
+    u, r = arma_innovations.arma_innovations(endog, ar_params, ma_params,
+                                             sigma2)
+
+    v = np.array(r) * sigma2
+    u = np.array(u)
+
+    llf_obs = -0.5 * u**2 / v - 0.5 * np.log(2 * np.pi * v)
+
+    # Kalman filter apparoach
+    mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
+    res = mod.filter(np.r_[ar_params, ma_params, sigma2])
+
+    # Test that the two approaches are identical
+    assert_allclose(u, res.forecasts_error[0])
+    # assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
+    assert_allclose(llf_obs, res.llf_obs)
+
+    # Get llf_obs directly
+    llf_obs2 = _arma_innovations.darma_loglikeobs_fast(
+        endog, ar_params, ma_params, sigma2)
+
+    assert_allclose(llf_obs2, res.llf_obs)
+
+
 @pytest.mark.parametrize("ar_params,diff,ma_params,sigma2", [
     (np.array([]), 1, np.array([]), 1),
     (np.array([0.]), 1, np.array([0.]), 1),

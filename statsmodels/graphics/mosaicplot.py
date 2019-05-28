@@ -172,7 +172,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         it with exponentially decreasing gaps
 
     Returns
-    ----------
+    ---------
     base_rect : dict
         A dictionary containing the result of the split.
         To each key is associated a 4-tuple of coordinates
@@ -532,7 +532,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         each axis can have a different rotation
 
     Returns
-    ----------
+    ---------
     fig : matplotlib.Figure
         The generate figure
     rects : dict
@@ -557,11 +557,16 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     Examples
     ----------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> import matplotlib.pyplot as plt
+    >>> from statsmodels.graphics.mosaicplot import mosaic
+
     The most simple use case is to take a dictionary and plot the result
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> mosaic(data, title='basic dictionary')
-    >>> pylab.show()
+    >>> plt.show()
 
     A more useful example is given by a dictionary with multiple indices.
     In this case we use a wider gap to a better visual separation of the
@@ -569,18 +574,17 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     >>> data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3, ('d', 'c'): 4}
     >>> mosaic(data, gap=0.05, title='complete dictionary')
-    >>> pylab.show()
+    >>> plt.show()
 
     The same data can be given as a simple or hierarchical indexed Series
 
     >>> rand = np.random.random
     >>> from itertools import product
-    >>>
     >>> tuples = list(product(['bar', 'baz', 'foo', 'qux'], ['one', 'two']))
     >>> index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
     >>> data = pd.Series(rand(8), index=index)
     >>> mosaic(data, title='hierarchical index series')
-    >>> pylab.show()
+    >>> plt.show()
 
     The third accepted data structureis the np array, for which a
     very simple index will be created.
@@ -588,7 +592,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> rand = np.random.random
     >>> data = 1+rand((2,2))
     >>> mosaic(data, title='random non-labeled array')
-    >>> pylab.show()
+    >>> plt.show()
 
     If you need to modify the labeling and the coloring you can give
     a function tocreate the labels and one with the graphical properties
@@ -596,18 +600,21 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second', \
-                               ('c',): 'third'}[k]
-    >>> mosaic(data, title='colored dictionary', \
-                properties=props, labelizer=labelizer)
-    >>> pylab.show()
+    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second',
+    ...                        ('c',): 'third'}[k]
+    >>> mosaic(data, title='colored dictionary', properties=props,
+    ...        labelizer=labelizer)
+    >>> plt.show()
 
     Using a DataFrame as source, specifying the name of the columns of interest
+
     >>> gender = ['male', 'male', 'male', 'female', 'female', 'female']
     >>> pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
-    >>> data = pandas.DataFrame({'gender': gender, 'pet': pet})
-    >>> mosaic(data, ['pet', 'gender'])
-    >>> pylab.show()
+    >>> data = pd.DataFrame({'gender': gender, 'pet': pet})
+    >>> mosaic(data, ['pet', 'gender'], title='DataFrame as Source')
+    >>> plt.show()
+
+    .. plot :: plots/graphics_mosaicplot_mosaic.py
     """
     if isinstance(data, DataFrame) and index is None:
         raise ValueError("You must pass an index if data is a DataFrame."

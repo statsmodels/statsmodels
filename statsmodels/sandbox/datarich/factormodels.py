@@ -146,8 +146,7 @@ class FactorModelUnivariate(object):
 
         sumstr += '\n' + ' '*19 + '%5d %4d %6d %5d' % tuple(self.best_nfact)
 
-        from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
-                                default_latex_fmt, default_html_fmt)
+        from statsmodels.iolib.table import SimpleTable
 
         headers = 'k, AIC, BIC, R2_adj, L1O'.split(', ')
         numformat = ['%6d'] + ['%10.3f']*4 #'%10.4f'

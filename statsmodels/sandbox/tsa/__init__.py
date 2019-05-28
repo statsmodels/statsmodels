@@ -48,5 +48,5 @@ movvar
 
 
 #from arima import *
-from .movstat import *
+from .movstat import movorder, movmean, movvar, movmoment  # noqa:F401
 #from stattools import *

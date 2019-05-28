@@ -1,3 +1,5 @@
+from statsmodels.compat.platform import PLATFORM_OSX
+
 import os
 import csv
 import warnings
@@ -11,10 +13,11 @@ from statsmodels.regression.mixed_linear_model import (
     MixedLM, MixedLMParams, _smw_solver, _smw_logdet)
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
+
 from statsmodels.base import _penalties as penalties
 import statsmodels.tools.numdiff as nd
 
-from . import lme_r_results
+from .results import lme_r_results
 
 # TODO: add tests with unequal group sizes
 
@@ -131,34 +134,43 @@ class TestMixedLM(object):
         loglike = loglike_function(
             model, profile_fe=profile_fe, has_fe=not profile_fe)
 
-        # Test the score at several points.
-        for kr in range(5):
-            fe_params = np.random.normal(size=k_fe)
-            cov_re = np.random.normal(size=(k_re, k_re))
-            cov_re = np.dot(cov_re.T, cov_re)
-            vcomp = np.random.normal(size=2)**2
-            params = MixedLMParams.from_components(
-                fe_params, cov_re=cov_re, vcomp=vcomp)
-            params_vec = params.get_packed(
-                has_fe=not profile_fe, use_sqrt=use_sqrt)
+        try:
+            # Test the score at several points.
+            for kr in range(5):
+                fe_params = np.random.normal(size=k_fe)
+                cov_re = np.random.normal(size=(k_re, k_re))
+                cov_re = np.dot(cov_re.T, cov_re)
+                vcomp = np.random.normal(size=2)**2
+                params = MixedLMParams.from_components(
+                    fe_params, cov_re=cov_re, vcomp=vcomp)
+                params_vec = params.get_packed(
+                    has_fe=not profile_fe, use_sqrt=use_sqrt)
 
-            # Check scores
-            gr = -model.score(params, profile_fe=profile_fe)
-            ngr = nd.approx_fprime(params_vec, loglike)
-            assert_allclose(gr, ngr, rtol=1e-3)
+                # Check scores
+                gr = -model.score(params, profile_fe=profile_fe)
+                ngr = nd.approx_fprime(params_vec, loglike)
+                assert_allclose(gr, ngr, rtol=1e-3)
 
-        # Check Hessian matrices at the MLE (we don't have
-        # the profile Hessian matrix and we don't care
-        # about the Hessian for the square root
-        # transformed parameter).
-        if (profile_fe is False) and (use_sqrt is False):
-            hess = -model.hessian(rslt.params_object)
-            params_vec = rslt.params_object.get_packed(
-                use_sqrt=False, has_fe=True)
-            loglike_h = loglike_function(
-                model, profile_fe=False, has_fe=True)
-            nhess = nd.approx_hess(params_vec, loglike_h)
-            assert_allclose(hess, nhess, rtol=1e-3)
+            # Check Hessian matrices at the MLE (we don't have
+            # the profile Hessian matrix and we don't care
+            # about the Hessian for the square root
+            # transformed parameter).
+            if (profile_fe is False) and (use_sqrt is False):
+                hess = -model.hessian(rslt.params_object)
+                params_vec = rslt.params_object.get_packed(
+                    use_sqrt=False, has_fe=True)
+                loglike_h = loglike_function(
+                    model, profile_fe=False, has_fe=True)
+                nhess = nd.approx_hess(params_vec, loglike_h)
+                assert_allclose(hess, nhess, rtol=1e-3)
+        except AssertionError:
+            # See GH#5628; because this test fails unpredictably but only on
+            #  OSX, we only xfail it there.
+            if PLATFORM_OSX:
+                pytest.xfail("fails on OSX due to unresolved "
+                             "numerical differences")
+            else:
+                raise
 
     def test_default_re(self):
 
@@ -182,8 +194,9 @@ class TestMixedLM(object):
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
 
+    @pytest.mark.slow
+    @pytest.mark.smoke
     def test_profile_inference(self):
-        # Smoke test
         np.random.seed(9814)
         k_fe = 2
         gsize = 3
@@ -589,6 +602,7 @@ class TestMixedLM(object):
         # BIC(r)
         assert_allclose(result.bic, 264.3718, rtol=1e-3)
 
+    @pytest.mark.slow
     def test_vcomp_formula(self):
 
         np.random.seed(6241)
@@ -700,6 +714,7 @@ class TestMixedLM(object):
             rslt5 = mod5.fit()
         assert_almost_equal(rslt4.params, rslt5.params)
 
+    @pytest.mark.slow
     def test_regularized(self):
 
         np.random.seed(3453)
@@ -957,6 +972,7 @@ def test_random_effects():
     assert_(len(re[0]) == 2)
 
 
+@pytest.mark.slow
 def test_handle_missing():
 
     np.random.seed(23423)
@@ -1201,7 +1217,9 @@ def check_smw_logdet(p, q, r, s):
 
     _, bd = np.linalg.slogdet(B)
     d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
-    assert_allclose(d1, d2)
+    # GH 5642, OSX OpenBlas tolerance increase
+    rtol = 1e-6 if PLATFORM_OSX else 1e-7
+    assert_allclose(d1, d2, rtol=rtol)
 
 
 class TestSMWLogdet(object):
@@ -1215,3 +1233,69 @@ class TestSMWLogdet(object):
     @pytest.mark.parametrize("s", [0, 0.5])
     def test_smw_logdet(self, p, q, r, s):
         check_smw_logdet(p, q, r, s)
+
+
+def test_get_distribution():
+
+    np.random.seed(234)
+
+    n = 100
+    n_groups = 10
+    fe_params = np.r_[1, -2]
+    cov_re = np.asarray([[1, 0.5], [0.5, 2]])
+    vcomp = np.r_[0.5**2, 1.5**2]
+    scale = 1.5
+
+    exog_fe = np.random.normal(size=(n, 2))
+    exog_re = np.random.normal(size=(n, 2))
+    exog_vca = np.random.normal(size=(n, 2))
+    exog_vcb = np.random.normal(size=(n, 2))
+
+    groups = np.repeat(np.arange(n_groups, dtype=np.int),
+                       n / n_groups)
+
+    ey = np.dot(exog_fe, fe_params)
+
+    u = np.random.normal(size=(n_groups, 2))
+    u = np.dot(u, np.linalg.cholesky(cov_re).T)
+
+    u1 = np.sqrt(vcomp[0]) * np.random.normal(size=(n_groups, 2))
+    u2 = np.sqrt(vcomp[1]) * np.random.normal(size=(n_groups, 2))
+
+    y = ey + (u[groups, :] * exog_re).sum(1)
+    y += (u1[groups, :] * exog_vca).sum(1)
+    y += (u2[groups, :] * exog_vcb).sum(1)
+    y += np.sqrt(scale) * np.random.normal(size=n)
+
+    df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0], "x2": exog_fe[:, 1],
+                       "z0": exog_re[:, 0], "z1": exog_re[:, 1],
+                       "grp": groups})
+    df["z2"] = exog_vca[:, 0]
+    df["z3"] = exog_vca[:, 1]
+    df["z4"] = exog_vcb[:, 0]
+    df["z5"] = exog_vcb[:, 1]
+
+    vcf = {"a": "0 + z2 + z3", "b": "0 + z4 + z5"}
+    m = MixedLM.from_formula("y ~ 0 + x1 + x2", groups="grp",
+                             re_formula="0 + z0 + z1",
+                             vc_formula=vcf, data=df)
+
+    # Build a params vector that is comparable to
+    # MixedLMResults.params
+    import statsmodels
+    mp = statsmodels.regression.mixed_linear_model.MixedLMParams
+    po = mp.from_components(fe_params=fe_params, cov_re=cov_re,
+                            vcomp=vcomp)
+    pa = po.get_packed(has_fe=True, use_sqrt=False)
+    pa[len(fe_params):] /= scale
+
+    # Get a realization
+    dist = m.get_distribution(pa, scale, None)
+    yr = dist.rvs(0)
+
+    # Check the overall variance
+    v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()
+    v += vcomp[0] * (exog_vca**2).sum(1).mean()
+    v += vcomp[1] * (exog_vcb**2).sum(1).mean()
+    v += scale
+    assert_allclose(np.var(yr - ey), v, rtol=1e-2, atol=1e-4)

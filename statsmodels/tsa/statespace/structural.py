@@ -251,7 +251,7 @@ class UnobservedComponents(MLEModel):
     After fitting the model, each unobserved seasonal component modeled in the
     frequency domain is available in the results class in the `freq_seasonal`
     attribute.
-    
+
     **Cycle**
 
     The cyclical component is intended to capture cyclical effects at time

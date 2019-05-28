@@ -81,7 +81,7 @@ class KernelReg(GenericKDE):
         The default values for the efficient bandwidth estimation.
 
     Attributes
-    ---------
+    ----------
     bw: array_like
         The bandwidth parameters.
     """
@@ -483,7 +483,7 @@ class KernelCensoredReg(KernelReg):
         The default values for the efficient bandwidth estimation
 
     Attributes
-    ---------
+    ----------
     bw: array_like
         The bandwidth parameters
     """
@@ -776,7 +776,7 @@ class TestRegCoefC(object):
         but slows down computation significantly.
         """
         n = np.shape(Y)[0]
-        lam = np.empty(shape=(self.nres, ))
+        lam = np.empty(shape=(self.nres,))
         for i in range(self.nres):
             ind = np.random.randint(0, n, size=(n, 1))
             Y1 = Y[ind, 0]
@@ -802,7 +802,7 @@ class TestRegCoefC(object):
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
         M = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                      defaults = EstimatorSettings(efficient=False)).fit()[0]
+                      defaults=EstimatorSettings(efficient=False)).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
@@ -875,15 +875,15 @@ class TestRegCoefD(TestRegCoefC):
 
         m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
-        I = np.zeros((n, 1))
+        zvec = np.zeros((n, 1))  # noqa:E741
         for i in dom_x[1:] :
             X1[:, self.test_vars] = i
             m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
-            I += (m1 - m0) ** 2
+            zvec += (m1 - m0) ** 2  # noqa:E741
 
-        I = I.sum(axis=0) / float(n)
-        return I
+        avg = zvec.sum(axis=0) / float(n)
+        return avg
 
     def _compute_sig(self):
         """Calculates the significance level of the variable tested"""

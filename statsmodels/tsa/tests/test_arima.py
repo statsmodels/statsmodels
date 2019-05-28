@@ -1,4 +1,5 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import os
 import warnings
@@ -7,12 +8,13 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises)
 import pandas as pd
-from pandas import PeriodIndex, DatetimeIndex
+from pandas import DatetimeIndex, date_range, period_range
 import pytest
 
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
@@ -29,10 +31,10 @@ ydata_path = os.path.join(current_path, 'results', 'y_arma_data.csv')
 with open(ydata_path, "rb") as fd:
     y_arma = np.genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
-sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
-cpi_predict_dates = PeriodIndex(start='2009q3', end='2015q4', freq='Q')
-sun_predict_dates = PeriodIndex(start='2008', end='2033', freq='A')
+cpi_dates = period_range(start='1959q1', end='2009q3', freq='Q')
+sun_dates = period_range(start='1700', end='2008', freq='A')
+cpi_predict_dates = period_range(start='2009q3', end='2015q4', freq='Q')
+sun_predict_dates = period_range(start='2008', end='2033', freq='A')
 
 
 def test_compare_arma():
@@ -156,9 +158,9 @@ class CheckArmaResultsMixin(object):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # smoke tests
-        table = self.res1.summary()
+        self.res1.summary()
 
 
 class CheckForecastMixin(object):
@@ -1599,6 +1601,7 @@ def test_arima_wrapper():
     assert_equal(res.model.endog_names, 'D.cpi')
 
 
+@pytest.mark.smoke
 def test_1dexog():
     # smoke test, this will raise an error if broken
     dta = load_macrodata_pandas().data
@@ -1624,7 +1627,7 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = pd.date_range(start='1700', end='2009', freq='A')[:309]
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
@@ -1634,7 +1637,7 @@ def test_arima_predict_bug():
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
     assert_(predict.index.equals(dta.index[-20:]))
     # partially out of sample
-    predict_dates = pd.DatetimeIndex(start='2000', end='2015', freq='A')
+    predict_dates = pd.date_range(start='2000', end='2015', freq='A')
     predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
     assert_(predict.index.equals(predict_dates))
     #assert_(1 == 0)
@@ -1660,11 +1663,13 @@ def test_arima_predict_pandas_nofreq():
              589.85, 580.0,587.62]
     data = pd.DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
 
-    #TODO: fix this names bug for non-string names names
-    arma = ARMA(data, order=(1,0)).fit(disp=-1)
+    # TODO: fix this names bug for non-string names names
+    with pytest.warns(ValueWarning, match="it has no associated frequency"):
+        arma = ARMA(data, order=(1, 0)).fit(disp=-1)
 
     # first check that in-sample prediction works
     predict = arma.predict()
+
     assert_(predict.index.equals(data.index))
 
     # check that this raises an exception when date not on index
@@ -1680,10 +1685,14 @@ def test_arima_predict_pandas_nofreq():
     assert_(len(predict) == 8)
     assert_(predict.index.equals(data.index[3:10+1]))
 
-    predict = arma.predict(start="2010-1-7", end=14)
+    with pytest.warns(ValueWarning, match="No supported index is available"):
+        predict = arma.predict(start="2010-1-7", end=14)
+
     assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
-    predict = arma.predict(start=3, end=14)
+    with pytest.warns(ValueWarning, match="No supported index is available"):
+        predict = arma.predict(start=3, end=14)
+
     assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
     # end can be a date if it's in the sample and on the index
@@ -1752,8 +1761,9 @@ def test_arima_predict_exog():
     #assert_almost_equal(predict, predict_expected.values, 3)
 
 
+@pytest.mark.smoke
 def test_arima_no_diff():
-    # issue 736
+    # GH#736
     # smoke test, predict will break if we have ARIMAResults but
     # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
     ar = [1, -.75, .15, .35]
@@ -1767,9 +1777,9 @@ def test_arima_no_diff():
     res.predict()
 
 
+@pytest.mark.smoke
 def test_arima_predict_noma():
-    # issue 657
-    # smoke test
+    # GH#657
     ar = [1, .75]
     ma = [1]
     np.random.seed(12345)
@@ -1852,7 +1862,6 @@ def test_bad_start_params():
 
 def test_arima_small_data_bug():
     # Issue 1038, too few observations with given order
-    from datetime import datetime
     import statsmodels.api as sm
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
@@ -1864,9 +1873,9 @@ def test_arima_small_data_bug():
     assert_raises(ValueError, mod.fit)
 
 
+@pytest.mark.smoke
 def test_arima_dataframe_integer_name():
-    # Smoke Test for Issue 1038
-    from datetime import datetime
+    # Smoke Test for Issue GH#1038
     import statsmodels.api as sm
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474,
@@ -2041,15 +2050,14 @@ class TestARMA00(object):
         ols_res = OLS(y_lead, X).fit()
         arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='nc', disp=-1)
         assert_almost_equal(ols_res.params, arma_res.params)
-        pass
 
 
 def test_arima_dates_startatend():
     # bug
     np.random.seed(18)
     x = pd.Series(np.random.random(36),
-                  index=pd.DatetimeIndex(start='1/1/1990',
-                                         periods=36, freq='M'))
+                  index=pd.date_range(start='1/1/1990',
+                                      periods=36, freq='M'))
     res = ARIMA(x, (1, 0, 0)).fit(disp=0)
     pred = res.predict(start=len(x), end=len(x))
     assert_(pred.index[0] == x.index.shift(1)[-1])
@@ -2070,7 +2078,7 @@ def test_plot_predict(close_figures):
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
 
@@ -2178,7 +2186,7 @@ def test_arima_exog_predict():
 
     dta = load_macrodata_pandas().data
     dates = pd.date_range("1959", periods=len(dta), freq='Q')
-    cpi_dates = PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+    cpi_dates = period_range(start='1959Q1', end='2009Q3', freq='Q')
     dta.index = cpi_dates
 
     data = dta
@@ -2186,7 +2194,7 @@ def test_arima_exog_predict():
     data['loggdp'] = np.log(data['realgdp'])
     data['logcons'] = np.log(data['realcons'])
 
-    forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
+    forecast_period = period_range(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
     data_sample = data.loc[dta.index < end]
 
@@ -2227,8 +2235,8 @@ def test_arima_exog_predict():
     mod111 = ARIMA(100 * np.asarray(data_sample['loginv']), (1, 1, 1),
                    # Stata differences also the exog
                    exog=ex)
-
-    res111 = mod111.fit(disp=0, solver='bfgs', maxiter=5000)
+    sv = [-0.94771574, 0.5869353, -0.32651653, 0.78066562, -0.68747501]
+    res111 = mod111.fit(start_params=sv, disp=0, solver='bfgs', maxiter=5000)
     exog_full_d = ex_scale * data[['loggdp', 'logcons']].diff()
     res111.predict(start=197, end=202, exog=exog_full_d.values[197:])
 
@@ -2260,18 +2268,21 @@ def test_arima_exog_predict():
          7.73245950636, 7.74935432862, 7.74449584691, 7.69589103679,
          7.59412746880, 7.59021764836, 7.59739267775])
 
+    # Relax tolerance on OSX due to frequent small failures
+    # GH 4657
+    tol = 1e-3 if PLATFORM_OSX or PLATFORM_WIN else 1e-4
     assert_allclose(predicted_arma_dp,
-                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+                    res_d101[-len(predicted_arma_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_fp,
-                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+                    res_f101[-len(predicted_arma_f):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_d,
-                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+                    res_d101[-len(predicted_arma_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arma_f,
-                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+                    res_f101[-len(predicted_arma_f):], rtol=tol, atol=tol)
     assert_allclose(predicted_arima_d / endog_scale,
-                    res_d111[-len(predicted_arima_d):], rtol=1e-4, atol=1e-4)
+                    res_d111[-len(predicted_arima_d):], rtol=tol, atol=tol)
     assert_allclose(predicted_arima_f / endog_scale,
-                    res_f111[-len(predicted_arima_f):], rtol=1e-4, atol=1e-4)
+                    res_f111[-len(predicted_arima_f):], rtol=tol, atol=tol)
 
     # test for forecast with 0 ar fix in #2457 numbers again from Stata
 
@@ -2302,15 +2313,15 @@ def test_arima_exog_predict():
     # TODO: Checking other results
     forecast_002 = forecast_002[0]
     assert_allclose(fpredict_002, res_f002[-len(fpredict_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
     assert_allclose(forecast_002, res_f002[-len(forecast_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
 
     # dynamic predict
     dpredict_002 = res_002.predict(start=193, end=202,
                                    exog=exog_full.values[197:], dynamic=True)
     assert_allclose(dpredict_002, res_d002[-len(dpredict_002):],
-                    rtol=1e-4, atol=1e-6)
+                    rtol=tol, atol=tol / 100.0)
 
     # in-sample dynamic predict should not need exog, #2982
     predict_3a = res_002.predict(start=100, end=120, dynamic=True)
@@ -2415,7 +2426,7 @@ def test_endog_int():
     # int endog should produce same result as float, #3504
 
     np.random.seed(123987)
-    y = np.random.random_integers(0, 15, size=100)
+    y = np.random.randint(0, 16, size=100)
     yf = y.astype(np.float64)
 
     res = AR(y).fit(5)
@@ -2432,3 +2443,25 @@ def test_endog_int():
     resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
     assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
     assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)
+
+
+def test_multidim_endog(reset_randomstate):
+    y = np.random.randn(1000, 2)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))
+
+    y = np.random.randn(1000, 1, 2)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))
+
+    y = np.random.randn(1000, 1, 1)
+    with pytest.raises(ValueError):
+        ARMA(y, order=(1, 1))
+
+
+def test_arima_no_full_output():
+    # GH 2752
+    endog = y_arma[:, 6]
+    mod = ARIMA(endog, (1, 0, 1))
+    res = mod.fit(trend="c", disp=-1, full_output=False)
+    assert res.mle_retvals is None

@@ -4,11 +4,7 @@ Created on Sat May 15 19:59:42 2010
 Author: josef-pktd
 """
 
-import numpy as np
-
 from statsmodels.sandbox import formula
-import statsmodels.sandbox.contrast_old as contrast
-
 
 
 #define a categorical variable - factor
@@ -19,7 +15,7 @@ f = ['a']*4 + ['b']*3 + ['c']*4
 fac = formula.Factor('ff', f)
 fac.namespace = {'ff':f}
 list(fac.values())
-[f for f in dir(fac) if f[0] != '_']
+[x for x in dir(fac) if x[0] != '_']
 
 #create dummy variable
 

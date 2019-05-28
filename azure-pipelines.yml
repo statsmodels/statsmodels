@@ -1,0 +1,27 @@
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/templates?view=azure-devops#passing-parameters
+
+trigger:
+- master
+
+variables:
+  MKL_NUM_THREADS: 1
+  NUMEXPR_NUM_THREADS: 1
+  OMP_NUM_THREADS: 1
+  OPENBLAS_NUM_THREADS: 1
+  PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
+
+jobs:
+- template: tools/ci/azure_template.yml
+  parameters:
+    name: Linux
+    vmImage: 'ubuntu-16.04'
+
+- template: tools/ci/azure_template.yml
+  parameters:
+    name: macOS
+    vmImage: 'macOS-10.13'
+
+- template: tools/ci/azure_template.yml
+  parameters:
+    name: Windows
+    vmImage: 'vs2017-win2016'

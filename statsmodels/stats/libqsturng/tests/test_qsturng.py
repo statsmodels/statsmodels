@@ -186,9 +186,10 @@ class TestPsturng(object):
     @pytest.mark.slow
     def test_100_random_values(self, reset_randomstate):
         n = 100
-        ps = np.random.random(n)*(.999 - .1) + .1
-        rs = np.random.randint(2, 101, n)
-        vs = np.random.random(n)*998. + 2.
+        random_state = np.random.RandomState(12345)
+        ps = random_state.random_sample(n)*(.999 - .1) + .1
+        rs = random_state.randint(2, 101, n)
+        vs = random_state.random_sample(n)*998. + 2.
         qs = qsturng(ps, rs, vs)
         estimates = psturng(qs, rs, vs)
         actuals = 1. - ps

@@ -16,6 +16,10 @@ outline for GEE.
 
 import numpy as np
 
+from statsmodels.regression.linear_model import yule_walker
+from statsmodels.stats.moment_helpers import cov2corr
+
+
 def corr_equi(k_vars, rho):
     '''create equicorrelated correlation matrix with rho on off diagonal
 
@@ -36,6 +40,7 @@ def corr_equi(k_vars, rho):
     corr.fill(rho)
     corr[np.diag_indices_from(corr)] = 1
     return corr
+
 
 def corr_ar(k_vars, ar):
     '''create autoregressive correlation matrix
@@ -76,7 +81,8 @@ def corr_arma(k_vars, ar, ma):
     from scipy.linalg import toeplitz
     from statsmodels.tsa.arima_process import arma2ar
 
-    ar = arma2ar(ar, ma, nobs=k_vars)[:k_vars]  #bug in arma2ar
+    # TODO: flesh out the comment below about a bug in arma2ar
+    ar = arma2ar(ar, ma, lags=k_vars)[:k_vars]  # bug in arma2ar
 
     return toeplitz(ar)
 
@@ -95,11 +101,11 @@ def corr2cov(corr, std):
     '''
     if np.size(std) == 1:
         std = std*np.ones(corr.shape[0])
-    cov = corr * std[:,None] * std[None, :]  #same as outer product
+    cov = corr * std[:, None] * std[None, :]  # same as outer product
     return cov
 
 
-def whiten_ar(x, ar_coefs):
+def whiten_ar(x, ar_coefs, order):
     """
     Whiten a series of columns according to an AR(p) covariance structure.
 
@@ -114,6 +120,7 @@ def whiten_ar(x, ar_coefs):
         The data to be whitened along axis 0
     ar_coefs : array
         coefficients of AR lag- polynomial,   TODO: ar or ar_coefs?
+    order : int
 
     Returns
     -------
@@ -124,16 +131,16 @@ def whiten_ar(x, ar_coefs):
 
     rho = ar_coefs
 
-    x = np.array(x, np.float64)  #make copy
-    #_x = x.copy()
-    #dimension handling is not DRY
+    x = np.array(x, np.float64)
+    _x = x.copy()
+    # TODO: dimension handling is not DRY
     # I think previous code worked for 2d because of single index rows in np
     if x.ndim == 2:
         rho = rho[:, None]
-    for i in range(self.order):
+    for i in range(order):
         _x[(i+1):] = _x[(i+1):] - rho[i] * x[0:-(i+1)]
 
-    return _x[self.order:]
+    return _x[order:]
 
 
 def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
@@ -160,16 +167,8 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
         inverse of the Toepliz matrix
 
     """
-    from scipy.linalg import toeplitz
-
-    R = toeplitz(r[:-1])
-
-    rho = np.linalg.solve(R, r[1:])
-    sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
-        return rho, np.sqrt(sigmasq), np.linalg.inv(R)
-    else:
-        return rho, np.sqrt(sigmasq)
+    return yule_walker(acov, order=order, method=method, df=df, inv=inv,
+                       demean=False)
 
 
 class ARCovariance(object):
@@ -194,12 +193,12 @@ class ARCovariance(object):
         return cls(ar_coefs=rho)
 
     def whiten(self, x):
-        return whiten_ar(x, self.ar_coefs)
+        return whiten_ar(x, self.ar_coefs, order=self.order)
 
     def corr(self, k_vars=None):
         if k_vars is None:
-            k_vars = len(self.ar)   #this could move into corr_arr
+            k_vars = len(self.ar)   # TODO: this could move into corr_arr
         return corr_ar(k_vars, self.ar)
 
     def cov(self, k_vars=None):
-        return cov2corr(corr(self, k_vars=None), self.sigma)
+        return cov2corr(self.corr(k_vars=None), self.sigma)
