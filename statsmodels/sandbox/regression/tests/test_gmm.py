@@ -10,6 +10,7 @@ from statsmodels.compat.python import lrange, lmap
 
 import os
 import copy
+import os
 
 import pytest
 import numpy as np
@@ -25,9 +26,7 @@ import statsmodels.sandbox.regression.gmm as gmm
 def get_griliches76_data():
     curdir = os.path.split(__file__)[0]
     path = os.path.join(curdir, 'griliches76.dta')
-    with pytest.warns(FutureWarning):
-        griliches76_data = iolib.genfromdta(path, missing_flt=np.NaN,
-                                            pandas=True)
+    griliches76_data = pd.read_stata(path)
 
     # create year dummies
     years = griliches76_data['year'].unique()

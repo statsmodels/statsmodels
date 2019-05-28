@@ -576,7 +576,7 @@ class TestCVXOPT(object):
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
     def test_cvxopt_versus_slsqp(self):
-        #Compares resutls from cvxopt to the standard slsqp
+        # Compares results from cvxopt to the standard slsqp
         self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
         res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
