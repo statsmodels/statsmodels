@@ -22,7 +22,7 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss', 'za', 'bds', 'pacf_burg', 'innovations_algo',
+           'adfuller', 'kpss', 'zivot_andrews', 'bds', 'pacf_burg', 'innovations_algo',
            'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -1622,7 +1622,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     return s_hat / nobs
 
 
-class ur_za(object):
+class ZivotAndrewsUnitRoot(object):
     """
     Class wrapper for Zivot-Andrews structural-break unit-root test
     """
@@ -1636,9 +1636,9 @@ class ur_za(object):
         The p-values are generated through Monte Carlo simulation using 100,000
         replications and 2000 data points.
         """
-        self.__za_critical_values = {}
+        self._za_critical_values = {}
         # constant-only model
-        self.__c = ((0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
+        self._c = ((0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
              (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
              (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
              (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
@@ -1654,9 +1654,9 @@ class ur_za(object):
              (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
              (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
              (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932), )
-        self.__za_critical_values['c'] = np.asarray(self.__c)
+        self._za_critical_values['c'] = np.asarray(self._c)
         # trend-only model
-        self.__t = ((0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
+        self._t = ((0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
              (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
              (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
              (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
@@ -1672,9 +1672,9 @@ class ur_za(object):
              (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
              (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
              (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466), )
-        self.__za_critical_values['t'] = np.asarray(self.__t)
+        self._za_critical_values['t'] = np.asarray(self._t)
         # constant + trend model
-        self.__ct = ((0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
+        self._ct = ((0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
               (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
               (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
               (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
@@ -1690,9 +1690,9 @@ class ur_za(object):
               (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
               (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
               (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767), )
-        self.__za_critical_values['ct'] = np.asarray(self.__ct)
+        self._za_critical_values['ct'] = np.asarray(self._ct)
 
-    def __za_crit(self, stat, model='c'):
+    def _za_crit(self, stat, model='c'):
         """
         Linear interpolation for Zivot-Andrews p-values and critical values
 
@@ -1716,7 +1716,7 @@ class ur_za(object):
         The p-values are linear interpolated from the quantiles of the
         simulated ZA test statistic distribution
         """
-        table = self.__za_critical_values[model]
+        table = self._za_critical_values[model]
         y = table[:, 0]
         x = table[:, 1]
         # ZA cv table contains quantiles multiplied by 100
@@ -1727,7 +1727,7 @@ class ur_za(object):
                   "10%" : crit_value[2]}
         return pvalue, cvdict
 
-    def __quick_ols(self, endog, exog):
+    def _quick_ols(self, endog, exog):
         """
         Minimal implementation of LS estimator for internal use
         """
@@ -1880,11 +1880,11 @@ class ur_za(object):
                             exog.shape[1] - 1, o.df_model))
                 stats[bp] = o.tvalues[basecols - 1]
             else:
-                stats[bp] = self.__quick_ols(dy[baselags:], exog)[basecols - 1]
+                stats[bp] = self._quick_ols(dy[baselags:], exog)[basecols - 1]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1
-        crit = self.__za_crit(zastat, regression)
+        crit = self._za_crit(zastat, regression)
         pval = crit[0]
         cvdict = crit[1]
         return zastat, pval, cvdict, baselags, bpidx
@@ -1894,5 +1894,5 @@ class ur_za(object):
         return self.run(x, trim=trim, maxlag=maxlag, regression=regression,
                         autolag=autolag)
 
-za = ur_za()
-za.__doc__ = za.run.__doc__
+zivot_andrews = ZivotAndrewsUnitRoot()
+zivot_andrews.__doc__ = zivot_andrews.run.__doc__
