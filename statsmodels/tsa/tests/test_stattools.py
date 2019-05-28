@@ -1,4 +1,6 @@
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import lrange
 
 import os
@@ -9,12 +11,12 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
-from pandas import Series, DatetimeIndex, DataFrame
+from pandas import Series, date_range, DataFrame
 
-from statsmodels.datasets import macrodata, sunspots
+from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss, zivot_andrews,
                                        arma_order_select_ic, levinson_durbin,
@@ -100,9 +102,12 @@ class TestADFNoConstant(CheckADF):
         cls.res1 = adfuller(cls.x, regression="nc", autolag=None,
                 maxlag=4)
         cls.teststat = 3.5227498
-        cls.pvalue = .99999 # Stata does not return a p-value for noconstant.
-                        # Tau^max in MacKinnon (1994) is missing, so it is
-                        # assumed that its right-tail is well-behaved
+
+        cls.pvalue = .99999
+        # Stata does not return a p-value for noconstant.
+        # Tau^max in MacKinnon (1994) is missing, so it is
+        # assumed that its right-tail is well-behaved
+
         cls.critvalues = [-2.587, -1.950, -1.617]
 
 
@@ -261,6 +266,21 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0., 0.])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_ols_inefficient(self):
+        lag_len = 5
+        pacfols = pacf_ols(self.x, nlags=lag_len, efficient=False)
+        x = self.x.copy()
+        x -= x.mean()
+        n = x.shape[0]
+        lags = np.zeros((n - 5, 5))
+        lead = x[5:]
+        direct = np.empty(lag_len + 1)
+        direct[0] = 1.0
+        for i in range(lag_len):
+            lags[:, i] = x[5 - (i + 1):-(i + 1)]
+            direct[i + 1] = lstsq(lags[:, :(i + 1)], lead, rcond=None)[0][-1]
+        assert_allclose(pacfols, direct, atol=1e-8)
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
@@ -421,9 +441,10 @@ class TestGrangerCausality(object):
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
         gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
-        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'], decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                            decimal=7)
 
-    def test_granger_fails_on_nobs_check(self):
+    def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         X = np.random.rand(10, 2)
         grangercausalitytests(X, 2, verbose=False)  # This should pass.
@@ -447,8 +468,8 @@ class TestKPSS(SetupKPSS):
     macrodata['realgdp'] series.
     """
 
-    def test_fail_nonvector_input(self):
-        with warnings.catch_warnings(record=True) as w:
+    def test_fail_nonvector_input(self, reset_randomstate):
+        with warnings.catch_warnings(record=True):
             kpss(self.x)  # should be fine
 
         x = np.random.rand(20, 2)
@@ -490,11 +511,52 @@ class TestKPSS(SetupKPSS):
         assert_equal(store.nobs, len(self.x))
         assert_equal(store.lags, 3)
 
+    # test autolag function _kpss_autolag against SAS 9.3
     def test_lags(self):
-        with warnings.catch_warnings(record=True) as w:
-            kpss_stat, pval, lags, crits = kpss(self.x, 'c')
-        assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
-        # assert_warns(UserWarning, kpss, self.x)
+        # real GDP from macrodata data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='auto')[2]
+        assert_equal(lags, 9)
+        # real interest rates from macrodata data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c',
+                        lags='auto')[2]
+        assert_equal(lags, 7)
+        # volumes from nile data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(nile.load().data['volume'], 'c', lags='auto')[2]
+        assert_equal(lags, 5)
+        # log-coinsurance from randhie data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(randhie.load().data['lncoins'], 'ct', lags='auto')[2]
+        assert_equal(lags, 75)
+        # in-vehicle time from modechoice data set
+        with warnings.catch_warnings(record=True):
+            lags = kpss(modechoice.load().data['invt'], 'ct', lags='auto')[2]
+        assert_equal(lags, 18)
+
+    def test_kpss_fails_on_nobs_check(self):
+        # Test that if lags exceeds number of observations KPSS raises a clear error
+        nobs = len(self.x)
+        msg = (r"lags \({}\) must be <= number of observations \({}\)"
+               .format(nobs+1, nobs))
+        with pytest.raises(ValueError, match=msg):
+            kpss(self.x, 'c', lags=nobs+1)
+
+    def test_legacy_lags(self):
+        # Test legacy lags are the same
+        with warnings.catch_warnings(record=True):
+            lags = kpss(self.x, 'c', lags='legacy')[2]
+        assert_equal(lags, 15)
+
+    def test_unknown_lags(self):
+        # Test legacy lags are the same
+        with pytest.raises(ValueError):
+            kpss(self.x, 'c', lags='unknown')
+
+    def test_deprecation(self):
+        with pytest.deprecated_call():
+            kpss(self.x, 'c', lags=None)
 
 
 def test_pandasacovf():
@@ -502,9 +564,9 @@ def test_pandasacovf():
     assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
-def test_acovf2d():
+def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))
@@ -513,17 +575,18 @@ def test_acovf2d():
         acovf(x, fft=False)
 
 
-def test_acovf_fft_vs_convolution():
+@pytest.mark.parametrize('demean', [True, False])
+@pytest.mark.parametrize('unbiased', [True, False])
+def test_acovf_fft_vs_convolution(demean, unbiased):
     np.random.seed(1)
     q = np.random.normal(size=100)
 
-    for demean in [True, False]:
-        for unbiased in [True, False]:
-            F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
-            F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
-            assert_almost_equal(F1, F2, decimal=7)
+    F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
+    F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
+    assert_almost_equal(F1, F2, decimal=7)
 
 
+@pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
@@ -752,7 +815,7 @@ def test_innovations_errors():
         innovations_algo(acovf, rtol='none')
 
 
-def test_innovations_filter_brockwell_davis():
+def test_innovations_filter_brockwell_davis(reset_randomstate):
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
@@ -766,7 +829,7 @@ def test_innovations_filter_brockwell_davis():
     assert_allclose(resid, expected)
 
 
-def test_innovations_filter_pandas():
+def test_innovations_filter_pandas(reset_randomstate):
     ma = np.array([-0.9, 0.5])
     acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, _ = innovations_algo(acovf, nobs=10)
@@ -791,7 +854,7 @@ def test_innovations_filter_errors():
         innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
 
 
-def test_innovations_algo_filter_kalman_filter():
+def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
     ar_params = np.array([0.5])
@@ -819,6 +882,11 @@ def test_innovations_algo_filter_kalman_filter():
     assert_allclose(u, res.forecasts_error[0])
     assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
     assert_allclose(llf_obs, res.llf_obs)
+    atol = 1e-6 if PLATFORM_WIN else 0.0
+    assert_allclose(u, res.forecasts_error[0], atol=atol)
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
+                    atol=atol)
+    assert_allclose(llf_obs, res.llf_obs, atol=atol)
 
 
 def test_zivot_andrews():
@@ -858,3 +926,21 @@ def test_zivot_andrews():
             assert_almost_equal(res[1], 0.69111, decimal=3)
             assert_equal(res[3], 25)
             assert_equal(res[4], 7071)
+
+
+def test_adfuller_short_series(reset_randomstate):
+    y = np.random.standard_normal(7)
+    res = adfuller(y, store=True)
+    assert res[-1].maxlag == 1
+    y = np.random.standard_normal(2)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y)
+    y = np.random.standard_normal(3)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y, regression='ct')
+
+
+def test_adfuller_maxlag_too_large(reset_randomstate):
+    y = np.random.standard_normal(100)
+    with pytest.raises(ValueError, match='maxlag must be less than'):
+        adfuller(y, maxlag=51)
