@@ -572,7 +572,7 @@ class TestCVXOPT(object):
     def setup_class(cls):
         if not has_cvxopt:
             pytest.skip('Skipped test_cvxopt since cvxopt is not available')
-        cls.data = sm.datasets.spector.load()
+        cls.data = sm.datasets.spector.load(as_pandas=False)
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
     def test_cvxopt_versus_slsqp(self):

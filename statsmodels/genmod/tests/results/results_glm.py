@@ -1204,7 +1204,7 @@ class InvGauss(object):
         # set up data #
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "inv_gaussian.csv")
-        with open(filename, 'rb') as fd:
+        with open(filename, 'r') as fd:
             data = np.genfromtxt(fd, delimiter=",", dtype=float)[1:]
         self.endog = data[:5000, 0]
         self.exog = data[:5000, 1:]
