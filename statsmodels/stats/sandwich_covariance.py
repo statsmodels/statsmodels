@@ -102,10 +102,9 @@ Statistics 90, no. 3 (2008): 414–427.
 
 """
 from statsmodels.compat.python import range
-import pandas as pd
 import numpy as np
 
-from statsmodels.tools.grouputils import Group, group_sums
+from statsmodels.tools.grouputils import combine_indices, group_sums
 from statsmodels.stats.moment_helpers import se_cov
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
@@ -589,10 +588,9 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     #[0] because we get still also returns bse
     cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
-    group_intersection = Group(group)
-    #cov of cluster formed by intersection of two groups
+    # cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
-                        group_intersection.group_int,
+                        combine_indices(group)[0],
                         use_correction=use_correction)
 
     #robust cov matrix for union of groups

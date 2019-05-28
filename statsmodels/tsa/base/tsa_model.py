@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
                     PeriodIndex, RangeIndex, Timestamp, Series, Index,
-                    Float64Index)
+                    Float64Index, date_range, period_range)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -181,7 +181,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
-                    resampled_index = type(index)(
+                    resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq)
                     if not inferred_freq and not resampled_index.equals(index):
                         raise ValueError('The given frequency argument could'
@@ -303,6 +303,11 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Special handling for date indexes
         if date_index:
+            # Use index type to choose creation function
+            if index_class is DatetimeIndex:
+                index_fn = date_range
+            else:
+                index_fn = period_range
             # Integer key (i.e. already given a location)
             if isinstance(key, (int, long, np.integer)):
                 # Negative indices (that lie in the Index)
@@ -311,9 +316,9 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # Out-of-sample (note that we include key itself in the new
                 # index)
                 elif key > len(base_index) - 1:
-                    index = index_class(start=base_index[0],
-                                        periods=int(key + 1),
-                                        freq=base_index.freq)
+                    index = index_fn(start=base_index[0],
+                                     periods=int(key + 1),
+                                     freq=base_index.freq)
                     key = index[-1]
                 else:
                     key = index[key]
@@ -328,14 +333,14 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # Out-of-sample
                 if date_key > base_index[-1]:
                     # First create an index that may not always include `key`
-                    index = index_class(start=base_index[0], end=date_key,
-                                        freq=base_index.freq)
+                    index = index_fn(start=base_index[0], end=date_key,
+                                     freq=base_index.freq)
 
                     # Now make sure we include `key`
                     if not index[-1] == date_key:
-                        index = index_class(start=base_index[0],
-                                            periods=len(index) + 1,
-                                            freq=base_index.freq)
+                        index = index_fn(start=base_index[0],
+                                         periods=len(index) + 1,
+                                         freq=base_index.freq)
 
         # Get the location
         if date_index:
@@ -616,12 +621,12 @@ if __name__ == "__main__":
     import statsmodels.api as sm
     import pandas
 
-    data = sm.datasets.macrodata.load(as_pandas=False)
+    mdata = sm.datasets.macrodata.load(as_pandas=False)
 
     #make a DataFrame
     #TODO: attach a DataFrame to some of the datasets, for quicker use
     dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in data.data[['year','quarter']]]
+             for x in mdata.data[['year','quarter']]]
 
-    df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
+    df = pandas.DataFrame(mdata.data[['realgdp','realinv','realcons']], index=dates)
     ex_mod = TimeSeriesModel(df)

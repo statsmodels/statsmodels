@@ -12,8 +12,9 @@ from statsmodels.api import datasets
 
 import numpy as np
 from itertools import product
+
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # noqa:F401
 except ImportError:
     pass
 
@@ -112,25 +113,25 @@ def test_mosaic(close_figures):
     datas = datas.sort_values(['rate_marriage', 'religious'])
 
     num_to_desc = {1: 'awful', 2: 'bad', 3: 'intermediate',
-                      4: 'good', 5: 'wonderful'}
+                   4: 'good', 5: 'wonderful'}
     datas['rate_marriage'] = datas['rate_marriage'].map(num_to_desc)
     num_to_faith = {1: 'non religious', 2: 'poorly religious', 3: 'religious',
-                      4: 'very religious'}
+                    4: 'very religious'}
     datas['religious'] = datas['religious'].map(num_to_faith)
     num_to_cheat = {False: 'faithful', True: 'cheated'}
     datas['cheated'] = datas['cheated'].map(num_to_cheat)
     # finished cleaning
     _, ax = plt.subplots(2, 2)
     mosaic(datas, ['rate_marriage', 'cheated'], ax=ax[0, 0],
-                title='by marriage happiness')
+           title='by marriage happiness')
     mosaic(datas, ['religious', 'cheated'], ax=ax[0, 1],
-                title='by religiosity')
+           title='by religiosity')
     mosaic(datas, ['rate_marriage', 'religious', 'cheated'], ax=ax[1, 0],
-                title='by both', labelizer=lambda k:'')
+           title='by both', labelizer=lambda k:'')
     ax[1, 0].set_xlabel('marriage rating')
     ax[1, 0].set_ylabel('religion status')
     mosaic(datas, ['religious', 'rate_marriage'], ax=ax[1, 1],
-                title='inter-dependence', axes_label=False)
+           title='inter-dependence', axes_label=False)
     plt.suptitle("extramarital affairs (plot 3 of 4)")
 
 
@@ -141,7 +142,7 @@ def test_mosaic_very_complex(close_figures):
     # new function that does this automatically based on the type of data
     key_name = ['gender', 'age', 'health', 'work']
     key_base = (['male', 'female'], ['old', 'young'],
-                    ['healty', 'ill'], ['work', 'unemployed'])
+                ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
     data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
     props = {}
@@ -188,14 +189,15 @@ def test_axes_labeling(close_figures):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
     mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
     mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
-        label_rotation=[0, 45, 90, 0])
+           label_rotation=[0, 45, 90, 0])
     #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
 
 
+@pytest.mark.smoke
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
-    # SMOKE test  see #2286
+    # GH#2286
     import pandas as pd
     mydata = pd.DataFrame({'id2': {64: 'Angelica',
                                    65: 'DXW_UID', 66: 'casuid01',
@@ -211,8 +213,8 @@ def test_mosaic_empty_cells(close_figures):
                                    62: 'default', 63: 'default'}})
 
     ct = pd.crosstab(mydata.id1, mydata.id2)
-    fig, vals = mosaic(ct.T.unstack())
-    fig, vals = mosaic(mydata, ['id1','id2'])
+    _, vals = mosaic(ct.T.unstack())
+    _, vals = mosaic(mydata, ['id1','id2'])
 
 
 eq = lambda x, y: assert_(np.allclose(x, y))

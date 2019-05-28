@@ -147,8 +147,9 @@ What's currently there?
 from __future__ import print_function
 import numpy as np
 
-from statsmodels.sandbox.distributions.multivariate import (
-                mvstdtprob, mvstdnormcdf, mvnormcdf)
+from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+from .extras import mvnormcdf
+
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
     '''calculate expected value of function by Monte Carlo integration
@@ -506,7 +507,7 @@ class MVElliptical(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -549,7 +550,7 @@ class MVElliptical(object):
         '''standardize the random variable, i.e. subtract mean and whiten
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -582,7 +583,7 @@ class MVElliptical(object):
         The distribution will have zero mean and sigma equal to correlation
 
         Parameters
-        -----------
+        ----------
         x : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -726,7 +727,7 @@ class MVNormal0(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
+        ----------
         X : array-like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
@@ -982,7 +983,7 @@ class MVNormal(MVElliptical):
         '''
         #indices need to be nd arrays for broadcasting
         keep = np.asarray(indices)
-        given = np.asarray([i for i in range(self.nvars) if not i in keep])
+        given = np.asarray([i for i in range(self.nvars) if i not in keep])
         sigmakk = self.sigma[keep[:, None], keep]
         sigmagg = self.sigma[given[:, None], given]
         sigmakg = self.sigma[keep[:, None], given]

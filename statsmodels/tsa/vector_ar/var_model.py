@@ -163,7 +163,8 @@ def _var_acf(coefs, sig_u):
     vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
-    acf = acf[:k].T.reshape((p, k, k))
+    acf = [acf[:k, k * i:k * (i + 1)] for i in range(p)]
+    acf = np.array(acf)
 
     return acf
 
@@ -475,7 +476,7 @@ class LagOrderResults:
     def summary(self):  # basically copied from (now deleted) print_ic_table()
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
         str_data = np.array([["%#10.4g" % v for v in self.ics[c]] for c in cols],
-                       dtype=object).T
+                            dtype=object).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
             idx = int(self.selected_orders[col]), i
@@ -636,9 +637,9 @@ class VAR(tsbase.TimeSeriesModel):
         if self.exog is not None:
             x_names_to_add = [("exog%d" % i)
                               for i in range(self.exog.shape[1])]
-            self.data.xnames = self.data.xnames[:k_trend] + \
-                               x_names_to_add + \
-                               self.data.xnames[k_trend:]
+            self.data.xnames = (self.data.xnames[:k_trend] +
+                                x_names_to_add +
+                                self.data.xnames[k_trend:])
 
         return self._estimate_var(lags, trend=trend)
 
@@ -1335,6 +1336,12 @@ class VARResults(VARProcess):
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
+    def _cov_params(self):
+        """Wrapper to avoid FutureWarning.  Remove after 0.11"""
+        import warnings
+        with warnings.catch_warnings(record=True):
+            return self.cov_params
+
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
 
@@ -1367,7 +1374,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
+        return self._cov_params()[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1389,7 +1396,7 @@ class VARResults(VARProcess):
     def stderr(self):
         """Standard errors of coefficients, reshaped to match in size
         """
-        stderr = np.sqrt(np.diag(self.cov_params))
+        stderr = np.sqrt(np.diag(self._cov_params()))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1528,7 +1535,7 @@ class VARResults(VARProcess):
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
-                      seed=None, burn=100, cum=False):
+                  seed=None, burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
         Used for Sims-Zha error band calculation.
@@ -1627,7 +1634,7 @@ class VARResults(VARProcess):
         upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
-        I = np.eye(lower_dim)
+        I = np.eye(lower_dim)  # noqa:E741
         lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
                                  np.zeros((lower_dim, self.neqs))))
 
@@ -1784,7 +1791,7 @@ class VARResults(VARProcess):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self.cov_params, C.T))
+        middle = scipy.linalg.inv(chain_dot(C, self._cov_params(), C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
@@ -2095,7 +2102,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'sigma_u_mle': 'cov_eq',
               'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
-                                    _attrs)
+                                   _attrs)
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)

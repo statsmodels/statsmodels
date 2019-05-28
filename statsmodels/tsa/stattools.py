@@ -1,8 +1,10 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import division
 from statsmodels.compat.python import (iteritems, range, lrange, string_types,
                                        lzip, zip, long)
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -217,13 +219,22 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     x = np.asarray(x)
     nobs = x.shape[0]
 
+    ntrend = len(regression) if regression != 'nc' else 0
     if maxlag is None:
-        #from Greene referencing Schwert 1989
+        # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
-
+        # -1 for the diff
+        maxlag = min(nobs // 2 - ntrend - 1, maxlag)
+        if maxlag < 0:
+            raise ValueError('sample size is too short to use selected '
+                             'regression component')
+    elif maxlag > nobs // 2 - ntrend - 1:
+        raise ValueError('maxlag must be less than (nobs/2 - 1 - ntrend) '
+                         'where n trend is the number of included '
+                         'deterministic regressors')
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim='both', original='in')
-    nobs = xdall.shape[0]  # pylint: disable=E1103
+    nobs = xdall.shape[0]
 
     xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
@@ -235,10 +246,11 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1  # 1 for level  # pylint: disable=E1103
-        #search for lag length with smallest information criteria
-        #Note: use the same number of observations to have comparable IC
-        #aic and bic: smaller is better
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1
+        # 1 for level
+        # search for lag length with smallest information criteria
+        # Note: use the same number of observations to have comparable IC
+        # aic and bic: smaller is better
 
         if not regresults:
             icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
@@ -251,9 +263,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
         bestlag -= startlag  # convert to lag not column index
 
-        #rerun ols with best autolag
+        # rerun ols with best autolag
         xdall = lagmat(xdiff[:, None], bestlag, trim='both', original='in')
-        nobs = xdall.shape[0]   # pylint: disable=E1103
+        nobs = xdall.shape[0]
         xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag
@@ -448,7 +460,7 @@ def q_stat(x, nobs, type="ljungbox"):
         P-value of the Q statistic
 
     Notes
-    ------
+    -----
     Written to be used with acf.
     """
     x = np.asarray(x)
@@ -568,6 +580,12 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     pacf : 1d array
         partial autocorrelations, maxlag+1 elements
 
+    See Also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
     This solves yule_walker for each desired lag and contains
@@ -600,9 +618,11 @@ def pacf_burg(x, nlags=None, demean=True):
         Residual variance estimates where the value in position m is the
         residual variance in an AR model that includes m lags
 
-    See also
+    See Also
     --------
     statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_ols
 
     References
     ----------
@@ -640,9 +660,9 @@ def pacf_burg(x, nlags=None, demean=True):
     return pacf, sigma2
 
 
-#NOTE: this is incorrect.
-def pacf_ols(x, nlags=40):
-    '''Calculate partial autocorrelations
+def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
+    """
+    Calculate partial autocorrelations via OLS
 
     Parameters
     ----------
@@ -650,30 +670,71 @@ def pacf_ols(x, nlags=40):
         observations of time series for which pacf is calculated
     nlags : int
         Number of lags for which pacf is returned.  Lag 0 is not returned.
+    efficient : bool, optional
+        If true, uses the maximum number of available observations to compute
+        each partial autocorrelation. If not, uses the same number of
+        observations to compute all pacf values.
+    unbiased : bool, optional
+        Adjust each partial autocorrelation by n / (n - lag)
 
     Returns
     -------
     pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
+        partial autocorrelations, (maxlag,) array corresponding to lags
+        0, 1, ..., maxlag
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.
-    '''
-    #TODO: add warnings for Yule-Walker
-    #NOTE: demeaning and not using a constant gave incorrect answers?
-    #JP: demeaning should have a better estimate of the constant
-    #maybe we can compare small sample properties with a MonteCarlo
-    xlags, x0 = lagmat(x, nlags, original='sep')
-    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags)
-    pacf = [1.]
-    for k in range(1, nlags+1):
-        res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-        #np.take(xlags[k:], range(1,k+1)+[-1],
+    This solves a separate OLS estimation for each desired lag using method in
+    [1]_. Setting efficient to True has two effects. First, it uses
+    `nobs - lag` observations of estimate each pacf.  Second, it re-estimates
+    the mean in each regression. If efficient is False, then the data are first
+    demeaned, and then `nobs - maxlag` observations are used to estimate each
+    partial autocorrelation.
 
-        pacf.append(res.params[-1])
-    return np.array(pacf)
+    The inefficient estimator appears to have better finite sample properties.
+    This option should only be used in time series that are covariance
+    stationary.
+
+    OLS estimation of the pacf does not guarantee that all pacf values are
+    between -1 and 1.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+
+    References
+    ----------
+    .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
+       Time series analysis: forecasting and control. John Wiley & Sons, p. 66
+    """
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    x = np.squeeze(np.asarray(x))
+    if x.ndim != 1:
+        raise ValueError('x must be squeezable to a 1-d array')
+    if efficient:
+        xlags, x0 = lagmat(x, nlags, original='sep')
+        xlags = add_constant(xlags)
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[k:, :k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = params[-1]
+    else:
+        x = x - np.mean(x)
+        # Create a single set of lags for multivariate OLS
+        xlags, x0 = lagmat(x, nlags, original='sep', trim='both')
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[:, :k], x0, rcond=None)[0]
+            # Last coefficient corresponds to PACF value (see [1])
+            pacf[k] = params[-1]
+
+    if unbiased:
+        n = len(x)
+        pacf *= n / (n - np.arange(nlags + 1))
+
+    return pacf
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
@@ -685,16 +746,22 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     x : 1d array
         observations of time series for which pacf is calculated
     nlags : int
-        largest lag for which pacf is returned
-    method : {'ywunbiased', 'ywmle', 'ols'}
+        largest lag for which the pacf is returned
+    method : str
         specifies which method for the calculations to use:
 
-        - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf. Default.
-        - ywm or ywmle : yule walker without bias correction
-        - ols - regression of time series on lags of it and on constant
-        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
-        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+        - 'yw' or 'ywunbiased' : Yule-Walker with bias correction in
+          denominator for acovf. Default.
+        - 'ywm' or 'ywmle' : Yule-Walker without bias correction
+        - 'ols' : regression of time series on lags of it and on constant
+        - 'ols-inefficient' : regression of time series on lags using a single
+          common sample to estimate all pacf coefficients
+        - 'ols-unbiased' : regression of time series on lags with a bias
+          adjustment
+        - 'ld' or 'ldunbiased' : Levinson-Durbin recursion with bias correction
+        - 'ldb' or 'ldbiased' : Levinson-Durbin recursion without bias
+          correction
+
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
@@ -708,25 +775,38 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     confint : array, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
+    See Also
+    --------
+    statsmodels.tsa.stattools.acf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
-    This solves yule_walker equations or ols for each desired lag
-    and contains currently duplicate calculations.
+    Based on simulation evidence across a range of low-order ARMA models,
+    the best methods based on root MSE are Yule-Walker (MLW), Levinson-Durbin
+    (MLE) and Burg, respectively. The estimators with the lowest bias included
+    included these three in addition to OLS and OLS-unbiased.
+
+    Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
+    consistently worse than the other options.
     """
 
-    if method == 'ols':
-        ret = pacf_ols(x, nlags=nlags)
-    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+    if method in ('ols', 'ols-inefficient', 'ols-unbiased'):
+        efficient = 'inefficient' not in method
+        unbiased = 'unbiased' in method
+        ret = pacf_ols(x, nlags=nlags, efficient=efficient, unbiased=unbiased)
+    elif method in ('yw', 'ywu', 'ywunbiased', 'yw_unbiased'):
         ret = pacf_yw(x, nlags=nlags, method='unbiased')
-    elif method in ['ywm', 'ywmle', 'yw_mle']:
+    elif method in ('ywm', 'ywmle', 'yw_mle'):
         ret = pacf_yw(x, nlags=nlags, method='mle')
-    elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
+    elif method in ('ld', 'ldu', 'ldunbiased', 'ld_unbiased'):
         acv = acovf(x, unbiased=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        #print 'ld', ld_
         ret = ld_[2]
     # inconsistent naming with ywmle
-    elif method in ['ldb', 'ldbiased', 'ld_biased']:
+    elif method in ('ldb', 'ldbiased', 'ld_biased'):
         acv = acovf(x, unbiased=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
@@ -833,8 +913,8 @@ def periodogram(X):
     return pergr
 
 
-#copied from nitime and statsmodels\sandbox\tsa\examples\try_ld_nitime.py
-#TODO: check what to return, for testing and trying out returns everything
+# moved from sandbox.tsa.examples.try_ld_nitime, via nitime
+# TODO: check what to return, for testing and trying out returns everything
 def levinson_durbin(s, nlags=10, isacov=False):
     """
     Levinson-Durbin recursion for autoregressive processes
@@ -990,7 +1070,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
     >>> nobs = activity.shape[0]
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
 
-    See also
+    See Also
     --------
     innovations_filter
 
@@ -1063,7 +1143,7 @@ def innovations_filter(endog, theta):
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
     >>> resid = innovations_filter(rgdpg, theta)
 
-    See also
+    See Also
     --------
     innovations_algo
 
@@ -1510,9 +1590,12 @@ def kpss(x, regression='c', lags=None, store=False):
         Indicates the null hypothesis for the KPSS test
         * 'c' : The data is stationary around a constant (default)
         * 'ct' : The data is stationary around a trend
-    lags : int
-        Indicates the number of lags to be used. If None (default),
-        lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
+    lags : {None, str, int}, optional
+        Indicates the number of lags to be used. If None (default), lags is
+        calculated using the legacy method. If 'auto', lags is calculated
+        using the data-dependent method of Hobijn et al. (1998). See also
+        Andrews (1991), Newey & West (1994), and Schwert (1989). If set to
+        'legacy',  uses int(12 * (n / 100)**(1 / 4)) , as outlined in
         Schwert (1989).
     store : bool
         If True, then a result instance is returned additionally to
@@ -1549,9 +1632,21 @@ def kpss(x, regression='c', lags=None, store=False):
 
     References
     ----------
-    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing
-    the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
-    `Journal of Econometrics` 54, 159-178.
+    Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation consistent
+    covariance matrix estimation. Econometrica, 59: 817-858.
+
+    Hobijn, B., Frances, B.H., & Ooms, M. (2004). Generalizations of the
+    KPSS-test for stationarity. Statistica Neerlandica, 52: 483-502.
+
+    Kwiatkowski, D., Phillips, P.C.B., Schmidt, P., & Shin, Y. (1992). Testing
+    the null hypothesis of stationarity against the alternative of a unit root.
+    Journal of Econometrics, 54: 159-178.
+
+    Newey, W.K., & West, K.D. (1994). Automatic lag selection in covariance
+    matrix estimation. Review of Economic Studies, 61: 631-653.
+
+    Schwert, G. W. (1989). Tests for unit roots: A Monte Carlo investigation.
+    Journal of Business and Economic Statistics, 7 (2): 147-159.
     """
     from warnings import warn
 
@@ -1578,12 +1673,30 @@ def kpss(x, regression='c', lags=None, store=False):
         raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
-        # from Kwiatkowski et al. referencing Schwert (1989)
+        lags = 'legacy'
+        msg = 'The behavior of using lags=None will change in the next ' \
+              'release. Currently lags=None is the same as ' \
+              'lags=\'legacy\', and so a sample-size lag length is used. ' \
+              'After the next release, the default will change to be the ' \
+              'same as lags=\'auto\' which uses an automatic lag length ' \
+              'selection method. To silence this warning, either use ' \
+              '\'auto\' or \'legacy\''
+        warn(msg, DeprecationWarning)
+    if lags == 'legacy':
         lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+    elif lags == 'auto':
+        # autolag method of Hobijn et al. (1998)
+        lags = _kpss_autolag(resids, nobs)
+    else:
+        lags = int(lags)
+
+    if lags > nobs:
+        raise ValueError("lags ({}) must be <= number of observations ({})"
+                         .format(lags, nobs))
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
-    eta = sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
+    eta = np.sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
     s_hat = _sigma_est_kpss(resids, nobs, lags)
 
     kpss_stat = eta / s_hat
@@ -1615,7 +1728,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
     consistent estimator for the variance.
     """
-    s_hat = sum(resids**2)
+    s_hat = np.sum(resids**2)
     for i in range(1, lags + 1):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
@@ -1896,3 +2009,24 @@ class ZivotAndrewsUnitRoot(object):
 
 zivot_andrews = ZivotAndrewsUnitRoot()
 zivot_andrews.__doc__ = zivot_andrews.run.__doc__
+
+
+def _kpss_autolag(resids, nobs):
+    """
+    Computes the number of lags for covariance matrix estimation in KPSS test
+    using method of Hobijn et al (1998). See also Andrews (1991), Newey & West
+    (1994), and Schwert (1989). Assumes Bartlett / Newey-West kernel.
+    """
+    covlags = int(np.power(nobs, 2. / 9.))
+    s0 = np.sum(resids**2) / nobs
+    s1 = 0
+    for i in range(1, covlags + 1):
+        resids_prod = np.dot(resids[i:], resids[:nobs - i])
+        resids_prod /= (nobs / 2.)
+        s0 += resids_prod
+        s1 += i * resids_prod
+    s_hat = s1 / s0
+    pwr = 1. / 3.
+    gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
+    autolags = np.amin([nobs, int(gamma_hat * np.power(nobs, pwr))])
+    return autolags

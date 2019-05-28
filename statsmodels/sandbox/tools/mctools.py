@@ -144,7 +144,7 @@ class StatTestMC(object):
             #self.nreturn = nreturns = 1
             mcres = np.zeros(nrepl)
             mcres[0] = mcres0
-            for ii in range(1, repl-1, nreturns):
+            for ii in range(1, nrepl-1, nreturns):
                 x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
                 #should I ravel?
                 mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
@@ -232,7 +232,7 @@ class StatTestMC(object):
         '''
 
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -321,7 +321,7 @@ class StatTestMC(object):
         if kwds is None:
             kwds = ({},{})
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -450,7 +450,6 @@ class StatTestMC(object):
 
 if __name__ == '__main__':
     from scipy import stats
-    from statsmodels.iolib.table import SimpleTable
 
     from statsmodels.sandbox.stats.diagnostic import (
                     acorr_ljungbox, unitroot_adf)
@@ -472,7 +471,6 @@ if __name__ == '__main__':
 #    print(mc1.quantiles()
 
     print('\nLjung Box')
-    from statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
         s,p = acorr_ljungbox(x, lags=4)

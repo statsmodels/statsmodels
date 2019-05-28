@@ -30,10 +30,7 @@ see also VAR section in Notes.txt
 """
 from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_equal
 from scipy import signal
-#might not (yet) need the following
-from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.tsatools import lagmat
 
@@ -127,9 +124,7 @@ def varfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-#        #not necessary:
-#        if np.any(a.shape[1:] != nvar):
-#            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
+        # Note: we must have shape[1] == shape[2] == nvar
         yf = signal.convolve(x[:,:,None], a)
         yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
         return yvalid
@@ -485,7 +480,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -500,7 +495,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial horizontally in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -515,7 +510,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d square array with eye
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -563,7 +558,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isstructured:
@@ -592,7 +587,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isindependent:

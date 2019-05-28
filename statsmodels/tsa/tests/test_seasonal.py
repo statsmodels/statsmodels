@@ -3,7 +3,7 @@ import pandas as pd
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose)
 from statsmodels.tsa.seasonal import seasonal_decompose
-from pandas import DataFrame, DatetimeIndex
+from pandas import DataFrame, date_range
 
 
 class TestDecompose:
@@ -13,9 +13,9 @@ class TestDecompose:
         data = [-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                 530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
                 232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184]
-        cls.data = DataFrame(data, DatetimeIndex(start='1/1/1951',
-                                                 periods=len(data),
-                                                 freq='Q'))
+        cls.data = DataFrame(data, date_range(start='1/1/1951',
+                                              periods=len(data),
+                                              freq='Q'))
 
     def test_ndarray(self):
         res_add = seasonal_decompose(self.data.values, freq=4)
@@ -85,7 +85,9 @@ class TestDecompose:
     def test_pandas(self):
         res_add = seasonal_decompose(self.data, freq=4)
         freq_override_data = self.data.copy()
-        freq_override_data.index = DatetimeIndex(start='1/1/1951', periods=len(freq_override_data), freq='A')
+        freq_override_data.index = date_range(start='1/1/1951',
+                                              periods=len(freq_override_data),
+                                              freq='A')
         res_add_override = seasonal_decompose(freq_override_data, freq=4)
         seasonal = [62.46, 86.17, -88.38, -60.25, 62.46, 86.17, -88.38,
                     -60.25, 62.46, 86.17, -88.38, -60.25, 62.46, 86.17,
@@ -133,13 +135,15 @@ class TestDecompose:
         assert_almost_equal(res_mult.seasonal.values.squeeze(), seasonal, 4)
         assert_almost_equal(res_mult.trend.values.squeeze(), trend, 2)
         assert_almost_equal(res_mult.resid.values.squeeze(), random, 4)
-        assert_almost_equal(res_mult_override.seasonal.values.squeeze(), seasonal, 4)
+        assert_almost_equal(res_mult_override.seasonal.values.squeeze(),
+                            seasonal, 4)
         assert_almost_equal(res_mult_override.trend.values.squeeze(), trend, 2)
-        assert_almost_equal(res_mult_override.resid.values.squeeze(), random, 4)
+        assert_almost_equal(res_mult_override.resid.values.squeeze(), random,
+                            4)
         assert_equal(res_mult.seasonal.index.values.squeeze(),
-                            self.data.index.values)
+                     self.data.index.values)
 
-    def test_pandas_nofreq(self):
+    def test_pandas_nofreq(self, reset_randomstate):
         # issue #3503
         nobs = 100
         dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))

@@ -1,6 +1,8 @@
 import numpy as np
 from numpy.testing import assert_equal, assert_
-from statsmodels.stats.regularized_covariance import _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov, RegularizedInvCovariance
+from statsmodels.stats.regularized_covariance import (
+    _calc_nodewise_row, _calc_nodewise_weight,
+    _calc_approx_inv_cov, RegularizedInvCovariance)
 
 
 def test_calc_nodewise_row():

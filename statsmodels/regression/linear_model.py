@@ -40,9 +40,8 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
+from statsmodels.tools.tools import chain_dot, pinv_extended
+from statsmodels.tools.decorators import (cache_readonly,
                                           cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -66,7 +65,7 @@ _fit_regularized_doc =\
         Parameters
         ----------
         method : string
-            Only the 'elastic_net' approach is currently implemented.
+            'elastic_net' and 'sqrt_lasso' are currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -105,10 +104,8 @@ _fit_regularized_doc =\
 
         Notes
         -----
-
-        The elastic net approach closely follows that implemented in
-        the glmnet package in R.  The penalty is a combination of L1
-        and L2 penalties.
+        The elastic net uses a combination of L1 and L2 penalties.
+        The implementation closely follows the glmnet package in R.
 
         The function that is minimized is:
 
@@ -135,11 +132,32 @@ _fit_regularized_doc =\
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
+        The square root lasso approach is a variation of the Lasso
+        that is largely self-tuning (the optimal tuning parameter
+        does not depend on the standard deviation of the regression
+        errors).  If the errors are Gaussian, the tuning parameter
+        can be taken to be
+
+        alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
+
+        where n is the sample size and p is the number of predictors.
+
+        The square root lasso uses the following keyword arguments:
+
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+
         References
         ----------
         Friedman, Hastie, Tibshirani (2008).  Regularization paths for
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
+
+        A Belloni, V Chernozhukov, L Wang (2011).  Square-root Lasso:
+        pivotal recovery of sparse signals via conic programming.
+        Biometrika 98(4), 791-806.
+        https://arxiv.org/pdf/1009.5689.pdf
         """
 
 
@@ -255,7 +273,7 @@ class RegressionModel(base.LikelihoodModel):
         A RegressionResults class instance.
 
         See Also
-        ---------
+        --------
         regression.linear_model.RegressionResults
         regression.linear_model.RegressionResults.get_robustcov_results
 
@@ -478,7 +496,7 @@ class GLS(RegressionModel):
         GLS whiten method.
 
         Parameters
-        -----------
+        ----------
         X : array-like
             Data to be whitened.
 
@@ -620,7 +638,7 @@ class WLS(RegressionModel):
     See regression.GLS
 
     Examples
-    ---------
+    --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
     >>> Y = [1,3,4,5,2,3,4]
@@ -963,19 +981,28 @@ class OLS(WLS):
                         refit=False, **kwargs):
         # Docstring attached below
 
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method not in ("elastic_net", "sqrt_lasso"):
+            msg = "Unknown method '%s' for fit_regularized" % method
+            raise ValueError(msg)
+
+        # Set default parameters.
+        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
+                    "zero_tol": 1e-8}
+        kwargs.update(defaults)
+
+        if method == "sqrt_lasso":
+            from statsmodels.base.elastic_net import (
+                RegularizedResults, RegularizedResultsWrapper
+            )
+            params = self._sqrt_lasso(alpha, refit, kwargs["zero_tol"])
+            results = RegularizedResults(self, params)
+            return RegularizedResultsWrapper(results)
+
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if L1_wt == 0:
             return self._fit_ridge(alpha)
-
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-
-        # Set default parameters.
-        defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
-                    "zero_tol": 1e-10}
-        defaults.update(kwargs)
 
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
@@ -1001,6 +1028,51 @@ class OLS(WLS):
                               **defaults)
 
     fit_regularized.__doc__ = _fit_regularized_doc
+
+    def _sqrt_lasso(self, alpha, refit, zero_tol):
+
+        try:
+            import cvxopt
+        except ImportError:
+            msg = "sqrt_lasso fitting requires the cvxopt module to be installed"
+            raise ValueError(msg)
+
+        n = len(self.endog)
+        p = self.exog.shape[1]
+
+        h0 = cvxopt.matrix(0., (2*p+1, 1))
+        h1 = cvxopt.matrix(0., (n+1, 1))
+        h1[1:, 0] = cvxopt.matrix(self.endog, (n, 1))
+
+        G0 = cvxopt.spmatrix([], [], [], (2*p+1, 2*p+1))
+        for i in range(1, 2*p+1):
+            G0[i, i] = -1
+        G1 = cvxopt.matrix(0., (n+1, 2*p+1))
+        G1[0, 0] = -1
+        G1[1:, 1:p+1] = self.exog
+        G1[1:, p+1:] = -self.exog
+
+        c = cvxopt.matrix(alpha / n, (2*p + 1, 1))
+        c[0] = 1 / np.sqrt(n)
+
+        from cvxopt import solvers
+        solvers.options["show_progress"] = False
+
+        rslt = solvers.socp(c, Gl=G0, hl=h0, Gq=[G1], hq=[h1])
+        x = np.asarray(rslt['x']).flat
+        bp = x[1:p+1]
+        bn = x[p+1:]
+        params = bp - bn
+
+        if not refit:
+            return params
+
+        ii = np.flatnonzero(np.abs(params) > zero_tol)
+        rfr = OLS(self.endog, self.exog[:, ii]).fit()
+        params *= 0
+        params[ii] = rfr.params
+
+        return params
 
     def _fit_ridge(self, alpha):
         """
@@ -1478,7 +1550,7 @@ class RegressionResults(base.LikelihoodModelResults):
         super(RegressionResults, self).__init__(
             model, params, normalized_cov_params, scale)
 
-        self._cache = resettable_cache()
+        self._cache = {}
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
         else:
@@ -1494,7 +1566,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 'covariance matrix of the errors is correctly ' +
                 'specified.'}
             if use_t is None:
-                self.use_t = True  # TODO: class default
+                use_t = True  # TODO: class default
+            self.use_t = use_t
         else:
             if cov_kwds is None:
                 cov_kwds = {}
@@ -2179,12 +2252,10 @@ class RegressionResults(base.LikelihoodModelResults):
         except in the case of cov_type `HCx`
         """
         import statsmodels.stats.sandwich_covariance as sw
+        from statsmodels.base.covtype import normalize_cov_type, descriptions
 
-        # normalize names
-        if cov_type == 'nw-panel':
-            cov_type = 'hac-panel'
-        if cov_type == 'nw-groupsum':
-            cov_type = 'hac-groupsum'
+        cov_type = normalize_cov_type(cov_type)
+
         if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
         if 'weights_func' in kwds and not callable(kwds['weights_func']):
@@ -2222,18 +2293,15 @@ class RegressionResults(base.LikelihoodModelResults):
         #       other models
         # TODO: make it DRYer   repeated code for checking kwds
         if cov_type in ['fixed scale', 'fixed_scale']:
-            res.cov_kwds['description'] = ('Standard Errors are based on ' +
-                                           'fixed scale')
+            res.cov_kwds['description'] = descriptions['fixed_scale']
 
             res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
             res.cov_params_default = scale * res.normalized_cov_params
         elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
-                raise ValueError('heteroscedasticity robust covarians ' +
+                raise ValueError('heteroscedasticity robust covariance '
                                  'does not use keywords')
-            res.cov_kwds['description'] = (
-                'Standard Errors are heteroscedasticity ' +
-                'robust ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions[cov_type.upper()]
             # TODO cannot access cov without calling se first
             getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
@@ -2244,11 +2312,9 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['weights_func'] = weights_func
             use_correction = kwds.get('use_correction', False)
             res.cov_kwds['use_correction'] = use_correction
-            res.cov_kwds['description'] = (
-                'Standard Errors are heteroscedasticity and ' +
-                'autocorrelation robust (HAC) using %d lags and %s small ' +
-                'sample correction') % (maxlags,
-                                        ['without', 'with'][use_correction])
+            res.cov_kwds['description'] = descriptions['HAC'].format(
+                maxlags=maxlags,
+                correction=['without', 'with'][use_correction])
 
             res.cov_params_default = sw.cov_hac_simple(
                 self, nlags=maxlags, weights_func=weights_func,
@@ -2290,9 +2356,7 @@ class RegressionResults(base.LikelihoodModelResults):
                     self, groups, use_correction=use_correction)[0]
             else:
                 raise ValueError('only two groups are supported')
-            res.cov_kwds['description'] = (
-                'Standard Errors are robust to' +
-                'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['cluster']
 
         elif cov_type.lower() == 'hac-panel':
             # cluster robust standard errors
@@ -2323,9 +2387,8 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                      weights_func=weights_func,
                                                      use_correction=use_correction)
-            res.cov_kwds['description'] = (
-                'Standard Errors are robust to' +
-                'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['HAC-Panel']
+
         elif cov_type.lower() == 'hac-groupsum':
             # Driscoll-Kraay standard errors
             res.cov_kwds['time'] = time = kwds['time']
@@ -2345,9 +2408,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_nw_groupsum(
                 self, maxlags, time, weights_func=weights_func,
                 use_correction=use_correction)
-            res.cov_kwds['description'] = (
-                        'Driscoll and Kraay Standard Errors are robust to ' +
-                        'cluster correlation ' + '(' + cov_type + ')')
+            res.cov_kwds['description'] = descriptions['HAC-Groupsum']
         else:
             raise ValueError('cov_type not recognized. See docstring for ' +
                              'available options and spelling')
@@ -2371,7 +2432,7 @@ class RegressionResults(base.LikelihoodModelResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -2390,20 +2451,18 @@ class RegressionResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
-
-        # TODO: import where we need it (for now), add as cached attributes
         from statsmodels.stats.stattools import (
             jarque_bera, omni_normtest, durbin_watson)
+
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
         eigvals = self.eigenvals
         condno = self.condition_number
 
+        # TODO: Avoid adding attributes in non-__init__
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[-1])
@@ -2413,7 +2472,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # diagn_right_header = ['Residual stats']
 
         # TODO: requiring list/iterable is a bit annoying
-        # need more control over formatting
+        #   need more control over formatting
         # TODO: default don't work if it's not identically spelled
 
         top_left = [('Dep. Variable:', None),
@@ -2422,8 +2481,8 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]), TODO: spelling
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
         if hasattr(self, 'cov_type'):
@@ -2434,7 +2493,7 @@ class RegressionResults(base.LikelihoodModelResults):
                      ('Adj. R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue]),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+                     ('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
@@ -2482,7 +2541,7 @@ class RegressionResults(base.LikelihoodModelResults):
             wstr += "matrix is singular."
             wstr = wstr % eigvals[-1]
             etext.append(wstr)
-        elif condno > 1000:  # TODO: what is recommended
+        elif condno > 1000:  # TODO: what is recommended?
             wstr = "The condition number is large, %6.3g. This might "
             wstr += "indicate that there are\n"
             wstr += "strong multicollinearity or other numerical "
@@ -2498,25 +2557,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return smry
 
-        #  top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-        #                    yname=yname, xname=xname,
-        #                    title=self.model.__class__.__name__ + ' ' +
-        #                    "Regression Results")
-        #  par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-        #                       use_t=False)
-        #
-        #  diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-        #                      yname=yname, xname=xname,
-        #                      title="Linear Model")
-        #
-        #  return summary_return([top, par, diagn], return_fmt=return_fmt)
-
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
         """Experimental summary function to summarize the regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -2537,8 +2583,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
 
         """
         # Diagnostics
@@ -2613,7 +2658,7 @@ class OLSResults(RegressionResults):
             the instance has methods to calculate the main influence and
             outlier measures for the OLS regression
 
-        See also
+        See Also
         --------
         statsmodels.stats.outliers_influence.OLSInfluence
         """
@@ -2621,7 +2666,7 @@ class OLSResults(RegressionResults):
         return OLSInfluence(self)
 
     def outlier_test(self, method='bonf', alpha=.05, labels=None,
-                 order=False, cutoff=None):
+                     order=False, cutoff=None):
         """
         Test observations for outliers according to method
 
@@ -2875,47 +2920,3 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
 
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
-    data.exog = add_constant(data.exog, prepend=False)
-    ols_results = OLS(data.endog, data.exog).fit()  # results
-    gls_results = GLS(data.endog, data.exog).fit()  # results
-    print(ols_results.summary())
-    tables = ols_results.summary(returns='tables')
-    csv = ols_results.summary(returns='csv')
-"""
-    Summary of Regression Results
-=======================================
-| Dependent Variable:            ['y']|
-| Model:                           OLS|
-| Method:                Least Squares|
-| Date:               Tue, 29 Jun 2010|
-| Time:                       22:32:21|
-| # obs:                          16.0|
-| Df residuals:                    9.0|
-| Df model:                        6.0|
-===========================================================================
-|            coefficient       std. error      t-statistic           prob.|
----------------------------------------------------------------------------
-| x1             15.0619          84.9149           0.1774          0.8631|
-| x2             -0.0358           0.0335          -1.0695          0.3127|
-| x3             -2.0202           0.4884          -4.1364        0.002535|
-| x4             -1.0332           0.2143          -4.8220       0.0009444|
-| x5             -0.0511           0.2261          -0.2261          0.8262|
-| x6           1829.1515         455.4785           4.0159        0.003037|
-| const    -3482258.6346      890420.3836          -3.9108        0.003560|
-===========================================================================
-|                        Models stats                      Residual stats |
----------------------------------------------------------------------------
-| R-squared:                 0.995479    Durbin-Watson:           2.55949 |
-| Adjusted R-squared:        0.992465    Omnibus:                0.748615 |
-| F-statistic:                330.285    Prob(Omnibus):          0.687765 |
-| Prob (F-statistic):     4.98403e-10    JB:                     0.352773 |
-| Log likelihood:            -109.617    Prob(JB):               0.838294 |
-| AIC criterion:              233.235    Skew:                   0.419984 |
-| BIC criterion:              238.643    Kurtosis:                2.43373 |
----------------------------------------------------------------------------
-"""

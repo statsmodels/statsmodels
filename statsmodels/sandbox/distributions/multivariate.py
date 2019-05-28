@@ -17,9 +17,9 @@ Genz and Bretz for formula
 from __future__ import print_function
 import numpy as np
 from scipy import integrate, stats, special
-from scipy.stats import chi,chi2
+from scipy.stats import chi
 
-from .extras import mvnormcdf, mvstdnormcdf, mvnormcdf
+from .extras import mvstdnormcdf
 
 from numpy import exp as np_exp
 from numpy import log as np_log
@@ -77,7 +77,7 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
     and the integration.
     """
     kwds = dict(args=(a, b, R, df), epsabs=1e-4, epsrel=1e-2, limit=150)
-    if not quadkwds is None:
+    if quadkwds is not None:
         kwds.update(quadkwds)
     lower, upper = chi.ppf([ieps, 1 - ieps], df)
     res, err = integrate.quad(funbgh2, lower, upper, **kwds)

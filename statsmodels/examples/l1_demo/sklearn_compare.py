@@ -19,12 +19,9 @@ The results "prove" that the regularization paths are the same.  Note that
 from __future__ import print_function
 from statsmodels.compat.python import range, lrange
 from sklearn import linear_model
-from sklearn import datasets
 import statsmodels.api as sm
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb  # pdb.set_trace
-import sys
 
 ## Decide which dataset to use
 # Use either spector or anes96
@@ -85,7 +82,9 @@ s = np.zeros(N)
 s = np.searchsorted(sk_special_X, sm_special_X)
 
 ## Plot
-plt.figure(2);plt.clf();plt.grid()
+plt.figure(2)
+plt.clf()
+plt.grid()
 plt.xlabel('Index in sklearn simulation')
 plt.ylabel('Coefficient value')
 plt.title('Regularization Paths')

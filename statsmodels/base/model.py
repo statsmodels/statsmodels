@@ -7,7 +7,7 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
                                         t_test_pairwise)
-from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
@@ -129,7 +129,7 @@ class Model(object):
         model : Model instance
 
         Notes
-        ------
+        -----
         data must define __getitem__ with the keys in the formula terms
         args and kwargs are passed on to the model instantiation. E.g.,
         a numpy structured or rec array, a dictionary, or a pandas DataFrame.
@@ -498,8 +498,8 @@ class LikelihoodModel(Model):
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1., **kwds)
 
         # TODO: hardcode scale?
+        mlefit.mle_retvals = retvals
         if isinstance(retvals, dict):
-            mlefit.mle_retvals = retvals
             if warn_convergence and not retvals['converged']:
                 from warnings import warn
                 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -962,7 +962,7 @@ class Results(object):
         If a formula was used, then exog is processed in the same way as
         the original data. This transformation needs to have key access to the
         same variable names, and can be a pandas DataFrame or a dict like
-        object.
+        object that contains numpy arrays.
 
         If no formula was used, then the provided exog needs to have the
         same number of columns as the original exog in the model. No
@@ -993,7 +993,15 @@ class Results(object):
                     exog = pd.DataFrame(exog).T
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
-            exog = dmatrix(design_info, exog, return_type="dataframe")
+            try:
+                exog = dmatrix(design_info, exog, return_type="dataframe")
+            except Exception as exc:
+                msg = ('predict requires that you use a DataFrame when '
+                       'predicting from a model\nthat was created using the '
+                       'formula api.'
+                       '\n\nThe original error message returned by patsy is:\n'
+                       '{0}'.format(str(str(exc))))
+                raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
                 import warnings
                 if exog_index is None:
@@ -1022,7 +1030,7 @@ class Results(object):
             return predict_results
 
     def summary(self):
-        pass
+        raise NotImplementedError
 
 
 # TODO: public method?
@@ -1031,7 +1039,7 @@ class LikelihoodModelResults(Results):
     Class to contain results from likelihood models
 
     Parameters
-    -----------
+    ----------
     model : LikelihoodModel instance or subclass instance
         LikelihoodModelResults holds a reference to the model that is fit.
     params : 1d array_like
@@ -1222,6 +1230,9 @@ class LikelihoodModelResults(Results):
 
     def _get_robustcov_results(self, cov_type='nonrobust', use_self=True,
                                use_t=None, **cov_kwds):
+        if use_self is False:
+            raise ValueError("use_self should have been removed long ago.  "
+                             "See GH#4401")
         from statsmodels.base.covtype import get_robustcov_results
         if cov_kwds is None:
             cov_kwds = {}
@@ -1377,6 +1388,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
         use_t : bool, optional
@@ -1444,11 +1458,17 @@ class LikelihoodModelResults(Results):
         ==============================================================================
 
         See Also
-        ---------
+        --------
         tvalues : individual t statistics
         f_test : for F tests
         patsy.DesignInfo.linear_constraint
         """
+        if scale is not None:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
         from patsy import DesignInfo
         names = self.model.data.param_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
@@ -1520,6 +1540,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             Default is 1.0 for no scaling.
         invcov : array-like, optional
             A q x q array to specify an inverse covariance matrix based on a
@@ -1591,13 +1614,18 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
-        res = self.wald_test(r_matrix, cov_p=cov_p, scale=scale,
-                             invcov=invcov, use_f=True)
+        if scale != 1.0:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
+        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True)
         return res
 
     # TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
-                  use_f=None):
+                  use_f=None, df_constraints=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1615,6 +1643,9 @@ class LikelihoodModelResults(Results):
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+
+            .. deprecated:: 0.10.0
+
             Default is 1.0 for no scaling.
         invcov : array-like, optional
             A q x q array to specify an inverse covariance matrix based on a
@@ -1631,7 +1662,7 @@ class LikelihoodModelResults(Results):
         res : ContrastResults instance
             The results for the test are attributes of this results instance.
 
-        See also
+        See Also
         --------
         statsmodels.stats.contrast.ContrastResults
         f_test
@@ -1648,6 +1679,12 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
+        if scale != 1.0:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
+
         if use_f is None:
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
@@ -1685,11 +1722,15 @@ class LikelihoodModelResults(Results):
             J_ = np.linalg.matrix_rank(cov_p)
             if J_ < J:
                 import warnings
-                from statsmodels.tools.sm_exceptions import ValueWarning
                 warnings.warn('covariance of constraints does not have full '
                               'rank. The number of constraints is %d, but '
                               'rank is %d' % (J, J_), ValueWarning)
                 J = J_
+
+        # TODO streamline computation, we don't need to compute J if given
+        if df_constraints is not None:
+            # let caller override J by df_constraint
+            J = df_constraints
 
         if (hasattr(self, 'mle_settings') and
                 self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
@@ -1801,7 +1842,7 @@ class LikelihoodModelResults(Results):
         else:
             # check by exog/params names if there is no formula info
             for col, name in enumerate(result.model.exog_names):
-                constraint_matrix = identity[col]
+                constraint_matrix = np.atleast_2d(identity[col])
 
                 # check if in combined
                 for cname in combine_terms:
@@ -1824,7 +1865,7 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue, constraint.shape[0]]
+            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
@@ -1927,7 +1968,7 @@ class LikelihoodModelResults(Results):
 
 
         Returns
-        --------
+        -------
         conf_int : array
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
@@ -2237,7 +2278,7 @@ class ResultMixin(object):
     def get_nlfun(self, fun):
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
-        pass
+        raise NotImplementedError
 
 
 class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
@@ -2314,14 +2355,14 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 
-        self._cache = resettable_cache()
+        self._cache = {}
         self.__dict__.update(mlefit.__dict__)
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -2340,9 +2381,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
@@ -2351,15 +2390,11 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]),
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
-        top_right = [  # ('R-squared:', ["%#8.3f" % self.rsquared]),
-                       # ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                       # ('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                       # ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+        top_right = [('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
@@ -2373,6 +2408,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=False)
+                              use_t=self.use_t)
 
         return smry

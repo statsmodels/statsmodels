@@ -407,7 +407,7 @@ cdef class {{prefix}}Statespace(object):
         """
         initialize_known(initial_state, initial_state_cov)
         """
-        tools.validate_vector_shape('inital state', &initial_state.shape[0], self.k_states, None)
+        tools.validate_vector_shape('initial state', &initial_state.shape[0], self.k_states, None)
         tools.validate_matrix_shape('initial state covariance', &initial_state_cov.shape[0], self.k_states, self.k_states, None)
 
         self.initial_state = initial_state

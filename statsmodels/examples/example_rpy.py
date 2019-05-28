@@ -20,7 +20,6 @@ some basic models for comparisons of results to statsmodels.
 from __future__ import print_function
 from statsmodels.compat.python import iterkeys
 from rpy import r
-import numpy as np
 import statsmodels.api as sm
 
 
@@ -39,7 +38,6 @@ if 1 in examples:
 if 2 in examples:
     data2 = sm.datasets.star98.load(as_pandas=False)
     y2,x2 = data2.endog, sm.add_constant(data2.exog, prepend=False)
-    import rpy
     y2 = y2[:,0]/y2.sum(axis=1)
     des_cols2 = ['x.%d' % (i+1) for i in range(x2.shape[1])]
     formula2 = r('y~%s-1' % '+'.join(des_cols2))

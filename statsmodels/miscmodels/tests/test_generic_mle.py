@@ -41,7 +41,7 @@ class MyPareto(GenericLikelihoodModel):
 
     def nloglikeobs(self, params):
         #print params.shape
-        if not self.fixed_params is None:
+        if self.fixed_params is not None:
             #print 'using fixed'
             params = self.expandparams(params)
         b = params[0]
@@ -60,12 +60,19 @@ class MyPareto(GenericLikelihoodModel):
 
 
 class CheckGenericMixin(object):
-    #mostly smoke tests for now
-
+    # mostly smoke tests for now
 
     def test_summary(self):
-        self.res1.summary()
-        #print self.res1.summary()
+        summ = self.res1.summary()
+        check_str = 'P>|t|' if self.res1.use_t else 'P>|z|'
+        assert check_str in str(summ)
+
+    def test_use_t_summary(self):
+        orig_val = self.res1.use_t
+        self.res1.use_t = True
+        summ = self.res1.summary()
+        assert 'P>|t|' in str(summ)
+        self.res1.use_t = orig_val
 
     def test_ttest(self):
         self.res1.t_test(np.eye(len(self.res1.params)))

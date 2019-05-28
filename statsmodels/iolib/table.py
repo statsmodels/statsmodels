@@ -312,7 +312,7 @@ class SimpleTable(list):
         fmt.update(fmt_dict)
         ncols = max(len(row) for row in self)
         request = fmt.get('colwidths')
-        if request is 0:  # assume no extra space desired (e.g, CSV)
+        if request == 0:  # assume no extra space desired (e.g, CSV)
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
             request = [0] * ncols
@@ -450,7 +450,8 @@ class SimpleTable(list):
         if center:
             formatted_rows.append(r'\end{center}')
 
-        return '\n'.join(formatted_rows)
+        # Replace $$ due to bug in GH 5444
+        return '\n'.join(formatted_rows).replace('$$', ' ')
 
 
     def extend_right(self, table):
@@ -635,11 +636,12 @@ class Cell(object):
     A cell can belong to a Row, but does not have to.
     """
     def __init__(self, data='', datatype=None, row=None, **fmt_dict):
-        try:  # might have passed a Cell instance
+        if isinstance(data, Cell):
+            # might have passed a Cell instance
             self.data = data.data
             self._datatype = data.datatype
             self._fmt = data._fmt
-        except (AttributeError, TypeError):  # passed ordinary data
+        else:
             self.data = data
             self._datatype = datatype
             self._fmt = dict()
@@ -689,6 +691,16 @@ class Cell(object):
             raise ValueError('Unknown cell datatype: %s' % datatype)
         return align
 
+    @staticmethod
+    def _latex_escape(data, fmt, output_format):
+        if output_format != 'latex':
+            return data
+        if "replacements" in fmt:
+            if isinstance(data, str):
+                for repl in sorted(fmt["replacements"]):
+                    data = data.replace(repl, fmt["replacements"][repl])
+        return data
+
     def format(self, width, output_format='txt', **fmt_dict):
         """Return string.
         This is the default formatter for cells.
@@ -713,11 +725,10 @@ class Cell(object):
         if isinstance(datatype, (int, long)):
             datatype = datatype % len(data_fmts)  # constrain to indexes
             content = data_fmts[datatype] % (data,)
+            if datatype == 0:
+                content = self._latex_escape(content, fmt, output_format)
         elif datatype in fmt:
-            if "replacements" in fmt:
-                if isinstance(data, str):
-                    for repl in sorted(fmt["replacements"]):
-                        data = data.replace(repl, fmt["replacements"][repl])
+            data = self._latex_escape(data, fmt, output_format)
 
             dfmt = fmt.get(datatype)
             try:

@@ -36,7 +36,7 @@ compared yet.
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.tools.decorators import cache_readonly
 
 
 class DescrStatsW(object):
@@ -106,37 +106,37 @@ class DescrStatsW(object):
         if weights is None:
             self.weights = np.ones(self.data.shape[0])
         else:
-            #why squeeze?
+            # TODO: why squeeze?
             self.weights = np.asarray(weights).squeeze().astype(float)
         self.ddof = ddof
 
 
-    @OneTimeProperty
+    @cache_readonly
     def sum_weights(self):
         return self.weights.sum(0)
 
-    @OneTimeProperty
+    @cache_readonly
     def nobs(self):
         '''alias for number of observations/cases, equal to sum of weights
         '''
         return self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def sum(self):
         '''weighted sum of data'''
         return np.dot(self.data.T, self.weights)
 
-    @OneTimeProperty
+    @cache_readonly
     def mean(self):
         '''weighted mean of data'''
         return self.sum / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def demeaned(self):
         '''data with weighted mean subtracted'''
         return self.data - self.mean
 
-    @OneTimeProperty
+    @cache_readonly
     def sumsquares(self):
         '''weighted sum of squares of demeaned data'''
         return np.dot((self.demeaned**2).T, self.weights)
@@ -172,13 +172,13 @@ class DescrStatsW(object):
         '''
         return np.sqrt(self.var_ddof(ddof=ddof))
 
-    @OneTimeProperty
+    @cache_readonly
     def var(self):
         '''variance with default degrees of freedom correction
         '''
         return self.sumsquares / (self.sum_weights - self.ddof)
 
-    @OneTimeProperty
+    @cache_readonly
     def _var(self):
         '''variance without degrees of freedom correction
 
@@ -186,13 +186,13 @@ class DescrStatsW(object):
         '''
         return self.sumsquares / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def std(self):
         '''standard deviation with default degrees of freedom correction
         '''
         return np.sqrt(self.var)
 
-    @OneTimeProperty
+    @cache_readonly
     def cov(self):
         '''weighted covariance of data if data is 2 dimensional
 
@@ -203,7 +203,7 @@ class DescrStatsW(object):
         cov_ /= (self.sum_weights - self.ddof)
         return cov_
 
-    @OneTimeProperty
+    @cache_readonly
     def corrcoef(self):
         '''weighted correlation with default ddof
 
@@ -211,7 +211,7 @@ class DescrStatsW(object):
         '''
         return self.cov / self.std / self.std[:,None]
 
-    @OneTimeProperty
+    @cache_readonly
     def std_mean(self):
         '''standard deviation of weighted mean
         '''
@@ -814,14 +814,14 @@ class CompareMeans(object):
                 alpha=alpha, use_t=use_t, yname=yname, xname=xname,
                 title=title)
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_separatevar(self):
         #this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
         return np.sqrt(d1._var / (d1.nobs-1) + d2._var / (d2.nobs-1))
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_pooledvar(self):
         '''variance assuming equal variance in both data sets
 
@@ -858,8 +858,10 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
         alternative : string
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -910,8 +912,10 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
         alternative : string
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
@@ -1115,21 +1119,23 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
                       weights=(None, None), value=0):
     '''ttest independent sample
 
-    convenience function that uses the classes and throws away the intermediate
+    Convenience function that uses the classes and throws away the intermediate
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    weights option.
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: difference in means not equal to value (default)
-           'larger' :   H1: difference in means larger than value
-           'smaller' :  H1: difference in means smaller than value
+           * 'two-sided' (default): H1: difference in means not equal to value
+           * 'larger' :   H1: difference in means larger than value
+           * 'smaller' :  H1: difference in means smaller than value
 
     usevar : string, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
@@ -1177,8 +1183,10 @@ def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     low, upp : float
         equivalence interval low < m1 - m2 < upp
     usevar : string, 'pooled' or 'unequal'
@@ -1250,8 +1258,10 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     Parameters
     ----------
-    x1, x2 : array_like
-        two dependent samples
+    x1 : array_like
+        first of the two independent samples
+    x2 : array_like
+        second of the two independent samples
     low, upp : float
         equivalence interval low < mean of difference < upp
     weights : None or ndarray
@@ -1299,8 +1309,10 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
@@ -1370,8 +1382,10 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.

@@ -124,7 +124,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     from collections import deque
     from datetime import datetime
-    import pandas
     import re
 
     regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))
@@ -154,9 +153,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        asbytes('Q'): frequencies.BQuarterEnd(),
+        asbytes('M'): frequencies.BMonthEnd(),
+        asbytes('A'): frequencies.BYearEnd()
     }
 
     # create an instance
@@ -166,8 +165,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     start_date = offset.rollforward(datetime(year, 1, 1)) + inc
 
     offset = offsets[freq]
-    from pandas import DatetimeIndex   # pylint: disable=E0611
-    date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
+    date_range = pd.date_range(start=start_date, freq=offset, periods=n)
 
     return data, date_range
 

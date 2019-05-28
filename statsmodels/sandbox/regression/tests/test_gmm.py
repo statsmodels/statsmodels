@@ -8,6 +8,9 @@ Author: Josef Perktold
 from __future__ import print_function
 from statsmodels.compat.python import lrange, lmap
 
+import copy
+
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -237,11 +240,20 @@ class CheckGMM(object):
         # Smoke test for Wald
         res_wald = res1.wald_test(restriction[:-1])
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         res1 = self.res1
         summ = res1.summary()
         # len + 1 is for header line
         assert_equal(len(summ.tables[1]), len(res1.params) + 1)
+
+    def test_use_t(self):
+        # Copy to avoid cache
+        res1 = copy.deepcopy(self.res1)
+        res1.use_t = True
+        summ = res1.summary()
+        assert 'P>|t|' in str(summ)
+        assert 'P>|z|' not in str(summ)
 
 
 class TestGMMSt1(CheckGMM):
@@ -405,9 +417,8 @@ class TestGMMStOneiter(CheckGMM):
                                             weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
-                                               #use_weights=True #weights=w
-                                                         ))))
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
+                                                #use_weights=True #weights=w
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
         #This doesn't replicate Stata oneway either
@@ -674,7 +685,6 @@ class CheckIV2SLS(object):
         assert_allclose(res_f.fvalue, res2.F, rtol=1e-10, atol=0)
         assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 
-
     def test_hausman(self):
         res1, res2 = self.res1, self.res2
         hausm = res1.spec_hausman()
@@ -682,11 +692,11 @@ class CheckIV2SLS(object):
         assert_allclose(hausm[0], res2.hausman['DWH'], rtol=1e-11, atol=0)
         assert_allclose(hausm[1], res2.hausman['DWHp'], rtol=1e-10, atol=1e-25)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         res1 = self.res1
         summ = res1.summary()
         assert_equal(len(summ.tables[1]), len(res1.params) + 1)
-
 
 
 class TestIV2SLSSt1(CheckIV2SLS):

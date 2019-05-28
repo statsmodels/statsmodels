@@ -210,7 +210,7 @@ class Power(object):
         #    nicer but requires inspect? and not generic across tests
         #    I'm duplicating this in the subclass to get informative docstring
         key = [k for k,v in iteritems(kwds) if v is None]
-        #print kwds, key;
+        #print kwds, key
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
         key = key[0]
@@ -914,7 +914,7 @@ class FTestAnovaPower(Power):
 
         '''
         # update start values for root finding
-        if not k_groups is None:
+        if k_groups is not None:
             self.start_ttp['nobs'] = k_groups * 10
             self.start_bqexp['nobs'] = dict(low=k_groups * 2,
                                             start_upp=k_groups * 10)

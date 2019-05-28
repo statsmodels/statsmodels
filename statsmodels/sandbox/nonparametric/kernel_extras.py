@@ -75,10 +75,9 @@ class TestFForm(object):
     References
     ----------
     See Racine, J.: "Consistent Significance Testing for Nonparametric
-    Regression" Journal of Business \& Economics Statistics.
+    Regression" Journal of Business & Economics Statistics.
 
     See chapter 12 in [1]  pp. 355-357.
-
     """
     def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
@@ -132,7 +131,7 @@ class TestFForm(object):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
         uLOO = LeaveOneOut(u[:,None]).__iter__()
-        I = 0
+        ival = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = next(uLOO)
@@ -142,16 +141,16 @@ class TestFForm(object):
                      var_type=self.var_type, tosum=False)
             f_i = (u[i] * u_j * K)
             assert u_j.shape == K.shape
-            I += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
+            ival += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
             S2 += (f_i**2).sum()  # See Theorem 12.1 on p.356 in [1]
-            assert np.size(I) == 1
+            assert np.size(ival) == 1
             assert np.size(S2) == 1
 
-        I *= 1. / (n * (n - 1))
+        ival *= 1. / (n * (n - 1))
         ix_cont = _get_type_pos(self.var_type)[0]
         hp = self.bw[ix_cont].prod()
         S2 *= 2 * hp / (n * (n - 1))
-        T = n * I * np.sqrt(hp / S2)
+        T = n * ival * np.sqrt(hp / S2)
         return T
 
 

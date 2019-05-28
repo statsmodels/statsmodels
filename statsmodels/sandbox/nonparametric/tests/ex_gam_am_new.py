@@ -12,19 +12,11 @@ Author: Josef Perktold
 """
 from __future__ import print_function
 from statsmodels.compat.python import lrange, zip
-import time
 
 import numpy as np
-#import matplotlib.pyplot as plt
-from numpy.testing import assert_almost_equal
-
-from scipy import stats
 
 from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.regression.linear_model import OLS
 
 np.random.seed(8765993)
 #seed is chosen for nice result, not randomly
@@ -62,6 +54,7 @@ for ss in m.smoothers:
 res_ols = OLS(y, exog_reduced).fit()
 print(res_ols.params)
 
+#from numpy.testing import assert_almost_equal
 #assert_almost_equal(y_pred, res_ols.fittedvalues, 3)
 
 if example > 0:

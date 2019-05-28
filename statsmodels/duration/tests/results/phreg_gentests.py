@@ -12,9 +12,9 @@ to update the R results.
 np.random.seed(5234)
 
 # Loop over pairs containing (sample size, number of variables).
-for (n,p) in (20,1), (50,1), (50,2), (100,5), (1000,10):
+for (n, p) in (20, 1), (50, 1), (50, 2), (100, 5), (1000, 10):
 
-    exog = np.random.normal(size=(5*n,p))
+    exog = np.random.normal(size=(5*n, p))
     coef = np.linspace(-0.5, 0.5, p)
     lpred = np.dot(exog, coef)
     expected_survival_time = np.exp(-lpred)
@@ -38,7 +38,7 @@ for (n,p) in (20,1), (50,1), (50,2), (100,5), (1000,10):
     status = 1*(survival_time <= censoring_time)
 
     # The censoring time of the failure time, whichever comes first
-    time = np.where(status==1, survival_time, censoring_time)
+    time = np.where(status == 1, survival_time, censoring_time)
 
     # Round time so that we have ties
     time = np.around(time, decimals=1)
@@ -49,11 +49,11 @@ for (n,p) in (20,1), (50,1), (50,2), (100,5), (1000,10):
     ii = ii[np.random.permutation(len(ii))[0:n]]
     status = status[ii]
     time = time[ii]
-    exog = exog[ii,:]
+    exog = exog[ii, :]
     entry_time = entry_time[ii]
 
-    data = np.concatenate((time[:,None], status[:,None],
-                           entry_time[:,None], exog),
+    data = np.concatenate((time[:, None], status[:, None],
+                           entry_time[:, None], exog),
                           axis=1)
 
     fname = "results/survival_data_%d_%d.csv" % (n, p)

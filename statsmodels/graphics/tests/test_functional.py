@@ -21,7 +21,10 @@ data = data.raw_data[:, 1:]
 
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
-    _, hdr = hdrboxplot(data, labels=labels, seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, labels=labels, seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
     assert len(hdr.extra_quantiles) == 0
 
@@ -57,9 +60,13 @@ def test_hdr_basic(close_figures):
     assert_equal(labels[hdr.outliers_idx], outliers)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
-def test_hdr_basic_brute(close_figures):
-    _, hdr = hdrboxplot(data, labels=labels, use_brute=True)
+def test_hdr_basic_brute(close_figures, reset_randomstate):
+    try:
+        _, hdr = hdrboxplot(data, ncomp=2, labels=labels, use_brute=True)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
     assert len(hdr.extra_quantiles) == 0
 
@@ -69,12 +76,17 @@ def test_hdr_basic_brute(close_figures):
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    hdrboxplot(data, labels=labels.tolist(), ax=ax, threshold=1, seed=12345)
+    try:
+        hdrboxplot(data, labels=labels.tolist(), ax=ax, threshold=1,
+                   seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
     ax.set_xlabel("Month of the year")
     ax.set_ylabel("Sea surface temperature (C)")
@@ -83,9 +95,14 @@ def test_hdr_plot(close_figures):
     ax.set_xlim([-0.2, 11.2])
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
-    _, hdr = hdrboxplot(data, alpha=[0.7], seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, alpha=[0.7], seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+
     extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
                                 23.0, 22.0, 21.7, 22.1, 22.7, 23.8],
                                [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
@@ -93,9 +110,14 @@ def test_hdr_alpha(close_figures):
     assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
-    _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+
     extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
                       26.162, 24.833, 23.639, 22.378,
                       22.250, 22.640, 23.472, 24.649],
@@ -112,9 +134,15 @@ def test_hdr_multiple_alpha(close_figures):
                         decimal=0)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
-    _, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93, seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93,
+                            seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+
     labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
                         axis=1)
     outliers = labels[labels_pos]
@@ -123,15 +151,24 @@ def test_hdr_threshold(close_figures):
 
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
-    _, hdr = hdrboxplot(data, bw='cv_ml', seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, bw='cv_ml', seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+
     median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
                 21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
-    _, hdr = hdrboxplot(data, ncomp=3, seed=12345)
+    try:
+        _, hdr = hdrboxplot(data, ncomp=3, seed=12345)
+    except WindowsError:
+        pytest.xfail('Multiprocess randomly crashes in Windows testing')
+
     median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
                 21.32, 20.45, 20.25, 20.53, 21.20, 22.39]
     assert_almost_equal(hdr.median, median_t, decimal=2)

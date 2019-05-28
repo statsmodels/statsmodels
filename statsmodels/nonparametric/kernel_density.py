@@ -382,7 +382,7 @@ class KDEMultivariateConditional(GenericKDE):
         The default values for the efficient bandwidth estimation
 
     Attributes
-    ---------
+    ----------
     bw: array_like
         The bandwidth parameters
 

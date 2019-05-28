@@ -46,7 +46,7 @@ class ResultsBunch(dict):
 
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
-        self.__dict__  = self
+        self.__dict__ = self
         self._initialize()
 
     def _initialize(self):
@@ -427,8 +427,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                     kappa_max=kappa_max,
                     weights=weights,
                     var_kappa=var_kappa,
-                    var_kappa0=var_kappa0
-                    )
+                    var_kappa0=var_kappa0)
         return res
     else:
         return kappa
@@ -495,7 +494,7 @@ class KappaResults(ResultsBunch):
     template = _kappa_template
 
     def _initialize(self):
-        if not 'alpha' in self:
+        if 'alpha' not in self:
             self['alpha'] = 0.025
             self['alpha_ci'] = _int_ifclose(100 - 0.025 * 200)[1]
 

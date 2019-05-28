@@ -19,6 +19,10 @@ def pytest_addoption(parser):
                      help="skip tests of examples")
     parser.addoption("--skip-matplotlib", action="store_true",
                      help="skip tests that depend on matplotlib")
+    parser.addoption("--skip-smoke", action="store_true",
+                     help="skip smoke tests")
+    parser.addoption("--only-smoke", action="store_true",
+                     help="run only smoke tests")
 
 
 def pytest_runtest_setup(item):
@@ -37,6 +41,12 @@ def pytest_runtest_setup(item):
 
     if 'matplotlib' in item.keywords and not HAVE_MATPLOTLIB:
         pytest.skip("skipping since matplotlib is not intalled")
+
+    if 'smoke' in item.keywords and item.config.getoption("--skip-smoke"):
+        pytest.skip("skipping due to --skip-smoke")
+
+    if 'smoke' not in item.keywords and item.config.getoption('--only-smoke'):
+        pytest.skip("skipping due to --only-smoke")
 
 
 def pytest_configure(config):

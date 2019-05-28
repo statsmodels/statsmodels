@@ -78,7 +78,9 @@ class Family(object):
             warnmssg = "Calling Family(..) with a link class as argument "
             warnmssg += "is deprecated.\n"
             warnmssg += "Use an instance of a link class instead."
-            warnings.warn(warnmssg, category=DeprecationWarning)
+            lvl = 2 if type(self) is Family else 3
+            warnings.warn(warnmssg,
+                          category=DeprecationWarning, stacklevel=lvl)
             self.link = link()
         else:
             self.link = link
@@ -202,7 +204,7 @@ class Family(object):
 
         .. math::
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
-           
+
         D_i is calculated from the _resid_dev method in each family.
         Distribution-specific documentation of the calculation is available
         there.
@@ -211,19 +213,18 @@ class Family(object):
         resid_dev *= var_weights / scale
         return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0., np.inf))
 
-
     def fitted(self, lin_pred):
         r"""
         Fitted values based on linear predictors lin_pred.
 
         Parameters
-        -----------
+        ----------
         lin_pred : array
             Values of the linear predictor of the model.
             :math:`X \cdot \beta` in a classical linear model.
 
         Returns
-        --------
+        -------
         mu : array
             The mean response variables given by the inverse of the link
             function.
@@ -385,7 +386,7 @@ class Poisson(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -511,7 +512,7 @@ class Gaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.constant
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -655,7 +656,7 @@ class Gamma(Family):
         ``variance`` is an instance of
         statsmodels.genmod.family.varfuncs.mu_squared
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -789,14 +790,22 @@ class Binomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.binary
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
 
     Notes
     -----
-    endog for Binomial can be specified in one of three ways.
+    endog for Binomial can be specified in one of three ways:
+    A 1d array of 0 or 1 values, indicating failure or success
+    respectively.
+    A 2d array, with two columns. The first column represents the
+    success count and the second column represents the failure
+    count.
+    A 1d array of proportions, indicating the proportion of
+    successes, with parameter `var_weights` containing the
+    number of trials for each row.
     """
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
@@ -835,7 +844,7 @@ class Binomial(Family):
             1d array of frequency weights
 
         Returns
-        --------
+        -------
         If `endog` is binary, returns `endog`
 
         If `endog` is a 2d array, then the input is assumed to be in the format
@@ -1016,7 +1025,7 @@ class InverseGaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu_cubed
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1154,7 +1163,7 @@ class NegativeBinomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.nbinom
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1166,7 +1175,7 @@ class NegativeBinomial(Family):
     Parameterization for :math:`y=0, 1, 2, \ldots` is
 
     .. math::
-      
+
        f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
               \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
               \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y
@@ -1329,6 +1338,10 @@ class Tweedie(Family):
         See statsmodels.genmod.families.links for more information.
     var_power : float, optional
         The variance power. The default is 1.
+    eql : bool
+        If True, the Extended Quasi-Likelihood is used, else the
+        likelihood is used (however the latter is not implemented).
+        If eql is True, var_power must be between 1 and 2.
 
     Attributes
     ----------
@@ -1340,10 +1353,11 @@ class Tweedie(Family):
     Tweedie.var_power : float
         The power of the variance function.
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
+
     Notes
     -----
     Logliklihood function not implemented because of the complexity of
@@ -1355,8 +1369,12 @@ class Tweedie(Family):
     variance = V.Power
     safe_links = [L.log, L.Power]
 
-    def __init__(self, link=None, var_power=1.):
+    def __init__(self, link=None, var_power=1., eql=False):
         self.var_power = var_power
+        self.eql = eql
+        if eql and (var_power < 1 or var_power > 2):
+            msg = "Tweedie: if EQL=True then var_power must fall between 1 and 2"
+            raise ValueError(msg)
         if link is None:
             link = L.log()
         super(Tweedie, self).__init__(
@@ -1451,10 +1469,38 @@ class Tweedie(Family):
 
         Notes
         -----
-        This is not implemented because of the complexity of calculating an
-        infinite series of sums.
+        If eql is True, the Extended Quasi-Likelihood is used.  At present,
+        this method returns NaN if eql is False.  When the actual likelihood
+        is implemented, it will be accessible by setting eql to False.
+
+        References
+        ----------
+        JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.  Biometrika
+        74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
-        return np.nan
+        if not self.eql:
+            # We have not yet implemented the actual likelihood
+            return np.nan
+
+        # Equations 9-10 or Nelder and Pregibon
+        p = self.var_power
+        llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
+        llf /= -2
+
+        if p == 1:
+            u = endog * np.log(endog / mu) - (endog - mu)
+            u *= var_weights / scale
+        elif p == 2:
+            yr = endog / mu
+            u = yr - np.log(yr) - 1
+            u *= var_weights / scale
+        else:
+            u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
+            u *= var_weights / (scale * (1 - p) * (2 - p))
+        llf -= u
+
+        return llf
+
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""

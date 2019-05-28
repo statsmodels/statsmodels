@@ -6,6 +6,8 @@ import pandas
 
 
 version = LooseVersion(pandas.__version__)
+pandas_lte_0_19_2 = version <= LooseVersion('0.19.2')
+pandas_gt_0_19_2 = version > LooseVersion('0.19.2')
 
 
 try:
@@ -14,7 +16,10 @@ except ImportError:
     from pandas.core.common import is_numeric_dtype  # noqa:F401
 
 if version >= '0.20':
-    from pandas.tseries import frequencies
+    try:
+        from pandas.tseries import offsets as frequencies
+    except ImportError:
+        from pandas.tseries import frequencies
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel)
 else:
     try:

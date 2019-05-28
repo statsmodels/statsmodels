@@ -50,8 +50,7 @@ Generalized Pareto distribution
 
 genpareto2.pdf(x,c) = (1+c*x)**(-1-1/c)
 for c != 0, and for x >= 0 for all c, and x < 1/abs(c) for c < 0.
-"""
-                          )
+""")
 
 shape, loc, scale = 0.5, 0, 1
 rv = np.arange(5)
@@ -112,7 +111,7 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
         meanexcess = meanexcess[::-1]
         if plot:
             plt.plot(datasorted[:-uidx], meanexcess[:-uidx])
-            if not params is None:
+            if params is not None:
                 shape, scale = params
                 plt.plot(datasorted[:-uidx], (scale - datasorted[:-uidx] * shape) / (1. + shape))
     return datasorted, meanexcess
@@ -161,9 +160,6 @@ print(rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean())
 
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 [ 1.   0.5  0.   0.   0. ]
 [ 1.   0.5  0.   0.   0. ]
 [ 0.    0.75  1.    1.    1.  ]

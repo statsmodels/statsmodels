@@ -822,7 +822,7 @@ class MixedLM(base.LikelihoodModel):
         model : Model instance
 
         Notes
-        ------
+        -----
         `data` must define __getitem__ with the keys in the formula
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
@@ -957,9 +957,12 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_vc = None
 
+        kwargs["subset"] = None
+        kwargs["exog_re"] = exog_re
+        kwargs["exog_vc"] = exog_vc
+        kwargs["groups"] = groups
         mod = super(MixedLM, cls).from_formula(
-            formula, data, subset=None, exog_re=exog_re,
-            exog_vc=exog_vc, groups=groups, *args, **kwargs)
+            formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
         (param_names,
@@ -1990,7 +1993,7 @@ class MixedLM(base.LikelihoodModel):
                 warnings.warn("Argument %s not used by MixedLM.fit" % x)
 
         if method is None:
-            method = ['bfgs', 'lbfgs']
+            method = ['bfgs', 'lbfgs', 'cg']
         elif isinstance(method, str):
             method = [method]
 
@@ -2134,6 +2137,89 @@ class MixedLM(base.LikelihoodModel):
 
         return MixedLMResultsWrapper(results)
 
+    def get_distribution(self, params, scale, exog):
+        return _mixedlm_distribution(self, params, scale, exog)
+
+
+class _mixedlm_distribution(object):
+    """
+    A private class for simulating data from a given mixed linear model.
+
+    Parameters
+    ----------
+    model : MixedLM instance
+        A mixed linear model
+    params : array-like
+        A parameter vector defining a mixed linear model.  See
+        notes for more information.
+    scale : scalar
+        The unexplained variance
+    exog : array-like
+        An array of fixed effect covariates.  If None, model.exog
+        is used.
+
+    Notes
+    -----
+    The params array is a vector containing fixed effects parameters,
+    random effects parameters, and variance component parameters, in
+    that order.  The lower triangle of the random effects covariance
+    matrix is stored.  The random effects and variance components
+    parameters are divided by the scale parameter.
+
+    This class is used in Mediation, and possibly elsewhere.
+    """
+
+    def __init__(self, model, params, scale, exog):
+
+        self.model = model
+        self.exog = exog if exog is not None else model.exog
+
+        po = MixedLMParams.from_packed(
+                params, model.k_fe, model.k_re, False, True)
+
+        self.fe_params = po.fe_params
+        self.cov_re = scale * po.cov_re
+        self.vcomp = scale * po.vcomp
+        self.scale = scale
+
+        group_idx = np.zeros(model.nobs, dtype=np.int)
+        for k, g in enumerate(model.group_labels):
+            group_idx[model.row_indices[g]] = k
+        self.group_idx = group_idx
+
+    def rvs(self, n):
+        """
+        Return a vector of simulated values from a mixed linear
+        model.
+
+        The parameter n is ignored, but required by the interface
+        """
+
+        model = self.model
+
+        # Fixed effects
+        y = np.dot(self.exog, self.fe_params)
+
+        # Random effects
+        u = np.random.normal(size=(model.n_groups, model.k_re))
+        u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
+        y += (u[self.group_idx, :] * model.exog_re).sum(1)
+
+        # Variance components
+        for j, k in enumerate(model._vc_names):
+            ex = model.exog_vc[k]
+            v = self.vcomp[j]
+            for g in model.group_labels:
+                exg = ex[g]
+                ii = model.row_indices[g]
+                u = np.random.normal(size=exg.shape[1])
+                y[ii] += np.sqrt(v) * np.dot(exg, u)
+
+        # Residual variance
+        y += np.sqrt(self.scale) * np.random.normal(size=len(y))
+
+        return y
+
 
 class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
@@ -2153,6 +2239,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Pointer to MixedLM model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
+    params : array
+        A packed parameter vector for the profile parameterization.
+        The first `k_fe` elements are the estimated fixed effects
+        coefficients.  The remaining elements are the estimated
+        variance parameters.  The variance parameters are all divided
+        by `scale` and are not the variance parameters shown
+        in the summary.
     fe_params : array
         The fitted fixed-effects coefficients
     cov_re : array
@@ -2378,6 +2471,11 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             The available results have the same elements as the parameter table
             in `summary()`.
         """
+        if scale is not None:
+            import warnings
+            warnings.warn('scale is has no effect and is deprecated. It will'
+                          'be removed in the next version.',
+                          DeprecationWarning)
 
         if r_matrix.shape[1] != self.k_fe:
             raise ValueError("r_matrix for t-test should have %d columns"
@@ -2386,8 +2484,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedLMResults, self).t_test(
-            r_matrix, scale=scale, use_t=use_t)
+        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, use_t=use_t)
         return tst_rslt
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
@@ -2396,7 +2493,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Summarize the mixed model regression results.
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname_fe : list of strings, optional
@@ -2417,8 +2514,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -2428,14 +2524,17 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Model:"] = "MixedLM"
         if yname is None:
             yname = self.model.endog_names
+
         param_names = self.model.data.param_names[:]
         k_fe_params = len(self.fe_params)
         k_re_params = len(param_names) - len(self.fe_params)
+
         if xname_fe is not None:
             if len(xname_fe) != k_fe_params:
                 msg = "xname_fe should be a list of length %d" % k_fe_params
                 raise ValueError(msg)
             param_names[:k_fe_params] = xname_fe
+
         if xname_re is not None:
             if len(xname_re) != k_re_params:
                 msg = "xname_re should be a list of length %d" % k_re_params

@@ -104,7 +104,7 @@ def discretize(X, method="ef", nbins=None):
     --------
     """
     nobs = len(X)
-    if nbins == None:
+    if nbins is None:
         nbins = np.floor(np.sqrt(nobs))
     if method == "ef":
         discrete = np.ceil(nbins * stats.rankdata(X)/nobs)
@@ -160,7 +160,7 @@ def shannonentropy(px, logbase=2):
     This is Shannon's entropy
 
     Parameters
-    -----------
+    ----------
     logbase, int or np.e
         The base of the log
     px : 1d or 2d array_like
@@ -234,9 +234,9 @@ def condentropy(px, py, pxpy=None, logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
     condent = np.sum(pxpy * np.nan_to_num(np.log2(py/pxpy)))
     if logbase == 2:
@@ -267,9 +267,9 @@ def mutualinfo(px,py,pxpy, logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
     return shannonentropy(px, logbase=logbase) - condentropy(px,py,pxpy,
             logbase=logbase)
@@ -306,9 +306,9 @@ def corrent(px,py,pxpy,logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
 
     return mutualinfo(px,py,pxpy,logbase=logbase)/shannonentropy(py,
@@ -347,9 +347,9 @@ def covent(px,py,pxpy,logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
 
     return condent(px,py,pxpy,logbase=logbase) + condent(py,px,pxpy,

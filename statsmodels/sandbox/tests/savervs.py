@@ -3,9 +3,9 @@
 '''
 
 import numpy as np
-from statsmodels.sandbox import tsa
 from statsmodels.tsa.arima_process import arma_generate_sample
 from .maketests_mlabwrap import HoldIt
+
 
 if __name__ == '__main__':
     filen = 'savedrvs_tmp.py'

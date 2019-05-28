@@ -8,11 +8,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
-from scipy import stats
 
-import pytest
-
-from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.discrete.discrete_model import Poisson

@@ -114,7 +114,7 @@ def cohn_numbers(df, observations, censorship):
         below = df[observations] < row['upper_dl']
 
         # index of non-detect observations
-        detect = df[censorship] == False
+        detect = ~df[censorship]
 
         # return the number of observations where all conditions are True
         return df[above & below & detect].shape[0]
@@ -131,8 +131,8 @@ def cohn_numbers(df, observations, censorship):
         less_thanequal = df[observations] <= row['lower_dl']
 
         # index of detects, non-detects
-        uncensored = df[censorship] == False
-        censored = df[censorship] == True
+        uncensored = ~df[censorship]
+        censored = df[censorship]
 
         # number observations less than or equal to lower_dl DL and non-detect
         LTE_censored = df[less_thanequal & censored].shape[0]
@@ -221,7 +221,7 @@ def _detection_limit_index(obs, cohn):
     det_limit_index : int
         The index of the corresponding detection limit in `cohn`
 
-    See also
+    See Also
     --------
     cohn_numbers
 
@@ -300,7 +300,7 @@ def _ros_plot_pos(row, censorship, cohn):
     -------
     plotting_position : float
 
-    See also
+    See Also
     --------
     cohn_numbers
 
@@ -360,7 +360,7 @@ def plotting_positions(df, censorship, cohn):
     -------
     plotting_position : array of float
 
-    See also
+    See Also
     --------
     cohn_numbers
 
@@ -411,8 +411,8 @@ def _impute(df, observations, censorship, transform_in, transform_out):
     """
 
     # detect/non-detect selectors
-    uncensored_mask = df[censorship] == False
-    censored_mask = df[censorship] == True
+    uncensored_mask = ~df[censorship]
+    censored_mask = df[censorship]
 
     # fit a line to the logs of the detected data
     fit_params = stats.linregress(

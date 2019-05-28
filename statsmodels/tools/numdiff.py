@@ -244,17 +244,6 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
             hess[j, i] = hess[i, j]
 
     return hess
-approx_hess_cs.__doc__ = (("Calculate Hessian with complex-step derivative "
-                          "approximation\n") +
-                          "\n".join(_hessian_docs.split("\n")[1:]) %
-                          dict(scale="3", extra_params="",
-                               extra_returns="", equation_number="10",
-                               equation=("1/(2*d_j*d_k) * "
-                                         "imag(f(x + i*d[j]*e[j] + "
-                                         "d[k]*e[k]) -\n"
-                                         "                     "
-                                         "f(x + i*d[j]*e[j] - d[k]*e[k]))\n"))
-                          )
 
 
 def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):

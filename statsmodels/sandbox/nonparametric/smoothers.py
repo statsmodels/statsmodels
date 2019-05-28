@@ -101,7 +101,7 @@ class PolySmoother(object):
 
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
-    #   smoother in gam.py  initalized by function default_smoother
+    #   smoother in gam.py  initialized by function default_smoother
     #   Only fixed exceptions, I didn't check whether it is statistically
     #   correctand I think it is not, there are still be some dimension
     #   problems, and there were some dimension problems initially.

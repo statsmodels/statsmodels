@@ -263,7 +263,6 @@ if __name__ == '__main__':
         empiricalcdf(x)
         print(percentileofscore(x, 0.5))
         print(scoreatpercentile(x, 50))
-        import matplotlib.pyplot as plt
         xsupp = np.linspace(x.min(), x.max())
         pos = percentileofscore(x, xsupp)
         plt.plot(xsupp, pos)

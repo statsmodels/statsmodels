@@ -30,8 +30,6 @@ from __future__ import division
 from statsmodels.compat.python import PY3
 
 import warnings
-from warnings import catch_warnings
-import sys
 
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
@@ -205,11 +203,12 @@ class TestGlmPoissonPwNr(CheckWeight):
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
-    @pytest.mark.xfail(reason='Known to fail')
+    # TODO: find more informative reasons why these fail
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_basic(self):
         super(TestGlmPoissonPwNr, self).test_basic()
 
-    @pytest.mark.xfail(reason='Known to fail')
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_compare_optimizers(self):
         super(TestGlmPoissonPwNr, self).test_compare_optimizers()
 
@@ -225,9 +224,10 @@ class TestGlmPoissonFwHC(CheckWeight):
         aweights = fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
 
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=fweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  freq_weights=fweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_hc1
@@ -249,9 +249,10 @@ class TestGlmPoissonAwHC(CheckWeight):
         # manually. Its *possible* lowering the IRLS convergence criterion
         # in stata and here will make this less sketchy.
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), var_weights=aweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  var_weights=aweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         # modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_aweight_hc1
@@ -274,9 +275,11 @@ class TestGlmPoissonFwClu(CheckWeight):
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
         with pytest.warns(None):
-            cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                            family=sm.families.Poisson(), freq_weights=fweights
-                            ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+            mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                      family=sm.families.Poisson(),
+                      freq_weights=fweights)
+            cls.res1 = mod.fit(cov_type='cluster', cov_kwds=cov_kwds)
+
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1
@@ -596,7 +599,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -606,7 +609,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         agg_endog = agg_endog['endog']
-        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link()),
                       exposure=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -627,7 +630,7 @@ class TestRepeatedvsAverage(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -637,7 +640,7 @@ class TestRepeatedvsAverage(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         avg_endog = agg_endog['endog'] / agg_wt
-        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link()),
                       var_weights=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -757,12 +760,12 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
-        mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
+        mod1 = sm.GLM(endog, exog, family=family(link=link()), freq_weights=wt)
         cls.res1 = mod1.fit()
 
         exog_dup = np.repeat(exog, wt, axis=0)
         endog_dup = np.repeat(endog, wt)
-        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link))
+        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link()))
         cls.res2 = mod2.fit()
 
 

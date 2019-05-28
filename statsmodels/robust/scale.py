@@ -8,7 +8,7 @@ PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
 R Venables, B Ripley. 'Modern Applied Statistics in S'
     Springer, New York, 2002.
 """
-from statsmodels.compat.python import callable, range
+from statsmodels.compat.python import range
 import numpy as np
 from scipy.stats import norm as Gaussian
 from . import norms
@@ -168,7 +168,8 @@ class Huber(object):
                         nscale * self.tol))
             test2 = np.alltrue(np.less_equal(np.fabs(mu - nmu), nscale*self.tol))
             if not (test1 and test2):
-                mu = nmu; scale = nscale
+                mu = nmu
+                scale = nscale
             else:
                 return nmu.squeeze(), nscale.squeeze()
         raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
@@ -178,7 +179,7 @@ huber = Huber()
 
 
 class HuberScale(object):
-    """
+    r"""
     Huber's scaling for fitting robust linear models.
 
     Huber's scale is intended to be used as the scale estimate in the

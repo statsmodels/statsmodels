@@ -816,6 +816,8 @@ class _VariationalBayesMixedGLM(object):
 
 class BayesMixedGLMResults(object):
     """
+    Class to hold results from a Bayesian estimation of a Mixed GLM model.
+
     Attributes
     ----------
     fe_mean : array-like

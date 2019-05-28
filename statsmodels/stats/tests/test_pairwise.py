@@ -115,7 +115,8 @@ ss5 = '''\
 3 - 2\t-4.340\t-7.989\t-0.691\t***
 3 - 1\t0.260\t-3.389\t3.909\t-
 1 - 2\t-4.600\t-8.249\t-0.951\t***
-1 - 3\t-0.260\t-3.909\t3.389\t'''
+1 - 3\t-0.260\t-3.909\t3.389\t-
+'''
 
 cylinders = np.array([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 6, 6, 6, 4, 4,
                     4, 4, 4, 4, 6, 8, 8, 8, 8, 4, 4, 4, 4, 8, 8, 8, 8, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6,
@@ -136,21 +137,22 @@ ss2 = asbytes(ss2)
 ss3 = asbytes(ss3)
 ss5 = asbytes(ss5)
 
-dta = np.recfromtxt(BytesIO(ss), names=("Rust", "Brand", "Replication"))
-dta2 = np.recfromtxt(BytesIO(ss2), names=("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(BytesIO(ss3), names=("Brand", "Relief"))
-dta5 = np.recfromtxt(BytesIO(ss5), names=('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
-
-dta = pd.DataFrame.from_records(dta)
-dta2 = pd.DataFrame.from_records(dta2)
-dta3 = pd.DataFrame.from_records(dta3)
-dta5 = pd.DataFrame.from_records(dta5)
+dta = pd.read_csv(BytesIO(ss), sep=r'\s+', header=None, engine='python')
+dta.columns = "Rust", "Brand", "Replication"
+dta2 = pd.read_csv(BytesIO(ss2), sep=r'\s+', header=None, engine='python')
+dta2.columns = "idx", "Treatment", "StressReduction"
+dta2["Treatment"] = dta2["Treatment"].map(lambda v: v.encode('utf-8'))
+dta3 = pd.read_csv(BytesIO(ss3), sep=r'\s+', header=None, engine='python')
+dta3.columns = ["Brand", "Relief"]
+dta5 = pd.read_csv(BytesIO(ss5), sep=r'\t', header=None, engine='python')
+dta5.columns = ['pair', 'mean', 'lower', 'upper', 'sig']
+for col in ('pair', 'sig'):
+    dta5[col] = dta5[col].map(lambda v: v.encode('utf-8'))
 sas_ = dta5.iloc[[1, 3, 2]]
 
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
-#import statsmodels.sandbox.stats.multicomp as multi
-#print tukeyhsd(dta['Brand'], dta['Rust'])
+
 
 def get_thsd(mci, alpha=0.05):
     var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
@@ -187,9 +189,9 @@ class CheckTuckeyHSDMixin(object):
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
         assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_plot_simultaneous_ci(self, close_figures):
-        # smoke tests
         self.res._simultaneous_ci()
         reference = self.res.groupsunique[1]
         self.res.plot_simultaneous(comparison_name=reference)
@@ -209,7 +211,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
         tukeyhsd2s = np.array([ 1.5,1,-0.5,0.3214915,
                                -0.1785085,-1.678509,2.678509,2.178509,
                                 0.6785085,0.01056279,0.1079035,0.5513904]
-                                ).reshape(3,4, order='F')
+                              ).reshape(3,4, order='F')
         cls.meandiff2 = tukeyhsd2s[:, 0]
         cls.confint2 = tukeyhsd2s[:, 1:3]
         pvals = tukeyhsd2s[:, 3]

@@ -3,7 +3,6 @@
 
 import numpy as np
 from scipy import spatial as ssp
-from numpy.testing import assert_equal
 import matplotlib.pylab as plt
 
 
@@ -96,7 +95,7 @@ class GaussProcess(object):
         self.distxsample = kernel(x,x,scale=scale)
         self.Kinv = np.linalg.inv(self.distxsample +
                              np.eye(*self.distxsample.shape)*ridgecoeff)
-        if not y is None:
+        if y is not None:
             self.y = y
             self.yest = self.fit(y)
 
@@ -121,7 +120,7 @@ class GaussProcess(object):
     def plot(self, y, plt=plt ):
         '''some basic plots'''
         #todo return proper graph handles
-        plt.figure();
+        plt.figure()
         plt.plot(self.x,self.y, 'bo-', self.x, self.yest, 'r.-')
         plt.title('sample (training) points')
         plt.figure()

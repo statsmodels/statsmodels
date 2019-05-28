@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 
-import os
-import sys
+from statsmodels.compat.platform import PLATFORM_WIN32
+
 import warnings
 
 import numpy as np
@@ -10,10 +10,10 @@ import pytest
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 
 from statsmodels.multivariate.pca import PCA
-from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
+from statsmodels.multivariate.tests.results.datamlw import (data, princomp1,
+                                                            princomp2)
 
 DECIMAL_5 = .00001
-WIN32 = os.name == 'nt' and sys.maxsize < 2**33
 
 
 class TestPCA(object):
@@ -45,6 +45,7 @@ class TestPCA(object):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
@@ -218,6 +219,7 @@ class TestPCA(object):
         assert_allclose(weights, pc_weights.weights)
         assert_allclose(np.abs(pc_weights.factors), np.abs(pc_gls.factors))
 
+    @pytest.mark.slow
     def test_wide(self):
         pc = PCA(self.x_wide)
         assert_equal(pc.factors.shape[1], self.x_wide.shape[0])
@@ -266,7 +268,7 @@ class TestPCA(object):
         project = pc.project
         assert_raises(ValueError, project, 6)
 
-    @pytest.mark.skipif(WIN32, reason='Windows 32-bit')
+    @pytest.mark.skipif(PLATFORM_WIN32, reason='Windows 32-bit')
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
@@ -370,6 +372,7 @@ class TestPCA(object):
             rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
         assert_allclose(rsquare, pc.rsquare)
 
+    @pytest.mark.slow
     def test_missing_dataframe(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan

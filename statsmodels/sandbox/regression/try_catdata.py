@@ -1,8 +1,3 @@
-from statsmodels.compat.python import lrange
-import numpy as np
-#from numpy import linalg as npla
-from scipy import stats, optimize
-
 '''
 Working with categorical data
 =============================
@@ -16,6 +11,8 @@ scipy.ndimage stats is missing count
 
 new: np.bincount can also be used for calculating values per label
 '''
+from statsmodels.compat.python import lrange
+import numpy as np
 
 from scipy import ndimage
 
@@ -80,7 +77,7 @@ def convertlabels(ys, indices=None):
     '''convert labels based on multiple variables or string labels to unique
     index labels 0,1,2,...,nk-1 where nk is the number of distinct labels
     '''
-    if indices == None:
+    if indices is None:
         ylabel = ys
     else:
         idx = np.array(indices)

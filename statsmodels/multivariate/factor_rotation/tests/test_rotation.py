@@ -4,8 +4,11 @@ import unittest
 import numpy as np
 
 from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
-from statsmodels.multivariate.factor_rotation._gpa_rotation import *
-from statsmodels.multivariate.factor_rotation._analytic_rotation import *
+from statsmodels.multivariate.factor_rotation._gpa_rotation import (
+    ff_partial_target, vgQ_partial_target, ff_target, vgQ_target, CF_objective,
+    orthomax_objective, oblimin_objective, GPA)
+from statsmodels.multivariate.factor_rotation._analytic_rotation import (
+    target_rotation)
 
 
 class TestAnalyticRotation(unittest.TestCase):

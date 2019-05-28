@@ -46,7 +46,7 @@ benchmark against the parametric GLM results.
 # NOTE: example script is now in examples folder
 #update: I did some of the above, see module docstring
 
-from statsmodels.compat.python import next, range
+from statsmodels.compat.python import range
 import numpy as np
 
 from statsmodels.genmod import families
@@ -193,7 +193,7 @@ class AdditiveModel(object):
 
     def __init__(self, exog, smoothers=None, weights=None, family=None):
         self.exog = exog
-        if not weights is None:
+        if weights is not None:
             self.weights = weights
         else:
             self.weights = np.ones(self.exog.shape[0])

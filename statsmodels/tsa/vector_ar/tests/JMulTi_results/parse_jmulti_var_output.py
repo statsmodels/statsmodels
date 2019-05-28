@@ -5,9 +5,11 @@ from io import open
 import numpy as np
 
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
-    import sublists, stringify_var_names, dt_s_tup_to_string
+    import sublists, stringify_var_names
 
 debug_mode = False
+
+here = os.path.dirname(os.path.realpath(__file__))
 
 
 def print_debug_output(results, dt):
@@ -83,8 +85,7 @@ def load_results_jmulti(dataset, dt_s_list):
     for dt_s in dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
         params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
-        params_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   params_file)
+        params_file = os.path.join(here, params_file)
         # sections in jmulti output:
         section_headers = ["Lagged endogenous term",  # parameter matrices
                            "Deterministic term"]      # c, s, ct
@@ -178,8 +179,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse information regarding \Sigma_u
         sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_Sigmau" + ".txt"
-        sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   sigmau_file)
+        sigmau_file = os.path.join(here, sigmau_file)
         rows_to_parse = 0
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
@@ -209,8 +209,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse forecast related output:
         fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_fc5" + ".txt"
-        fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               fc_file)
+        fc_file = os.path.join(here, fc_file)
         fc, lower, upper, plu_min = [], [], [], []
         fc_file = open(fc_file, encoding='latin_1')
         for line in fc_file:
@@ -252,8 +251,7 @@ def load_results_jmulti(dataset, dt_s_list):
             causality_file = dataset.__str__() + "_" + source + "_" \
                 + dt_string + "_granger_causality_" \
                 + stringify_var_names(causing, "_") + ".txt"
-            causality_file = os.path.join(os.path.dirname(
-                    os.path.realpath(__file__)), causality_file)
+            causality_file = os.path.join(here, causality_file)
             causality_file = open(causality_file)
             causality_results = []
             for line in causality_file:
@@ -278,8 +276,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse output related to impulse-response analysis:
         ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_ir" + ".txt"
-        ir_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               ir_file)
+        ir_file = os.path.join(here, ir_file)
         ir_file = open(ir_file, encoding='latin_1')
         causing = None
         caused = None
@@ -315,8 +312,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse output related to lag order selection:
         lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_lagorder" + ".txt"
-        lagorder_file = os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), lagorder_file)
+        lagorder_file = os.path.join(here, lagorder_file)
         lagorder_file = open(lagorder_file, encoding='latin_1')
         results["lagorder"] = dict()
         aic_start = "Akaike Info Criterion:"
@@ -338,8 +334,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse output related to non-normality-test:
         test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_diag" + ".txt"
-        test_norm_file = os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), test_norm_file)
+        test_norm_file = os.path.join(here, test_norm_file)
         test_norm_file = open(test_norm_file, encoding='latin_1')
         results["test_norm"] = dict()
         section_start_marker = "TESTS FOR NONNORMALITY"
@@ -371,8 +366,7 @@ def load_results_jmulti(dataset, dt_s_list):
         # parse output related to testing the whiteness of the residuals:
         whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_diag" + ".txt"
-        whiteness_file = os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), whiteness_file)
+        whiteness_file = os.path.join(here, whiteness_file)
         whiteness_file = open(whiteness_file, encoding='latin_1')
         results["whiteness"] = dict()
         section_start_marker = "PORTMANTEAU TEST"

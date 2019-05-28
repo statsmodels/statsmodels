@@ -888,7 +888,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
                     atol=atol)
     assert_allclose(llf_obs, res.llf_obs, atol=atol)
 
-
+    
 def test_zivot_andrews():
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     resdir = os.path.join(cur_dir, "results")

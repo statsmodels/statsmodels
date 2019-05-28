@@ -18,7 +18,7 @@ from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
                                        approx_fprime_cs, approx_fprime)
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
 import statsmodels.base.wrapper as wrap
@@ -88,7 +88,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     Attributes
     ----------
-    ssm : KalmanFilter
+    ssm : statsmodels.tsa.statespace.kalman_filter.KalmanFilter
         Underlying state space representation.
 
     Notes
@@ -433,7 +433,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         -------
         MLEResults
 
-        See also
+        See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         MLEResults
@@ -1046,7 +1046,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to the `loglike` method.
 
         Returns
-        ----------
+        -------
         score : array
             Score, evaluated at `params`.
 
@@ -1055,9 +1055,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglike` method.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both args and kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         params = np.array(params, ndmin=1)
 
@@ -1109,7 +1109,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional arguments to the `loglike` method.
 
         Returns
-        ----------
+        -------
         score : array
             Score per observation, evaluated at `params`.
 
@@ -1178,9 +1178,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
 
-        Both \*args and \*\*kwargs are necessary because the optimizer from
+        Both args and kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
-        \*args (for example `scipy.optimize.fmin_l_bfgs`).
+        args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         transformed, method, approx_complex_step, approx_centered, kwargs = (
             _handle_args(MLEModel._hessian_param_names,
@@ -1594,7 +1594,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.cov_type = cov_type
 
         # Setup the cache
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Handle covariance matrix calculation
         if cov_kwds is None:
@@ -1684,6 +1684,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
           intermediate calculations use the 'approx' method.
         - 'none' for no covariance matrix calculation.
         """
+        from statsmodels.base.covtype import descriptions
+
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self
@@ -1720,35 +1722,27 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
-            res.cov_kwds['description'] = 'Covariance matrix not calculated.'
+            res.cov_kwds['description'] = descriptions['none']
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical (%s)'
-                ' differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['approx'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'oim':
             res.cov_params_default = res.cov_params_oim
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using the observed information'
-                ' matrix (%s) described in Harvey (1989).' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['OIM'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using the outer product of'
-                ' gradients (%s).' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['OPG'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
             res.cov_params_default = res.cov_params_robust_oim
-            res.cov_kwds['description'] = (
-                'Quasi-maximum likelihood covariance matrix used for'
-                ' robustness to some misspecifications; calculated using the'
-                ' observed information matrix (%s) described in'
-                ' Harvey (1989).' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['robust-OIM'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'robust_approx':
             res.cov_params_default = res.cov_params_robust_approx
-            res.cov_kwds['description'] = (
-                'Quasi-maximum likelihood covariance matrix used for'
-                ' robustness to some misspecifications; calculated using'
-                ' numerical (%s) differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['robust-approx'].format(
+                                                approx_type=approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
@@ -2639,9 +2633,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # elements
         resid_nonmissing = resid[~(np.isnan(resid))]
         ax = fig.add_subplot(222)
-        # temporarily disable Deprecation warning, normed -> density
-        # hist needs to use `density` in future when minimum matplotlib has it
-        with warnings.catch_warnings(record=True):
+
+        # gh5792: Remove  except after support for matplotlib>2.1 required
+        try:
+            ax.hist(resid_nonmissing, density=True, label='Hist')
+        except AttributeError:
             ax.hist(resid_nonmissing, normed=True, label='Hist')
 
         from scipy.stats import gaussian_kde, norm

@@ -16,9 +16,8 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  GeneralizedPoisson,
                                                  NegativeBinomialP)
 from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
@@ -44,7 +43,7 @@ class GenericZeroInflated(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -467,7 +466,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -633,7 +632,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -705,8 +704,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Poisson",
-                    "extra_attr" : ""}
+    "one_line_description": "A results class for Zero Inflated Poisson",
+    "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -715,7 +714,7 @@ class ZeroInflatedPoissonResults(CountResults):
         return (1 + w * np.exp(mu))
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -741,8 +740,8 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 
 class ZeroInflatedGeneralizedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Generalized Poisson",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Generalized Poisson",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -753,7 +752,7 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
         return ((1 + alpha * mu**p)**2 + w * mu)
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -782,8 +781,8 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Genaralized Negative Binomial",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Genaralized Negative Binomial",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):

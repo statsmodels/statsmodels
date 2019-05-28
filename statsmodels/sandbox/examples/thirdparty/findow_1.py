@@ -12,8 +12,6 @@ uses DataFrame and WidePanel to hold data downloaded from yahoo using matplotlib
 I haven't figured out storage, so the download happens at each run
 of the script.
 
-getquotes is from pandas\examples\finance.py
-
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
 """
@@ -27,6 +25,7 @@ import pandas as pa
 
 
 def getquotes(symbol, start, end):
+    # Taken from the no-longer-existent pandas.examples.finance
     quotes = fin.quotes_historical_yahoo(symbol, start, end)
     dates, open, close, high, low, volume = lzip(*quotes)
 

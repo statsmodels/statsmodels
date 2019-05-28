@@ -20,7 +20,7 @@ from __future__ import division
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import range
 from statsmodels.compat.scipy import loggamma
 
 import numpy as np
@@ -32,7 +32,7 @@ from scipy.stats import nbinom
 
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
@@ -400,8 +400,8 @@ class DiscreteModel(base.LikelihoodModel):
         """
         H = likelihood_model.hessian(xopt)
         trimmed = retvals['trimmed']
-        nz_idx = np.nonzero(trimmed == False)[0]
-        nnz_params = (trimmed == False).sum()
+        nz_idx = np.nonzero(~trimmed)[0]
+        nnz_params = (~trimmed).sum()
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
@@ -421,11 +421,28 @@ class DiscreteModel(base.LikelihoodModel):
         raise NotImplementedError
 
     def _derivative_exog(self, params, exog=None, dummy_idx=None,
-            count_idx=None):
+                         count_idx=None):
         """
         This should implement the derivative of the non-linear function
         """
         raise NotImplementedError
+
+    def _derivative_exog_helper(self, margeff, params, exog, dummy_idx,
+                                count_idx, transform):
+        """
+        Helper for _derivative_exog to wrap results appropriately
+        """
+        from .discrete_margins import _get_count_effects, _get_dummy_effects
+
+        if count_idx is not None:
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                                         self, params)
+        if dummy_idx is not None:
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                                         self, params)
+
+        return margeff
+
 
 class BinaryModel(DiscreteModel):
 
@@ -499,7 +516,7 @@ class BinaryModel(DiscreteModel):
         return dF
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -509,27 +526,22 @@ class BinaryModel(DiscreteModel):
         Not all of these make sense in the presence of discrete regressors,
         but checks are done in the results in get_margeff.
         """
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        # Note: this form should be appropriate for
+        #   group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if exog is None:
             exog = self.exog
-        margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
-                                                          params[None,:])
+
+        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
+                         params[None, :])
+
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+            margeff /= self.predict(params, exog)[:, None]
+
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
+
 
 class MultinomialModel(BinaryModel):
 
@@ -663,7 +675,8 @@ class MultinomialModel(BinaryModel):
 
         eXB = np.exp(np.dot(exog, params))
         sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = lmap(int, [self.J, self.K])
+        J = int(self.J)
+        K = int(self.K)
         repeat_eXB = np.repeat(eXB, J, axis=1)
         X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
@@ -685,7 +698,7 @@ class MultinomialModel(BinaryModel):
         return dFdX
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -705,38 +718,38 @@ class MultinomialModel(BinaryModel):
         margeff.reshape(nobs, K, J, order='F).mean(0) and the marginal effects
         for choice J are in column J
         """
-        J = int(self.J) # number of alternative choices
-        K = int(self.K) # number of variables
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        J = int(self.J)  # number of alternative choices
+        K = int(self.K)  # number of variables
+        # Note: this form should be appropriate for
+        #   group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if exog is None:
             exog = self.exog
-        if params.ndim == 1: # will get flatted from approx_fprime
+        if params.ndim == 1:  # will get flatted from approx_fprime
             params = params.reshape(K, J-1, order='F')
-        zeroparams = np.c_[np.zeros(K), params] # add base in
+
+        zeroparams = np.c_[np.zeros(K), params]  # add base in
 
         cdf = self.cdf(np.dot(exog, params))
-        margeff = np.array([cdf[:,[j]]* (zeroparams[:,j]-np.array([cdf[:,[i]]*
-            zeroparams[:,i] for i in range(int(J))]).sum(0))
-                          for j in range(J)])
-        margeff = np.transpose(margeff, (1,2,0))
+
+        # TODO: meaningful interpretation for `iterm`?
+        iterm = np.array([cdf[:, [i]] * zeroparams[:, i]
+                          for i in range(int(J))]).sum(0)
+
+        margeff = np.array([cdf[:, [j]] * (zeroparams[:, j] - iterm)
+                            for j in range(J)])
+
         # swap the axes to make sure margeff are in order nobs, K, J
+        margeff = np.transpose(margeff, (1, 2, 0))
+
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None,:]
 
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
+        margeff = self._derivative_exog_helper(margeff, params, exog,
+                                               dummy_idx, count_idx, transform)
         return margeff.reshape(len(exog), -1, order='F')
+
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
@@ -830,7 +843,7 @@ class CountModel(DiscreteModel):
         return dF
 
     def _derivative_exog(self, params, exog=None, transform="dydx",
-            dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None):
         """
         For computing marginal effects. These are the marginal effects
         d F(XB) / dX
@@ -853,17 +866,8 @@ class CountModel(DiscreteModel):
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None]
 
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+        return self._derivative_exog_helper(margeff, params, exog,
+                                            dummy_idx, count_idx, transform)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -905,7 +909,7 @@ class Poisson(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -930,7 +934,7 @@ class Poisson(CountModel):
         Poisson model cumulative distribution function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the model.  See notes.
 
@@ -958,7 +962,7 @@ class Poisson(CountModel):
         Poisson model probability mass function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the model.  See notes.
 
@@ -1315,7 +1319,7 @@ class GeneralizedPoisson(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1644,17 +1648,11 @@ class GeneralizedPoisson(CountModel):
                            2 * a3 * (a4 + 1) / a1**2 -
                            a4 * p / (mu * a1) +
                            a3 * p * a2 / (mu * a1**2) +
-                           a4 / (mu * a1) -
-                           a3 * a2 / (mu * a1**2) +
                            (y - 1) * a4 * (p - 1) / (a2 * mu) -
                            (y - 1) * (1 + a4)**2 / a2**2 -
-                           a4 * (p - 1) / (a1 * mu) -
-                           1 / mu**2) +
-                     (-a4 / a1 +
-                      a3 * a2 / a1**2 +
-                      (y - 1) * (1 + a4) / a2 -
-                      (1 + a4) / a1 +
-                      1 / mu)), axis=0)
+                           a4 * (p - 1) / (a1 * mu)) +
+                     ((y - 1) * (1 + a4) / a2 -
+                      (1 + a4) / a1)), axis=0)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -1726,7 +1724,7 @@ class Logit(BinaryModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1748,10 +1746,13 @@ class Logit(BinaryModel):
         1/(1 + exp(-X))
 
         Notes
-        ------
+        -----
         In the logit model,
 
-        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=\\text{Prob}\\left(Y=1|x\\right)=\\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=
+                  \\text{Prob}\\left(Y=1|x\\right)=
+                  \\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+
         """
         X = np.asarray(X)
         return 1/(1+np.exp(-X))
@@ -1761,7 +1762,7 @@ class Logit(BinaryModel):
         The logistic probability density function
 
         Parameters
-        -----------
+        ----------
         X : array-like
             `X` is the linear predictor of the logit model.  See notes.
 
@@ -1785,7 +1786,7 @@ class Logit(BinaryModel):
         Log-likelihood of logit model.
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the logit model.
 
@@ -1796,8 +1797,11 @@ class Logit(BinaryModel):
             See notes.
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i}\\ln\\Lambda
+           \\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         logistic distribution is symmetric.
@@ -1811,7 +1815,7 @@ class Logit(BinaryModel):
         Log-likelihood of logit model for each observation.
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the logit model.
 
@@ -1822,8 +1826,11 @@ class Logit(BinaryModel):
             at `params`. See Notes
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i}\\ln\\Lambda
+           \\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         for observations :math:`i=1,...,n`
 
@@ -1928,7 +1935,7 @@ class Probit(BinaryModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -1946,7 +1953,7 @@ class Probit(BinaryModel):
             The linear predictor of the model (XB).
 
         Returns
-        --------
+        -------
         cdf : ndarray
             The cdf evaluated at `X`.
 
@@ -1966,7 +1973,7 @@ class Probit(BinaryModel):
             The linear predictor of the model (XB).
 
         Returns
-        --------
+        -------
         pdf : ndarray
             The value of the normal density function for each point of X.
 
@@ -2198,7 +2205,7 @@ class MNLogit(MultinomialModel):
             The linear predictor of the model XB.
 
         Returns
-        --------
+        -------
         cdf : ndarray
             The cdf evaluated at `X`.
 
@@ -2226,8 +2233,13 @@ class MNLogit(MultinomialModel):
             See notes.
 
         Notes
-        ------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        -----
+        .. math::
+
+           \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln
+           \\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}
+           {\\sum_{k=0}^{J}
+           \\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
@@ -2253,8 +2265,13 @@ class MNLogit(MultinomialModel):
             at `params`. See Notes
 
         Notes
-        ------
-        .. math:: \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        -----
+        .. math::
+
+           \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln
+           \\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}
+           {\\sum_{k=0}^{J}
+           \\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
 
         for observations :math:`i=1,...,n`
 
@@ -2276,7 +2293,7 @@ class MNLogit(MultinomialModel):
             The parameters of the multinomial logit model.
 
         Returns
-        --------
+        -------
         score : ndarray, (K * (J-1),)
             The 2-d score vector, i.e. the first derivative of the
             loglikelihood function, of the multinomial logit model evaluated at
@@ -2322,7 +2339,7 @@ class MNLogit(MultinomialModel):
             The parameters of the multinomial logit model.
 
         Returns
-        --------
+        -------
         jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params` .
@@ -2348,7 +2365,7 @@ class MNLogit(MultinomialModel):
         Multinomial logit Hessian matrix of the log-likelihood
 
         Parameters
-        -----------
+        ----------
         params : array-like
             The parameters of the model
 
@@ -2450,6 +2467,7 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
+
 class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
@@ -2458,7 +2476,7 @@ class NegativeBinomial(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -2466,15 +2484,12 @@ class NegativeBinomial(CountModel):
 
     References
     ----------
-
-    References:
-
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
+    """ % {'params': base._model_params_doc,
+           'extra_params':
            """loglike_method : string
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
@@ -2491,7 +2506,7 @@ class NegativeBinomial(CountModel):
 
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
-                       exposure=None, missing='none', **kwargs):
+                 exposure=None, missing='none', **kwargs):
         super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                missing=missing, **kwargs)
@@ -2511,12 +2526,12 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'nb1':
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True # transform lnalpha -> alpha in fit
+            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'geometric':
             self.hessian = self._hessian_geom
             self.score = self._score_geom
@@ -2527,7 +2542,7 @@ class NegativeBinomial(CountModel):
 
     # Workaround to pickle instance methods
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = self.__dict__.copy()  # copy the dict since we change it
         del odict['hessian']
         del odict['score']
         del odict['loglikeobs']
@@ -2552,14 +2567,14 @@ class NegativeBinomial(CountModel):
         return llf
 
     def _ll_nb2(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
         return self._ll_nbin(params[:-1], alpha, Q=0)
 
     def _ll_nb1(self, params):
-        if self._transparams: # got lnalpha during fit
+        if self._transparams:  # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -2608,8 +2623,8 @@ class NegativeBinomial(CountModel):
 
     def _score_geom(self, params):
         exog = self.exog
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog[:, None]
+        mu = self.predict(params)[:, None]
         dparams = exog * (y-mu)/(mu+1)
         return dparams.sum(0)
 
@@ -2727,12 +2742,12 @@ class NegativeBinomial(CountModel):
         alpha2 = alpha**2
         mu2 = mu**2
         dada = ((alpha3*mu*(2*log_alpha + 2*dgpart + 3) -
-                2*alpha3*y +
-                4*alpha2*mu*(log_alpha + dgpart) +
-                alpha2 * (2*mu - y) +
-                2*alpha*mu2*trigamma + mu2 * trigamma + alpha2 * mu2 * trigamma +
-                2*alpha*mu*(log_alpha + dgpart)
-                )/(alpha**4*(alpha2 + 2*alpha + 1)))
+                 2*alpha3*y +
+                 4*alpha2*mu*(log_alpha + dgpart) +
+                 alpha2 * (2*mu - y) +
+                 2*alpha*mu2*trigamma + mu2 * trigamma + alpha2 * mu2 * trigamma +
+                 2*alpha*mu*(log_alpha + dgpart)
+                 )/(alpha**4*(alpha2 + 2*alpha + 1)))
         hess_arr[-1,-1] = dada.sum()
 
         return hess_arr
@@ -2925,7 +2940,7 @@ class NegativeBinomialP(CountModel):
     %(params)s
     %(extra_params)s
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -3044,14 +3059,14 @@ class NegativeBinomialP(CountModel):
         a4 = p * a1 / mu
 
         dgpart = digamma(a3) - digamma(a1)
+        dgterm = dgpart + np.log(a1 / a2) + 1 - a3 / a2
+        # TODO: better name/interpretation for dgterm?
 
-        dparams = ((a4 * dgpart -
-                   a3 / a2) +
-                   y / mu + a4 * (1 - a3 / a2 + np.log(a1 / a2)))
+        dparams = (a4 * dgterm -
+                   a3 / a2 +
+                   y / mu)
         dparams = (self.exog.T * mu * dparams).T
-        dalpha = (-a1 / alpha * (dgpart +
-                                 np.log(a1 / a2) +
-                                 1 - a3 / a2))
+        dalpha = -a1 / alpha * dgterm
 
         return np.concatenate((dparams, np.atleast_2d(dalpha).T),
                               axis=1)
@@ -3108,40 +3123,43 @@ class NegativeBinomialP(CountModel):
         a2 = mu + a1
         a3 = y + a1
         a4 = p * a1 / mu
-        a5 = a4 * p / mu
 
+        prob = a1 / a2
+        lprob = np.log(prob)
         dgpart = digamma(a3) - digamma(a1)
+        pgpart = polygamma(1, a3) - polygamma(1, a1)
 
         dim = exog.shape[1]
         hess_arr = np.zeros((dim + 1, dim + 1))
 
         coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
-                          a3 * (a5 - a4 / mu) / a2 -
+                          a3 / a2 * (p - 1) * a4 / mu -
                           y / mu**2 -
                           2 * a4 * (1 + a4) / a2 +
-                          a5 * (np.log(a1) - np.log(a2) + dgpart + 2) -
-                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1) / mu -
-                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                          p * a4 / mu * (lprob + dgpart + 2) -
+                          a4 / mu * (lprob + dgpart + 1) +
+                          a4**2 * pgpart) +
                          (-(1 + a4) * a3 / a2 +
                           y / mu +
-                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1)) / mu)
+                          a4 * (lprob + dgpart + 1)) / mu)
 
         for i in range(dim):
-            hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
+            hess_arr[i, :-1] = np.sum(self.exog[:, :].T * self.exog[:, i] * coeff, axis=1)
 
 
-        hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
+        hess_arr[-1,:-1] = (self.exog[:, :].T * mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
-                 p * (np.log(a1 / a2) + dgpart + 2) / mu +
-                 p * (a3 / mu + a4) / a2 +
-                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum(axis=1)
+                 p * (lprob + dgpart + 2) / mu +
+                 p / mu * (a3 + p * a1) / a2 -
+                 a4 * pgpart) / alpha).sum(axis=1)
 
 
-        da2 = (a1 * (2 * np.log(a1 / a2) +
+        da2 = (a1 * (2 * lprob +
                      2 * dgpart + 3 -
-                     2 * a3 / a2 - a1 * polygamma(1, a1) +
-                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
-                     a1 * a3 / a2**2) / alpha**2)
+                     2 * a3 / a2
+                     + a1 * pgpart
+                     - 2 * prob +
+                     prob * a3 / a2) / alpha**2)
 
         hess_arr[-1, -1] = da2.sum()
 
@@ -3355,7 +3373,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self._cache = resettable_cache()
+        self._cache = {}
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
@@ -3578,7 +3596,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
+        ----------
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -3597,9 +3615,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
@@ -3607,9 +3623,8 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
-                     ('converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
+                     ('converged:', ["%s" % self.mle_retvals['converged']]),
+                    ]
 
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),
@@ -3620,6 +3635,9 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
                      ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
@@ -3627,9 +3645,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         yname, yname_list = self._get_endog_name(yname, yname_list)
+
         # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
+
         # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
                               use_t=self.use_t)
@@ -3638,10 +3658,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             smry.add_extra_txt(['Model has been estimated subject to linear '
                                 'equality constraints.'])
 
-        #diagnostic table not used yet
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
@@ -3649,7 +3665,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         """Experimental function to summarize regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -3704,10 +3720,11 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for NegativeBinomial 1 and 2",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for NegativeBinomial 1 and 2",
+        "extra_attr": ""}
 
     @cache_readonly
     def lnalpha(self):
@@ -3730,10 +3747,11 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
+
 class GeneralizedPoissonResults(NegativeBinomialResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Generalized Poisson",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Generalized Poisson",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -3745,14 +3763,13 @@ class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
             "extra_attr" : _l1_results_attr}
-        #discretefit = CountResults(self, cntfit)
 
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
 
         # Set degrees of freedom.  In doing so,
         # adjust for extra parameter in NegativeBinomial nb1 and nb2
@@ -3841,7 +3858,7 @@ class BinaryResults(DiscreteResults):
             considered 1 and below which a prediction is considered 0.
 
         Notes
-        ------
+        -----
         pred_table[i,j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
@@ -3851,19 +3868,18 @@ class BinaryResults(DiscreteResults):
         bins = np.array([0, 0.5, 1])
         return np.histogram2d(actual, pred, bins=bins)[0]
 
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
-                     yname_list)
+                                                  yname_list)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
         predclose_sum = (absprederror < 1e-4).sum()
         predclose_frac = predclose_sum / len(fittedvalues)
 
-        #add warnings/notes
+        # add warnings/notes
         etext = []
-        if predclose_sum == len(fittedvalues): #nobs?
+        if predclose_sum == len(fittedvalues):  # TODO: nobs?
             wstr = "Complete Separation: The results show that there is"
             wstr += "complete separation.\n"
             wstr += "In this case the Maximum Likelihood Estimator does "
@@ -3957,10 +3973,12 @@ class BinaryResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+
 class LogitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Logit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Logit Model",
+        "extra_attr": ""}
+
     @cache_readonly
     def resid_generalized(self):
         """
@@ -3978,10 +3996,12 @@ class LogitResults(BinaryResults):
         # Generalized residuals
         return self.model.endog - self.predict()
 
+
 class ProbitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Probit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Probit Model",
+        "extra_attr": ""}
+
     @cache_readonly
     def resid_generalized(self):
         """
@@ -4010,7 +4030,7 @@ class L1BinaryResults(BinaryResults):
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
         self.df_model = self.nnz_params - 1
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
@@ -4018,6 +4038,12 @@ class L1BinaryResults(BinaryResults):
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for multinomial data", "extra_attr" : ""}
+
+    def __init__(self, model, mlefit):
+        super(MultinomialResults, self).__init__(model, mlefit)
+        self.J = model.J
+        self.K = model.K
+
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
         try:
@@ -4110,7 +4136,7 @@ class MultinomialResults(DiscreteResults):
         """Experimental function to summarize regression results
 
         Parameters
-        -----------
+        ----------
         alpha : float
             significance level for the confidence intervals
         float_format: string
@@ -4124,9 +4150,7 @@ class MultinomialResults(DiscreteResults):
 
         See Also
         --------
-        statsmodels.iolib.summary2.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
 
         from statsmodels.iolib import summary2
@@ -4136,14 +4160,18 @@ class MultinomialResults(DiscreteResults):
         eqn = self.params.shape[1]
         confint = self.conf_int(alpha)
         for i in range(eqn):
-            coefs = summary2.summary_params((self, self.params[:,i],
-                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i],
-                    confint[i]), alpha=alpha)
+            coefs = summary2.summary_params((self, self.params[:, i],
+                                             self.bse[:, i],
+                                             self.tvalues[:, i],
+                                             self.pvalues[:, i],
+                                             confint[i]),
+                                            alpha=alpha)
             # Header must show value of endog
             level_str =  self.model.endog_names + ' = ' + str(i)
             coefs[level_str] = coefs.index
-            coefs = coefs.iloc[:,[-1,0,1,2,3,4,5]]
-            smry.add_df(coefs, index=False, header=True, float_format=float_format)
+            coefs = coefs.iloc[:, [-1, 0, 1, 2, 3, 4, 5]]
+            smry.add_df(coefs, index=False, header=True,
+                        float_format=float_format)
             smry.add_title(results=self)
         return smry
 
@@ -4157,7 +4185,7 @@ class L1MultinomialResults(MultinomialResults):
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = mlefit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
+        self.nnz_params = (~self.trimmed).sum()
 
         # Note: J-1 constants
         self.df_model = self.nnz_params - (self.model.J - 1)

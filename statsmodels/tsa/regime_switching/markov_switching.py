@@ -15,7 +15,7 @@ import pandas as pd
 
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.sm_exceptions import EstimationWarning
@@ -1871,11 +1871,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         self.cov_type = cov_type
 
         # Setup the cache
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Handle covariance matrix calculation
         if cov_kwds is None:
-                cov_kwds = {}
+            cov_kwds = {}
         self._cov_approx_complex_step = (
             cov_kwds.pop('approx_complex_step', True))
         self._cov_approx_centered = cov_kwds.pop('approx_centered', False)
@@ -1934,6 +1934,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                     self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
+        from statsmodels.base.covtype import descriptions
+
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self
@@ -1964,24 +1966,19 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
-            res.cov_kwds['description'] = 'Covariance matrix not calculated.'
+            res.cov_kwds['description'] = descriptions['none']
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical (%s)'
-                ' differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['approx'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using the outer product of'
-                ' gradients (%s).' % approx_type_str
-            )
+            res.cov_kwds['description'] = descriptions['OPG'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'robust':
             res.cov_params_default = res.cov_params_robust
-            res.cov_kwds['description'] = (
-                'Quasi-maximum likelihood covariance matrix used for'
-                ' robustness to some misspecifications; calculated using'
-                ' numerical (%s) differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['robust'].format(
+                                                approx_type=approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
@@ -2238,7 +2235,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                    self.conf_int(alpha)[mask])
 
             param_names = [
-                re.sub('\[\d+\]$', '', name) for name in
+                re.sub(r'\[\d+\]$', '', name) for name in
                 np.array(self.data.param_names)[mask].tolist()
             ]
 

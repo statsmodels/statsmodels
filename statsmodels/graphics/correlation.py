@@ -59,6 +59,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     >>> smg.plot_corr(corr_matrix, xnames=hie_data.names)
     >>> plt.show()
 
+    ..plot :: plots/graphics_correlation_plot_corr.py
     """
     if ax is None:
         create_colorbar = True
@@ -66,8 +67,6 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         create_colorbar = False
 
     fig, ax = utils.create_mpl_ax(ax)
-    import matplotlib as mpl
-    from matplotlib import cm
 
     nvars = dcorr.shape[0]
 
@@ -88,7 +87,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5
 
-    if not ynames is None:
+    if ynames is not None:
         ax.set_yticks(labelPos)
         ax.set_yticks(labelPos[:-1]+0.5, minor=True)
         ax.set_yticklabels(ynames[::-1], fontsize='small',
@@ -96,7 +95,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     elif ynames == []:
         ax.set_yticks([])
 
-    if not xnames is None:
+    if xnames is not None:
         ax.set_xticks(labelPos)
         ax.set_xticks(labelPos[:-1]+0.5, minor=True)
         ax.set_xticklabels(xnames, fontsize='small', rotation=45,
@@ -179,6 +178,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     >>> sm.graphics.plot_corr_grid([corr_matrix] * 8, xnames=hie_data.names)
     >>> plt.show()
 
+    ..plot :: plots/graphics_correlation_plot_corr_grid.py
     """
     if ynames is None:
         ynames = xnames

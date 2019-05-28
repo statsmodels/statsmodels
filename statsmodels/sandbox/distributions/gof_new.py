@@ -18,7 +18,7 @@ References
 
 '''
 from __future__ import print_function
-from statsmodels.compat.python import range, lmap, string_types, callable
+from statsmodels.compat.python import range, lmap, string_types
 import numpy as np
 
 from scipy.stats import distributions
@@ -72,7 +72,7 @@ def ks_2samp(data1, data2):
     >>> from scipy.stats import ks_2samp
 
     >>> #fix random seed to get the same result
-    >>> np.random.seed(12345678);
+    >>> np.random.seed(12345678)
 
     >>> n1 = 200  # size of first sample
     >>> n2 = 300  # size of second sample
@@ -80,7 +80,7 @@ def ks_2samp(data1, data2):
     different distribution
     we can reject the null hypothesis since the pvalue is below 1%
 
-    >>> rvs1 = stats.norm.rvs(size=n1,loc=0.,scale=1);
+    >>> rvs1 = stats.norm.rvs(size=n1,loc=0.,scale=1)
     >>> rvs2 = stats.norm.rvs(size=n2,loc=0.5,scale=1.5)
     >>> ks_2samp(rvs1,rvs2)
     (0.20833333333333337, 4.6674975515806989e-005)
@@ -526,8 +526,8 @@ def asquare(cdfvals, axis=0):
     islice = [None] * ndim
     islice[axis] = slice(None)
     slice_reverse[axis] = slice(None, None, -1)
-    asqu = -((2. * np.arange(1., nobs+1)[islice] - 1) *
-            (np.log(cdfvals) + np.log(1-cdfvals[slice_reverse]))/nobs).sum(axis) \
+    asqu = -((2. * np.arange(1., nobs+1)[tuple(islice)] - 1) *
+            (np.log(cdfvals) + np.log(1-cdfvals[tuple(slice_reverse)]))/nobs).sum(axis) \
             - nobs
 
     return asqu
@@ -563,7 +563,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
 
     #it will be better to build a separate batch function that calls bootstrap
     #keep batch if value is true, but batch iterate from outside if stat is returned
-    if (not batch_size is None):
+    if batch_size is not None:
         if value is None:
             raise ValueError('using batching requires a value')
         n_batch = int(np.ceil(nrep/float(batch_size)))
@@ -638,6 +638,7 @@ class NewNorm(object):
 
 
 
+
 if __name__ == '__main__':
     from scipy import stats
     #rvs = np.random.randn(1000)
@@ -686,19 +687,3 @@ if __name__ == '__main__':
     [0.1545, 0.10009999999999999, 0.049000000000000002, 0.023, 0.0104]
     >>>
     '''
-
-    #test equality of loop, vectorized, batch-vectorized
-    np.random.seed(8765679)
-    resu1 = bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=100,
-                      value=0.576/(1 + 4./nobs - 25./nobs**2))
-    np.random.seed(8765679)
-    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1) for _ in range(100)]
-    resu2 = (np.array(tmp) > 0.576/(1 + 4./nobs - 25./nobs**2)).mean()
-    np.random.seed(8765679)
-    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1,
-                     value=0.576/ (1 + 4./nobs - 25./nobs**2),
-                     batch_size=10) for _ in range(10)]
-    resu3 = np.array(resu).mean()
-    from numpy.testing import assert_almost_equal, assert_array_almost_equal
-    assert_array_almost_equal(resu1, resu2, 15)
-    assert_array_almost_equal(resu2, resu3, 15)

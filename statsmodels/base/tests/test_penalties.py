@@ -7,10 +7,12 @@ License: BSD-3
 """
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 import statsmodels.base._penalties as smpen
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
+
+
 
 
 class CheckPenalty(object):
@@ -28,7 +30,7 @@ class CheckPenalty(object):
         pen = self.pen
         x = self.params
 
-        ps = np.array([pen.grad(np.atleast_1d(xi)) for xi in x])
+        ps = np.array([pen.deriv(np.atleast_1d(xi)) for xi in x])
         psn = np.array([approx_fprime(np.atleast_1d(xi), pen.func) for xi in x])
         assert_allclose(ps, psn, rtol=1e-7, atol=1e-8)
 
@@ -100,6 +102,22 @@ class TestPseudoHuber(CheckPenalty):
         cls.params = np.column_stack((x0, x0))
         cls.pen = smpen.PseudoHuber(0.1)
 
+    def test_backward_compatibility(self):
+        wts = [0.5]
+        pen = smpen.PseudoHuber(0.1, wts=wts)
+        assert_equal(pen.weights, wts)
+
+    def test_deprecated_priority(self):
+        weights = [1.0]
+        wts = [0.5]
+        pen = smpen.PseudoHuber(0.1, weights=weights, wts=wts)
+        assert_equal(pen.weights, weights)
+
+    def test_weights_assignment(self):
+        weights = [1.0, 2.0]
+        pen = smpen.PseudoHuber(0.1, weights=weights)
+        assert_equal(pen.weights, weights)
+
 
 class TestL2(CheckPenalty):
 
@@ -108,3 +126,28 @@ class TestL2(CheckPenalty):
         x0 = np.linspace(-0.2, 0.2, 11)
         cls.params = np.column_stack((x0, x0))
         cls.pen = smpen.L2()
+
+    def test_backward_compatibility(self):
+        wts = [0.5]
+        pen = smpen.L2(wts=wts)
+        assert_equal(pen.weights, wts)
+
+    def test_deprecated_priority(self):
+        weights = [1.0]
+        wts = [0.5]
+        pen = smpen.L2(weights=weights, wts=wts)
+        assert_equal(pen.weights, weights)
+
+    def test_weights_assignment(self):
+        weights = [1.0, 2.0]
+        pen = smpen.L2(weights=weights)
+        assert_equal(pen.weights, weights)
+
+
+class TestNonePenalty(CheckPenalty):
+
+    @classmethod
+    def setup_class(cls):
+        x0 = np.linspace(-0.2, 0.2, 11)
+        cls.params = np.column_stack((x0, x0))
+        cls.pen = smpen.NonePenalty()

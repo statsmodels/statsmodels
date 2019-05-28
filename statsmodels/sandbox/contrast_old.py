@@ -65,7 +65,7 @@ class Contrast(object):
     def __init__(self, term, formula, name=''):
         self.term = term
         self.formula = formula
-        if name is '':
+        if name == '':
             self.name = str(term)
         else:
             self.name = name

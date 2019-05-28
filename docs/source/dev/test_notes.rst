@@ -3,20 +3,33 @@
 Testing
 =======
 
+Setting up development environment locally
+------------------------------------------
+Follow our :ref:`installation instructions <install>` and set up a suitable
+environment to build statsmodels from source. We recommend that you develop
+using a development install of statsmodels::
+
+    python setup.py develop
+
+This will compile the C code and add statsmodels to your activate python
+environment by creating links from your python environemnt's libraries
+to the statsmodels source code. Therefore, changes to pure python code will
+be immediately available to the user without a re-install.
+
 Test Driven Development
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 We strive to follow a `Test Driven Development (TDD) <https://en.wikipedia.org/wiki/Test-driven_development>`_ pattern.
 All models or statistical functions that are added to the main code base are to have
 tests versus an existing statistical package, if possible.
 
 Introduction to pytest
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 Like many packages, statsmodels uses the `pytest testing system <https://docs.pytest.org/en/latest/contents.html>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__.  Pytest will find any file, directory, function, or class name that starts with ``test`` or ``Test`` (classes only). Test function should start with ``test``, test classes should start with ``Test``. These functions and classes should be placed in files with names beginning with ``test`` in a directory called ``tests``.
 
 .. _run-tests:
 
 Running the Test Suite
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 You can run all the tests by::
 
@@ -67,11 +80,11 @@ at different levels:
     pytest statsmodels/regression/tests/test_regression.py::test_ridge
 
 How To Write A Test
-~~~~~~~~~~~~~~~~~~~
+-------------------
 NumPy provides a good introduction to unit testing with pytest and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details.
-Here, we will document a few conventions we follow that are worth mentioning. Often we want to test 
-a whole model at once rather than just one function, for example. The following is a pared down 
-version test_discrete.py. In this case, several different models with different options need to be 
+Here, we will document a few conventions we follow that are worth mentioning. Often we want to test
+a whole model at once rather than just one function, for example. The following is a pared down
+version test_discrete.py. In this case, several different models with different options need to be
 tested. The tests look something like
 
 .. code-block:: python
@@ -87,7 +100,7 @@ tested. The tests look something like
 
         def test_params(self):
             assert_almost_equal(self.res1.params, self.res2.params, 4)
-        
+
         decimal_tvalues = 4
         def test_tvalues(self):
             assert_almost_equal(self.res1.params, self.res2.params, self.decimal_tvalues)
@@ -105,10 +118,9 @@ tested. The tests look something like
             data = sm.datasets.spector.load()
             data.exog = sm.add_constant(data.exog)
             cls.res1 = sm.Probit(data.endog, data.exog).fit(method='newton', disp=0)
-            
+
             # set up results
-            res2 = Spector()
-            res2.probit()
+            res2 = Spector.probit
             cls.res2 = res2
 
             # set up precision
@@ -117,23 +129,23 @@ tested. The tests look something like
         def test_model_specifc(self):
             assert_almost_equal(self.res1.foo, self.res2.foo, 4)
 
-The main workhorse is the `CheckDiscreteResults` class. Notice that we can set the level of precision 
-for `tvalues` to be different than the default in the subclass  `TestProbitNewton`. All of the test 
+The main workhorse is the `CheckDiscreteResults` class. Notice that we can set the level of precision
+for `tvalues` to be different than the default in the subclass  `TestProbitNewton`. All of the test
 classes have a ``@classmethod`` called ``setup_class``. Otherwise, pytest would reinstantiate the class
 before every single test method. If the fitting of the model is time consuming, then this is clearly
 undesirable. Finally, we have a script at the bottom so that we can run the tests should be running
 the Python file.
 
 Test Results
-~~~~~~~~~~~~
-The test results are the final piece of the above example. For many tests, especially those for the 
-models, there are many results against which you would like to test. It makes sense then to separate 
+------------
+The test results are the final piece of the above example. For many tests, especially those for the
+models, there are many results against which you would like to test. It makes sense then to separate
 the hard-coded results from the actual tests to make the tests more readable. If there are only a few
 results it's not necessary to separate the results. We often take results from some other statistical
 package. It is important to document where you got the results from and why they might differ from
 the results that we get. Each tests folder has a results subdirectory. Consider the folder structure
 for the discrete models::
-    
+
     tests/
         __init__.py
         test_discrete.py
@@ -142,7 +154,7 @@ for the discrete models::
             results_discrete.py
             nbinom_resids.csv
 
-It is up to you how best to structure the results. In the discrete model example, you will notice 
-that there are result classes based around particular datasets with a method for loading different 
-model results for that dataset. You can also include text files that hold results to be loaded by 
+It is up to you how best to structure the results. In the discrete model example, you will notice
+that there are result classes based around particular datasets with a method for loading different
+model results for that dataset. You can also include text files that hold results to be loaded by
 results classes if it is easier than putting them in the class itself.

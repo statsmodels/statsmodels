@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa
 from . import iolib
 from . import datasets
 from . import tools
@@ -30,6 +31,8 @@ from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test
 
+from .gam.generalized_additive_model import GLMGam
+from .gam import api as gam
 from .graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics
 from .stats import api as stats
@@ -48,9 +51,10 @@ from .tools.print_version import show_versions
 from .tools.web import webdoc
 
 import os
-
 chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
 if os.path.exists(chmpath):
+    # As of 0.10.0, this is not reached.  See GH#5134
+
     def open_help(chmpath=chmpath):
         from subprocess import Popen
 

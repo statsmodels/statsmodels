@@ -16,7 +16,7 @@ import statsmodels.sandbox.panel.correlation_structures as cs
 import statsmodels.stats.sandwich_covariance as sw
 #from statsmodels.stats.sandwich_covariance import (
 #                   S_hac_groupsum, weights_bartlett, _HCCM2)
-from statsmodels.stats.moment_helpers import cov2corr, se_cov
+from statsmodels.stats.moment_helpers import se_cov
 cov_nw_panel2 = sw.cov_nw_groupsum
 
 

@@ -1,9 +1,13 @@
+from datetime import datetime
+
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
+import pytest
+
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tools.testing import assert_equal
-from datetime import datetime
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 
 def test_pandas_nodates_index():
@@ -25,7 +29,10 @@ def test_pandas_nodates_index():
     actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
                   str(index[0].value))
     assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
-    mod = TimeSeriesModel(s)
+
+    with pytest.warns(ValueWarning, match="No frequency information"):
+        mod = TimeSeriesModel(s)
+
     start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
     assert_equal(len(mod.data.predict_dates), 5)
 
@@ -68,7 +75,7 @@ def test_keyerror_start_date():
 def test_period_index():
     # test 1285
 
-    dates = pd.PeriodIndex(start="1/1/1990", periods=20, freq="M")
+    dates = pd.period_range(start="1/1/1990", periods=20, freq="M")
     x = np.arange(1, 21.)
 
     model = TimeSeriesModel(pd.Series(x, index=dates))
@@ -93,7 +100,7 @@ def test_pandas_dates():
 
 
 def test_get_predict_start_end():
-    index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')
+    index = pd.date_range(start='1970-01-01', end='1990-01-01', freq='AS')
     endog = pd.Series(np.zeros(10), index[:10])
     model = TimeSeriesModel(endog)
 

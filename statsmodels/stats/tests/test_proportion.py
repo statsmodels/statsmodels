@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 import warnings
 
+import pytest
 import numpy as np
 import pandas as pd
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
@@ -16,17 +17,16 @@ from statsmodels.stats.proportion import (proportion_confint,
                                           multinomial_proportions_confint)
 import statsmodels.stats.proportion as smprop
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.testing import Holder
 
 
-class Holder(object):
-    pass
-
-probci_methods = {'agresti_coull' : 'agresti-coull',
-                  'normal' : 'asymptotic',
-                  'beta' : 'exact',
-                  'wilson' : 'wilson',
-                  'jeffreys' : 'bayes'
+probci_methods = {'agresti_coull': 'agresti-coull',
+                  'normal': 'asymptotic',
+                  'beta': 'exact',
+                  'wilson': 'wilson',
+                  'jeffreys': 'bayes'
                   }
+
 
 def test_confint_proportion():
     from .results.results_proportion import res_binom, res_binom_methods
@@ -54,7 +54,8 @@ def test_confint_proportion():
                                 err_msg=repr(case) + method)
 
 
-def test_confint_proportion_ndim():
+@pytest.mark.parametrize('method', probci_methods)
+def test_confint_proportion_ndim(method):
     # check that it works with 1-D, 2-D and pandas
 
     count = np.arange(6).reshape(2, 3)
@@ -63,33 +64,32 @@ def test_confint_proportion_ndim():
     count_pd = pd.DataFrame(count)
     nobs_pd =  pd.DataFrame(nobs)
 
-    for method in probci_methods:
-        ci_arr = proportion_confint(count, nobs, alpha=0.05, method=method)
-        ci_pd = proportion_confint(count_pd, nobs_pd, alpha=0.05,
-                                   method=method)
-        assert_allclose(ci_arr, (ci_pd[0].values, ci_pd[1].values), rtol=1e-13)
-        # spot checking one value
-        ci12 = proportion_confint(count[1, 2], nobs[1, 2], alpha=0.05,
-                                  method=method)
-        assert_allclose((ci_pd[0].values[1, 2], ci_pd[1].values[1, 2]), ci12,
-                        rtol=1e-13)
-        assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
+    ci_arr = proportion_confint(count, nobs, alpha=0.05, method=method)
+    ci_pd = proportion_confint(count_pd, nobs_pd, alpha=0.05,
+                               method=method)
+    assert_allclose(ci_arr, (ci_pd[0].values, ci_pd[1].values), rtol=1e-13)
+    # spot checking one value
+    ci12 = proportion_confint(count[1, 2], nobs[1, 2], alpha=0.05,
+                              method=method)
+    assert_allclose((ci_pd[0].values[1, 2], ci_pd[1].values[1, 2]), ci12,
+                    rtol=1e-13)
+    assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
-        # check that lists work as input
-        ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05,
-                                   method=method)
-        assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
+    # check that lists work as input
+    ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05,
+                               method=method)
+    assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
 
-        # check pandas Series, 1-D
-        ci_pds = proportion_confint(count_pd.iloc[0], nobs_pd.iloc[0],
-                                    alpha=0.05, method=method)
-        assert_allclose((ci_pds[0].values, ci_pds[1].values),
-                        (ci_pd[0].values[0], ci_pd[1].values[0]), rtol=1e-13)
+    # check pandas Series, 1-D
+    ci_pds = proportion_confint(count_pd.iloc[0], nobs_pd.iloc[0],
+                                alpha=0.05, method=method)
+    assert_allclose((ci_pds[0].values, ci_pds[1].values),
+                    (ci_pd[0].values[0], ci_pd[1].values[0]), rtol=1e-13)
 
-        # check scalar nobs, verifying one value
-        ci_arr2 = proportion_confint(count, nobs[1, 2], alpha=0.05,
-                                     method=method)
-        assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
+    # check scalar nobs, verifying one value
+    ci_arr2 = proportion_confint(count, nobs[1, 2], alpha=0.05,
+                                 method=method)
+    assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
 
 def test_samplesize_confidenceinterval_prop():
@@ -500,58 +500,63 @@ def test_ztost():
 def test_power_ztost_prop_norm():
     # regression test for normal distribution
     # from a rough comparison, the results and variations look reasonable
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=False,
-                                    dist='norm', variance_prop=0.5,
-                                    continuity=0, critval_continuity=0)[0]
+    with pytest.warns(HypothesisTestWarning):
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=False,
+                                        dist='norm', variance_prop=0.5,
+                                        continuity=0, critval_continuity=0)[0]
 
-    res_power = np.array([0., 0., 0., 0.11450013,  0.27752006, 0.41495922,
-                          0.52944621,  0.62382638,  0.70092914,  0.76341806])
+    res_power = np.array([0., 0., 0., 0.11450013, 0.27752006, 0.41495922,
+                          0.52944621, 0.62382638, 0.70092914, 0.76341806])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=False,
-                                    dist='norm', variance_prop=0.5,
-                                    continuity=1, critval_continuity=0)[0]
+    with pytest.warns(HypothesisTestWarning):
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=False,
+                                        dist='norm', variance_prop=0.5,
+                                        continuity=1, critval_continuity=0)[0]
 
-    res_power = np.array([0., 0., 0.02667562,  0.20189793,  0.35099606,
-                          0.47608598,  0.57981118,  0.66496683,  0.73427591,
+    res_power = np.array([0., 0., 0.02667562, 0.20189793, 0.35099606,
+                          0.47608598, 0.57981118, 0.66496683, 0.73427591,
                           0.79026127])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=True,
-                                    dist='norm', variance_prop=0.5,
-                                    continuity=1, critval_continuity=0)[0]
+    with pytest.warns(HypothesisTestWarning):
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=True,
+                                        dist='norm', variance_prop=0.5,
+                                        continuity=1, critval_continuity=0)[0]
 
-    res_power = np.array([0., 0., 0., 0.08902071,  0.23582284, 0.35192313,
-                          0.55312718,  0.61549537,  0.66743625,  0.77066806])
+    res_power = np.array([0., 0., 0., 0.08902071, 0.23582284, 0.35192313,
+                          0.55312718, 0.61549537, 0.66743625, 0.77066806])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=True,
-                                    dist='norm', variance_prop=0.5,
-                                    continuity=1, critval_continuity=1)[0]
+    with pytest.warns(HypothesisTestWarning):
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=True,
+                                        dist='norm', variance_prop=0.5,
+                                        continuity=1, critval_continuity=1)[0]
 
-    res_power = np.array([0., 0., 0., 0.08902071,  0.23582284, 0.35192313,
-                          0.44588687,  0.61549537,  0.66743625,  0.71115563])
+    res_power = np.array([0., 0., 0., 0.08902071, 0.23582284, 0.35192313,
+                          0.44588687, 0.61549537, 0.66743625, 0.71115563])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=True,
-                                    dist='norm', variance_prop=None,
-                                    continuity=0, critval_continuity=0)[0]
+    with pytest.warns(HypothesisTestWarning):
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=True,
+                                        dist='norm', variance_prop=None,
+                                        continuity=0, critval_continuity=0)[0]
 
     res_power = np.array([0., 0., 0., 0., 0.15851942, 0.41611758,
-                          0.5010377 ,  0.5708047 ,  0.70328247,  0.74210096])
+                          0.5010377, 0.5708047, 0.70328247, 0.74210096])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 

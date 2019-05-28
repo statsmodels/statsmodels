@@ -1312,7 +1312,7 @@ def test_exceptions():
                     deterministic="co").fit()
     # ##### exog_fc not passed as argument:
     assert_raises_regex(ValueError, "exog_fc is None.*", vecm_res.predict)
-        # ##### exog_fc is too short:
+    # ##### exog_fc is too short:
     exog_fc = np.ones(STEPS)
     assert_raises_regex(ValueError, ".*exog_fc must have at least steps elements.*",
                         vecm_res.predict, 5, None, exog_fc[:2])  # [:2] shortens exog_fc

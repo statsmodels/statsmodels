@@ -54,7 +54,7 @@ License: BSD
 
 from __future__ import print_function
 from statsmodels.compat.python import range, iteritems
-from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
+from scipy import stats, special
 from scipy.stats import distributions
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 import numpy as np
@@ -488,9 +488,6 @@ License: BSD
 
 '''
 
-from scipy import integrate # for scipy 0.6.0
-
-from scipy import stats, info
 from scipy.stats import distributions
 
 
@@ -583,7 +580,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy import stats
 from scipy.stats import distributions
 import numpy as np
 
@@ -1057,7 +1053,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     else:
         raise ValueError('corrcoef has incorrect dimension')
 
-    if not 'maxpts' in kwds:
+    if 'maxpts' not in kwds:
         if n >2:
             kwds['maxpts'] = 10000*n
 

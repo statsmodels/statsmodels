@@ -138,6 +138,26 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         super(TestProbPlotRandomNormalLocScale, self).setup()
 
 
+class TestCompareSamplesDifferentSize(object):
+    def setup(self):
+        np.random.seed(5)
+        self.data1 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25,
+                                                  size=37))
+        self.data2 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25,
+                                                  size=55))
+
+    @pytest.mark.matplotlib
+    def test_qqplot(self, close_figures):
+        self.data1.qqplot(other=self.data2)
+        with pytest.raises(ValueError):
+            self.data2.qqplot(other=self.data1)
+
+    @pytest.mark.matplotlib
+    def test_ppplot(self, close_figures):
+        self.data1.ppplot(other=self.data2)
+        self.data2.ppplot(other=self.data1)
+
+
 class TestTopLevel(object):
     def setup(self):
         self.data = sm.datasets.longley.load(as_pandas=False)
@@ -166,7 +186,6 @@ class TestTopLevel(object):
             # test with `ProbPlot` instances
             sm.qqplot_2samples(self.prbplt, self.other_prbplot,
                                line=line)
-
 
     @pytest.mark.matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
