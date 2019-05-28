@@ -32,22 +32,22 @@ def _check_ar_start(start, k_ar, method, dynamic):
                          "or dynamic forecast. Got %d" % start)
 
 
-def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
+def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
     mu = params[:k_trend] if k_trend else 0  # only have to worry constant
     arparams = params[k_trend:][::-1]  # reverse for dot
 
     # dynamic endogenous variable
-    endog = np.zeros(p + steps)  # this is one too big but doesn't matter
+    endog = np.zeros(k_ar + steps)  # this is one too big but doesn't matter
     if start:
-        endog[:p] = y[start-p:start]
+        endog[:k_ar] = y[start-k_ar:start]
     else:
-        endog[:p] = y[-p:]
+        endog[:k_ar] = y[-k_ar:]
 
     forecast = np.zeros(steps)
     for i in range(steps):
-        fcast = mu + np.dot(arparams, endog[i:i+p])
+        fcast = mu + np.dot(arparams, endog[i:i+k_ar])
         forecast[i] = fcast
-        endog[i + p] = fcast
+        endog[i + k_ar] = fcast
 
     return forecast
 
@@ -223,7 +223,7 @@ class AR(tsbase.TimeSeriesModel):
             return predictedvalues
 
         # just do the whole thing and truncate
-        fittedvalues = dot(self.X, params)
+        fittedvalues = np.dot(self.X, params)
 
         pv_start = max(k_ar - start, 0)
         fv_start = max(start - k_ar, 0)
@@ -388,7 +388,7 @@ class AR(tsbase.TimeSeriesModel):
         X = lagmat(endog, maxlag=k_ar, trim='both')
         k_trend = util.get_trendorder(trend)
         if k_trend:
-            X = add_trend(X, prepend=True, trend=trend)
+            X = add_trend(X, prepend=True, trend=trend, has_constant="raise")
         self.k_trend = k_trend
         return X
 
@@ -430,7 +430,7 @@ class AR(tsbase.TimeSeriesModel):
                 fit = AR(endog_tmp).fit(maxlag=lag, method=method,
                                         full_output=0, trend=trend,
                                         maxiter=100, disp=0)
-                results[lag] = eval('fit.'+ic)
+                results[lag] = getattr(fit, ic)
             bestic, bestlag = min((res, k) for k, res in iteritems(results))
 
         else:  # choose by last t-stat.

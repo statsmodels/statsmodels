@@ -337,6 +337,33 @@ def test_ar_select_order_tstat():
     assert_equal(res, 0)
 
 
+def test_constant_column_trend():
+    # GH#5258, after calling lagmat, the sample below has a constant column,
+    #  which used to cause the result.k_trend attribute to be set incorrectly
+    # See also GH#5538
+
+    sample = np.array([
+        0.46341460943222046, 0.46341460943222046, 0.39024388790130615,
+        0.4146341383457184, 0.4146341383457184, 0.4146341383457184,
+        0.3414634168148041, 0.4390243887901306, 0.46341460943222046,
+        0.4390243887901306])
+    model = AR(sample)
+
+    # Fitting with a constant and maxlag=7 raises because of regressor
+    #  collinearity.
+    with pytest.raises(ValueError, match="already contains"):
+        model.fit(trend="c")
+
+    res = model.fit(trend="nc")
+    assert res.k_trend == 0
+    assert res.k_ar == 7
+    assert len(res.params) == 7
+    pred = res.predict(start=10, end=12)
+    # expected numbers are regression-test
+    expected = np.array([0.44687422, 0.45608137, 0.47046381])
+    assert_allclose(pred, expected)
+
+
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
 #    def setup(self):
