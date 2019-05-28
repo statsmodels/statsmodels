@@ -50,7 +50,7 @@ class ARIMA111(object):
             self.cov_params = [[0.0423583,   -0.00167449,    0.00262911],
                                [-0.00167449, 0.00208858,    -0.0035068],
                                [0.00262911, -0.0035068, 0.00805622]]
-            self.bse = np.diag(np.sqrt(self.cov_params))
+            self.bse = np.sqrt(np.diag(self.cov_params))
             # these bse are approx [.205811, .0457010, .0897565]
 
             # from stata
