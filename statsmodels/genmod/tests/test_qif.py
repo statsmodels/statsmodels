@@ -28,12 +28,12 @@ def test_qif_numdiff(fam, cov_struct):
 
     model = QIF(y, x, groups=g, family=fam, cov_struct=cov_struct)
 
-    for k in range(5):
+    for _ in range(5):
 
         pt = np.random.normal(size=3)
 
         # Check the Jacobian of the vector of estimating equations.
-        qif, grad, cmat, gn, gn_deriv = model.objective(pt)
+        qif, grad, cmat, _, gn_deriv = model.objective(pt)
 
         def llf_gn(params):
             return model.objective(params)[3]
@@ -95,7 +95,7 @@ def test_formula():
     df = pd.DataFrame({"y": y, "x1": x[:, 0], "x2": x[:, 1], "groups": groups})
 
     model2 = QIF.from_formula("y ~ 0 + x1 + x2", groups="groups", data=df)
-    result2 = model1.fit()
+    result2 = model2.fit()
 
     assert_allclose(result1.params, result2.params)
     assert_allclose(result1.bse, result2.bse)

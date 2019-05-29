@@ -267,7 +267,6 @@ class QIF(base.Model):
         lpr = np.dot(self.exog, params)
         mean = self.family.link.inverse(lpr)
         va = self.family.variance(mean)
-        sdev = np.sqrt(va)
         resid = self.endog - mean
         scale = np.sum(resid**2) / (self.nobs - ddof_scale)
 
@@ -292,7 +291,6 @@ class QIF(base.Model):
             An array-like object of booleans, integers, or index
             values that indicate the subset of the data to used when
             fitting the model.
-        %(missing_param_doc)s
 
         Returns
         -------
@@ -334,9 +332,9 @@ class QIF(base.Model):
 
         params = np.zeros(self.exog.shape[1])
 
-        for k in range(maxiter):
+        for _ in range(maxiter):
 
-            qif, grad, cmat, gn, gn_deriv = self.objective(params)
+            qif, grad, cmat, _, gn_deriv = self.objective(params)
 
             if np.sqrt(np.sum(grad * grad)) < gtol:
                 break
@@ -364,6 +362,24 @@ class QIFResults(base.LikelihoodModelResults):
         super(QIFResults, self).__init__(
             model, params, normalized_cov_params=cov_params,
             scale=scale)
+
+    @cache_readonly
+    def aic(self):
+        """
+        An AIC-like statistic for models fit using QIF.
+        """
+        qif, _, _, _, _ = self.model.objective(self.params)
+        df = self.model.exog.shape[1]
+        return qif + 2*df
+
+    @cache_readonly
+    def bic(self):
+        """
+        A BIC-like statistic for models fit using QIF.
+        """
+        qif, _, _, _, _ = self.model.objective(self.params)
+        df = self.model.exog.shape[1]
+        return qif + np.log(self.model.nobs)*df
 
     @cache_readonly
     def fittedvalues(self):
