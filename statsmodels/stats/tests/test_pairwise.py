@@ -251,7 +251,7 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
     def setup_class(cls):
         super(TestTuckeyHSD2Pandas, cls).setup_class()
 
-=        cls.endog = pd.Series(cls.endog)
+        cls.endog = pd.Series(cls.endog)
         # we are working with bytes on python 3, not with strings in this case
         cls.groups = pd.Series(cls.groups, dtype=object)
 
