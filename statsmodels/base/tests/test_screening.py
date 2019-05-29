@@ -94,7 +94,7 @@ def test_screen_iterated():
     nobs, k_nonzero = 100, 5
 
     x = (np.random.rand(nobs, k_nonzero - 1) +
-         1.* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+         1. * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
     x *= 1.2
     x = (x - x.mean(0)) / x.std(0)
     x = np.column_stack((np.ones(nobs), x))
@@ -115,7 +115,7 @@ def test_screen_iterated():
         n_batches = 6
         for i in range(n_batches):
             x = (0.05 * common + np.random.rand(nobs, k_vars) +
-                 1.* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+                 1. * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
             x *= 1.2
             if i < k_nonzero - 1:
                 # hide a nonezero
@@ -127,17 +127,18 @@ def test_screen_iterated():
     dummy[:nobs // 2] = 0
     exog_keep = np.column_stack((np.ones(nobs), dummy))
     for k in [1, 2]:
-        mod_initial = PoissonPenalized(y, exog_keep[:, :k], pen_weight=nobs * 500)
+        mod_initial = PoissonPenalized(y, exog_keep[:, :k],
+                                       pen_weight=nobs * 500)
         screener = VariableScreening(mod_initial)
         screener.k_max_add = 30
 
         final = screener.screen_exog_iterator(exog_iterator())
         names = ['var0_10', 'var1_10', 'var2_10', 'var3_10']
         assert_equal(final.exog_final_names, names)
-        idx_full = np.array([[ 0, 10],
-                             [ 1, 10],
-                             [ 2, 10],
-                             [ 3, 10]], dtype=np.int64)
+        idx_full = np.array([[0, 10],
+                             [1, 10],
+                             [2, 10],
+                             [3, 10]], dtype=np.int64)
         assert_equal(final.idx_nonzero_batches, idx_full)
 
 
@@ -148,7 +149,8 @@ def test_glmpoisson_screening():
 
     xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
     xnames_true[0] = 'const'
-    parameters = pd.DataFrame(beta[idx_nonzero_true], index=xnames_true, columns=['true'])
+    parameters = pd.DataFrame(beta[idx_nonzero_true],
+                              index=xnames_true, columns=['true'])
 
     xframe_true = pd.DataFrame(x[:, idx_nonzero_true], columns=xnames_true)
     res_oracle = GLMPenalized(y, xframe_true, family=family.Poisson()).fit()
@@ -260,7 +262,6 @@ def test_glmlogit_screening():
     res_oracle = GLMPenalized(y, xframe_true, family=family.Binomial()).fit()
     parameters['oracle'] = res_oracle.params
 
-    #mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Binomial())
 
     screener = VariableScreening(mod_initial, **screener_kwds)
@@ -345,7 +346,8 @@ def test_glmgaussian_screening():
         res_screen.results_pen.summary()
         assert_equal(res_screen.results_final.mle_retvals['converged'], True)
 
-        ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
+        ps = pd.Series(res_screen.results_final.params,
+                       index=xnames, name='final')
         parameters = parameters.join(ps, how='outer')
 
         assert_allclose(parameters['oracle'], parameters['final'], atol=1e-5)

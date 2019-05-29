@@ -41,14 +41,14 @@ def test_full_output_false(reset_randomstate):
         func = fit_funcs[method]
         if method == "newton":
             xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
-                    hess=dummy_hess, full_output=False, disp=0)
+                                 hess=dummy_hess, full_output=False, disp=0)
 
         else:
             xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
-                full_output=False, disp=0)
+                                 full_output=False, disp=0)
         assert_(retvals is None)
         if method == "powell":
-            #NOTE: I think I reported this? Might be version/optimize API
+            # NOTE: I think I reported this? Might be version/optimize API
             # dependent
             assert_(xopt.shape == () and xopt.size == 1)
         else:
@@ -70,7 +70,7 @@ def test_full_output(reset_randomstate):
         assert_('converged' in retvals)
 
         if method == "powell":
-            #NOTE: I think I reported this? Might be version/optimize API
+            # NOTE: I think I reported this? Might be version/optimize API
             # dependent
             assert_(xopt.shape == () and xopt.size == 1)
         else:

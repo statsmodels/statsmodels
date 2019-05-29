@@ -68,7 +68,7 @@ class CheckPredictReturns(object):
 
         # pandas DataFrame
         x = pd.DataFrame(res.model.exog[1:10:2],
-                         index = data.index[1:10:2],
+                         index=data.index[1:10:2],
                          columns=res.model.exog_names)
         pred = res.predict(x)
         pdt.assert_index_equal(pred.index, fitted.index)

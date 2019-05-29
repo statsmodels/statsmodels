@@ -20,6 +20,12 @@ if [ "$LINT" == true ]; then
         statsmodels/resampling/ \
         statsmodels/interface/ \
         statsmodels/base/tests/test_data.py \
+        statsmodels/base/tests/test_optimize.py \
+        statsmodels/base/tests/test_penalized.py \
+        statsmodels/base/tests/test_penalties.py \
+        statsmodels/base/tests/test_predict.py \
+        statsmodels/base/tests/test_screening.py \
+        statsmodels/base/tests/test_transform.py \
         statsmodels/compat/ \
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/results/ \
