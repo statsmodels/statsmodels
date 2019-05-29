@@ -5,6 +5,9 @@ from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
 import statsmodels.api as sm
+from statsmodels.iolib.summary import (
+    table_extend, summary_params_2d, summary_params_2dflat)
+
 
 anes_data = sm.datasets.anes96.load(as_pandas=False)
 anes_exog = anes_data.exog
@@ -19,9 +22,6 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 #TODO: Add a technical note on algorithms
 #mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
 
-
-from statsmodels.iolib.summary import (
-                        summary_params_2d, summary_params_2dflat)
 
 exog_names = [anes_data.exog_name[i] for i in [0, 2]+lrange(5,8)] + ['const']
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
@@ -41,7 +41,6 @@ print(table_all)
 print('\n\n')
 print('\n'.join((str(t) for t in tables)))
 
-from statsmodels.iolib.summary import table_extend
 at = table_extend(tables)
 print(at)
 

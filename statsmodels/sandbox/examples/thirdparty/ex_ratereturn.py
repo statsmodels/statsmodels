@@ -11,6 +11,7 @@ Author: josef-pktd
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from statsmodels.compat.python import cPickle
 
@@ -66,7 +67,6 @@ ax3 = fig.add_subplot(2,2,4)
 plot_corr(residcorr, xnames=ticksym, title='Correlation Residuals',
           normcolor=normcolor, ax=ax3)
 
-import matplotlib as mpl
 images = [c for fig_ax in fig.axes for c in fig_ax.get_children() if isinstance(c, mpl.image.AxesImage)]
 print(images)
 print(ax.get_children())

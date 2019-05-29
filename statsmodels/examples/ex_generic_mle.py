@@ -6,6 +6,7 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 
 data = sm.datasets.spector.load(as_pandas=False)
@@ -119,7 +120,6 @@ res_norm3.model.score(res_norm3.params)
 res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
                          maxiter=500, retall=0)
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
 hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
 hh = (hf+hb)/2.

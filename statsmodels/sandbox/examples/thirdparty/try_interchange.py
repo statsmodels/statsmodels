@@ -24,14 +24,16 @@ Author: josef-pktd
 from statsmodels.compat.python import lrange, zip
 import numpy as np
 import scikits.timeseries as ts
+import la
+import pandas
+import tabular as tb
+from finance import msft, ibm  # hack to make it run as standalone
 
 s = ts.time_series([1,2,3,4,5],
             dates=ts.date_array(["2001-01","2001-01",
             "2001-02","2001-03","2001-03"],freq="M"))
 
 print('\nUsing la')
-import la
-
 dta = la.larry(s.data, label=[lrange(len(s.data))])
 dat = la.larry(s.dates.tolist(), label=[lrange(len(s.data))])
 s2 = ts.time_series(dta.group_mean(dat).x,dates=ts.date_array(dat.x,freq="M"))
@@ -42,7 +44,6 @@ print(repr(s2))
 print(repr(s2u))
 
 print('\nUsing pandas')
-import pandas
 pdta = pandas.DataFrame(s.data, np.arange(len(s.data)), [1])
 pa = pdta.groupby(dict(zip(np.arange(len(s.data)),
             s.dates.tolist()))).aggregate(np.mean)
@@ -53,14 +54,12 @@ print(pa)
 print(repr(s3))
 
 print('\nUsing tabular')
-import tabular as tb
 X = tb.tabarray(array=s.torecords(), dtype=s.torecords().dtype)
 tabx = X.aggregate(On=['_dates'], AggFuncDict={'_data':np.mean,'_mask':np.all})
 s4 = ts.time_series(tabx['_data'],dates=ts.date_array(tabx['_dates'],freq="M"))
 print(tabx)
 print(repr(s4))
 
-from finance import msft, ibm  #hack to make it run as standalone
 #after running pandas/examples/finance.py
 larmsft = la.larry(msft.values, [msft.index.tolist(), msft.columns.tolist()])
 laribm = la.larry(ibm.values, [ibm.index.tolist(), ibm.columns.tolist()])

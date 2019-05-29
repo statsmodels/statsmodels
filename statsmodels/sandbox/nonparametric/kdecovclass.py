@@ -4,9 +4,11 @@ Author: josef pktd
 '''
 
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_
 import scipy
 from scipy import stats
 import matplotlib.pylab as plt
+
 
 class gaussian_kde_set_covariance(stats.gaussian_kde):
     '''
@@ -61,9 +63,6 @@ def plotkde(covfact):
                   color="r", label='DGP: normal mix')
     plt.title('Kernel Density Estimation - ' + str(gkde.covfact))
     plt.legend()
-
-
-from numpy.testing import assert_almost_equal, assert_
 
 
 def test_kde_1d():

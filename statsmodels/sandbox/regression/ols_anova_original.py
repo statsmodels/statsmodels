@@ -8,7 +8,8 @@ in ANOVA
 
 from __future__ import print_function
 import numpy as np
-#from scipy import stats
+import numpy.lib.recfunctions
+
 from statsmodels.compat.python import lmap
 import statsmodels.api as sm
 
@@ -236,7 +237,6 @@ def form2design(ss, data):
 nobs = 1000
 testdataint = np.random.randint(3, size=(nobs,4)).view([('a',int),('b',int),('c',int),('d',int)])
 testdatacont = np.random.normal( size=(nobs,2)).view([('e',float), ('f',float)])
-import numpy.lib.recfunctions
 dt2 = numpy.lib.recfunctions.zip_descr((testdataint, testdatacont),flatten=True)
 # concatenate structured arrays
 testdata = np.empty((nobs,1), dt2)

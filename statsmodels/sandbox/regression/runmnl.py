@@ -27,6 +27,8 @@ from __future__ import print_function
 from statsmodels.compat.python import zip
 import numpy as np
 import numpy.lib.recfunctions as recf
+from scipy import optimize
+
 
 class TryCLogit(object):
     '''
@@ -312,7 +314,6 @@ betai = [beta[idx] for idx in betaindices]
 #get exogs as float
 xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
 clogit = TryCLogit(endog, xifloat, 2)
-from scipy import optimize
 
 debug = 0
 if debug:

@@ -8,9 +8,14 @@ Author: josef-pktd
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import matplotlib.pyplot as plt
+
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.sandbox.stats.diagnostic import _recursive_olsresiduals2 as recursive_olsresiduals2
+from statsmodels.sandbox.stats.diagnostic import (
+    breaks_hansen, breaks_cusumolsresid)
+
 
 #examples from ex_onewaygls.py
 #choose example
@@ -69,7 +74,6 @@ print(rresid_scaled[skip-1:])
 
 assert_almost_equal(rparams[-1], res1.params)
 
-import matplotlib.pyplot as plt
 plt.plot(rcusum)
 plt.plot(rcusumci[0])
 plt.plot(rcusumci[1])
@@ -88,9 +92,6 @@ assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #plt.show()
 
 ####################  Example break test
-#import statsmodels.sandbox.tools.stattools
-from statsmodels.sandbox.stats.diagnostic import breaks_hansen, \
-        breaks_cusumolsresid#, breaks_cusum
 H, crit95, ft, s = breaks_hansen(res1)
 print(H)
 print(crit95)

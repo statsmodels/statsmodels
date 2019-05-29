@@ -8,7 +8,9 @@ from __future__ import print_function
 from statsmodels.compat.python import range
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import matplotlib.pyplot as plt
 
+import statsmodels.api as sm
 from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
 from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
 from statsmodels.tsa.stattools import acf, acovf
@@ -382,10 +384,8 @@ print(acf2m[:10])
 
 x = arma_generate_sample([1.0, -0.8], [1.0], 500)
 print(acf(x)[:20])
-import statsmodels.api as sm
 print(sm.regression.yule_walker(x, 10))
 
-import matplotlib.pyplot as plt
 #ax = plt.axes()
 plt.plot(x)
 #plt.show()

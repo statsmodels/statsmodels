@@ -16,7 +16,7 @@ Runs now without raising exception
 from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_equal
-from scipy import signal
+from scipy import signal, stats
 from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.filters.filtertools import fftconvolveinv as fftconvolve
@@ -303,8 +303,6 @@ a2inv[1,:,:] = -a2[1]
 for i in range(2,nobs+1):
     a2inv[i,:,:] = np.dot(-a2[1],a2inv[i-1,:,:])
 
-import scipy.stats as stats
-import numpy as np
 nbins = 12
 binProb = np.zeros(nbins) + 1.0/nbins
 binSumProb = np.add.accumulate(binProb)

@@ -8,6 +8,9 @@ import os
 import numpy as np
 from scipy import stats
 
+import statsmodels.api as sm
+from .try_ols_anova import data2dummy
+
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',
               'SmLs04.dat', 'SmLs05.dat', 'SmLs06.dat', 'SmLs07.dat', 'SmLs08.dat',
               'SmLs09.dat']
@@ -73,8 +76,6 @@ def anova_oneway(y, x, seq=0):
     f, prob, R2, resstd = lmap(_fix2scalar, (f, prob, R2, resstd))
     return f, prob, R2, resstd
 
-import statsmodels.api as sm
-from .try_ols_anova import data2dummy
 
 def anova_ols(y, x):
     X = sm.add_constant(data2dummy(x), prepend=False)

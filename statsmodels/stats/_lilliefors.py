@@ -34,6 +34,8 @@ Lilliefors, H.W.
 On the Kolmogorov-Smirnov test for the exponential distribution with mean unknown.
 Journal of the American Statistical Association, Vol 64, No. 325. (1969), pp. 387–389.
 """
+from functools import partial
+
 from statsmodels.compat.python import string_types
 import numpy as np
 from scipy import stats
@@ -349,7 +351,6 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
 lilliefors = kstest_fit
 
 # namespace aliases
-from functools import partial
 kstest_normal = kstest_fit
 kstest_exponential = partial(kstest_fit, dist='exp')
 

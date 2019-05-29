@@ -2,8 +2,8 @@
 """
 Created on Thu Aug 30 12:26:38 2012
 Author: Josef Perktold
-"""
-'''
+
+
 function jc =  c_sja(n,p)
 % PURPOSE: find critical values for Johansen maximum eigenvalue statistic
 % ------------------------------------------------------------
@@ -35,7 +35,8 @@ function jc =  c_sja(n,p)
 % 2801 W. Bancroft St,
 % Toledo, OH 43606
 % jlesage@spatial-econometrics.com
-'''
+
+"""
 
 import numpy as np
 

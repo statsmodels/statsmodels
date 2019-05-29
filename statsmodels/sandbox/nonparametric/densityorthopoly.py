@@ -39,9 +39,9 @@ enhancements:
 '''
 from __future__ import print_function
 from statsmodels.compat.python import zip
-from scipy import stats, integrate
-import numpy as np
+from scipy import stats, integrate, special
 
+import numpy as np
 
 
 sqr2 = np.sqrt(2.)
@@ -128,9 +128,6 @@ class ChebyTPoly(object):
         else:
             return self.poly(x) / (1-x**2)**(1/4.) /np.sqrt(np.pi) *np.sqrt(2)
 
-
-
-from scipy import special
 
 logpi2 = np.log(np.pi)/2
 

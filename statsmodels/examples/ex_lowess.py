@@ -8,15 +8,18 @@ extracted from test suite by josef-pktd
 """
 
 from __future__ import print_function
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-
-lowess = sm.nonparametric.lowess
+import statsmodels.nonparametric.tests.results
 
 # this is just to check direct import
 import statsmodels.nonparametric.smoothers_lowess
 statsmodels.nonparametric.smoothers_lowess.lowess
+
+lowess = sm.nonparametric.lowess
 
 x = np.arange(20.)
 
@@ -60,8 +63,6 @@ plt.plot(y, 'o')
 plt.plot(actual_lowess[:,1])
 plt.plot(expected_lowess[:,1])
 
-import os.path
-import statsmodels.nonparametric.tests.results
 rpath = os.path.split(statsmodels.nonparametric.tests.results.__file__)[0]
 rfile = os.path.join(rpath, 'test_lowess_frac.csv')
 test_data = np.genfromtxt(open(rfile, 'rb'),

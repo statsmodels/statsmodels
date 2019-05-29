@@ -1,9 +1,6 @@
 '''Collection of alternative implementations for time series analysis
 
-'''
 
-
-'''
 >>> signal.fftconvolve(x,x[::-1])[len(x)-1:len(x)+10]/x.shape[0]
 array([  2.12286549e+00,   1.27450889e+00,   7.86898619e-02,
         -5.80017553e-01,  -5.74814915e-01,  -2.28006995e-01,

@@ -14,6 +14,8 @@ from statsmodels.formula.api import ols, glm, poisson
 from statsmodels.discrete.discrete_model import Poisson
 
 import statsmodels.stats.tests.test_anova as ttmod
+from statsmodels.discrete.discrete_model import NegativeBinomial
+
 
 test = ttmod.TestAnova3()
 test.setup_class()
@@ -36,7 +38,6 @@ print(res_poi.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Wei
 print('\nPoisson 2')
 print(res_poi_2.wald_test_terms(skip_single=False))
 
-from statsmodels.discrete.discrete_model import NegativeBinomial
 res_nb2 = NegativeBinomial.from_formula("Days ~ C(Weight) * C(Duration)", data).fit()
 print('\nNegative Binomial nb2')
 print(res_nb2.wald_test_terms(skip_single=False))

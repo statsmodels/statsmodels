@@ -9,6 +9,7 @@ Author: Josef Perktold based on test file by George Panterov
 from __future__ import print_function
 import numpy as np
 import numpy.testing as npt
+import matplotlib.pyplot as plt
 
 import statsmodels.nonparametric.api as nparam
 #import statsmodels.api as sm
@@ -54,7 +55,6 @@ npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
 npt.assert_allclose(sm_mean2, R_mean, atol=1e-2)
 npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
-import matplotlib.pyplot as plt
 
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)

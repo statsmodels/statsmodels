@@ -53,6 +53,10 @@ from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_partial_residuals_doc,
     _plot_ceres_residuals_doc)
+from statsmodels.discrete.discrete_margins import (
+    _get_margeff_exog, _check_margeff_args, _effects_at, margeff_cov_with_se,
+    _check_at_is_all, _transform_names, _check_discrete_args,
+    _get_dummy_index, _get_count_index)
 
 
 class ParameterConstraint(object):
@@ -3017,12 +3021,6 @@ class _Multinomial(families.Family):
     def initialize(self, nlevels):
         self.ncut = nlevels - 1
         self.link = _MultinomialLogit(self.ncut)
-
-
-from statsmodels.discrete.discrete_margins import (
-    _get_margeff_exog, _check_margeff_args, _effects_at, margeff_cov_with_se,
-    _check_at_is_all, _transform_names, _check_discrete_args,
-    _get_dummy_index, _get_count_index)
 
 
 class GEEMargins(object):

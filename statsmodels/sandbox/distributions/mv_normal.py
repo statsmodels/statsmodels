@@ -146,6 +146,7 @@ What's currently there?
 """
 from __future__ import print_function
 import numpy as np
+from scipy import special
 
 from statsmodels.sandbox.distributions.multivariate import mvstdtprob
 from .extras import mvnormcdf
@@ -1001,8 +1002,6 @@ class MVNormal(MVElliptical):
         return MVNormal(mean_new, sigma_new)
 
 
-
-from scipy import special
 #redefine some shortcuts
 np_log = np.log
 np_pi = np.pi

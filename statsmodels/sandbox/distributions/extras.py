@@ -49,15 +49,21 @@ Author: josef-pktd
 License: BSD
 
 '''
+from __future__ import print_function
+
+import numpy as np
+from numpy import poly1d,sqrt, exp
+
+import scipy
+from scipy import stats, special
+from scipy.stats import distributions
+
+from statsmodels.compat.python import range, iteritems
+from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
+
 
 #note copied from distr_skewnorm_0.py
 
-from __future__ import print_function
-from statsmodels.compat.python import range, iteritems
-from scipy import stats, special
-from scipy.stats import distributions
-from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
-import numpy as np
 
 class SkewNorm_gen(distributions.rv_continuous):
     '''univariate Skew-Normal distribution of Azzalini
@@ -208,8 +214,6 @@ appears in J.Roy.Statist.Soc, series B, vol.65, pp.367-389
 ##    return (mc, mc2, mc3, mc4)
 
 
-from numpy import poly1d,sqrt, exp
-import scipy
 def _hermnorm(N):
     # return the negatively normalized hermite polynomials up to order N-1
     #  (inclusive)
@@ -488,8 +492,6 @@ License: BSD
 
 '''
 
-from scipy.stats import distributions
-
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
@@ -580,8 +582,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy.stats import distributions
-import numpy as np
 
 class ExpTransf_gen(distributions.rv_continuous):
     '''Distribution based on log/exp transformation
