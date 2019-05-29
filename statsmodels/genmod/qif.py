@@ -132,6 +132,8 @@ class QIF(base.Model):
                                  "family instance")
         self.family = family
 
+        self._fit_history = defaultdict(list)
+
         # Handle the cov_struct argument
         if cov_struct is None:
             cov_struct = QIFIndependence()
@@ -358,14 +360,21 @@ class QIF(base.Model):
 
         for _ in range(maxiter):
 
-            _, grad, cmat, _, gn_deriv = self.objective(params)
+            qif, grad, cmat, _, gn_deriv = self.objective(params)
 
-            if np.sqrt(np.sum(grad * grad)) < gtol:
+            gnorm = np.sqrt(np.sum(grad * grad))
+            self._fit_history["qif"].append(qif)
+            self._fit_history["gradnorm"].append(gnorm)
+
+            if gnorm < gtol:
                 break
 
             cjac = 2 * np.dot(gn_deriv.T, np.linalg.solve(cmat, gn_deriv))
             step = np.linalg.solve(cjac, grad)
-            if np.sqrt(np.sum(step * step)) < tol:
+
+            snorm = np.sqrt(np.sum(step * step))
+            self._fit_history["stepnorm"].append(snorm)
+            if snorm < tol:
                 break
             params -= step
 
@@ -374,6 +383,8 @@ class QIF(base.Model):
         scale = self.estimate_scale(params)
 
         rslt = QIFResults(self, params, vcov / scale, scale)
+        rslt.fit_history = self._fit_history
+        self._fit_history = defaultdict(list)
 
         return QIFResultsWrapper(rslt)
 
