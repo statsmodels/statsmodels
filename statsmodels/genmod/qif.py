@@ -28,7 +28,7 @@ class QIFIndependence(QIFCovariance):
     model gives identical results to GEE with the independence working
     covariance.  When using QIFIndependence as the working covariance,
     the QIF value will be zero, and cannot be used for chi^2 testing, or
-    model selection using AIC, BIC, etc.
+    for model selection using AIC, BIC, etc.
     """
 
     def __init__(self):
@@ -70,7 +70,7 @@ class QIFAutoregressive(QIFCovariance):
 
         if dim < 3:
             msg = ("Groups must have size at least 3 for " +
-                  "autoregressive covariance.")
+                   "autoregressive covariance.")
             raise ValueError(msg)
 
         if term == 0:
@@ -87,6 +87,7 @@ class QIFAutoregressive(QIFCovariance):
             return mat
         else:
             return None
+
 
 class QIF(base.Model):
     """
@@ -108,10 +109,6 @@ class QIF(base.Model):
         An instance of a GLM family.
     cov_struct : QIFCovariance instance
         An instance of a QIFCovariance.
-
-    Returns
-    -------
-    A QIFResults object.
 
     References
     ----------
@@ -165,7 +162,8 @@ class QIF(base.Model):
             raise ValueError(msg)
 
         if len(self.endog) != self.exog.shape[0]:
-            msg = "QIF: the length of endog should be equal to the number of rows of exog."
+            msg = ("QIF: the length of endog should be equal to the "
+                   "number of rows of exog.")
             raise ValueError(msg)
 
     def objective(self, params):
@@ -230,7 +228,8 @@ class QIF(base.Model):
                 gi_deriv[jj:jj+p, :] = np.dot(deriv.T, crs2)
                 if not (fastlink and fastvar):
                     for k in range(p):
-                        m1 = np.dot(exog[ix, :].T, idl2[ix] * exog[ix, k] * crs1)
+                        m1 = np.dot(exog[ix, :].T,
+                                    idl2[ix] * exog[ix, k] * crs1)
                         if not fastvar:
                             vx = -0.5 * vd[ix] * deriv[:, k] / va[ix]**1.5
                             m2 = np.dot(deriv.T, vx * np.dot(c, sresid))
@@ -499,6 +498,9 @@ class QIFResults(base.LikelihoodModelResults):
 
         return smry
 
+
 class QIFResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(QIFResultsWrapper, QIFResults)
