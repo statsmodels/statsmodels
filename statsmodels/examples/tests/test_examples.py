@@ -33,6 +33,4 @@ for n, path in enumerate(test_files):
 
 @pytest.mark.parametrize('path', test_files)
 def test_example(path):
-    # TODO: re-write so that we get a useful exception message on failure
-    rc = run_example(path)
-    assert rc == 0
+    run_example(path)

@@ -44,7 +44,7 @@ def run_example(path):
     # FIXME: don't use `exec`
     with open(path, "rb") as fd:
         content = fd.read()
-    exec(content.replace('__name__ == "__main__"', "True"))
+    exec(content.replace(b'__name__ == "__main__"', b"True"))
 
 
 def run_all():
