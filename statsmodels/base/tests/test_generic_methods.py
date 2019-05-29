@@ -46,9 +46,11 @@ class CheckGenericMixin(object):
         mat = np.eye(len(res.params))
 
         tt = res.t_test(mat[0])
-        string_confint = lambda alpha: "[%4.3F      %4.3F]" % (
-                                       alpha / 2, 1- alpha / 2)
-        summ = tt.summary()   # smoke test for #1323
+
+        def string_confint(alpha):
+            return "[%4.3F      %4.3F]" % (alpha / 2, 1 - alpha / 2)
+
+        summ = tt.summary()   # smoke test for GH#1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
         assert_(string_confint(0.05) in str(summ))
 
@@ -92,8 +94,8 @@ class CheckGenericMixin(object):
             del keep_index_p[i]
 
         if use_start_params:
-            res1 = self.results.model._fit_zeros(keep_index, maxiter=500,
-                                        start_params=self.results.params)
+            res1 = self.results.model._fit_zeros(
+                keep_index, maxiter=500, start_params=self.results.params)
         else:
             res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
 
@@ -190,9 +192,9 @@ class CheckGenericMixin(object):
 
             if use_start_params:
                 start_params = np.zeros(k_vars + k_extra)
-                method =  self.results.mle_settings['optimizer']
+                method = self.results.mle_settings['optimizer']
                 # string in `method` is not mutable, so no need for copy
-                sp =  self.results.mle_settings['start_params'].copy()
+                sp = self.results.mle_settings['start_params'].copy()
                 if self.transform_index is not None:
                     # work around internal transform_params, currently in NB
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
@@ -221,8 +223,9 @@ class CheckGenericMixin(object):
 
             # check fit optimizer arguments, if mle_settings is available
             if hasattr(res2, 'mle_settings'):
-                assert_equal(res1.results_constrained.mle_settings['optimizer'],
-                             res2.mle_settings['optimizer'])
+                assert_equal(
+                    res1.results_constrained.mle_settings['optimizer'],
+                    res2.mle_settings['optimizer'])
                 if 'start_params' in res2.mle_settings:
                     spc = res1.results_constrained.mle_settings['start_params']
                     assert_allclose(spc,
@@ -239,7 +242,8 @@ class CheckGenericMixin(object):
             assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
             assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-8)
             assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=5e-8)
+            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues,
+                            rtol=5e-8)
             assert_allclose(res1.pvalues[keep_index_p], res2.pvalues,
                             rtol=1e-6, atol=1e-30)
 
@@ -260,13 +264,14 @@ class CheckGenericMixin(object):
             assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
 
-#########  subclasses for individual models, unchanged from test_shrink_pickle
+# ----------------------------------------------------------------------
+# subclasses for individual models, unchanged from test_shrink_pickle
 # TODO: check if setup_class is faster than setup
 
 class TestGenericOLS(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
@@ -277,7 +282,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
     # check with single regressor (no constant)
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog[:, 1]
         np.random.seed(987689)
         y = x + np.random.randn(x.shape[0])
@@ -292,7 +297,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 class TestGenericWLS(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
@@ -302,13 +307,13 @@ class TestGenericWLS(CheckGenericMixin):
 class TestGenericPoisson(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
         # use start_params to converge faster
-        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        start_params = np.array([.75334818, .99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
@@ -316,7 +321,7 @@ class TestGenericPoisson(CheckGenericMixin):
 class TestGenericPoissonOffset(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
@@ -324,25 +329,27 @@ class TestGenericPoissonOffset(CheckGenericMixin):
         model = sm.Poisson(y_count, x, offset=0.01 * np.ones(nobs),
                            exposure=np.ones(nobs))  # bug with default
         # use start_params to converge faster
-        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        start_params = np.array([.75334818, .99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
-        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
+        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5),
+                                   offset=np.ones(5))
         self.predict_kwds = dict(exposure=1, offset=0)
 
 
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, exog)
-        start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
-                                 0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
-                                 0.17490962,  0.66461151,   1.2925957 ])
+        start_params = np.array([
+            -0.05783623, -0.26655806,   0.04109148, -0.03815837,
+            0.2685168,    0.03811594,  -0.04426238,  0.01614795,
+            0.17490962,   0.66461151,   1.2925957])
         self.results = mod.fit(start_params=start_params, disp=0, maxiter=500)
         self.transform_index = -1
 
@@ -350,21 +357,24 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 class TestGenericLogit(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
-        y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        rlt1 = np.random.rand(nobs) < 1.0
+        y_bin = (rlt1 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
+        model = sm.Logit(y_bin, x)
         # use start_params to converge faster
-        start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
+        start_params = np.array([
+            -0.73403806, -1.00901514, -0.97754543, -0.95648212])
+        self.results = model.fit(start_params=start_params,
+                                 method='bfgs', disp=0)
 
 
 class TestGenericRLM(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
@@ -374,7 +384,7 @@ class TestGenericRLM(CheckGenericMixin):
 class TestGenericGLM(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
@@ -384,7 +394,7 @@ class TestGenericGLM(CheckGenericMixin):
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
@@ -393,18 +403,19 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
                        offset=0.01 * np.ones(nobs),
                        exposure=np.ones(nobs))
         # use start_params to converge faster
-        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        start_params = np.array([.75334818, .99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
-        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
+        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5),
+                                   offset=np.ones(5))
         self.predict_kwds = dict(exposure=1, offset=0)
 
 
 class TestGenericGEEPoisson(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
@@ -414,17 +425,17 @@ class TestGenericGEEPoisson(CheckGenericMixin):
 
         vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
-        self.results = sm.GEE(y_count, self.exog, groups, family=family,
-                                cov_struct=vi).fit(start_params=start_params)
+        model = sm.GEE(y_count, self.exog, groups, family=family,
+                       cov_struct=vi)
+        self.results = model.fit(start_params=start_params)
 
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested
@@ -432,23 +443,23 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
         vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
-        self.results = sm.GEE(y_count, self.exog, groups, family=family,
-                                cov_struct=vi).fit(start_params=start_params,
-                                                   cov_type='naive')
+        model = sm.GEE(y_count, self.exog, groups, family=family,
+                       cov_struct=vi)
+        self.results = model.fit(start_params=start_params, cov_type='naive')
 
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
 
     def setup(self):
-        #fit for each test, because results will be changed by test
+        # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested
         start_params = np.array([0., 1., 1., 1.])
-        # params_est = np.array([-0.0063238 ,  0.99463752,  1.02790201,  0.98080081])
+        # The estimated parameters we get are
+        #  params = np.array([-0.0063238, 0.99463752, 1.02790201, 0.98080081])
 
         vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
@@ -468,29 +479,31 @@ class CheckAnovaMixin(object):
         test = ttmod.TestAnova3()
         test.setup_class()
 
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
         cls.initialize()
 
     def test_combined(self):
         res = self.res
-        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
+        wa = res.wald_test_terms(skip_single=False,
+                                 combine_terms=['Duration', 'Weight'])
         eye = np.eye(len(res.params))
         c_const = eye[0]
-        c_w = eye[[2,3]]
+        c_w = eye[[2, 3]]
         c_d = eye[1]
-        c_dw = eye[[4,5]]
+        c_dw = eye[[4, 5]]
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 
-        compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
+        compare_waldres(res, wa,
+                        [c_const, c_d, c_w, c_dw, c_duration, c_weight])
 
     def test_categories(self):
         # test only multicolumn terms
         res = self.res
         wa = res.wald_test_terms(skip_single=True)
         eye = np.eye(len(res.params))
-        c_w = eye[[2,3]]
-        c_dw = eye[[4,5]]
+        c_w = eye[[2, 3]]
+        c_dw = eye[[4, 5]]
 
         compare_waldres(res, wa, [c_w, c_dw])
 
@@ -585,7 +598,8 @@ class TestWaldAnovaPoisson(CheckAnovaMixin):
     def initialize(cls):
         from statsmodels.discrete.discrete_model import Poisson
 
-        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)",
+                                   cls.data)
         cls.res = mod.fit(cov_type='HC0')
 
 
@@ -635,7 +649,7 @@ class TestTTestPairwiseOLS(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
         cls.res = mod.fit()
@@ -669,7 +683,7 @@ class TestTTestPairwiseOLS2(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
         cls.res = mod.fit()
@@ -688,7 +702,7 @@ class TestTTestPairwiseOLS3(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
         cls.res = mod.fit()
@@ -707,14 +721,16 @@ class TestTTestPairwiseOLS4(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
-        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
+        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)",
+                  cls.data)
         cls.res = mod.fit()
         cls.term_name = "C(Weight, Treatment(2))"
-        cls.constraints = ['-C(Weight, Treatment(2))[T.1]',
-                           'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
-                           'C(Weight, Treatment(2))[T.3]',]
+        cls.constraints = [
+            '-C(Weight, Treatment(2))[T.1]',
+            'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
+            'C(Weight, Treatment(2))[T.3]']
 
 
 class TestTTestPairwisePoisson(CheckPairwise):
@@ -726,7 +742,7 @@ class TestTTestPairwisePoisson(CheckPairwise):
 
         test = ttmod.TestAnova3()
         test.setup_class()
-        cls.data = test.data.drop([0,1,2])
+        cls.data = test.data.drop([0, 1, 2])
 
         mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
         cls.res = mod.fit(cov_type='HC0')
