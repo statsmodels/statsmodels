@@ -388,6 +388,25 @@ class Power(Link):
         else:
             return np.power(z, (1 - self.power)/self.power) / self.power
 
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the power transform
+
+        Parameters
+        ----------
+        z : array-like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the power transform
+        function
+        """
+        if self.power == 1:
+            return np.zeros_like(z)
+        else:
+            return (1 - self.power) * np.power(z, (1 - 2*self.power)/self.power) / self.power**2
 
 class inverse_power(Power):
     """

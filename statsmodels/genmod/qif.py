@@ -1,10 +1,13 @@
 import statsmodels.base.model as base
 from statsmodels.genmod import families
+from statsmodels.genmod.families import links
+from statsmodels.genmod.families import varfuncs
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
 import numpy as np
 from collections import defaultdict
+
 
 class QIFCovariance(object):
     """
@@ -18,9 +21,14 @@ class QIFCovariance(object):
         """
         raise NotImplementedError
 
+
 class QIFIndependence(QIFCovariance):
     """
-    Independent working covariance for QIF regression.
+    Independent working covariance for QIF regression.  This covariance
+    model gives identical results to GEE with the independence working
+    covariance.  When using QIFIndependence as the working covariance,
+    the QIF value will be zero, and cannot be used for chi^2 testing, or
+    model selection using AIC, BIC, etc.
     """
 
     def __init__(self):
@@ -31,6 +39,7 @@ class QIFIndependence(QIFCovariance):
             return np.eye(dim)
         else:
             return None
+
 
 class QIFExchangeable(QIFCovariance):
     """
@@ -60,7 +69,8 @@ class QIFAutoregressive(QIFCovariance):
     def mat(self, dim, term):
 
         if dim < 3:
-            msg = "Groups must have size at least 3 for autoregressive covariance."
+            msg = ("Groups must have size at least 3 for " +
+                  "autoregressive covariance.")
             raise ValueError(msg)
 
         if term == 0:
@@ -105,8 +115,8 @@ class QIF(base.Model):
 
     References
     ----------
-    A. Qu, B. Lindsay, B. Li (2000).  Improving Generalized Estimating Equations using
-    Quadratic Inference Functions, Biometrika 87:4.
+    A. Qu, B. Lindsay, B. Li (2000).  Improving Generalized Estimating
+    Equations using Quadratic Inference Functions, Biometrika 87:4.
     www.jstor.org/stable/2673612
     """
 
@@ -196,6 +206,9 @@ class QIF(base.Model):
         cn_deriv = [0] * p
         cmat = np.zeros((d, d))
 
+        fastvar = self.family.variance is varfuncs.constant
+        fastlink = isinstance(self.family.link, links.identity)
+
         for ix in self.groups_ix:
             sd = np.sqrt(va[ix])
             resid = endog[ix] - mean[ix]
@@ -213,12 +226,16 @@ class QIF(base.Model):
                 gi[jj:jj+p] = np.dot(deriv.T, crs1)
                 crs2 = np.dot(c, -deriv / sd[:, None]) / sd[:, None]
                 gi_deriv[jj:jj+p, :] = np.dot(deriv.T, crs2)
-                for k in range(p):
-                    vx = -0.5 * vd[ix] * deriv[:, k] / va[ix]**1.5
-                    m1 = np.dot(exog[ix, :].T, idl2[ix] * exog[ix, k] * crs1)
-                    m2 = np.dot(deriv.T, vx * np.dot(c, sresid))
-                    m3 = np.dot(deriv.T, np.dot(c, vx * resid) / sd)
-                    gi_deriv[jj:jj+p, k] += m1 + m2 + m3
+                if not (fastlink and fastvar):
+                    for k in range(p):
+                        m1 = np.dot(exog[ix, :].T, idl2[ix] * exog[ix, k] * crs1)
+                        if not fastvar:
+                            vx = -0.5 * vd[ix] * deriv[:, k] / va[ix]**1.5
+                            m2 = np.dot(deriv.T, vx * np.dot(c, sresid))
+                            m3 = np.dot(deriv.T, np.dot(c, vx * resid) / sd)
+                        else:
+                            m2, m3 = 0, 0
+                        gi_deriv[jj:jj+p, k] += m1 + m2 + m3
                 jj += p
 
             for j in range(p):
@@ -299,13 +316,14 @@ class QIF(base.Model):
         if isinstance(groups, str):
             groups = data[groups]
 
-        model = super(QIF, cls).from_formula(formula, data=data, subset=subset,
-                                             groups=groups,
-                                             *args, **kwargs)
+        model = super(QIF, cls).from_formula(
+                   formula, data=data, subset=subset,
+                   groups=groups, *args, **kwargs)
 
         return model
 
-    def fit(self, maxiter=100, tol=1e-6, gtol=1e-4, ddof_scale=None):
+    def fit(self, maxiter=100, start_params=None, tol=1e-6, gtol=1e-4,
+            ddof_scale=None):
         """
         Fit a GLM to correlated data using QIF.
 
@@ -313,11 +331,15 @@ class QIF(base.Model):
         ----------
         maxiter : integer
             Maximum number of iterations.
+        start_params : array-like, optional
+            Starting values
         tol : float
             Convergence threshold for difference of successive
             estimates.
         gtol : float
             Convergence threshold for gradient.
+        ddof_scale : int, optional
+            Degrees of freedom for the scale parameter
 
         Returns
         -------
@@ -329,7 +351,10 @@ class QIF(base.Model):
         else:
             self.ddof_scale = ddof_scale
 
-        params = np.zeros(self.exog.shape[1])
+        if start_params is None:
+            params = np.zeros(self.exog.shape[1])
+        else:
+            params = start_params
 
         for _ in range(maxiter):
 
@@ -364,12 +389,14 @@ class QIFResults(base.LikelihoodModelResults):
 
         self.qif, _, _, _, _ = self.model.objective(params)
 
-
     @cache_readonly
     def aic(self):
         """
         An AIC-like statistic for models fit using QIF.
         """
+        if isinstance(self.model.cov_struct, QIFIndependence):
+            msg = "AIC not available with QIFIndependence covariance"
+            raise ValueError(msg)
         df = self.model.exog.shape[1]
         return self.qif + 2*df
 
@@ -378,6 +405,9 @@ class QIFResults(base.LikelihoodModelResults):
         """
         A BIC-like statistic for models fit using QIF.
         """
+        if isinstance(self.model.cov_struct, QIFIndependence):
+            msg = "BIC not available with QIFIndependence covariance"
+            raise ValueError(msg)
         df = self.model.exog.shape[1]
         return self.qif + np.log(self.model.nobs)*df
 

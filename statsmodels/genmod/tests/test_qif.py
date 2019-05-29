@@ -7,8 +7,10 @@ import pandas as pd
 import pytest
 from statsmodels.genmod import families
 
-@pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(), families.Binomial()])
-@pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(), QIFAutoregressive()])
+@pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(),
+         families.Binomial()])
+@pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(),
+         QIFAutoregressive()])
 def test_qif_numdiff(fam, cov_struct):
     # Test the analytic scores against numeric derivatives
 
@@ -33,7 +35,7 @@ def test_qif_numdiff(fam, cov_struct):
         pt = np.random.normal(size=3)
 
         # Check the Jacobian of the vector of estimating equations.
-        qif, grad, _, _, gn_deriv = model.objective(pt)
+        _, grad, _, _, gn_deriv = model.objective(pt)
 
         def llf_gn(params):
             return model.objective(params)[3]
@@ -47,8 +49,10 @@ def test_qif_numdiff(fam, cov_struct):
         assert_allclose(grad, grad_numdiff, 1e-4)
 
 
-@pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(), families.Binomial()])
-@pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(), QIFAutoregressive()])
+@pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(),
+         families.Binomial()])
+@pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(),
+         QIFAutoregressive()])
 def test_qif_fit(fam, cov_struct):
 
     np.random.seed(234234)
@@ -80,25 +84,28 @@ def test_qif_fit(fam, cov_struct):
     # Smoke test
     _ = rslt.summary()
 
-
-def test_formula():
+@pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(),
+         QIFAutoregressive()])
+def test_formula(cov_struct):
 
     np.random.seed(3423)
 
     y = np.random.normal(size=100)
     x = np.random.normal(size=(100, 2))
-    groups = np.kron(np.arange(50), np.r_[1, 1])
+    groups = np.kron(np.arange(25), np.ones(4))
 
-    model1 = QIF(y, x, groups=groups)
+    model1 = QIF(y, x, groups=groups, cov_struct=cov_struct)
     result1 = model1.fit()
 
     df = pd.DataFrame({"y": y, "x1": x[:, 0], "x2": x[:, 1], "groups": groups})
 
-    model2 = QIF.from_formula("y ~ 0 + x1 + x2", groups="groups", data=df)
+    model2 = QIF.from_formula("y ~ 0 + x1 + x2", groups="groups",
+               cov_struct=cov_struct, data=df)
     result2 = model2.fit()
 
     assert_allclose(result1.params, result2.params)
     assert_allclose(result1.bse, result2.bse)
 
-    _ = result2.bic
-    _ = result2.aic
+    if not isinstance(cov_struct, QIFIndependence):
+        _ = result2.bic
+        _ = result2.aic
