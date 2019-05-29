@@ -274,7 +274,7 @@ def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three ge
     stds = []
     for gene in genes:
         means.append(np.mean(gene))
-        std.append(np.std(gene))
+        std.append(np.std(gene))  # noqa:F821  See GH#5756
 
     #firstmean = np.mean(first) #means of the three arrays
     #secondmean = np.mean(second)
@@ -1430,8 +1430,8 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     idx1, idx2 = np.triu_indices(n_means, 1)
     if triu:
         #select all pairs from upper triangle of matrix
-        meandiffs = meandiffs_[idx1, idx2]
-        std_pairs = std_pairs_[idx1, idx2]
+        meandiffs = meandiffs_[idx1, idx2]  # noqa: F821  See GH#5756
+        std_pairs = std_pairs_[idx1, idx2]  # noqa: F821  See GH#5756
 
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 
