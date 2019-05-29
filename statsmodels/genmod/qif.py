@@ -266,7 +266,6 @@ class QIF(base.Model):
 
         lpr = np.dot(self.exog, params)
         mean = self.family.link.inverse(lpr)
-        va = self.family.variance(mean)
         resid = self.endog - mean
         scale = np.sum(resid**2) / (self.nobs - ddof_scale)
 
@@ -295,7 +294,7 @@ class QIF(base.Model):
         Returns
         -------
         model : QIF model instance
-        """ % {'missing_param_doc': base._missing_param_doc}
+        """
 
         if isinstance(groups, str):
             groups = data[groups]
@@ -334,7 +333,7 @@ class QIF(base.Model):
 
         for _ in range(maxiter):
 
-            qif, grad, cmat, _, gn_deriv = self.objective(params)
+            _, grad, cmat, _, gn_deriv = self.objective(params)
 
             if np.sqrt(np.sum(grad * grad)) < gtol:
                 break

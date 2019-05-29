@@ -33,7 +33,7 @@ def test_qif_numdiff(fam, cov_struct):
         pt = np.random.normal(size=3)
 
         # Check the Jacobian of the vector of estimating equations.
-        qif, grad, cmat, _, gn_deriv = model.objective(pt)
+        qif, grad, _, _, gn_deriv = model.objective(pt)
 
         def llf_gn(params):
             return model.objective(params)[3]
