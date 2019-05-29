@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import numpy as np
+import matplotlib.pyplot as plt
 #import statsmodels.linear_model.regression as smreg
 
 from scipy import special
@@ -25,7 +26,6 @@ fitted = [sm.OLS(gdp, exog[:, :maxr]).fit().fittedvalues for maxr in
 
 print((np.corrcoef(exog[:,1:6], rowvar=0)*10000).astype(int))
 
-import matplotlib.pyplot as plt
 
 plt.figure()
 plt.plot(gdp, 'o')

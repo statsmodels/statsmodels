@@ -22,7 +22,13 @@ LIMDEP software.
 '''
 
 import numpy as np
+from numpy.testing import assert_almost_equal
+from scipy.special import digamma
 from scipy.stats import nbinom
+import pandas
+import patsy
+
+from statsmodels.compat.python import urlopen
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.model import GenericLikelihoodModelResults
 
@@ -202,7 +208,6 @@ class CountResults(GenericLikelihoodModelResults):
 
 
 #### Score function for NB-P ####
-from scipy.special import digamma
 
 
 def _score_nbp(y, X, beta, thet, Q):
@@ -243,10 +248,6 @@ def _score_nbp(y, X, beta, thet, Q):
 
 
 #### Tests ####
-from statsmodels.compat.python import urlopen
-from numpy.testing import assert_almost_equal
-import pandas
-import patsy
 medpar = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'))
 mdvis = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv'))
 

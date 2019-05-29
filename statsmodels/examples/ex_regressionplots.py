@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 import statsmodels.graphics.regressionplots as smrp
+from statsmodels.graphics.tests.test_regressionplots import TestPlot
 
 #example from tut.ols with changes
 #fix a seed for these examples
@@ -122,7 +123,6 @@ if doplots:
     smrp.plot_ccpr(res, exog_idx=0)
     smrp.plot_ccpr_grid(res, exog_idx=[0,1])
 
-from statsmodels.graphics.tests.test_regressionplots import TestPlot
 tp = TestPlot()
 tp.test_plot_fit()
 

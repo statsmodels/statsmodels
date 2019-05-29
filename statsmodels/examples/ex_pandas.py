@@ -10,11 +10,14 @@ from statsmodels.compat.python import zip
 from datetime import datetime
 
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from pandas import DataFrame, Series
 
 import statsmodels.api as sm
 import statsmodels.tsa.api as tsa
+from statsmodels.tsa.arima_process import arma_generate_sample
 
 
 data = sm.datasets.stackloss.load(as_pandas=False)
@@ -42,9 +45,6 @@ print(hub_results.params)
 print(hub_results.bcov_scaled)
 print(hub_results.summary())
 
-
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 
 def plot_acf_multiple(ys, lags=20):
     """
@@ -109,12 +109,8 @@ print(res.test_normality())
 
 #Example TSA ARMA
 
-import numpy as np
-import statsmodels.api as sm
-
 
 # Generate some data from an ARMA process
-from statsmodels.tsa.arima_process import arma_generate_sample
 arparams = np.array([.75, -.25])
 maparams = np.array([.65, .35])
 # The conventions of the arma_generate function require that we specify a

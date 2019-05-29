@@ -10,8 +10,12 @@ from __future__ import print_function
 from statsmodels.compat.python import StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+from scipy import stats
 
 from statsmodels.stats.libqsturng import qsturng
+from statsmodels.stats.multicomp import tukeyhsd
+import statsmodels.stats.multicomp as multi
+
 
 ss = '''\
   43.9  1   1
@@ -122,8 +126,6 @@ dta = np.recfromtxt(StringIO(ss), names=("Rust","Brand","Replication"))
 dta2 = np.recfromtxt(StringIO(ss2), names = ("idx", "Treatment", "StressReduction"))
 dta3 = np.recfromtxt(StringIO(ss3), names = ("Brand", "Relief"))
 
-from statsmodels.sandbox.stats.multicomp import tukeyhsd
-import statsmodels.sandbox.stats.multicomp as multi
 #print tukeyhsd(dta['Brand'], dta['Rust'])
 
 def get_thsd(mci):
@@ -170,7 +172,6 @@ except Exception as e:
 for mci in [mc, mc2, mc3]:
     get_thsd(mci)
 
-from scipy import stats
 print(mc2.allpairtest(stats.ttest_ind, method='b')[0])
 
 '''same as SAS:

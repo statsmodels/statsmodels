@@ -4,6 +4,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import kdensityfft
+from statsmodels.nonparametric import bandwidths
 import matplotlib.pyplot as plt
 
 
@@ -25,7 +26,6 @@ plt.show()
 
 # do some timings
 # get bw first because they're not streamlined
-from statsmodels.nonparametric import bandwidths
 bw = bandwidths.bw_scott(obs_dist)
 
 #.. timeit kdensity(obs_dist, kernel="gauss", bw=bw, gridsize=2**10)

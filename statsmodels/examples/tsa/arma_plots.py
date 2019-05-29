@@ -6,6 +6,8 @@
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+
 import statsmodels.tsa.arima_process as tsp
 from statsmodels.graphics.tsaplots import plotacf
 
@@ -67,7 +69,6 @@ for ax in axs[:-2]:#[:-1,:].flat:
 
 # use a MaxNLocator on the first column y axis if you have a bunch of
 # rows to avoid bunching; example below uses at most 3 ticks
-import matplotlib.ticker as mticker
 for ax in axs: #[::2]:#[:,1].flat:
     ax.yaxis.set_major_locator( mticker.MaxNLocator(3 ))
 

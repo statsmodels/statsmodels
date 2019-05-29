@@ -45,6 +45,7 @@ from scipy import stats
 from scipy.stats import distributions
 import numpy as np
 
+
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
     u_kwargs = dict((k.replace('u_','',1),v) for k,v in iteritems(kwargs)
@@ -131,9 +132,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy import stats
-from scipy.stats import distributions
-import numpy as np
 
 class ExpTransf_gen(distributions.rv_continuous):
     '''Distribution based on log/exp transformation

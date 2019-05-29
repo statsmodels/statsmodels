@@ -1,5 +1,8 @@
 from functools import wraps
 
+import pandas as pd
+import numpy as np
+
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -129,10 +132,6 @@ def dummy_func_pandas_columns(X):
 
 def dummy_func_pandas_series(X):
     return X['A']
-
-
-import pandas as pd
-import numpy as np
 
 
 def test_pandas_freq_decorator():

@@ -6,6 +6,7 @@ import numpy as np
 
 import nitime.utils as ut
 
+import statsmodels.api as sm
 
 sxx=None
 order = 10
@@ -20,5 +21,4 @@ X, v, _ = ut.ar_generator(npts, sigma, coefs, drop_transients)
 
 s = X
 
-import statsmodels.api as sm
 sm.tsa.stattools.pacf(X)

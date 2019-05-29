@@ -8,7 +8,6 @@ and estimated.
 Note: uncomment plt.show() to display graphs
 '''
 
-example = 2 #3  # 1,2 or 3
 import time
 
 import numpy as np
@@ -20,6 +19,9 @@ import scipy.stats
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod import families
+
+
+example = 2 #3  # 1,2 or 3
 
 #np.random.seed(987654)
 

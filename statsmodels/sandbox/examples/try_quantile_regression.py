@@ -5,6 +5,8 @@ Author: Josef Perktold
 '''
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 from statsmodels.compat.python import zip
 import statsmodels.api as sm
 
@@ -31,7 +33,6 @@ res_ols = sm.OLS(y, exog).fit()
 params = [res_ols.params, res_qr2.params, res_qr.params, res_qr3.params]
 labels = ['ols', 'qr 0.25', 'qr 0.5', 'qr 0.75']
 
-import matplotlib.pyplot as plt
 #sortidx = np.argsort(y)
 fitted_ols = np.dot(res_ols.model.exog, params[0])
 sortidx = np.argsort(fitted_ols)

@@ -12,9 +12,13 @@ for comparison I used R mvtnorm version 0.9-96
 """
 from __future__ import print_function
 import numpy as np
+from numpy.testing import assert_array_almost_equal
+import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
+import statsmodels.distributions.mixture_rvs as mix
 import statsmodels.sandbox.distributions.mv_normal as mvd
 
-from numpy.testing import assert_array_almost_equal
 
 cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
                    [ 0.5 ,  1.5 ,  0.6 ],
@@ -85,8 +89,6 @@ mv2c = mvn3.conditional(np.array([0]), [0, 0])
 print(mv2c.mean)
 print(mv2c.cov)
 
-import statsmodels.api as sm
-
 mod = sm.OLS(x[:,0], sm.add_constant(x[:,1:], prepend=True))
 res = mod.fit()
 print(res.model.predict(np.array([1,0,0])))
@@ -144,13 +146,11 @@ print('diff', mvt3_cdf1 - 0.1946217)
 assert_array_almost_equal(mvt3_cdf0, 0.3026855, decimal=5)
 assert_array_almost_equal(mvt3_cdf1, 0.1946217, decimal=5)
 
-import statsmodels.distributions.mixture_rvs as mix
 mu2 = np.array([4, 2.0, 2.0])
 mvn32 = mvd.MVNormal(mu2, cov3/2., 4)
 md = mix.mv_mixture_rvs([0.4, 0.6], 5, [mvt3, mvt3n], 3)
 rvs = mix.mv_mixture_rvs([0.4, 0.6], 2000, [mvn3, mvn32], 3)
 #rvs2 = rvs[:,:2]
-import matplotlib.pyplot as plt
 fig = plt.figure()
 fig.add_subplot(2, 2, 1)
 plt.plot(rvs[:,0], rvs[:,1], '.', alpha=0.25)

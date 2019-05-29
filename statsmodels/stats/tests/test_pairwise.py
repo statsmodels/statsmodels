@@ -16,6 +16,8 @@ from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_
     assert_raises
 
 from statsmodels.stats.libqsturng import qsturng
+from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
+                                         MultiComparison)
 
 ss = '''\
   43.9  1   1
@@ -150,9 +152,6 @@ for col in ('pair', 'sig'):
     dta5[col] = dta5[col].map(lambda v: v.encode('utf-8'))
 sas_ = dta5.iloc[[1, 3, 2]]
 
-from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
-                                         MultiComparison)
-
 
 def get_thsd(mci, alpha=0.05):
     var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
@@ -252,10 +251,9 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
     def setup_class(cls):
         super(TestTuckeyHSD2Pandas, cls).setup_class()
 
-        import pandas
-        cls.endog = pandas.Series(cls.endog)
+        cls.endog = pd.Series(cls.endog)
         # we are working with bytes on python 3, not with strings in this case
-        cls.groups = pandas.Series(cls.groups, dtype=object)
+        cls.groups = pd.Series(cls.groups, dtype=object)
 
     def test_incorrect_output(self):
         # too few groups

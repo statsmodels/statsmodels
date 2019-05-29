@@ -13,6 +13,14 @@ import numpy as np
 from scipy import stats, special, optimize
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.numdiff import approx_hess
+
+#import for kstest based estimation
+#should be replace
+# FIXME: importing these patches scipy distribution classes in-place.
+#  Don't do this.
+import statsmodels.sandbox.distributions.sppatch  # noqa:F401
+
 
 #redefine some shortcuts
 np_log = np.log
@@ -137,7 +145,6 @@ print('using Newton')
 print(resp2.params)
 print(resp2.bse)
 
-from statsmodels.tools.numdiff import approx_hess
 
 hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_params)
@@ -155,15 +162,6 @@ print(pp.max(0))
 # estimating scale doesn't work yet, a bug somewhere ?
 # fit_ks works well, but no bse or other result statistics yet
 
-
-
-
-
-#import for kstest based estimation
-#should be replace
-# FIXME: importing these patches scipy distribution classes in-place.
-#  Don't do this.
-import statsmodels.sandbox.distributions.sppatch  # noqa:F401
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution

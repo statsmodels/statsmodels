@@ -9,6 +9,8 @@ Author: Josef Perktold
 from __future__ import print_function
 from statsmodels.compat.python import lmap
 import numpy as np
+import matplotlib.pyplot as plt
+
 import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
 
@@ -45,7 +47,6 @@ assert_almost_equal(res[2][0], -4.8701, 4)
 nn = np.arange(200, 351)
 pow_z = sms.power_ztost_prop(0.5, 0.72, nn, 0.6, alpha=0.05)
 pow_bin = sms.power_ztost_prop(0.5, 0.72, nn, 0.6, alpha=0.05, dist='binom')
-import matplotlib.pyplot as plt
 plt.plot(nn, pow_z[0], label='normal')
 plt.plot(nn, pow_bin[0], label='binomial')
 plt.legend(loc='lower right')

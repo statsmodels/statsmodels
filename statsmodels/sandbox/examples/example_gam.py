@@ -3,8 +3,6 @@
 Note: uncomment plt.show() to display graphs
 '''
 
-example = 2  # 1,2 or 3
-
 import time
 
 import numpy as np
@@ -16,6 +14,7 @@ from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod.families import family
 
+example = 2  # 1,2 or 3
 
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())

@@ -25,12 +25,13 @@ from statsmodels.base._constraints import fit_constrained
 from statsmodels.tools.tools import add_constant
 from statsmodels import datasets
 
+from .results import results_poisson_constrained as results
+from .results import results_glm_logit_constrained as reslogit
+
 
 spector_data = datasets.spector.load(as_pandas=False)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
-from .results import results_poisson_constrained as results
-from .results import results_glm_logit_constrained as reslogit
 
 DEBUG = False
 

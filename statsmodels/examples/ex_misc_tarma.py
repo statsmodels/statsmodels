@@ -8,10 +8,12 @@ Author: Josef Perktold
 
 from __future__ import print_function
 import numpy as np
+import matplotlib.pyplot as plt
 
 from statsmodels.tsa.arima_process import arma_generate_sample, ArmaProcess
 from statsmodels.miscmodels.tmodel import TArma
 from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arma_mle import Arma
 
 nobs = 500
 ar = [1, -0.6, -0.1]
@@ -36,7 +38,6 @@ print(proc.ar, proc.ma)
 
 print(proc.ar_roots(), proc.ma_roots())
 
-from statsmodels.tsa.arma_mle import Arma
 modn = Arma(x)
 resn = modn.fit_mle(order=order)
 
@@ -69,7 +70,6 @@ print(res2.t_test(np.eye(len(res2.params))))
 resid = res2.model.geterrors(res2.params)
 fv = res[2]['fvec']  #resid returned from leastsq?
 
-import matplotlib.pyplot as plt
 plt.plot(x, 'o', alpha=0.5)
 plt.plot(x-resid)
 plt.plot(x-fv)

@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
+from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arima_process import arma_generate_sample
+from statsmodels.miscmodels.tmodel import TArma
+
 
 x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200, burnin=1000)
 d = TsaDescriptive(x)
@@ -34,7 +38,6 @@ plt.figure()
 plt.plot(modc.error_estimate)
 #plt.show()
 
-from statsmodels.miscmodels.tmodel import TArma
 
 modct = TArma(x)
 reslst = modc.fit(order=(1,1))
@@ -44,14 +47,12 @@ rescmt = modct.fit_mle(order=(1,1), start_params=[-0.4,0.4, 10, 1.],maxiter=500,
 print(rescmt.params)
 
 
-from statsmodels.tsa.arima_model import ARMA
 mkf = ARMA(x)
 ##rkf = mkf.fit((1,1))
 ##rkf.params
 rkf = mkf.fit((1,1), trend='nc')
 print(rkf.params)
 
-from statsmodels.tsa.arima_process import arma_generate_sample
 np.random.seed(12345)
 y_arma22 = arma_generate_sample([1.,-.85,.35, -0.1],[1,.25,-.7], nsample=1000)
 ##arma22 = ARMA(y_arma22)

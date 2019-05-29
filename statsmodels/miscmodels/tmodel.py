@@ -35,14 +35,17 @@ TODO
 #mostly copied from the examples directory written for trying out generic mle.
 
 import numpy as np
-from scipy import special #, stats
+from scipy import special, stats
+
+from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tsa.arma_mle import Arma
+
+
 #redefine some shortcuts
 np_log = np.log
 np_pi = np.pi
 sps_gamln = special.gammaln
 
-
-from statsmodels.base.model import GenericLikelihoodModel
 
 class TLinearModel(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Linear Model with t-distributed errors
@@ -162,9 +165,6 @@ class TLinearModel(GenericLikelihoodModel):
             exog = self.exog
         return np.dot(exog, params[:self.exog.shape[1]])
 
-
-from scipy import stats
-from statsmodels.tsa.arma_mle import Arma
 
 class TArma(Arma):
     '''Univariate Arma Model with t-distributed errors

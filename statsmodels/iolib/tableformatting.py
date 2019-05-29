@@ -2,6 +2,7 @@
 Summary Table formating
 This is here to help keep the formating consistent across the different models
 """
+import copy
 
 gen_fmt = dict(
         data_fmts = ["%s", "%s", "%s", "%s", "%s"],
@@ -82,7 +83,6 @@ fmt_base = dict(
         fmt = 'txt'
         )
 
-import copy
 fmt_2cols = copy.deepcopy(fmt_base)
 
 fmt2 = dict(

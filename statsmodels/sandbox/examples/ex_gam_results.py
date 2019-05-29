@@ -13,6 +13,7 @@ converge in this case
 """
 
 
+import matplotlib.pyplot as plt
 
 from statsmodels.sandbox.tests.test_gam import _estGAMGaussianLogLink
 
@@ -37,7 +38,6 @@ comp2_true -= mean2
 noise = tt.res2.model.endog - tt.mu_true
 noise_eta =  tt.family.link(tt.res2.model.endog) - tt.y_true
 
-import matplotlib.pyplot as plt
 plt.figure()
 plt.plot(noise, 'k.')
 plt.figure()

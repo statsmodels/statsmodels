@@ -11,6 +11,7 @@ import numpy as np
 from scipy import stats
 from scipy.special import comb
 from scipy.stats.distributions import rv_continuous
+import matplotlib.pyplot as plt
 
 from numpy import where, inf
 from numpy import abs as np_abs
@@ -119,7 +120,6 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
 
 print(meanexcess(5, -0.5, 10))
 print(meanexcess(5, -2, 10))
-import matplotlib.pyplot as plt
 
 data = genpareto2.rvs(-0.75, scale=5, size=1000)
 #data = np.random.uniform(50, size=1000)

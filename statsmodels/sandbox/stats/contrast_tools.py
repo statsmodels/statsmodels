@@ -23,6 +23,8 @@ Idea for second part
 
 
 from __future__ import print_function
+from numpy.testing import assert_equal
+
 from statsmodels.compat.python import zip
 import numpy as np
 
@@ -550,16 +552,8 @@ class TwoWay(object):
                            txt_fmt=table_fmt)
 
 
-
-
-
-
-
-#--------------- tests
-
-from numpy.testing import assert_equal
-
-#TODO: several tests still missing, several are in the example with print
+# --------------- tests
+# TODO: several tests still missing, several are in the example with print
 
 class TestContrastTools(object):
 
