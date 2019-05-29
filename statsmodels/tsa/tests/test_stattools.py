@@ -879,9 +879,6 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     res = mod.filter(np.r_[ar_params, ma_params, sigma2])
 
     # Test that the two approaches are identical
-    assert_allclose(u, res.forecasts_error[0])
-    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
-    assert_allclose(llf_obs, res.llf_obs)
     atol = 1e-6 if PLATFORM_WIN else 0.0
     assert_allclose(u, res.forecasts_error[0], atol=atol)
     assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
@@ -893,28 +890,28 @@ def test_zivot_andrews():
     cur_dir = os.path.abspath(os.path.dirname(__file__))
     resdir = os.path.join(cur_dir, "results")
     zafiles = ['rgnp.csv', 'gnpdef.csv', 'stkprc.csv', 'rgnpq.csv', 'rand10000.csv']
-    for file in zafiles:
-        mdlfile = os.path.join(resdir, file)
+    for filename in zafiles:
+        mdlfile = os.path.join(resdir, filename)
         mdl = np.asarray(pd.read_csv(mdlfile))
         # compare results to R package urca.ur.za (1.13-0)
-        if file == 'rgnp.csv':
+        if filename == 'rgnp.csv':
             res = zivot_andrews(mdl, maxlag=8, regression='c', autolag=None)
             assert_almost_equal(res[0], -5.57615, decimal=3)
             assert_almost_equal(res[1], 0.00312, decimal=3)
             assert_equal(res[4], 20)
-        elif file == 'gnpdef.csv':
+        elif filename == 'gnpdef.csv':
             res = zivot_andrews(mdl, maxlag=8, regression='c', autolag='t-stat')
             assert_almost_equal(res[0], -4.12155, decimal=3)
             assert_almost_equal(res[1], 0.28024, decimal=3)
             assert_equal(res[3], 5)
             assert_equal(res[4], 40)
-        elif file == 'stkprc.csv':
+        elif filename == 'stkprc.csv':
             res = zivot_andrews(mdl, maxlag=8, regression='ct', autolag='t-stat')
             assert_almost_equal(res[0], -5.60689, decimal=3)
             assert_almost_equal(res[1], 0.00894, decimal=3)
             assert_equal(res[3], 1)
             assert_equal(res[4], 65)
-        elif file == 'rgnpq.csv':
+        elif filename == 'rgnpq.csv':
             res = zivot_andrews(mdl, maxlag=12, regression='t', autolag='t-stat')
             assert_almost_equal(res[0], -3.02761, decimal=3)
             assert_almost_equal(res[1], 0.63993, decimal=3)
