@@ -363,23 +363,24 @@ class QIFResults(base.LikelihoodModelResults):
             model, params, normalized_cov_params=cov_params,
             scale=scale)
 
+        self.qif, _, _, _, _ = self.model.objective(params)
+
+
     @cache_readonly
     def aic(self):
         """
         An AIC-like statistic for models fit using QIF.
         """
-        qif, _, _, _, _ = self.model.objective(self.params)
         df = self.model.exog.shape[1]
-        return qif + 2*df
+        return self.qif + 2*df
 
     @cache_readonly
     def bic(self):
         """
         A BIC-like statistic for models fit using QIF.
         """
-        qif, _, _, _, _ = self.model.objective(self.params)
         df = self.model.exog.shape[1]
-        return qif + np.log(self.model.nobs)*df
+        return self.qif + np.log(self.model.nobs)*df
 
     @cache_readonly
     def fittedvalues(self):

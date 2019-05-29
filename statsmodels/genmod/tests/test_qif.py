@@ -99,3 +99,6 @@ def test_formula():
 
     assert_allclose(result1.params, result2.params)
     assert_allclose(result1.bse, result2.bse)
+
+    _ = result2.bic
+    _ = result2.aic
