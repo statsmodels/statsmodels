@@ -541,11 +541,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        params = np.array(params, ndmin=1)
-
-        if not transformed:
-            params = self.transform_params(params)
-        self.update(params, transformed=True, complex_step=complex_step)
+        self.update(params, transformed=transformed, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -587,11 +583,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        params = np.array(params, ndmin=1)
-
-        if not transformed:
-            params = self.transform_params(params)
-        self.update(params, transformed=True, complex_step=complex_step)
+        self.update(params, transformed=transformed, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -645,10 +637,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
             *args, **kwargs)
 
-        if not transformed:
-            params = self.transform_params(params)
-
-        self.update(params, transformed=True, complex_step=complex_step)
+        self.update(params, transformed=transformed, complex_step=complex_step)
 
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
@@ -691,15 +680,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         --------
         update : modifies the internal state of the Model to reflect new params
         """
-        if not transformed:
-            params = self.transform_params(params)
-
         # If we're using complex-step differentiation, then we can't use
         # Cholesky factorization
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
 
-        self.update(params, transformed=True, complex_step=complex_step)
+        self.update(params, transformed=transformed, complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
 
@@ -727,8 +713,6 @@ class MLEModel(tsbase.TimeSeriesModel):
                                              approx_complex_step=None,
                                              approx_centered=False,
                                              res=None, **kwargs):
-        params = np.array(params, ndmin=1)
-
         # We can't use complex-step differentiation with non-transformed
         # parameters
         if approx_complex_step is None:
@@ -848,8 +832,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         Cambridge University Press.
 
         """
-        params = np.array(params, ndmin=1)
-
         # Setup
         n = len(params)
 
@@ -989,7 +971,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         Cambridge University Press.
 
         """
-        params = np.array(params, ndmin=1)
         n = len(params)
 
         # Get values at the params themselves
