@@ -18,7 +18,7 @@ PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
 PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
 PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
 if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.coveragerc_travis --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
 echo conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} ${DEPEND_ALWAYS}
 conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} ${DEPEND_ALWAYS}
 source activate statsmodels-test

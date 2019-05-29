@@ -2,8 +2,7 @@
 To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
 python setup.py develop
-pytest --cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels \
-       statsmodels
+pytest --cov=statsmodels statsmodels
 """
 import fnmatch
 import os
