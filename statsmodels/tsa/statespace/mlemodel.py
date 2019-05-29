@@ -541,7 +541,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        self.update(params, transformed=transformed, complex_step=complex_step)
+        params = self.update(params, transformed=transformed, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -583,7 +583,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        self.update(params, transformed=transformed, complex_step=complex_step)
+        params = self.update(params, transformed=transformed, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
@@ -637,8 +637,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
             *args, **kwargs)
 
-        self.update(params, transformed=transformed, complex_step=complex_step)
-
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
 
@@ -685,8 +683,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
 
-        self.update(params, transformed=transformed, complex_step=complex_step)
-
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
 
     def simulation_smoother(self, simulation_output=None, **kwargs):
@@ -729,8 +725,6 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Get values at the params themselves
         if res is None:
-            self.update(params, transformed=transformed,
-                        complex_step=approx_complex_step)
             res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
         # Setup
@@ -749,8 +743,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             increments = np.identity(n) * 1j * epsilon
 
             for i, ih in enumerate(increments):
-                self.update(params + ih, transformed=transformed,
-                            complex_step=True)
                 _res = self.ssm.filter(complex_step=True, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
@@ -765,8 +757,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             ei = np.zeros((n,), float)
             for i in range(n):
                 ei[i] = epsilon[i]
-                self.update(params + ei, transformed=transformed,
-                            complex_step=False)
                 _res = self.ssm.filter(complex_step=False, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
@@ -782,12 +772,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             for i in range(n):
                 ei[i] = epsilon[i]
 
-                self.update(params + ei, transformed=transformed,
-                            complex_step=False)
                 _res1 = self.ssm.filter(complex_step=False, **kwargs)
-
-                self.update(params - ei, transformed=transformed,
-                            complex_step=False)
                 _res2 = self.ssm.filter(complex_step=False, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
@@ -845,7 +830,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                              " with untransformed parameters.")
 
         # Get values at the params themselves
-        self.update(params, transformed=transformed,
+        params = self.update(params, transformed=transformed,
                     complex_step=approx_complex_step)
         # If we're using complex-step differentiation, then we can't use
         # Cholesky factorization
@@ -974,7 +959,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         n = len(params)
 
         # Get values at the params themselves
-        self.update(params, transformed=True, complex_step=approx_complex_step)
+        params = self.update(params, transformed=True, complex_step=approx_complex_step)
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
         res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
@@ -1303,7 +1288,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return approx_fprime(unconstrained, self.transform_params,
                              centered=approx_centered)
 
-    def transform_params(self, unconstrained):
+    @staticmethod
+    def transform_params(unconstrained):
         """
         Transform unconstrained parameters used by the optimizer to constrained
         parameters used in likelihood evaluation
@@ -1419,8 +1405,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         simulated_obs : array
             An (nsimulations x k_endog) array of simulated observations.
         """
-        self.update(params)
-
         simulated_obs, simulated_states = self.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
 
@@ -1475,7 +1459,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         calculating impulse responses.
 
         """
-        self.update(params)
         irfs = self.ssm.impulse_responses(
             steps, impulse, orthogonalized, cumulative, **kwargs)
 
