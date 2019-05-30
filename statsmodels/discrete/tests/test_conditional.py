@@ -308,8 +308,8 @@ def test_conditional_mnlogit_3d():
     # Regression tests
     assert_allclose(
         result.params,
-        np.asarray([[ 0.729629, -1.633673],
-                    [ 1.879019, -1.327163],
+        np.asarray([[0.729629, -1.633673],
+                    [1.879019, -1.327163],
                     [-0.114124, -0.109378]]),
         atol=1e-5, rtol=1e-5)
 

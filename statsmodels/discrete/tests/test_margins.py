@@ -16,10 +16,11 @@ import statsmodels.discrete.tests.results.results_count_margins as res_stata
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
 cpunish_data = load(as_pandas=False)
-cpunish_data.exog[:,3] = np.log(cpunish_data.exog[:,3])
+cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 exog = add_constant(cpunish_data.exog, prepend=False)
-endog = cpunish_data.endog - 1 # avoid zero-truncation
+endog = cpunish_data.endog - 1  # avoid zero-truncation
 exog /= np.round(exog.max(0), 3)
+
 
 class CheckMarginMixin(object):
     rtol_fac = 1
@@ -28,9 +29,12 @@ class CheckMarginMixin(object):
         res1 = self.res1
         sl = self.res1_slice
         rf = self.rtol_fac
-        assert_allclose(self.margeff.margeff, self.res1.params[sl], rtol=1e-5 * rf)
-        assert_allclose(self.margeff.margeff_se, self.res1.bse[sl], rtol=1e-6 * rf)
-        assert_allclose(self.margeff.pvalues, self.res1.pvalues[sl], rtol=5e-6 * rf)
+        assert_allclose(self.margeff.margeff, self.res1.params[sl],
+                        rtol=1e-5 * rf)
+        assert_allclose(self.margeff.margeff_se, self.res1.bse[sl],
+                        rtol=1e-6 * rf)
+        assert_allclose(self.margeff.pvalues, self.res1.pvalues[sl],
+                        rtol=5e-6 * rf)
         assert_allclose(self.margeff.conf_int(), res1.margins_table[sl, 4:6],
                         rtol=1e-6 * rf)
 
@@ -44,7 +48,6 @@ class TestPoissonMargin(CheckMarginMixin):
                         -5.0529]
         mod_poi = Poisson(endog, exog)
         res_poi = mod_poi.fit(start_params=start_params)
-        #res_poi = mod_poi.fit(maxiter=100)
         marge_poi = res_poi.get_margeff()
         cls.res = res_poi
         cls.margeff = marge_poi

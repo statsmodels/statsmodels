@@ -28,6 +28,8 @@ if [ "$LINT" == true ]; then
         statsmodels/datasets/elec_equip \
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/test_constrained.py \
+        statsmodels/discrete/tests/test_conditional.py \
+        statsmodels/discrete/tests/test_margins.py \
         statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
         statsmodels/duration/tests/results/ \
