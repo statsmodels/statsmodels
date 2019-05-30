@@ -29,6 +29,7 @@ if [ "$LINT" == true ]; then
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/test_constrained.py \
         statsmodels/discrete/tests/test_conditional.py \
+        statsmodels/discrete/tests/test_count_model.py \
         statsmodels/discrete/tests/test_discrete.py.py \
         statsmodels/discrete/tests/test_margins.py \
         statsmodels/discrete/tests/results/ \
