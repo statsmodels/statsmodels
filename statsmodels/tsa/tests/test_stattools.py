@@ -911,10 +911,10 @@ class TestZivotAndrews(SetupZivotAndrews):
         assert_raises(TypeError, zivot_andrews, fail_mdl, autolag='None')
 
 	# following tests compare results to R package urca.ur.za (1.13-0)
-	def test_rgnp_case(self):
-		res = zivot_andrews(fail_mdl, maxlag=8, regression='c', autolag=None)
+    def test_rgnp_case(self):
+        res = zivot_andrews(fail_mdl, maxlag=8, regression='c', autolag=None)
         assert_allclose([res[0], res[1], res[4]],
-						[-5.57615, 0.00312, 20], rtol=1e-3)
+                        [-5.57615, 0.00312, 20], rtol=1e-3)
 
     def test_gnpdef_case(self):
         mdlfile = os.path.join(run_dir, 'gnpdef.csv')
