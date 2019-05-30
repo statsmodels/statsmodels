@@ -80,6 +80,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/descriptivestats.py \
+        statsmodels/tsa/mlemodel.py \
         statsmodels/tsa/varma_process.py \
         statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/filters/tests/ \
