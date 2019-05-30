@@ -24,8 +24,9 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss', 'zivot_andrews', 'bds', 'pacf_burg', 'innovations_algo',
-           'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
+           'adfuller', 'kpss', 'zivot_andrews', 'bds', 'pacf_burg',
+           'innovations_algo', 'innovations_filter', 'levinson_durbin_pacf',
+           'levinson_durbin']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
@@ -1746,63 +1747,69 @@ class ZivotAndrewsUnitRoot(object):
 
         Notes
         -----
-        The p-values are generated through Monte Carlo simulation using 100,000
-        replications and 2000 data points.
+        The p-values are generated through Monte Carlo simulation using
+        100,000 replications and 2000 data points.
         """
         self._za_critical_values = {}
         # constant-only model
-        self._c = ((0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
-             (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
-             (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
-             (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
-             (5.000, -4.81067), (7.500, -4.67636), (10.000, -4.56618),
-             (12.500, -4.48130), (15.000, -4.40507), (17.500, -4.33947),
-             (20.000, -4.28155), (22.500, -4.22683), (25.000, -4.17830),
-             (27.500, -4.13101), (30.000, -4.08586), (32.500, -4.04455),
-             (35.000, -4.00380), (37.500, -3.96144), (40.000, -3.92078),
-             (42.500, -3.88178), (45.000, -3.84503), (47.500, -3.80549),
-             (50.000, -3.77031), (52.500, -3.73209), (55.000, -3.69600),
-             (57.500, -3.65985), (60.000, -3.62126), (65.000, -3.54580),
-             (70.000, -3.46848), (75.000, -3.38533), (80.000, -3.29112),
-             (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
-             (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
-             (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932), )
+        self._c = (
+            (0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
+            (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
+            (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
+            (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
+            (5.000, -4.81067), (7.500, -4.67636), (10.000, -4.56618),
+            (12.500, -4.48130), (15.000, -4.40507), (17.500, -4.33947),
+            (20.000, -4.28155), (22.500, -4.22683), (25.000, -4.17830),
+            (27.500, -4.13101), (30.000, -4.08586), (32.500, -4.04455),
+            (35.000, -4.00380), (37.500, -3.96144), (40.000, -3.92078),
+            (42.500, -3.88178), (45.000, -3.84503), (47.500, -3.80549),
+            (50.000, -3.77031), (52.500, -3.73209), (55.000, -3.69600),
+            (57.500, -3.65985), (60.000, -3.62126), (65.000, -3.54580),
+            (70.000, -3.46848), (75.000, -3.38533), (80.000, -3.29112),
+            (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
+            (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
+            (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932)
+        )
         self._za_critical_values['c'] = np.asarray(self._c)
         # trend-only model
-        self._t = ((0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
-             (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
-             (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
-             (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
-             (5.000, -4.40580), (7.500, -4.25214), (10.000, -4.13678),
-             (12.500, -4.03765), (15.000, -3.95185), (17.500, -3.87945),
-             (20.000, -3.81295), (22.500, -3.75273), (25.000, -3.69836),
-             (27.500, -3.64785), (30.000, -3.59819), (32.500, -3.55146),
-             (35.000, -3.50522), (37.500, -3.45987), (40.000, -3.41672),
-             (42.500, -3.37465), (45.000, -3.33394), (47.500, -3.29393),
-             (50.000, -3.25316), (52.500, -3.21244), (55.000, -3.17124),
-             (57.500, -3.13211), (60.000, -3.09204), (65.000, -3.01135),
-             (70.000, -2.92897), (75.000, -2.83614), (80.000, -2.73893),
-             (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
-             (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
-             (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466), )
+        self._t = (
+            (0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
+            (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
+            (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
+            (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
+            (5.000, -4.40580), (7.500, -4.25214), (10.000, -4.13678),
+            (12.500, -4.03765), (15.000, -3.95185), (17.500, -3.87945),
+            (20.000, -3.81295), (22.500, -3.75273), (25.000, -3.69836),
+            (27.500, -3.64785), (30.000, -3.59819), (32.500, -3.55146),
+            (35.000, -3.50522), (37.500, -3.45987), (40.000, -3.41672),
+            (42.500, -3.37465), (45.000, -3.33394), (47.500, -3.29393),
+            (50.000, -3.25316), (52.500, -3.21244), (55.000, -3.17124),
+            (57.500, -3.13211), (60.000, -3.09204), (65.000, -3.01135),
+            (70.000, -2.92897), (75.000, -2.83614), (80.000, -2.73893),
+            (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
+            (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
+            (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466)
+        )
         self._za_critical_values['t'] = np.asarray(self._t)
         # constant + trend model
-        self._ct = ((0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
-              (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
-              (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
-              (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
-              (5.000, -5.07332), (7.500, -4.93003), (10.000, -4.82668),
-              (12.500, -4.73711), (15.000, -4.66020), (17.500, -4.58970),
-              (20.000, -4.52855), (22.500, -4.47100), (25.000, -4.42011),
-              (27.500, -4.37387), (30.000, -4.32705), (32.500, -4.28126),
-              (35.000, -4.23793), (37.500, -4.19822), (40.000, -4.15800),
-              (42.500, -4.11946), (45.000, -4.08064), (47.500, -4.04286),
-              (50.000, -4.00489), (52.500, -3.96837), (55.000, -3.93200),
-              (57.500, -3.89496), (60.000, -3.85577), (65.000, -3.77795),
-              (70.000, -3.69794), (75.000, -3.61852), (80.000, -3.52485),
-              (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
-              (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
-              (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767), )
+        self._ct = (
+            (0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
+            (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
+            (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
+            (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
+            (5.000, -5.07332), (7.500, -4.93003), (10.000, -4.82668),
+            (12.500, -4.73711), (15.000, -4.66020), (17.500, -4.58970),
+            (20.000, -4.52855), (22.500, -4.47100), (25.000, -4.42011),
+            (27.500, -4.37387), (30.000, -4.32705), (32.500, -4.28126),
+            (35.000, -4.23793), (37.500, -4.19822), (40.000, -4.15800),
+            (42.500, -4.11946), (45.000, -4.08064), (47.500, -4.04286),
+            (50.000, -4.00489), (52.500, -3.96837), (55.000, -3.93200),
+            (57.500, -3.89496), (60.000, -3.85577), (65.000, -3.77795),
+            (70.000, -3.69794), (75.000, -3.61852), (80.000, -3.52485),
+            (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
+            (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
+            (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767)
+        )
         self._za_critical_values['ct'] = np.asarray(self._ct)
 
     def _za_crit(self, stat, model='c'):
@@ -1830,14 +1837,14 @@ class ZivotAndrewsUnitRoot(object):
         simulated ZA test statistic distribution
         """
         table = self._za_critical_values[model]
-        y = table[:, 0]
-        x = table[:, 1]
+        pcnts = table[:, 0]
+        stats = table[:, 1]
         # ZA cv table contains quantiles multiplied by 100
-        pvalue = np.interp(stat, x, y) / 100.0
+        pvalue = np.interp(stat, stats, pcnts) / 100.0
         cv = [1.0, 5.0, 10.0]
-        crit_value = np.interp(cv, y, x)
-        cvdict = {"1%" : crit_value[0], "5%" : crit_value[1],
-                  "10%" : crit_value[2]}
+        crit_value = np.interp(cv, pcnts, stats)
+        cvdict = {"1%": crit_value[0], "5%": crit_value[1],
+                  "10%": crit_value[2]}
         return pvalue, cvdict
 
     def _quick_ols(self, endog, exog):
@@ -1851,6 +1858,43 @@ class ZivotAndrewsUnitRoot(object):
         e = endog - exog.dot(b)
         sigma2 = e.T.dot(e) / (nobs - k_exog)
         return b / np.sqrt(np.diag(sigma2 * xpxi))
+
+    def _format_regression_data(self, series, nobs, const, trend, cols, lags):
+        """
+        Create the endog/exog data for the auxiliary regressions
+        from the original (standardized) series under test.
+        """
+        # first-diff y and standardize for numerical stability
+        endog = np.diff(series, axis=0)[:, 0]
+        endog /= np.sqrt(endog.T.dot(endog))
+        series /= np.sqrt(series.T.dot(series))
+        # reserve exog space
+        exog = np.zeros((endog[lags:].shape[0], cols + lags))
+        exog[:, 0] = const
+        # lagged y and dy
+        exog[:, cols - 1] = series[lags:(nobs - 1), 0]
+        exog[:, cols:] = tsa.lagmat(
+            endog, lags, trim='none')[lags:exog.shape[0] + lags]
+        return endog, exog
+
+    def _update_regression_exog(self, exog, regression, period, nobs, const,
+                                trend, cols, lags):
+        """
+        Update the exog array for the next regression.
+        """
+        cutoff = (period - (lags + 1))
+        if regression != 't':
+            exog[:cutoff, 1] = 0
+            exog[cutoff:, 1] = const
+            exog[:, 2] = trend[(lags + 2):(nobs + 1)]
+            if regression == 'ct':
+                exog[:cutoff, 3] = 0
+                exog[cutoff:, 3] = trend[1:(nobs - period + 1)]
+        else:
+            exog[:, 1] = trend[(lags + 2):(nobs + 1)]
+            exog[:(cutoff-1), 2] = 0
+            exog[(cutoff-1):, 2] = trend[0:(nobs - period + 1)]
+        return exog
 
     def run(self, x, trim=0.15, maxlag=None, regression='c', autolag='AIC'):
         """
@@ -1927,7 +1971,8 @@ class ZivotAndrewsUnitRoot(object):
         """
         if regression not in ['c', 't', 'ct']:
             raise ValueError(
-                'ZA: regression option \'%s\' not understood' % regression)
+                'ZA: regression option \'{}\' not understood'.format(
+                    regression))
         if not isinstance(trim, float) or trim < 0 or trim > (1. / 3.):
             raise ValueError(
                 'ZA: trim value must be a float in range [0, 0.333]')
@@ -1938,8 +1983,8 @@ class ZivotAndrewsUnitRoot(object):
         x = np.reshape(x, (-1, 1))
         nobs = x.shape[0]
         if autolag:
-            baselags = adfuller(x[:, 0], maxlag=maxlag, regression='ct',
-                                autolag=autolag)[2]
+            baselags = tsa.adfuller(x[:, 0], maxlag=maxlag, regression='ct',
+                                    autolag=autolag)[2]
         elif maxlag:
             baselags = maxlag
         else:
@@ -1951,49 +1996,32 @@ class ZivotAndrewsUnitRoot(object):
             basecols = 5
         else:
             basecols = 4
-        # first-diff y and standardize for numerical stability
-        dy = np.diff(x, axis=0)[:, 0]
-        dy /= np.sqrt(dy.T.dot(dy))
-        x = x / np.sqrt(x.T.dot(x))
-        # reserve exog space
-        exog = np.zeros((dy[baselags:].shape[0], basecols + baselags))
-        # normalize constant for stability in long time series
-        c_const = 1 / np.sqrt(nobs)  # Normalize
-        exog[:, 0] = c_const
-        # lagged y and dy
-        exog[:, basecols - 1] = x[baselags:(nobs - 1), 0]
-        exog[:, basecols:] = lagmat(
-            dy, baselags, trim='none')[baselags:exog.shape[0] + baselags]
-        # better time trend: t_const @ t_const = 1 for large nobs
+        # normalize constant and trend terms for stability
+        c_const = 1 / np.sqrt(nobs)
         t_const = np.arange(1.0, nobs + 2)
         t_const *= np.sqrt(3) / nobs ** (3 / 2)
+        # format the auxiliary regression data
+        endog, exog = self._format_regression_data(
+            x, nobs, c_const, t_const, basecols, baselags)
         # iterate through the time periods
         stats = np.full(end_period + 1, np.inf)
         for bp in range(start_period + 1, end_period + 1):
             # update intercept dummy / trend / trend dummy
-            cutoff = (bp - (baselags + 1))
-            if regression != 't':
-                exog[:cutoff, 1] = 0
-                exog[cutoff:, 1] = c_const
-                exog[:, 2] = t_const[(baselags + 2):(nobs + 1)]
-                if regression == 'ct':
-                    exog[:cutoff, 3] = 0
-                    exog[cutoff:, 3] = t_const[1:(nobs - bp + 1)]
-            else:
-                exog[:, 1] = t_const[(baselags + 2):(nobs + 1)]
-                exog[:(cutoff-1), 2] = 0
-                exog[(cutoff-1):, 2] = t_const[0:(nobs - bp + 1)]
+            exog = self._update_regression_exog(exog, regression, bp, nobs,
+                                                c_const, t_const, basecols,
+                                                baselags)
             # check exog rank on first iteration
             if bp == start_period + 1:
-                o = OLS(dy[baselags:], exog, hasconst=1).fit()
+                o = lm.OLS(endog[baselags:], exog, hasconst=1).fit()
                 if o.df_model < exog.shape[1] - 1:
                     raise ValueError(
-                        'ZA: auxiliary exog matrix is not full rank.\n \
-                        cols (exc intercept) = {}  rank = {}'.format(
+                        'ZA: auxiliary exog matrix is not full rank.\n'
+                        '  cols (exc intercept) = {}  rank = {}'.format(
                             exog.shape[1] - 1, o.df_model))
                 stats[bp] = o.tvalues[basecols - 1]
             else:
-                stats[bp] = self._quick_ols(dy[baselags:], exog)[basecols - 1]
+                stats[bp] = self._quick_ols(endog[baselags:],
+                                            exog)[basecols - 1]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1
