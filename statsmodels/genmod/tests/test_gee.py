@@ -208,7 +208,7 @@ class TestGEE(object):
                             3.295837, -2.197225])
 
         logit_model = gee.GEE(endog, exog, groups,
-                             family=families.Binomial())
+                              family=families.Binomial())
         logit_results = logit_model.fit(cov_type='naive')
 
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
@@ -256,7 +256,7 @@ class TestGEE(object):
         # Smoke test for now
         model = gee.GEE(endog, exog, groups, weights=weights,
                         cov_struct=cov_struct.Exchangeable())
-        result = model.fit(ddof_scale=0)
+        model.fit(ddof_scale=0)
 
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
@@ -328,7 +328,7 @@ class TestGEE(object):
         exog2[10:12] = np.nan
 
         data0 = pd.DataFrame({"endog": endog, "exog1": exog1, "exog2": exog2,
-                                "exog3": exog3, "groups": groups})
+                              "exog3": exog3, "groups": groups})
 
         for k in 0, 1:
             data = data0.copy()
@@ -363,7 +363,7 @@ class TestGEE(object):
             assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
 
     def test_invalid_args(self):
-
+        # TODO: parametrize?
         for j in range(3):
             for k1 in False, True:
                 for k2 in False, True:
@@ -488,12 +488,13 @@ class TestGEE(object):
                                      for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D,
-                                  family=family, cov_struct=v)
+                                      family=family, cov_struct=v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=6)
             assert_almost_equal(mdf.standard_errors(), se[j],
                                 decimal=6)
 
+        # FIXME: don't leave commented-out
         # Check for run-time exceptions in summary
         # print(mdf.summary())
 
@@ -616,7 +617,8 @@ class TestGEE(object):
             score_p = res1.score_test()["p-value"]
             assert_array_less(np.abs(wald_p - score_p), 0.02)
 
-    @pytest.mark.parametrize("cov_struct", [cov_struct.Independence, cov_struct.Exchangeable])
+    @pytest.mark.parametrize("cov_struct", [cov_struct.Independence,
+                                            cov_struct.Exchangeable])
     def test_compare_score_test(self, cov_struct):
 
         np.random.seed(6432)
@@ -631,7 +633,7 @@ class TestGEE(object):
         R = np.zeros(2)
         mod_lr = gee.GEE(endog, exog, group, constraint=(L, R),
                          cov_struct=cov_struct())
-        _ = mod_lr.fit()
+        mod_lr.fit()
 
         mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
@@ -642,11 +644,14 @@ class TestGEE(object):
                 # Should work with or without fitting the parent model
                 mod.fit()
             score_results = mod.compare_score_test(res_sub)
-            assert_almost_equal(score_results["statistic"],
+            assert_almost_equal(
+                score_results["statistic"],
                 mod_lr.score_test_results["statistic"])
-            assert_almost_equal(score_results["p-value"],
+            assert_almost_equal(
+                score_results["p-value"],
                 mod_lr.score_test_results["p-value"])
-            assert_almost_equal(score_results["df"],
+            assert_almost_equal(
+                score_results["df"],
                 mod_lr.score_test_results["df"])
 
     def test_compare_score_test_warnings(self):
@@ -660,24 +665,27 @@ class TestGEE(object):
 
         # Mismatched cov_struct
         with assert_warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct.Exchangeable())
+            mod_sub = gee.GEE(endog, exog_sub, group,
+                              cov_struct=cov_struct.Exchangeable())
             res_sub = mod_sub.fit()
-            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct.Independence())
-            _ = mod.compare_score_test(res_sub)
+            mod = gee.GEE(endog, exog, group,
+                          cov_struct=cov_struct.Independence())
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched family
         with assert_warns(UserWarning):
-            mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
+            mod_sub = gee.GEE(endog, exog_sub, group,
+                              family=families.Gaussian())
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog, exog, group, family=families.Poisson())
-            _ = mod.compare_score_test(res_sub)
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched size
         with assert_raises(Exception):
             mod_sub = gee.GEE(endog, exog_sub, group)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog[0:100], exog[:100, :], group[0:100])
-            _ = mod.compare_score_test(res_sub)
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Mismatched weights
         with assert_warns(UserWarning):
@@ -685,7 +693,7 @@ class TestGEE(object):
             mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog, exog, group)
-            _ = mod.compare_score_test(res_sub)
+            mod.compare_score_test(res_sub)  # smoketest
 
         # Parent and submodel are the same dimension
         with pytest.warns(UserWarning):
@@ -693,7 +701,7 @@ class TestGEE(object):
             mod_sub = gee.GEE(endog, exog, group)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog, exog, group)
-            _ = mod.compare_score_test(res_sub)
+            mod.compare_score_test(res_sub)  # smoketest
 
     def test_constraint_covtype(self):
         # Test constraints with different cov types
@@ -842,8 +850,10 @@ class TestGEE(object):
                             decimal=6)
 
         smry = mdf2.cov_struct.summary()
-        assert_allclose(smry.Variance, np.r_[1.043878, 0.611656, 1.421205], atol=1e-5, rtol=1e-5)
-
+        assert_allclose(
+            smry.Variance,
+            np.r_[1.043878, 0.611656, 1.421205],
+            atol=1e-5, rtol=1e-5)
 
     def test_nested_pandas(self):
 
@@ -865,7 +875,8 @@ class TestGEE(object):
         y = groups_e[groups] + groups1_e[groups1] + groups2_e[groups2]
         y += 0.5 * np.random.normal(size=n)
 
-        df = pd.DataFrame({"y": y, "TheGroups": groups, "groups1": groups1, "groups2": groups2})
+        df = pd.DataFrame({"y": y, "TheGroups": groups,
+                           "groups1": groups1, "groups2": groups2})
 
         model = gee.GEE.from_formula("y ~ 1", groups="TheGroups",
                                      dep_data="0 + groups1 + groups2",
@@ -875,7 +886,10 @@ class TestGEE(object):
 
         # The true variances are 1, 4, 9, 0.25
         smry = result.cov_struct.summary()
-        assert_allclose(smry.Variance, np.r_[1.437299, 4.421543, 8.905295, 0.258480], atol=1e-5, rtol=1e-5)
+        assert_allclose(
+            smry.Variance,
+            np.r_[1.437299, 4.421543, 8.905295, 0.258480],
+            atol=1e-5, rtol=1e-5)
 
     def test_ordinal(self):
 
@@ -920,7 +934,8 @@ class TestGEE(object):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
+            model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups,
+                                                data=df)
             model.fit()
 
     @pytest.mark.smoke
@@ -1309,7 +1324,8 @@ class TestGEE(object):
         exog = tools.add_constant(exog)
 
         model = gee.GEE(endog, exog, group,
-                       cov_struct=cov_struct.Stationary(max_lag=2, grid=False))
+                        cov_struct=cov_struct.Stationary(max_lag=2,
+                                                         grid=False))
         result = model.fit()
         se = result.bse * np.sqrt(12 / 9.)  # Stata adjustment
 
@@ -1319,11 +1335,12 @@ class TestGEE(object):
                         4.463968, -0.0386674], rtol=1e-5, atol=1e-5)
         assert_allclose(se, np.r_[0.5217202, 0.2800333], rtol=1e-5, atol=1e-5)
 
-        # Smoke test for no grid
+        # Smoke test for no grid  # TODO: pytest.mark.smoke>
         time = np.r_[0, 1, 3, 0, 2, 3, 0, 2, 3, 0, 1, 2][:, None]
         model = gee.GEE(endog, exog, group, time=time,
-                        cov_struct=cov_struct.Stationary(max_lag=4, grid=False))
-        result = model.fit()
+                        cov_struct=cov_struct.Stationary(max_lag=4,
+                                                         grid=False))
+        model.fit()
 
     def test_predict_exposure(self):
 
@@ -1541,7 +1558,7 @@ class TestGEE(object):
                     assert(ky not in ixs)
                     ixs.add(ky)
 
-        # Smoke test
+        # Smoke test  # TODO: pytest.mark.smoke?
         eq = cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = gee.GEE(endog, exog, groups, cov_struct=eq)
         with warnings.catch_warnings():
@@ -1717,6 +1734,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
         check_wrapper(rslt2)
 
+
 def test_regularized_poisson():
 
     np.random.seed(8735)
@@ -1735,7 +1753,9 @@ def test_regularized_poisson():
     model = gee.GEE(y, x, groups=groups, family=families.Poisson())
     result = model.fit_regularized(0.0000001)
 
-    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0], rtol=0.01, atol=0.12)
+    assert_allclose(result.params, 0.7 * np.r_[0, 1, 0, -1, 0],
+                    rtol=0.01, atol=0.12)
+
 
 def test_regularized_gaussian():
 
@@ -1752,7 +1772,8 @@ def test_regularized_gaussian():
     x[:, 1] = np.random.normal(size=ng*gs)
     r = 0.5
     for j in range(2, p):
-        x[:, j] = r * x[:, j-1] + np.sqrt(1 - r**2) * np.random.normal(size=ng*gs)
+        eps = np.random.normal(size=ng*gs)
+        x[:, j] = r * x[:, j-1] + np.sqrt(1 - r**2) * eps
     lpr = np.dot(x[:, 0:4], np.r_[2, 3, 1.5, 2])
     s = 0.4
     e = np.sqrt(s) * np.kron(np.random.normal(size=ng), np.ones(gs))
@@ -1767,7 +1788,9 @@ def test_regularized_gaussian():
     ex[0:4] = np.r_[2, 3, 1.5, 2]
     assert_allclose(result.params, ex, rtol=0.01, atol=0.2)
 
-    assert_allclose(model.cov_struct.dep_params, np.r_[s], rtol=0.01, atol=0.05)
+    assert_allclose(model.cov_struct.dep_params, np.r_[s],
+                    rtol=0.01, atol=0.05)
+
 
 @pytest.mark.smoke
 @pytest.mark.matplotlib
@@ -1830,8 +1853,8 @@ def test_missing():
     df = pd.DataFrame(data[1:], columns=data[0])
     df.loc[df.fake == 1, 'fake'] = np.nan
     mod = gee.GEE.from_formula('status ~ fake', data=df, groups='grps',
-                  cov_struct=cov_struct.Independence(),
-                  family=families.Binomial())
+                               cov_struct=cov_struct.Independence(),
+                               family=families.Binomial())
 
     df = df.dropna().copy()
     df['constant'] = 1
@@ -1860,6 +1883,7 @@ def simple_qic_data(fam):
     x2 = x2[:, None]
 
     return y, x1, x2, g
+
 
 # Test quasi-likelihood by numerical integration in two settings
 # where there is a closed form expression.
@@ -1904,8 +1928,9 @@ def test_ql_known(family):
     assert_equal(qler2, qle2[1:])
 
 
-# Compare differences of QL values computed by numerical integration.  Use difference
-# here so that constants that are inconvenient to compute cancel out.
+# Compare differences of QL values computed by numerical integration.
+#  Use difference here so that constants that are inconvenient to compute
+#  cancel out.
 @pytest.mark.parametrize("family", [families.Gaussian,
                                     families.Binomial,
                                     families.Poisson])
@@ -1929,14 +1954,18 @@ def test_ql_diff(family):
         qldiff = np.sum(y * np.log(mean1 / (1 - mean1)) + np.log(1 - mean1))
         qldiff -= np.sum(y * np.log(mean2 / (1 - mean2)) + np.log(1 - mean2))
     elif family is families.Poisson:
-        qldiff = np.sum(y * np.log(mean1) - mean1) - np.sum(y * np.log(mean2) - mean2)
+        qldiff = (np.sum(y * np.log(mean1) - mean1)
+                  - np.sum(y * np.log(mean2) - mean2))
     else:
         raise ValueError("unknown family")
 
-    qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
-    qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
+    qle1, _, _ = model1.qic(result1.params, result1.scale,
+                            result1.cov_params())
+    qle2, _, _ = model2.qic(result2.params, result2.scale,
+                            result2.cov_params())
 
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
+
 
 def test_qic_warnings():
     with pytest.warns(UserWarning):
