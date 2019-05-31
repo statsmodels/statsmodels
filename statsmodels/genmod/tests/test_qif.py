@@ -1,10 +1,10 @@
 import numpy as np
-from statsmodels.genmod.qif import (QIF, QIFIndependence, QIFExchangeable,
-     QIFAutoregressive)
-from statsmodels.tools.numdiff import approx_fprime
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+from statsmodels.genmod.qif import (QIF, QIFIndependence, QIFExchangeable,
+                                    QIFAutoregressive)
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.genmod import families
 
 @pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(),
@@ -100,7 +100,7 @@ def test_formula(cov_struct):
     df = pd.DataFrame({"y": y, "x1": x[:, 0], "x2": x[:, 1], "groups": groups})
 
     model2 = QIF.from_formula("y ~ 0 + x1 + x2", groups="groups",
-               cov_struct=cov_struct, data=df)
+                              cov_struct=cov_struct, data=df)
     result2 = model2.fit()
 
     assert_allclose(result1.params, result2.params)
