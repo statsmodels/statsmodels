@@ -33,6 +33,7 @@ if [ "$LINT" == true ]; then
         statsmodels/emplike/tests/ \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
+        statsmodels/iolib/tableformatting.py \
         statsmodels/iolib/tests/test_pickle.py \
         statsmodels/iolib/tests/results/ \
         statsmodels/multivariate/pca.py \
