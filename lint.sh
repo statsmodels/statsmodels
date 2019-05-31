@@ -40,6 +40,7 @@ if [ "$LINT" == true ]; then
         statsmodels/genmod/qif.py \
         statsmodels/genmod/tests/test_gee.py \
         statsmodels/genmod/tests/test_qif.py \
+        statsmodels/genmod/tests/test_glm.py \
         statsmodels/genmod/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
