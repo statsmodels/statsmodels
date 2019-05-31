@@ -4,6 +4,7 @@ Handle file opening for read/write
 from numpy.lib._iotools import _is_string_like
 from statsmodels.compat.python import PY3
 
+
 class EmptyContextManager(object):
     """
     This class is needed to allow file-like object to be used as
@@ -23,6 +24,7 @@ class EmptyContextManager(object):
     def __getattr__(self, name):
         return getattr(self._obj, name)
 
+
 if PY3:
     def _open(fname, mode, encoding):
         if fname.endswith('.gz'):
@@ -38,6 +40,7 @@ else:
         else:
             return open(fname, mode)
 
+
 def get_file_obj(fname, mode='r', encoding=None):
     """
     Light wrapper to handle strings and let files (anything else) pass through.
@@ -45,7 +48,7 @@ def get_file_obj(fname, mode='r', encoding=None):
     It also handle '.gz' files.
 
     Parameters
-    ==========
+    ----------
     fname: string or file-like object
         File to open / forward
     mode: string
@@ -54,9 +57,10 @@ def get_file_obj(fname, mode='r', encoding=None):
         For Python 3 only, specify the encoding of the file
 
     Returns
-    =======
-    A file-like object that is always a context-manager. If the `fname` was already a file-like object,
-    the returned context manager *will not close the file*.
+    -------
+    A file-like object that is always a context-manager. If the `fname` was
+    already a file-like object, the returned context manager *will not
+    close the file*.
     """
     if _is_string_like(fname):
         return _open(fname, mode, encoding)

@@ -453,7 +453,6 @@ class SimpleTable(list):
         # Replace $$ due to bug in GH 5444
         return '\n'.join(formatted_rows).replace('$$', ' ')
 
-
     def extend_right(self, table):
         """Return None.
         Extend each row of `self` with corresponding row of `table`.

@@ -32,7 +32,10 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
         statsmodels/examples/tests/ \
+        statsmodels/iolib/openfile.py \
+        statsmodels/iolib/summary2.py \
         statsmodels/iolib/smpickle.py \
+        statsmodels/iolib/table.py \
         statsmodels/iolib/tableformatting.py \
         statsmodels/iolib/tests/test_pickle.py \
         statsmodels/iolib/tests/results/ \
