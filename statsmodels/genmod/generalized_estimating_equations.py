@@ -29,7 +29,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 import patsy
-
+from collections import defaultdict
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.model as base
 # used for wrapper:
@@ -516,10 +516,7 @@ class GEE(base.Model):
         self.constraint = constraint
         self.update_dep = update_dep
 
-        self._fit_history = {'params': [],
-                             'score': [],
-                             'dep_params': [],
-                             'cov_adjust': []}
+        self._fit_history = defaultdict(list)
 
         # Pass groups, time, offset, and dep_data so they are
         # processed for missing data along with endog and exog.
@@ -805,6 +802,9 @@ class GEE(base.Model):
         if self.exog.shape[0] != submod.exog.shape[0]:
             msg = "Model and submodel have different numbers of cases."
             raise ValueError(msg)
+        if self.exog.shape[1] == submod.exog.shape[1]:
+            msg = "Model and submodel have the same number of variables"
+            warnings.warn(msg)
         if not isinstance(self.family, type(submod.family)):
             msg = "Model and submodel have different GLM families."
             warnings.warn(msg)
@@ -1263,10 +1263,7 @@ class GEE(base.Model):
 
         self.scaling_factor = scaling_factor
 
-        self._fit_history = {'params': [],
-                             'score': [],
-                             'dep_params': [],
-                             'cov_adjust': []}
+        self._fit_history = defaultdict(list)
 
         if self.weights is not None and cov_type == 'naive':
             raise ValueError("when using weights, cov_type may not be naive")
@@ -1368,7 +1365,7 @@ class GEE(base.Model):
 
         # attributes not needed during results__init__
         results.fit_history = self._fit_history
-        delattr(self, "_fit_history")
+        self.fit_history = defaultdict(list)
         results.score_norm = del_params
         results.converged = (del_params < ctol)
         results.cov_struct = self.cov_struct
@@ -1496,7 +1493,7 @@ class GEE(base.Model):
         mean_params = np.zeros(self.exog.shape[1])
         self.update_cached_means(mean_params)
         converged = False
-        fit_history = {'params': []}
+        fit_history = defaultdict(list)
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
@@ -1915,10 +1912,20 @@ class GEEResults(base.LikelihoodModelResults):
         """
         Returns the QIC and QICu information criteria.
 
-        For families with a scale parameter (e.g. Gaussian),
-        provide as the scale argument the estimated scale
-        from the largest model under consideration.
+        For families with a scale parameter (e.g. Gaussian), provide
+        as the scale argument the estimated scale from the largest
+        model under consideration.
+
+        If the scale parameter is not provided, the estimated scale
+        parameter is used.  Doing this does not allow comparisons of
+        QIC values between models.
         """
+
+        # It is easy to forget to set the scale parameter.  Sometimes
+        # this is intentional, so we warn.
+        if scale is None:
+            msg = "QIC values obtained using scale=None are not appropriate for comparing models"
+            warnings.warn(msg)
 
         if scale is None:
             scale = self.scale

@@ -1989,7 +1989,7 @@ def test_tweedie_EQL_upper_limit():
         # Un-regularized fit using gradients not IRLS
         fam = sm.families.Tweedie(var_power=2, eql=True)
         model1 = sm.GLM(y, x, family=fam)
-        result1 = model1.fit(method="newton")
+        result1 = model1.fit(method="newton", scale=scale)
         assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
 
 

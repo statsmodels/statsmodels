@@ -635,14 +635,19 @@ class TestGEE(object):
 
         mod_sub = gee.GEE(endog, exog_sub, group, cov_struct=cov_struct())
         res_sub = mod_sub.fit()
-        mod = gee.GEE(endog, exog, group, cov_struct=cov_struct())
-        score_results = mod.compare_score_test(res_sub)
-        assert_almost_equal(score_results["statistic"],
-            mod_lr.score_test_results["statistic"])
-        assert_almost_equal(score_results["p-value"],
-            mod_lr.score_test_results["p-value"])
-        assert_almost_equal(score_results["df"],
-            mod_lr.score_test_results["df"])
+
+        for call_fit in [False, True]:
+            mod = gee.GEE(endog, exog, group, cov_struct=cov_struct())
+            if call_fit:
+                # Should work with or without fitting the parent model
+                mod.fit()
+            score_results = mod.compare_score_test(res_sub)
+            assert_almost_equal(score_results["statistic"],
+                mod_lr.score_test_results["statistic"])
+            assert_almost_equal(score_results["p-value"],
+                mod_lr.score_test_results["p-value"])
+            assert_almost_equal(score_results["df"],
+                mod_lr.score_test_results["df"])
 
     def test_compare_score_test_warnings(self):
 
@@ -678,6 +683,14 @@ class TestGEE(object):
         with assert_warns(UserWarning):
             w = np.random.uniform(size=n)
             mod_sub = gee.GEE(endog, exog_sub, group, weights=w)
+            res_sub = mod_sub.fit()
+            mod = gee.GEE(endog, exog, group)
+            _ = mod.compare_score_test(res_sub)
+
+        # Parent and submodel are the same dimension
+        with pytest.warns(UserWarning):
+            w = np.random.uniform(size=n)
+            mod_sub = gee.GEE(endog, exog, group)
             res_sub = mod_sub.fit()
             mod = gee.GEE(endog, exog, group)
             _ = mod.compare_score_test(res_sub)
@@ -1883,8 +1896,10 @@ def test_ql_known(family):
     assert_allclose(ql1, qle1[0], rtol=1e-4)
     assert_allclose(ql2, qle2[0], rtol=1e-4)
 
-    qler1 = result1.qic()
-    qler2 = result2.qic()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        qler1 = result1.qic()
+        qler2 = result2.qic()
     assert_equal(qler1, qle1[1:])
     assert_equal(qler2, qle2[1:])
 
@@ -1922,3 +1937,11 @@ def test_ql_diff(family):
     qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
 
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
+
+def test_qic_warnings():
+    with pytest.warns(UserWarning):
+        fam = families.Gaussian()
+        y, x1, _, g = simple_qic_data(fam)
+        model = gee.GEE(y, x1, family=fam, groups=g)
+        result = model.fit()
+        result.qic()
