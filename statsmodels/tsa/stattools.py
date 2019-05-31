@@ -2012,7 +2012,7 @@ class ZivotAndrewsUnitRoot(object):
                                                 baselags)
             # check exog rank on first iteration
             if bp == start_period + 1:
-                o = lm.OLS(endog[baselags:], exog, hasconst=1).fit()
+                o = OLS(endog[baselags:], exog, hasconst=1).fit()
                 if o.df_model < exog.shape[1] - 1:
                     raise ValueError(
                         'ZA: auxiliary exog matrix is not full rank.\n'
