@@ -889,7 +889,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
 class SetupZivotAndrews(object):
     # test directory
     cur_dir = os.path.abspath(os.path.dirname(__file__))
-    run_dir = os.path.join(cur_dir, "..\\results\\")
+    run_dir = os.path.join(cur_dir, 'results')
     # use same file for testing failure modes
     fail_file = os.path.join(run_dir, 'rgnp.csv')
     fail_mdl = np.asarray(pd.read_csv(fail_file))
