@@ -2,7 +2,8 @@
 The one parameter exponential family distributions used by GLM.
 '''
 # TODO: quasi, quasibinomial, quasipoisson
-# see http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
+# see
+# http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
 
 
@@ -1373,8 +1374,8 @@ class Tweedie(Family):
         self.var_power = var_power
         self.eql = eql
         if eql and (var_power < 1 or var_power > 2):
-            msg = "Tweedie: if EQL=True then var_power must fall between 1 and 2"
-            raise ValueError(msg)
+            raise ValueError("Tweedie: if EQL=True then var_power must fall "
+                             "between 1 and 2")
         if link is None:
             link = L.log()
         super(Tweedie, self).__init__(
@@ -1475,8 +1476,8 @@ class Tweedie(Family):
 
         References
         ----------
-        JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.  Biometrika
-        74:2, pp 221-232.  https://www.jstor.org/stable/2336136
+        JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.
+        Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
         if not self.eql:
             # We have not yet implemented the actual likelihood
@@ -1495,12 +1496,13 @@ class Tweedie(Family):
             u = yr - np.log(yr) - 1
             u *= var_weights / scale
         else:
-            u = endog ** (2 - p) - (2 - p) * endog * mu ** (1 - p) + (1 - p) * mu ** (2 - p)
+            u = (endog ** (2 - p)
+                 - (2 - p) * endog * mu ** (1 - p)
+                 + (1 - p) * mu ** (2 - p))
             u *= var_weights / (scale * (1 - p) * (2 - p))
         llf -= u
 
         return llf
-
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""

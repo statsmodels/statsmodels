@@ -4,6 +4,7 @@ Variance functions for use with the link functions in statsmodels.family.links
 import numpy as np
 FLOAT_EPS = np.finfo(float).eps
 
+
 class VarianceFunction(object):
     """
     Relates the variance of a random variable to its mean. Defaults to 1.
@@ -51,10 +52,12 @@ class VarianceFunction(object):
 
 constant = VarianceFunction()
 constant.__doc__ = """
-The call method of constant returns a constant variance, i.e., a vector of ones.
+The call method of constant returns a constant variance, i.e., a vector of
+ones.
 
 constant is an alias of VarianceFunction()
 """
+
 
 class Power(object):
     """
@@ -138,6 +141,7 @@ Notes
 This is an alias of statsmodels.family.links.Power(power=3)
 """
 
+
 class Binomial(object):
     """
     Binomial variance function
@@ -191,7 +195,7 @@ class Binomial(object):
         p = self._clean(mu / self.n)
         return p * (1 - p) * self.n
 
-    #TODO: inherit from super
+    # TODO: inherit from super
     def deriv(self, mu):
         """
         Derivative of the variance function v'(mu)
@@ -207,6 +211,7 @@ Notes
 -----
 This is an alias of Binomial(n=1)
 """
+
 
 class NegativeBinomial(object):
     '''
@@ -266,6 +271,7 @@ class NegativeBinomial(object):
 
         p = self._clean(mu)
         return 1 + 2 * self.alpha * p
+
 
 nbinom = NegativeBinomial()
 nbinom.__doc__ = """
