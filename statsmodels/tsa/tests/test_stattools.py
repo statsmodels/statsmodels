@@ -899,46 +899,46 @@ class TestZivotAndrews(SetupZivotAndrews):
 
 	# failure mode tests
     def test_fail_regression_type(self):
-        assert_raises(ValueError, zivot_andrews, fail_mdl, regression='x')
+        assert_raises(ValueError, zivot_andrews, self.fail_mdl, regression='x')
 
     def test_fail_trim_value(self):
-        assert_raises(ValueError, zivot_andrews, fail_mdl, trim=0.5)
+        assert_raises(ValueError, zivot_andrews, self.fail_mdl, trim=0.5)
 
     def test_fail_array_shape(self):
         assert_raises(ValueError, zivot_andrews, np.random.rand(50,2))
 
     def test_fail_autolag_type(self):
-        assert_raises(TypeError, zivot_andrews, fail_mdl, autolag='None')
+        assert_raises(TypeError, zivot_andrews, self.fail_mdl, autolag='None')
 
 	# following tests compare results to R package urca.ur.za (1.13-0)
     def test_rgnp_case(self):
-        res = zivot_andrews(fail_mdl, maxlag=8, regression='c', autolag=None)
+        res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c', autolag=None)
         assert_allclose([res[0], res[1], res[4]],
                         [-5.57615, 0.00312, 20], rtol=1e-3)
 
     def test_gnpdef_case(self):
-        mdlfile = os.path.join(run_dir, 'gnpdef.csv')
+        mdlfile = os.path.join(self.run_dir, 'gnpdef.csv')
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression='c', autolag='t-stat')
         assert_allclose([res[0], res[1], res[3], res[4]],
                         [-4.12155, 0.28024, 5, 40], rtol=1e-3)
 
     def test_stkprc_case(self):
-        mdlfile = os.path.join(run_dir, 'stkprc.csv')
+        mdlfile = os.path.join(self.run_dir, 'stkprc.csv')
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression='ct', autolag='t-stat')
         assert_allclose([res[0], res[1], res[3], res[4]],
                         [-5.60689, 0.00894, 1, 65], rtol=1e-3)
 
     def test_rgnpq_case(self):
-        mdlfile = os.path.join(run_dir, 'rgnpq.csv')
+        mdlfile = os.path.join(self.run_dir, 'rgnpq.csv')
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=12, regression='t', autolag='t-stat')
         assert_allclose([res[0], res[1], res[3], res[4]],
                         [-3.02761, 0.63993, 12, 102], rtol=1e-3)
 
     def test_rand10000_case(self):
-        mdlfile = os.path.join(run_dir, 'rand10000.csv')
+        mdlfile = os.path.join(self.run_dir, 'rand10000.csv')
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, regression='c', autolag='t-stat')
         assert_allclose([res[0], res[1], res[3], res[4]],
