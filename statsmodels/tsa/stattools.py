@@ -1873,7 +1873,7 @@ class ZivotAndrewsUnitRoot(object):
         exog[:, 0] = const
         # lagged y and dy
         exog[:, cols - 1] = series[lags:(nobs - 1), 0]
-        exog[:, cols:] = tsa.lagmat(
+        exog[:, cols:] = lagmat(
             endog, lags, trim='none')[lags:exog.shape[0] + lags]
         return endog, exog
 
@@ -1983,7 +1983,7 @@ class ZivotAndrewsUnitRoot(object):
         x = np.reshape(x, (-1, 1))
         nobs = x.shape[0]
         if autolag:
-            baselags = tsa.adfuller(x[:, 0], maxlag=maxlag, regression='ct',
+            baselags = adfuller(x[:, 0], maxlag=maxlag, regression='ct',
                                     autolag=autolag)[2]
         elif maxlag:
             baselags = maxlag

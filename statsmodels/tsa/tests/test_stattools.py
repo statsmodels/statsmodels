@@ -897,7 +897,7 @@ class SetupZivotAndrews(object):
 
 class TestZivotAndrews(SetupZivotAndrews):
 
-	# failure mode tests
+    # failure mode tests
     def test_fail_regression_type(self):
         assert_raises(ValueError, zivot_andrews, self.fail_mdl, regression='x')
 
@@ -910,7 +910,7 @@ class TestZivotAndrews(SetupZivotAndrews):
     def test_fail_autolag_type(self):
         assert_raises(TypeError, zivot_andrews, self.fail_mdl, autolag='None')
 
-	# following tests compare results to R package urca.ur.za (1.13-0)
+    # following tests compare results to R package urca.ur.za (1.13-0)
     def test_rgnp_case(self):
         res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c', autolag=None)
         assert_allclose([res[0], res[1], res[4]],
