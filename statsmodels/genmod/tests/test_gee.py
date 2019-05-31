@@ -688,7 +688,7 @@ class TestGEE(object):
             _ = mod.compare_score_test(res_sub)
 
         # Parent and submodel are the same dimension
-        with assert_warns(UserWarning):
+        with pytest.warns(UserWarning):
             w = np.random.uniform(size=n)
             mod_sub = gee.GEE(endog, exog, group)
             res_sub = mod_sub.fit()
@@ -1939,7 +1939,7 @@ def test_ql_diff(family):
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
 
 def test_qic_warnings():
-    with assert_warns(UserWarning):
+    with pytest.warns(UserWarning):
         fam = families.Gaussian()
         y, x1, _, g = simple_qic_data(fam)
         model = gee.GEE(y, x1, family=fam, groups=g)
