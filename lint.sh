@@ -28,6 +28,7 @@ if [ "$LINT" == true ]; then
         statsmodels/formula/ \
         statsmodels/gam/ \
         statsmodels/genmod/_tweedie_compound_poisson.py \
+        statsmodels/genmod/tests/test_gee.py \
         statsmodels/genmod/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
