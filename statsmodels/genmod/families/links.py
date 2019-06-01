@@ -94,6 +94,29 @@ class Link(object):
         """
         return 1 / self.deriv(self.inverse(z))
 
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array-like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g'^(-1)(z) : array
+            The value of the second derivative of the inverse of the link
+            function
+
+        Notes
+        -----
+        This reference implementation gives the correct result but is
+        inefficient, so it can be overriden in subclasses.
+        """
+        iz = self.inverse(z)
+        return -self.deriv2(iz) / self.deriv(iz)**3
+
 
 class Logit(Link):
     """
@@ -365,6 +388,25 @@ class Power(Link):
         else:
             return np.power(z, (1 - self.power)/self.power) / self.power
 
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the power transform
+
+        Parameters
+        ----------
+        z : array-like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the power transform
+        function
+        """
+        if self.power == 1:
+            return np.zeros_like(z)
+        else:
+            return (1 - self.power) * np.power(z, (1 - 2*self.power)/self.power) / self.power**2
 
 class inverse_power(Power):
     """
