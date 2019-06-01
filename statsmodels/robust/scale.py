@@ -143,7 +143,7 @@ class Huber(object):
 
         where estimate_location is an M-estimator and estimate_scale implements
         the check used in Section 5.5 of Venables & Ripley
-        """
+        """  # noqa:E501
         for _ in range(self.maxiter):
             # Estimate the mean along a given axis
             if est_mu:
@@ -152,10 +152,10 @@ class Huber(object):
                     # if self.norm == norms.HuberT
                     # It should be faster than using norms.HuberT
                     nmu = np.clip(a, mu-self.c*scale,
-                        mu+self.c*scale).sum(axis) / a.shape[axis]
+                                  mu+self.c*scale).sum(axis) / a.shape[axis]
                 else:
-                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu,
-                            self.maxiter, self.tol)
+                    nmu = norms.estimate_location(a, scale, self.norm, axis,
+                                                  mu, self.maxiter, self.tol)
             else:
                 # Effectively, do nothing
                 nmu = mu.squeeze()
@@ -164,9 +164,9 @@ class Huber(object):
             subset = np.less_equal(np.abs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
-            nscale = np.sqrt(np.sum(subset * (a - nmu) ** 2, axis)
-                             / (n * self.gamma -
-                                (a.shape[axis] - card) * self.c ** 2))
+            scale_num = np.sum(subset * (a - nmu)**2, axis)
+            scale_denom = (n * self.gamma - (a.shape[axis] - card) * self.c**2)
+            nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
             test1 = np.alltrue(np.less_equal(np.abs(scale - nscale),
@@ -178,7 +178,8 @@ class Huber(object):
                 scale = nscale
             else:
                 return nmu.squeeze(), nscale.squeeze()
-        raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
+        raise ValueError('joint estimation of location and scale failed '
+                         'to converge in %d iterations' % self.maxiter)
 
 
 huber = Huber()
@@ -225,10 +226,11 @@ class HuberScale(object):
         self.maxiter = maxiter
 
     def __call__(self, df_resid, nobs, resid):
-        h = (df_resid) / nobs * (self.d ** 2 + (1 - self.d ** 2) *
-                                 Gaussian.cdf(self.d) - .5 - self.d / (
-                                     np.sqrt(2 * np.pi)) *
-                                 np.exp(-.5 * self.d ** 2))
+        h = df_resid / nobs * (
+            self.d ** 2
+            + (1 - self.d ** 2) * Gaussian.cdf(self.d)
+            - .5 - self.d / (np.sqrt(2 * np.pi)) * np.exp(-.5 * self.d ** 2)
+        )
         s = mad(resid)
 
         def subset(x):
@@ -246,8 +248,7 @@ class HuberScale(object):
                              scalehist[-1] ** 2)
             scalehist.append(nscale)
             niter += 1
-            # if niter == self.maxiter:
-            #    raise ValueError("Huber's scale failed to converge")
+            # TODO: raise on convergence failure?
         return scalehist[-1]
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-#TODO: add plots to weighting functions for online docs.
+# TODO: add plots to weighting functions for online docs.
 
 
 class RobustNorm(object):
@@ -284,7 +284,7 @@ class RamsayE(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = .3):
+    def __init__(self, a=.3):
         self.a = a
 
     def rho(self, z):
@@ -717,7 +717,7 @@ class Hampel(RobustNorm):
         v[t2] = a / abs_z[t2]
         abs_zt3 = abs_z[t3]
         v[t3] = a * (c - abs_zt3) / (abs_zt3 * (c - b))
-        v[np.where(np.isnan(v))] = 1.  # for some reason 0 returns a nan?
+        v[np.where(np.isnan(v))] = 1.  # TODO: for some reason 0 returns a nan?
         return v
 
     def psi_deriv(self, z):
@@ -747,7 +747,7 @@ class TukeyBiweight(RobustNorm):
     Tukey's biweight is sometime's called bisquare.
     """
 
-    def __init__(self, c = 4.685):
+    def __init__(self, c=4.685):
         self.c = c
 
     def _subset(self, z):
@@ -830,8 +830,9 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset*((1 - (z/self.c)**2)**2 - (4*z**2/self.c**2) *\
-                    (1-(z/self.c)**2))
+        return subset * ((1 - (z/self.c)**2)**2
+                         - (4*z**2/self.c**2) * (1-(z/self.c)**2))
+
 
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):

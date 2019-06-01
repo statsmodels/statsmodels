@@ -80,7 +80,6 @@ class RLM(base.LikelihoodModel):
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
 
-
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -150,7 +149,7 @@ class RLM(base.LikelihoodModel):
         -------
         An array of fitted values
         """
-        # copied from linear_model
+        # copied from linear_model  # TODO: then is it needed?
         if exog is None:
             exog = self.exog
         return np.dot(exog, params)
@@ -162,8 +161,8 @@ class RLM(base.LikelihoodModel):
         """
         Returns the (unnormalized) log-likelihood from the M estimator.
         """
-        return self.M((self.endog - tmp_results.fittedvalues) /
-                      tmp_results.scale).sum()
+        tmp_resid = self.endog - tmp_results.fittedvalues
+        return self.M(tmp_resid / tmp_results.scale).sum()
 
     def _update_history(self, tmp_results, history, conv):
         history['params'].append(tmp_results.params)
@@ -374,8 +373,8 @@ class RLMResults(base.LikelihoodModelResults):
     pinv_wexog : array
         See RLM.pinv_wexog
     pvalues : array
-        The p values associated with `tvalues`. Note that `tvalues` are assumed to be distributed
-        standard normal rather than Student's t.
+        The p values associated with `tvalues`. Note that `tvalues` are assumed
+        to be distributed standard normal rather than Student's t.
     resid : array
         The residuals of the fitted model.  endog - fittedvalues
     scale : float
@@ -387,8 +386,9 @@ class RLMResults(base.LikelihoodModelResults):
     sresid : array
         The scaled residuals.
     tvalues : array
-        The "t-statistics" of params. These are defined as params/bse where bse are taken
-        from the robust covariance matrix specified in the argument to fit.
+        The "t-statistics" of params. These are defined as params/bse where
+        bse are taken from the robust covariance matrix specified in the
+        argument to fit.
     weights : array
         The reported weights are determined by passing the scaled residuals
         from the last weighted least squares fit in the IRLS algortihm.
