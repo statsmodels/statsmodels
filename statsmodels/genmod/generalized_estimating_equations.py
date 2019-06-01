@@ -450,10 +450,12 @@ _gee_nominal_example = """
     >>> print(result.summary())
 """
 
+
 def _check_args(endog, exog, groups, time, offset, exposure):
 
     if endog.size != exog.shape[0]:
-        raise ValueError("Leading dimension of 'exog' should match length of 'endog'")
+        raise ValueError("Leading dimension of 'exog' should match "
+                         "length of 'endog'")
 
     if groups.size != endog.size:
         raise ValueError("'groups' and 'endog' should have the same size")
@@ -686,9 +688,10 @@ class GEE(base.Model):
         kwargs : extra keyword arguments
             These are passed to the model with two exceptions. `dep_data`
             is processed as described below.  The ``eval_env`` keyword is
-            passed to patsy. It can be either a :class:`patsy:patsy.EvalEnvironment`
-            object or an integer indicating the depth of the namespace to use.
-            For example, the default ``eval_env=0`` uses the calling namespace.
+            passed to patsy. It can be either a
+            :class:`patsy:patsy.EvalEnvironment` object or an integer
+            indicating the depth of the namespace to use. For example, the
+            default ``eval_env=0`` uses the calling namespace.
             If you wish to use a "clean" environment set ``eval_env=-1``.
 
         Optional arguments
@@ -732,7 +735,8 @@ class GEE(base.Model):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = patsy.dmatrix(dep_data, data, return_type='dataframe')
+                dep_data = patsy.dmatrix(dep_data, data,
+                                         return_type='dataframe')
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)
@@ -809,8 +813,8 @@ class GEE(base.Model):
             msg = "Model and submodel have different GLM families."
             warnings.warn(msg)
         if not isinstance(self.cov_struct, type(submod.cov_struct)):
-            msg = "Model and submodel have different GEE covariance structures."
-            warnings.warn(msg)
+            warnings.warn("Model and submodel have different GEE covariance "
+                          "structures.")
         if not np.equal(self.weights, submod.weights).all():
             msg = "Model and submodel should have the same weights."
             warnings.warn(msg)
@@ -1241,8 +1245,8 @@ class GEE(base.Model):
     def _starting_params(self):
 
         model = GLM(self.endog, self.exog, family=self.family,
-                       offset=self._offset_exposure,
-                       freq_weights=self.weights)
+                    offset=self._offset_exposure,
+                    freq_weights=self.weights)
         result = model.fit()
         return result.params
 
@@ -1387,7 +1391,6 @@ class GEE(base.Model):
 
     fit.__doc__ = _gee_fit_doc
 
-
     def _update_regularized(self, params, pen_wt, scad_param, eps):
 
         sn, hm = 0, 0
@@ -1410,7 +1413,8 @@ class GEE(base.Model):
         # seems to be incorrect
 
         ap = np.abs(params)
-        en = pen_wt * np.clip(scad_param * pen_wt - ap, 0, np.inf) * (ap > pen_wt)
+        clipped = np.clip(scad_param * pen_wt - ap, 0, np.inf)
+        en = pen_wt * clipped * (ap > pen_wt)
         en /= (scad_param - 1) * pen_wt
         en += pen_wt * (ap <= pen_wt)
         en /= eps + ap
@@ -1485,7 +1489,8 @@ class GEE(base.Model):
         ----------
         Wang L, Zhou J, Qu A. (2012). Penalized generalized estimating
         equations for high-dimensional longitudinal data analysis.
-        Biometrics. 2012 Jun;68(2):353-60. doi: 10.1111/j.1541-0420.2011.01678.x.
+        Biometrics. 2012 Jun;68(2):353-60.
+        doi: 10.1111/j.1541-0420.2011.01678.x.
         https://www.ncbi.nlm.nih.gov/pubmed/21955051
         http://users.stat.umn.edu/~wangx346/research/GEE_selection.pdf
         """
@@ -1696,28 +1701,30 @@ class GEE(base.Model):
         The quasi-likelihood used here is obtained by numerically evaluating
         Wedderburn's integral representation of the quasi-likelihood function.
         This approach is valid for all families and  links.  Many other
-        packages use analytical expressions for quasi-likelihoods that are valid
-        in special cases where the link function is canonical.  These analytical
-        expressions may omit additive constants that only depend on the
-        data.  Therefore, the numerical values of our QL and QIC values will
-        differ from the values reported by other packages.  However only the
-        differences between two QIC values calculated for different models
+        packages use analytical expressions for quasi-likelihoods that are
+        valid in special cases where the link function is canonical.  These
+        analytical expressions may omit additive constants that only depend
+        on the data.  Therefore, the numerical values of our QL and QIC values
+        will differ from the values reported by other packages.  However only
+        the differences between two QIC values calculated for different models
         using the same data are meaningful.  Our QIC should produce the same
         QIC differences as other software.
 
-        When using the QIC for models with unknown scale parameter, use a common
-        estimate of the scale parameter for all models being compared.
+        When using the QIC for models with unknown scale parameter, use a
+        common estimate of the scale parameter for all models being compared.
 
         References
         ----------
-        .. [*] W. Pan (2001).  Akaike's information criterion in generalized estimating
-               equations.  Biometrics (57) 1.
+        .. [*] W. Pan (2001).  Akaike's information criterion in generalized
+               estimating equations.  Biometrics (57) 1.
         """
 
         varfunc = self.family.variance
 
         means = []
-        omega = 0.0  # omega^-1 is the model-based covariance assuming independence
+        omega = 0.0
+        # omega^-1 is the model-based covariance assuming independence
+
         for i in range(self.num_group):
             expval, lpr = self.cached_means[i]
             means.append(expval)
@@ -1924,14 +1931,14 @@ class GEEResults(base.LikelihoodModelResults):
         # It is easy to forget to set the scale parameter.  Sometimes
         # this is intentional, so we warn.
         if scale is None:
-            msg = "QIC values obtained using scale=None are not appropriate for comparing models"
-            warnings.warn(msg)
+            warnings.warn("QIC values obtained using scale=None are not "
+                          "appropriate for comparing models")
 
         if scale is None:
             scale = self.scale
 
         _, qic, qicu = self.model.qic(self.params, scale,
-                  self.cov_params())
+                                      self.cov_params())
 
         return qic, qicu
 
@@ -2343,7 +2350,7 @@ class GEEResultsWrapper(lm.RegressionResultsWrapper):
     }
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
                                    _attrs)
-wrap.populate_wrapper(GEEResultsWrapper, GEEResults)
+wrap.populate_wrapper(GEEResultsWrapper, GEEResults)  # noqa:E305
 
 
 class OrdinalGEE(GEE):
@@ -2622,9 +2629,10 @@ def _score_test_submodel(par, sub):
 
     return qm, qc
 
+
 class OrdinalGEEResultsWrapper(GEEResultsWrapper):
     pass
-wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)
+wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)  # noqa:E305
 
 
 class NominalGEE(GEE):
@@ -2953,7 +2961,7 @@ class NominalGEEResults(GEEResults):
 
 class NominalGEEResultsWrapper(GEEResultsWrapper):
     pass
-wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)
+wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)  # noqa:E305
 
 
 class _MultinomialLogit(Link):
