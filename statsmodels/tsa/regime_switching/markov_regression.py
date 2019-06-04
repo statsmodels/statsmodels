@@ -173,9 +173,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                             self.k_regimes, axis=1)
         return self.endog - predict
 
-    def _conditional_likelihoods(self, params):
+    def _conditional_loglikelihoods(self, params):
         """
-        Compute likelihoods conditional on the current period's regime
+        Compute loglikelihoods conditional on the current period's regime
         """
 
         # Get residuals
@@ -186,10 +186,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if self.switching_variance:
             variance = np.reshape(variance, (self.k_regimes, 1, 1))
 
-        conditional_likelihoods = (
-            np.exp(-0.5 * resid**2 / variance) / np.sqrt(2 * np.pi * variance))
+        conditional_loglikelihoods = (
+            -0.5 * resid**2 / variance - 0.5 * np.log(2 * np.pi * variance))
 
-        return conditional_likelihoods
+        return conditional_loglikelihoods
 
     @property
     def _res_classes(self):

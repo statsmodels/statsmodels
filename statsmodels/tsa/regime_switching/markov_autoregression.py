@@ -219,9 +219,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     def _resid(self, params):
         return self.endog - self.predict_conditional(params)
 
-    def _conditional_likelihoods(self, params):
+    def _conditional_loglikelihoods(self, params):
         """
-        Compute likelihoods conditional on the current period's regime and
+        Compute loglikelihoods conditional on the current period's regime and
         the last `self.order` regimes.
         """
         # Get the residuals
@@ -232,10 +232,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if self.switching_variance:
             variance = np.reshape(variance, (self.k_regimes, 1, 1))
 
-        conditional_likelihoods = (
-            np.exp(-0.5 * resid**2 / variance) / np.sqrt(2 * np.pi * variance))
+        conditional_loglikelihoods = (
+            -0.5 * resid**2 / variance - 0.5 * np.log(2 * np.pi * variance))
 
-        return conditional_likelihoods
+        return conditional_loglikelihoods
 
     @property
     def _res_classes(self):

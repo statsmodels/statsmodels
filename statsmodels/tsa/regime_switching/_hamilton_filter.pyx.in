@@ -24,11 +24,23 @@ import numpy as np
 import warnings
 cimport numpy as np
 cimport cython
+from statsmodels.src.math cimport dlog, zlog, dexp, zexp
 
 cdef int FORTRAN = 1
 
 {{for prefix, types in TYPES.items()}}
 {{py:cython_type, dtype, typenum = types}}
+
+{{py:
+combined_prefix = prefix
+combined_cython_type = cython_type
+if prefix == 'c':
+    combined_prefix = 'z'
+    combined_cython_type = 'np.complex128_t'
+if prefix == 's':
+    combined_prefix = 'd'
+    combined_cython_type = 'np.float64_t'
+}}
 
 def {{prefix}}hamilton_filter(int nobs, int k_regimes, int order,
                               {{cython_type}} [:,:,:] regime_transition,
@@ -132,5 +144,157 @@ cdef {{prefix}}hamilton_filter_iteration(int t, int k_regimes, int order,
         else:
             curr_filtered_joint_probabilities[i] = (
                 weighted_likelihoods[i] / joint_likelihoods[t])
+
+
+def {{prefix}}hamilton_filter_log(int nobs, int k_regimes, int order,
+                                  {{cython_type}} [:,:,:] regime_transition,
+                                  {{cython_type}} [:,:] conditional_likelihoods,
+                                  {{cython_type}} [:] joint_likelihoods,
+                                  {{cython_type}} [:,:] predicted_joint_probabilities,
+                                  {{cython_type}} [:,:] filtered_joint_probabilities):
+    cdef int t, i, j, k, ix, regime_transition_t = 0, time_varying_regime_transition
+    cdef:
+        # k_regimes_order_m1 is not used when order == 0.
+        int k_regimes_order_m1 = k_regimes**max(order - 1, 0)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
+        {{cython_type}} [:] weighted_likelihoods, tmp_filtered_marginalized_probabilities, tmp_predicted_joint_probabilities
+        np.float64_t tmp_max_real
+        {{cython_type}} tmp_max
+
+    time_varying_regime_transition = regime_transition.shape[2] > 1
+    weighted_likelihoods = np.zeros(k_regimes_order_p1, dtype={{dtype}})
+    # tmp_filtered_marginalized_probabilities is not used if order == 0.
+    tmp_filtered_marginalized_probabilities = np.zeros(k_regimes_order, dtype={{dtype}})
+    tmp_predicted_joint_probabilities = np.zeros(k_regimes, dtype={{dtype}})
+
+    # zlog, zexp require the GIL (at least for now), so we can only release
+    # the GIL for s, d prefixes. For c, z prefixes to get the indentation
+    # right, we replace this with an "if True:".
+    # {{if combined_prefix == 'd'}}with nogil:{{else}}if True:{{endif}}
+    if True:
+        for t in range(nobs):
+            if time_varying_regime_transition:
+                regime_transition_t = t
+
+            if order > 0:
+                # Collapse filtered joint probabilities over the last dimension
+                # Pr[S_{t-1}, ..., S_{t-r} | t-1] = \sum_{ S_{t-r-1} } Pr[S_{t-1}, ..., S_{t-r}, S_{t-r-1} | t-1]
+                ix = 0
+                # tmp_filtered_marginalized_probabilities[:] = 0
+                for j in range(k_regimes_order):
+                    # This is logsumexp, so we use the maximum trick
+                    tmp_max_real = filtered_joint_probabilities[ix, t]{{if combined_prefix == 'z'}}.real{{endif}}
+                    tmp_max = filtered_joint_probabilities[ix, t]
+                    for i in range(k_regimes):
+                        if filtered_joint_probabilities[ix + i, t]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
+                            tmp_max_real = filtered_joint_probabilities[ix + i, t]{{if combined_prefix == 'z'}}.real{{endif}}
+                            tmp_max = filtered_joint_probabilities[ix + i, t]
+
+                    tmp_filtered_marginalized_probabilities[j] = 0
+                    for i in range(k_regimes):
+                        tmp_filtered_marginalized_probabilities[j] = (
+                            tmp_filtered_marginalized_probabilities[j] +
+                            {{combined_prefix}}exp(filtered_joint_probabilities[ix, t] - tmp_max))
+                        ix = ix + 1
+                    tmp_filtered_marginalized_probabilities[j] = (tmp_max +
+                      {{combined_prefix}}log(tmp_filtered_marginalized_probabilities[j]))
+
+            {{prefix}}hamilton_filter_log_iteration(t, k_regimes, order,
+                                      regime_transition[:, :, regime_transition_t],
+                                      weighted_likelihoods,
+                                      tmp_filtered_marginalized_probabilities,
+                                      conditional_likelihoods[:, t],
+                                      joint_likelihoods,
+                                      predicted_joint_probabilities[:, t],
+                                      filtered_joint_probabilities[:, t],
+                                      filtered_joint_probabilities[:, t+1],
+                                      tmp_predicted_joint_probabilities)
+
+
+cdef void {{prefix}}hamilton_filter_log_iteration(int t, int k_regimes, int order,
+                              {{cython_type}} [:,:] regime_transition,
+                              {{cython_type}} [:] weighted_likelihoods,
+                              {{cython_type}} [:] prev_filtered_marginalized_probabilities,
+                              {{cython_type}} [:] conditional_likelihoods,
+                              {{cython_type}} [:] joint_likelihoods,
+                              {{cython_type}} [:] curr_predicted_joint_probabilities,
+                              {{cython_type}} [:] prev_filtered_joint_probabilities,
+                              {{cython_type}} [:] curr_filtered_joint_probabilities,
+                              {{cython_type}} [:] tmp_predicted_joint_probabilities): # {{if combined_prefix == 'd'}}nogil{{endif}}:
+    cdef int i, j, k, ix
+    cdef:
+        int k_regimes_order_m1 = k_regimes**(order - 1)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
+        np.float64_t tmp_max_real
+        {{cython_type}} tmp_max
+
+    # Compute predicted joint probabilities
+    # Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1] = Pr[S_t | S_{t-1}] * Pr[S_{t-1}, ..., S_{t-r} | t-1]
+    if order > 0:
+        ix = 0
+        for i in range(k_regimes):
+            for j in range(k_regimes):
+                for k in range(k_regimes_order_m1):
+                    curr_predicted_joint_probabilities[ix] = (
+                        prev_filtered_marginalized_probabilities[j * k_regimes_order_m1 + k] +
+                        regime_transition[i, j])
+                    ix += 1
+    else:
+        curr_predicted_joint_probabilities[:] = 0
+        for i in range(k_regimes):
+            # Again, this is logsumexp, so we use the maximum trick
+            tmp_max_real = 0
+            tmp_max = 0
+            for j in range(k_regimes):
+                tmp_predicted_joint_probabilities[j] = (
+                    prev_filtered_joint_probabilities[j] + regime_transition[i, j])
+                if tmp_predicted_joint_probabilities[j]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
+                    tmp_max_real = tmp_predicted_joint_probabilities[j]{{if combined_prefix == 'z'}}.real{{endif}}
+                    tmp_max = tmp_predicted_joint_probabilities[j]
+
+            curr_predicted_joint_probabilities[i] = 0
+            for j in range(k_regimes):
+                curr_predicted_joint_probabilities[i] = (
+                  curr_predicted_joint_probabilities[i] +
+                  {{combined_prefix}}exp(tmp_predicted_joint_probabilities[j] - tmp_max))
+
+            curr_predicted_joint_probabilities[i] = (tmp_max +
+              {{combined_prefix}}log(curr_predicted_joint_probabilities[i]))
+
+
+    # Compute weighted likelihoods f(y_t | S_t, S_{t-1}, ..., S_{t-r}, t-1) * Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1]
+    tmp_max_real = 0
+    tmp_max = 0
+    for i in range(k_regimes_order_p1):
+        weighted_likelihoods[i] = (
+            curr_predicted_joint_probabilities[i] +
+            conditional_likelihoods[i])
+
+        # Compute the maximum for use below in logsumexp
+        if weighted_likelihoods[i]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
+            tmp_max_real = weighted_likelihoods[i]{{if combined_prefix == 'z'}}.real{{endif}}
+            tmp_max = weighted_likelihoods[i]
+
+    # Compute the joint likelihood f(y_t | t-1)
+    # Again, this is logsumexp, so we use the maximum trick (where the
+    # maximum was just computed above)
+    joint_likelihoods[t] = 0
+    for i in range(k_regimes_order_p1):
+        joint_likelihoods[t] = (
+          joint_likelihoods[t] +
+          {{combined_prefix}}exp(weighted_likelihoods[i] - tmp_max))
+    joint_likelihoods[t] = tmp_max + {{combined_prefix}}log(joint_likelihoods[t])
+
+    # Compute filtered joint probabilities
+    # Pr[S_t, S_{t-1}, ..., S_{t-r} | t] = (
+    #     f(y_t | S_t, S_{t-1}, ..., S_{t-r}, t-1) *
+    #     Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1] /
+    #     f(y_t | t-1))
+    for i in range(k_regimes_order_p1):
+        # TODO: do I need to worry about some value for joint_likelihoods?
+        curr_filtered_joint_probabilities[i] = (
+            weighted_likelihoods[i] - joint_likelihoods[t])
 
 {{endfor}}
