@@ -137,7 +137,7 @@ def plot_probs(freq, probs_predicted, label='predicted', upp_xlim=None,
     return fig
 
 
-def test_chisquare_prob(results, probs, bin_edges=None, method=None):
+def chisquare_prob_test(results, probs, bin_edges=None, method=None):
     """
     chisquare test for predicted probabilities using cmt-opg
 
@@ -203,7 +203,7 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     return chi2_stat, stats.chi2.sf(chi2_stat, df), df, extras
 
 
-def test_poisson_zeroinflation(results_poisson, exog_infl=None):
+def poisson_zeroinflation_score_test(results_poisson, exog_infl=None):
     """score test for zero inflation or deflation in Poisson
 
     This implements Jansakul and Hinde 2009 score test
@@ -282,13 +282,13 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     return statistic, pvalue, df, df2
 
 
-def test_poisson_zeroinflation_brock(results_poisson):
+def poisson_zeroinflation_brock_score_test(results_poisson):
     """score test for zero modification in Poisson, special case
 
     This assumes that the Poisson model has a constant and that
     the zero modification probability is constant.
 
-    This is a special case of test_poisson_zeroinflation derived by
+    This is a special case of poisson_zeroinflation_score_test derived by
     van den Brock 1995.
 
     The test reports two sided and one sided alternatives based on

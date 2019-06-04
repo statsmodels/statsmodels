@@ -46,13 +46,13 @@ class TestCountDiagnostic(object):
 
     def test_count(self):
         # partially smoke
-        tzi1 = dia.test_poisson_zeroinflation(self.res)
+        tzi1 = dia.poisson_zeroinflation_score_test(self.res)
 
-        tzi2 = dia.test_poisson_zeroinflation_brock(self.res)
+        tzi2 = dia.poisson_zeroinflation_brock_score_test(self.res)
         # compare two implementation in special case
         assert_allclose(tzi1[:2], (tzi2[0]**2, tzi2[1]), rtol=1e-5)
 
-        tzi3 = dia.test_poisson_zeroinflation(self.res, self.exog)
+        tzi3 = dia.poisson_zeroinflation_score_test(self.res, self.exog)
 
         # regression test
         tzi3_1 = (0.79863597832443878, 0.67077736750318928, 2, 2)
@@ -64,7 +64,7 @@ class TestCountDiagnostic(object):
         probs = self.res.predict_prob()
         freq = np.bincount(self.endog) / nobs
 
-        tzi = dia.test_chisquare_prob(self.res, probs[:, :2])
+        tzi = dia.chisquare_prob_test(self.res, probs[:, :2])
         # regression numbers
         tzi1 = (0.387770845, 0.5334734738)
         assert_allclose(tzi[:2], tzi1, rtol=5e-5)
