@@ -964,13 +964,10 @@ class TestFedFundsConstShort(MarkovRegression):
         expected_marginals[:, :2] = [[1/3], [1/3], [1/3]]
         expected_marginals[:, 2:] = [[0], [1], [0]]
 
-        py_results = markov_switching.py_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-        assert_allclose(py_results[0], expected_marginals)
-
-        cy_results = markov_switching.cy_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-        assert_allclose(cy_results[0], expected_marginals)
+        cy_results = markov_switching.cy_hamilton_filter_log(
+            initial_probabilities, regime_transition,
+            np.log(conditional_likelihoods + 1e-20))
+        assert_allclose(cy_results[0], expected_marginals, atol=1e-15)
 
     def test_hamilton_filter_order_zero_with_tvtp(self):
         k_regimes = 3
@@ -1015,13 +1012,10 @@ class TestFedFundsConstShort(MarkovRegression):
         expected_marginals[:, 4:6] = [[0], [1/2], [1/2]]
         expected_marginals[:, 6:8] = [[0], [0], [1]]
 
-        py_results = markov_switching.py_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-        assert_allclose(py_results[0], expected_marginals)
-
-        cy_results = markov_switching.cy_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-        assert_allclose(cy_results[0], expected_marginals)
+        cy_results = markov_switching.cy_hamilton_filter_log(
+            initial_probabilities, regime_transition,
+            np.log(conditional_likelihoods + 1e-20))
+        assert_allclose(cy_results[0], expected_marginals, atol=1e-15)
 
     def test_hamilton_filter_shape_checks(self):
         k_regimes = 3
@@ -1030,53 +1024,12 @@ class TestFedFundsConstShort(MarkovRegression):
 
         initial_probabilities = np.ones(k_regimes) / k_regimes
         regime_transition = np.ones((k_regimes, k_regimes, nobs)) / k_regimes
-        conditional_likelihoods = np.ones(order * (k_regimes,) + (nobs,))
+        conditional_loglikelihoods = np.ones(order * (k_regimes,) + (nobs,))
 
-        for func in [markov_switching.py_hamilton_filter,
-                     markov_switching.cy_hamilton_filter]:
-            with assert_raises(ValueError):
-                func(initial_probabilities,
-                     regime_transition,
-                     conditional_likelihoods)
-
-    def test_py_hamilton_filter(self):
-        mod = self.model
-        params = self.true['params']
-
-        regime_transition = mod.regime_transition_matrix(params)
-        initial_probabilities = mod.initial_probabilities(
-            params, regime_transition)
-        conditional_likelihoods = mod._conditional_likelihoods(params)
-
-        actual = markov_switching.py_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-        desired = markov_switching.cy_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-
-        for i in range(3):
-            assert_allclose(actual[i], desired[i])
-
-    def test_py_kim_smoother(self):
-        mod = self.model
-        params = self.true['params']
-
-        regime_transition = mod.regime_transition_matrix(params)
-        initial_probabilities = mod.initial_probabilities(
-            params, regime_transition)
-        conditional_likelihoods = mod._conditional_likelihoods(params)
-
-        # Hamilton filter
-        filter_output = markov_switching.cy_hamilton_filter(
-            initial_probabilities, regime_transition, conditional_likelihoods)
-
-        # Kim smoother
-        actual = markov_switching.py_kim_smoother(
-            regime_transition, filter_output[1], filter_output[3])
-        desired = markov_switching.cy_kim_smoother(
-            regime_transition, filter_output[1], filter_output[3])
-
-        for i in range(2):
-            assert_allclose(actual[i], desired[i])
+        with assert_raises(ValueError):
+            markov_switching.cy_hamilton_filter_log(
+                initial_probabilities, regime_transition,
+                conditional_loglikelihoods)
 
 
 class TestFedFundsConstL1(MarkovRegression):
@@ -1317,7 +1270,7 @@ def test_avoid_underflow():
         6.97337611e-01, 6.26116329e-01, -6.41266551e-06, 3.81141202e-06,
         4.72462327e-08, 4.45291473e-06])
     res = m.smooth(params)
-    
+
     assert not np.any(np.isnan(res.predicted_joint_probabilities))
     assert not np.any(np.isnan(res.filtered_joint_probabilities))
     assert not np.any(np.isnan(res.smoothed_joint_probabilities))
