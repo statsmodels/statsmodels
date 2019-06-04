@@ -611,8 +611,8 @@ class LikelihoodModel(Model):
             res._results.mle_settings = res_constr.mle_settings
 
         res._results.params = params_full
-        if (not hasattr(res._results, 'normalized_cov_param') or
-                res._results.normalized_cov_param is None):
+        if (not hasattr(res._results, 'normalized_cov_params') or
+                res._results.normalized_cov_params is None):
             res._results.normalized_cov_params = np.zeros((k_params, k_params))
         else:
             res._results.normalized_cov_params[...] = 0
