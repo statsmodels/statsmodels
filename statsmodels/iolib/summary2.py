@@ -395,9 +395,11 @@ def _col_params(result, float_format='%.4f', stars=True):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
-    res = pd.DataFrame(res).append(
-        pd.DataFrame({'Basic': [result.rsquared], 'Adj.': [result.rsquared_adj]},
-                     index=['R-squared']))
+    r_result = pd.DataFrame({'Basic': [result.rsquared], 'Adj.': [result.rsquared_adj]},
+                            index=['R-squared'])
+    for col in r_result:
+        r_result[col] = r_result[col].apply(lambda x: float_format % x)
+    res = pd.DataFrame(res).append(r_result)
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
