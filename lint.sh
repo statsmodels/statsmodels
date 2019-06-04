@@ -22,6 +22,7 @@ if [ "$LINT" == true ]; then
         statsmodels/base/tests/test_data.py \
         statsmodels/compat/ \
         statsmodels/datasets/tests/ \
+        statsmodels/discrete/tests/test_constrained.py \
         statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
         statsmodels/duration/tests/results/ \
