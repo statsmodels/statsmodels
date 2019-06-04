@@ -70,14 +70,33 @@ Model Class
 
    GEE
 
+.. module:: statsmodels.genmod.qif
+   :synopsis: Quadratic inference functions
+
+.. currentmodule:: statsmodels.genmod.qif
+
+.. autosummary::
+   :toctree: generated/
+
+   QIF
+
 Results Classes
 ^^^^^^^^^^^^^^^
+
+.. currentmodule:: statsmodels.genmod.generalized_estimating_equations
 
 .. autosummary::
    :toctree: generated/
 
    GEEResults
    GEEMargins
+
+.. currentmodule:: statsmodels.genmod.qif
+
+.. autosummary::
+   :toctree: generated/
+
+   QIFResults
 
 Dependence Structures
 ^^^^^^^^^^^^^^^^^^^^^

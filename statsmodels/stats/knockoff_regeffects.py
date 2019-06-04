@@ -31,7 +31,7 @@ class CorrelationEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -55,7 +55,7 @@ class ForwardEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
     pursuit : bool
@@ -106,7 +106,7 @@ class OLSEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -132,7 +132,7 @@ class RegModelEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
     model_cls : class

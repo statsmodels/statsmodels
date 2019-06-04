@@ -141,6 +141,7 @@ Model Classes
    WLS
    GLSAR
    yule_walker
+   burg
 
 .. module:: statsmodels.regression.quantile_regression
    :synopsis: Quantile regression
@@ -161,6 +162,30 @@ Model Classes
    :toctree: generated/
 
    RecursiveLS
+
+.. module:: statsmodels.regression.process_regression
+   :synopsis: Process regression
+
+.. currentmodule:: statsmodels.regression.process_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   GaussianCovariance
+   ProcessMLE
+
+.. module:: statsmodels.regression.dimred
+   :synopsis: Dimension reduction methods
+
+.. currentmodule:: statsmodels.regression.dimred
+
+.. autosummary::
+   :toctree: generated/
+
+    SlicedInverseReg
+    PrincipalHessianDirections
+    SlicedAverageVarianceEstimation
+
 
 Results Classes
 ^^^^^^^^^^^^^^^
@@ -191,3 +216,17 @@ results class of the other linear models.
    :toctree: generated/
 
    RecursiveLSResults
+
+.. currentmodule:: statsmodels.regression.process_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   ProcessMLEResults
+
+.. currentmodule:: statsmodels.regression.dimred
+
+.. autosummary::
+   :toctree: generated/
+
+   DimReductionResults

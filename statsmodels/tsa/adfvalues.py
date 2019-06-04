@@ -243,8 +243,8 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
 
     References
     ----------
-    MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions for
-        Unit-Root and Cointegration Tests." Journal of Business & Economics
+    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
+        for Unit-Root and Cointegration Tests." Journal of Business & Economics
         Statistics, 12.2, 167-76.
 
     Notes
@@ -432,10 +432,10 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
 
     References
     ----------
-    MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions for
-        Unit-Root and Cointegration Tests." Journal of Business & Economics
+    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
+        for Unit-Root and Cointegration Tests." Journal of Business & Economics
         Statistics, 12.2, 167-76.
-    MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
+    .. [*] MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
         Queen's University, Dept of Economics Working Papers 1227.
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """

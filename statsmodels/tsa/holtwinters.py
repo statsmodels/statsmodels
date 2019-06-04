@@ -469,13 +469,13 @@ class ExponentialSmoothing(TimeSeriesModel):
     Notes
     -----
     This is a full implementation of the holt winters exponential smoothing as
-    per [1]. This includes all the unstable methods as well as the stable
+    per [1]_. This includes all the unstable methods as well as the stable
     methods. The implementation of the library covers the functionality of the
     R library as much as possible whilst still being Pythonic.
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+    .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
         and practice. OTexts, 2014.
     """
 
@@ -988,7 +988,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     Notes
     -----
     This is a full implementation of the simple exponential smoothing as
-    per [1].  `SimpleExpSmoothing` is a restricted version of
+    per [1]_.  `SimpleExpSmoothing` is a restricted version of
     :class:`ExponentialSmoothing`.
 
     See Also
@@ -998,7 +998,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+    .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
         and practice. OTexts, 2014.
     """
 
@@ -1068,7 +1068,7 @@ class Holt(ExponentialSmoothing):
     Notes
     -----
     This is a full implementation of the Holt's exponential smoothing as
-    per [1]. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
+    per [1]_. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
 
     See Also
     --------
@@ -1077,7 +1077,7 @@ class Holt(ExponentialSmoothing):
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+    .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
         and practice. OTexts, 2014.
     """
 

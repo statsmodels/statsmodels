@@ -86,6 +86,8 @@ Descriptive Statistics and Tests
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.innovations_algo
+   stattools.innovations_filter
    stattools.levinson_durbin_pacf
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
@@ -133,6 +135,7 @@ these are rarely needed by end-users):
    :toctree: generated/
 
    kalmanf.kalmanfilter.KalmanFilter
+   innovations.arma_innovations.arma_innovations
    innovations.arma_innovations.arma_loglike
    innovations.arma_innovations.arma_loglikeobs
    innovations.arma_innovations.arma_score

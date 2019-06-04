@@ -626,8 +626,8 @@ def pacf_burg(x, nlags=None, demean=True):
 
     References
     ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     x = np.squeeze(np.asarray(x))
     if x.ndim != 1:
@@ -902,10 +902,11 @@ def periodogram(X):
 
     References
     ----------
-    Brockwell and Davis.
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     X = np.asarray(X)
-    #if kernel == "bartlett":
+    # if kernel == "bartlett":
     #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
     pergr = 1. / len(X) * np.abs(np.fft.fft(X))**2
@@ -1003,8 +1004,8 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     References
     ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     pacf = np.squeeze(np.asarray(pacf))
     if pacf.ndim != 1:
@@ -1076,8 +1077,8 @@ def innovations_algo(acov, nobs=None, rtol=None):
 
     References
     ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     acov = np.squeeze(np.asarray(acov))
     if acov.ndim != 1:
@@ -1149,8 +1150,8 @@ def innovations_filter(endog, theta):
 
     References
     ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     orig_endog = endog
     endog = np.squeeze(np.asarray(endog))

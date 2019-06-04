@@ -632,7 +632,8 @@ class FactorResults(object):
         return corr_f
 
     def factor_score_params(self, method='bartlett'):
-        """compute factor scoring coefficient matrix
+        """
+        Compute factor scoring coefficient matrix
 
         The coefficient matrix is not cached.
 
@@ -652,9 +653,8 @@ class FactorResults(object):
         -----
         The `regression` method follows the Stata definition.
         Method bartlett and regression are verified against Stats.
-        Two inofficial methods, 'ols' and 'gls', produce similar factor scores
+        Two unofficial methods, 'ols' and 'gls', produce similar factor scores
         but are not verified.
-
 
         See Also
         --------
@@ -690,7 +690,8 @@ class FactorResults(object):
         return s_mat
 
     def factor_scoring(self, endog=None, method='bartlett', transform=True):
-        """factor scoring: compute factors for endog
+        """
+        factor scoring: compute factors for endog
 
         If endog was not provided when creating the factor class, then
         a standarized endog needs to be provided here.
