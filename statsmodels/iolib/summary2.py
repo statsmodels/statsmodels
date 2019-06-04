@@ -1,7 +1,7 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
-
+from statsmodels.regression.mixed_linear_model import MixedLMResultsWrapper
 from collections import OrderedDict
 import datetime
 import re
@@ -395,12 +395,13 @@ def _col_params(result, float_format='%.4f', stars=True):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
-    r_result = pd.DataFrame({'Basic': [result.rsquared], 'Adj.': [result.rsquared_adj]},
-                            index=['R-squared'])
-    for col in r_result:
-        r_result[col] = r_result[col].apply(lambda x: float_format % x)
-    res = pd.DataFrame(res).append(r_result)
-    res = res.stack()
+    if not isinstance(result, MixedLMResultsWrapper):
+        r_result = pd.DataFrame({'Basic': [result.rsquared], 'Adj.': [result.rsquared_adj]},
+                                index=['R-squared'])
+        for col in r_result:
+            r_result[col] = r_result[col].apply(lambda x: float_format % x)
+        res = pd.DataFrame(res).append(r_result)
+        res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
     return res
