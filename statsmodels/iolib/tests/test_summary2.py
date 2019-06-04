@@ -55,8 +55,8 @@ x1        -0.7  -1.6
 R-squared 0.7   0.5  
           0.8   0.6  
 =====================
-Standard errors
-in parentheses.
+Standard errors in
+parentheses.
 """  # noqa:W291
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
