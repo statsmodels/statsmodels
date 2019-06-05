@@ -67,8 +67,7 @@ cpdef {{prefix}}kim_smoother_log(int nobs, int k_regimes, int order,
     # zlog, zexp require the GIL (at least for now), so we can only release
     # the GIL for s, d prefixes. For c, z prefixes to get the indentation
     # right, we replace this with an "if True:".
-    # {{if combined_prefix == 'd'}}with nogil:{{else}}if True:{{endif}}
-    if True:
+    {{if combined_prefix == 'd'}}with nogil:{{else}}if True:{{endif}}
         for t in range(nobs - 2, -1, -1):
             if time_varying_regime_transition:
                 regime_transition_t = t + 1
@@ -90,7 +89,7 @@ cdef void {{prefix}}kim_smoother_log_iteration(int tt, int k_regimes, int order,
                              {{cython_type}} [:] predicted_joint_probabilities,
                              {{cython_type}} [:] filtered_joint_probabilities,
                              {{cython_type}} [:] prev_smoothed_joint_probabilities,
-                             {{cython_type}} [:] next_smoothed_joint_probabilities): #{{if combined_prefix == 'd'}}nogil{{endif}}:
+                             {{cython_type}} [:] next_smoothed_joint_probabilities) {{if combined_prefix == 'd'}}nogil{{endif}}:
     cdef int t, i, j, k, ix
     cdef:
         int k_regimes_order_m1 = k_regimes**(order - 1)

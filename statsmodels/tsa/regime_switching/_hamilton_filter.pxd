@@ -19,7 +19,7 @@ cdef void shamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.float32_t [:] curr_predicted_joint_probabilities,
                                 np.float32_t [:] prev_filtered_joint_probabilities,
                                 np.float32_t [:] curr_filtered_joint_probabilities,
-                                np.float32_t [:] tmp_predicted_joint_probabilities)
+                                np.float32_t [:] tmp_predicted_joint_probabilities) nogil
 cdef void dhamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.float64_t [:,:] transition,
                                 np.float64_t [:] weighted_likelihoods,
@@ -29,7 +29,7 @@ cdef void dhamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.float64_t [:] curr_predicted_joint_probabilities,
                                 np.float64_t [:] prev_filtered_joint_probabilities,
                                 np.float64_t [:] curr_filtered_joint_probabilities,
-                                np.float64_t [:] tmp_predicted_joint_probabilities)
+                                np.float64_t [:] tmp_predicted_joint_probabilities) nogil
 cdef void chamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.complex64_t [:,:] transition,
                                 np.complex64_t [:] weighted_likelihoods,

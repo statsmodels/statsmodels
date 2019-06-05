@@ -41,7 +41,7 @@ cdef void skim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.float32_t [:] predicted_joint_probabilities,
                     np.float32_t [:] filtered_joint_probabilities,
                     np.float32_t [:] prev_smoothed_joint_probabilities,
-                    np.float32_t [:] next_smoothed_joint_probabilities)
+                    np.float32_t [:] next_smoothed_joint_probabilities) nogil
 
 cdef void dkim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.float64_t [:] tmp_joint_probabilities,
@@ -50,7 +50,7 @@ cdef void dkim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.float64_t [:] predicted_joint_probabilities,
                     np.float64_t [:] filtered_joint_probabilities,
                     np.float64_t [:] prev_smoothed_joint_probabilities,
-                    np.float64_t [:] next_smoothed_joint_probabilities)
+                    np.float64_t [:] next_smoothed_joint_probabilities) nogil
 
 cdef void ckim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.complex64_t [:] tmp_joint_probabilities,
