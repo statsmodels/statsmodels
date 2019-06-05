@@ -1,24 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
-from statsmodels.base.model import Model
-from .factor_rotation import rotate_factors, promax
+import warnings
+
 import numpy as np
 from numpy.linalg import eigh, inv, norm, matrix_rank
 import pandas as pd
-from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import minimize
+
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
-import warnings
+from statsmodels.graphics.utils import _import_mpl
 
-try:
-    import matplotlib.pyplot  # noqa:F401
-    missing_matplotlib = False
-except ImportError:
-    missing_matplotlib = True
+from .factor_rotation import rotate_factors, promax
 
-if not missing_matplotlib:
-    from .plots import plot_scree, plot_loadings
 
 _opt_defaults = {'gtol': 1e-7}
 
@@ -929,8 +925,8 @@ class FactorResults(object):
         fig : figure
             Handle to the figure
         """
-        if missing_matplotlib:
-            raise ImportError("Matplotlib missing")
+        _import_mpl()
+        from .plots import plot_scree
         return plot_scree(self.eigenvals, self.n_comp, ncomp)
 
     def plot_loadings(self, loading_pairs=None, plot_prerotated=False):
@@ -952,8 +948,8 @@ class FactorResults(object):
         figs : a list of figure handles
 
         """
-        if missing_matplotlib:
-            raise ImportError("Matplotlib missing")
+        _import_mpl()
+        from .plots import plot_loadings
 
         if self.rotation_method is None:
             plot_prerotated = True
