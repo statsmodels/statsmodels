@@ -111,6 +111,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_docstring.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/ar_model.py \
+        statsmodels/tsa/arima/ \
         statsmodels/tsa/arima_model.py \
         statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/filters/tests/ \
