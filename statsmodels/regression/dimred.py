@@ -29,7 +29,7 @@ class _DimReductionRegression(model.Model):
         self._split_wexog = np.array_split(x, n_slice)
 
 
-class SIR(_DimReductionRegression):
+class SlicedInverseReg(_DimReductionRegression):
     """
     Sliced Inverse Regression (SIR)
 
