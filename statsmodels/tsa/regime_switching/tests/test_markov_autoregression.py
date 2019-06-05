@@ -181,7 +181,7 @@ def test_conditional_loglikelihoods():
     conditional_likelihoods = (
         np.exp(-0.5 * resid**2 / 2) / np.sqrt(2 * np.pi * 2))
     assert_allclose(mod._conditional_loglikelihoods(params),
-                 np.log(conditional_likelihoods))
+                    np.log(conditional_likelihoods))
 
     # AR(1) without mean, k_regimes=3, switching variance
     endog = np.ones(10)
