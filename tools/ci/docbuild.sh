@@ -32,6 +32,15 @@ echo '=          Broken Behavior (Errors and Warnings to be Fixed)           ='
 echo '========================================================================'
 grep -E '(SEVERE|ERROR|WARNING)' doc_build.log | grep -Ev '(noindex|toctree)'
 
+# Check that docbuild succeeded. Exit 1 if not.
+echo "Checking if index.html exists"
+if [ -f "build/html/index.html" ]; then
+  echo "docbuild succeeded.";
+else
+  echo "docbuild failed. Aborting doctr.";
+  exit 1;
+fi;
+
 # Deploy with doctr
 cd "$SRCDIR"
 if [[ -z "$TRAVIS_TAG" ]]; then
