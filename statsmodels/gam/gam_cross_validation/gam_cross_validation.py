@@ -159,7 +159,7 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
                  c='blue')
 
         return
-         # TODO add return
+        # TODO add return
 
 
 class MultivariateGAMCVPath(object):
