@@ -96,8 +96,11 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
                     return False
             col_const = x.apply(safe_is_const, 0)
         else:
-            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(x), axis=0) == 0, axis=0),
-                                       np.all(x != 0.0, axis=0))
+            ptp0 = np.ptp(np.asanyarray(x), axis=0)
+            col_is_const = ptp0 == 0
+            nz_const = col_is_const & (x[0] != 0)
+            col_const = nz_const
+
         if np.any(col_const):
             if has_constant == 'raise':
                 raise ValueError("x already contains a constant")
