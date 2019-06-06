@@ -20,8 +20,9 @@ cauchy = links.cauchy()
 cloglog = links.CLogLog()
 negbinom = links.NegativeBinomial()
 
-Links = [logit, inverse_power, sqrt, inverse_squared, identity, log, probit, cauchy,
-         cloglog, negbinom]
+# TODO: parametrize all these tess
+Links = [logit, inverse_power, sqrt, inverse_squared, identity,
+         log, probit, cauchy, cloglog, negbinom]
 
 
 def get_domainvalue(link):
@@ -29,19 +30,22 @@ def get_domainvalue(link):
     Get a value in the domain for a given family.
     """
     z = -np.log(np.random.uniform(0, 1))
-    if type(link) == type(cloglog): # prone to overflow
+    if isinstance(link, links.CLogLog):  # prone to overflow
         z = min(z, 3)
-    elif type(link) == type(negbinom): # domain is negative numbers
+    elif isinstance(link, links.NegativeBinomial):
+        # domain is negative numbers
         z = -z
     return z
 
+
 def test_inverse():
-    # Logic check that link.inverse(link) and link(link.inverse) are the identity.
+    # Logic check that link.inverse(link) and link(link.inverse)
+    # are the identity.
     np.random.seed(3285)
 
     for link in Links:
         for k in range(10):
-            p = np.random.uniform(0, 1) # In domain for all families
+            p = np.random.uniform(0, 1)  # In domain for all families
             d = link.inverse(link(p))
             assert_allclose(d, p, atol=1e-8, err_msg=str(link))
 
@@ -67,22 +71,22 @@ def test_deriv():
 def test_deriv2():
     # Check link function second derivatives using numeric differentiation.
 
-
     np.random.seed(24235)
 
     for link in Links:
         # TODO: Resolve errors with the numeric derivatives
-        if type(link) == type(probit):
+        if isinstance(link, links.probit):
             continue
         for k in range(10):
             p = np.random.uniform(0, 1)
             p = np.clip(p, 0.01, 0.99)
-            if type(link) == type(cauchy):
+            if isinstance(link, links.cauchy):
                 p = np.clip(p, 0.03, 0.97)
             d = link.deriv2(p)
             da = nd.approx_fprime(np.r_[p], link.deriv)
             assert_allclose(d, da, rtol=1e-6, atol=1e-6,
                             err_msg=str(link))
+
 
 def test_inverse_deriv():
     # Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
@@ -91,7 +95,7 @@ def test_inverse_deriv():
 
     for link in Links:
         for k in range(10):
-            z = -np.log(np.random.uniform()) # In domain for all families
+            z = -np.log(np.random.uniform())  # In domain for all families
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
             assert_allclose(d, f, rtol=1e-8, atol=1e-10,

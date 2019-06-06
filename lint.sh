@@ -27,6 +27,7 @@ if [ "$LINT" == true ]; then
         statsmodels/duration/tests/results/ \
         statsmodels/formula/ \
         statsmodels/gam/ \
+        statsmodels/genmod/families/ \
         statsmodels/genmod/_tweedie_compound_poisson.py \
         statsmodels/genmod/bayes_mixed_glm.py \
         statsmodels/genmod/generalized_estimating_equations.py \
