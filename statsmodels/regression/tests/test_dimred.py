@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-from statsmodels.regression.dimred import (SIR, SAVE, PHD)
+from statsmodels.regression.dimred import (SlicedInverseReg, SAVE, PHD)
 from numpy.testing import (assert_equal)
 
 
-def test_sir_poisson():
+def test_poisson():
 
     np.random.seed(43242)
 
@@ -21,7 +21,7 @@ def test_sir_poisson():
     for method in range(6):
 
         if method == 0:
-            model = SIR(y, xmat)
+            model = SlicedInverseReg(y, xmat)
             rslt = model.fit()
         elif method == 1:
             model = SAVE(y, xmat)
@@ -36,7 +36,8 @@ def test_sir_poisson():
                                "x2": xmat[:, 2],
                                "x3": xmat[:, 3],
                                "x4": xmat[:, 4]})
-            model = SIR.from_formula("y ~ 0 + x0 + x1 + x2 + x3 + x4", data=df)
+            model = SlicedInverseReg.from_formula(
+                        "y ~ 0 + x0 + x1 + x2 + x3 + x4", data=df)
             rslt = model.fit()
         elif method == 4:
             model = PHD(y, xmat)

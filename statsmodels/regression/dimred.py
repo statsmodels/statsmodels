@@ -3,10 +3,13 @@ from statsmodels.base import model
 import statsmodels.base.wrapper as wrap
 
 
-class DimReductionRegression(model.Model):
+class _DimReductionRegression(model.Model):
+    """
+    A base class for dimension reduction regression methods.
+    """
 
     def __init__(self, endog, exog, **kwargs):
-        super(DimReductionRegression, self).__init__(endog, exog, **kwargs)
+        super(_DimReductionRegression, self).__init__(endog, exog, **kwargs)
 
     def _prep(self, n_slice):
 
@@ -26,7 +29,7 @@ class DimReductionRegression(model.Model):
         self._split_wexog = np.array_split(x, n_slice)
 
 
-class SIR(DimReductionRegression):
+class SlicedInverseReg(_DimReductionRegression):
     """
     Sliced Inverse Regression (SIR)
 
@@ -77,7 +80,7 @@ class SIR(DimReductionRegression):
         return DimReductionResultsWrapper(results)
 
 
-class PHD(DimReductionRegression):
+class PHD(_DimReductionRegression):
     """
     Principal Hessian Directions
 
@@ -132,7 +135,7 @@ class PHD(DimReductionRegression):
         return DimReductionResultsWrapper(results)
 
 
-class SAVE(DimReductionRegression):
+class SAVE(_DimReductionRegression):
     """
     Sliced Average Variance Estimation (SAVE)
 
@@ -233,6 +236,9 @@ class SAVE(DimReductionRegression):
 
 
 class DimReductionResults(model.Results):
+    """
+    Results class for a dimension reduction regression.
+    """
 
     def __init__(self, model, params, eigs):
         super(DimReductionResults, self).__init__(
