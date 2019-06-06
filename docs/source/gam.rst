@@ -80,6 +80,7 @@ Model Class
    :toctree: generated/
 
    GLMGam
+   LogitGam
 
 Results Classes
 ^^^^^^^^^^^^^^^

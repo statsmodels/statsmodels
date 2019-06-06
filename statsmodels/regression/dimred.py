@@ -50,9 +50,9 @@ class SlicedInverseReg(_DimReductionRegression):
         """
         Estimate the EDR space.
 
-        Optional keyword parameters
-        ---------------------------
-        slice_n : int
+        Parameters
+        ----------
+        slice_n : int, optional
             Number of observations per slice
         """
 
@@ -80,7 +80,7 @@ class SlicedInverseReg(_DimReductionRegression):
         return DimReductionResultsWrapper(results)
 
 
-class PHD(_DimReductionRegression):
+class PrincipalHessianDirections(_DimReductionRegression):
     """
     Principal Hessian Directions
 
@@ -102,9 +102,9 @@ class PHD(_DimReductionRegression):
         """
         Estimate the EDR space using PHD.
 
-        Optional keyword parameters
-        ---------------------------
-        resid : bool
+        Parameters
+        ----------
+        resid : bool, optional
             If True, use least squares regression to remove the
             linear relationship between each covariate and the
             response, before conducting PHD.
@@ -135,7 +135,7 @@ class PHD(_DimReductionRegression):
         return DimReductionResultsWrapper(results)
 
 
-class SAVE(_DimReductionRegression):
+class SlicedAverageVarianceEstimation(_DimReductionRegression):
     """
     Sliced Average Variance Estimation (SAVE)
 
@@ -145,10 +145,7 @@ class SAVE(_DimReductionRegression):
         The dependent variable
     exog : array-like (2d)
         The covariates
-
-    Keyword parameters
-    ------------------
-    bc : bool
+    bc : bool, optional
         If True, use the bias-correctedCSAVE method of Li and Zhu.
 
     References
@@ -173,8 +170,8 @@ class SAVE(_DimReductionRegression):
         """
         Estimate the EDR space.
 
-        Optional keyword arguments
-        --------------------------
+        Parameters
+        ----------
         slice_n : int
             Number of observations per slice
         """
@@ -254,3 +251,8 @@ class DimReductionResultsWrapper(wrap.ResultsWrapper):
 
 wrap.populate_wrapper(DimReductionResultsWrapper,  # noqa:E305
                       DimReductionResults)
+
+# aliases for expert users
+SIR = SlicedInverseReg
+PHD = PrincipalHessianDirections
+SAVE = SlicedAverageVarianceEstimation

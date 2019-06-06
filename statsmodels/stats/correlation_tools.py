@@ -972,9 +972,9 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
 
     References
     ----------
-    Genton M, W Kleiber (2015).  Cross covariance functions for multivariate
-    geostatics.  Statistical Science 30(2).
-    https://arxiv.org/pdf/1507.08017.pdf
+    .. [1] Genton M, W Kleiber (2015).  Cross covariance functions for
+        multivariate geostatics.  Statistical Science 30(2).
+        https://arxiv.org/pdf/1507.08017.pdf
     """
 
     exog = np.asarray(exog)

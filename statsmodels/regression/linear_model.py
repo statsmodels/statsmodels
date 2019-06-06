@@ -1385,8 +1385,8 @@ def burg(endog, order=1, demean=True):
 
     References
     ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
+    .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
     """
     # Avoid circular imports
     from statsmodels.tsa.stattools import levinson_durbin_pacf, pacf_burg

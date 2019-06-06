@@ -179,7 +179,7 @@ class QIF(base.Model):
         Calculate the gradient of the QIF objective function.
 
         Parameters
-        ---------
+        ----------
         params : array-like
             The model parameters at which the gradient is evaluated.
 
@@ -397,7 +397,7 @@ class QIF(base.Model):
 
 
 class QIFResults(base.LikelihoodModelResults):
-
+    """Results class for QIF Regression"""
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 

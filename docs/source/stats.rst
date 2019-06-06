@@ -89,6 +89,8 @@ Outliers and influence measures
    :toctree: generated/
 
    OLSInfluence
+   GLMInfluence
+   MLEInfluence
    variance_inflation_factor
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
@@ -255,7 +257,21 @@ to one way ANOVA, but still in developement
    local_fdr
    fdrcorrection_twostage
    NullDistribution
-   ._knockoff.RegressionFDR
+   RegressionFDR
+
+.. module:: statsmodels.stats.knockoff_regeffects
+   :synopsis: Regression Knock-Off Effects
+
+.. currentmodule:: statsmodels.stats.knockoff_regeffects
+
+.. autosummary::
+   :toctree: generated/
+
+   CorrelationEffects
+   OLSEffects
+   ForwardEffects
+   OLSEffects
+   RegModelEffects
 
 The following functions are not (yet) public
 
@@ -428,6 +444,8 @@ positive definite and close to the original matrix.
    cov_nearest
    cov_nearest_factor_homog
    FactoredPSDMatrix
+   kernel_covariance
+
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.

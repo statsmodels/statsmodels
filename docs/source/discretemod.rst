@@ -91,6 +91,14 @@ The specific model classes are:
    ZeroInflatedNegativeBinomialP
    ZeroInflatedGeneralizedPoisson
 
+.. module:: statsmodels.discrete.conditional_models
+
+.. autosummary::
+   :toctree: generated/
+
+   ConditionalLogit
+   ConditionalMNLogit
+   ConditionalPoisson
 
 The specific result classes are:
 

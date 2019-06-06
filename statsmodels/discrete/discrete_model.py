@@ -1417,15 +1417,16 @@ class GeneralizedPoisson(CountModel):
         return a
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None, use_transparams = False,
+            full_output=1, disp=1, callback=None, use_transparams=False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        # TODO: Fix doc string
         """
         use_transparams : bool
-            This parameter enable internal transformation to impose non-negativity.
-            True to enable. Default is False.
-            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
-            In case use_transparams=True and method="newton" or "ncg" transformation
-            is ignored.
+            This parameter enable internal transformation to impose
+            non-negativity. True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0)
+            constaint. In case use_transparams=True and method="newton" or
+            "ncg" transformation is ignored.
         """
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
@@ -3168,15 +3169,16 @@ class NegativeBinomialP(CountModel):
         return a
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None, use_transparams = False,
+            full_output=1, disp=1, callback=None, use_transparams=False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        # TODO: Fix doc string
         """
         use_transparams : bool
-            This parameter enable internal transformation to impose non-negativity.
-            True to enable. Default is False.
-            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
-            In case use_transparams=True and method="newton" or "ncg" transformation
-            is ignored.
+            This parameter enable internal transformation to impose
+            non-negativity. True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0)
+            constaint. In case use_transparams=True and method="newton" or
+            "ncg" transformation is ignored.
         """
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True

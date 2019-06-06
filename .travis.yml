@@ -66,8 +66,7 @@ matrix:
         # Documentation build (on Python 3.6 + cutting edge packages)
     - python: 3.6
       env:
-        - PYTHON=3.6
-        - PANDAS=0.23
+        - PYTHON=3.7
         - DOCBUILD=true
     # Python 3.6 + legacy blas
     - python: 3.6

@@ -223,15 +223,8 @@ class ConditionalLogit(_ConditionalModel):
     exog : array-like
         The array of covariates.  Do not include an intercept
         in this array.
-
-    Required keyword parameters
-    ---------------------------
     groups : array-like
-        Codes defining the groups.
-
-    Returns
-    -------
-    A ConditionalMNLogit model instance, which can be fit using the `fit` method.
+        Codes defining the groups. This is a required keyword parameter.
     """
 
     def __init__(self, endog, exog, missing='none', **kwargs):
@@ -367,15 +360,8 @@ class ConditionalPoisson(_ConditionalModel):
         The response variable
     exog : array-like
         The covariates
-
-    Required keyword parameters
-    ---------------------------
     groups : array-like
-        Codes defining the groups
-
-    Returns
-    -------
-    A ConditionalPoisson model instance that can be fit using 'fit'.
+        Codes defining the groups. This is a required keyword parameter.
     """
 
     def loglike(self, params):
@@ -507,11 +493,8 @@ class ConditionalMNLogit(_ConditionalModel):
         categories.
     exog : array-like
         The independent variables.
-
-    Required keyword arguments
-    --------------------------
     groups : array-like
-        Codes defining the groups.
+        Codes defining the groups. This is a required keyword parameter.
 
     References
     ----------

@@ -7,15 +7,22 @@ License: BSD-3
 '''
 
 from statsmodels.compat.python import range
+
 from collections import OrderedDict
+
 import numpy as np
 
+from statsmodels.stats._knockoff import RegressionFDR
 
-#==============================================
+__all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
+           'multipletests', 'NullDistribution', 'RegressionFDR']
+
+# ==============================================
 #
 # Part 1: Multiple Tests and P-Value Correction
 #
-#==============================================
+# ==============================================
+
 
 def _ecdf(x):
     '''no frills empirical cdf used in fdrcorrection

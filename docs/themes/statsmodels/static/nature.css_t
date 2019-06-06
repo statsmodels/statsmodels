@@ -249,6 +249,10 @@ pre {
     -moz-box-shadow: 1px 1px 1px #d8d8d8;
 }
 
+.pre {
+    font-size: 135%;
+}
+
 tt {
     background-color: #ecf0f3;
     color: #222;

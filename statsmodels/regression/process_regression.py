@@ -80,7 +80,7 @@ class GaussianCovariance(ProcessCovariance):
     This class represents a parametric covariance model for a Gaussian
     process as described in the work of Paciorek et al. cited below.
 
-    Following Paciorek et al, the covariance between observations with
+    Following Paciorek et al [1]_, the covariance between observations with
     index `i` and `j` is given by:
 
     .. math::
@@ -104,10 +104,10 @@ class GaussianCovariance(ProcessCovariance):
 
     References
     ----------
-    Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
-    a new class of nonstationary covariance functions. Environmetrics,
-    17:483–506.
-    https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
+    .. [1] Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
+        a new class of nonstationary covariance functions. Environmetrics,
+        17:483–506.
+        https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
     """
 
     def get_cov(self, time, sc, sm):

@@ -108,10 +108,8 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
 
     References
     ----------
-    Brockwell, Peter J., and Richard A. Davis. 2009.
-    Time Series: Theory and Methods. 2nd ed. 1991.
-    New York, NY: Springer.
-
+    .. [*] Brockwell, Peter J., and Richard A. Davis. 2009. Time Series:
+        Theory and Methods. 2nd ed. 1991. New York, NY: Springer.
     """
     if dtype is None:
         dtype = np.common_type(np.array(ar), np.array(ma), np.array(sigma2))
