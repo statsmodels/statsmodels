@@ -2476,3 +2476,20 @@ def test_arima_summary_no_lags(reset_randomstate):
     assert 'const ' in summ
     assert 'x1 ' in summ
     assert 'x2 ' in summ
+
+
+def test_constant_column_trend():
+    # GH#3343 analogous to GH#5258 for AR, when the user passes a constant exog
+    #  and also passes trend="c", raise instead _make_arma_exog used to
+    #  silently drop a column and return an inconsistenct k_trend value.
+
+    exog = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
+    endog =  np.array([-0.011866, 0.003380, 0.015357, 0.004451, -0.020889])
+
+    model = ARIMA(endog=endog, order=(1, 1, 0), exog=exog)
+
+    # Fitting with a constant and constant exog raises because of colinearity
+    with pytest.raises(ValueError, match="already contains"):
+        model.fit(trend="c")
+
+    # FIXME: calling model.fit(trend="nc") raises for orthogonal reasons

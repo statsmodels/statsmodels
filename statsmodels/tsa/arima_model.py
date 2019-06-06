@@ -394,7 +394,7 @@ def _make_arma_exog(endog, exog, trend):
     if exog is None and trend == 'c':   # constant only
         exog = np.ones((len(endog), 1))
     elif exog is not None and trend == 'c':  # constant plus exogenous
-        exog = add_trend(exog, trend='c', prepend=True)
+        exog = add_trend(exog, trend='c', prepend=True, has_constant='raise')
     elif exog is not None and trend == 'nc':
         # make sure it's not holding constant from last run
         if exog.var() == 0:
