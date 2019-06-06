@@ -9,8 +9,8 @@ Release summary
 
 Statsmodels is using github to store the updated documentation. Two version are available:
 
- * `Stable <https://www.statsmodels.org/stable/>`_, the latest releast
- * `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
+* `Stable <https://www.statsmodels.org/stable/>`_, the latest release
+* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
 
 **Warning**
 
@@ -20,6 +20,11 @@ possible. The stability of a new feature depends on how much time it
 was already in statsmodels master and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
+
+Stats
+-----
+**Issues Closed**: 1052
+**Pull Requests Merged**: 469
 
 The list of pull requests for this release can be found on `github
 <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.10/>`_
@@ -68,10 +73,12 @@ Quadratic Inference Function, :class:`~statsmodels.genmod.qif.QIF`, improve the 
 
 Gaussian Process Regression
 ---------------------------
-:class:`~statsmodels.regression.process_regression.GaussianCovariance` ad Gaussian process regression which 
-is a nonparametric kernel-based method to model data.  :class:`~statsmodels.regression.process_regression.ProcessMLE`
-is a generic class that can be used for other types of process regression. The results are returned in a 
-:class:`~statsmodels.regression.process_regression.ProcessMLEResults`. :func:`~statsmodels.stats.correlation_tools.kernel_covariance`
+:class:`~statsmodels.regression.process_regression.GaussianCovariance` implements Gaussian process
+regression which is a nonparametric kernel-based method to model data.
+:class:`~statsmodels.regression.process_regression.ProcessMLE` is a generic class that can be used
+for other types of process regression. The results are returned in a
+:class:`~statsmodels.regression.process_regression.ProcessMLEResults`.
+:func:`~statsmodels.stats.correlation_tools.kernel_covariance`
 provides a method that uses kernel averaging to estimate a multivariate covariance function.
 
 Burg's Method
@@ -114,7 +121,7 @@ Submodules
 ~~~~~~~~
 - Add ``ModelWarning`` base class to avoid warning filter on standard UserWarning (:pr:`4712`)
 - Add ultra-high screening with SCAD (:pr:`4683`)
-- Add penalized mle scad (:pr:`4576` :issue:`3677` :issue:`2374`)
+- Add penalized mle scad (:pr:`4576`, :issue:`3677`, :issue:`2374`)
 - Add score/LM conditional moment tests (:pr:`2096`)
 - Fixed a bug which resulted in weights not being used in penalized models (:pr:`5762`, :issue:`4725`)
 - Allow the constant index to be located even when ``hasconst=False`` (:pr:`5680`)
@@ -139,7 +146,7 @@ Submodules
 - Ensure that column names are properly attached to the model (:pr:`4788`)
 - Change ``cov_params`` in ``BayesMixedLM`` to act more like it does in other models (:pr:`4788`)
 - Add missing predict and fit methods to ``BayesMixedGLM`` (:pr:`4702`)
-- Add influence function support for GLM (:pr:`4732` :issue:`4268` :issue:`4257`)
+- Add influence function support for GLM (:pr:`4732`, :issue:`4268`, :issue:`4257`)
 - Fixed a bug in GEE where history was not saved (:pr:`5789`)
 - Enable ``missing='drop'`` in GEE (:pr:`5771`)
 - Improve score test to allow the submodel to be provided as a GEEResults object instead of as linear constraints (:pr:`5435`)
@@ -183,7 +190,7 @@ Submodules
 ``nonparametric``
 ~~~~~~~~~~~~~~~~~
 - Added input protection ``lowess` to ensure ``frac`` is always in bounds. (:pr:`5556`)
-- Add check of inputs in ``KernelReg`` (:pr:`4968` :issue:`4873`)
+- Add check of inputs in ``KernelReg`` (:pr:`4968`, :issue:`4873`)
 
 ``regression``
 ~~~~~~~~~~~~~~
@@ -199,9 +206,9 @@ Submodules
 - Added label to R2 when model is uncentered (:pr:`5083`, :issue:`5078`)
 - Allow several optimizers to be tried in sequence for MixedLM (:pr:`4819`)
 - Fix bug in Recursive LS with multiple constraints (:pr:`4826`)
-- Fix a typo in ``ColinearityWarning`` (:pr:`4889` :issue:`4671`)
+- Fix a typo in ``ColinearityWarning`` (:pr:`4889`, :issue:`4671`)
 - Add a finite check for ``_MinimalWLS`` (:pr:`4960`)
-- Fix definition of R2 in ``GLS`` (:pr:`4967` :issue:`1252` :issue:`1171`)
+- Fix definition of R2 in ``GLS`` (:pr:`4967`, :issue:`1252`, :issue:`1171`)
 - Add Burgs algorithm for estimating parameters of AR models (:pr:`5016`)
 
 ``sandbox``
@@ -227,14 +234,14 @@ Submodules
 
 ``tsa``
 ~~~~~~~
-- Fix k_params in seasonal MAs (:pr:`4790` :issue:`4789`)
-- Fix prediction index in VAR predict (:pr:`4785` :issue:`4784`)
+- Fix k_params in seasonal MAs (:pr:`4790`, :issue:`4789`)
+- Fix prediction index in VAR predict (:pr:`4785`, :issue:`4784`)
 - Standardized forecast error in state space when using Cholesky methods with partial missing data (:pr:`4770`)
 - Add and fix VARMAX trend, exog. timing and polynomial trends (:pr:`4766`)
 - Fix bug in exact diffuse filtering in complex data type case (:pr:`4743`)
 - SARIMAX warns for non-stationary starting params (:pr:`4739`)
 - Make arroots and maroots have consistent return type (:pr:`4559`)
-- Add exact diffuse initialization to state space models (:pr:`4418` :issue:`4042`)
+- Add exact diffuse initialization to state space models (:pr:`4418`, :issue:`4042`)
 - Allow concentrating scale out of log-likelihood in state space models (:pr:`3480`)
 - Fixed a bug in ``coint_johansen`` that prevented it from running with 0 lags (:pr:`5783`)
 - Improved performance in ``kpss`` using ``np.sum`` (:pr:`5774`)
@@ -259,8 +266,8 @@ Submodules
 - Fix bug in simulation smoothed measurement disturbance with FILTER_COLLAPSED (:pr:`4810`, :issue:`4800`)
 - Improve SARIMAX for time series close to non-stationary (:pr:`4815`)
 - Use Cython to improve speed of Exponential Smoothing models (:pr:`4845`)
-- Fix a bug in ``arma_order_selection`` when data is passed in as a list (:pr:`4890` :issue:`4727`)
-- Add explicit exceptions in ARMA/ARIMA forecast with missing or wrong exog (:pr:`4915` :issue:`3737`)
+- Fix a bug in ``arma_order_selection`` when data is passed in as a list (:pr:`4890`, :issue:`4727`)
+- Add explicit exceptions in ARMA/ARIMA forecast with missing or wrong exog (:pr:`4915`, :issue:`3737`)
 - Remove incorrect endog from results if constraints (:pr:`4921`)
 - Add ``nlag`` argument to ``acovf`` (:pr:`4937`)
 - Set reasonable default lags for acf/pacf plots (:pr:`4949`)
@@ -853,4 +860,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5803`: ENH: QIF regression
 * :pr:`5805`: REF/CLN: collect imports at top of file, de-duplicate imports
 * :pr:`5815`: CLN: test_gee.py
+* :pr:`5816`: CLN: genmod/families/
+* :pr:`5818`: CLN: qif
 * :pr:`5825`: MAINT: use correct key name to check cov params presence
+* :pr:`5830`: DOC: Add docstring for base class
