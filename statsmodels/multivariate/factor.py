@@ -658,7 +658,7 @@ class FactorResults(object):
 
         See Also
         --------
-        `factor_scoring` : compute factor scores using scoring matrix
+        statsmodels.multivariate.factor.FactorResults.factor_scoring
         """
         L = self.loadings
         T = self.rotation_matrix.T
@@ -720,7 +720,7 @@ class FactorResults(object):
 
         See Also
         --------
-        `factor_score_params` : scoring matrix
+        statsmodels.multivariate.factor.FactorResults.factor_score_params
         """
 
         if transform is False and endog is not None:
@@ -746,6 +746,7 @@ class FactorResults(object):
         return factors
 
     def summary(self):
+        """Summary"""
         summ = summary2.Summary()
         summ.add_title('Factor analysis results')
         loadings_no_rot = pd.DataFrame(

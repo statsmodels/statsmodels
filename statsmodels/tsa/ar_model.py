@@ -614,9 +614,8 @@ class ARResults(tsbase.TimeSeriesModelResults):
     scale : float, optional
         An estimate of the scale of the model.
 
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
 
     aic : float
         Akaike Information Criterion using Lutkephol's definition.

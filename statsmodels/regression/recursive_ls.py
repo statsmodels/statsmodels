@@ -451,20 +451,24 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def ssr(self):
+        """ssr"""
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (self.nobs - d) * self.filter_results.obs_cov[0, 0, 0]
 
     @cache_readonly
     def centered_tss(self):
+        """Centered tss"""
         return np.sum((self.filter_results.endog[0] -
                        np.mean(self.filter_results.endog))**2)
 
     @cache_readonly
     def uncentered_tss(self):
+        """uncentered tss"""
         return np.sum((self.filter_results.endog[0])**2)
 
     @cache_readonly
     def ess(self):
+        """esss"""
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
@@ -472,6 +476,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def rsquared(self):
+        """rsquared"""
         if self.k_constant:
             return 1 - self.ssr / self.centered_tss
         else:
@@ -479,14 +484,17 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def mse_model(self):
+        """mse_model"""
         return self.ess / self.df_model
 
     @cache_readonly
     def mse_resid(self):
+        """mse_resid"""
         return self.ssr / self.df_resid
 
     @cache_readonly
     def mse_total(self):
+        """mse_total"""
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:

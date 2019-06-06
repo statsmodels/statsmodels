@@ -28,23 +28,24 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 
-# Add any Sphinx extension module names here, as strings. They can be extensions
-# coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
+# Add any Sphinx extension module names here, as strings. They can be
+# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',
+              'numpydoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               # One of mathjax or imgmath
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              'sphinx.ext.autosummary',
+              # 'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
               # numpydoc or sphinx.ext.napoleon, but not both
-              'sphinx.ext.napoleon'
+              # 'sphinx.ext.napoleon'
               ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -61,7 +62,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2018, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2019, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
@@ -100,7 +101,7 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['*/autosummary/class.rst', '*/autosummary/glmfamilies.rst']
+exclude_patterns = ['*/autosummary/*.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -303,6 +304,25 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # Allow duplicate toc entries.
 #epub_tocdup = True
 
+# Sphinx napoleon options
+# napoleon_google_docstring = True
+# napoleon_numpy_docstring = True
+# napoleon_include_init_with_doc = False
+# napoleon_include_private_with_doc = False
+# napoleon_include_special_with_doc = False
+# napoleon_use_admonition_for_examples = False
+# napoleon_use_admonition_for_notes = False
+# napoleon_use_admonition_for_references = False
+# napoleon_use_ivar = False
+# napoleon_use_param = True
+# napoleon_use_rtype = True
+# napoleon_use_keyword = True
+# napoleon_custom_sections = None
+
+# Numpydoc options
+# numpydoc_attributes_as_param_list = True
+# numpydoc_show_class_members = False
+# numpydoc_show_inherited_class_members = True
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {

@@ -459,10 +459,6 @@ class SVARProcess(VARProcess):
     A_mask : neqs x neqs mask array with known parameters masked
     B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
     B_mask : neqs x neqs mask array with known parameters masked
-
-    Returns
-    -------
-    **Attributes**:
     """
     def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
                  names=None):
@@ -516,10 +512,8 @@ class SVARResults(SVARProcess, VARResults):
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
 
-
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
     aic
     bic
     bse

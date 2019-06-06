@@ -18,8 +18,8 @@ class ScreeningResults(object):
     Note: Indices except for exog_idx and in the iterated case also
     idx_nonzero_batches are based on the combined [exog_keep, exog] array.
 
-    **Attributes**
-
+    Attributes
+    ----------
     results_final : instance
         Results instance returned by the final fit of the penalized model, i.e.
         after trimming exog with params below trimming threshold.

@@ -418,8 +418,8 @@ class GLS(RegressionModel):
         same as WLS.
     %(extra_params)s
 
-    **Attributes**
-
+    Attributes
+    ----------
     pinv_wexog : array
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
     cholsimgainv : array
@@ -635,7 +635,9 @@ class WLS(RegressionModel):
     weights : array
         The stored weights supplied as an argument.
 
-    See regression.GLS
+    See Also
+    --------
+    regression.GLS
 
     Examples
     --------
@@ -1408,24 +1410,10 @@ class RegressionResults(base.LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
 
-    Returns
-    -------
-    **Attributes**
-
-    aic
-        Akaike's information criteria. For a model with a constant
-        :math:`-2llf + 2(df\_model + 1)`. For a model without a constant
-        :math:`-2llf + 2(df\_model)`.
-    bic
-        Bayes' information criteria. For a model with a constant
-        :math:`-2llf + \log(n)(df\_model+1)`. For a model without a constant
-        :math:`-2llf + \log(n)(df\_model)`
-    bse
-        The standard errors of the parameter estimates.
+    Attributes
+    ----------
     pinv_wexog
         See specific model class docstring
-    centered_tss
-        The total (weighted) sum of squares centered about the mean.
     cov_HC0
         Heteroscedasticity robust covariance matrix. See HC0_se below.
     cov_HC1
@@ -1442,18 +1430,6 @@ class RegressionResults(base.LikelihoodModelResults):
     df_resid
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
         `n - p` if a constant is not included.
-    ess
-        Explained sum of squares.  If a constant is present, the centered
-        total sum of squares minus the sum of squared residuals. If there is
-        no constant, the uncentered total sum of squares is used.
-    fvalue
-        F-statistic of the fully specified model.  Calculated as the mean
-        squared error of the model divided by the mean squared error of the
-        residuals.
-    f_pvalue
-        p-value of the F-statistic
-    fittedvalues
-        The predicted values for the original (unwhitened) design.
     het_scale
         adjusted squared residuals for heteroscedasticity robust standard
         errors. Is only available after `HC#_se` or `cov_HC#` is called.
@@ -1496,51 +1472,12 @@ class RegressionResults(base.LikelihoodModelResults):
         resid^(2)/(1-h_ii)^(2).
     model
         A pointer to the model instance that called fit() or results.
-    mse_model
-        Mean squared error the model. This is the explained sum of
-        squares divided by the model degrees of freedom.
-    mse_resid
-        Mean squared error of the residuals.  The sum of squared
-        residuals divided by the residual degrees of freedom.
-    mse_total
-        Total mean squared error.  Defined as the uncentered total sum
-        of squares divided by n the number of observations.
-    nobs
-        Number of observations n.
-    normalized_cov_params
-        See specific model class docstring
     params
         The linear coefficients that minimize the least squares
         criterion.  This is usually called Beta for the classical
         linear model.
-    pvalues
-        The two-tailed p values for the t-stats of the params.
-    resid
-        The residuals of the model.
     resid_pearson
         `wresid` normalized to have unit variance.
-    rsquared
-        R-squared of a model with an intercept.  This is defined here
-        as 1 - `ssr`/`centered_tss` if the constant is included in the
-        model and 1 - `ssr`/`uncentered_tss` if the constant is
-        omitted.
-    rsquared_adj
-        Adjusted R-squared.  This is defined here as 1 -
-        (`nobs`-1)/`df_resid` * (1-`rsquared`) if a constant is
-        included and 1 - `nobs`/`df_resid` * (1-`rsquared`) if no
-        constant is included.
-    scale
-        A scale factor for the covariance matrix.  Default value is
-        ssr/(n-p).  Note that the square root of `scale` is often
-        called the standard error of the regression.
-    ssr
-        Sum of squared (whitened) residuals.
-    uncentered_tss
-        Uncentered sum of squares.  Sum of the squared values of the
-        (whitened) endogenous response variable.
-    wresid
-        The residuals of the transformed/whitened regressand and
-        regressor(s)
     """
 
     _cache = {}  # needs to be a class attribute for scale setter?
@@ -1607,35 +1544,48 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def nobs(self):
+        """Number of observations n."""
         return float(self.model.wexog.shape[0])
 
     @cache_readonly
     def fittedvalues(self):
+        """The predicted values for the original (unwhitened) design."""
         return self.model.predict(self.params, self.model.exog)
 
     @cache_readonly
     def wresid(self):
+        """
+        The residuals of the transformed/whitened regressand and regressor(s)
+        """
         return self.model.wendog - self.model.predict(
             self.params, self.model.wexog)
 
     @cache_readonly
     def resid(self):
+        """The residuals of the model."""
         return self.model.endog - self.model.predict(
             self.params, self.model.exog)
 
     # TODO: fix writable example
     @cache_writable()
     def scale(self):
+        """
+        A scale factor for the covariance matrix.  Default value is
+        ssr/(n-p).  Note that the square root of `scale` is often
+        called the standard error of the regression.
+        """
         wresid = self.wresid
         return np.dot(wresid, wresid) / self.df_resid
 
     @cache_readonly
     def ssr(self):
+        """Sum of squared (whitened) residuals."""
         wresid = self.wresid
         return np.dot(wresid, wresid)
 
     @cache_readonly
     def centered_tss(self):
+        """The total (weighted) sum of squares centered about the mean."""
         model = self.model
         weights = getattr(model, 'weights', None)
         sigma = getattr(model, 'sigma', None)
@@ -1656,11 +1606,19 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def uncentered_tss(self):
+        """
+        Uncentered sum of squares.  Sum of the squared values of the
+        (whitened) endogenous response variable.
+        """
         wendog = self.model.wendog
         return np.dot(wendog, wendog)
 
     @cache_readonly
     def ess(self):
+        """Explained sum of squares. If a constant is present, the centered
+        total sum of squares minus the sum of squared residuals. If there is no
+        constant, the uncentered total sum of squares is used."""
+
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
@@ -1668,6 +1626,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared(self):
+        """
+        R-squared of a model with an intercept.  This is defined here
+        as 1 - `ssr`/`centered_tss` if the constant is included in the
+        model and 1 - `ssr`/`uncentered_tss` if the constant is
+        omitted.
+        """
         if self.k_constant:
             return 1 - self.ssr/self.centered_tss
         else:
@@ -1675,19 +1639,37 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared_adj(self):
+        """
+        Adjusted R-squared.  This is defined here as 1 -
+        (`nobs`-1)/`df_resid` * (1-`rsquared`) if a constant is
+        included and 1 - `nobs`/`df_resid` * (1-`rsquared`) if no
+        constant is included.
+        """
         return 1 - (np.divide(self.nobs - self.k_constant, self.df_resid)
                     * (1 - self.rsquared))
 
     @cache_readonly
     def mse_model(self):
+        """
+        Mean squared error the model. This is the explained sum of
+        squares divided by the model degrees of freedom.
+        """
         return self.ess/self.df_model
 
     @cache_readonly
     def mse_resid(self):
+        """
+        Mean squared error of the residuals.  The sum of squared
+        residuals divided by the residual degrees of freedom.
+        """
         return self.ssr/self.df_resid
 
     @cache_readonly
     def mse_total(self):
+        """
+        Total mean squared error.  Defined as the uncentered total sum
+        of squares divided by n the number of observations.
+        """
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
@@ -1695,6 +1677,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fvalue(self):
+        """F-statistic of the fully specified model.  Calculated as the mean
+        squared error of the model divided by the mean squared error of the
+        residuals."""
         if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
             # with heteroscedasticity or correlation robustness
             k_params = self.normalized_cov_params.shape[0]
@@ -1724,18 +1709,26 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def f_pvalue(self):
+        """p-value of the F-statistic"""
         return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
 
     @cache_readonly
     def bse(self):
+        """The standard errors of the parameter estimates."""
         return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
     def aic(self):
+        """Akaike's information criteria. For a model with a constant
+        :math:`-2llf + 2(df\_model + 1)`. For a model without a constant
+        :math:`-2llf + 2(df\_model)`."""
         return -2 * self.llf + 2 * (self.df_model + self.k_constant)
 
     @cache_readonly
     def bic(self):
+        """Bayes' information criteria. For a model with a constant
+        :math:`-2llf + \log(n)(df\_model+1)`. For a model without a constant
+        :math:`-2llf + \log(n)(df\_model)`"""
         return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
                                                      self.k_constant))
 

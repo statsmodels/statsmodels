@@ -967,21 +967,26 @@ class DynamicFactorResults(MLEResults):
     def factors(self):
         """
         Estimates of unobserved factors
+
         Returns
         -------
-        out: Bunch
-            Has the following attributes:
+        out : Bunch
+            Has the following attributes shown in Notes.
 
-            - `filtered`: a time series array with the filtered estimate of
-                          the component
-            - `filtered_cov`: a time series array with the filtered estimate of
-                          the variance/covariance of the component
-            - `smoothed`: a time series array with the smoothed estimate of
-                          the component
-            - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
-            - `offset`: an integer giving the offset in the state vector where
-                        this component begins
+        Notes
+        -----
+        The output is a bunch of the following format:
+
+        - `filtered`: a time series array with the filtered estimate of
+          the component
+        - `filtered_cov`: a time series array with the filtered estimate of
+          the variance/covariance of the component
+        - `smoothed`: a time series array with the smoothed estimate of
+          the component
+        - `smoothed_cov`: a time series array with the smoothed estimate of
+          the variance/covariance of the component
+        - `offset`: an integer giving the offset in the state vector where
+          this component begins
         """
         # If present, level is always the first component of the state vector
         out = None

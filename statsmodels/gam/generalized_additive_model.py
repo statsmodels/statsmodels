@@ -99,7 +99,8 @@ class GLMGamResults(GLMResults):
     All methods related to the loglikelihood function return the penalized
     values.
 
-    **Extra Attributes**
+    Attributes
+    ----------
 
     edf
         list of effective degrees of freedom for each column of the design
@@ -196,7 +197,8 @@ class GLMGamResults(GLMResults):
         return ex, exog_index
 
     def predict(self, exog=None, exog_smooth=None, transform=True, **kwargs):
-        """"compute prediction
+        """"
+        compute prediction
 
         Parameters
         ----------

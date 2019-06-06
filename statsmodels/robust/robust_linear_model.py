@@ -47,10 +47,8 @@ class RLM(base.LikelihoodModel):
         See statsmodels.robust.norms for more information.
     %(extra_params)s
 
-    Notes
-    -----
-
-    **Attributes**
+    Attributes
+    ----------
 
     df_model : float
         The degrees of freedom of the model.  The number of regressors p less
@@ -301,9 +299,8 @@ class RLMResults(base.LikelihoodModelResults):
     """
     Class to contain RLM results
 
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
 
     bcov_scaled : array
         p x p scaled covariance matrix specified in the model fit method.

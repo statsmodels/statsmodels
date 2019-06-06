@@ -41,6 +41,7 @@ class HypothesisTestResults(object):
         self.signif_str = " at {:.0%} significance level".format(self.signif)
 
     def summary(self):
+        """Return summary"""
         title = self.title + ". " + self.h0 + ". " \
                                   + self.conclusion_str + self.signif_str + "."
         data_fmt = {"data_fmts": ["%#0.4g", "%#0.4g", "%#0.3F", "%s"]}

@@ -1350,10 +1350,8 @@ class PHRegResults(base.LikelihoodModelResults):
     ----------
     See statsmodels.LikelihoodModelResults
 
-    Returns
-    -------
-    **Attributes**
-
+    Attributes
+    ----------
     model : class instance
         PHreg model instance that called fit.
     normalized_cov_params : array

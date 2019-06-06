@@ -328,9 +328,8 @@ _gee_fit_doc = """
 """
 
 _gee_results_doc = """
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
 
     cov_params_default : ndarray
         default covariance of the parameter estimates. Is chosen among one

@@ -48,6 +48,11 @@ class Model(object):
     %(params_doc)s
     %(extra_params_doc)s
 
+    Attributes
+    ----------
+    exog_names
+    endog_names
+
     Notes
     -----
     `endog` and `exog` are references to any data provided.  So if the data is
@@ -759,6 +764,11 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     # this is redundant and not used when subclassing
     def initialize(self):
+        """
+        Initialize (possibly re-initialize) a Model instance. For
+        instance, the design matrix of a linear model may change
+        and some things must be recomputed.
+        """
         if not self.score:  # right now score is not optional
             self.score = lambda x: approx_fprime(x, self.loglike)
             if not self.hessian:
@@ -811,15 +821,19 @@ class GenericLikelihoodModel(LikelihoodModel):
         return paramsfull
 
     def reduceparams(self, params):
+        """Reduce parameters"""
         return params[self.fixed_paramsmask]
 
     def loglike(self, params):
+        """Log-likelihood of model at params"""
         return self.loglikeobs(params).sum(0)
 
     def nloglike(self, params):
+        """Negative log-likelihood of model at params"""
         return -self.loglikeobs(params).sum(0)
 
     def loglikeobs(self, params):
+        """Log-likelihood of individual observations at params"""
         return -self.nloglikeobs(params)
 
     def score(self, params):
@@ -925,6 +939,9 @@ class Results(object):
         self._data_attr = []
 
     def initialize(self, model, params, **kwd):
+        """
+        Initialize (possibly re-initialize) a Results instance.
+        """
         self.params = params
         self.model = model
         if hasattr(model, 'k_constant'):
@@ -1030,6 +1047,11 @@ class Results(object):
             return predict_results
 
     def summary(self):
+        """
+        Summary
+
+        Not implemented
+        """
         raise NotImplementedError
 
 
@@ -1050,9 +1072,8 @@ class LikelihoodModelResults(Results):
         For (some subset of models) scale will typically be the
         mean square error from the estimated model (sigma^2)
 
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
     mle_retvals : dict
         Contains the values returned from the chosen optimization method if
         full_output is True during the fit.  Available only if the model
@@ -1226,6 +1247,7 @@ class LikelihoodModelResults(Results):
                                       use_t=use_t, **cov_kwds)
 
     def normalized_cov_params(self):
+        """See specific model class docstring"""
         raise NotImplementedError
 
     def _get_robustcov_results(self, cov_type='nonrobust', use_self=True,
@@ -1249,10 +1271,12 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def llf(self):
+        """Log-likelihood of model"""
         return self.model.loglike(self.params)
 
     @cache_readonly
     def bse(self):
+        """The standard errors of the parameter estimates."""
         # Issue 3299
         if ((not hasattr(self, 'cov_params_default')) and
                 (self.normalized_cov_params is None)):
@@ -1271,6 +1295,7 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def pvalues(self):
+        """The two-tailed p values for the t-stats of the params."""
         if self.use_t:
             df_resid = getattr(self, 'df_resid_inference', self.df_resid)
             return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
@@ -2144,6 +2169,7 @@ class ResultMixin(object):
 
     @cache_readonly
     def df_modelwc(self):
+        """Model WC"""
         # collect different ways of defining the number of parameters, used for
         # aic, bic
         if hasattr(self, 'df_model'):
@@ -2158,10 +2184,12 @@ class ResultMixin(object):
 
     @cache_readonly
     def aic(self):
+        """Akaike information criterion"""
         return -2 * self.llf + 2 * (self.df_modelwc)
 
     @cache_readonly
     def bic(self):
+        """Bayesian information criterion"""
         return -2 * self.llf + np.log(self.nobs) * (self.df_modelwc)
 
     @cache_readonly
@@ -2276,6 +2304,11 @@ class ResultMixin(object):
         return results.mean(0), results.std(0), results
 
     def get_nlfun(self, fun):
+        """
+        get_nlfun
+
+        This is not Implemented
+        """
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
         raise NotImplementedError
@@ -2298,12 +2331,8 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         LikelihoodModel.fit(), in a superclass of GnericLikelihoodModels
 
 
-    Returns
-    -------
-    *Attributes*
-
-    Warning most of these are not available yet
-
+    Attributes
+    ----------
     aic : float
         Akaike information criterion.  -2*(`llf` - p) where p is the number
         of regressors including the intercept.

@@ -113,6 +113,7 @@ class DescrStatsW(object):
 
     @cache_readonly
     def sum_weights(self):
+        """Sum of weights"""
         return self.weights.sum(0)
 
     @cache_readonly

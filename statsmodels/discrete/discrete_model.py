@@ -74,36 +74,14 @@ _discrete_results_docs = """
     scale : float
         A scale parameter for the covariance matrix.
 
-    Returns
-    -------
-    *Attributes*
-
-    aic : float
-        Akaike information criterion.  `-2*(llf - p)` where `p` is the number
-        of regressors including the intercept.
-    bic : float
-        Bayesian information criterion. `-2*llf + ln(nobs)*p` where `p` is the
-        number of regressors including the intercept.
-    bse : array
-        The standard errors of the coefficients.
+    Attributes
+    ----------
     df_resid : float
         See model definition.
     df_model : float
         See model definition.
-    fitted_values : array
-        Linear predictor XB.
     llf : float
         Value of the loglikelihood
-    llnull : float
-        Value of the constant-only loglikelihood
-    llr : float
-        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
-    llr_pvalue : float
-        The chi-squared probability of getting a log-likelihood ratio
-        statistic greater than llr.  llr has a chi-squared distribution
-        with degrees of freedom `df_model`.
-    prsquared : float
-        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
     %(extra_attr)s"""
 
 _l1_results_attr = """    nnz_params : Integer
@@ -1442,8 +1420,6 @@ class GeneralizedPoisson(CountModel):
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         """
-        Parameters
-        ----------
         use_transparams : bool
             This parameter enable internal transformation to impose non-negativity.
             True to enable. Default is False.
@@ -3195,8 +3171,6 @@ class NegativeBinomialP(CountModel):
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         """
-        Parameters
-        ----------
         use_transparams : bool
             This parameter enable internal transformation to impose non-negativity.
             True to enable. Default is False.
@@ -3407,14 +3381,25 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def prsquared(self):
+        """
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        """
         return 1 - self.llf/self.llnull
 
     @cache_readonly
     def llr(self):
+        """
+        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
+        """
         return -2*(self.llnull - self.llf)
 
     @cache_readonly
     def llr_pvalue(self):
+        """
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+        """
         return stats.distributions.chi2.sf(self.llr, self.df_model)
 
     def set_null_options(self, llnull=None, attach_results=True, **kwds):
@@ -3460,7 +3445,9 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
-
+        """
+        Value of the constant-only loglikelihood
+        """
         model = self.model
         kwds = model._get_init_kwds().copy()
         for key in getattr(model, '_null_drop_keys', []):
@@ -3504,18 +3491,33 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
+        """
+        Linear predictor XB.
+        """
         return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
 
     @cache_readonly
     def resid_response(self):
+        """
+        Respnose residuals. The response residuals are defined as
+        `endog - fittedvalues`
+        """
         return self.model.endog - self.predict()
 
     @cache_readonly
     def aic(self):
+        """
+        Akaike information criterion.  `-2*(llf - p)` where `p` is the number
+        of regressors including the intercept.
+        """
         return -2*(self.llf - (self.df_model+1))
 
     @cache_readonly
     def bic(self):
+        """
+        Bayesian information criterion. `-2*llf + ln(nobs)*p` where `p` is the
+        number of regressors including the intercept.
+        """
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
     def _get_endog_name(self, yname, yname_list):
@@ -3728,10 +3730,12 @@ class NegativeBinomialResults(CountResults):
 
     @cache_readonly
     def lnalpha(self):
+        """Natural log of alpha"""
         return np.log(self.params[-1])
 
     @cache_readonly
     def lnalpha_std_err(self):
+        """Natural log of standardized error"""
         return self.bse[-1] / self.params[-1]
 
     @cache_readonly

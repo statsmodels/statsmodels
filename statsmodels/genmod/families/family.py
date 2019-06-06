@@ -1366,7 +1366,7 @@ class Tweedie(Family):
     statsmodels.genmod.generalized_linear_model.GLM class.
     """
     links = [L.log, L.Power]
-    variance = V.Power
+    variance = V.Power(power=1.5)
     safe_links = [L.log, L.Power]
 
     def __init__(self, link=None, var_power=1., eql=False):

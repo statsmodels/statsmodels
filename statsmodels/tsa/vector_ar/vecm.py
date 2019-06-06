@@ -1047,9 +1047,8 @@ class VECMResults(object):
     dates : array-like
         For example a DatetimeIndex of length nobs_tot.
 
-    Returns
-    -------
-    **Attributes**
+    Attributes
+    ----------
     nobs : int
         Number of observations (excluding the presample).
     model : see Parameters

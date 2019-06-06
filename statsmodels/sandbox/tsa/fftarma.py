@@ -364,6 +364,7 @@ class ArmaFft(ArmaProcess):
 
 
     def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):
+        """Plot results"""
         rvs = self.generate_sample(nsample=100, burnin=500)
         acf = self.acf(nacf)[:nacf]  #TODO: check return length
         pacf = self.pacf(nacf)

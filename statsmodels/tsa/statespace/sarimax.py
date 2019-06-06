@@ -667,6 +667,7 @@ class SARIMAX(MLEModel):
                                        idx[1][-self.k_exog:])
 
     def initialize_default(self, approximate_diffuse_variance=None):
+        """Initialize default"""
         if approximate_diffuse_variance is None:
             approximate_diffuse_variance = self.ssm.initial_variance
 
