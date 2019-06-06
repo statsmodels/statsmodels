@@ -115,7 +115,6 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
         update_needed = (os.path.getmtime(dst) <= os.path.getmtime(nb))
         if not update_needed:
             print('Skipping {0}'.format(nb))
-            return dst
 
     if execute and update_needed:
         print("Executing %s to %s" % (nb, dst))
