@@ -1286,10 +1286,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     scale : float, optional
         Optional argument to scale the variance covariance matrix.
 
-    Returns
-    -------
-    **Attributes**
-
+    Attributes
+    ----------
     aic : float
         Akaike Information Criterion
         :math:`-2*llf+2* df_model`

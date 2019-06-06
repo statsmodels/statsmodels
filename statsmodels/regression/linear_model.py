@@ -418,8 +418,8 @@ class GLS(RegressionModel):
         same as WLS.
     %(extra_params)s
 
-    **Attributes**
-
+    Attributes
+    ----------
     pinv_wexog : array
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
     cholsimgainv : array

@@ -157,10 +157,8 @@ class DynamicVAR(object):
     trend : {'c', 'nc', 'ct', 'ctt'}
         TODO
 
-    Returns
-    -------
-    **Attributes**:
-
+    Attributes
+    ----------
     coefs : Panel
         items : coefficient names
         major_axis : dates

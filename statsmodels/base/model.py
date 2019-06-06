@@ -2331,12 +2331,8 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         LikelihoodModel.fit(), in a superclass of GnericLikelihoodModels
 
 
-    Returns
-    -------
-    *Attributes*
-
-    Warning most of these are not available yet
-
+    Attributes
+    ----------
     aic : float
         Akaike information criterion.  -2*(`llf` - p) where p is the number
         of regressors including the intercept.

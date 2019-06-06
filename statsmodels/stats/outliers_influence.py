@@ -308,8 +308,8 @@ class MLEInfluence(_BaseInfluenceMixin):
 
 
 
-    **Attributes**
-
+    Attributes
+    ----------
     hat_matrix_diag (hii) : This is the generalized leverage computed as the
         local derivative of fittedvalues (predicted mean) with respect to the
         observed response for each observation.
@@ -1154,8 +1154,8 @@ class GLMInfluence(MLEInfluence):
 
 
 
-    **Attributes**
-
+    Attributes
+    ----------
     hat_matrix_diag (hii) : diagonal for hatmatrix using the formulas for
         GLM
     d_params : Change in parameters computed as one step approximation to
