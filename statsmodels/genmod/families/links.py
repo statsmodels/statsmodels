@@ -406,7 +406,9 @@ class Power(Link):
         if self.power == 1:
             return np.zeros_like(z)
         else:
-            return (1 - self.power) * np.power(z, (1 - 2*self.power)/self.power) / self.power**2
+            return ((1 - self.power) *
+                    np.power(z, (1 - 2*self.power)/self.power) / self.power**2)
+
 
 class inverse_power(Power):
     """
