@@ -13,17 +13,17 @@ here = os.path.dirname(os.path.realpath(__file__))
 
 
 def print_debug_output(results, dt):
-        print("\n\n\nDETERMINISTIC TERMS: " + dt)
-        coefs = results["est"]["Lagged endogenous term"]
-        print("coefs:")
-        print(str(type(coefs)) + str(coefs.shape))
-        print(coefs)
-        print("se: ")
-        print(results["se"]["Lagged endogenous term"])
-        print("t: ")
-        print(results["t"]["Lagged endogenous term"])
-        print("p: ")
-        print(results["p"]["Lagged endogenous term"])
+    print("\n\n\nDETERMINISTIC TERMS: " + dt)
+    coefs = results["est"]["Lagged endogenous term"]
+    print("coefs:")
+    print(str(type(coefs)) + str(coefs.shape))
+    print(coefs)
+    print("se: ")
+    print(results["se"]["Lagged endogenous term"])
+    print("t: ")
+    print(results["t"]["Lagged endogenous term"])
+    print("p: ")
+    print(results["p"]["Lagged endogenous term"])
 
 
 def dt_s_tup_to_string(dt_s_tup):

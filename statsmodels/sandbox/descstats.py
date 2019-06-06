@@ -118,10 +118,16 @@ def descstats(data, cols=None, axis=0):
 #                +str(x[var].max())+')'+os.linesep}
 #        else:
         for var in range(x.shape[1]):
-                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
-%(range)20s" % {'name': var, 'obs': len(x[:,var]), 'mean': x[:,var].mean(),
-                'stddev': x[:,var].std(), 'range': '('+str(x[:,var].min())+', '+\
-                str(x[:,var].max())+')'+os.linesep}
+            xv = x[:, var]
+            kwargs = {
+                'name': var,
+                'obs': len(xv),
+                'mean': xv.mean(),
+                'stddev': xv.std(),
+                'range': '('+str(xv.min())+', '+str(xv.max())+')'+os.linesep
+                }
+            desc += ("%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g "
+                     "%(range)20s" % kwargs)
     else:
         raise ValueError("data not understood")
 
