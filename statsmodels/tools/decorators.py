@@ -42,7 +42,7 @@ class CachedWritableAttribute(CachedAttribute):
         _cache[name] = value
 
 
-class _cache_readonly(object):
+class _cache_readonly(property):
     """
     Decorator for CachedAttribute
     """

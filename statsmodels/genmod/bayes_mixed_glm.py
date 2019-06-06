@@ -512,8 +512,8 @@ class _BayesMixedGLM(base.Model):
             If True, return the linear predictor without passing through the
             link function.
 
-        Result
-        ------
+        Returns
+        -------
         A 1-dimensional array of predicted values
         """
 
