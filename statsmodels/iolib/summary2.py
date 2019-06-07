@@ -403,10 +403,9 @@ def _col_params(result, float_format='%.4f', stars=True):
         rsquared_adj = result.rsquared_adj
     r_result = pd.DataFrame({'Basic': [rsquared], 'Adj.': [rsquared_adj]},
                             index=['R-squared'])
-    if np.any(r_result):
-        for col in r_result:
-            r_result[col] = r_result[col].apply(lambda x: float_format % x)
-        res = pd.DataFrame(res).append(r_result)
+    for col in r_result:
+        r_result[col] = r_result[col].apply(lambda x: float_format % x)
+    res = pd.DataFrame(res).append(r_result)
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
