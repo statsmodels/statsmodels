@@ -1719,14 +1719,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        """Akaike's information criteria. For a model with a constant
+        r"""Akaike's information criteria. For a model with a constant
         :math:`-2llf + 2(df\_model + 1)`. For a model without a constant
         :math:`-2llf + 2(df\_model)`."""
         return -2 * self.llf + 2 * (self.df_model + self.k_constant)
 
     @cache_readonly
     def bic(self):
-        """Bayes' information criteria. For a model with a constant
+        r"""Bayes' information criteria. For a model with a constant
         :math:`-2llf + \log(n)(df\_model+1)`. For a model without a constant
         :math:`-2llf + \log(n)(df\_model)`"""
         return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
