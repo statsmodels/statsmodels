@@ -25,7 +25,6 @@ import warnings
 cimport numpy as np
 cimport cython
 from statsmodels.src.math cimport dlog, zlog, dexp, zexp
-from scipy.special import logsumexp
 
 cdef int FORTRAN = 1
 
