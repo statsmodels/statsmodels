@@ -93,10 +93,15 @@ class Term(object):
     def _get_namespace(self):
         if isinstance(self.__namespace, np.ndarray):
             return self.__namespace
-        else: return self.__namespace or default_namespace
+        else:
+            return self.__namespace or default_namespace
 
-    def _set_namespace(self, value):  self.__namespace = value
-    def _del_namespace(self): del self.__namespace
+    def _set_namespace(self, value):
+        self.__namespace = value
+
+    def _del_namespace(self):
+        del self.__namespace
+
     namespace = property(_get_namespace, _set_namespace, _del_namespace)
 
     def __str__(self):
@@ -208,7 +213,8 @@ class Factor(Term):
                     v = copy.copy(v)
                     v.namespace = self.namespace
                 v = v(*args, **kw)
-            else: break
+            else:
+                break
 
         n = len(v)
 
@@ -363,10 +369,15 @@ class Formula(object):
     def _get_namespace(self):
         if isinstance(self.__namespace, np.ndarray):
             return self.__namespace
-        else: return self.__namespace or default_namespace
+        else:
+            return self.__namespace or default_namespace
 
-    def _set_namespace(self, value):  self.__namespace = value
-    def _del_namespace(self): del self.__namespace
+    def _set_namespace(self, value):
+        self.__namespace = value
+
+    def _del_namespace(self):
+        del self.__namespace
+
     namespace = property(_get_namespace, _set_namespace, _del_namespace)
 
     def _terms_changed(self):

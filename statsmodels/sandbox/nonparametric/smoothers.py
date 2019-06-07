@@ -163,7 +163,8 @@ class PolySmoother(object):
                 print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
                 x=x[:,0]  #TODO: check and clean this up
             X = np.array([(x**i) for i in range(self.order+1)])
-        else: X = self.X
+        else:
+            X = self.X
         #return np.squeeze(np.dot(X.T, self.coef))
         #need to check what dimension this is supposed to be
         if X.shape[1] == self.coef.shape[0]:

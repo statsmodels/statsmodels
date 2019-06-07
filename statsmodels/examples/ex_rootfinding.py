@@ -17,25 +17,29 @@ from statsmodels.tools.rootfinding import brentq_expanding
 DEBUG = False #True
 
 
-
 def func(x, a):
     f = (x - a)**3
-    if DEBUG: print('evaluating at %g, fval = %f' % (x, f))
+    if DEBUG:
+        print('evaluating at %g, fval = %f' % (x, f))
     return f
+
 
 def func_nan(x, a, b):
     x = np.atleast_1d(x)
     f = (x - 1.*a)**3
     f[x < b] = np.nan
-    if DEBUG: print('evaluating at %f, fval = %f' % (x, f))
+    if DEBUG:
+        print('evaluating at %f, fval = %f' % (x, f))
     return f
 
 
 
 def funcn(x, a):
     f = -(x - a)**3
-    if DEBUG: print('evaluating at %g, fval = %g' % (x, f))
+    if DEBUG:
+        print('evaluating at %g, fval = %g' % (x, f))
     return f
+
 
 def func2(x, a):
     f = (x - a)**3

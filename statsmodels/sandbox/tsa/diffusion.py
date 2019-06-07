@@ -379,8 +379,10 @@ class SchwartzOne(ExactDiffusion):
         kappa = -np.log(slope)/dt
         sigma = np.sqrt(errvar * kappa / (1-np.exp(-2*kappa*dt)))
         mu = const / (1-np.exp(-kappa*dt)) + sigma**2/2./kappa
-        if np.shape(mu)== (1,): mu = mu[0]   # how to remove scalar array ?
-        if np.shape(sigma)== (1,): sigma = sigma[0]
+        if np.shape(mu)== (1,):
+            mu = mu[0]   # TODO: how to remove scalar array ?
+        if np.shape(sigma)== (1,):
+            sigma = sigma[0]
         #mu, kappa are good, sigma too small
         return mu, kappa, sigma
 

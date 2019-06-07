@@ -120,11 +120,16 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     if not isinstance(lambd, string_types):
         a = lambd
     else:
-        if lambd == 'loglikeratio': a = 0
-        elif lambd == 'freeman_tukey': a = -0.5
-        elif lambd == 'pearson': a = 1
-        elif lambd == 'modified_loglikeratio': a = -1
-        elif lambd == 'cressie_read': a = 2/3.0
+        if lambd == 'loglikeratio':
+            a = 0
+        elif lambd == 'freeman_tukey':
+            a = -0.5
+        elif lambd == 'pearson':
+            a = 1
+        elif lambd == 'modified_loglikeratio':
+            a = -1
+        elif lambd == 'cressie_read':
+            a = 2/3.0
         else:
             raise ValueError('lambd has to be a number or one of '
                              'loglikeratio, freeman_tukey, pearson, '

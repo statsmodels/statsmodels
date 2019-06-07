@@ -291,7 +291,8 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
 
         rvsli.append(rvsok)   #[:remain]) use extras instead
         print(used)
-        if used >= size: break
+        if used >= size:
+            break
     rvs = np.vstack(rvsli)
     print(rvs.shape)
     assert used == rvs.shape[0] #saftey check

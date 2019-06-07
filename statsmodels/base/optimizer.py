@@ -267,8 +267,10 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
     # Use Hessian/Jacobian only if they're required by the method
     no_hess = ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'COBYLA', 'SLSQP']
     no_jac  = ['Nelder-Mead', 'Powell', 'COBYLA']
-    if kwargs['min_method'] in no_hess: hess = None
-    if kwargs['min_method'] in no_jac: score = None
+    if kwargs['min_method'] in no_hess:
+        hess = None
+    if kwargs['min_method'] in no_jac:
+        score = None
 
     res = optimize.minimize(f, start_params, args=fargs, method=kwargs['min_method'],
                             jac=score, hess=hess, callback=callback, options=options)

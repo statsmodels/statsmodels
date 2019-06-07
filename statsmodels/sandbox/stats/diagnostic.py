@@ -359,7 +359,8 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     xdall = np.c_[np.ones((nobs,1)), xdall]
     xshort = x[-nobs:]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = ResultsStore()
 
     if autolag:
         #search for lag length with highest information criteria
@@ -508,7 +509,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     exog = np.column_stack((exog_old, xdall))
     k_vars = exog.shape[1]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = ResultsStore()
 
     resols = OLS(xshort, exog).fit()
     ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))

@@ -63,8 +63,9 @@ axs = fig.axes
 ##   for label in ax.get_yticklabels(): label.set_visible(False)
 
 # turn off all but the bottom xtick labels
-for ax in axs[:-2]:#[:-1,:].flat:
-    for label in ax.get_xticklabels(): label.set_visible(False)
+for ax in axs[:-2]:
+    for label in ax.get_xticklabels():
+        label.set_visible(False)
 
 
 # use a MaxNLocator on the first column y axis if you have a bunch of

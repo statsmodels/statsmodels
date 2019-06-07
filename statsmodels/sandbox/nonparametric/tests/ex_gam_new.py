@@ -83,7 +83,8 @@ for ss in m.smoothers:
 if example > 1:
     import matplotlib.pyplot as plt
     plt.figure()
-    for i in np.array(m.history[2:15:3]): plt.plot(i.T)
+    for i in np.array(m.history[2:15:3]):
+        plt.plot(i.T)
 
     plt.figure()
     plt.plot(exog)
