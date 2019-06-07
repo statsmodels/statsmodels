@@ -19,6 +19,7 @@ import pytest
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 try:
     import matplotlib.pyplot as plt  # noqa:F401
@@ -730,8 +731,10 @@ def test_power_solver():
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
-    assert_raises(ValueError, nip.solve_power, nobs1=None, effect_size=0, alpha=0.01,
-                  power=0.005, ratio=1, alternative='larger')
+    with pytest.warns(HypothesisTestWarning):
+        with pytest.raises(ValueError):
+            nip.solve_power(nobs1=None, effect_size=0, alpha=0.01,
+                            power=0.005, ratio=1, alternative='larger')
 
 
 # TODO: can something useful be made from this?

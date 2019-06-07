@@ -25,7 +25,9 @@ def get_griliches76_data():
     import os
     curdir = os.path.split(__file__)[0]
     path = os.path.join(curdir, 'griliches76.dta')
-    griliches76_data = iolib.genfromdta(path, missing_flt=np.NaN, pandas=True)
+    with pytest.warns(FutureWarning):
+        griliches76_data = iolib.genfromdta(path, missing_flt=np.NaN,
+                                            pandas=True)
 
     # create year dummies
     years = griliches76_data['year'].unique()

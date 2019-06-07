@@ -84,7 +84,7 @@ def interpret_data(data, colnames=None, rownames=None):
 
 
 def struct_to_ndarray(arr):
-    return arr.view((float, len(arr.dtype.names)), type=np.ndarray)
+    return arr.view((float, (len(arr.dtype.names),)), type=np.ndarray)
 
 
 def _is_using_ndarray_type(endog, exog):

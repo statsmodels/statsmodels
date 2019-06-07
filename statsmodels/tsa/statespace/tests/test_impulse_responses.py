@@ -7,12 +7,17 @@ License: Simplified-BSD
 
 from __future__ import division, absolute_import, print_function
 
-import warnings
-import numpy as np
+from statsmodels.compat import PY3
 
+import warnings
+
+import numpy as np
+import pytest
+from numpy.testing import assert_allclose
+
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
-from numpy.testing import assert_allclose
 
 
 def test_sarimax():
@@ -212,7 +217,10 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
+    warning = EstimationWarning if PY3 else None
+    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
     actual = mod1.impulse_responses([10, 0.5, 0.2, 0.1, -0.2, 1], steps)
     desired = mod2.impulse_responses([10, 0.5, 0.2, 0.1, -0.2, 1], steps)
