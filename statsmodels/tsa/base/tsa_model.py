@@ -286,10 +286,17 @@ class TimeSeriesModel(base.LikelihoodModel):
                 key = nobs + key
             # Out-of-sample (note that we include key itself in the new index)
             elif key > nobs - 1:
-                stop = base_index._start + (key + 1) * base_index._step
-                index = RangeIndex(start=base_index._start,
+                # See gh5835. Remove the except after pandas 0.25 required.
+                try:
+                    base_index_start = base_index.start
+                    base_index_step = base_index.step
+                except AttributeError:
+                    base_index_start = base_index._start
+                    base_index_step = base_index._step
+                stop = base_index_start + (key + 1) * base_index_step
+                index = RangeIndex(start=base_index_start,
                                    stop=stop,
-                                   step=base_index._step)
+                                   step=base_index_step)
 
         # Special handling for Int64Index
         if (not range_index and int_index and not date_index and
