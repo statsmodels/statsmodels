@@ -1,7 +1,6 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
-from statsmodels.regression.mixed_linear_model import MixedLMResultsWrapper
 from collections import OrderedDict
 import datetime
 import re
