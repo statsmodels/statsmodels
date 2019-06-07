@@ -228,7 +228,7 @@ class NonlinearLS(Model):  #or subclass a model
         '''
 
         if nparams is None:
-                nparams = self.nparams
+            nparams = self.nparams
         if rvs_generator is None:
             rvs = np.random.uniform(low=-10, high=10, size=(ntries, nparams))
         else:

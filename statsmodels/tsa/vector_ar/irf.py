@@ -486,12 +486,12 @@ class IRAnalysis(BaseIRAnalysis):
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in range(repl):
-            c=0
+            c = 0
             for j in range(neqs):
                 for i in range(neqs):
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
-                        if i == neqs-1:
-                            gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
+                    gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
+                    if i == neqs-1:
+                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1

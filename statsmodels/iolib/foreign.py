@@ -544,8 +544,9 @@ def _dtype_to_stata_type(dtype):
     #TODO: expand to handle datetime to integer conversion
     if dtype.type == np.string_:
         return chr(dtype.itemsize)
-    elif dtype.type == np.object_: # try to coerce it to the biggest string
-                        # not memory efficient, what else could we do?
+    elif dtype.type == np.object_:
+        # try to coerce it to the biggest string
+        # not memory efficient, what else could we do?
         return chr(244)
     elif dtype == np.float64:
         return chr(255)
