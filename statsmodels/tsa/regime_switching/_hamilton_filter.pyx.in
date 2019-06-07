@@ -65,10 +65,7 @@ def {{prefix}}hamilton_filter_log(int nobs, int k_regimes, int order,
     tmp_filtered_marginalized_probabilities = np.zeros(k_regimes_order, dtype={{dtype}})
     tmp_predicted_joint_probabilities = np.zeros(k_regimes, dtype={{dtype}})
 
-    # zlog, zexp require the GIL (at least for now), so we can only release
-    # the GIL for s, d prefixes. For c, z prefixes to get the indentation
-    # right, we replace this with an "if True:".
-    {{if combined_prefix == 'd'}}with nogil:{{else}}if True:{{endif}}
+    with nogil:
         for t in range(nobs):
             if time_varying_regime_transition:
                 regime_transition_t = t
@@ -117,7 +114,7 @@ cdef void {{prefix}}hamilton_filter_log_iteration(int t, int k_regimes, int orde
                               {{cython_type}} [:] curr_predicted_joint_probabilities,
                               {{cython_type}} [:] prev_filtered_joint_probabilities,
                               {{cython_type}} [:] curr_filtered_joint_probabilities,
-                              {{cython_type}} [:] tmp_predicted_joint_probabilities) {{if combined_prefix == 'd'}}nogil{{endif}}:
+                              {{cython_type}} [:] tmp_predicted_joint_probabilities) nogil:
     cdef int i, j, k, ix
     cdef:
         int k_regimes_order_m1 = k_regimes**(order - 1)

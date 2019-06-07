@@ -39,7 +39,7 @@ cdef void chamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.complex64_t [:] curr_predicted_joint_probabilities,
                                 np.complex64_t [:] prev_filtered_joint_probabilities,
                                 np.complex64_t [:] curr_filtered_joint_probabilities,
-                                np.complex64_t [:] tmp_predicted_joint_probabilities)
+                                np.complex64_t [:] tmp_predicted_joint_probabilities) nogil
 cdef void zhamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.complex128_t [:,:] transition,
                                 np.complex128_t [:] weighted_likelihoods,
@@ -49,4 +49,4 @@ cdef void zhamilton_filter_log_iteration(int t, int k_regimes, int order,
                                 np.complex128_t [:] curr_predicted_joint_probabilities,
                                 np.complex128_t [:] prev_filtered_joint_probabilities,
                                 np.complex128_t [:] curr_filtered_joint_probabilities,
-                                np.complex128_t [:] tmp_predicted_joint_probabilities)
+                                np.complex128_t [:] tmp_predicted_joint_probabilities) nogil

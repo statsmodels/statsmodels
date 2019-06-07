@@ -59,7 +59,7 @@ cdef void ckim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.complex64_t [:] predicted_joint_probabilities,
                     np.complex64_t [:] filtered_joint_probabilities,
                     np.complex64_t [:] prev_smoothed_joint_probabilities,
-                    np.complex64_t [:] next_smoothed_joint_probabilities)
+                    np.complex64_t [:] next_smoothed_joint_probabilities) nogil
 
 cdef void zkim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.complex128_t [:] tmp_joint_probabilities,
@@ -68,4 +68,4 @@ cdef void zkim_smoother_log_iteration(int tt, int k_regimes, int order,
                     np.complex128_t [:] predicted_joint_probabilities,
                     np.complex128_t [:] filtered_joint_probabilities,
                     np.complex128_t [:] prev_smoothed_joint_probabilities,
-                    np.complex128_t [:] next_smoothed_joint_probabilities)
+                    np.complex128_t [:] next_smoothed_joint_probabilities) nogil
