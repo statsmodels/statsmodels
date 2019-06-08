@@ -83,7 +83,7 @@ SETUP_DIR = split(abspath(__file__))[0]
 with open(pjoin(SETUP_DIR, 'README.rst')) as readme:
     README = readme.read()
 LONG_DESCRIPTION = README
-MAINTAINER = 'Josef Perktold, Chad Fulton, Kerby Shedden'
+MAINTAINER = 'statsmodels Developers'
 MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
 URL = 'https://www.statsmodels.org/'
 LICENSE = 'BSD License'
