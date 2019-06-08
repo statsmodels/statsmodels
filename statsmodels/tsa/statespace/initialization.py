@@ -279,7 +279,8 @@ class Initialization(object):
         # Construct the index, using a slice object as an intermediate step
         # to enforce regularity
         if not isinstance(index, slice):
-            if isinstance(index, int):
+            if isinstance(index, (int, np.integer)):
+                index = int(index)
                 if index < 0 or index >= self.k_states:
                     raise ValueError('Invalid index.')
                 index = (index, index + 1)
@@ -422,7 +423,8 @@ class Initialization(object):
         initialization. To unset all initializations (including both global and
         block level), use the `clear` method.
         """
-        if isinstance(index, int):
+        if isinstance(index, (int, np.integer)):
+            index = int(index)
             if index < 0 or index > self.k_states:
                 raise ValueError('Invalid index.')
             index = (index, index + 1)

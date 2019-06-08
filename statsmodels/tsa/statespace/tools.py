@@ -178,8 +178,9 @@ def companion_matrix(polynomial):
 
     """
     identity_matrix = False
-    if isinstance(polynomial, int):
-        n = polynomial
+    if isinstance(polynomial, (int, np.integer)):
+        # GH 5570, allow numpy integer types, but coerce to python int
+        n = int(polynomial)
         m = 1
         polynomial = None
     else:
