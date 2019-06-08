@@ -385,17 +385,6 @@ def _make_arma_names(data, k_trend, order, exog_names):
     ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
     trend_name = util.make_lag_names('', 0, k_trend)
 
-    # ensure exog_names stays unchanged when the `fit` method
-    # is called multiple times.
-    if k_ma ==0 and k_ar ==0:
-        if len(exog_names) != 0:
-            return exog_names
-    elif (exog_names[-k_ma:] == ma_lag_names and
-          exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and
-          (not exog_names or not trend_name
-           or trend_name[0] == exog_names[0])):
-        return exog_names
-
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names
 
@@ -447,6 +436,7 @@ class ARMA(tsbase.TimeSeriesModel):
         else:
             k_exog = 0
         self.k_exog = k_exog
+        self._orig_exog_names = self.exog_names
 
     def _fit_start_params_hr(self, order, start_ar_lags=None):
         """
@@ -926,8 +916,8 @@ class ARMA(tsbase.TimeSeriesModel):
         self.exog = exog    # overwrites original exog from __init__
 
         # (re)set names for this model
-        self.exog_names = _make_arma_names(self.data, k_trend, (k_ar, k_ma),
-                                           self.exog_names)
+        self.exog_names = _make_arma_names(self.data, k_trend,
+                                           (k_ar, k_ma), self._orig_exog_names)
         k = k_trend + k_exog
 
         # choose objective function
