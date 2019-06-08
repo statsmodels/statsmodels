@@ -30,7 +30,9 @@ class TestCompanionMatrix(object):
          np.array([[1, 2, 5, 6],
                    [3, 4, 7, 8],
                    [1, 0, 0, 0],
-                   [0, 1, 0, 0]]).T)
+                   [0, 1, 0, 0]]).T),
+        # GH 5570
+        (np.int64(2), np.array([[0, 1], [0, 0]]))
     ]
 
     def test_cases(self):
