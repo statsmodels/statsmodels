@@ -4,13 +4,17 @@ Tests for simulation of time series
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from __future__ import division, absolute_import, print_function
+
+from statsmodels.compat import PY3
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 from scipy.signal import lfilter
 
+from statsmodels.tools.sm_exceptions import SpecificationWarning, \
+    EstimationWarning
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 
@@ -185,10 +189,10 @@ def test_structural():
     # Fixed intercept
     # (in practice this is a deterministic constant, because an irregular
     #  component must be added)
-    # TODO: once PY3- only, check
-    # pytest.warns(SpecificationWarning, match=irregular component added"):
-    # See GH#5760
-    mod = structural.UnobservedComponents([0], 'fixed intercept')
+    warning = SpecificationWarning if PY3 else None
+    match = 'irregular component added' if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod = structural.UnobservedComponents([0], 'fixed intercept')
     actual = mod.simulate([1.], nobs, measurement_shocks=eps,
                           initial_state=[10])
     assert_allclose(actual, 10 + eps)
@@ -216,10 +220,10 @@ def test_structural():
     # Fixed slope
     # (in practice this is a deterministic trend, because an irregular
     #  component must be added)
-    # TODO: once PY3- only, check
-    # pytest.warns(SpecificationWarning, match=irregular component added"):
-    # See GH#5760
-    mod = structural.UnobservedComponents([0], 'fixed slope')
+    warning = SpecificationWarning if PY3 else None
+    match = 'irregular component added' if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod = structural.UnobservedComponents([0], 'fixed slope')
     actual = mod.simulate([1., 1.], nobs, measurement_shocks=eps,
                           state_shocks=eps2, initial_state=[0, 1])
     assert_allclose(actual, eps + np.arange(100))
@@ -357,10 +361,10 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) - single series
-    # TODO: once PY3- only, check
-    # pytest.warns(EstimationWarning, match=r"VARMA\(p,q\) models is not"):
-    # See GH#5760
-    mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
+    warning = EstimationWarning if PY3 else None
+    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
     actual = mod1.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -369,10 +373,10 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
-    # TODO: once PY3- only, check
-    # pytest.warns(EstimationWarning, match=r"VARMA\(p,q\) models is not"):
-    # See GH#5760
-    mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
+    warning = EstimationWarning if PY3 else None
+    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
     actual = mod1.simulate([10, 0.5, 0.2, 0.1, -0.2, 1], nobs,
                            state_shocks=eps,
@@ -431,12 +435,12 @@ def test_varmax():
 
     # VARMA(2, 2) + trend + exog
     # TODO: This is just a smoke test
-    # TODO: once PY3- only, check
-    # pytest.warns(EstimationWarning, match=r"VARMA\(p,q\) models is not"):
-    # See GH#5760
-    mod = varmax.VARMAX(
-        np.random.normal(size=(nobs, 2)), order=(2, 2), trend='c',
-        exog=exog)
+    warning = EstimationWarning if PY3 else None
+    match = r"VARMA\(p,q\) models is not" if PY3 else None
+    with pytest.warns(warning, match=match):
+        mod = varmax.VARMAX(
+            np.random.normal(size=(nobs, 2)), order=(2, 2), trend='c',
+            exog=exog)
     mod.simulate(mod.start_params, nobs)
 
 
@@ -532,7 +536,7 @@ def test_known_initialization():
     # correctly onto the series)
     mod = dynamic_factor.DynamicFactor([[0, 0]], k_factors=1, factor_order=1)
     mod.initialize_known([100], [[0]])
-    print(mod.param_names)
+
     actual = mod.simulate([0.8, 0.2, 1.0, 1.0, 0.5], nobs,
                           measurement_shocks=np.c_[eps1, eps1],
                           state_shocks=eps1)

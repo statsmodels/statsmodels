@@ -5,6 +5,9 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+
+from statsmodels.compat import PY3
+
 import warnings
 
 import numpy as np
@@ -13,6 +16,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import macrodata
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import structural
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
@@ -117,12 +121,10 @@ def test_irregular(close_figures):
 def test_fixed_intercept(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
-
-    with warnings.catch_warnings(record=True) as w:
+    warning = SpecificationWarning if PY3 else None
+    match = 'Specified model does not contain' if PY3 else None
+    with pytest.warns(warning, match=match):
         run_ucm('fixed_intercept')
-        message = ("Specified model does not contain a stochastic element;"
-                   " irregular component added.")
-        assert_equal(str(w[0].message), message)
 
 
 def test_deterministic_constant(close_figures):
@@ -138,21 +140,20 @@ def test_local_level(close_figures):
 
 
 def test_fixed_slope(close_figures):
-    # TODO: once PY3- only, check
-    # pytest.warns(SpecificationWarning, match="irregular component added"):
-    # See GH#5760
-    run_ucm('fixed_slope')
+    warning = SpecificationWarning if PY3 else None
+    match = 'irregular component added' if PY3 else None
+    with pytest.warns(warning, match=match):
+        run_ucm('fixed_slope')
 
 
 def test_fixed_slope_warn(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
-    with warnings.catch_warnings(record=True) as w:
+    warning = SpecificationWarning if PY3 else None
+    match = 'irregular component added' if PY3 else None
+    with pytest.warns(warning, match=match):
         run_ucm('fixed_slope')
-        message = ("Specified model does not contain a stochastic element;"
-                   " irregular component added.")
-        assert_equal(str(w[0].message), message)
 
 
 def test_deterministic_trend(close_figures):
@@ -234,12 +235,10 @@ def test_specifications():
 
     # Test that when nothing specified, a warning is issued and the model that
     # is fit is one with irregular=True and nothing else.
-    with warnings.catch_warnings(record=True) as w:
+    warning = SpecificationWarning if PY3 else None
+    match = 'irregular component added' if PY3 else None
+    with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog)
-
-        message = ("Specified model does not contain a stochastic element;"
-                   " irregular component added.")
-        assert_equal(str(w[0].message), message)
         assert_equal(mod.trend_specification, 'irregular')
 
     # Test an invalid string trend specification
@@ -248,11 +247,10 @@ def test_specifications():
 
     # Test that if a trend component is specified without a level component,
     # a warning is issued and a deterministic level component is added
-    with warnings.catch_warnings(record=True) as w:
+    warning = SpecificationWarning if PY3 else None
+    match = 'Trend component specified without' if PY3 else None
+    with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog, trend=True, irregular=True)
-        message = ("Trend component specified without level component;"
-                   " deterministic level component added.")
-        assert_equal(str(w[0].message), message)
         assert_equal(mod.trend_specification, 'deterministic trend')
 
     # Test that if a string specification is provided, a warning is issued if
@@ -260,14 +258,12 @@ def test_specifications():
     trend_attributes = ['irregular', 'trend', 'stochastic_level',
                         'stochastic_trend']
     for attribute in trend_attributes:
-        with warnings.catch_warnings(record=True) as w:
-            kwargs = {attribute: True}
-            mod = UnobservedComponents(endog, 'deterministic trend', **kwargs)
+        kwargs = {attribute: True}
 
-            message = ("Value of `%s` may be overridden when the trend"
-                       " component is specified using a model string."
-                       % attribute)
-            assert_equal(str(w[0].message), message)
+        warning = SpecificationWarning if PY3 else None
+        match = 'may be overridden when the trend' if PY3 else None
+        with pytest.warns(warning, match=match):
+            UnobservedComponents(endog, 'deterministic trend', **kwargs)
 
     # Test that a seasonal with period less than two is invalid
     with pytest.raises(ValueError):
