@@ -351,7 +351,7 @@ def test_constant_column_trend():
 
     # Fitting with a constant and maxlag=7 raises because of regressor
     #  collinearity.
-    with pytest.raises(ValueError, match="already contains"):
+    with pytest.raises(ValueError, match="trend='c' is not allowed"):
         model.fit(trend="c")
 
     res = model.fit(trend="nc")
