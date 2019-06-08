@@ -315,7 +315,7 @@ class CovReduce(_DimReductionRegression):
         # The marginal covariance
         covm = 0
         for i in range(len(covs)):
-           covm += covs[i] * ns[i]
+            covm += covs[i] * ns[i]
         covm /= self.nobs
         self.covm = covm
 
