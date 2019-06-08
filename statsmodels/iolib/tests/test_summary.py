@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import numpy as np  # noqa: F401
+import pytest
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
@@ -19,6 +20,16 @@ def test_escaped_variable_name():
     res = mod.fit()
     assert 'CPI\\_' in res.summary().as_latex()
     assert 'CPI_' in res.summary().as_text()
+
+
+def test_wrong_len_xname(reset_randomstate):
+    y = np.random.randn(100)
+    x = np.random.randn(100, 2)
+    res = OLS(y, x).fit()
+    with pytest.raises(ValueError):
+        res.summary(xname=['x1'])
+    with pytest.raises(ValueError):
+        res.summary(xname=['x1', 'x2', 'x3'])
 
 
 if __name__ == '__main__':
