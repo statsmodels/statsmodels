@@ -2,8 +2,11 @@
 Holds common functions for l1 solvers.
 """
 from __future__ import print_function
+
 import numpy as np
+
 from statsmodels.compat.python import range
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
@@ -65,7 +68,9 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
             ', decreasing alpha, or switch solvers'
         if qc_verbose:
             message += _get_verbose_addon(qc_dict)
-        print(message)
+
+        import warnings
+        warnings.warn(message, ConvergenceWarning)
 
     return passed
 
@@ -135,8 +140,10 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     if trim_mode == 'off':
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and not passed:
-        print("Could not trim params automatically due to failed QC "
-              "check.  Trimming using trim_mode == 'size' will still work.")
+        import warnings
+        msg = "Could not trim params automatically due to failed QC check. " \
+              "Trimming using trim_mode == 'size' will still work."
+        warnings.warn(msg, ConvergenceWarning)
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and passed:
         fprime = score(params)
