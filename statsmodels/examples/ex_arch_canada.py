@@ -102,13 +102,17 @@ canada = np.array([
     [417.26668018, 961.76570981,   6.87,       469.64723444]])
 
 
-template = (
-    "        ARCH LM-test; Null hypothesis: no ARCH effects\n\n"
-    "Chi-squared = %(chi)-8.4f df = %(df)-4d p-value = %(pval)8.4g\n"
-)
-
 
 def run_het_arch(colnum, maxlag):
+    """
+    Small wrapper for het_arch to approximate the output format
+    of the FinTS ArchTest from R that we are comparing against.
+    """
+    template = (
+        "        ARCH LM-test; Null hypothesis: no ARCH effects\n\n"
+        "Chi-squared = %(chi)-8.4f df = %(df)-4d p-value = %(pval)8.4g\n"
+    )
+
     data = canada[:, colnum]
     res = het_arch(data, maxlag=maxlag,
                    autolag=None, store=1)
