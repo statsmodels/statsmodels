@@ -53,11 +53,11 @@ def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
 
 
 class AR(tsbase.TimeSeriesModel):
-    __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
-                                 "params" : """endog : array-like
+    __doc__ = tsbase._tsa_doc % {"model": "Autoregressive AR(p) model",
+                                 "params": """endog : array-like
         1-d endogenous response variable. The independent variable.""",
-                                 "extra_params" : base._missing_param_doc,
-                                 "extra_sections" : ""}
+                                 "extra_params": base._missing_param_doc,
+                                 "extra_sections": ""}
 
     def __init__(self, endog, dates=None, freq=None, missing='none'):
         super(AR, self).__init__(endog, None, dates, freq, missing=missing)
@@ -342,7 +342,7 @@ class AR(tsbase.TimeSeriesModel):
         mean of the AR process and :math:`\\sigma^{2}V_{p}` is the (`p` x `p`)
         variance-covariance matrix of the first `p` observations.
         """
-        #TODO: Math is on Hamilton ~pp 124-5
+        # TODO: Math is on Hamilton ~pp 124-5
         if self.method == "cmle":
             return self._loglike_css(params)
 
@@ -751,7 +751,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def fpe(self):
         nobs = self.nobs
         df_model = self.df_model
-        #Lutkepohl
+        # Lutkepohl
         return ((nobs+df_model)/(nobs-df_model))*self.sigma2
 
     @cache_readonly
@@ -767,7 +767,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def resid(self):
-        #NOTE: uses fittedvalues because it calculate presample values for mle
+        # NOTE: uses fittedvalues because it calculate presample values for mle
         model = self.model
         endog = model.endog.squeeze()
         if model.method == "cmle":  # elimate pre-sample
@@ -792,29 +792,11 @@ class ARResults(tsbase.TimeSeriesModelResults):
         params = self.params
         predictedvalues = self.model.predict(params, start, end, dynamic)
         return predictedvalues
+        # TODO: consider returning forecast errors and confidence intervals?
 
-        # start, end, out_of_sample, prediction_index = (
-        #     self.model._get_prediction_index(start, end, index))
-
-        ##TODO: return forecast errors and confidence intervals
-        #from statsmodels.tsa.arima_process import arma2ma
-        #ma_rep = arma2ma(np.r_[1,-params[::-1]], [1], out_of_sample)
-        #fcasterr = np.sqrt(self.sigma2 * np.cumsum(ma_rep**2))
-
+    # Same docstring as AR.predict, but with "params" parameter removed
     preddoc = AR.predict.__doc__.split('\n')
-    extra_doc = ("""        confint : bool, float
-            Whether to return confidence intervals.  If `confint` == True,
-            95 % confidence intervals are returned.  Else if `confint` is a
-            float, then it is assumed to be the alpha value of the confidence
-            interval.  That is confint == .05 returns a 95% confidence
-            interval, and .10 would return a 90% confidence interval."""
-                 ).split('\n')
-    #ret_doc = """
-    #    fcasterr : array-like
-    #    confint : array-like
-    #"""
-    predict.__doc__ = '\n'.join(preddoc[:5] + preddoc[7:20] + extra_doc +
-                                preddoc[20:])
+    predict.__doc__ = '\n'.join(preddoc[:5] + preddoc[7:])
 
 
 class ARResultsWrapper(wrap.ResultsWrapper):
@@ -822,8 +804,8 @@ class ARResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
     _methods = {}
-    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
-                                     _methods)
+    _wrap_methods = wrap.union_dicts(
+        tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(ARResultsWrapper, ARResults)  # noqa:E305
 
 
