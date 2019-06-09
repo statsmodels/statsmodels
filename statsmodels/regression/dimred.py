@@ -4,6 +4,7 @@ import statsmodels.base.wrapper as wrap
 import pandas as pd
 import warnings
 
+
 class _DimReductionRegression(model.Model):
     """
     A base class for dimension reduction regression methods.
@@ -343,7 +344,7 @@ class CovReduce(_DimReductionRegression):
         _, ldet = np.linalg.slogdet(c)
         f = self.nobs * ldet / 2
 
-        for j,c in enumerate(self.covs):
+        for j, c in enumerate(self.covs):
             c = np.dot(proj.T, np.dot(c, proj))
             _, ldet = np.linalg.slogdet(c)
             f -= self.ns[j] * ldet / 2

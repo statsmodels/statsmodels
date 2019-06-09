@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
 from statsmodels.regression.dimred import (SlicedInverseReg,
-    SAVE, PHD, CovReduce)
+     SAVE, PHD, CovReduce)
 from numpy.testing import (assert_equal, assert_allclose)
 from statsmodels.tools.numdiff import approx_fprime
+
 
 def test_poisson():
 
@@ -59,6 +60,7 @@ def test_poisson():
         q /= np.sqrt(np.sum(b**2))
         assert_equal(np.abs(q) > 0.95, True)
 
+
 def test_covreduce():
 
     np.random.seed(34324)
@@ -104,4 +106,5 @@ def test_covreduce():
             # Here we know the approximate truth
             projt = np.zeros((p, 2))
             projt[0:2, 0:2] = np.eye(2)
-            assert_allclose(np.trace(np.dot(proj.T, projt)), 2, rtol=1e-3, atol=1e-3)
+            assert_allclose(np.trace(np.dot(proj.T, projt)), 2,
+                            rtol=1e-3, atol=1e-3)
