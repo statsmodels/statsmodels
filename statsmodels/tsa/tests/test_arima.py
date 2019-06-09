@@ -2465,3 +2465,14 @@ def test_arima_no_full_output():
     mod = ARIMA(endog, (1, 0, 1))
     res = mod.fit(trend="c", disp=-1, full_output=False)
     assert res.mle_retvals is None
+
+
+def test_arima_summary_no_lags(reset_randomstate):
+    y_train = pd.Series(np.random.randn(1000), name='y_train')
+    x_train = pd.DataFrame(np.random.randn(1000, 2), columns=['x1', 'x2'])
+    res = ARIMA(endog=y_train.values, exog=x_train,
+                order=(0, 1, 0)).fit(disp=-1)
+    summ = res.summary().as_text()
+    assert 'const ' in summ
+    assert 'x1 ' in summ
+    assert 'x2 ' in summ
