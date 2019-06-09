@@ -37,7 +37,6 @@ if [ "$LINT" == true ]; then
         statsmodels/genmod/tests/results/ \
         statsmodels/graphics/tsaplots.py \
         statsmodels/emplike/tests/ \
-        statsmodels/examples/ex_arch_canada.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \
