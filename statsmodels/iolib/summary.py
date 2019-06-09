@@ -110,6 +110,12 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     if title == 0:
         title = _model_types[self.model.__class__.__name__]
 
+    if xname is not None and len(xname) != len(self.params):
+        # GH 2298
+        raise ValueError('User supplied xnames must have the same number of '
+                         'entries as the number of model parameters '
+                         '({0})'.format(len(self.params)))
+
     yname, xname = _getnames(self, yname, xname)
 
     time_now = time.localtime()
