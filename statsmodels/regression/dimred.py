@@ -254,15 +254,10 @@ class DimReductionResultsWrapper(wrap.ResultsWrapper):
 wrap.populate_wrapper(DimReductionResultsWrapper,  # noqa:E305
                       DimReductionResults)
 
-# aliases for expert users
-SIR = SlicedInverseReg
-PHD = PrincipalHessianDirections
-SAVE = SlicedAverageVarianceEstimation
 
-
-class CovReduce(_DimReductionRegression):
+class CovarianceReduction(_DimReductionRegression):
     """
-    Dimension reduction for a collection of covariance matrices.
+    Dimension reduction for covariance matrices (CORE).).
 
     Parameters
     ----------
@@ -303,7 +298,7 @@ class CovReduce(_DimReductionRegression):
 
     def __init__(self, endog, exog, dim):
 
-        super(CovReduce, self).__init__(endog, exog)
+        super(CovarianceReduction, self).__init__(endog, exog)
 
         covs, ns = [], []
         df = pd.DataFrame(self.exog, index=self.endog)
@@ -450,3 +445,10 @@ class CovReduce(_DimReductionRegression):
         results = DimReductionResults(self, params, eigs=None)
         results.llf = llf
         return DimReductionResultsWrapper(results)
+
+
+# aliases for expert users
+SIR = SlicedInverseReg
+PHD = PrincipalHessianDirections
+SAVE = SlicedAverageVarianceEstimation
+CORE = CovarianceReduction

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from statsmodels.regression.dimred import (SlicedInverseReg,
-     SAVE, PHD, CovReduce)
+from statsmodels.regression.dimred import (
+     SlicedInverseReg, SAVE, PHD, CORE)
 from numpy.testing import (assert_equal, assert_allclose)
 from statsmodels.tools.numdiff import approx_fprime
 
@@ -87,7 +87,7 @@ def test_covreduce():
 
     for dim in 1, 2, 3:
 
-        cr = CovReduce(endog, exog, dim)
+        cr = CORE(endog, exog, dim)
 
         pt = np.random.normal(size=(p, dim))
         pt, _, _ = np.linalg.svd(pt, 0)
