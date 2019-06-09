@@ -224,3 +224,20 @@ stub R2 C2  40.95038  40.65765
                    "y_amax         0.2432      0.035      "]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
+
+    def test_default_alignment(self):
+        desired = '''
+=====================
+      header1 header2
+---------------------
+stub1 1.30312    2.73
+stub2 1.95038     2.6
+---------------------
+'''
+        test1data = [[1.30312, 2.73], [1.95038, 2.6]]
+        test1stubs = ('stub1', 'stub2')
+        test1header = ('header1', 'header2')
+        actual = SimpleTable(test1data, test1header, test1stubs,
+                             txt_fmt=default_txt_fmt)
+        actual = '\n%s\n' % actual.as_text()
+        assert_equal(desired, str(actual))
