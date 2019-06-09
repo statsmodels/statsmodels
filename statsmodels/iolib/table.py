@@ -782,7 +782,7 @@ default_txt_fmt = dict(
     row_dec_below=None,
     colwidths=None,
     colsep=' ',
-    data_aligns="c",
+    data_aligns="r",  # GH 1477
     # data formats
     # data_fmt="%s",  #deprecated; use data_fmts
     data_fmts=["%s"],
