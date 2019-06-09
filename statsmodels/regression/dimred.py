@@ -303,11 +303,11 @@ class CovReduce(_DimReductionRegression):
 
     def __init__(self, endog, exog, dim):
 
-        super(_DimReductionRegression, self).__init__(endog, exog)
+        super(CovReduce, self).__init__(endog, exog)
 
         covs, ns = [], []
         df = pd.DataFrame(self.exog, index=self.endog)
-        for k, v in df.groupby(df.index):
+        for _, v in df.groupby(df.index):
             covs.append(v.cov().values)
             ns.append(v.shape[0])
 
@@ -315,7 +315,7 @@ class CovReduce(_DimReductionRegression):
 
         # The marginal covariance
         covm = 0
-        for i in range(len(covs)):
+        for i, _ in enumerate(covs):
             covm += covs[i] * ns[i]
         covm /= self.nobs
         self.covm = covm
@@ -410,7 +410,7 @@ class CovReduce(_DimReductionRegression):
 
         llf = self.loglike(params)
 
-        for iter in range(maxiter):
+        for _ in range(maxiter):
 
             g = self.score(params)
             g -= np.dot(g, params) * params / np.dot(params, params)
