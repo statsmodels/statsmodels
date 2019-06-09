@@ -103,7 +103,9 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
         if np.any(col_const):
             if has_constant == 'raise':
-                raise ValueError("x already contains a constant")
+                msg = "x contains a constant. Adding a constant with " \
+                      "trend='{0}' is not allowed.".format(trend)
+                raise ValueError(msg)
             elif has_constant == 'skip':
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
