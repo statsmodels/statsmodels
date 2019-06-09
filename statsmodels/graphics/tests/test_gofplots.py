@@ -193,3 +193,13 @@ class TestTopLevel(object):
         for line in ['r', 'q', '45', 's']:
             # test with arrays
             sm.qqplot_2samples(self.res, self.other_array, line=line)
+
+
+def test_invalid_dist_config(close_figures):
+    # GH 4226
+    np.random.seed(5)
+    data = sm.datasets.longley.load(as_pandas=False)
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    mod_fit = sm.OLS(data.endog, data.exog).fit()
+    with pytest.raises(TypeError, match=r'dist\(0, 1, 4, loc=0, scale=1\)'):
+        sm.ProbPlot(mod_fit.resid, stats.t, distargs=(0, 1, 4))

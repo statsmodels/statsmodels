@@ -28,13 +28,15 @@ class ProbPlot(object):
         scipy.stats.distributions.norm (a standard normal).
     distargs : tuple
         A tuple of arguments passed to dist to specify it fully
-        so dist.ppf may be called.
-    loc : float
-        Location parameter for dist
+        so dist.ppf may be called. distargs must not contain loc
+        or scale. These values must be passed using the loc or
+        scale inputs.
     a : float
         Offset for the plotting position of an expected order
         statistic, for example. The plotting positions are given
         by (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
+    loc : float
+        Location parameter for dist
     scale : float
         Scale parameter for dist
     fit : boolean
@@ -177,21 +179,22 @@ class ProbPlot(object):
             self.scale = self.fit_params[-1]
             if len(self.fit_params) > 2:
                 self.dist = dist(*self.fit_params[:-2],
-                                 **dict(loc = 0, scale = 1))
+                                 **dict(loc=0, scale=1))
             else:
                 self.dist = dist(loc=0, scale=1)
-        elif distargs or loc == 0 or scale == 1:
-            if len(distargs) > 2:
-                self.loc = distargs[-2]
-                self.scale = distargs[-1]
-            else:
-                self.loc = loc
-                self.scale = scale
-
-            # We can't pass both loc/scale as a kwarg *and* an arg from
-            # distargs, or we'll get TypeError due to conflict
-            shape = distargs[0]
-            self.dist = dist(shape, loc=self.loc, scale=self.scale)
+        elif distargs or loc != 0 or scale != 1:
+            try:
+                self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
+            except Exception:
+                distargs = ', '.join([str(da) for da in distargs])
+                cmd = 'dist({distargs}, loc={loc}, scale={scale})'
+                cmd = cmd.format(distargs=distargs, loc=loc, scale=scale)
+                raise TypeError('Initializing the distribution failed.  This '
+                                'can occur if distargs contains loc or scale. '
+                                'The distribution initialization command '
+                                'is:\n{cmd}'.format(cmd=cmd))
+            self.loc = loc
+            self.scale = scale
         else:
             self.dist = dist
             self.loc = loc
