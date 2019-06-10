@@ -2,6 +2,9 @@
 Test functions for models.tools
 """
 from statsmodels.compat.python import lrange, range
+
+import string
+
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
@@ -13,6 +16,19 @@ import pytest
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
+
+
+@pytest.fixture('module')
+def string_var():
+    string_var = [string.ascii_lowercase[0:5],
+                  string.ascii_lowercase[5:10],
+                  string.ascii_lowercase[10:15],
+                  string.ascii_lowercase[15:20],
+                  string.ascii_lowercase[20:25]]
+    string_var *= 5
+    string_var = np.asarray(sorted(string_var))
+    series = pd.Series(string_var, name='string_var')
+    return series
 
 
 class TestTools(object):
@@ -211,8 +227,12 @@ class TestCategoricalNumerical(object):
 
     def test_array1d(self):
         des = tools.categorical(self.instr)
-        assert_array_equal(des[:,-5:], self.dummy)
-        assert_equal(des.shape[1],6)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 6)
+
+    def test_array1d_col_error(self):
+        with pytest.raises(TypeError, match='col must be a str, int or None'):
+            tools.categorical(self.instr, col={'a': 1})
 
     def test_array2d_drop(self):
         des = np.column_stack((self.des, self.instr, self.des))
@@ -231,6 +251,11 @@ class TestCategoricalNumerical(object):
         test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
         assert_array_equal(test_des, self.dummy)
         assert_equal(len(des.dtype.names), 9)
+
+    def test_recarray2d_error(self):
+        arr = np.c_[self.recdes, self.recdes]
+        with pytest.raises(IndexError, match='col is None and the input'):
+            tools.categorical(arr, col=None)
 
     def test_recarray2dint(self):
         des = tools.categorical(self.recdes, col=2)
@@ -606,6 +631,50 @@ class TestEnsure2d(object):
         assert_array_equal(results[0], self.ndarray)
         assert_equal(results[1], None)
 
-        results = tools._ensure_2d(self.ndarray[:,0])
-        assert_array_equal(results[0], self.ndarray[:,[0]])
+        results = tools._ensure_2d(self.ndarray[:, 0])
+        assert_array_equal(results[0], self.ndarray[:, [0]])
         assert_equal(results[1], None)
+
+
+def test_categorical_pandas_errors(string_var):
+    with pytest.raises(ValueError, match='data.name does not match col'):
+        tools.categorical(string_var, 'unknown')
+
+    df = pd.DataFrame(string_var)
+    with pytest.raises(TypeError, match='col must be a str or int'):
+        tools.categorical(df, None)
+    with pytest.raises(ValueError, match='Column \'unknown\' not found in '
+                                         'data'):
+        tools.categorical(df, 'unknown')
+
+
+def test_categorical_series(string_var):
+    design = tools.categorical(string_var, drop=True)
+    dummies = pd.get_dummies(pd.Categorical(string_var))
+    assert_frame_equal(design, dummies)
+    design = tools.categorical(string_var, drop=False)
+    dummies.columns = list(dummies.columns)
+    assert_frame_equal(design.iloc[:, :5], dummies)
+    assert_series_equal(design.iloc[:, 5], string_var)
+    _, dictnames = tools.categorical(string_var, drop=False, dictnames=True)
+    for i, c in enumerate(pd.Categorical(string_var).categories):
+        assert i in dictnames
+        assert dictnames[i] == c
+
+
+def test_categorical_dataframe(string_var):
+    df = pd.DataFrame(string_var)
+    design = tools.categorical(df, 'string_var', drop=True)
+    dummies = pd.get_dummies(pd.Categorical(string_var))
+    assert_frame_equal(design, dummies)
+
+    df = pd.DataFrame({'apple': string_var, 'ban': string_var})
+    design = tools.categorical(df, 'apple', drop=True)
+    assert_frame_equal(design, dummies)
+
+
+def test_categorical_errors(string_var):
+    with pytest.raises(ValueError, match='Can only convert one column'):
+        tools.categorical(string_var, (0, 1))
+    with pytest.raises(ValueError, match='data.name does not match col'):
+        tools.categorical(string_var, {'a': 1})

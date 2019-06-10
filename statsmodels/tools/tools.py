@@ -1,12 +1,13 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range, long
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 import pandas as pd
 
+from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, range,
+                                       long, string_types)
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 
@@ -17,7 +18,7 @@ def _make_dictnames(tmp_arr, offset=0):
     """
     col_map = {}
     for i, col_name in enumerate(tmp_arr):
-        col_map.update({i+offset : col_name})
+        col_map[i + offset] = col_name
     return col_map
 
 
@@ -60,20 +61,22 @@ def drop_missing(Y, X=None, axis=1):
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
-def categorical(data, col=None, dictnames=False, drop=False, ):
+def categorical(data, col=None, dictnames=False, drop=False):
     '''
     Returns a dummy matrix given an array of categorical variables.
 
     Parameters
     ----------
     data : array
-        A structured array, recarray, or array.  This can be either
-        a 1d vector of the categorical variable or a 2d array with
+        A structured array, recarray, array, Series or DataFrame.  This can be
+        either a 1d vector of the categorical variable or a 2d array with
         the column specifying the categorical variable specified by the col
         argument.
-    col : 'string', int, or None
-        If data is a structured array or a recarray, `col` can be a string
-        that is the name of the column that contains the variable.  For all
+    col : {str, int, None}
+        If data is a DataFrame col must in a column of data. If data is a
+        Series, col must be either the name of the Series or None. If data is a
+        structured array or a recarray, `col` can be a string that is the name
+        of the column that contains the variable.  For all other
         arrays `col` can be an int that is the (zero-based) column index
         number.  `col` can only be None for a 1d array.  The default is None.
     dictnames : bool, optional
@@ -135,16 +138,43 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
-    if isinstance(col, (list, tuple)):
-        try:
-            assert len(col) == 1
-            col = col[0]
-        except:
-            raise ValueError("Can only convert one column at a time")
-
     # TODO: add a NameValidator function
+    if isinstance(col, (list, tuple)):
+        if len(col) == 1:
+            col = col[0]
+        else:
+            raise ValueError("Can only convert one column at a time")
+    if (not isinstance(data, (pd.DataFrame, pd.Series)) and
+            not isinstance(col, (string_types, int)) and
+            col is not None):
+        raise TypeError('col must be a str, int or None')
+
+    # Pull out a Series from a DataFrame if provided
+    if isinstance(data, pd.DataFrame):
+        if col is None:
+            raise TypeError('col must be a str or int when using a DataFrame')
+        elif col not in data:
+            raise ValueError('Column \'{0}\' not found in data'.format(col))
+        data = data[col]
+        # Set col to None since we not have a Series
+        col = None
+
+    if isinstance(data, pd.Series):
+        if col is not None and data.name != col:
+            raise ValueError('data.name does not match col '
+                             '\'{0}\''.format(col))
+        data_cat = data.astype('category')
+        dummies = pd.get_dummies(data_cat)
+        col_map = {i: cat for i, cat in enumerate(data_cat.cat.categories) if
+                   cat in dummies}
+        if not drop:
+            dummies.columns = list(dummies.columns)
+            dummies = pd.concat([dummies, data], 1)
+        if dictnames:
+            return dummies, col_map
+        return dummies
     # catch recarrays and structured arrays
-    if data.dtype.names or data.__class__ is np.recarray:
+    elif data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
         if isinstance(col, (int, long)):
@@ -196,11 +226,10 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
                                   asrecarray=type(data) is np.recarray)
         return data
 
-    # handle ndarrays and catch array-like for an error
-    elif data.__class__ is np.ndarray or not isinstance(data, np.ndarray):
-        if not isinstance(data, np.ndarray):
-            raise NotImplementedError("Array-like objects are not supported")
-
+    # Catch array-like for an error
+    elif not isinstance(data, np.ndarray):
+        raise NotImplementedError("Array-like objects are not supported")
+    else:
         if isinstance(col, (int, long)):
             offset = data.shape[1]          # need error catching here?
             tmp_arr = np.unique(data[:, col])
