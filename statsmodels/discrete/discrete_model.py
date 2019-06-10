@@ -33,7 +33,8 @@ from scipy.stats import nbinom
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
+                                             SpecificationWarning)
 from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
@@ -4052,12 +4053,23 @@ class MultinomialResults(DiscreteResults):
 
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
-        try:
-            for i in ynames:
+        issue_warning = False
+        msg = ('endog contains values are that not int-like. Uses string '
+               'representation of value. Use integer-valued endog to '
+               'suppress this warning.')
+        for i in ynames:
+            try:
                 if ynames[i] % 1 == 0:
                     ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
+                else:
+                    issue_warning = True
+                    ynames[i] = str(ynames[i])
+            except TypeError:
+                ynames[i] = str(ynames[i])
+        if issue_warning:
+            import warnings
+            warnings.warn(msg, SpecificationWarning)
+
         return ynames
 
     def _get_endog_name(self, yname, yname_list, all=False):

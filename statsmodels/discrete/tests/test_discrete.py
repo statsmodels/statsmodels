@@ -28,7 +28,8 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
+                                             SpecificationWarning)
 from scipy.stats import nbinom
 
 try:
@@ -2357,6 +2358,16 @@ def test_unchanging_degrees_of_freedom():
     # If res2.df_model == res1.df_model, then this test is invalid.
 
     res3 = model.fit(start_params=params, disp=0)
-    # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
+    # Test that the call to `fit_regularized` didn't
+    # modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
+
+
+def test_mnlogit_float_name():
+    df = pd.DataFrame({"A": [0., 1.1, 0, 0, 1.1], "B": [0, 1, 0, 1, 1]})
+    result = smf.mnlogit(formula="A ~ B", data=df).fit()
+    with pytest.warns(SpecificationWarning,
+                      match='endog contains values are that not int-like'):
+        summ = result.summary().as_text()
+    assert 'A=1.1' in summ
