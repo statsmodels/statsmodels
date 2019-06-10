@@ -2496,7 +2496,7 @@ def test_constant_column_trend():
     model = ARIMA(endog=endog, order=(1, 1, 0), exog=exog)
 
     # Fitting with a constant and constant exog raises because of colinearity
-    with pytest.raises(ValueError, match="already contains"):
+    with pytest.raises(ValueError, match="x contains a constant"):
         model.fit(trend="c")
 
     # FIXME: calling model.fit(trend="nc") raises for orthogonal reasons
