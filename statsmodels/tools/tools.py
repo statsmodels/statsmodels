@@ -163,9 +163,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
         if col is not None and data.name != col:
             raise ValueError('data.name does not match col '
                              '\'{0}\''.format(col))
-        data_cat = data.astype('category')
+        data_cat = pd.Categorical(data)
         dummies = pd.get_dummies(data_cat)
-        col_map = {i: cat for i, cat in enumerate(data_cat.cat.categories) if
+        col_map = {i: cat for i, cat in enumerate(data_cat.categories) if
                    cat in dummies}
         if not drop:
             dummies.columns = list(dummies.columns)
