@@ -14,7 +14,8 @@ import pytest
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    ValueWarning, HessianInversionWarning)
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
@@ -2338,31 +2339,33 @@ def test_arima_exog_predict():
         res_002.forecast(steps=h, exog=np.empty(20))
 
 
-def test_arima_fit_mutliple_calls():
+def test_arima_fit_multiple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(HessianInversionWarning, match="no bse or cov"):
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
-    with warnings.catch_warnings(record=True) as w:
-        res= mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+
+    mod.exog = None  # FIXME: this shouldn't be necessary
+    with pytest.warns(HessianInversionWarning, match="no bse or cov"):
+        res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
-    #ensure summary() works
+    # ensure summary() works  # TODO: separate and pytest.mark.smoke
     res.summary()
 
-    #test multiple calls when there is only a constant term
+    # test multiple calls when there is only a constant term
     mod = ARIMA(y, (0, 0, 0))
     # Make multiple calls to fit
-    with warnings.catch_warnings(record=True) as w:
-        mod.fit(disp=0, start_params=[np.mean(y)])
-    assert_equal(mod.exog_names,  ['const'])
-    with warnings.catch_warnings(record=True) as w:
-        res = mod.fit(disp=0, start_params=[np.mean(y)])
+    mod.fit(disp=0, start_params=[np.mean(y)])
     assert_equal(mod.exog_names,  ['const'])
 
-    # ensure summary() works
+    mod.exog = None  # FIXME: this shouldn't be necessary
+    res = mod.fit(disp=0, start_params=[np.mean(y)])
+    assert_equal(mod.exog_names,  ['const'])
+
+    # ensure summary() works  # TODO: separate and pytest.mark.smoke
     res.summary()
 
 
@@ -2378,9 +2381,13 @@ def test_long_ar_start_params():
 
     model = ARMA(y, order=(2, 2))
 
-    res = model.fit(method='css',start_ar_lags=10, disp=0)
-    res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
-    res = model.fit(method='mle',start_ar_lags=10, disp=0)
+    model.fit(method='css',start_ar_lags=10, disp=0)
+
+    model.exog = None  # FIXME: should not be necessary
+    model.fit(method='css-mle',start_ar_lags=10, disp=0)
+
+    model.exog = None  # FIXME: should not be necessary
+    model.fit(method='mle',start_ar_lags=10, disp=0)
     assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
 
 
@@ -2476,3 +2483,20 @@ def test_arima_summary_no_lags(reset_randomstate):
     assert 'const ' in summ
     assert 'x1 ' in summ
     assert 'x2 ' in summ
+
+
+def test_constant_column_trend():
+    # GH#3343 analogous to GH#5258 for AR, when the user passes a constant exog
+    #  and also passes trend="c", raise instead _make_arma_exog used to
+    #  silently drop a column and return an inconsistenct k_trend value.
+
+    exog = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
+    endog =  np.array([-0.011866, 0.003380, 0.015357, 0.004451, -0.020889])
+
+    model = ARIMA(endog=endog, order=(1, 1, 0), exog=exog)
+
+    # Fitting with a constant and constant exog raises because of colinearity
+    with pytest.raises(ValueError, match="x contains a constant"):
+        model.fit(trend="c")
+
+    # FIXME: calling model.fit(trend="nc") raises for orthogonal reasons
