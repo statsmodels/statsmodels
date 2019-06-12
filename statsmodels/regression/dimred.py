@@ -1,8 +1,8 @@
+import warnings
 import numpy as np
+import pandas as pd
 from statsmodels.base import model
 import statsmodels.base.wrapper as wrap
-import pandas as pd
-import warnings
 
 
 class _DimReductionRegression(model.Model):
@@ -257,7 +257,7 @@ wrap.populate_wrapper(DimReductionResultsWrapper,  # noqa:E305
 
 class CovarianceReduction(_DimReductionRegression):
     """
-    Dimension reduction for covariance matrices (CORE).).
+    Dimension reduction for covariance matrices (CORE).
 
     Parameters
     ----------
