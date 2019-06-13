@@ -95,6 +95,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/ \
         statsmodels/tsa/tests/results/ \
+        statsmodels/__init__.py \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \
         examples/ \
