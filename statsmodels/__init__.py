@@ -18,7 +18,7 @@ if debug_warnings:
 
 def test(*args, **kwargs):
     from .tools._testing import PytestTester
-    tst = PytestTester()
+    tst = PytestTester(package_path=__file__)
     return tst(*args, **kwargs)
 
 

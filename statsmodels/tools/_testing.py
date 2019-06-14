@@ -20,11 +20,12 @@ import pandas.util.testing as tm
 
 
 class PytestTester(object):
-    def __init__(self):
+    def __init__(self, package_path=None):
         f = sys._getframe(1)
-        package_path = f.f_locals.get('__file__', None)
         if package_path is None:
-            raise ValueError('Unable to determine path')
+            package_path = f.f_locals.get('__file__', None)
+            if package_path is None:
+                raise ValueError('Unable to determine path')
         self.package_path = os.path.dirname(package_path)
         self.package_name = f.f_locals.get('__name__', None)
 
