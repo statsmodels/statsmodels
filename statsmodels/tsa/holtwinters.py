@@ -460,7 +460,8 @@ class ExponentialSmoothing(TimeSeriesModel):
     seasonal : {"add", "mul", "additive", "multiplicative", None}, optional
         Type of seasonal component.
     seasonal_periods : int, optional
-        The number of seasons to consider for the holt winters.
+        The number of periods in a complete seasonal cycle, e.g., 4 for
+        quarterly data or 7 for daily data with a weekly cycle.
 
     Returns
     -------
