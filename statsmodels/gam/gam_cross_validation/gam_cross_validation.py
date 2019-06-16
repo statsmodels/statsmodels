@@ -14,12 +14,6 @@ import numpy as np
 from statsmodels.gam.smooth_basis import (GenericSmoothers,
                                           UnivariateGenericSmoother)
 
-try:
-    import matplotlib.pyplot as plt
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
 
 class BaseCV(with_metaclass(ABCMeta)):
     """
@@ -150,21 +144,22 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
         self.cv_std = None
 
     def plot_path(self):
-        if have_matplotlib:
-            plt.plot(self.alphas, self.cv_error, c='black')
-            plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std,
-                     c='blue')
-            plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std,
-                     c='blue')
+        from statsmodels.graphics.utils import _import_mpl
+        plt = _import_mpl()
+        plt.plot(self.alphas, self.cv_error, c='black')
+        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std,
+                 c='blue')
+        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std,
+                 c='blue')
 
-            plt.plot(self.alphas, self.cv_error, 'o', c='black')
-            plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, 'o',
-                     c='blue')
-            plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, 'o',
-                     c='blue')
+        plt.plot(self.alphas, self.cv_error, 'o', c='black')
+        plt.plot(self.alphas, self.cv_error + 1.96 * self.cv_std, 'o',
+                 c='blue')
+        plt.plot(self.alphas, self.cv_error - 1.96 * self.cv_std, 'o',
+                 c='blue')
 
-            return
-            # TODO add return
+        return
+        # TODO add return
 
 
 class MultivariateGAMCVPath(object):

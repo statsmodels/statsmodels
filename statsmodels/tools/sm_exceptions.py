@@ -128,3 +128,5 @@ class CollinearityWarning(ModelWarning):
 
 
 warnings.simplefilter('always', category=ModelWarning)
+warnings.simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
+                                 IterationLimitWarning, InvalidTestWarning))

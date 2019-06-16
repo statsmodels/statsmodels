@@ -39,6 +39,8 @@ def _R_compat_quantile(x, probs):
     return quantiles.reshape(probs.shape, order="C")
 
 
+# FIXME: is this copy/pasted?  If so, why do we need it?  If not, get
+#  rid of the try/except for scipy import
 # from patsy splines.py
 def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     try:

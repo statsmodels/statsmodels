@@ -1,22 +1,11 @@
-from __future__ import print_function
-from .compat import PY3
 
-from warnings import simplefilter
-
-from .tools._testing import PytestTester
-from .tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
-                                  IterationLimitWarning, InvalidTestWarning)
 from ._version import get_versions
-
-__docformat__ = 'restructuredtext'
-
-simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
-                        IterationLimitWarning, InvalidTestWarning))
 
 debug_warnings = False
 
 if debug_warnings:
     import warnings
+    from .compat import PY3
 
     warnings.simplefilter("default")
     # use the following to raise an exception for debugging specific warnings
@@ -26,7 +15,12 @@ if debug_warnings:
         # we have currently many ResourceWarnings in the datasets on python 3.4
         warnings.simplefilter("ignore", ResourceWarning)  # noqa:F821
 
-test = PytestTester()
+
+def test(*args, **kwargs):
+    from .tools._testing import PytestTester
+    tst = PytestTester(package_path=__file__)
+    return tst(*args, **kwargs)
+
 
 __version__ = get_versions()['version']
 del get_versions
