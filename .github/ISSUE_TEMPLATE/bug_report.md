@@ -13,15 +13,21 @@ assignees: ''
 
 #### Code Sample, a copy-pastable example if possible
 
-```python
-# Your code here
 
+```python
+# Your code here that produces the bug
+# This example should be self-contained, and so not rely on external data.
+# It should run in a fresh ipython session, and so include all relevant imports.
 ```
+<details>
+
 **Note**: As you can see, there are many issues on our GitHub tracker, so it is very possible that your issue has been posted before. Please check first before submitting so that we do not have to handle and close duplicates.
 
 **Note**: Please be sure you are using the latest released version of `statsmodels`, or a recent build of `master`. If your problem has been fixed in an unreleased version, you might be able to use `master` until a new release occurs. 
 
 **Note**: If you are using a released version, have you verified that the bug exists in the master branch of this repository? It helps the limited resources if we know problems exist in the current master so that they do not need to check whether the code sample produces a bug in the next release.
+
+</details>
 
 
 If the issue has not been resolved, please file it in the issue tracker.
@@ -34,6 +40,6 @@ A clear and concise description of what you expected to happen.
 
 <details>
 
-[paste the output of ``sm.show_versions()`` here below this line]
+[paste the output of ``import statsmodels.api as sm; sm.show_versions()`` here below this line]
 
 </details>
