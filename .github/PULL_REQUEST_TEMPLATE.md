@@ -4,6 +4,9 @@
 - [ ] properly formatted commit message. See 
       [NumPy's guide](https://docs.scipy.org/doc/numpy/dev/gitwash/development_workflow.html#writing-the-commit-message). 
 
+<details>
+
+
 **Notes**:
 
 * It is essential that you add a test when making code changes. Tests are not 
@@ -21,3 +24,5 @@
   local Linux environment. While passing this test is not required, it is good practice and it help 
   improve code quality in `statsmodels`.
 * Docstring additions must render correctly, including escapes and LaTeX.
+
+</details>
