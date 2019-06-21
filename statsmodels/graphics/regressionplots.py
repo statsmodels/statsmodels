@@ -520,24 +520,19 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
-    #maybe add option for using wendog, wexog instead
+    # TODO: maybe add option for using wendog, wexog instead
     y = pandas.Series(results.model.endog, name=results.model.endog_names)
     exog = results.model.exog
 
     k_vars = exog.shape[1]
-    #this function doesn't make sense if k_vars=1
+    # this function doesn't make sense if k_vars=1
 
+    nrows = (len(exog_idx) + 1) // 2
+    ncols = 1 if nrows == len(exog_idx) else 2
     if grid is not None:
         nrows, ncols = grid
-    else:
-        if len(exog_idx) > 2:
-            nrows = int(np.ceil(len(exog_idx)/2.))
-            ncols = 2
-            title_kwargs = {"fontdict" : {"fontsize" : 'small'}}
-        else:
-            nrows = len(exog_idx)
-            ncols = 1
-            title_kwargs = {}
+    if ncols > 1:
+        title_kwargs = {"fontdict": {"fontsize": 'small'}}
 
     # for indexing purposes
     other_names = np.array(results.model.exog_names)
@@ -546,7 +541,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
         others.pop(idx)
         exog_others = pandas.DataFrame(exog[:, others],
                                        columns=other_names[others])
-        ax = fig.add_subplot(nrows, ncols, i+1)
+        ax = fig.add_subplot(nrows, ncols, i + 1)
         plot_partregress(y, pandas.Series(exog[:, idx],
                                           name=other_names[idx]),
                          exog_others, ax=ax, title_kwargs=title_kwargs,
@@ -554,10 +549,9 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
         ax.set_title("")
 
     fig.suptitle("Partial Regression Plot", fontsize="large")
-
     fig.tight_layout()
-
     fig.subplots_adjust(top=.95)
+
     return fig
 
 
