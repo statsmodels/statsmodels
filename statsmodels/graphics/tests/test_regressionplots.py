@@ -28,21 +28,23 @@ def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
 
+
 class TestPlot(object):
 
-    def setup(self):
+    @classmethod
+    def setup_class(cls):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
-        x2 = 5 + 3* np.random.randn(nsample)
-        X = np.c_[x1, x2, np.sin(0.5*x1), (x2-5)**2, np.ones(nsample)]
+        x2 = 5 + 3 * np.random.randn(nsample)
+        x = np.c_[x1, x2, np.sin(0.5 * x1), (x2 - 5) ** 2, np.ones(nsample)]
         beta = [0.5, 0.5, 1, -0.04, 5.]
-        y_true = np.dot(X, beta)
+        y_true = np.dot(x, beta)
         y = y_true + sig * np.random.normal(size=nsample)
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
-        res = sm.OLS(y, exog0).fit()
 
-        self.res = res
+        cls.res = sm.OLS(y, exog0).fit()
+        cls.res_true = sm.OLS(y, x).fit()
 
     @pytest.mark.matplotlib
     def test_plot_fit(self, close_figures):
@@ -66,10 +68,12 @@ class TestPlot(object):
 
     @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
-        #just test that they run
+        # just test that they run
         res = self.res
         plot_fit(res, 0, y_true=None)
-        plot_partregress_grid(res, exog_idx=[0,1])
+        plot_partregress_grid(res, exog_idx=[0, 1])
+        # GH 5873
+        plot_partregress_grid(self.res_true, grid=(2, 3))
         plot_regress_exog(res, exog_idx=0)
         plot_ccpr(res, exog_idx=0)
         plot_ccpr_grid(res, exog_idx=[0])
