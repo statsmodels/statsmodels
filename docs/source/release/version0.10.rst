@@ -282,6 +282,8 @@ Submodules
 - Added new CI using Azure Pipelines (:pr:`5617`)
 - Enable linting on travis to ensure code is up to standards (:pr:`4820`)
 - Add coverage for Cython code (:pr:`4871`)
+- Improve import speed (:pr:`5831`)
+- Make all version of docs available (:pr:`5879`)
 
 bug-wrong
 ---------
@@ -336,6 +338,7 @@ Thanks to all of the contributors for the 0.10 release (based on git log):
 * Brock Mendel
 * Chad Fulton
 * Chris Snow
+* Chris Down
 * Daniel Saxton
 * donbeo
 * Emlyn Price
@@ -864,3 +867,27 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5818`: CLN: qif
 * :pr:`5825`: MAINT: use correct key name to check cov params presence
 * :pr:`5830`: DOC: Add docstring for base class
+* :pr:`5831`: PERF: Import speed
+* :pr:`5833`: BUG: ARIMA fit with trend and constant exog
+* :pr:`5834`: DOC: Fix small errors in release notes
+* :pr:`5839`: MAINT: RangeIndex._start deprecated in pandas 0.25
+* :pr:`5836`: CLN: over-indentation E117
+* :pr:`5837`: CLN: invalid escapes in linear_model
+* :pr:`5843`: MAINT: Catch intentional warnings
+* :pr:`5846`: DOC: Update maintainer
+* :pr:`5847`: BUG: Allow NumPy ints #
+* :pr:`5848`: BUG: Warn rather than print
+* :pr:`5850`: MAINT: Improve error message
+* :pr:`5851`: BUG: Refactor method used to name variables
+* :pr:`5853`: BUG: Add check for xnames length
+* :pr:`5854`: BUG: Fix MNLogit summary with float values
+* :pr:`5857`: BUG: Allow categorical to accept pandas dtype
+* :pr:`5858`: BUG: Fix default alignment for SimpleTable
+* :pr:`5859`: DOC: fix incorrect ARResults.predict docstring, closes #4498
+* :pr:`5860`: Cdown gofplot typerror
+* :pr:`5863`: MAINT: Use pd.Categorical() instead of .astype('categorical')
+* :pr:`5868`: BUG: State space univariate smoothing w/ time-varying transition matrix: wrong transition matrix used
+* :pr:`5869`: DOC: Improve ExponentialSmoothing docstring
+* :pr:`5875`: DOC: Improve bug report template
+* :pr:`5876`: BUG: Ensure keywords exist in partial reg plot
+* :pr:`5879`: DOC: Update version dropdown javascript
