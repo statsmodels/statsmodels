@@ -930,14 +930,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         resid = data - fitted[:-h - 1]
         if remove_bias:
             fitted += resid.mean()
-        if not damped:
-            phi = np.NaN
         self.params = {'smoothing_level': alpha,
                        'smoothing_slope': beta,
                        'smoothing_seasonal': gamma,
-                       'damping_slope': phi,
+                       'damping_slope': phi if damped else np.nan,
                        'initial_level': lvls[0],
-                       'initial_slope': b[0],
+                       'initial_slope': b[0] / phi,
                        'initial_seasons': s[:m],
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
