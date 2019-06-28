@@ -226,14 +226,14 @@ class TestHoltWinters(object):
         assert_almost_equal(fit4.params['smoothing_slope'], 0.00, 2)
         assert_almost_equal(fit4.params['damping_slope'], 0.98, 2)
         assert_almost_equal(fit4.params['initial_level'], 257.36, 2)
-        assert_almost_equal(fit4.params['initial_slope'], 6.51, 2)
+        assert_almost_equal(fit4.params['initial_slope'], 6.64, 2)
         assert_almost_equal(fit4.sse, 6036.56, 2)  # 6080.26
 
         assert_almost_equal(fit5.params['smoothing_level'], 0.97, 2)
         assert_almost_equal(fit5.params['smoothing_slope'], 0.00, 2)
         assert_almost_equal(fit5.params['damping_slope'], 0.98, 2)
         assert_almost_equal(fit5.params['initial_level'], 258.95, 2)
-        assert_almost_equal(fit5.params['initial_slope'], 1.02, 2)
+        assert_almost_equal(fit5.params['initial_slope'], 1.04, 2)
         assert_almost_equal(fit5.sse, 6082.00, 2)  # 6100.11
 
     def test_holt_damp_R(self):
