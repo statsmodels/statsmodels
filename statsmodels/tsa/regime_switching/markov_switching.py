@@ -27,18 +27,19 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
 
 from statsmodels.tsa.regime_switching._hamilton_filter import (
-    shamilton_filter, dhamilton_filter, chamilton_filter, zhamilton_filter)
+    shamilton_filter_log, dhamilton_filter_log, chamilton_filter_log,
+    zhamilton_filter_log)
 from statsmodels.tsa.regime_switching._kim_smoother import (
-    skim_smoother, dkim_smoother, ckim_smoother, zkim_smoother)
+    skim_smoother_log, dkim_smoother_log, ckim_smoother_log, zkim_smoother_log)
 
-prefix_hamilton_filter_map = {
-    's': shamilton_filter, 'd': dhamilton_filter,
-    'c': chamilton_filter, 'z': zhamilton_filter
+prefix_hamilton_filter_log_map = {
+    's': shamilton_filter_log, 'd': dhamilton_filter_log,
+    'c': chamilton_filter_log, 'z': zhamilton_filter_log
 }
 
-prefix_kim_smoother_map = {
-    's': skim_smoother, 'd': dkim_smoother,
-    'c': ckim_smoother, 'z': zkim_smoother
+prefix_kim_smoother_log_map = {
+    's': skim_smoother_log, 'd': dkim_smoother_log,
+    'c': ckim_smoother_log, 'z': zkim_smoother_log
 }
 
 
@@ -102,10 +103,10 @@ def _partials_logistic(x):
     return partials
 
 
-def py_hamilton_filter(initial_probabilities, regime_transition,
-                       conditional_likelihoods):
+def cy_hamilton_filter_log(initial_probabilities, regime_transition,
+                           conditional_loglikelihoods):
     """
-    Hamilton filter using pure Python
+    Hamilton filter in log space using Cython inner loop.
 
     Parameters
     ----------
@@ -122,8 +123,8 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
         stochastic.  The first order entries and initial_probabilities are
         used to produce the initial joint distribution of dimension order +
         1 at time t=0.
-    conditional_likelihoods : array
-        Array of likelihoods conditional on the last `order+1` regimes,
+    conditional_loglikelihoods : array
+        Array of loglikelihoods conditional on the last `order+1` regimes,
         shaped (k_regimes,)*(order + 1) + (nobs,).
 
     Returns
@@ -136,140 +137,9 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t-1
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-    joint_likelihoods : array
-        Array of likelihoods condition on time t information, shaped (nobs,).
-    filtered_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
-        the joint probability of the current and previous `order` periods
-        being in each combination of regimes conditional on time t
-        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-
-    """
-
-    # Dimensions
-    k_regimes = len(initial_probabilities)
-    nobs = conditional_likelihoods.shape[-1]
-    order = conditional_likelihoods.ndim - 2
-    dtype = conditional_likelihoods.dtype
-
-    # Check for compatible shapes.
-    incompatible_shapes = (
-        regime_transition.shape[-1] not in (1, nobs + order)
-        or regime_transition.shape[:2] != (k_regimes, k_regimes)
-        or conditional_likelihoods.shape[0] != k_regimes)
-    if incompatible_shapes:
-        raise ValueError('Arguments do not have compatible shapes')
-
-    # Storage
-    # Pr[S_t = s_t | Y_t]
-    filtered_marginal_probabilities = (
-        np.zeros((k_regimes, nobs), dtype=dtype))
-    # Pr[S_t = s_t, ... S_{t-r} = s_{t-r} | Y_{t-1}]
-    predicted_joint_probabilities = np.zeros(
-        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
-    # f(y_t | Y_{t-1})
-    joint_likelihoods = np.zeros((nobs,), dtype)
-    # Pr[S_t = s_t, ... S_{t-r} = s_{t-r} | Y_t]
-    filtered_joint_probabilities = np.zeros(
-        (k_regimes,) * (order + 1) + (nobs + 1,), dtype=dtype)
-
-    # Initial probabilities
-    filtered_marginal_probabilities[:, 0] = initial_probabilities
-    tmp = np.copy(initial_probabilities)
-    shape = (k_regimes, k_regimes)
-    for i in range(order):
-        tmp = np.reshape(regime_transition[..., i], shape + (1,) * i) * tmp
-    filtered_joint_probabilities[..., 0] = tmp
-
-    # Check that regime_transition is oriented correctly.
-    if not np.allclose(np.sum(regime_transition, axis=0), 1):
-        raise ValueError('regime_transition does not contain '
-                         'left stochastic matrices.')
-
-    # Reshape regime_transition so we can use broadcasting
-    shape = (k_regimes, k_regimes)
-    shape += (1,) * (order-1)
-    shape += (regime_transition.shape[-1],)
-    regime_transition = np.reshape(regime_transition, shape)
-
-    # Get appropriate subset of transition matrix
-    if regime_transition.shape[-1] > 1:
-        regime_transition = regime_transition[..., order:]
-
-    # Hamilton filter iterations
-    transition_t = 0
-    for t in range(nobs):
-        if regime_transition.shape[-1] > 1:
-            transition_t = t
-
-        # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
-        if order > 0:
-            predicted_joint_probabilities[..., t] = (
-                # S_t | S_{t-1}
-                regime_transition[..., transition_t] *
-                # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
-                filtered_joint_probabilities[..., t].sum(axis=-1))
-        else:
-            predicted_joint_probabilities[..., t] = (
-                np.dot(regime_transition[..., transition_t],
-                       filtered_joint_probabilities[..., t]))
-
-        # f(y_t, S_t, ..., S_{t-r} | t-1)
-        tmp = (conditional_likelihoods[..., t] *
-               predicted_joint_probabilities[..., t])
-        # f(y_t | t-1)
-        joint_likelihoods[t] = np.sum(tmp)
-
-        # S_t, S_{t-1}, ..., S_{t-r} | t, stored at index t+1
-        filtered_joint_probabilities[..., t+1] = (
-            tmp / joint_likelihoods[t])
-
-    # S_t | t
-    filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
-    for i in range(1, filtered_marginal_probabilities.ndim - 1):
-        filtered_marginal_probabilities = np.sum(
-            filtered_marginal_probabilities, axis=-2)
-
-    return (filtered_marginal_probabilities, predicted_joint_probabilities,
-            joint_likelihoods, filtered_joint_probabilities[..., 1:])
-
-
-def cy_hamilton_filter(initial_probabilities, regime_transition,
-                       conditional_likelihoods):
-    """
-    Hamilton filter using Cython inner loop
-
-    Parameters
-    ----------
-    initial_probabilities : array
-        Array of initial probabilities, shaped (k_regimes,) giving the
-        distribution of the regime process at time t = -order where order
-        is a nonnegative integer.
-    regime_transition : array
-        Matrix of regime transition probabilities, shaped either
-        (k_regimes, k_regimes, 1) or if there are time-varying transition
-        probabilities (k_regimes, k_regimes, nobs + order).  Entry [i, j,
-        t] contains the probability of moving from j at time t-1 to i at
-        time t, so each matrix regime_transition[:, :, t] should be left
-        stochastic.  The first order entries and initial_probabilities are
-        used to produce the initial joint distribution of dimension order +
-        1 at time t=0.
-    conditional_likelihoods : array
-        Array of likelihoods conditional on the last `order+1` regimes,
-        shaped (k_regimes,)*(order + 1) + (nobs,).
-
-    Returns
-    -------
-    filtered_marginal_probabilities : array
-        Array containing Pr[S_t=s_t | Y_t] - the probability of being in each
-        regime conditional on time t information. Shaped (k_regimes, nobs).
-    predicted_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
-        the joint probability of the current and previous `order` periods
-        being in each combination of regimes conditional on time t-1
-        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-    joint_likelihoods : array
-        Array of likelihoods condition on time t information, shaped (nobs,).
+    joint_loglikelihoods : array
+        Array of loglikelihoods condition on time t information,
+        shaped (nobs,).
     filtered_joint_probabilities : array
         Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
         the joint probability of the current and previous `order` periods
@@ -279,17 +149,21 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
 
     # Dimensions
     k_regimes = len(initial_probabilities)
-    nobs = conditional_likelihoods.shape[-1]
-    order = conditional_likelihoods.ndim - 2
-    dtype = conditional_likelihoods.dtype
+    nobs = conditional_loglikelihoods.shape[-1]
+    order = conditional_loglikelihoods.ndim - 2
+    dtype = conditional_loglikelihoods.dtype
 
     # Check for compatible shapes.
     incompatible_shapes = (
         regime_transition.shape[-1] not in (1, nobs + order)
         or regime_transition.shape[:2] != (k_regimes, k_regimes)
-        or conditional_likelihoods.shape[0] != k_regimes)
+        or conditional_loglikelihoods.shape[0] != k_regimes)
     if incompatible_shapes:
         raise ValueError('Arguments do not have compatible shapes')
+
+    # Convert to log space
+    initial_probabilities = np.log(initial_probabilities)
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -299,8 +173,8 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
     # Has k_regimes^(order+1) elements
     predicted_joint_probabilities = np.zeros(
         (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
-    # f(y_t | Y_{t-1})
-    joint_likelihoods = np.zeros((nobs,), dtype)
+    # log(f(y_t | Y_{t-1}))
+    joint_loglikelihoods = np.zeros((nobs,), dtype)
     # Pr[S_t = s_t, ... S_{t-r+1} = s_{t-r+1} | Y_t]
     # Has k_regimes^order elements
     filtered_joint_probabilities = np.zeros(
@@ -315,7 +189,7 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
         if regime_transition.shape[-1] > 1:
             transition_t = i
         tmp = np.reshape(regime_transition[..., transition_t],
-                         shape + (1,) * i) * tmp
+                         shape + (1,) * i) + tmp
     filtered_joint_probabilities[..., 0] = tmp
 
     # Get appropriate subset of transition matrix
@@ -324,14 +198,22 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
 
     # Run Cython filter iterations
     prefix, dtype, _ = find_best_blas_type((
-        regime_transition, conditional_likelihoods, joint_likelihoods,
+        regime_transition, conditional_loglikelihoods, joint_loglikelihoods,
         predicted_joint_probabilities, filtered_joint_probabilities))
-    func = prefix_hamilton_filter_map[prefix]
+    func = prefix_hamilton_filter_log_map[prefix]
     func(nobs, k_regimes, order, regime_transition,
-         conditional_likelihoods.reshape(k_regimes**(order+1), nobs),
-         joint_likelihoods,
+         conditional_loglikelihoods.reshape(k_regimes**(order+1), nobs),
+         joint_loglikelihoods,
          predicted_joint_probabilities.reshape(k_regimes**(order+1), nobs),
          filtered_joint_probabilities.reshape(k_regimes**(order+1), nobs+1))
+
+    # Save log versions for smoother
+    predicted_joint_probabilities_log = predicted_joint_probabilities
+    filtered_joint_probabilities_log = filtered_joint_probabilities
+
+    # Convert out of log scale
+    predicted_joint_probabilities = np.exp(predicted_joint_probabilities)
+    filtered_joint_probabilities = np.exp(filtered_joint_probabilities)
 
     # S_t | t
     filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
@@ -340,98 +222,15 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
             filtered_marginal_probabilities, axis=-2)
 
     return (filtered_marginal_probabilities, predicted_joint_probabilities,
-            joint_likelihoods, filtered_joint_probabilities[..., 1:])
+            joint_loglikelihoods, filtered_joint_probabilities[..., 1:],
+            predicted_joint_probabilities_log,
+            filtered_joint_probabilities_log[..., 1:])
 
 
-def py_kim_smoother(regime_transition, predicted_joint_probabilities,
-                    filtered_joint_probabilities):
+def cy_kim_smoother_log(regime_transition, predicted_joint_probabilities,
+                        filtered_joint_probabilities):
     """
-    Kim smoother using pure Python
-
-    Parameters
-    ----------
-    regime_transition : array
-        Matrix of regime transition probabilities, shaped either
-        (k_regimes, k_regimes, 1) or if there are time-varying transition
-        probabilities (k_regimes, k_regimes, nobs).
-    predicted_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
-        the joint probability of the current and previous `order` periods
-        being in each combination of regimes conditional on time t-1
-        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-    filtered_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
-        the joint probability of the current and previous `order` periods
-        being in each combination of regimes conditional on time t
-        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-
-    Returns
-    -------
-    smoothed_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_T] -
-        the joint probability of the current and previous `order` periods
-        being in each combination of regimes conditional on all information.
-        Shaped (k_regimes,) * (order + 1) + (nobs,).
-    smoothed_marginal_probabilities : array
-        Array containing Pr[S_t=s_t | Y_T] - the probability of being in each
-        regime conditional on all information. Shaped (k_regimes, nobs).
-    """
-
-    # Dimensions
-    k_regimes = filtered_joint_probabilities.shape[0]
-    nobs = filtered_joint_probabilities.shape[-1]
-    order = filtered_joint_probabilities.ndim - 2
-    dtype = filtered_joint_probabilities.dtype
-
-    # Storage
-    smoothed_joint_probabilities = np.zeros(
-        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
-    smoothed_marginal_probabilities = np.zeros((k_regimes, nobs), dtype=dtype)
-
-    # S_T, S_{T-1}, ..., S_{T-r} | T
-    smoothed_joint_probabilities[..., -1] = (
-        filtered_joint_probabilities[..., -1])
-
-    # Reshape transition so we can use broadcasting
-    shape = (k_regimes, k_regimes)
-    shape += (1,) * (order)
-    shape += (regime_transition.shape[-1],)
-    regime_transition = np.reshape(regime_transition, shape)
-
-    # Get appropriate subset of transition matrix
-    if regime_transition.shape[-1] == nobs + order:
-        regime_transition = regime_transition[..., order:]
-
-    # Kim smoother iterations
-    transition_t = 0
-    for t in range(nobs - 2, -1, -1):
-        if regime_transition.shape[-1] > 1:
-            transition_t = t + 1
-
-        # S_{t+1}, S_t, ..., S_{t-r+1} | t
-        # x = predicted_joint_probabilities[..., t]
-        x = (filtered_joint_probabilities[..., t] *
-             regime_transition[..., transition_t])
-        # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
-        y = (smoothed_joint_probabilities[..., t+1] /
-             predicted_joint_probabilities[..., t+1])
-        # S_t, S_{t-1}, ..., S_{t-r+1} | T
-        smoothed_joint_probabilities[..., t] = (x * y[..., None]).sum(axis=0)
-
-    # Get smoothed marginal probabilities S_t | T by integrating out
-    # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
-    smoothed_marginal_probabilities = smoothed_joint_probabilities
-    for i in range(1, smoothed_marginal_probabilities.ndim - 1):
-        smoothed_marginal_probabilities = np.sum(
-            smoothed_marginal_probabilities, axis=-2)
-
-    return smoothed_joint_probabilities, smoothed_marginal_probabilities
-
-
-def cy_kim_smoother(regime_transition, predicted_joint_probabilities,
-                    filtered_joint_probabilities):
-    """
-    Kim smoother using Cython inner loop
+    Kim smoother in log space using Cython inner loop.
 
     Parameters
     ----------
@@ -475,16 +274,22 @@ def cy_kim_smoother(regime_transition, predicted_joint_probabilities,
     # Get appropriate subset of transition matrix
     if regime_transition.shape[-1] == nobs + order:
         regime_transition = regime_transition[..., order:]
+
+    # Convert to log space
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
 
     # Run Cython smoother iterations
     prefix, dtype, _ = find_best_blas_type((
         regime_transition, predicted_joint_probabilities,
         filtered_joint_probabilities))
-    func = prefix_kim_smoother_map[prefix]
+    func = prefix_kim_smoother_log_map[prefix]
     func(nobs, k_regimes, order, regime_transition,
          predicted_joint_probabilities.reshape(k_regimes**(order+1), nobs),
          filtered_joint_probabilities.reshape(k_regimes**(order+1), nobs),
          smoothed_joint_probabilities.reshape(k_regimes**(order+1), nobs))
+
+    # Convert back from log space
+    smoothed_joint_probabilities = np.exp(smoothed_joint_probabilities)
 
     # Get smoothed marginal probabilities S_t | T by integrating out
     # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
@@ -787,6 +592,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         else:
             raise RuntimeError('Invalid initialization method selected.')
 
+        # Slightly bound probabilities away from zero (for filters in log
+        # space)
+        probabilities = np.maximum(probabilities, 1e-20)
+
         return probabilities
 
     def _regime_transition_matrix_tvtp(self, params, exog_tvtp=None):
@@ -944,7 +753,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         raise NotImplementedError
 
-    def _conditional_likelihoods(self, params):
+    def _conditional_loglikelihoods(self, params):
         """
         Compute likelihoods conditional on the current period's regime (and
         the last self.order periods' regimes if self.order > 0).
@@ -962,13 +771,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             params, regime_transition)
 
         # Compute the conditional likelihoods
-        conditional_likelihoods = self._conditional_likelihoods(params)
+        conditional_loglikelihoods = self._conditional_loglikelihoods(params)
 
         # Apply the filter
         return ((regime_transition, initial_probabilities,
-                 conditional_likelihoods) +
-                cy_hamilton_filter(initial_probabilities, regime_transition,
-                                   conditional_likelihoods))
+                 conditional_loglikelihoods) +
+                cy_hamilton_filter_log(
+                    initial_probabilities, regime_transition,
+                    conditional_loglikelihoods))
 
     def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
                return_raw=False, results_class=None,
@@ -1014,9 +824,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Get the result
         names = ['regime_transition', 'initial_probabilities',
-                 'conditional_likelihoods', 'filtered_marginal_probabilities',
-                 'predicted_joint_probabilities', 'joint_likelihoods',
-                 'filtered_joint_probabilities']
+                 'conditional_loglikelihoods',
+                 'filtered_marginal_probabilities',
+                 'predicted_joint_probabilities', 'joint_loglikelihoods',
+                 'filtered_joint_probabilities',
+                 'predicted_joint_probabilities_log',
+                 'filtered_joint_probabilities_log']
         result = HamiltonFilterResults(
             self, Bunch(**dict(zip(names, self._filter(params)))))
 
@@ -1025,17 +838,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                                   cov_kwds, results_class,
                                   results_wrapper_class)
 
-    def _smooth(self, params, filtered_marginal_probabilities,
-                predicted_joint_probabilities,
-                filtered_joint_probabilities, regime_transition=None):
+    def _smooth(self, params, predicted_joint_probabilities_log,
+                filtered_joint_probabilities_log, regime_transition=None):
         # Get the regime transition matrix
         if regime_transition is None:
             regime_transition = self.regime_transition_matrix(params)
 
         # Apply the smoother
-        return cy_kim_smoother(regime_transition,
-                               predicted_joint_probabilities,
-                               filtered_joint_probabilities)
+        return cy_kim_smoother_log(regime_transition,
+                                   predicted_joint_probabilities_log,
+                                   filtered_joint_probabilities_log)
 
     @property
     def _res_classes(self):
@@ -1103,16 +915,20 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.data.param_names = self.param_names
 
         # Hamilton filter
+        # TODO add option to filter to return logged values so that we don't
+        # need to re-log them for smoother
         names = ['regime_transition', 'initial_probabilities',
-                 'conditional_likelihoods', 'filtered_marginal_probabilities',
-                 'predicted_joint_probabilities', 'joint_likelihoods',
-                 'filtered_joint_probabilities']
+                 'conditional_loglikelihoods',
+                 'filtered_marginal_probabilities',
+                 'predicted_joint_probabilities', 'joint_loglikelihoods',
+                 'filtered_joint_probabilities',
+                 'predicted_joint_probabilities_log',
+                 'filtered_joint_probabilities_log']
         result = Bunch(**dict(zip(names, self._filter(params))))
 
         # Kim smoother
-        out = self._smooth(params, result.filtered_marginal_probabilities,
-                           result.predicted_joint_probabilities,
-                           result.filtered_joint_probabilities)
+        out = self._smooth(params, result.predicted_joint_probabilities_log,
+                           result.filtered_joint_probabilities_log)
         result['smoothed_joint_probabilities'] = out[0]
         result['smoothed_marginal_probabilities'] = out[1]
         result = KimSmootherResults(self, result)
@@ -1141,7 +957,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         results = self._filter(params)
 
-        return np.log(results[5])
+        return results[5]
 
     def loglike(self, params, transformed=True):
         """
@@ -1723,15 +1539,15 @@ class HamiltonFilterResults(object):
         Initialization method for regime probabilities.
     initial_probabilities : array
         Initial regime probabilities
-    conditional_likelihoods : array
-        The likelihood values at each time period, conditional on regime.
+    conditional_loglikelihoods : array
+        The loglikelihood values at each time period, conditional on regime.
     predicted_joint_probabilities : array
         Predicted joint probabilities at each time period.
     filtered_marginal_probabilities : array
         Filtered marginal probabilities at each time period.
     filtered_joint_probabilities : array
         Filtered joint probabilities at each time period.
-    joint_likelihoods : array
+    joint_loglikelihoods : array
         The likelihood values at each time period.
     llf_obs : array
         The loglikelihood values at each time period.
@@ -1745,16 +1561,16 @@ class HamiltonFilterResults(object):
         self.k_regimes = model.k_regimes
 
         attributes = ['regime_transition', 'initial_probabilities',
-                      'conditional_likelihoods',
+                      'conditional_loglikelihoods',
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
                       'filtered_joint_probabilities',
-                      'joint_likelihoods']
+                      'joint_loglikelihoods']
         for name in attributes:
             setattr(self, name, getattr(result, name))
 
         self.initialization = model._initialization
-        self.llf_obs = np.log(self.joint_likelihoods)
+        self.llf_obs = self.joint_loglikelihoods
         self.llf = np.sum(self.llf_obs)
 
         # Subset transition if necessary (e.g. for Markov autoregression)
@@ -1779,7 +1595,23 @@ class HamiltonFilterResults(object):
         """
         (array) Expected duration of a regime, possibly time-varying.
         """
-        return 1. / (1 - np.diagonal(self.regime_transition).squeeze())
+        # It is possible that we will have a degenerate system, so that there
+        # is no possibility of transitioning to a different state. In that
+        # case, we do want the expected duration of one state to be np.inf,
+        # and the expected duration of the other states to be np.nan
+        diag = np.diagonal(self.regime_transition)
+        expected_durations = np.zeros_like(diag)
+        degenerate = np.any(diag == 1, axis=1)
+
+        # For non-degenerate states, use the usual computation
+        expected_durations[~degenerate] = 1 / (1 - diag[~degenerate])
+
+        # For degenerate states, everything is np.nan, except for the one
+        # state that is np.inf.
+        expected_durations[degenerate] = np.nan
+        expected_durations[diag == 1] = np.inf
+
+        return expected_durations.squeeze()
 
 
 class KimSmootherResults(HamiltonFilterResults):
@@ -1893,12 +1725,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Copy over arrays
         attributes = ['regime_transition', 'initial_probabilities',
-                      'conditional_likelihoods',
+                      'conditional_loglikelihoods',
                       'predicted_marginal_probabilities',
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
                       'filtered_joint_probabilities',
-                      'joint_likelihoods', 'expected_durations']
+                      'joint_loglikelihoods', 'expected_durations']
         for name in attributes:
             setattr(self, name, getattr(self.filter_results, name))
 
@@ -2081,6 +1913,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         (array) The model residuals. An (nobs x k_endog) array.
         """
         return self.model.endog - self.fittedvalues
+
+    @property
+    def joint_likelihoods(self):
+        return np.exp(self.joint_loglikelihoods)
 
     def predict(self, start=None, end=None, probabilities=None,
                 conditional=False):
