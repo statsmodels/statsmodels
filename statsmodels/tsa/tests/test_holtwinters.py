@@ -206,7 +206,9 @@ class TestHoltWinters(object):
         assert_almost_equal(fit3.forecast(5),
                             [42.85, 43.81, 44.66, 45.41, 46.06], 2)
 
-    def test_holt_damp(self):
+    @pytest.mark.smoke
+    def test_holt_damp_fit(self):
+        # Smoke test for parameter estimation
         fit1 = SimpleExpSmoothing(self.livestock2_livestock).fit()
         mod4 = Holt(self.livestock2_livestock, damped=True)
         fit4 = mod4.fit(damping_slope=0.98)
@@ -226,12 +228,100 @@ class TestHoltWinters(object):
         assert_almost_equal(fit4.params['initial_level'], 257.36, 2)
         assert_almost_equal(fit4.params['initial_slope'], 6.51, 2)
         assert_almost_equal(fit4.sse, 6036.56, 2)  # 6080.26
+
         assert_almost_equal(fit5.params['smoothing_level'], 0.97, 2)
         assert_almost_equal(fit5.params['smoothing_slope'], 0.00, 2)
         assert_almost_equal(fit5.params['damping_slope'], 0.98, 2)
         assert_almost_equal(fit5.params['initial_level'], 258.95, 2)
         assert_almost_equal(fit5.params['initial_slope'], 1.02, 2)
         assert_almost_equal(fit5.sse, 6082.00, 2)  # 6100.11
+
+    def test_holt_damp_R(self):
+        # Test the damping parameters against the R forecast packages `ets`
+        # library(ets)
+        # livestock2_livestock <- c(...)
+        # res <- ets(livestock2_livestock, model='AAN', damped=TRUE, phi=0.98)
+        mod = Holt(self.livestock2_livestock, damped=True)
+        params = {
+            'smoothing_level': 0.97402626,
+            'smoothing_slope': 0.00010006,
+            'damping_slope': 0.98,
+            'initial_level': 252.59039965,
+            'initial_slope': 6.90265918}
+        fit = mod.fit(optimized=False, **params)
+
+        # Check that we captured the parameters correctly
+        for key in params.keys():
+            assert_allclose(fit.params[key], params[key])
+
+        # Summary output
+        # print(res$mse)
+        assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)
+        # print(res$aicc)
+        # TODO: this fails - different AICC definition?
+        # assert_allclose(fit.aicc, 282.386426659408, atol=1e-3)
+        # print(res$bic)
+        # TODO: this fails - different BIC definition?
+        # assert_allclose(fit.bic, 287.1563626818338)
+
+        # print(res$states[,'l'])
+        # note: this array includes the initial level
+        desired = [
+            252.5903996514365, 263.7992355246843, 268.3623324350207,
+            261.0312983437606, 266.6590942700923, 277.3958197247272,
+            283.8256217863908, 290.2962560621914, 292.5701438129583,
+            300.7655919939834, 309.2118057241649, 318.2377698496536,
+            329.2238709362550, 338.7709778307978, 339.3669793596703,
+            329.0127022356033, 314.7684267018998, 314.5948077575944,
+            321.3612035017972, 329.6924360833211, 346.0712138652086,
+            352.2534120008911, 348.5862874190927, 415.8839400693967,
+            417.2018843196238, 417.8435306633725, 412.4857261252961,
+            412.0647865321129, 395.2500605270393, 401.4367438266322,
+            408.1907701386275, 414.1814574903921]
+        assert_allclose(np.r_[fit.params['initial_level'], fit.level], desired)
+
+        # print(res$states[,'b'])
+        # note: this array includes the initial slope
+        desired = [
+            6.902659175332394, 6.765062519124909, 6.629548973536494,
+            6.495537532917715, 6.365550989616566, 6.238702070454378,
+            6.113960476763530, 5.991730467006233, 5.871526257315264,
+            5.754346516684953, 5.639547926790058, 5.527116419415724,
+            5.417146212898857, 5.309238662451385, 5.202580636191761,
+            5.096941655567694, 4.993026494493987, 4.892645486210410,
+            4.794995106664251, 4.699468310763351, 4.606688340205792,
+            4.514725879754355, 4.423600168391240, 4.341595902295941,
+            4.254462303550087, 4.169010676686062, 4.084660399498803,
+            4.002512751871354, 3.920332298146730, 3.842166514133902,
+            3.765630194200260, 3.690553892582855]
+        # TODO: not sure why the precision is so low here...
+        assert_allclose(np.r_[fit.params['initial_slope'], fit.slope], desired,
+                        atol=1e-3)
+
+        # print(res$fitted)
+        desired = [
+            259.3550056432622, 270.4289967934267, 274.8592904290865,
+            267.3969251260200, 272.8973342399166, 283.5097477537724,
+            289.8173030536191, 296.1681519198575, 298.3242395451272,
+            306.4048515803347, 314.7385626924191, 323.6543439406810,
+            334.5326742248959, 343.9740317200002, 344.4655083831382,
+            334.0077050580596, 319.6615926665040, 319.3896003340806,
+            326.0602987063282, 334.2979150278692, 350.5857684386102,
+            356.6778433630504, 352.9214155841161, 420.1387040536467,
+            421.3712573771029, 421.9291611265248, 416.4886933168049,
+            415.9872490289468, 399.0919861792231, 405.2020670104834,
+            411.8810877289437]
+        assert_allclose(fit.fittedvalues, desired, atol=1e-3)
+
+        # print(forecast(res)$mean)
+        desired = [
+            417.7982003051233, 421.3426082635598, 424.8161280628277,
+            428.2201774661102, 431.5561458813270, 434.8253949282395,
+            438.0292589942138, 441.1690457788685, 444.2460368278302,
+            447.2614880558126]
+        assert_allclose(fit.forecast(10), desired, atol=1e-4)
+
+
 
     def test_hw_seasonal(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4,
