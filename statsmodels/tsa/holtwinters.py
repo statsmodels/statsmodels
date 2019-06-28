@@ -1135,4 +1135,4 @@ class Holt(ExponentialSmoothing):
         return super(Holt, self).fit(smoothing_level=smoothing_level,
                                      smoothing_slope=smoothing_slope, damping_slope=damping_slope,
                                      optimized=optimized, start_params=start_params,
-                                     initial_level=None, initial_slope=None, use_brute=use_brute)
+                                     initial_level=initial_level, initial_slope=initial_slope, use_brute=use_brute)
