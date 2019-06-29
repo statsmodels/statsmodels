@@ -16,6 +16,7 @@ What's new in Statsmodels
 .. toctree::
    :maxdepth: 1
 
+   version0.10.1
    version0.10
    version0.9
    version0.8

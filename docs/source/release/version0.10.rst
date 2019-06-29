@@ -395,7 +395,7 @@ be complete.
 Merged Pull Requests
 --------------------
 
-Thie following Pull Requests were merged since the last release:
+The following Pull Requests were merged since the last release:
 
 
 * :pr:`2096`: Score/LM conditional moment tests
