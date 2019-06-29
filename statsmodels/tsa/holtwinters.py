@@ -930,14 +930,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         resid = data - fitted[:-h - 1]
         if remove_bias:
             fitted += resid.mean()
-        if not damped:
-            phi = np.NaN
         self.params = {'smoothing_level': alpha,
                        'smoothing_slope': beta,
                        'smoothing_seasonal': gamma,
-                       'damping_slope': phi,
+                       'damping_slope': phi if damped else np.nan,
                        'initial_level': lvls[0],
-                       'initial_slope': b[0],
+                       'initial_slope': b[0] / phi,
                        'initial_seasons': s[:m],
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
@@ -1135,4 +1133,4 @@ class Holt(ExponentialSmoothing):
         return super(Holt, self).fit(smoothing_level=smoothing_level,
                                      smoothing_slope=smoothing_slope, damping_slope=damping_slope,
                                      optimized=optimized, start_params=start_params,
-                                     initial_level=None, initial_slope=None, use_brute=use_brute)
+                                     initial_level=initial_level, initial_slope=initial_slope, use_brute=use_brute)
