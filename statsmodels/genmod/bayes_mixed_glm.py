@@ -16,7 +16,7 @@ Every column of `exog_vc` corresponds to an independent realization of
 a random effect.  These random effects have mean zero and an unknown
 standard deviation.  The standard deviation parameters are constrained
 to be equal within subsets of the columns. These subsets are specified
-through the parameer `ident` when not using formulas.  When formulas
+through the parameter `ident` when not using formulas.  When formulas
 are used, the columns of `exog_vc` derived from a common formula are
 constrained to have the same standard deviation.
 
@@ -86,8 +86,8 @@ _init_doc = r"""
         scipy.sparse array may be provided, or else the passed
         array will be converted to sparse internally.
     ident : array-like
-        Array of labels showing which random terms (columns of
-        `exog_vc`) have a common variance.
+        Array of integer labels showing which random terms (columns
+        of `exog_vc`) have a common variance.
     vcp_p : float
         Prior standard deviation for variance component parameters
         (the prior standard deviation of log(s) is vcp_p, where s is
@@ -157,26 +157,28 @@ _init_doc = r"""
     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
     """
 
+# The code in the example should be identical to what appears in
+# the test_doc_examples unit test
 _logit_example = """
     A binomial (logistic) random effects model with random intercepts
     for villages and random slopes for each year within each village:
 
-    >>> data['year_cen'] = data['Year'] - data.Year.mean()
-    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
-    >>> model = BinomialBayesMixedGLM.from_formula('y ~ year_cen',
-                   random, data)
-    >>> result = model.fit()
+    >>> random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    >>> model = BinomialBayesMixedGLM.from_formula(
+                   'y ~ year_cen', random, data)
+    >>> result = model.fit_vb()
 """
 
+# The code in the example should be identical to what appears in
+# the test_doc_examples unit test
 _poisson_example = """
     A Poisson random effects model with random intercepts for villages
     and random slopes for each year within each village:
 
-    >>> data['year_cen'] = data['Year'] - data.Year.mean()
-    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
-    >>> model = PoissonBayesMixedGLM.from_formula('y ~ year_cen',
-                    random, data)
-    >>> result = model.fit()
+    >>> random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    >>> model = PoissonBayesMixedGLM.from_formula(
+                    'y ~ year_cen', random, data)
+    >>> result = model.fit_vb()
 """
 
 
@@ -194,8 +196,17 @@ class _BayesMixedGLM(base.Model):
                  vc_names=None,
                  **kwargs):
 
+        ident = np.asarray(ident)
+        if ident.ndim != 1:
+            msg = "ident must be a one-dimensional array"
+            raise ValueError(msg)
+
         if len(ident) != exog_vc.shape[1]:
             msg = "len(ident) should match the number of columns of exog_vc"
+            raise ValueError(msg)
+
+        if not np.issubdtype(ident.dtype, np.integer):
+            msg = "ident must have an integer dtype"
             raise ValueError(msg)
 
         # Get the fixed effects parameter names
@@ -386,7 +397,7 @@ class _BayesMixedGLM(base.Model):
         vc_formulas : dictionary
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
-            prameter.  If using a categorical expression to produce
+            prameter.  If using categorical (factor) variables to produce
             variance components, note that generally `0 + ...` should
             be used so that an intercept is not included.
         data : data frame
@@ -408,7 +419,7 @@ class _BayesMixedGLM(base.Model):
             mat = patsy.dmatrix(fml, data, return_type='dataframe')
             exog_vc.append(mat)
             vcp_names.append(na)
-            ident.append(j * np.ones(mat.shape[1]))
+            ident.append(j * np.ones(mat.shape[1], dtype=np.integer))
             j += 1
         exog_vc = pd.concat(exog_vc, axis=1)
         vc_names = exog_vc.columns.tolist()
@@ -992,6 +1003,10 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             fep_names=fep_names,
             vcp_names=vcp_names,
             vc_names=vc_names)
+
+        if not np.all(np.unique(endog) == np.r_[0, 1]):
+            msg = "endog values must be 0 and 1, and not all identical"
+            raise ValueError(msg)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
