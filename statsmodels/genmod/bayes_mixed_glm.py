@@ -201,6 +201,26 @@ class _BayesMixedGLM(base.Model):
                  vc_names=None,
                  **kwargs):
 
+        if exog.ndim == 1:
+            if isinstance(exog, np.ndarray):
+                exog = exog[:, None]
+            else:
+                exog = pd.DataFrame(exog)
+
+        if exog.ndim != 2:
+            msg = "'exog' must have one or two columns"
+            raise ValueError(msg)
+
+        if exog_vc.ndim == 1:
+            if isinstance(exog_vc, np.ndarray):
+                exog_vc = exog_vc[:, None]
+            else:
+                exog_vc = pd.DataFrame(exog_vc)
+
+        if exog_vc.ndim != 2:
+            msg = "'exog_vc' must have one or two columns"
+            raise ValueError(msg)
+
         ident = np.asarray(ident)
         if ident.ndim != 1:
             msg = "ident must be a one-dimensional array"
