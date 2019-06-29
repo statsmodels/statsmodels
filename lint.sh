@@ -51,6 +51,7 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/tests/test_lme.py \
         statsmodels/regression/tests/test_processreg.py \
         statsmodels/regression/tests/test_quantile_regression.py \
+        statsmodels/regression/tests/test_tools.py \
         statsmodels/regression/tests/results/ \
         statsmodels/robust/tests/ \
         statsmodels/sandbox/distributions/try_pot.py \
