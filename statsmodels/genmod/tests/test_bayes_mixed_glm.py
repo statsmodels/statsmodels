@@ -597,6 +597,7 @@ def test_doc_examples():
     model = BinomialBayesMixedGLM.from_formula(
                  'y ~ year_cen', random, data)
     result = model.fit_vb()
+    _ = result
 
     # Poisson outcome
     lpr = np.random.normal(size=m)[data.Village]
@@ -608,3 +609,4 @@ def test_doc_examples():
     model = PoissonBayesMixedGLM.from_formula(
                  'y ~ year_cen', random, data)
     result = model.fit_vb()
+    _ = result
