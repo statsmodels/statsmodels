@@ -36,8 +36,8 @@ import versioneer
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
-SETUP_REQUIREMENTS = {'numpy': '1.11',  # released March 2016
-                      'scipy': '0.18',  # released July 2016
+SETUP_REQUIREMENTS = {'numpy': '1.14',  # released January 2018
+                      'scipy': '1.0',  # released October 2017
                       }
 
 REQ_NOT_MET_MSG = """
@@ -59,11 +59,11 @@ for key in SETUP_REQUIREMENTS:
         raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
 
 INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
-INSTALL_REQUIREMENTS.update({'pandas': '0.19',  # released October 2016
-                             'patsy': '0.4.0',  # released July 2015
+INSTALL_REQUIREMENTS.update({'pandas': '0.21',  # released October 2017
+                             'patsy': '0.5',  # released January 2018
                              })
 
-CYTHON_MIN_VER = '0.24'  # released Apr 2016
+CYTHON_MIN_VER = '0.27'  # released September 2017
 
 SETUP_REQUIRES = [k + '>=' + v for k, v in SETUP_REQUIREMENTS.items()]
 INSTALL_REQUIRES = [k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()]
@@ -98,7 +98,6 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
                'Programming Language :: Python :: 2.7',
-               'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: 3.6',
                'Programming Language :: Python :: 3.7',

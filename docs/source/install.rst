@@ -103,20 +103,18 @@ Dependencies
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 2.7, including Python 3.4+
-* `NumPy <http://www.scipy.org/>`__ >= 1.11
-* `SciPy <http://www.scipy.org/>`__ >= 0.18
-* `Pandas <http://pandas.pydata.org/>`__ >= 0.19
-* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.4.0
-* `Cython <http://cython.org/>`__ >= 0.24 is required to build the code from
+* `Python <https://www.python.org>`__ >= 2.7, including Python 3.5+
+* `NumPy <http://www.scipy.org/>`__ >= 1.14
+* `SciPy <http://www.scipy.org/>`__ >= 1.0
+* `Pandas <http://pandas.pydata.org/>`__ >= 0.21
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.0
+* `Cython <http://cython.org/>`__ >= 0.27 is required to build the code from
   github but not from a source distribution.
 
 Given the long release cycle, Statsmodels follows a loose time-based policy for
 dependencies: minimal dependencies are lagged about one and a half to two
-years. Our next planned update of minimum versions in `setup.py` is expected in
-September 2018, when we will update to reflect Numpy >= 1.12 (released January
-2017), Scipy >= 0.19 (released March 2017) and Pandas >= 0.20 (released May
-2017).
+years. Our next planned update of minimum versions is expected in the first
+half of 2020.
 
 Optional Dependencies
 ---------------------

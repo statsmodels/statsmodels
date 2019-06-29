@@ -1,4 +1,4 @@
-numpy>=1.11
-scipy>=0.18
-pandas>=0.19
-patsy>=0.4
+numpy>=1.14
+scipy>=1.0
+pandas>=0.21
+patsy>=0.5
