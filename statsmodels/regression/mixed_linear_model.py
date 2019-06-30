@@ -210,19 +210,18 @@ class VCSpec(object):
     """
     Define the variance component structure of a multilevel model.
 
+    An instance of the class contains three attributes:
+
+    - names : names[k] is the name of variance component k.
+
+    - mats : mats[k][i] is the design matrix for group index
+      i in variance component k.
+
+    - colnames : colnames[k][i] is the list of column names for
+      mats[k][i].
+
     The groups in colnames and mats must be in sorted order.
     """
-
-    # Names of the variance components.  names[k] is the
-    # name of variance component k
-    names = []
-
-    # colnames[k][i] is the list of column names for mats[k][i]
-    colnames = []
-
-    # mats[k][i] is the variance component design matrix
-    # for group i in variance component k
-    mats = []
 
     def __init__(self, names, colnames, mats):
         self.names = names
@@ -605,9 +604,8 @@ class MixedLM(base.LikelihoodModel):
     exog_vc : VCSpec instance or dict-like (deprecated)
         A VCSPec instance defines the structure of the variance
         components in the model.  Alternatively, see notes below
-        for a dictionary-based format.  However the dictionary
-        format is deprecated and may be removed at some point
-        in the future.
+        for a dictionary-based format.  The dictionary format is
+        deprecated and may be removed at some point in the future.
     use_sqrt : bool
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
@@ -997,18 +995,16 @@ class MixedLM(base.LikelihoodModel):
             vc_colnames = []
             vc_names = []
             gb = data.groupby(groups)
-            kylist = list(gb.groups.keys())
-            kylist.sort()
-            vcf = list(vc_formula.keys())
-            vcf.sort()
+            kylist = sorted(gb.groups.keys())
+            vcf = sorted(vc_formula.keys())
             for vc_name in vcf:
-                vcg = vc_formula[vc_name]
+                md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
                     mat = patsy.dmatrix(
-                             vcg,
+                             md,
                              data.loc[ii, :],
                              eval_env=eval_env,
                              return_type='dataframe')
@@ -1390,7 +1386,7 @@ class MixedLM(base.LikelihoodModel):
 
         ex = [ex_r] if self.k_re > 0 else []
         any_sparse = False
-        for j, k in enumerate(self.exog_vc.names):
+        for j, _ in enumerate(self.exog_vc.names):
             ex.append(self.exog_vc.mats[j][group_ix])
             any_sparse |= sparse.issparse(ex[-1])
         if any_sparse:
@@ -1543,7 +1539,7 @@ class MixedLM(base.LikelihoodModel):
                 jj += 1
 
         # Variance components
-        for j, ky in enumerate(self.exog_vc.names):
+        for j, _ in enumerate(self.exog_vc.names):
             if max_ix is not None and jj > max_ix:
                 return
             mat = self.exog_vc.mats[j][group_ix]
@@ -2267,7 +2263,7 @@ class _mixedlm_distribution(object):
         y += (u[self.group_idx, :] * model.exog_re).sum(1)
 
         # Variance components
-        for j, k in enumerate(model.exog_vc.names):
+        for j, _ in enumerate(model.exog_vc.names):
             ex = model.exog_vc.mats[j]
             v = self.vcomp[j]
             for i, g in enumerate(model.group_labels):
@@ -2863,8 +2859,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
                     tokens.add(tok.string)
                 else:
                     tokens.add(tok[1])
-    tokens = list(tokens & set(data.columns))
-    tokens.sort()
+    tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
     ii = pd.notnull(data).all(1)
