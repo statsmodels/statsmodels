@@ -10,7 +10,7 @@ import re
 import warnings
 
 import numpy as np
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal, assert_allclose, assert_raises
 import pandas as pd
 import pytest
 
@@ -936,3 +936,35 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert out.index.equals(pd.Index(['a']))
+
+
+def test_forecast_exog():
+    # Test forecasting with various shapes of `exog`
+    nobs = 100
+    endog = np.ones((nobs, 2)) * 2.0
+    exog = np.ones(nobs)
+
+    mod = varmax.VARMAX(endog, order=(1, 0), exog=exog, trend='n')
+    res = mod.smooth(np.r_[[0] * 4, 2.0, 2.0, 1, 0, 1])
+
+    # 1-step-ahead, valid
+    exog_fcast_scalar = 1.
+    exog_fcast_1dim = np.ones(1)
+    exog_fcast_2dim = np.ones((1, 1))
+
+    assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, valid
+    h = 10
+    exog_fcast_1dim = np.ones(h)
+    exog_fcast_2dim = np.ones((h, 1))
+
+    assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, invalid
+    assert_raises(ValueError, res.forecast, h, exog=1.)
+    assert_raises(ValueError, res.forecast, h, exog=[1, 2])
+    assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))

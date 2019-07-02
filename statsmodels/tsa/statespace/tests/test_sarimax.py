@@ -2414,3 +2414,35 @@ def check_concentrated_scale(filter_univariate=False):
 def test_concentrated_scale():
     check_concentrated_scale(filter_univariate=False)
     check_concentrated_scale(filter_univariate=True)
+
+
+def test_forecast_exog():
+    # Test forecasting with various shapes of `exog`
+    nobs = 100
+    endog = np.ones(nobs) * 2.0
+    exog = np.ones(nobs)
+
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    res = mod.smooth([2.0, 0.0, 1.0])
+
+    # 1-step-ahead, valid
+    exog_fcast_scalar = 1.
+    exog_fcast_1dim = np.ones(1)
+    exog_fcast_2dim = np.ones((1, 1))
+
+    assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, valid
+    h = 10
+    exog_fcast_1dim = np.ones(h)
+    exog_fcast_2dim = np.ones((h, 1))
+
+    assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, invalid
+    assert_raises(ValueError, res.forecast, h, exog=1.)
+    assert_raises(ValueError, res.forecast, h, exog=[1, 2])
+    assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))

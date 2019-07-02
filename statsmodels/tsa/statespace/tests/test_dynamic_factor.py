@@ -781,3 +781,36 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_forecast_exog():
+    # Test forecasting with various shapes of `exog`
+    nobs = 100
+    endog = np.ones((nobs, 2)) * 2.0
+    exog = np.ones(nobs)
+
+    mod = dynamic_factor.DynamicFactor(endog, exog=exog, k_factors=1,
+                                       factor_order=1)
+    res = mod.smooth(np.r_[[0] * 2, 2.0, 2.0, 1, 1., 0.])
+
+    # 1-step-ahead, valid
+    exog_fcast_scalar = 1.
+    exog_fcast_1dim = np.ones(1)
+    exog_fcast_2dim = np.ones((1, 1))
+
+    assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, valid
+    h = 10
+    exog_fcast_1dim = np.ones(h)
+    exog_fcast_2dim = np.ones((h, 1))
+
+    assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, invalid
+    assert_raises(ValueError, res.forecast, h, exog=1.)
+    assert_raises(ValueError, res.forecast, h, exog=[1, 2])
+    assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
