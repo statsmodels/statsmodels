@@ -41,5 +41,6 @@ Merged Pull Requests
 
 The following Pull Requests were merged since the last release:
 
-
+* :pr:`5892`: BUG: fix pandas compat
 * :pr:`5893`: BUG: exponential smoothing - damped trend gives incorrect param, predictions
+* :pr:`5897`: MAINT: Use pytest.raises to check error message
