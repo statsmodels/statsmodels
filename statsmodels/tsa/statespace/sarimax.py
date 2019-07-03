@@ -1912,10 +1912,7 @@ class SARIMAXResults(MLEResults):
                     continue
                 mat = getattr(model.ssm, name)
                 if mat.shape[-1] > 1:
-                    if len(mat.shape) == 2:
-                        kwargs[name] = mat[:, -_out_of_sample:]
-                    else:
-                        kwargs[name] = mat[:, :, -_out_of_sample:]
+                    kwargs[name] = mat[..., -_out_of_sample:]
         elif self.model.k_exog == 0 and exog is not None:
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
