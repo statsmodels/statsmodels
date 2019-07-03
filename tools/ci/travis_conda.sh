@@ -11,6 +11,7 @@ chmod +x miniconda.sh
 export PATH="$HOME"/miniconda/bin:$PATH
 conda config --set always_yes yes
 conda update --quiet conda
+conda config --set restore_free_channel true
 # Build package list to avoid empty package=versions; only needed for versioned packages
 PKGS="numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
 PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi

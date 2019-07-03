@@ -4,6 +4,7 @@ START /WAIT C:\Miniconda.exe /S /D=C:\Py
 set PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
 conda config --set always_yes yes
 conda update conda --quiet
+conda config --set restore_free_channel true
 IF Defined SCIPY (
     conda install numpy=%NUMPY% scipy=%SCIPY% icc_rt cython pandas pip nose patsy --quiet
 ) else (
