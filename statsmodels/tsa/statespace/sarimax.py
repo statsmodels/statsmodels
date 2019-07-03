@@ -1909,7 +1909,7 @@ class SARIMAXResults(MLEResults):
                 required_exog_shape = (_out_of_sample, self.model.k_exog)
                 try:
                     exog = exog.reshape(required_exog_shape)
-                except:
+                except ValueError:
                     raise ValueError('Provided exogenous values are not of the'
                                      ' appropriate shape. Required %s, got %s.'
                                      % (str(required_exog_shape),
