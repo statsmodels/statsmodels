@@ -601,15 +601,14 @@ class UnobservedComponents(MLEModel):
             2*np.pi / cycle_period_bounds[1], 2*np.pi / cycle_period_bounds[0]
         )
 
-        # update _init_keys attached by super
+        # Update _init_keys attached by super
         self._init_keys += ['level', 'trend', 'seasonal', 'freq_seasonal',
-                            'cycle', 'autoregressive', 'exog', 'irregular',
+                            'cycle', 'autoregressive', 'irregular',
                             'stochastic_level', 'stochastic_trend',
                             'stochastic_seasonal', 'stochastic_freq_seasonal',
                             'stochastic_cycle',
                             'damped_cycle', 'cycle_period_bounds',
                             'mle_regression'] + list(kwargs.keys())
-        # TODO: I think the kwargs or not attached, need to recover from ???
 
         # Initialize the state
         self.initialize_default()
@@ -619,6 +618,13 @@ class UnobservedComponents(MLEModel):
         kwds = super(UnobservedComponents, self)._get_init_kwds()
 
         # Modifications
+        if self.trend_specification is not None:
+            kwds['level'] = self.trend_specification
+
+            for attr in ['irregular', 'trend', 'stochastic_level',
+                         'stochastic_trend']:
+                kwds[attr] = False
+
         kwds['seasonal'] = self.seasonal_periods
         kwds['freq_seasonal'] = [
             {'period': p,

@@ -237,6 +237,21 @@ class DynamicFactor(MLEModel):
         self._params_error_transition, offset = (
             _slice('error_transition', offset))
 
+        # Update _init_keys attached by super
+        self._init_keys += ['k_factors', 'factor_order', 'error_order',
+                            'error_var', 'error_cov_type',
+                            'enforce_stationarity'] + list(kwargs.keys())
+
+    def _get_init_kwds(self):
+        # Get keywords based on model attributes
+        kwds = super(DynamicFactor, self)._get_init_kwds()
+
+        for key, value in kwds.items():
+            if value is None and hasattr(self.ssm, key):
+                kwds[key] = getattr(self.ssm, key)
+
+        return kwds
+
     def _initialize_loadings(self):
         # Initialize the parameters
         self.parameters['factor_loadings'] = self.k_endog * self.k_factors

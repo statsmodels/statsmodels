@@ -488,3 +488,63 @@ def test_forecast_exog():
     assert_raises(ValueError, res.forecast, h, exog=1.)
     assert_raises(ValueError, res.forecast, h, exog=[1, 2])
     assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
+
+
+def check_equivalent_models(mod, mod2):
+    attrs = [
+        'level', 'trend', 'seasonal_periods', 'seasonal',
+        'freq_seasonal_periods', 'freq_seasonal_harmonics', 'freq_seasonal',
+        'cycle', 'ar_order', 'autoregressive', 'irregular', 'stochastic_level',
+        'stochastic_trend', 'stochastic_seasonal', 'stochastic_freq_seasonal',
+        'stochastic_cycle', 'damped_cycle', 'mle_regression',
+        'trend_specification', 'trend_mask', 'regression',
+        'cycle_frequency_bound']
+
+    ssm_attrs = [
+        'nobs', 'k_endog', 'k_states', 'k_posdef', 'obs_intercept', 'design',
+        'obs_cov', 'state_intercept', 'transition', 'selection', 'state_cov']
+
+    for attr in attrs:
+        assert_equal(getattr(mod2, attr), getattr(mod, attr))
+
+    for attr in ssm_attrs:
+        assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
+
+    assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
+
+
+def test_recreate_model():
+    nobs = 100
+    endog = np.ones(nobs) * 2.0
+    exog = np.ones(nobs)
+
+    levels = [
+        'irregular', 'ntrend', 'fixed intercept', 'deterministic constant',
+        'dconstant', 'local level', 'llevel', 'random walk', 'rwalk',
+        'fixed slope', 'deterministic trend', 'dtrend',
+        'local linear deterministic trend', 'lldtrend',
+        'random walk with drift', 'rwdrift', 'local linear trend',
+        'lltrend', 'smooth trend', 'strend', 'random trend', 'rtrend']
+
+    for level in levels:
+        # Note: have to add in some stochastic component, otherwise we have
+        # problems with entirely deterministic models
+
+        # level + stochastic seasonal
+        mod = UnobservedComponents(endog, level=level, seasonal=2,
+                                   stochastic_seasonal=True, exog=exog)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+        # level + autoregressive
+        mod = UnobservedComponents(endog, level=level, exog=exog,
+                                   autoregressive=1)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+        # level + stochastic cycle
+        mod = UnobservedComponents(endog, level=level, exog=exog,
+                                   cycle=True, stochastic_cycle=True,
+                                   damped_cycle=True)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)

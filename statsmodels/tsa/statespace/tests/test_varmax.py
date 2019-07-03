@@ -968,3 +968,49 @@ def test_forecast_exog():
     assert_raises(ValueError, res.forecast, h, exog=1.)
     assert_raises(ValueError, res.forecast, h, exog=[1, 2])
     assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
+
+
+def check_equivalent_models(mod, mod2):
+    attrs = [
+        'order', 'trend', 'error_cov_type', 'measurement_error',
+        'enforce_stationarity', 'enforce_invertibility', 'k_params']
+
+    ssm_attrs = [
+        'nobs', 'k_endog', 'k_states', 'k_posdef', 'obs_intercept', 'design',
+        'obs_cov', 'state_intercept', 'transition', 'selection', 'state_cov']
+
+    for attr in attrs:
+        assert_equal(getattr(mod2, attr), getattr(mod, attr))
+
+    for attr in ssm_attrs:
+        assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
+
+    assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
+
+
+def test_recreate_model():
+    nobs = 100
+    endog = np.ones((nobs, 3)) * 2.0
+    exog = np.ones(nobs)
+
+    orders = [(1, 0), (1, 1)]
+    trends = ['t', 'n']
+    error_cov_types = ['diagonal', 'unstructured']
+    measurement_errors = [False, True]
+    enforce_stationarities = [False, True]
+    enforce_invertibilities = [False, True]
+
+    import itertools
+    names = ['order', 'trend', 'error_cov_type', 'measurement_error',
+             'enforce_stationarity', 'enforce_invertibility']
+    for element in itertools.product(orders, trends, error_cov_types,
+                                     measurement_errors,
+                                     enforce_stationarities,
+                                     enforce_invertibilities):
+        kwargs = dict(zip(names, element))
+
+        with warnings.catch_warnings(record=False):
+            warnings.simplefilter('ignore')
+            mod = varmax.VARMAX(endog, exog=exog, **kwargs)
+            mod2 = varmax.VARMAX(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)

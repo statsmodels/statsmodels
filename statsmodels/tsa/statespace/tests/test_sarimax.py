@@ -2446,3 +2446,62 @@ def test_forecast_exog():
     assert_raises(ValueError, res.forecast, h, exog=1.)
     assert_raises(ValueError, res.forecast, h, exog=[1, 2])
     assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
+
+
+def check_equivalent_models(mod, mod2):
+    attrs = [
+        'measurement_error', 'state_error', 'mle_regression',
+        'state_regression', 'time_varying_regression', 'simple_differencing',
+        'enforce_stationarity', 'enforce_invertibility',
+        'hamilton_representation', 'trend', 'polynomial_ar', 'polynomial_ma',
+        'polynomial_seasonal_ar', 'polynomial_seasonal_ma', 'polynomial_trend',
+        'k_ar', 'k_ar_params', 'k_diff', 'k_ma', 'k_ma_params',
+        'seasonal_periods', 'k_seasonal_ar', 'k_seasonal_ar_params',
+        'k_seasonal_diff', 'k_seasonal_ma', 'k_seasonal_ma_params',
+        'k_trend', 'k_exog']
+
+    ssm_attrs = [
+        'nobs', 'k_endog', 'k_states', 'k_posdef', 'obs_intercept', 'design',
+        'obs_cov', 'state_intercept', 'transition', 'selection', 'state_cov']
+
+    for attr in attrs:
+        print(attr)
+        assert_equal(getattr(mod2, attr), getattr(mod, attr))
+
+    for attr in ssm_attrs:
+        assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
+
+    assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
+
+
+def test_recreate_model():
+    nobs = 100
+    endog = np.ones(nobs) * 2.0
+    exog = np.ones(nobs)
+
+    orders = [(1, 0, 0), (2, 2, 2)]
+    seasonal_orders = [(0, 0, 0, 0), (1, 1, 1, 4)]
+
+    simple_differencings = [True, False]
+    exogs = [None, np.ones_like(endog)]
+    trends = [None, 't']
+    # Disabled, see discussion below in setting k_snr for details
+    time_varying_regressions = [True, False]
+    measurement_errors = [True, False]
+
+    import itertools
+    names = ['exog', 'order', 'seasonal_order', 'trend', 'measurement_error',
+             'time_varying_regression', 'simple_differencing']
+    for element in itertools.product(exogs, orders, seasonal_orders, trends,
+                                     measurement_errors,
+                                     time_varying_regressions,
+                                     simple_differencings):
+        kwargs = dict(zip(names, element))
+        if kwargs.get('time_varying_regression', False):
+            kwargs['mle_regression'] = False
+        exog = kwargs.pop('exog', None)
+
+        mod = sarimax.SARIMAX(endog, exog=exog, **kwargs)
+        mod2 = sarimax.SARIMAX(endog, exog=exog, **mod._get_init_kwds())
+
+        check_equivalent_models(mod, mod2)

@@ -8,6 +8,7 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 import warnings
 
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -174,6 +175,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def __getitem__(self, key):
         return self.ssm.__getitem__(key)
+
+    def clone(self, endog, exog=None, **kwargs):
+        pass
 
     def set_filter_method(self, filter_method=None, **kwargs):
         """
@@ -2578,6 +2582,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                 **kwargs)
         return irfs
 
+    def extend(endog, exog=None, **kwargs):
+        # Extend the current fit result to additional endog data
+        pass
+
+    def apply(endog, exog=None, **kwargs):
+        # Apply the current parameters to different endog data
+        pass
+
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """
         Diagnostic plots for standardized residuals of one endogenous variable
@@ -2903,7 +2915,6 @@ class PredictionResults(pred.PredictionResults):
     def summary_frame(self, endog=0, what='all', alpha=0.05):
         # TODO: finish and cleanup
         # import pandas as pd
-        from collections import OrderedDict
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
         to_include = OrderedDict()

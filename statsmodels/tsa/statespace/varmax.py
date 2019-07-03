@@ -290,6 +290,21 @@ class VARMAX(MLEModel):
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
 
+        # Update _init_keys attached by super
+        self._init_keys += ['order', 'trend', 'error_cov_type',
+                            'measurement_error', 'enforce_stationarity',
+                            'enforce_invertibility'] + list(kwargs.keys())
+
+    def _get_init_kwds(self):
+        # Get keywords based on model attributes
+        kwds = super(VARMAX, self)._get_init_kwds()
+
+        for key, value in kwds.items():
+            if value is None and hasattr(self.ssm, key):
+                kwds[key] = getattr(self.ssm, key)
+
+        return kwds
+
     @property
     def _res_classes(self):
         return {'fit': (VARMAXResults, VARMAXResultsWrapper)}

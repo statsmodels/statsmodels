@@ -542,7 +542,7 @@ class SARIMAX(MLEModel):
             self.ssm['state_cov', 0, 0] = 1.
 
         # update _init_keys attached by super
-        self._init_keys += ['order',  'seasonal_order', 'trend',
+        self._init_keys += ['order', 'seasonal_order', 'trend',
                             'measurement_error', 'time_varying_regression',
                             'mle_regression', 'simple_differencing',
                             'enforce_stationarity', 'enforce_invertibility',
