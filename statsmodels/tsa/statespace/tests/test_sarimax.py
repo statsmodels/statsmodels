@@ -2132,9 +2132,6 @@ def test_misc_exog():
         res.get_forecast(steps=1, exog=oos_exog)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(1))
-        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
-
         oos_exog = np.random.normal(size=(2, mod.k_exog))
         assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
 
