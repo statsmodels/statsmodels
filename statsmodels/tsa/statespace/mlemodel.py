@@ -2601,7 +2601,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                 **kwargs)
         return irfs
 
-    def append(self, endog, exog=None, **kwargs):
+    def append(self, endog, exog=None, refit=False, **kwargs):
         """
         Recreate the results object with new data appended to the original data
 
@@ -2615,6 +2615,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             New observations from the modeled time-series process.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        refit : bool, optional
+            Wheter to re-fit the parameters, based on the combined dataset.
+            Default is False (so parameters from the current results object
+            are used to create the new results object).
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -2687,7 +2691,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             new_exog = None
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
-        if self.smoother_results is not None:
+
+        if refit:
+            res = mod.fit(start_params=self.params)
+        elif self.smoother_results is not None:
             res = mod.smooth(self.params)
         else:
             res = mod.filter(self.params)
@@ -2779,13 +2786,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
-    def apply(self, endog, exog=None, **kwargs):
+    def apply(self, endog, exog=None, refit=False, **kwargs):
         """
-        Apply the results object to new data unrelated to the original data
+        Apply the fitted parameters to new data unrelated to the original data
 
-        Creates a new result object applied to a completely new dataset that is
-        assumed to be unrelated to the model's original data. The new results
-        can then be used for analysis or forecasting.
+        Creates a new result object using the current fitted parameters,
+        applied to a completely new dataset that is assumed to be unrelated to
+        the model's original data. The new results can then be used for
+        analysis or forecasting.
 
         Parameters
         ----------
@@ -2793,6 +2801,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             New observations from the modeled time-series process.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        refit : bool, optional
+            Wheter to re-fit the parameters, using the new dataset.
+            Default is False (so parameters from the current results object
+            are used to create the new results object).
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -2852,7 +2864,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
-        if self.smoother_results is not None:
+        if refit:
+            res = mod.fit(start_params=self.params)
+        elif self.smoother_results is not None:
             res = mod.smooth(self.params)
         else:
             res = mod.filter(self.params)
