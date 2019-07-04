@@ -482,8 +482,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
                  seasonal_periods=None, dates=None, freq=None, missing='none'):
-        super(ExponentialSmoothing, self).__init__(
-            endog, None, dates, freq, missing=missing)
+        super(ExponentialSmoothing, self).__init__(endog, None, dates,
+                                                   freq, missing=missing)
         if trend in ['additive', 'multiplicative']:
             trend = {'additive': 'add', 'multiplicative': 'mul'}[trend]
         self.trend = trend
@@ -493,9 +493,10 @@ class ExponentialSmoothing(TimeSeriesModel):
         self.seasonal = seasonal
         self.trending = trend in ['mul', 'add']
         self.seasoning = seasonal in ['mul', 'add']
-        if (self.trend == 'mul' or self.seasonal == 'mul') and np.any(endog <= 0.0):
-            raise ValueError('endog must be strictly positive when using multiplicative '
-                             'trend or seasonal components.')
+        if (self.trend == 'mul' or self.seasonal == 'mul') and \
+                np.any(np.asarray(endog) <= 0.0):
+            raise ValueError('endog must be strictly positive when using'
+                             'multiplicative trend or seasonal components.')
         if self.damped and not self.trending:
             raise ValueError('Can only dampen the trend component')
         if self.seasoning:
