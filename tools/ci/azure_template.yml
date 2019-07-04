@@ -42,6 +42,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
+      pip install "numpy<=1.16"
       pip install -r requirements.txt
       pip install -r requirements-dev.txt
       pip install pytest-xdist
