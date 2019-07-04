@@ -16,8 +16,6 @@ jobs:
     vmImage: ${{ parameters.vmImage }}
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
       Python35:
         python.version: '3.5'
       Python36:
@@ -31,14 +29,6 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
-
-  - ${{ if eq(parameters.name, 'Windows') }}:
-    # We need to install a C compiler, see
-    #  https://github.com/Microsoft/azure-pipelines-tasks/issues/9674
-    # TODO: This is only necessary for the py27 build, can be removed
-    #  once py27 is dropped
-    - script: choco install vcpython27
-      displayName: 'Install compiler'
 
   - script: |
       python -m pip install --upgrade pip
