@@ -242,16 +242,6 @@ class DynamicFactor(MLEModel):
                             'error_var', 'error_cov_type',
                             'enforce_stationarity'] + list(kwargs.keys())
 
-    def _get_init_kwds(self):
-        # Get keywords based on model attributes
-        kwds = super(DynamicFactor, self)._get_init_kwds()
-
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
-
-        return kwds
-
     def _initialize_loadings(self):
         # Initialize the parameters
         self.parameters['factor_loadings'] = self.k_endog * self.k_factors
@@ -438,6 +428,9 @@ class DynamicFactor(MLEModel):
         # column
         idx = idx[:, np.lexsort((idx[1], idx[0]))]
         self._idx_error_transition = np.s_['transition', idx[0], idx[1]]
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):

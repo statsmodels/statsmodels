@@ -632,10 +632,6 @@ class UnobservedComponents(MLEModel):
             ix, p in enumerate(self.freq_seasonal_periods)]
         kwds['autoregressive'] = self.ar_order
 
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
-
         return kwds
 
     def setup(self):
@@ -806,6 +802,9 @@ class UnobservedComponents(MLEModel):
             init.set(None, 'approximate_diffuse')
 
         self.ssm.initialization = init
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):

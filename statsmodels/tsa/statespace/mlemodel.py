@@ -32,6 +32,8 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
+from .initialization import Initialization
+from .tools import prepare_exog, concat
 
 if bytes != str:
     # PY3
@@ -176,8 +178,25 @@ class MLEModel(tsbase.TimeSeriesModel):
     def __getitem__(self, key):
         return self.ssm.__getitem__(key)
 
+    def _get_init_kwds(self):
+        # Get keywords based on model attributes
+        kwds = super(MLEModel, self)._get_init_kwds()
+
+        for key, value in kwds.items():
+            if value is None and hasattr(self.ssm, key):
+                kwds[key] = getattr(self.ssm, key)
+
+        return kwds
+
     def clone(self, endog, exog=None, **kwargs):
-        pass
+        raise NotImplementedError
+
+    def _clone_from_init_kwds(self, endog, exog=None, **kwargs):
+        # Can't make this the default, because there is extra work required
+        # for subclasses to make _get_init_kwds useful.
+        use_kwargs = self._get_init_kwds()
+        use_kwargs.update(kwargs)
+        return self.__class__(endog, exog=exog, **use_kwargs)
 
     def set_filter_method(self, filter_method=None, **kwargs):
         """
@@ -2582,13 +2601,262 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                 **kwargs)
         return irfs
 
-    def extend(endog, exog=None, **kwargs):
-        # Extend the current fit result to additional endog data
-        pass
+    def append(self, endog, exog=None, **kwargs):
+        """
+        Recreate the results object with new data appended to the original data
 
-    def apply(endog, exog=None, **kwargs):
-        # Apply the current parameters to different endog data
-        pass
+        Creates a new result object applied to a dataset that is created by
+        appending new data to the end of the model's original data. The new
+        results can then be used for analysis or forecasting.
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments may be used to modify model specification
+            arguments when created the new model object.
+
+        Returns
+        -------
+        results
+            Updated Results object, that includes results from both the
+            original dataset and the new dataset.
+
+        Notes
+        -----
+        The `endog` and `exog` arguments to this method must be formatted in
+        the same was (e.g. Pandas Series versus Numpy array) as were the
+        `endog` and `exog` arrays passed to the original model.
+
+        The `endog` argument to this method should consist of new observations
+        that occurred directly after the last element of `endog`. For any other
+        kind of dataset, see the `apply` method.
+
+        This method will apply filtering to all of the original data as well
+        as to the new data. To apply filtering only to the new data (which
+        can be much faster if the original dataset is large), see the `extend`
+        method.
+
+        Examples
+        --------
+        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> original_observations = pd.Series([1.2, 1.5], index=index)
+        >>> mod = sm.tsa.SARIMAX(original_observations)
+        >>> res = mod.fit()
+        >>> print(res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(res.fittedvalues)
+        2000    0.0000
+        2001    1.1707
+        Freq: A-DEC, dtype: float64
+        >>> print(res.forecast(1))
+        2002    1.4634
+        Freq: A-DEC, dtype: float64
+
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_observations = pd.Series([0.9], index=new_index)
+        >>> updated_res = res.append(new_observations)
+        >>> print(updated_res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(updated_res.fittedvalues)
+        2000    0.0000
+        2001    1.1707
+        2002    1.4634
+        Freq: A-DEC, dtype: float64
+        >>> print(updated_res.forecast(1))
+        2003    0.878
+        Freq: A-DEC, dtype: float64
+
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+        """
+        new_endog = concat([self.model.data.orig_endog, endog], axis=0)
+        if exog is not None:
+            _, exog = prepare_exog(exog)
+            new_exog = concat([self.model.data.orig_exog, exog], axis=0)
+        else:
+            new_exog = None
+
+        mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
+        if self.smoother_results is not None:
+            res = mod.smooth(self.params)
+        else:
+            res = mod.filter(self.params)
+        return res
+
+    def extend(self, endog, exog=None, **kwargs):
+        """
+        Recreate the results object for new data that extends the original data
+
+        Creates a new result object applied to a new dataset that is assumed to
+        follow directly from the end of the model's original data. The new
+        results can then be used for analysis or forecasting.
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments may be used to modify model specification
+            arguments when created the new model object.
+
+        Returns
+        -------
+        results
+            Updated Results object, that includes results only for the new
+            dataset.
+
+        Notes
+        -----
+        The `endog` argument to this method should consist of new observations
+        that occurred directly after the last element of the model's original
+        `endog` array. For any other kind of dataset, see the `apply` method.
+
+        This method will apply filtering only to the new data provided by the
+        `endog` argument, which can be much faster than re-filtering the entire
+        dataset. However, the returned results object will only have results
+        for the new data. To retrieve results for both the new data and the
+        original data, see the `append` method.
+
+        Examples
+        --------
+        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> original_observations = pd.Series([1.2, 1.5], index=index)
+        >>> mod = sm.tsa.SARIMAX(original_observations)
+        >>> res = mod.fit()
+        >>> print(res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(res.fittedvalues)
+        2000    0.0000
+        2001    1.1707
+        Freq: A-DEC, dtype: float64
+        >>> print(res.forecast(1))
+        2002    1.4634
+        Freq: A-DEC, dtype: float64
+
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_observations = pd.Series([0.9], index=new_index)
+        >>> updated_res = res.extend(new_observations)
+        >>> print(updated_res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(updated_res.fittedvalues)
+        2002    1.4634
+        Freq: A-DEC, dtype: float64
+        >>> print(updated_res.forecast(1))
+        2003    0.878
+        Freq: A-DEC, dtype: float64
+
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.append
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+        """
+        # Extend the current fit result to additional data
+        mod = self.model.clone(endog, exog=exog, **kwargs)
+        mod.ssm.initialization = Initialization(
+            mod.k_states, 'known', constant=self.predicted_state[..., -1],
+            stationary_cov=self.predicted_state_cov[..., -1])
+
+        if self.smoother_results is not None:
+            res = mod.smooth(self.params)
+        else:
+            res = mod.filter(self.params)
+
+        return res
+
+    def apply(self, endog, exog=None, **kwargs):
+        """
+        Apply the results object to new data unrelated to the original data
+
+        Creates a new result object applied to a completely new dataset that is
+        assumed to be unrelated to the model's original data. The new results
+        can then be used for analysis or forecasting.
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments may be used to modify model specification
+            arguments when created the new model object.
+
+        Returns
+        -------
+        results
+            Updated Results object, that includes results only for the new
+            dataset.
+
+        Notes
+        -----
+        The `endog` argument to this method should consist of new observations
+        that are unrelated to the original model's `endog` dataset. For
+        observations that continue that original dataset by follow directly
+        after its last element, see the `append` and `extend` methods.
+
+        Examples
+        --------
+        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> original_observations = pd.Series([1.2, 1.5], index=index)
+        >>> mod = sm.tsa.SARIMAX(original_observations)
+        >>> res = mod.fit()
+        >>> print(res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(res.fittedvalues)
+        2000    0.0000
+        2001    1.1707
+        Freq: A-DEC, dtype: float64
+        >>> print(res.forecast(1))
+        2002    1.4634
+        Freq: A-DEC, dtype: float64
+
+        >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
+        >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
+        >>> new_res = res.apply(new_observations)
+        >>> print(new_res.params)
+        ar.L1     0.9756
+        sigma2    0.0889
+        dtype: float64
+        >>> print(new_res.fittedvalues)
+        1980    1.1707
+        1981    1.3659
+        1982    0.2927
+        Freq: A-DEC, dtype: float64
+        Freq: A-DEC, dtype: float64
+        >>> print(new_res.forecast(1))
+        1983    1.1707
+        Freq: A-DEC, dtype: float64
+
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.append
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+        """
+        mod = self.model.clone(endog, exog=exog, **kwargs)
+
+        if self.smoother_results is not None:
+            res = mod.smooth(self.params)
+        else:
+            res = mod.filter(self.params)
+        return res
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """

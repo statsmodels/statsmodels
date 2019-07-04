@@ -537,22 +537,13 @@ class SARIMAX(MLEModel):
                             'measurement_error', 'time_varying_regression',
                             'mle_regression', 'simple_differencing',
                             'enforce_stationarity', 'enforce_invertibility',
-                            'hamilton_representation',
-                            'concentrate_scale'] + list(kwargs.keys())
+                            'hamilton_representation', 'concentrate_scale',
+                            'trend_offset'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
 
         # Initialize the state
         if self.ssm.initialization is None:
             self.initialize_default()
-
-    def _get_init_kwds(self):
-        kwds = super(SARIMAX, self)._get_init_kwds()
-
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
-
-        return kwds
 
     def prepare_data(self):
         endog, exog = super(SARIMAX, self).prepare_data()
@@ -805,6 +796,9 @@ class SARIMAX(MLEModel):
             for i in range(self.k_exog, 0, -1):
                 selection[-i, -i] = 1
         return selection
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):
@@ -1693,6 +1687,7 @@ class SARIMAXResults(MLEResults):
             'enforce_invertibility': self.model.enforce_invertibility,
             'hamilton_representation': self.model.hamilton_representation,
             'concentrate_scale': self.model.concentrate_scale,
+            'trend_offset': self.model.trend_offset,
 
             'order': self.model.order,
             'seasonal_order': self.model.seasonal_order,
@@ -1752,6 +1747,10 @@ class SARIMAXResults(MLEResults):
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
+
+    def extend(self, endog, exog=None, **kwargs):
+        kwargs.setdefault('trend_offset', self.nobs + 1)
+        return super(SARIMAXResults, self).extend(endog, exog=exog, **kwargs)
 
     @cache_readonly
     def arroots(self):

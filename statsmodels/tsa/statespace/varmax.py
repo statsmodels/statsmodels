@@ -21,6 +21,7 @@ from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
 
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .initialization import Initialization
 from .tools import (
     is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate,
@@ -63,6 +64,10 @@ class VARMAX(MLEModel):
     enforce_invertibility : boolean, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
+    trend_offset : int, optional
+        The offset at which to start time trend values. Default is 1, so that
+        if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
+        set when the model created by extending a previous dataset.
     kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -128,7 +133,7 @@ class VARMAX(MLEModel):
     def __init__(self, endog, exog=None, order=(1, 0), trend='c',
                  error_cov_type='unstructured', measurement_error=False,
                  enforce_stationarity=True, enforce_invertibility=True,
-                 **kwargs):
+                 trend_offset=1, **kwargs):
 
         # Model parameters
         self.error_cov_type = error_cov_type
@@ -138,7 +143,6 @@ class VARMAX(MLEModel):
 
         # Save the given orders
         self.order = order
-        self.trend = trend
 
         # Model orders
         self.k_ar = int(order[0])
@@ -160,6 +164,7 @@ class VARMAX(MLEModel):
 
         # Trend
         self.trend = trend
+        self.trend_offset = trend_offset
         self.polynomial_trend, self.k_trend = prepare_trend_spec(self.trend)
         self._trend_is_const = (self.polynomial_trend.size == 1 and
                                 self.polynomial_trend[0] == 1)
@@ -219,7 +224,8 @@ class VARMAX(MLEModel):
 
         # Initialize trend data
         self._trend_data = prepare_trend_data(
-            self.polynomial_trend, self.k_trend, self.nobs, offset=1)
+            self.polynomial_trend, self.k_trend, self.nobs,
+            offset=self.trend_offset)
 
         # Initialize known elements of the state space matrices
 
@@ -295,15 +301,8 @@ class VARMAX(MLEModel):
                             'measurement_error', 'enforce_stationarity',
                             'enforce_invertibility'] + list(kwargs.keys())
 
-    def _get_init_kwds(self):
-        # Get keywords based on model attributes
-        kwds = super(VARMAX, self)._get_init_kwds()
-
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
-
-        return kwds
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):
@@ -759,6 +758,7 @@ class VARMAXResults(MLEResults):
             'measurement_error': self.model.measurement_error,
             'enforce_stationarity': self.model.enforce_stationarity,
             'enforce_invertibility': self.model.enforce_invertibility,
+            'trend_offset': self.model.trend_offset,
 
             'order': self.model.order,
 
@@ -789,6 +789,33 @@ class VARMAXResults(MLEResults):
             self.coefficient_matrices_vma = (
                 ma_params.reshape(k_endog * k_ma, k_endog).T
             ).reshape(k_endog, k_endog, k_ma).T
+
+    def extend(self, endog, exog=None, **kwargs):
+        # If we have exog, then the last element of predicted_state and
+        # predicted_state_cov are nan (since they depend on the exog associated
+        # with the first out-of-sample point), so we need to compute them here
+        if exog is not None:
+            fcast = self.get_prediction(self.nobs, self.nobs, exog=exog[:1])
+            fcast_results = fcast.prediction_results
+            initial_state = fcast_results.predicted_state[..., 0]
+            initial_state_cov = fcast_results.predicted_state_cov[..., 0]
+        else:
+            initial_state = self.predicted_state[..., -1]
+            initial_state_cov = self.predicted_state_cov[..., -1]
+
+        kwargs.setdefault('trend_offset', self.nobs + 1)
+        mod = self.model.clone(endog, exog=exog, **kwargs)
+
+        mod.ssm.initialization = Initialization(
+            mod.k_states, 'known', constant=initial_state,
+            stationary_cov=initial_state_cov)
+
+        if self.smoother_results is not None:
+            res = mod.smooth(self.params)
+        else:
+            res = mod.filter(self.params)
+
+        return res
 
     def get_prediction(self, start=None, end=None, dynamic=False, index=None,
                        exog=None, **kwargs):
@@ -869,7 +896,8 @@ class VARMAXResults(MLEResults):
                 error_cov_type=self.model.error_cov_type,
                 measurement_error=self.model.measurement_error,
                 enforce_stationarity=self.model.enforce_stationarity,
-                enforce_invertibility=self.model.enforce_invertibility
+                enforce_invertibility=self.model.enforce_invertibility,
+                trend_offset=self.model.trend_offset
             )
             model.update(self.params)
             if model['state_intercept'].ndim > 1:

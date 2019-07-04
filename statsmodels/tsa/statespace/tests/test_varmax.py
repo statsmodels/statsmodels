@@ -912,10 +912,6 @@ def test_misc_exog():
         res.get_forecast(steps=1, exog=oos_exog)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(1))
-        with pytest.raises(ValueError):
-            res.forecast(steps=1, exog=oos_exog)
-
         oos_exog = np.random.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
@@ -1014,3 +1010,123 @@ def test_recreate_model():
             mod = varmax.VARMAX(endog, exog=exog, **kwargs)
             mod2 = varmax.VARMAX(endog, exog=exog, **mod._get_init_kwds())
         check_equivalent_models(mod, mod2)
+
+
+def test_append_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, 0.2,
+              0.5, -0.1, 0.0, 0.2,
+              1., 2.,
+              1., 0., 1.]
+
+    mod1 = varmax.VARMAX(endog, order=(1, 0), trend='t', exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = varmax.VARMAX(endog[:50], order=(1, 0), trend='t', exog=exog[:50])
+    res2 = mod2.smooth(params)
+    res3 = res2.append(endog[50:], exog=exog[50:])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_extend_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, 0.2,
+              0.5, -0.1, 0.0, 0.2,
+              1., 2.,
+              1., 0., 1.]
+
+    mod1 = varmax.VARMAX(endog, order=(1, 0), trend='t', exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = varmax.VARMAX(endog[:50], order=(1, 0), trend='t', exog=exog[:50])
+    res2 = mod2.smooth(params)
+    res3 = res2.extend(endog[50:], exog=exog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        desired = getattr(res1, attr)
+        if desired is not None:
+            desired = desired[..., 50:]
+        assert_equal(getattr(res3, attr), desired)
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_apply_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, 0.2,
+              0.5, -0.1, 0.0, 0.2,
+              1., 2.,
+              1., 0., 1.]
+
+    mod1 = varmax.VARMAX(endog[:50], order=(1, 0), trend='t', exog=exog[:50])
+    res1 = mod1.smooth(params)
+
+    mod2 = varmax.VARMAX(endog[50:], order=(1, 0), trend='t', exog=exog[50:])
+    res2 = mod2.smooth(params)
+
+    res3 = res2.apply(endog[:50], exog=exog[:50])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
