@@ -33,55 +33,38 @@ env:
 matrix:
   fast_finish: true
   include:
-    # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
+    # Python 2.7 until 0.10.1 has been released, then change to Python 3.7
     - python: 2.7
       env:
         - PYTHON=2.7
-        - NUMPY=1.13
-        - MATPLOTLIB=2.0
+        - PANDAS=0.24
         - COVERAGE=true
-      # Python 2.7 + baseline packages
-    - python: 2.7
-      env:
-        - PYTHON=2.7
-        - NUMPY=1.12
-        - BLAS= # Do not specify blas in this config due to conflict
-        - SCIPY=0.19
-        - PANDAS=0.20
-        - USEMPL=false
-        - LINT=true
-    # Python 3.4 + baseline packages
-    - python: 3.4
-      env:
-        - PYTHON=3.4
-        - NUMPY=1.11
-        - SCIPY=0.18
-        - PANDAS=0.19
-        - MATPLOTLIB=1.5
     # Python 3.7 + cutting edge packages
     - python: 3.7
       env:
         - PYTHON=3.7
         - COVERAGE=true
-        # Documentation build (on Python 3.6 + cutting edge packages)
-    - python: 3.6
+    # Documentation build (on Python 3.7 + cutting edge packages)
+    - python: 3.7
       env:
         - PYTHON=3.7
         - DOCBUILD=true
-    # Python 3.6 + legacy blas
+    # Python 3.6 + legacy blas + older pandas
     - python: 3.6
       env:
         - PYTHON=3.6
-        - NUMPY=1.14
+        - NUMPY=1.15
+        - PANDAS=0.22
+        - SCIPY=1.1
         - BLAS="nomkl blas=*=openblas"
-    # Python 3.5 + partially updated packages
+    # Python 3.5 + oldest packages
     - python: 3.5
       env:
         - PYTHON=3.5
-        - NUMPY=1.13
+        - NUMPY=1.14
         - SCIPY=1.0
-        - PANDAS=0.22
-        - MATPLOTLIB=2.0
+        - PANDAS=0.21
+        - MATPLOTLIB=2
         - LINT=true
     # Latest pre-release packages
     - python: 3.7
@@ -92,7 +75,8 @@ matrix:
       language: generic
       env:
         - PYTHON=3.6.6
-        - NUMPY=1.14
+        - NUMPY=1.15
+        - SCIPY=1.2
         - BUILD_INIT=tools/ci/travis_pip.sh
     - os: osx
       language: generic
@@ -105,16 +89,6 @@ matrix:
       env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
-    - os: osx
-      language: generic
-      env:
-        - PYTHON=3.6.6
-        - NUMPY=1.14
-        - BUILD_INIT=tools/ci/travis_pip.sh
-    - os: osx
-      language: generic
-      env:
-        - PYTHON=3.7
 
 notifications:
   email:

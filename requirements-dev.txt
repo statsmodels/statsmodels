@@ -1,11 +1,12 @@
 # build
-cython
+cython>=0.29
 
 # run
-matplotlib
+matplotlib>=2.2
 cvxopt
 
 # test
 pytest
 pytest-randomly
+pytest-xdist
 flake8
