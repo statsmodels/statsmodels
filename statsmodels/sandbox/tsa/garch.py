@@ -1105,7 +1105,8 @@ def test_gjrgarch():
                         [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
                         mu=0.0,scale=0.1, varinnovation=varinno)
     ht1 = [0]
-    for h in ht: ht1.append(h-ht1[-1])
+    for h in ht:
+        ht1.append(h-ht1[-1])
     assert_almost_equal(hgjr5[:6], ht1[1:], decimal=15)
 
     # negative shock
@@ -1126,7 +1127,8 @@ def test_gjrgarch():
                         [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
                         mu=0.0,scale=0.1, varinnovation=varinno)
     ht1 = [0]
-    for h in ht: ht1.append(h-ht1[-1])
+    for h in ht:
+        ht1.append(h-ht1[-1])
     assert_almost_equal(hgjr5[:6], ht1[1:], decimal=15)
 
 

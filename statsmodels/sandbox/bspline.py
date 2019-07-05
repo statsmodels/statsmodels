@@ -54,14 +54,18 @@ def _band2array(a, lower=0, symmetric=False, hermitian=False):
         for j in range(r):
             _b = np.diag(a[r-1-j],k=j)[j:(n+j),j:(n+j)]
             _a += _b
-            if symmetric and j > 0: _a += _b.T
-            elif hermitian and j > 0: _a += _b.conjugate().T
+            if symmetric and j > 0:
+                _a += _b.T
+            elif hermitian and j > 0:
+                _a += _b.conjugate().T
     else:
         for j in range(r):
             _b = np.diag(a[j],k=j)[0:n,0:n]
             _a += _b
-            if symmetric and j > 0: _a += _b.T
-            elif hermitian and j > 0: _a += _b.conjugate().T
+            if symmetric and j > 0:
+                _a += _b.T
+            elif hermitian and j > 0:
+                _a += _b.conjugate().T
         _a = _a.T
 
     return _a
@@ -125,8 +129,10 @@ def _triangle2unit(tb, lower=0):
 
     """
 
-    if lower: d = tb[0].copy()
-    else: d = tb[-1].copy()
+    if lower:
+        d = tb[0].copy()
+    else:
+        d = tb[-1].copy()
 
     if lower:
         return d, (tb / d)
@@ -170,9 +176,11 @@ def _zero_triband(a, lower=0):
 
     nrow, ncol = a.shape
     if lower:
-        for i in range(nrow): a[i,(ncol-i):] = 0.
+        for i in range(nrow):
+            a[i, (ncol-i):] = 0.
     else:
-        for i in range(nrow): a[i,0:i] = 0.
+        for i in range(nrow):
+            a[i, 0:i] = 0.
     return a
 
 

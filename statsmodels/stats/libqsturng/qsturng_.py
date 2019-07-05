@@ -649,7 +649,8 @@ def _interpolate_v(p, r, v):
 
     # if v2 is inf set to a big number so interpolation
     # calculations will work
-    if v2 > 1e38: v2 = 1e38
+    if v2 > 1e38:
+        v2 = 1e38
 
     # transform v
     v_, v0_, v1_, v2_ = 1./v, 1./v0, 1./v1, 1./v2

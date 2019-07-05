@@ -71,8 +71,10 @@ def anova_oneway(y, x, seq=0):
     #print(f, prob
 
     def _fix2scalar(z): # return number
-        if np.shape(z) == (1, 1): return z[0,0]
-        else: return z
+        if np.shape(z) == (1, 1):
+            return z[0, 0]
+        else:
+            return z
     f, prob, R2, resstd = lmap(_fix2scalar, (f, prob, R2, resstd))
     return f, prob, R2, resstd
 

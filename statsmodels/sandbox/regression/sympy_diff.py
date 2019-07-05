@@ -44,7 +44,9 @@ dlddf = (tllf1-tllf2).diff(df)
 print(dlddf)
 print(sy.cse(dlddf))
 print('\n derivative of loglike of t distribution wrt df')
-for k,v in sy.cse(dlddf)[0]: print(k,'=',v)
+for k,v in sy.cse(dlddf)[0]:
+    print(k, '=', v)
+
 print(sy.cse(dlddf)[1][0])
 
 print('\nstandard t distribution, dll_df, dll_dy')

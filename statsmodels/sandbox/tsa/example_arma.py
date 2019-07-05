@@ -333,9 +333,11 @@ def pltxcorr(self, x, y, normed=True, detrend=detrend_none,
 
     c = np.correlate(x, y, mode=2)
 
-    if normed: c/= np.sqrt(np.dot(x,x) * np.dot(y,y))
+    if normed:
+        c /= np.sqrt(np.dot(x, x) * np.dot(y, y))
 
-    if maxlags is None: maxlags = Nx - 1
+    if maxlags is None:
+        maxlags = Nx - 1
 
     if maxlags >= Nx or maxlags < 1:
         raise ValueError('maxlags must be None or strictly '

@@ -192,7 +192,7 @@ if __name__ == '__main__':
                 par_est = tuple(distfn.fit(rvs,-5,loc=sm,scale=sstd))
             elif distname == 'wrapcauchy':
                 par_est = tuple(distfn.fit(rvs,0.5,loc=0,scale=sstd))
-            elif distname == 'f':\
+            elif distname == 'f':
                 par_est = tuple(distfn.fit(rvs,10,15,loc=0,scale=1))
 
             elif distname in right:
