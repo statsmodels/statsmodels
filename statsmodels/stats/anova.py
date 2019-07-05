@@ -10,25 +10,23 @@ from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
 from statsmodels.iolib import summary2
 
+
 def _get_covariance(model, robust):
     if robust is None:
         return model.cov_params()
     elif robust == "hc0":
-        se = model.HC0_se
         return model.cov_HC0
     elif robust == "hc1":
-        se = model.HC1_se
         return model.cov_HC1
     elif robust == "hc2":
-        se = model.HC2_se
         return model.cov_HC2
     elif robust == "hc3":
-        se = model.HC3_se
         return model.cov_HC3
-    else: # pragma: no cover
+    else:  # pragma: no cover
         raise ValueError("robust options %s not understood" % robust)
 
-#NOTE: these need to take into account weights !
+
+# NOTE: these need to take into account weights !
 
 def anova_single(model, **kwargs):
     """

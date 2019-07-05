@@ -2295,8 +2295,6 @@ class RegressionResults(base.LikelihoodModelResults):
                 raise ValueError('heteroscedasticity robust covariance '
                                  'does not use keywords')
             res.cov_kwds['description'] = descriptions[cov_type.upper()]
-            # TODO cannot access cov without calling se first
-            getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
         elif cov_type.lower() == 'hac':
             maxlags = kwds['maxlags']   # required?, default in cov_hac_simple

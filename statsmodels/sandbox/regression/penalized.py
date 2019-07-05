@@ -36,15 +36,10 @@ problem with definition of df_model, it has 1 subtracted for constant
 from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
+
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
-
-
-def atleast_2dcols(x):
-    x = np.asarray(x)
-    if x.ndim == 1:
-        x = x[:, None]
-    return x
+from statsmodels.regression.feasible_gls import atleast_2dcols
 
 
 class TheilGLS(GLS):
