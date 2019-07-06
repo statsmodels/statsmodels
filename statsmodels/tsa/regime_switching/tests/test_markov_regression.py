@@ -966,7 +966,7 @@ class TestFedFundsConstShort(MarkovRegression):
 
         cy_results = markov_switching.cy_hamilton_filter_log(
             initial_probabilities, regime_transition,
-            np.log(conditional_likelihoods + 1e-20))
+            np.log(conditional_likelihoods + 1e-20), model_order=0)
         assert_allclose(cy_results[0], expected_marginals, atol=1e-15)
 
     def test_hamilton_filter_order_zero_with_tvtp(self):
@@ -1014,7 +1014,7 @@ class TestFedFundsConstShort(MarkovRegression):
 
         cy_results = markov_switching.cy_hamilton_filter_log(
             initial_probabilities, regime_transition,
-            np.log(conditional_likelihoods + 1e-20))
+            np.log(conditional_likelihoods + 1e-20), model_order=0)
         assert_allclose(cy_results[0], expected_marginals, atol=1e-15)
 
     def test_hamilton_filter_shape_checks(self):
@@ -1029,7 +1029,7 @@ class TestFedFundsConstShort(MarkovRegression):
         with assert_raises(ValueError):
             markov_switching.cy_hamilton_filter_log(
                 initial_probabilities, regime_transition,
-                conditional_loglikelihoods)
+                conditional_loglikelihoods, model_order=order)
 
 
 class TestFedFundsConstL1(MarkovRegression):
@@ -1274,3 +1274,31 @@ def test_avoid_underflow():
     assert not np.any(np.isnan(res.predicted_joint_probabilities))
     assert not np.any(np.isnan(res.filtered_joint_probabilities))
     assert not np.any(np.isnan(res.smoothed_joint_probabilities))
+
+
+def test_exog_tvtp():
+    exog = np.ones_like(fedfunds)
+
+    mod1 = markov_regression.MarkovRegression(fedfunds, k_regimes=2)
+    mod2 = markov_regression.MarkovRegression(fedfunds, k_regimes=2,
+                                              exog_tvtp=exog)
+
+    params = np.r_[0.98209618, 0.05036498, 3.70877542, 9.55676298, 4.44181911]
+    params_tvtp = params.copy()
+    params_tvtp[0] = mod2._untransform_logistic(
+        np.r_[0.], np.r_[1 - params[0]])
+    params_tvtp[1] = mod2._untransform_logistic(
+        np.r_[0.], np.r_[1 - params[1]])
+
+    res1 = mod1.smooth(params)
+    res2 = mod2.smooth(params_tvtp)
+
+    assert_allclose(res2.llf_obs, res1.llf_obs)
+    assert_allclose(res2.regime_transition - res1.regime_transition, 0,
+                    atol=1e-15)
+    assert_allclose(res2.predicted_joint_probabilities,
+                    res1.predicted_joint_probabilities)
+    assert_allclose(res2.filtered_joint_probabilities,
+                    res1.filtered_joint_probabilities)
+    assert_allclose(res2.smoothed_joint_probabilities,
+                    res1.smoothed_joint_probabilities)
