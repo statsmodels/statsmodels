@@ -104,7 +104,7 @@ def _partials_logistic(x):
 
 
 def cy_hamilton_filter_log(initial_probabilities, regime_transition,
-                           conditional_loglikelihoods):
+                           conditional_loglikelihoods, model_order):
     """
     Hamilton filter in log space using Cython inner loop.
 
@@ -155,7 +155,7 @@ def cy_hamilton_filter_log(initial_probabilities, regime_transition,
 
     # Check for compatible shapes.
     incompatible_shapes = (
-        regime_transition.shape[-1] not in (1, nobs + order)
+        regime_transition.shape[-1] not in (1, nobs + model_order)
         or regime_transition.shape[:2] != (k_regimes, k_regimes)
         or conditional_loglikelihoods.shape[0] != k_regimes)
     if incompatible_shapes:
@@ -194,7 +194,7 @@ def cy_hamilton_filter_log(initial_probabilities, regime_transition,
 
     # Get appropriate subset of transition matrix
     if regime_transition.shape[-1] > 1:
-        regime_transition = regime_transition[..., order:]
+        regime_transition = regime_transition[..., model_order:]
 
     # Run Cython filter iterations
     prefix, dtype, _ = find_best_blas_type((
@@ -778,7 +778,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                  conditional_loglikelihoods) +
                 cy_hamilton_filter_log(
                     initial_probabilities, regime_transition,
-                    conditional_loglikelihoods))
+                    conditional_loglikelihoods, self.order))
 
     def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
                return_raw=False, results_class=None,
