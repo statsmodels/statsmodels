@@ -103,7 +103,7 @@ def _partials_logistic(x):
 
 
 def py_hamilton_filter(initial_probabilities, regime_transition,
-                       conditional_likelihoods):
+                       conditional_likelihoods, model_order):
     """
     Hamilton filter using pure Python
 
@@ -154,7 +154,7 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
 
     # Check for compatible shapes.
     incompatible_shapes = (
-        regime_transition.shape[-1] not in (1, nobs + order)
+        regime_transition.shape[-1] not in (1, nobs + model_order)
         or regime_transition.shape[:2] != (k_regimes, k_regimes)
         or conditional_likelihoods.shape[0] != k_regimes)
     if incompatible_shapes:
@@ -194,7 +194,7 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
 
     # Get appropriate subset of transition matrix
     if regime_transition.shape[-1] > 1:
-        regime_transition = regime_transition[..., order:]
+        regime_transition = regime_transition[..., model_order:]
 
     # Hamilton filter iterations
     transition_t = 0
@@ -235,7 +235,7 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
 
 
 def cy_hamilton_filter(initial_probabilities, regime_transition,
-                       conditional_likelihoods):
+                       conditional_likelihoods, model_order):
     """
     Hamilton filter using Cython inner loop
 
@@ -285,7 +285,7 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
 
     # Check for compatible shapes.
     incompatible_shapes = (
-        regime_transition.shape[-1] not in (1, nobs + order)
+        regime_transition.shape[-1] not in (1, nobs + model_order)
         or regime_transition.shape[:2] != (k_regimes, k_regimes)
         or conditional_likelihoods.shape[0] != k_regimes)
     if incompatible_shapes:
@@ -320,7 +320,7 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
 
     # Get appropriate subset of transition matrix
     if regime_transition.shape[-1] > 1:
-        regime_transition = regime_transition[..., order:]
+        regime_transition = regime_transition[..., model_order:]
 
     # Run Cython filter iterations
     prefix, dtype, _ = find_best_blas_type((
@@ -968,7 +968,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return ((regime_transition, initial_probabilities,
                  conditional_likelihoods) +
                 cy_hamilton_filter(initial_probabilities, regime_transition,
-                                   conditional_likelihoods))
+                                   conditional_likelihoods, self.order))
 
     def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
                return_raw=False, results_class=None,
