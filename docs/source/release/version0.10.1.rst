@@ -43,4 +43,7 @@ The following Pull Requests were merged since the last release:
 
 * :pr:`5892`: BUG: fix pandas compat
 * :pr:`5893`: BUG: exponential smoothing - damped trend gives incorrect param, predictions
+* :pr:`5895`: DOC: improvements to BayesMixedGLM docs, argument checking
 * :pr:`5897`: MAINT: Use pytest.raises to check error message
+* :pr:`5903`: BUG: Fix kwargs update bug in linear model fit_regularized
+* :pr:`5917`: BUG: TVTP for Markov regression
