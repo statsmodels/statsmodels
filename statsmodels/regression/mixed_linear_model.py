@@ -1366,7 +1366,7 @@ class MixedLM(base.LikelihoodModel):
         if len(vcomp) == 0:
             return np.empty(0)
         vc_var = []
-        for j, k in enumerate(self.exog_vc.names):
+        for j in range(len(self.exog_vc.names)):
             d = self.exog_vc.mats[j][group_ix].shape[1]
             vc_var.append(vcomp[j] * np.ones(d))
         if len(vc_var) > 0:
