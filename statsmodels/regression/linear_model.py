@@ -991,13 +991,13 @@ class OLS(WLS):
         # Set default parameters.
         defaults = {"maxiter":  50, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-8}
-        kwargs.update(defaults)
+        defaults.update(kwargs)
 
         if method == "sqrt_lasso":
             from statsmodels.base.elastic_net import (
                 RegularizedResults, RegularizedResultsWrapper
             )
-            params = self._sqrt_lasso(alpha, refit, kwargs["zero_tol"])
+            params = self._sqrt_lasso(alpha, refit, defaults["zero_tol"])
             results = RegularizedResults(self, params)
             return RegularizedResultsWrapper(results)
 
