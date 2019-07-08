@@ -261,6 +261,11 @@
         "img": "../_static/images/prediction.png"
     },
     {
+        "text": "Forecasting in statsmodels",
+        "target": "notebooks/generated/statespace_forecasting.html",
+        "img": "../_static/images/statespace_forecasting.png"
+    },
+    {
         "text": "Generic Maximum Likelihood",
         "target": "notebooks/generated/generic_mle.html",
         "img": "../_static/images/generic_mle.png"
