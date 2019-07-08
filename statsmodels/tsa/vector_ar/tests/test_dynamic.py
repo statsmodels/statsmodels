@@ -1,14 +1,11 @@
-
 import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 
-from statsmodels.compat.pandas import pandas_gt_0_19_2
-
-pytestmark = pytest.mark.skipif(pandas_gt_0_19_2,
-                                reason='Requires pandas <= 0.19.2')
+pytestmark = pytest.mark.skip('Deprecated, pending removal. Reuqires pandas'
+                              '< 0.19.2, which are unsupported.')
 
 from statsmodels.tsa.vector_ar.dynamic import _window_ols  # noqa:E402
 
