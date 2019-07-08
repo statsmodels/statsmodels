@@ -206,6 +206,29 @@ def _dotsum(x, y):
         return np.dot(x.ravel(), y.ravel())
 
 
+class VCSpec(object):
+    """
+    Define the variance component structure of a multilevel model.
+
+    An instance of the class contains three attributes:
+
+    - names : names[k] is the name of variance component k.
+
+    - mats : mats[k][i] is the design matrix for group index
+      i in variance component k.
+
+    - colnames : colnames[k][i] is the list of column names for
+      mats[k][i].
+
+    The groups in colnames and mats must be in sorted order.
+    """
+
+    def __init__(self, names, colnames, mats):
+        self.names = names
+        self.colnames = colnames
+        self.mats = mats
+
+
 def _get_exog_re_names(self, exog_re):
     """
     Passes through if given a list of names. Otherwise, gets pandas names
@@ -527,6 +550,39 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     return B_logdet + ld + ld1
 
 
+def _convert_vc(exog_vc):
+
+    vc_names = []
+    vc_colnames = []
+    vc_mats = []
+
+    # Get the groups in sorted order
+    groups = set([])
+    for k, v in exog_vc.items():
+        groups |= set(v.keys())
+    groups = list(groups)
+    groups.sort()
+
+    for k, v in exog_vc.items():
+        vc_names.append(k)
+        colnames, mats = [], []
+        for g in groups:
+            try:
+                colnames.append(v[g].columns)
+            except AttributeError:
+                colnames.append([str(j) for j in range(v[g].shape[1])])
+            mats.append(v[g])
+        vc_colnames.append(colnames)
+        vc_mats.append(mats)
+
+    ii = np.argsort(vc_names)
+    vc_names = [vc_names[i] for i in ii]
+    vc_colnames = [vc_colnames[i] for i in ii]
+    vc_mats = [vc_mats[i] for i in ii]
+
+    return VCSpec(vc_names, vc_colnames, vc_mats)
+
+
 class MixedLM(base.LikelihoodModel):
     """
     An object specifying a linear mixed effects model.  Use the `fit`
@@ -546,9 +602,11 @@ class MixedLM(base.LikelihoodModel):
         A matrix of covariates used to determine the variance and
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
-    exog_vc : dict-like
-        A dictionary containing specifications of the variance
-        component terms.  See below for details.
+    exog_vc : VCSpec instance or dict-like (deprecated)
+        A VCSPec instance defines the structure of the variance
+        components in the model.  Alternatively, see notes below
+        for a dictionary-based format.  The dictionary format is
+        deprecated and may be removed at some point in the future.
     use_sqrt : bool
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
@@ -559,14 +617,15 @@ class MixedLM(base.LikelihoodModel):
 
     Notes
     -----
-    `exog_vc` is a dictionary of dictionaries.  Specifically,
-    `exog_vc[a][g]` is a matrix whose columns are linearly combined
-    using independent random coefficients.  This random term then
-    contributes to the variance structure of the data for group `g`.
-    The random coefficients all have mean zero, and have the same
-    variance.  The matrix must be `m x k`, where `m` is the number of
-    observations in group `g`.  The number of columns may differ among
-    the top-level groups.
+    If `exog_vc` is not a `VCSpec` instance, then it must be a
+    dictionary of dictionaries.  Specifically, `exog_vc[a][g]` is a
+    matrix whose columns are linearly combined using independent
+    random coefficients.  This random term then contributes to the
+    variance structure of the data for group `g`.  The random
+    coefficients all have mean zero, and have the same variance.  The
+    matrix must be `m x k`, where `m` is the number of observations in
+    group `g`.  The number of columns may differ among the top-level
+    groups.
 
     The covariates in `exog`, `exog_re` and `exog_vc` may (but need
     not) partially or wholly overlap.
@@ -630,8 +689,17 @@ class MixedLM(base.LikelihoodModel):
         self.fe_pen = None
         self.re_pen = None
 
-        # Needs to run early so that the names are sorted.
-        self._setup_vcomp(exog_vc)
+        if isinstance(exog_vc, dict):
+            warnings.warn("Using deprecated variance components format")
+            # Convert from old to new representation
+            exog_vc = _convert_vc(exog_vc)
+
+        if exog_vc is not None:
+            self.k_vc = len(exog_vc.names)
+            self.exog_vc = exog_vc
+        else:
+            self.k_vc = 0
+            self.exog_vc = VCSpec([], [], [])
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
@@ -657,7 +725,7 @@ class MixedLM(base.LikelihoodModel):
         # Number of fixed effects parameters
         self.k_fe = exog.shape[1]
 
-        if exog_re is None and exog_vc is None:
+        if exog_re is None and len(self.exog_vc.names) == 0:
             # Default random effects structure (random intercepts).
             self.k_re = 1
             self.k_re2 = 1
@@ -745,15 +813,6 @@ class MixedLM(base.LikelihoodModel):
         # Precompute this
         self._lin, self._quad = self._reparam()
 
-    def _setup_vcomp(self, exog_vc):
-        if exog_vc is None:
-            exog_vc = {}
-        self.exog_vc = exog_vc
-        self.k_vc = len(exog_vc)
-        vc_names = list(set(exog_vc.keys()))
-        vc_names.sort()
-        self._vc_names = vc_names
-
     def _make_param_names(self, exog_re):
         """
         Returns the full parameter names list, just the exogenous random
@@ -774,7 +833,7 @@ class MixedLM(base.LikelihoodModel):
                                        exog_re_names[i] + " Cov")
                 jj += 1
 
-        vc_names = [x + " Var" for x in self._vc_names]
+        vc_names = [x + " Var" for x in self.exog_vc.names]
 
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
@@ -933,29 +992,33 @@ class MixedLM(base.LikelihoodModel):
                 from patsy import EvalEnvironment
                 eval_env = EvalEnvironment({})
 
-            exog_vc = {}
+            vc_mats = []
+            vc_colnames = []
+            vc_names = []
             gb = data.groupby(groups)
-            kylist = list(gb.groups.keys())
-            kylist.sort()
-            exog_vc_names = {}
-            for vc_name in vc_formula.keys():
-                exog_vc[vc_name] = {}
+            kylist = sorted(gb.groups.keys())
+            vcf = sorted(vc_formula.keys())
+            for vc_name in vcf:
+                md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
+                vc_names.append(vc_name)
+                evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
-                    if group not in exog_vc_names:
-                        exog_vc_names[group] = {}
                     ii = gb.groups[group]
-                    vcg = vc_formula[vc_name]
                     mat = patsy.dmatrix(
-                        vcg, data.loc[ii, :], eval_env=eval_env,
-                        return_type='dataframe')
-                    exog_vc_names[group][vc_name] = mat.columns.tolist()
+                             md,
+                             data.loc[ii, :],
+                             eval_env=eval_env,
+                             return_type='dataframe')
+                    evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        exog_vc[vc_name][group] = sparse.csr_matrix(mat)
+                        evc_mats.append(sparse.csr_matrix(mat))
                     else:
-                        exog_vc[vc_name][group] = np.asarray(mat)
-            exog_vc = exog_vc
+                        evc_mats.append(np.asarray(mat))
+                vc_mats.append(evc_mats)
+                vc_colnames.append(evc_colnames)
+            exog_vc = VCSpec(vc_names, vc_colnames, vc_mats)
         else:
-            exog_vc = None
+            exog_vc = VCSpec([], [], [])
 
         kwargs["subset"] = None
         kwargs["exog_re"] = exog_re
@@ -974,8 +1037,7 @@ class MixedLM(base.LikelihoodModel):
         mod.data.exog_re_names_full = exog_re_names_full
 
         if vc_formula is not None:
-            mod.data.vcomp_names = mod._vc_names
-            mod._exog_vc_names = exog_vc_names
+            mod.data.vcomp_names = mod.exog_vc.names
 
         return mod
 
@@ -1123,7 +1185,7 @@ class MixedLM(base.LikelihoodModel):
                 a, b = 0., 0.
                 for group_ix, group in enumerate(self.group_labels):
 
-                    vc_var = self._expand_vcomp(vcomp, group)
+                    vc_var = self._expand_vcomp(vcomp, group_ix)
 
                     exog = self.exog_li[group_ix]
                     ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
@@ -1215,7 +1277,7 @@ class MixedLM(base.LikelihoodModel):
 
         xtxy = 0.
         for group_ix, group in enumerate(self.group_labels):
-            vc_var = self._expand_vcomp(vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group_ix)
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
             solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
@@ -1286,7 +1348,7 @@ class MixedLM(base.LikelihoodModel):
 
         return lin, quad
 
-    def _expand_vcomp(self, vcomp, group):
+    def _expand_vcomp(self, vcomp, group_ix):
         """
         Replicate variance parameters to match a group's design.
 
@@ -1294,8 +1356,8 @@ class MixedLM(base.LikelihoodModel):
         ----------
         vcomp : array-like
             The variance parameters for the variance components.
-        group : string
-            The group label
+        group_ix : integer
+            The group index
 
         Returns an expanded version of vcomp, in which each variance
         parameter is copied as many times as there are independent
@@ -1304,13 +1366,13 @@ class MixedLM(base.LikelihoodModel):
         if len(vcomp) == 0:
             return np.empty(0)
         vc_var = []
-        for j, k in enumerate(self._vc_names):
-            if group in self.exog_vc[k]:
-                vc_var.append(
-                    vcomp[j] * np.ones(self.exog_vc[k][group].shape[1]))
+        for j in range(len(self.exog_vc.names)):
+            d = self.exog_vc.mats[j][group_ix].shape[1]
+            vc_var.append(vcomp[j] * np.ones(d))
         if len(vc_var) > 0:
             return np.concatenate(vc_var)
         else:
+            # Cannot reach here?
             return np.empty(0)
 
     def _augment_exog(self, group_ix):
@@ -1323,13 +1385,10 @@ class MixedLM(base.LikelihoodModel):
         if self.k_vc == 0:
             return ex_r
 
-        group = self.group_labels[group_ix]
         ex = [ex_r] if self.k_re > 0 else []
         any_sparse = False
-        for j, k in enumerate(self._vc_names):
-            if group not in self.exog_vc[k]:
-                continue
-            ex.append(self.exog_vc[k][group])
+        for j, _ in enumerate(self.exog_vc.names):
+            ex.append(self.exog_vc.mats[j][group_ix])
             any_sparse |= sparse.issparse(ex[-1])
         if any_sparse:
             for j, x in enumerate(ex):
@@ -1407,13 +1466,13 @@ class MixedLM(base.LikelihoodModel):
             likeval -= self.fe_pen.func(fe_params)
 
         xvx, qf = 0., 0.
-        for k, group in enumerate(self.group_labels):
+        for group_ix, group in enumerate(self.group_labels):
 
-            vc_var = self._expand_vcomp(vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group_ix)
             cov_aug_logdet = cov_re_logdet + np.sum(np.log(vc_var))
 
-            exog = self.exog_li[k]
-            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            exog = self.exog_li[group_ix]
+            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
             solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             resid = resid_all[self.row_indices[group]]
@@ -1448,7 +1507,7 @@ class MixedLM(base.LikelihoodModel):
 
         return likeval
 
-    def _gen_dV_dPar(self, ex_r, solver, group, max_ix=None):
+    def _gen_dV_dPar(self, ex_r, solver, group_ix, max_ix=None):
         """
         A generator that yields the element-wise derivative of the
         marginal covariance matrix with respect to the random effects
@@ -1459,8 +1518,8 @@ class MixedLM(base.LikelihoodModel):
         solver : function
             A function that given x returns V^{-1}x, where V
             is the group's marginal covariance matrix.
-        group : scalar
-            The group label
+        group_ix : integer
+            The group index
         max_ix : integer or None
             If not None, the generator ends when this index
             is reached.
@@ -1481,14 +1540,13 @@ class MixedLM(base.LikelihoodModel):
                 jj += 1
 
         # Variance components
-        for ky in self._vc_names:
-            if group in self.exog_vc[ky]:
-                if max_ix is not None and jj > max_ix:
-                    return
-                mat = self.exog_vc[ky][group]
-                axmat = solver(mat)
-                yield jj, mat, mat, axmat, axmat, True
-                jj += 1
+        for j, _ in enumerate(self.exog_vc.names):
+            if max_ix is not None and jj > max_ix:
+                return
+            mat = self.exog_vc.mats[j][group_ix]
+            axmat = solver(mat)
+            yield jj, mat, mat, axmat, axmat, True
+            jj += 1
 
     def score(self, params, profile_fe=True):
         """
@@ -1609,7 +1667,7 @@ class MixedLM(base.LikelihoodModel):
 
         for group_ix, group in enumerate(self.group_labels):
 
-            vc_var = self._expand_vcomp(vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group_ix)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
@@ -1628,7 +1686,7 @@ class MixedLM(base.LikelihoodModel):
             # Contributions to the covariance parameter gradient
             vir = solver(resid)
             for (jj, matl, matr, vsl, vsr, sym) in\
-                    self._gen_dV_dPar(ex_r, solver, group):
+                    self._gen_dV_dPar(ex_r, solver, group_ix):
                 dlv[jj] = _dotsum(matr, vsl)
                 if not sym:
                     dlv[jj] += _dotsum(matl, vsr)
@@ -1777,16 +1835,16 @@ class MixedLM(base.LikelihoodModel):
         B = np.zeros(m)
         D = np.zeros((m, m))
         F = [[0.] * m for k in range(m)]
-        for k, group in enumerate(self.group_labels):
+        for group_ix, group in enumerate(self.group_labels):
 
-            vc_var = self._expand_vcomp(vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group_ix)
 
-            exog = self.exog_li[k]
-            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            exog = self.exog_li[group_ix]
+            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
             solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             # The residuals
-            resid = self.endog_li[k]
+            resid = self.endog_li[group_ix]
             if self.k_fe > 0:
                 expval = np.dot(exog, fe_params)
                 resid = resid - expval
@@ -1797,7 +1855,7 @@ class MixedLM(base.LikelihoodModel):
             rvir += np.dot(resid, vir)
 
             for (jj1, matl1, matr1, vsl1, vsr1, sym1) in\
-                    self._gen_dV_dPar(ex_r, solver, group):
+                    self._gen_dV_dPar(ex_r, solver, group_ix):
 
                 ul = _dot(viexog.T, matl1)
                 ur = _dot(matr1.T, vir)
@@ -1825,7 +1883,7 @@ class MixedLM(base.LikelihoodModel):
                     E.append((vsr1, matl1))
 
                 for (jj2, matl2, matr2, vsl2, vsr2, sym2) in\
-                        self._gen_dV_dPar(ex_r, solver, group, jj1):
+                        self._gen_dV_dPar(ex_r, solver, group_ix, jj1):
 
                     re = sum([_multi_dot_three(matr2.T, x[0], x[1].T)
                               for x in E])
@@ -1915,7 +1973,7 @@ class MixedLM(base.LikelihoodModel):
         qf = 0.
         for group_ix, group in enumerate(self.group_labels):
 
-            vc_var = self._expand_vcomp(vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group_ix)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
@@ -2206,11 +2264,11 @@ class _mixedlm_distribution(object):
         y += (u[self.group_idx, :] * model.exog_re).sum(1)
 
         # Variance components
-        for j, k in enumerate(model._vc_names):
-            ex = model.exog_vc[k]
+        for j, _ in enumerate(model.exog_vc.names):
+            ex = model.exog_vc.mats[j]
             v = self.vcomp[j]
-            for g in model.group_labels:
-                exg = ex[g]
+            for i, g in enumerate(model.group_labels):
+                exg = ex[i]
                 ii = model.row_indices[g]
                 u = np.random.normal(size=exg.shape[1])
                 y[ii] += np.sqrt(v) * np.dot(exg, u)
@@ -2285,9 +2343,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             mat = []
             if self.model.exog_re_li is not None:
                 mat.append(self.model.exog_re_li[group_ix])
-            for c in self.model._vc_names:
-                if group in self.model.exog_vc[c]:
-                    mat.append(self.model.exog_vc[c][group])
+            for j in range(self.k_vc):
+                mat.append(self.model.exog_vc.mats[j][group_ix])
             mat = np.concatenate(mat, axis=1)
 
             fit[ix] += np.dot(mat, re[group])
@@ -2331,11 +2388,11 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         p = self.model.exog.shape[1]
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
-    def _expand_re_names(self, group):
+    def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)
 
-        for v in self.model._vc_names:
-            vg = self.model._exog_vc_names[group][v]
+        for j, v in enumerate(self.model.exog_vc.names):
+            vg = self.model.exog_vc.colnames[j][group_ix]
             na = ["%s[%s]" % (v, s) for s in vg]
             names.extend(na)
 
@@ -2369,7 +2426,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             exog = self.model.exog_li[group_ix]
             ex_r = self.model._aex_r[group_ix]
             ex2_r = self.model._aex_r2[group_ix]
-            vc_var = self.model._expand_vcomp(vcomp, group)
+            vc_var = self.model._expand_vcomp(vcomp, group_ix)
 
             # Get the residuals relative to fixed effects
             resid = endog
@@ -2386,7 +2443,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             xtvir[0:k_re] = np.dot(self.cov_re, xtvir[0:k_re])
             xtvir[k_re:] *= vc_var
             ranef_dict[group] = pd.Series(
-                xtvir, index=self._expand_re_names(group))
+                xtvir, index=self._expand_re_names(group_ix))
 
         return ranef_dict
 
@@ -2417,7 +2474,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             ex_r = self.model._aex_r[group_ix]
             ex2_r = self.model._aex_r2[group_ix]
             label = self.model.group_labels[group_ix]
-            vc_var = self.model._expand_vcomp(vcomp, label)
+            vc_var = self.model._expand_vcomp(vcomp, group_ix)
 
             solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv,
                                  1 / vc_var)
@@ -2434,7 +2491,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             v[0:m, 0:m] += self.cov_re
             ix = np.arange(m, v.shape[0])
             v[ix, ix] += vc_var
-            na = self._expand_re_names(label)
+            na = self._expand_re_names(group_ix)
             v = pd.DataFrame(v, index=na, columns=na)
             ranef_dict[label] = v
 
@@ -2695,7 +2752,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             high = (cov_re[0, 0] + dist_high) / self.scale
 
         elif vtype == 'vc':
-            re_ix = self.model._vc_names.index(re_ix)
+            re_ix = self.model.exog_vc.names.index(re_ix)
             params = self.params_object.copy()
             vcomp = self.vcomp
             low = (vcomp[re_ix] - dist_low) / self.scale
@@ -2803,8 +2860,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
                     tokens.add(tok.string)
                 else:
                     tokens.add(tok[1])
-    tokens = list(tokens & set(data.columns))
-    tokens.sort()
+    tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
     ii = pd.notnull(data).all(1)
