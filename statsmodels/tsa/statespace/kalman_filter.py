@@ -1990,11 +1990,12 @@ class FilterResults(FrozenRepresentation):
             for name, shape in self.shapes.items():
                 if name == 'obs':
                     continue
-                if representation[name].shape[-1] == 1:
+                if representation[name].shape[-1] == 1 and self.nobs > 1:
                     if name in kwargs:
                         warn(warning % (name, name), ValueWarning)
                 elif name not in kwargs:
-                    raise ValueError(exception % name)
+                    if self.nobs > 1:
+                        raise ValueError(exception % name)
                 else:
                     mat = np.asarray(kwargs[name])
                     if len(shape) == 2:
