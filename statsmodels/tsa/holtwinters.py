@@ -482,8 +482,9 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
                  seasonal_periods=None, dates=None, freq=None, missing='none'):
-        super(ExponentialSmoothing, self).__init__(
-            endog, None, dates, freq, missing=missing)
+        super(ExponentialSmoothing, self).__init__(endog, None, dates,
+                                                   freq, missing=missing)
+        self.endog = self.endog.astype(np.double)
         if trend in ['additive', 'multiplicative']:
             trend = {'additive': 'add', 'multiplicative': 'mul'}[trend]
         self.trend = trend
@@ -632,7 +633,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             y = data.squeeze()
         if np.ndim(y) != 1:
             raise ValueError('Only 1 dimensional data supported')
-        self._y = y
+        self._y = y = np.ascontiguousarray(y, dtype=np.double)
         lvls = np.zeros(self.nobs)
         b = np.zeros(self.nobs)
         s = np.zeros(self.nobs + m - 1)

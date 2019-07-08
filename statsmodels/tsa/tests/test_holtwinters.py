@@ -505,3 +505,13 @@ def test_direct_holt_add():
     assert_allclose(b, res.slope)
     assert_allclose(f, res.level.iloc[-1] + res.slope.iloc[-1] * np.array([1, 2, 3, 4, 5]))
     assert_allclose(f, res.forecast(5))
+
+
+def test_integer_array(reset_randomstate):
+    rs = np.random.RandomState(12345)
+    e = 10*rs.standard_normal((1000,2))
+    y_star = np.cumsum(e[:,0])
+    y = y_star + e[:,1]
+    y = y.astype(np.long)
+    res = ExponentialSmoothing(y,trend='add').fit()
+    assert res.params['smoothing_level'] != 0.0
