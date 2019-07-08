@@ -17,7 +17,7 @@ except ImportError:
     from pandas.core.common import is_numeric_dtype  # noqa:F401
 
 if pandas_ge_25_0:
-    from pandas.tseries import frequencies  # noqa:F401
+    from pandas.tseries import offsets as frequencies  # noqa:F401
     data_klasses = (pandas.Series, pandas.DataFrame)
 elif pandas_ge_20_0:
     try:
