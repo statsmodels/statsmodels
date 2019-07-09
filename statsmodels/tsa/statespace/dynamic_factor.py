@@ -237,6 +237,11 @@ class DynamicFactor(MLEModel):
         self._params_error_transition, offset = (
             _slice('error_transition', offset))
 
+        # Update _init_keys attached by super
+        self._init_keys += ['k_factors', 'factor_order', 'error_order',
+                            'error_var', 'error_cov_type',
+                            'enforce_stationarity'] + list(kwargs.keys())
+
     def _initialize_loadings(self):
         # Initialize the parameters
         self.parameters['factor_loadings'] = self.k_endog * self.k_factors
@@ -423,6 +428,9 @@ class DynamicFactor(MLEModel):
         # column
         idx = idx[:, np.lexsort((idx[1], idx[0]))]
         self._idx_error_transition = np.s_['transition', idx[0], idx[1]]
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):
@@ -1175,7 +1183,9 @@ class DynamicFactorResults(MLEResults):
                                      ' `exog` argument.')
                 exog = np.array(exog)
                 required_exog_shape = (_out_of_sample, self.model.k_exog)
-                if not exog.shape == required_exog_shape:
+                try:
+                    exog = exog.reshape(required_exog_shape)
+                except ValueError:
                     raise ValueError('Provided exogenous values are not of the'
                                      ' appropriate shape. Required %s, got %s.'
                                      % (str(required_exog_shape),

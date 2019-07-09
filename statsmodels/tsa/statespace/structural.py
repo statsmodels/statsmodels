@@ -601,15 +601,14 @@ class UnobservedComponents(MLEModel):
             2*np.pi / cycle_period_bounds[1], 2*np.pi / cycle_period_bounds[0]
         )
 
-        # update _init_keys attached by super
+        # Update _init_keys attached by super
         self._init_keys += ['level', 'trend', 'seasonal', 'freq_seasonal',
-                            'cycle', 'autoregressive', 'exog', 'irregular',
+                            'cycle', 'autoregressive', 'irregular',
                             'stochastic_level', 'stochastic_trend',
                             'stochastic_seasonal', 'stochastic_freq_seasonal',
                             'stochastic_cycle',
                             'damped_cycle', 'cycle_period_bounds',
                             'mle_regression'] + list(kwargs.keys())
-        # TODO: I think the kwargs or not attached, need to recover from ???
 
         # Initialize the state
         self.initialize_default()
@@ -619,16 +618,19 @@ class UnobservedComponents(MLEModel):
         kwds = super(UnobservedComponents, self)._get_init_kwds()
 
         # Modifications
+        if self.trend_specification is not None:
+            kwds['level'] = self.trend_specification
+
+            for attr in ['irregular', 'trend', 'stochastic_level',
+                         'stochastic_trend']:
+                kwds[attr] = False
+
         kwds['seasonal'] = self.seasonal_periods
         kwds['freq_seasonal'] = [
             {'period': p,
              'harmonics': self.freq_seasonal_harmonics[ix]} for
             ix, p in enumerate(self.freq_seasonal_periods)]
         kwds['autoregressive'] = self.ar_order
-
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
 
         return kwds
 
@@ -800,6 +802,9 @@ class UnobservedComponents(MLEModel):
             init.set(None, 'approximate_diffuse')
 
         self.ssm.initialization = init
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):
@@ -1744,7 +1749,9 @@ class UnobservedComponentsResults(MLEResults):
                                      ' `exog` argument.')
                 exog = np.array(exog)
                 required_exog_shape = (_out_of_sample, self.model.k_exog)
-                if not exog.shape == required_exog_shape:
+                try:
+                    exog = exog.reshape(required_exog_shape)
+                except ValueError:
                     raise ValueError('Provided exogenous values are not of the'
                                      ' appropriate shape. Required %s, got %s.'
                                      % (str(required_exog_shape),

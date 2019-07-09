@@ -11,7 +11,7 @@ from statsmodels.compat import PY3
 import warnings
 
 import numpy as np
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal, assert_allclose, assert_raises
 import pandas as pd
 import pytest
 
@@ -346,10 +346,6 @@ def test_misc_exog():
         res.get_forecast(steps=1, exog=oos_exog)
 
         # Smoke tests for invalid exog
-        oos_exog = np.random.normal(size=(1))
-        with pytest.raises(ValueError):
-            res.forecast(steps=1, exog=oos_exog)
-
         oos_exog = np.random.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
@@ -456,3 +452,207 @@ def __direct_sum(square_matrices):
         new_array[offset:offset + rows, offset:offset + rows] = m
         offset += rows
     return new_array
+
+
+def test_forecast_exog():
+    # Test forecasting with various shapes of `exog`
+    nobs = 100
+    endog = np.ones(nobs) * 2.0
+    exog = np.ones(nobs)
+
+    mod = UnobservedComponents(endog, 'irregular', exog=exog)
+    res = mod.smooth([1.0, 2.0])
+
+    # 1-step-ahead, valid
+    exog_fcast_scalar = 1.
+    exog_fcast_1dim = np.ones(1)
+    exog_fcast_2dim = np.ones((1, 1))
+
+    assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, valid
+    h = 10
+    exog_fcast_1dim = np.ones(h)
+    exog_fcast_2dim = np.ones((h, 1))
+
+    assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, invalid
+    assert_raises(ValueError, res.forecast, h, exog=1.)
+    assert_raises(ValueError, res.forecast, h, exog=[1, 2])
+    assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
+
+
+def check_equivalent_models(mod, mod2):
+    attrs = [
+        'level', 'trend', 'seasonal_periods', 'seasonal',
+        'freq_seasonal_periods', 'freq_seasonal_harmonics', 'freq_seasonal',
+        'cycle', 'ar_order', 'autoregressive', 'irregular', 'stochastic_level',
+        'stochastic_trend', 'stochastic_seasonal', 'stochastic_freq_seasonal',
+        'stochastic_cycle', 'damped_cycle', 'mle_regression',
+        'trend_specification', 'trend_mask', 'regression',
+        'cycle_frequency_bound']
+
+    ssm_attrs = [
+        'nobs', 'k_endog', 'k_states', 'k_posdef', 'obs_intercept', 'design',
+        'obs_cov', 'state_intercept', 'transition', 'selection', 'state_cov']
+
+    for attr in attrs:
+        assert_equal(getattr(mod2, attr), getattr(mod, attr))
+
+    for attr in ssm_attrs:
+        assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
+
+    assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
+
+
+def test_recreate_model():
+    nobs = 100
+    endog = np.ones(nobs) * 2.0
+    exog = np.ones(nobs)
+
+    levels = [
+        'irregular', 'ntrend', 'fixed intercept', 'deterministic constant',
+        'dconstant', 'local level', 'llevel', 'random walk', 'rwalk',
+        'fixed slope', 'deterministic trend', 'dtrend',
+        'local linear deterministic trend', 'lldtrend',
+        'random walk with drift', 'rwdrift', 'local linear trend',
+        'lltrend', 'smooth trend', 'strend', 'random trend', 'rtrend']
+
+    for level in levels:
+        # Note: have to add in some stochastic component, otherwise we have
+        # problems with entirely deterministic models
+
+        # level + stochastic seasonal
+        mod = UnobservedComponents(endog, level=level, seasonal=2,
+                                   stochastic_seasonal=True, exog=exog)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+        # level + autoregressive
+        mod = UnobservedComponents(endog, level=level, exog=exog,
+                                   autoregressive=1)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+        # level + stochastic cycle
+        mod = UnobservedComponents(endog, level=level, exog=exog,
+                                   cycle=True, stochastic_cycle=True,
+                                   damped_cycle=True)
+        mod2 = UnobservedComponents(endog, exog=exog, **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+
+def test_append_results():
+    endog = np.arange(100)
+    exog = np.ones_like(endog)
+    params = [1., 1., 0.1, 1.]
+
+    mod1 = UnobservedComponents(endog, 'llevel', exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = UnobservedComponents(endog[:50], 'llevel', exog=exog[:50])
+    res2 = mod2.smooth(params)
+    res3 = res2.append(endog[50:], exog=exog[50:])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_extend_results():
+    endog = np.arange(100)
+    exog = np.ones_like(endog)
+    params = [1., 1., 0.1, 1.]
+
+    mod1 = UnobservedComponents(endog, 'llevel', exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = UnobservedComponents(endog[:50], 'llevel', exog=exog[:50])
+    res2 = mod2.smooth(params)
+
+    res3 = res2.extend(endog[50:], exog=exog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        desired = getattr(res1, attr)
+        if desired is not None:
+            desired = desired[..., 50:]
+        assert_equal(getattr(res3, attr), desired)
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_apply_results():
+    endog = np.arange(100)
+    exog = np.ones_like(endog)
+    params = [1., 1., 0.1, 1.]
+
+    mod1 = UnobservedComponents(endog[:50], 'llevel', exog=exog[:50])
+    res1 = mod1.smooth(params)
+
+    mod2 = UnobservedComponents(endog[50:], 'llevel', exog=exog[50:])
+    res2 = mod2.smooth(params)
+
+    res3 = res2.apply(endog[:50], exog=exog[:50])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))

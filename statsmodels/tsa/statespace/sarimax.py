@@ -23,7 +23,7 @@ from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
     unconstrain_stationary_univariate,
-    prepare_exog
+    prepare_exog, prepare_trend_spec, prepare_trend_data
 )
 
 
@@ -98,6 +98,10 @@ class SARIMAX(MLEModel):
         out of the likelihood. This reduces the number of parameters estimated
         by maximum likelihood by one, but standard errors will then not
         be available for the scale parameter.
+    trend_offset : int, optional
+        The offset at which to start time trend values. Default is 1, so that
+        if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
+        set when the model created by extending a previous dataset.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -301,7 +305,7 @@ class SARIMAX(MLEModel):
                  mle_regression=True, simple_differencing=False,
                  enforce_stationarity=True, enforce_invertibility=True,
                  hamilton_representation=False, concentrate_scale=False,
-                 **kwargs):
+                 trend_offset=1, **kwargs):
 
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
@@ -372,16 +376,8 @@ class SARIMAX(MLEModel):
 
         # Deterministic trend polynomial
         self.trend = trend
-        if trend is None or trend == 'n':
-            self.polynomial_trend = np.ones((0))
-        elif trend == 'c':
-            self.polynomial_trend = np.r_[1]
-        elif trend == 't':
-            self.polynomial_trend = np.r_[0, 1]
-        elif trend == 'ct':
-            self.polynomial_trend = np.r_[1, 1]
-        else:
-            self.polynomial_trend = (np.array(trend) > 0).astype(int)
+        self.trend_offset = trend_offset
+        self.polynomial_trend, self.k_trend = prepare_trend_spec(self.trend)
         self._polynomial_trend = self.polynomial_trend.copy()
 
         # Model orders
@@ -421,11 +417,6 @@ class SARIMAX(MLEModel):
                              ' integrated into the state vector. Set'
                              ' `simple_differencing` to True or set'
                              ' `hamilton_representation` to False')
-
-        # Note: k_trend is not the degree of the trend polynomial, because e.g.
-        # k_trend = 1 corresponds to the degree zero polynomial (with only a
-        # constant term).
-        self.k_trend = int(np.sum(self.polynomial_trend))
 
         # Model order
         # (this is used internally in a number of locations)
@@ -542,26 +533,17 @@ class SARIMAX(MLEModel):
             self.ssm['state_cov', 0, 0] = 1.
 
         # update _init_keys attached by super
-        self._init_keys += ['order',  'seasonal_order', 'trend',
+        self._init_keys += ['order', 'seasonal_order', 'trend',
                             'measurement_error', 'time_varying_regression',
                             'mle_regression', 'simple_differencing',
                             'enforce_stationarity', 'enforce_invertibility',
-                            'hamilton_representation',
-                            'concentrate_scale'] + list(kwargs.keys())
+                            'hamilton_representation', 'concentrate_scale',
+                            'trend_offset'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
 
         # Initialize the state
         if self.ssm.initialization is None:
             self.initialize_default()
-
-    def _get_init_kwds(self):
-        kwds = super(SARIMAX, self)._get_init_kwds()
-
-        for key, value in kwds.items():
-            if value is None and hasattr(self.ssm, key):
-                kwds[key] = getattr(self.ssm, key)
-
-        return kwds
 
     def prepare_data(self):
         endog, exog = super(SARIMAX, self).prepare_data()
@@ -598,15 +580,8 @@ class SARIMAX(MLEModel):
 
         # Cache the arrays for calculating the intercept from the trend
         # components
-        time_trend = np.arange(1, self.nobs + 1)
-        self._trend_data = np.zeros((self.nobs, self.k_trend))
-        i = 0
-        for k in self.polynomial_trend.nonzero()[0]:
-            if k == 0:
-                self._trend_data[:, i] = np.ones(self.nobs,)
-            else:
-                self._trend_data[:, i] = time_trend**k
-            i += 1
+        self._trend_data = prepare_trend_data(
+            self.polynomial_trend, self.k_trend, self.nobs, self.trend_offset)
 
         return endog, exog
 
@@ -821,6 +796,9 @@ class SARIMAX(MLEModel):
             for i in range(self.k_exog, 0, -1):
                 selection[-i, -i] = 1
         return selection
+
+    def clone(self, endog, exog=None, **kwargs):
+        return self._clone_from_init_kwds(endog, exog, **kwargs)
 
     @property
     def _res_classes(self):
@@ -1709,6 +1687,7 @@ class SARIMAXResults(MLEResults):
             'enforce_invertibility': self.model.enforce_invertibility,
             'hamilton_representation': self.model.hamilton_representation,
             'concentrate_scale': self.model.concentrate_scale,
+            'trend_offset': self.model.trend_offset,
 
             'order': self.model.order,
             'seasonal_order': self.model.seasonal_order,
@@ -1768,6 +1747,10 @@ class SARIMAXResults(MLEResults):
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
+
+    def extend(self, endog, exog=None, **kwargs):
+        kwargs.setdefault('trend_offset', self.nobs + 1)
+        return super(SARIMAXResults, self).extend(endog, exog=exog, **kwargs)
 
     @cache_readonly
     def arroots(self):
@@ -1907,7 +1890,9 @@ class SARIMAXResults(MLEResults):
                                      ' `exog` argument.')
                 exog = np.array(exog)
                 required_exog_shape = (_out_of_sample, self.model.k_exog)
-                if not exog.shape == required_exog_shape:
+                try:
+                    exog = exog.reshape(required_exog_shape)
+                except ValueError:
                     raise ValueError('Provided exogenous values are not of the'
                                      ' appropriate shape. Required %s, got %s.'
                                      % (str(required_exog_shape),
@@ -1926,10 +1911,7 @@ class SARIMAXResults(MLEResults):
                     continue
                 mat = getattr(model.ssm, name)
                 if mat.shape[-1] > 1:
-                    if len(mat.shape) == 2:
-                        kwargs[name] = mat[:, -_out_of_sample:]
-                    else:
-                        kwargs[name] = mat[:, :, -_out_of_sample:]
+                    kwargs[name] = mat[..., -_out_of_sample:]
         elif self.model.k_exog == 0 and exog is not None:
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)

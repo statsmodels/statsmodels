@@ -781,3 +781,195 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_forecast_exog():
+    # Test forecasting with various shapes of `exog`
+    nobs = 100
+    endog = np.ones((nobs, 2)) * 2.0
+    exog = np.ones(nobs)
+
+    mod = dynamic_factor.DynamicFactor(endog, exog=exog, k_factors=1,
+                                       factor_order=1)
+    res = mod.smooth(np.r_[[0] * 2, 2.0, 2.0, 1, 1., 0.])
+
+    # 1-step-ahead, valid
+    exog_fcast_scalar = 1.
+    exog_fcast_1dim = np.ones(1)
+    exog_fcast_2dim = np.ones((1, 1))
+
+    assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, valid
+    h = 10
+    exog_fcast_1dim = np.ones(h)
+    exog_fcast_2dim = np.ones((h, 1))
+
+    assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.)
+    assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.)
+
+    # h-steps-ahead, invalid
+    assert_raises(ValueError, res.forecast, h, exog=1.)
+    assert_raises(ValueError, res.forecast, h, exog=[1, 2])
+    assert_raises(ValueError, res.forecast, h, exog=np.ones((h, 2)))
+
+
+def check_equivalent_models(mod, mod2):
+    attrs = [
+        'k_factors', 'factor_order', 'error_order', 'error_var',
+        'error_cov_type', 'enforce_stationarity', 'mle_regression', 'k_params']
+
+    ssm_attrs = [
+        'nobs', 'k_endog', 'k_states', 'k_posdef', 'obs_intercept', 'design',
+        'obs_cov', 'state_intercept', 'transition', 'selection', 'state_cov']
+
+    for attr in attrs:
+        assert_equal(getattr(mod2, attr), getattr(mod, attr))
+
+    for attr in ssm_attrs:
+        assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
+
+    assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
+
+
+def test_recreate_model():
+    nobs = 100
+    endog = np.ones((nobs, 3)) * 2.0
+    exog = np.ones(nobs)
+
+    k_factors = [0, 1, 2]
+    factor_orders = [0, 1, 2]
+    error_orders = [0, 1]
+    error_vars = [False, True]
+    error_cov_types = ['diagonal', 'scalar']
+
+    import itertools
+    names = ['k_factors', 'factor_order', 'error_order', 'error_var',
+             'error_cov_type']
+    for element in itertools.product(k_factors, factor_orders, error_orders,
+                                     error_vars, error_cov_types):
+        kwargs = dict(zip(names, element))
+
+        mod = dynamic_factor.DynamicFactor(endog, exog=exog, **kwargs)
+        mod2 = dynamic_factor.DynamicFactor(endog, exog=exog,
+                                            **mod._get_init_kwds())
+        check_equivalent_models(mod, mod2)
+
+
+def test_append_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, -0.2, 1., 2., 1., 1., 0.5, 0.1]
+
+    mod1 = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=2, exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = dynamic_factor.DynamicFactor(
+        endog[:50], k_factors=1, factor_order=2, exog=exog[:50])
+    res2 = mod2.smooth(params)
+    res3 = res2.append(endog[50:], exog=exog[50:])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_extend_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, -0.2, 1., 2., 1., 1., 0.5, 0.1]
+
+    mod1 = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=2, exog=exog)
+    res1 = mod1.smooth(params)
+
+    mod2 = dynamic_factor.DynamicFactor(
+        endog[:50], k_factors=1, factor_order=2, exog=exog[:50])
+    res2 = mod2.smooth(params)
+    res3 = res2.extend(endog[50:], exog=exog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        desired = getattr(res1, attr)
+        if desired is not None:
+            desired = desired[..., 50:]
+        assert_equal(getattr(res3, attr), desired)
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
+
+
+def test_apply_results():
+    endog = np.arange(200).reshape(100, 2)
+    exog = np.ones(100)
+    params = [0.1, -0.2, 1., 2., 1., 1., 0.5, 0.1]
+
+    mod1 = dynamic_factor.DynamicFactor(
+        endog[:50], k_factors=1, factor_order=2, exog=exog[:50])
+    res1 = mod1.smooth(params)
+
+    mod2 = dynamic_factor.DynamicFactor(
+        endog[50:], k_factors=1, factor_order=2, exog=exog[50:])
+    res2 = mod2.smooth(params)
+
+    res3 = res2.apply(endog[:50], exog=exog[:50])
+
+    assert_equal(res1.specification, res3.specification)
+
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
+                 'cov_params_default']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        assert_equal(getattr(res3, attr), getattr(res1, attr))
+
+    assert_allclose(res3.forecast(10, exog=np.ones(10)),
+                    res1.forecast(10, exog=np.ones(10)))
