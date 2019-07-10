@@ -84,7 +84,7 @@ def test_baseline_class(default_kwargs):
 
     expected = results.loc['baseline'].sort_index()
     assert_allclose(res.trend, expected.trend)
-    assert_allclose(res.season, expected.season)
+    assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.weights, expected.rw)
     resid = class_kwargs['endog'] - expected.trend - expected.season
     assert_allclose(res.resid, resid)
@@ -96,7 +96,7 @@ def test_short_class(default_kwargs_short):
     res = mod.fit(outer_iter=outer, inner_iter=inner)
 
     expected = results.loc['short'].sort_index()
-    assert_allclose(res.season, expected.season)
+    assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
     assert_allclose(res.weights, expected.rw)
 
@@ -108,7 +108,7 @@ def test_nljump_1_class(default_kwargs):
     res = mod.fit(outer_iter=outer, inner_iter=inner)
 
     expected = results.loc['nljump-1'].sort_index()
-    assert_allclose(res.season, expected.season)
+    assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
     assert_allclose(res.weights, expected.rw)
 
@@ -120,7 +120,7 @@ def test_ntjump_1_class(default_kwargs):
     res = mod.fit(outer_iter=outer, inner_iter=inner)
 
     expected = results.loc['ntjump-1'].sort_index()
-    assert_allclose(res.season, expected.season)
+    assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
     assert_allclose(res.weights, expected.rw)
 
@@ -133,7 +133,7 @@ def test_nljump_1_ntjump_1_class(default_kwargs):
     res = mod.fit(outer_iter=outer, inner_iter=inner)
 
     expected = results.loc['nljump-1-ntjump-1'].sort_index()
-    assert_allclose(res.season, expected.season)
+    assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
     assert_allclose(res.weights, expected.rw)
 
@@ -218,7 +218,7 @@ def test_jump_errors(default_kwargs):
 
 
 def test_defaults_smoke(default_kwargs, robust):
-    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs, robust)
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs, robust)
     endog = class_kwargs['endog']
     period = class_kwargs['period']
     mod = STL(endog=endog, period=period)
@@ -226,13 +226,13 @@ def test_defaults_smoke(default_kwargs, robust):
 
 
 def test_pandas(default_kwargs, robust):
-    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs, robust)
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs, robust)
     endog = pd.Series(class_kwargs['endog'], name='y')
     period = class_kwargs['period']
     mod = STL(endog=endog, period=period)
     res = mod.fit()
     assert isinstance(res.trend, pd.Series)
-    assert isinstance(res.season, pd.Series)
+    assert isinstance(res.seasonal, pd.Series)
     assert isinstance(res.resid, pd.Series)
     assert isinstance(res.weights, pd.Series)
 
@@ -249,11 +249,11 @@ def test_period_detection(default_kwargs):
     mod = STL(**class_kwargs)
 
     res_implicit_period = mod.fit()
-    assert_allclose(res.season, res_implicit_period.season)
+    assert_allclose(res.seasonal, res_implicit_period.seasonal)
 
 
 def test_no_period(default_kwargs):
-    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     del class_kwargs['period']
     class_kwargs['endog'] = pd.Series(class_kwargs['endog'])
     with pytest.raises(ValueError, match='Unable to determine period from'):

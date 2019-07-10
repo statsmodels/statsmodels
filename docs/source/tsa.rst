@@ -226,6 +226,7 @@ Time Series Filters
    filters.filtertools.fftconvolveinv
    seasonal.seasonal_decompose
    seasonal.STL
+   seasonal.DecomposeResult
 
 TSA Tools
 """""""""

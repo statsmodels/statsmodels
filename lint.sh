@@ -21,6 +21,7 @@ if [ "$LINT" == true ]; then
         statsmodels/interface/ \
         statsmodels/base/tests/test_data.py \
         statsmodels/compat/ \
+        statsmodels/datasets/elec_equip \
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/results/ \
         statsmodels/duration/__init__.py \
@@ -100,6 +101,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/ \
         statsmodels/tsa/tests/results/ \
+        statsmodels/tsa/tests/test_stl.py \
         statsmodels/__init__.py \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \

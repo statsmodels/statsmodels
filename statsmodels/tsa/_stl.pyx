@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False, cdivision=True, wraparound=False
+#cython: language_level=3, boundscheck=False, cdivision=True, wraparound=False, initializedcheck=False
 
 """
 (c) 2019 Kevin Sheppard
@@ -82,7 +82,7 @@ work    workspace of (n+2*np)*5 locations.
 import pandas as pd
 import numpy as np
 cimport numpy as np 
-from libc.math cimport fabs, sqrt, isnan
+from libc.math cimport fabs, sqrt, isnan, NAN
 
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -98,6 +98,7 @@ def _is_pos_int(x, odd):
     if valid and odd:
         valid = valid & (x % 2) == 1
     return valid
+
 
 cdef class STL(object):
     """
@@ -120,7 +121,8 @@ cdef class STL(object):
         normally be >= 7 (default).
     trend : {int, None}, optional
         Length of the trend smoother. Must be an odd integer. If not provided
-        uses the smallest odd integer greater than 1.5 * period
+        uses the smallest odd integer greater than 1.5 * period, following the
+        suggestion in the original implementation.
     low_pass: {int, None}, optional
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
@@ -175,7 +177,7 @@ cdef class STL(object):
 
     See Also
     --------
-    statsmodels.tsa.seasonal.STLResults
+    statsmodels.tsa.seasonal.DecomposeResult
     statsmodels.tsa.seasonal.seasonal_decompose
 
     References
@@ -265,7 +267,7 @@ cdef class STL(object):
 
         Returns
         -------
-        results : STLResult
+        results : DecomposeResult
             Estimation results
         """
         cdef Py_ssize_t i
@@ -277,7 +279,6 @@ cdef class STL(object):
 
         self._use_rw = False
         k = 0
-        #  self._work[:, :] = 0??
         for i in range(self.nobs):
             self._season[i] = self._trend[i] = 0.0
             self._rw[i] = 1.0
@@ -303,9 +304,12 @@ cdef class STL(object):
             trend = pd.Series(trend, index=index, name='trend')
             rw = pd.Series(rw, index=index, name='robust_weight')
 
-        return STLResult(self.endog, season, trend, resid, rw)
+        # Avoid circular imports
+        from statsmodels.tsa.seasonal import DecomposeResult
 
-    cdef _onestp(self, int inner_iter):
+        return DecomposeResult(self.endog, season, trend, resid, rw)
+
+    cdef void _onestp(self, int inner_iter):
         """
         y, n, np, ns, nt, nl, isdeg, itdeg, ildeg, nsjump,
                 ntjump, nljump, ni, userw, rw, season, trend, work
@@ -373,7 +377,7 @@ cdef class STL(object):
                     w[j] = w[j] * rw[j]
                 a = a + w[j]
         if a <= 0:
-            return np.nan
+            return NAN
         for j in range(nleft - 1, nright):
             w[j] = w[j] / a
         if h > 0 and ideg > 0:
@@ -469,7 +473,7 @@ cdef class STL(object):
                 for j in range(k, n):
                     ys[j] = ys[k - 1] + delta * ((j + 1) - k)
 
-    cdef _ma(self, double[::1] x, int n, int len_, double[::1] ave):
+    cdef void _ma(self, double[::1] x, int n, int len_, double[::1] ave):
         cdef int newn
         cdef double flen, v
         cdef Py_ssize_t i, j, k, m
@@ -488,7 +492,7 @@ cdef class STL(object):
             k += 1
             m += 1
 
-    cdef _fts(self):
+    cdef void _fts(self):
         """
         Original def:
         _fts(self, x, n, np, trend, work)
@@ -559,7 +563,7 @@ cdef class STL(object):
             for m in range(k + 2):
                 season[m * np + j] = work2[m]
 
-    cdef _rwts(self):
+    cdef void _rwts(self):
         """
         y, n, fit, rw ->
         self._ya, self.nobs, self._work[0, :], self._rw
@@ -593,88 +597,3 @@ cdef class STL(object):
                 rw[i] = (1.0 - (rw[i] / cmad) ** 2) ** 2
             else:
                 rw[i] = 0.0
-
-class STLResult(object):
-    def __init__(self, y, season, trend, resid, rw):
-        self._season = season
-        self._trend = trend
-        self._rw = rw
-        self._resid = resid
-        self._y = y
-
-    @property
-    def season(self):
-        """The estimated seasonal component"""
-        return self._season
-
-    @property
-    def trend(self):
-        """The estimated trend component"""
-        return self._trend
-
-    @property
-    def resid(self):
-        """The estimated residuals"""
-        return self._resid
-
-    @property
-    def weights(self):
-        """The weights used in the robust estimation"""
-        return self._rw
-
-    def plot(self, endog=True, season=True, trend=True, resid=True,
-             weights=False):
-        """
-        plot(self, endog=True, season=True, trend=True, resid=True,
-             weights=False)
-
-        Plot estimated components
-
-        Parameters
-        ----------
-        endog: bool
-            Include the endog series in the plot
-        season: bool
-            Include the seasonal component in the plot
-        trend: bool
-            Include the trend component in the plot
-        resid: bool
-            Include the residual in the plot
-        weights: bool
-            Include the residual in the plot
-
-        Returns
-        -------
-        fig : matplotlib.figure.Figure
-            The figure instance that containing the plot
-        """
-        import matplotlib.pyplot as plt
-        series = [(self._y, 'Endog')]  if endog else[]
-        series += [(self.trend, 'trend')] if trend else []
-        series += [(self.season, 'season')] if season else []
-        series += [(self.resid, 'residual')] if resid else []
-        series += [(self.weights, 'weights')] if weights else []
-
-        if isinstance(self._y, (pd.DataFrame, pd.Series)):
-            nobs = self._y.shape[0]
-            xlim = self._y.index[0], self._y.index[nobs - 1]
-        else:
-            xlim = (0, self._y.shape[0] - 1)
-
-        fig, axs = plt.subplots(len(series), 1)
-        name = getattr(series, 'name', 'Endog')
-        loc = 0
-        for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):
-            if def_name != 'residual':
-                ax.plot(series)
-            else:
-                ax.plot(series, marker='o', linestyle='none')
-                ax.plot(xlim,(0,0), color='#000000', zorder=-3)
-            name = getattr(series, 'name', def_name)
-            if def_name != 'Endog':
-                name = name.capitalize()
-            title = ax.set_title if i==0 and endog else ax.set_ylabel
-            title(name)
-            ax.set_xlim(xlim)
-
-        return fig
