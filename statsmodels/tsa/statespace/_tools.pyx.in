@@ -4,7 +4,7 @@
 """
 State Space Model - Cython tools
 
-Author: Chad Fulton
+Author: Chad Fulton  
 License: Simplified-BSD
 """
 
@@ -31,12 +31,11 @@ ctypedef fused sm_type_t:
 # ------------------------------------------------------------------------
 # Array shape validation
 
-cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows,
-                           int ncols, nobs=None):
-    if shape[0] != nrows:
+cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, nobs=None):
+    if not shape[0] == nrows:
         raise ValueError('Invalid shape for %s matrix: requires %d rows,'
                          ' got %d' % (name, nrows, shape[0]))
-    if shape[1] != ncols:
+    if not shape[1] == ncols:
         raise ValueError('Invalid shape for %s matrix: requires %d columns,'
                          'got %d' % (name, shape[1], shape[1]))
     if nobs is not None and shape[2] not in [1, nobs]:
@@ -44,11 +43,11 @@ cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows,
                          ' requires 1 or %d, got %d' % (name, nobs, shape[2]))
 
 
-cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs=None):
-    if shape[0] != nrows:
+cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs = None):
+    if not shape[0] == nrows:
         raise ValueError('Invalid shape for %s vector: requires %d rows,'
                          ' got %d' % (name, nrows, shape[0]))
-    if nobs is not None and shape[1] not in [1, nobs]:
+    if nobs is not None and not shape[1] in [1, nobs]:
         raise ValueError('Invalid time-varying dimension for %s vector:'
                          ' requires 1 or %d got %d' % (name, nobs, shape[1]))
 
@@ -799,7 +798,7 @@ cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing,
     missing is a pointer to an n x 1 array
     n is the dimension of A
     """
-    cdef int i, k, nobs
+    cdef int i, j, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -821,7 +820,7 @@ cdef int _{{prefix}}reorder_missing_submatrix({{cython_type}} * a, int * missing
     missing is a pointer to an n x 1 array
     n is the dimension of A
     """
-    cdef int i, k, nobs
+    cdef int i, j, k, nobs
 
     _{{prefix}}reorder_missing_rows(a, missing, n, n)
     _{{prefix}}reorder_missing_cols(a, missing, n, n)
@@ -833,7 +832,7 @@ cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, k, nobs
+    cdef int i, j, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -841,8 +840,8 @@ cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int
         nobs = nobs - missing[i]
 
     # Perform replacement
-    k = nobs - 1
-    for i in range(n - 1, -1, -1):
+    k = nobs-1
+    for i in range(n-1,-1,-1):
         if not missing[i]:
             swap(m, &a[i], &a[k], n, n)
             k = k - 1
@@ -863,8 +862,8 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
         nobs = nobs - missing[i]
 
     # Perform replacement
-    k = nobs - 1
-    for i in range(m - 1, -1, -1):
+    k = nobs-1
+    for i in range(m-1,-1,-1):
         if not missing[i]:
             swap(n, &a[i*n], &a[k*n])
             k = k - 1
@@ -895,7 +894,7 @@ cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [:
 
 
 cpdef int {{prefix}}reorder_missing_vector({{cython_type}} [::1, :] A, int [::1, :] missing) except *:
-    cdef int t, n, T
+    cdef int i, k, t, n, T, nobs
 
     n, T = A.shape[0:2]
 
@@ -912,7 +911,7 @@ cdef int _{{prefix}}copy_missing_diagonal({{cython_type}} * a, {{cython_type}} *
     missing is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, k, nobs
+    cdef int i, j, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -954,7 +953,7 @@ cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, 
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, nobs
+    cdef int i, j, k, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -1042,7 +1041,7 @@ cdef int _{{prefix}}copy_index_diagonal({{cython_type}} * a, {{cython_type}} * b
     index is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i
+    cdef int i, j, k, nobs
 
     # Perform replacement
     for i in range(n):
@@ -1155,22 +1154,22 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
     # (i.e k_posdof == 0)
     if k_posdef > 0:
 
-        # #### Calculate selected state covariance matrix
+        # #### Calculate selected state covariance matrix 
         # $Q_t^* = R_t Q_t R_t'$
-        #
+        # 
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
         # matrix (see e.g. Durbin and Koopman p. 43)
 
-        # `tmp0` array used here, dimension $(m \times r)$
+        # `tmp0` array used here, dimension $(m \times r)$ 
 
-        # $\\#_0 = 1.0 * R_t Q_t$
+        # $\\#_0 = 1.0 * R_t Q_t$ 
         # $(m \times r) = (m \times r) (r \times r)$
         blas.{{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
               &alpha, selection, &k_states_total,
                       cov, &k_posdef,
               &beta, tmp, &k_states)
-        # $Q_t^* = 1.0 * \\#_0 R_t'$
+        # $Q_t^* = 1.0 * \\#_0 R_t'$ 
         # $(m \times m) = (m \times r) (m \times r)'$
         blas.{{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
               &alpha, tmp, &k_states,
