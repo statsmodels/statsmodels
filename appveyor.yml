@@ -10,14 +10,8 @@ environment:
     # Pip builds
     - PYTHON: C:\Python36
       PYTEST_DIRECTIVES:
-    # Conda builds, TODO: Remove after 0.10.1
-    - PY_MAJOR_VER: 2
+    - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86"
-    # Conda builds, TODO: Move to Python 3 after 0.10.1
-    - PY_MAJOR_VER: 2
-      PYTHON_ARCH: "x86_64"
-      SCIPY: "1"
-      NUMPY: "1.14"
     - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86_64"
       TEST_INSTALL: "true"
