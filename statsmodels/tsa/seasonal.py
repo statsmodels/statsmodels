@@ -8,6 +8,10 @@ from .filters._utils import (_maybe_get_pandas_wrapper_freq,
                              _maybe_get_pandas_wrapper)
 from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
+from statsmodels.tsa._stl import STL, STLResult
+
+__all__ = ['STL', 'STLResult', 'seasonal_decompose', 'seasonal_mean',
+           'DecomposeResult']
 
 
 def seasonal_mean(x, freq):

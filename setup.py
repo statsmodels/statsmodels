@@ -3,6 +3,7 @@ To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
 python setup.py develop
 pytest --cov=statsmodels statsmodels
+coverage html
 """
 import fnmatch
 import os
@@ -143,6 +144,7 @@ DEFINE_MACROS = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 
 exts = dict(
+    _stl={'source': 'statsmodels/tsa/_stl.pyx'},
     _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
     _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa: E501
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
@@ -289,7 +291,7 @@ for source in statespace_exts:
 
 if HAS_CYTHON:
     extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES,
-                           language_level=3)
+                           language_level=3, force=CYTHON_COVERAGE)
 
 ##############################################################################
 # Construct package data
