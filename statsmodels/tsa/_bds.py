@@ -21,6 +21,8 @@ from __future__ import division
 import numpy as np
 from scipy import stats
 
+from statsmodels.tools.validation import array_like
+
 
 def distance_indicators(x, epsilon=None, distance=1.5):
     """
@@ -47,8 +49,7 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     Since this can be a very large matrix, use np.int8 to save some space.
 
     """
-    x = np.asarray(x)
-    nobs = len(x)
+    x = array_like(x, 'x')
 
     if epsilon is not None and epsilon <= 0:
         raise ValueError("Threshold distance must be positive if specified."
@@ -206,7 +207,7 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     x_t^m = (x_t, x_{t-1}, ... x_{t-(m-1)})
 
     """
-    x = np.asarray(x)
+    x = array_like(x, 'x', ndim=1)
     nobs_full = len(x)
 
     if max_dim < 2 or max_dim >= nobs_full:

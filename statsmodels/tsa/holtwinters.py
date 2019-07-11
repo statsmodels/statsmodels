@@ -22,6 +22,7 @@ from scipy.stats import boxcox
 
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.tsatools import freq_to_period
 import statsmodels.tsa._exponential_smoothers as smoothers
@@ -484,7 +485,9 @@ class ExponentialSmoothing(TimeSeriesModel):
                  seasonal_periods=None, dates=None, freq=None, missing='none'):
         super(ExponentialSmoothing, self).__init__(endog, None, dates,
                                                    freq, missing=missing)
-        self.endog = self.endog.astype(np.double)
+        self.endog = self.endog
+        self._y = self._data = array_like(endog, 'endog', contiguous=True,
+                                          order='C')
         if trend in ['additive', 'multiplicative']:
             trend = {'additive': 'add', 'multiplicative': 'mul'}[trend]
         self.trend = trend
@@ -495,7 +498,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         self.trending = trend in ['mul', 'add']
         self.seasoning = seasonal in ['mul', 'add']
         if (self.trend == 'mul' or self.seasonal == 'mul') and \
-                np.any(np.asarray(endog) <= 0.0):
+                not np.all(self._data > 0.0):
             raise ValueError('endog must be strictly positive when using'
                              'multiplicative trend or seasonal components.')
         if self.damped and not self.trending:
@@ -612,7 +615,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         l0 = self._l0 = initial_level
         b0 = self._b0 = initial_slope
 
-        data = self.endog
+        data = self._data
         damped = self.damped
         seasoning = self.seasoning
         trending = self.trending
@@ -632,9 +635,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         else:
             lamda = None
             y = data.squeeze()
-        if np.ndim(y) != 1:
-            raise ValueError('Only 1 dimensional data supported')
-        self._y = y = np.ascontiguousarray(y, dtype=np.double)
+        self._y = y
         lvls = np.zeros(self.nobs)
         b = np.zeros(self.nobs)
         s = np.zeros(self.nobs + m - 1)

@@ -9,16 +9,16 @@ Created on Sat Oct 23 17:18:03 2010
 
 Author: Josef-pktd
 """
-#not original copied from various experimental scripts
-#version control history is there
+# not original copied from various experimental scripts
+# version control history is there
 
-from statsmodels.compat.python import range
 import numpy as np
 import scipy.fftpack as fft
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
-from ._utils import _maybe_get_pandas_wrapper
 
+from statsmodels.compat.python import range
+from statsmodels.tools.validation import array_like, PandasWrapper
 
 def _pad_nans(x, head=None, tail=None):
     if np.ndim(x) == 1:
@@ -190,17 +190,14 @@ def recursive_filter(x, ar_coeff, init=None):
 
     where n_coeff = len(n_coeff).
     '''
-    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
-    x = np.asarray(x).squeeze()
-    ar_coeff = np.asarray(ar_coeff).squeeze()
-
-    if x.ndim > 1 or ar_coeff.ndim > 1:
-        raise ValueError('x and ar_coeff have to be 1d')
+    pw = PandasWrapper(x)
+    x = array_like(x, 'x')
+    ar_coeff = array_like(ar_coeff, 'ar_coeff')
 
     if init is not None:  # integer init are treated differently in lfiltic
+        init = array_like(init, 'init')
         if len(init) != len(ar_coeff):
             raise ValueError("ar_coeff must be the same length as init")
-        init = np.asarray(init, dtype=float)
 
     if init is not None:
         zi = signal.lfiltic([1], np.r_[1, -ar_coeff], init, x)
@@ -214,9 +211,8 @@ def recursive_filter(x, ar_coeff, init=None):
     else:
         result = y
 
-    if _pandas_wrapper:
-        return _pandas_wrapper(result)
-    return result
+    return pw.wrap(result)
+
 
 
 def convolution_filter(x, filt, nsides=2):
@@ -280,13 +276,9 @@ def convolution_filter(x, filt, nsides=2):
     else:  # pragma : no cover
         raise ValueError("nsides must be 1 or 2")
 
-    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
-    x = np.asarray(x)
-    filt = np.asarray(filt)
-    if x.ndim > 1 and filt.ndim == 1:
-        filt = filt[:, None]
-    if x.ndim > 2:
-        raise ValueError('x array has to be 1d or 2d')
+    pw = PandasWrapper(x)
+    x = array_like(x, 'x', maxdim=2)
+    filt = array_like(filt, 'filt', ndim=x.ndim)
 
     if filt.ndim == 1 or min(filt.shape) == 1:
         result = signal.convolve(x, filt, mode='valid')
@@ -304,9 +296,7 @@ def convolution_filter(x, filt, nsides=2):
                 result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
                                                mode='valid')
     result = _pad_nans(result, trim_head, trim_tail)
-    if _pandas_wrapper:
-        return _pandas_wrapper(result)
-    return result
+    return pw.wrap(result)
 
 
 # previously located in sandbox.tsa.garch
@@ -348,27 +338,27 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs,nvars), ar (narlags,), ma (narlags,nvars)
 
     '''
-    ma = np.asarray(ma)
-    ar = np.asarray(ar)
-    #inp = signal.convolve(x, ma, mode='valid')
-    #inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
-    #Note: convolve mixes up the variable left-right flip
-    #I only want the flip in time direction
-    #this might also be a mistake or problem in other code where I
-    #switched from correlate to convolve
+    ma = array_like(ma, 'ma')
+    ar = array_like(ar, 'ar')
+    # inp = signal.convolve(x, ma, mode='valid')
+    # inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
+    # Note: convolve mixes up the variable left-right flip
+    # I only want the flip in time direction
+    # this might also be a mistake or problem in other code where I
+    # switched from correlate to convolve
     # correct convolve version, for use with fftconvolve in other cases
-    #inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
-    inp = signal.correlate(x, ma[::-1,:])[:, (x.shape[1]+1)//2]
-    #for testing 2d equivalence between convolve and correlate
-    #np.testing.assert_almost_equal(inp2, inp)
+    # inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
+    inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
+    # for testing 2d equivalence between convolve and correlate
+    # np.testing.assert_almost_equal(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end
 
-    #todo initialize also x for correlate
+    # todo initialize also x for correlate
     if useic:
         return signal.lfilter([1], ar, inp,
-                #zi=signal.lfilter_ic(np.array([1.,0.]),ar, ic))[0][:nobs], inp[:nobs]
-                zi=signal.lfiltic(np.array([1.,0.]),ar, useic))[0][:nobs], inp[:nobs]
+                              zi=signal.lfiltic(np.array([1., 0.]), ar,
+                                                useic))[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
-    #return signal.lfilter([1], ar, inp), inp
+    # return signal.lfilter([1], ar, inp), inp

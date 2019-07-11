@@ -1,8 +1,9 @@
 #cython: language_level=3, wraparound=False, cdivision=True, boundscheck=False
 import numpy as np
-import pandas as pd
 
 cimport numpy as np
+
+from statsmodels.tools.validation import array_like, PandasWrapper
 
 def innovations_algo(acov, nobs=None, rtol=None):
     """
@@ -56,11 +57,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
     cdef double[:, ::1] theta
     cdef Py_ssize_t i, j, k, max_lag
     cdef double sub, _rtol
-
-    acov = np.ascontiguousarray(np.squeeze(np.asarray(acov)), dtype=np.double)
-    if acov.ndim != 1:
-        raise ValueError('acov must be 1-d or squeezable to 1-d.')
-    _acov = acov
+    _acov = array_like(acov, 'acov', contiguous=True, ndim=1)
     rtol = 0.0 if rtol is None else rtol
     if not isinstance(rtol, float):
         raise ValueError('rtol must be a non-negative float or None.')
@@ -136,22 +133,15 @@ def innovations_filter(endog, theta):
     cdef double[:, ::1] _theta
     cdef double hat
 
-    orig_endog = endog
-    endog = np.ascontiguousarray(np.squeeze(np.asarray(endog)), dtype=np.double)
-    if endog.ndim != 1:
-        raise ValueError('endog must be 1-d or squeezable to 1-d.')
-    _endog = endog
+    pw = PandasWrapper(endog)
+    endog = array_like(endog, 'endog', contiguous=True, ndim=1)
+    theta = array_like(theta, 'theta', contiguous=True, ndim=2)
     nobs = endog.shape[0]
     n_theta, k = theta.shape
     if nobs != n_theta:
         raise ValueError('theta must be (nobs, q) where q is the moder order')
-    _theta = np.ascontiguousarray(theta, dtype=np.double)
-    is_pandas = isinstance(orig_endog, (pd.DataFrame, pd.Series))
-    if is_pandas:
-        if len(orig_endog.index) != nobs:
-            msg = 'If endog is a Series or DataFrame, the index must ' \
-                  'correspond to the number of time series observations.'
-            raise ValueError(msg)
+    _endog = endog
+    _theta = theta
     u = np.empty(nobs)
     u[0] = _endog[0]
     for i in range(1, nobs):
@@ -161,6 +151,4 @@ def innovations_filter(endog, theta):
         u[i] = _endog[i] - hat
 
     _u = np.asarray(u)
-    if is_pandas:
-        return pd.Series(_u, index=orig_endog.index.copy())
-    return _u
+    return pw.wrap(_u)

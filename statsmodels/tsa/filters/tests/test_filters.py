@@ -1,8 +1,13 @@
+from statsmodels.compat.pandas import assert_frame_equal
+
 from datetime import datetime
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
+import pandas as pd
+
+from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.datasets import macrodata
 from pandas import DataFrame, date_range, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
@@ -558,7 +563,7 @@ def test_bking_pandas():
     assert_equal(filtered.values, nd_filtered)
     assert_equal(filtered.index[0], datetime(1962, 3, 31))
     assert_equal(filtered.index[-1], datetime(2006, 9, 30))
-    assert_equal(filtered.name, "infl")
+    assert_equal(filtered.name, "infl_cycle")
 
     # 2d
     filtered = bkfilter(dta[["infl", "unemp"]])
@@ -566,7 +571,7 @@ def test_bking_pandas():
     assert_equal(filtered.values, nd_filtered)
     assert_equal(filtered.index[0], datetime(1962, 3, 31))
     assert_equal(filtered.index[-1], datetime(2006, 9, 30))
-    assert_equal(filtered.columns.values, ["infl", "unemp"])
+    assert_equal(filtered.columns.values, ["infl_cycle", "unemp_cycle"])
 
 
 def test_cfitz_pandas():
@@ -579,7 +584,7 @@ def test_cfitz_pandas():
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
-    assert_equal(cycle.name, "infl")
+    assert_equal(cycle.name, "infl_cycle")
 
     # 2d
     cycle, trend = cffilter(dta[["infl", "unemp"]])
@@ -587,7 +592,7 @@ def test_cfitz_pandas():
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
-    assert_equal(cycle.columns.values, ["infl", "unemp"])
+    assert_equal(cycle.columns.values, ["infl_cycle", "unemp_cycle"])
 
 
 def test_hpfilter_pandas():
@@ -599,7 +604,7 @@ def test_hpfilter_pandas():
     assert_equal(cycle.values, ndcycle)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
-    assert_equal(cycle.name, "realgdp")
+    assert_equal(cycle.name, "realgdp_cycle")
 
 
 class TestFilters(object):
@@ -737,3 +742,34 @@ class TestFilters(object):
         np.testing.assert_almost_equal(res.values.squeeze(), expected, 4)
         np.testing.assert_(res.index[0] == start)
         np.testing.assert_(res.index[-1] == end)
+
+
+def dummy_func(x):
+    return x
+
+
+def dummy_func_array(x):
+    return x.values
+
+
+def dummy_func_pandas_columns(x):
+    return x.values
+
+
+def dummy_func_pandas_series(x):
+    return x['A']
+
+
+def test_pandas_freq_decorator():
+    x = pd.util.testing.makeDataFrame()
+    # in x, get a function back that returns an x with the same columns
+    func = pandas_wrapper(dummy_func)
+
+    np.testing.assert_equal(func(x.values), x)
+
+    func = pandas_wrapper(dummy_func_array)
+    assert_frame_equal(func(x), x)
+
+    expected = x.rename(columns=dict(zip('ABCD', 'EFGH')))
+    func = pandas_wrapper(dummy_func_array, names=list('EFGH'))
+    assert_frame_equal(func(x), expected)

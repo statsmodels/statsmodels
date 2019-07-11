@@ -21,6 +21,8 @@ from statsmodels.compat.python import range
 import numpy as np
 from scipy import signal, optimize, linalg
 
+from statsmodels.tools.validation import array_like
+
 __all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
            'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
            'lpol2index', 'index2lpol']
@@ -484,7 +486,7 @@ def lpol2index(ar):
     index : array
         index (lags) of lag polynomial with non-zero elements
     """
-    ar = np.asarray(ar)
+    ar = array_like(ar, 'ar')
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
     return coeffs, index
@@ -699,8 +701,8 @@ class ArmaProcess(object):
             ar = np.array([1.])
         if ma is None:
             ma = np.array([1.])
-        self.ar = np.asarray(ar)
-        self.ma = np.asarray(ma)
+        self.ar = array_like(ar, 'ar')
+        self.ma = array_like(ma, 'ma')
         self.arcoefs = -self.ar[1:]
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)

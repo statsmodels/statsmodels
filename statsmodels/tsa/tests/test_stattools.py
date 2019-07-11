@@ -761,7 +761,7 @@ def test_pacf2acf_errors():
     with pytest.raises(ValueError):
         levinson_durbin_pacf(pacf, nlags=20)
     with pytest.raises(ValueError):
-        levinson_durbin_pacf(pacf[:1])
+        levinson_durbin_pacf(pacf[1:])
     with pytest.raises(ValueError):
         levinson_durbin_pacf(np.zeros(10))
     with pytest.raises(ValueError):

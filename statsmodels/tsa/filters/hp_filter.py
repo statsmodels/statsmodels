@@ -1,18 +1,18 @@
 from __future__ import absolute_import
 
+import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
-import numpy as np
-from ._utils import _maybe_get_pandas_wrapper
+from statsmodels.tools.validation import array_like, PandasWrapper
 
 
-def hpfilter(X, lamb=1600):
+def hpfilter(x, lamb=1600):
     """
     Hodrick-Prescott filter
 
     Parameters
     ----------
-    X : array_like
+    x : array_like
         The 1d ndarray timeseries to filter of length (nobs,) or (nobs,1)
     lamb : float
         The Hodrick-Prescott smoothing parameter. A value of 1600 is
@@ -50,15 +50,15 @@ def hpfilter(X, lamb=1600):
 
     Notes
     -----
-    The HP filter removes a smooth trend, `T`, from the data `X`. by solving
+    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
 
-    min sum((X[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
+    min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
      T   t
 
     Here we implemented the HP filter as a ridge-regression rule using
     scipy.sparse. In this sense, the solution can be written as
 
-    T = inv(I - lamb*K'K)X
+    T = inv(I - lamb*K'K)x
 
     where I is a nobs x nobs identity matrix, and K is a (nobs-2) x nobs matrix
     such that
@@ -82,20 +82,16 @@ def hpfilter(X, lamb=1600):
         Filter for the Frequency of Observations." `The Review of Economics and
         Statistics`, 84(2), 371-80.
     """
-    _pandas_wrapper = _maybe_get_pandas_wrapper(X)
-    X = np.asarray(X, float)
-    if X.ndim > 1:
-        X = X.squeeze()
-    nobs = len(X)
+    pw = PandasWrapper(x)
+    x = array_like(x, 'x', ndim=1)
+    nobs = len(x)
     I = sparse.eye(nobs, nobs)  # noqa:E741
-    offsets = np.array([0,1,2])
-    data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
-    K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))
+    offsets = np.array([0, 1, 2])
+    data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
+    K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
 
     use_umfpack = True
-    trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
+    trend = spsolve(I+lamb*K.T.dot(K), x, use_umfpack=use_umfpack)
 
-    cycle = X-trend
-    if _pandas_wrapper is not None:
-        return _pandas_wrapper(cycle), _pandas_wrapper(trend)
-    return cycle, trend
+    cycle = x - trend
+    return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')

@@ -11,7 +11,7 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
-
+from statsmodels.tools.validation import array_like
 
 def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     """
@@ -390,18 +390,17 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
     values.
     """
     # TODO:  allow list of lags additional to maxlag
-    is_pandas = _is_using_pandas(x, None) and use_pandas
+    orig = x
+    x = array_like(x, 'x', ndim=2, dtype=None)
+    is_pandas = _is_using_pandas(orig, None) and use_pandas
     trim = 'none' if trim is None else trim
     trim = trim.lower()
     if is_pandas and trim in ('none', 'backward'):
         raise ValueError("trim cannot be 'none' or 'forward' when used on "
                          "Series or DataFrames")
 
-    xa = np.asarray(x)
     dropidx = 0
-    if xa.ndim == 1:
-        xa = xa[:, None]
-    nobs, nvar = xa.shape
+    nobs, nvar = x.shape
     if original in ['ex', 'sep']:
         dropidx = nvar
     if maxlag >= nobs:
@@ -409,7 +408,7 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
         lm[maxlag - k:nobs + maxlag - k,
-        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = xa
+        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = x
 
     if trim in ('none', 'forward'):
         startobs = 0
@@ -424,6 +423,7 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
         stopobs = nobs
 
     if is_pandas:
+        x = orig
         x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
