@@ -1,8 +1,3 @@
-from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import assert_index_equal
-from statsmodels.compat.platform import PLATFORM_WIN
-from statsmodels.compat.python import lrange
-
 import os
 import warnings
 
@@ -13,17 +8,22 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, date_range, DataFrame
 
+from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
+from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
-                                             MissingDataError)
+                                             MissingDataError,
+                                             InterpolationWarning)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
                                        innovations_algo, innovations_filter)
-from statsmodels.tsa.arima_process import arma_acovf
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -469,42 +469,47 @@ class TestKPSS(SetupKPSS):
     """
 
     def test_fail_nonvector_input(self, reset_randomstate):
-        with warnings.catch_warnings(record=True):
-            kpss(self.x)  # should be fine
+        # should be fine
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, lags='legacy')
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
-        with warnings.catch_warnings(record=True) as w:
-            kpss(self.x, 'c')
-            kpss(self.x, 'C')
-            kpss(self.x, 'ct')
-            kpss(self.x, 'CT')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'c', lags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'C', lags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'ct', lags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'CT', lags='legacy')
 
-        assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
+        assert_raises(ValueError, kpss, self.x, "unclear hypothesis",
+                      lags='legacy')
 
     def test_teststat(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_equal(pval, 0.01)
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_equal(pval, 0.01)
 
     def test_store(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
 
         # assert attributes, and make sure they're correct
@@ -514,40 +519,40 @@ class TestKPSS(SetupKPSS):
     # test autolag function _kpss_autolag against SAS 9.3
     def test_lags(self):
         # real GDP from macrodata data set
-        with warnings.catch_warnings(record=True):
-            lags = kpss(self.x, 'c', lags='auto')[2]
-        assert_equal(lags, 9)
+        with pytest.warns(InterpolationWarning):
+            res = kpss(self.x, 'c', lags='auto')
+        assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        with warnings.catch_warnings(record=True):
-            lags = kpss(sunspots.load().data['SUNACTIVITY'], 'c',
-                        lags='auto')[2]
-        assert_equal(lags, 7)
+        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', lags='auto')
+        assert_equal(res[2], 7)
         # volumes from nile data set
-        with warnings.catch_warnings(record=True):
-            lags = kpss(nile.load().data['volume'], 'c', lags='auto')[2]
-        assert_equal(lags, 5)
+        with pytest.warns(InterpolationWarning):
+            res = kpss(nile.load(True).data['volume'], 'c', lags='auto')
+        assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
-        with warnings.catch_warnings(record=True):
-            lags = kpss(randhie.load().data['lncoins'], 'ct', lags='auto')[2]
-        assert_equal(lags, 75)
+        with pytest.warns(InterpolationWarning):
+            res = kpss(randhie.load(True).data['lncoins'], 'ct', lags='auto')
+        assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
-        with warnings.catch_warnings(record=True):
-            lags = kpss(modechoice.load().data['invt'], 'ct', lags='auto')[2]
-        assert_equal(lags, 18)
+        with pytest.warns(InterpolationWarning):
+            res = kpss(modechoice.load(True).data['invt'], 'ct', lags='auto')
+        assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
-        # Test that if lags exceeds number of observations KPSS raises a clear error
+        # Test that if lags exceeds number of observations KPSS raises a
+        # clear error
+        # GH5925
         nobs = len(self.x)
-        msg = (r"lags \({}\) must be <= number of observations \({}\)"
-               .format(nobs+1, nobs))
+        msg = (r"lags \({}\) must be < number of observations \({}\)"
+               .format(nobs, nobs))
         with pytest.raises(ValueError, match=msg):
-            kpss(self.x, 'c', lags=nobs+1)
+            kpss(self.x, 'c', lags=nobs)
 
     def test_legacy_lags(self):
         # Test legacy lags are the same
-        with warnings.catch_warnings(record=True):
-            lags = kpss(self.x, 'c', lags='legacy')[2]
-        assert_equal(lags, 15)
+        with pytest.warns(InterpolationWarning):
+            res = kpss(self.x, 'c', lags='legacy')
+        assert_equal(res[2], 15)
 
     def test_unknown_lags(self):
         # Test legacy lags are the same
@@ -555,8 +560,8 @@ class TestKPSS(SetupKPSS):
             kpss(self.x, 'c', lags='unknown')
 
     def test_deprecation(self):
-        with pytest.deprecated_call():
-            kpss(self.x, 'c', lags=None)
+        with pytest.warns(FutureWarning):
+            kpss(self.x, 'c')
 
 
 def test_pandasacovf():
