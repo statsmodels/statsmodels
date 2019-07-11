@@ -20,12 +20,12 @@ class Link(object):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Probabilities
 
         Returns
         -------
-        g(p) : array-like
+        g(p) : array_like
             The value of the link function g(p) = z
         """
         return NotImplementedError
@@ -36,7 +36,7 @@ class Link(object):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor of the transformed variable
             in the IRLS algorithm for GLM.
 
@@ -55,7 +55,7 @@ class Link(object):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
 
         Returns
         -------
@@ -79,7 +79,7 @@ class Link(object):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -100,7 +100,7 @@ class Link(object):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -137,7 +137,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Probabilities
 
         Returns
@@ -153,7 +153,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Probabilities
 
         Returns
@@ -174,7 +174,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the logit transform at `p`
 
         Returns
@@ -197,7 +197,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p: array-like
+        p: array_like
             Probabilities
 
         Returns
@@ -221,7 +221,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -239,7 +239,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             probabilities
 
         Returns
@@ -282,12 +282,12 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
         -------
-        z : array-like
+        z : array_like
             Power transform of x
 
         Notes
@@ -305,7 +305,7 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array-like
+        `z` : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
@@ -328,7 +328,7 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -351,7 +351,7 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -374,7 +374,7 @@ class Power(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -394,7 +394,7 @@ class Power(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -485,7 +485,7 @@ class Log(Link):
 
         Parameters
         ----------
-        x : array-like
+        x : array_like
             Mean parameters
 
         Returns
@@ -526,7 +526,7 @@ class Log(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -547,7 +547,7 @@ class Log(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -618,7 +618,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -639,7 +639,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the link function at `p`
 
         Returns
@@ -659,7 +659,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             mean parameters
 
         Returns
@@ -735,7 +735,7 @@ class cauchy(CDFLink):
 
         Parameters
         ----------
-        p: array-like
+        p: array_like
             Probabilities
 
         Returns
@@ -787,7 +787,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the CLogLog link function at `p`
 
         Returns
@@ -807,7 +807,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -828,7 +828,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -848,7 +848,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the CLogLog link function at `p`
 
         Returns
@@ -897,7 +897,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -918,7 +918,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the negative binomial link at `p`.
 
         Returns
@@ -938,7 +938,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -958,7 +958,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -981,7 +981,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             Usually the linear predictor for a GLM or GEE model
 
         Returns

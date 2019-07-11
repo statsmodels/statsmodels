@@ -59,7 +59,7 @@ _hessian_docs = """
        value at which function derivative is evaluated
     f : function
        function of one array f(x, `*args`, `**kwargs`)
-    epsilon : float or array-like, optional
+    epsilon : float or array_like, optional
        Stepsize used, if None, then stepsize is automatically chosen
        according to EPS**(1/%(scale)s)*x.
     args : tuple

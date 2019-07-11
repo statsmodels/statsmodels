@@ -27,7 +27,7 @@ def bw_scott(x, kernel=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Unused
@@ -60,7 +60,7 @@ def bw_silverman(x, kernel=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Unused
@@ -97,7 +97,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Used to calculate the constant for the plug-in bandwidth.
@@ -151,7 +151,7 @@ def select_bandwidth(x, bw, kernel):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     bw : string
         name of bandwidth selection rule, currently supported are:

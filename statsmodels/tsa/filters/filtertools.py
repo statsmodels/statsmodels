@@ -166,11 +166,11 @@ def recursive_filter(x, ar_coeff, init=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Time-series data. Should be 1d or n x 1.
-    ar_coeff : array-like
+    ar_coeff : array_like
         AR coefficients in reverse time order. See Notes
-    init : array-like
+    init : array_like
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 

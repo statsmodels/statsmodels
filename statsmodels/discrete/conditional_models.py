@@ -147,12 +147,12 @@ class _ConditionalModel(base.LikelihoodModel):
         ----------
         method :
             Only the `elastic_net` approach is currently implemented.
-        alpha : scalar or array-like
+        alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        start_params : array-like
+        start_params : array_like
             Starting values for `params`.
         refit : bool
             If True, the model is refit using only the variables that
@@ -218,12 +218,12 @@ class ConditionalLogit(_ConditionalModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The response variable, must contain only 0 and 1.
-    exog : array-like
+    exog : array_like
         The array of covariates.  Do not include an intercept
         in this array.
-    groups : array-like
+    groups : array_like
         Codes defining the groups. This is a required keyword parameter.
     """
 
@@ -356,11 +356,11 @@ class ConditionalPoisson(_ConditionalModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The response variable
-    exog : array-like
+    exog : array_like
         The covariates
-    groups : array-like
+    groups : array_like
         Codes defining the groups. This is a required keyword parameter.
     """
 
@@ -487,13 +487,13 @@ class ConditionalMNLogit(_ConditionalModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variable, must be integer-valued, coded
         0, 1, ..., c-1, where c is the number of response
         categories.
-    exog : array-like
+    exog : array_like
         The independent variables.
-    groups : array-like
+    groups : array_like
         Codes defining the groups. This is a required keyword parameter.
 
     References

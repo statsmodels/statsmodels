@@ -451,7 +451,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Time series
     trend : {"add", "mul", "additive", "multiplicative", None}, optional
         Type of trend component.
@@ -979,7 +979,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Time series
 
     Returns
@@ -1055,7 +1055,7 @@ class Holt(ExponentialSmoothing):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Time series
     exponential : bool, optional
         Type of trend component.

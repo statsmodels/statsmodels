@@ -54,7 +54,7 @@ def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
 
 class AR(tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model": "Autoregressive AR(p) model",
-                                 "params": """endog : array-like
+                                 "params": """endog : array_like
         1-d endogenous response variable. The independent variable.""",
                                  "extra_params": base._missing_param_doc,
                                  "extra_sections": ""}
@@ -355,7 +355,7 @@ class AR(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter values at which to evaluate the score function.
 
         Notes
@@ -484,7 +484,7 @@ class AR(tsbase.TimeSeriesModel):
         transparams : bool, optional
             Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).
-        start_params : array-like, optional
+        start_params : array_like, optional
             A first guess on the parameters.  Default is cmle estimates.
         solver : str or None, optional
             Solver to be used if method is 'mle'.  The default is 'lbfgs'

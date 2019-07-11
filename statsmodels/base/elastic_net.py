@@ -76,7 +76,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     maxiter : integer
         The maximum number of iteration cycles (an iteration cycle
         involves running coordinate descent on all variables).
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -85,7 +85,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         The fraction of the penalty given to the L1 penalty term.
         Must be between 0 and 1 (inclusive).  If 0, the fit is
         a ridge fit, if 1 it is a lasso fit.
-    start_params : array-like
+    start_params : array_like
         Starting values for `params`.
     cnvrg_tol : scalar
         If `params` changes by less than this amount (in sup-norm)

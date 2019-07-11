@@ -12,7 +12,7 @@ class KDE(object):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         N-dimensional array from which the density is to be estimated
     kernel : Kernel Class
         Should be a class from *

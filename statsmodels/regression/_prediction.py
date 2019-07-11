@@ -99,7 +99,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Parameters
     ----------
-    exog : array-like, optional
+    exog : array_like, optional
         The values for which you want to predict.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass

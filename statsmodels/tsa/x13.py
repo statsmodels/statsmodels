@@ -327,7 +327,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
 
     Parameters
     ----------
-    endog : array-like, pandas.Series
+    endog : array_like, pandas.Series
         The series to model. It is best to use a pandas object with a
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
@@ -348,7 +348,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
-    exog : array-like
+    exog : array_like
         Exogenous variables.
     log : bool or None
         If None, it is automatically determined whether to log the series or
@@ -496,7 +496,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
 
     Parameters
     ----------
-    endog : array-like, pandas.Series
+    endog : array_like, pandas.Series
         The series to model. It is best to use a pandas object with a
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
@@ -517,7 +517,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
-    exog : array-like
+    exog : array_like
         Exogenous variables.
     log : bool or None
         If None, it is automatically determined whether to log the series or

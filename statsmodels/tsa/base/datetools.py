@@ -151,7 +151,7 @@ def dates_from_str(dates):
 
     Parameters
     ----------
-    dates : array-like
+    dates : array_like
         A sequence of abbreviated dates as string. For instance,
         '1996m1' or '1996Q1'. The datetime dates are at the end of the
         period.

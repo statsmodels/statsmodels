@@ -335,7 +335,7 @@ class Grouping(object):
                 else:
                     index.names = names
             self.index = index
-        else:  # array-like
+        else:  # array_like
             if _is_hierarchical(index):
                 self.index = _make_hierarchical_index(index, names)
             else:

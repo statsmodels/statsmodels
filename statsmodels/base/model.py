@@ -19,9 +19,9 @@ from statsmodels.base.optimizer import Optimizer
 _model_params_doc = """
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1-d endogenous response variable. The dependent variable.
-    exog : array-like
+    exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See
@@ -110,13 +110,13 @@ class Model(object):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        data : array-like
+        data : array_like
             The data for the model. See Notes.
-        subset : array-like
+        subset : array_like
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`
-        drop_cols : array-like
+        drop_cols : array_like
             Columns to drop from the design matrix.  Cannot be used to
             drop terms involving categoricals.
         args : extra arguments
@@ -263,7 +263,7 @@ class LikelihoodModel(Model):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
         method : str, optional
@@ -953,7 +953,7 @@ class Results(object):
 
         Parameters
         ----------
-        exog : array-like, optional
+        exog : array_like, optional
             The values for which you want to predict. see Notes below.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
@@ -1314,14 +1314,14 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array-like
+        r_matrix : array_like
             Can be 1d, or 2d.  Can be used alone or with other.
-        column :  array-like, optional
+        column : array_like, optional
             Must be used on its own.  Can be 0d or 1d see below.
         scale : float, optional
             Can be specified or not.  Default is None, which means that
             the scale argument is taken from the model.
-        other : array-like, optional
+        other : array_like, optional
             Can be used when r_matrix is specified.
 
         Returns
@@ -1401,7 +1401,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array-like, str, tuple
+        r_matrix : array_like, str, tuple
             - array : If an array is given, a p x k 2d array or length k 1d
               array specifying the linear restrictions. It is assumed
               that the linear combination is equal to zero.
@@ -1409,7 +1409,7 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q). If q is given,
               can be either a scalar or a length p row vector.
-        cov_p : array-like, optional
+        cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
@@ -1553,7 +1553,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array-like, str, or tuple
+        r_matrix : array_like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed
               that the linear combination is equal to zero.
@@ -1561,7 +1561,7 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q), ``q`` can be
               either a scalar or a length k row vector.
-        cov_p : array-like, optional
+        cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
@@ -1569,7 +1569,7 @@ class LikelihoodModelResults(Results):
             .. deprecated:: 0.10.0
 
             Default is 1.0 for no scaling.
-        invcov : array-like, optional
+        invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
 
@@ -1656,7 +1656,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array-like, str, or tuple
+        r_matrix : array_like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed that the
               linear combination is equal to zero.
@@ -1664,7 +1664,7 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q), ``q`` can be
               either a scalar or a length p row vector.
-        cov_p : array-like, optional
+        cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
@@ -1672,7 +1672,7 @@ class LikelihoodModelResults(Results):
             .. deprecated:: 0.10.0
 
             Default is 1.0 for no scaling.
-        invcov : array-like, optional
+        invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
         use_f : bool
@@ -1979,7 +1979,7 @@ class LikelihoodModelResults(Results):
         alpha : float, optional
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
-        cols : array-like, optional
+        cols : array_like, optional
             `cols` specifies which confidence intervals to return
         method : string
             Not Implemented Yet

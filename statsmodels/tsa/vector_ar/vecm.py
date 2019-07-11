@@ -36,7 +36,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
 
     Parameters
     ----------
-    data : array-like (nobs_tot x neqs)
+    data : array_like (nobs_tot x neqs)
         The observed data.
     maxlags : int
         All orders until maxlag will be compared according to the information
@@ -423,10 +423,10 @@ class CointRankResults:
         test.
     neqs : int
         Number of variables in the time series.
-    test_stats : array-like (`rank` + 1 if `rank` < `neqs` else `rank`)
+    test_stats : array_like (`rank` + 1 if `rank` < `neqs` else `rank`)
         A one-dimensional array-like object containing the test statistics of
         the conducted tests.
-    crit_vals : array-like (`rank` +1 if `rank` < `neqs` else `rank`)
+    crit_vals : array_like (`rank` +1 if `rank` < `neqs` else `rank`)
         A one-dimensional array-like object containing the critical values
         corresponding to the entries in the `test_stats` argument.
     method : str, {``"trace"``, ``"maxeig"``}, default: ``"trace"``
@@ -474,7 +474,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
 
     Parameters
     ----------
-    endog : array-like (nobs_tot x neqs)
+    endog : array_like (nobs_tot x neqs)
         The data with presample.
     det_order : int
         * -1 - no deterministic terms
@@ -534,7 +534,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     Parameters
     ----------
-    endog : array-like (nobs_tot x neqs)
+    endog : array_like (nobs_tot x neqs)
         The data with presample.
     det_order : int
         * -1 - no deterministic terms
@@ -710,13 +710,13 @@ class VECM(tsbase.TimeSeriesModel):
 
     Parameters
     ----------
-    endog : array-like (nobs_tot x neqs)
+    endog : array_like (nobs_tot x neqs)
         2-d endogenous response variable.
     exog: ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
     exog_coint: ndarray (nobs_tot x neqs) or None
         Deterministic terms inside the cointegration relation.
-    dates : array-like of datetime, optional
+    dates : array_like of datetime, optional
         See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
         information.
     freq : str, optional
@@ -1044,7 +1044,7 @@ class VECMResults(object):
     names : list of str
         Each str in the list represents the name of a variable of the time
         series.
-    dates : array-like
+    dates : array_like
         For example a DatetimeIndex of length nobs_tot.
 
     Attributes

@@ -547,7 +547,7 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
 def test_basic_endog():
     # Test various types of basic python endog inputs (e.g. lists, scalars...)
 
-    # Check cannot call with non-array-like
+    # Check cannot call with non-array_like
     # fails due to checks in Statsmodels base classes
     assert_raises(ValueError, MLEModel, endog=1, k_states=1)
     assert_raises(ValueError, MLEModel, endog='a', k_states=1)

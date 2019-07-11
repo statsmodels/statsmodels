@@ -19,7 +19,7 @@ def cffilter(X, low=6, high=32, drift=True):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         1 or 2d array to filter. If 2d, variables are assumed to be in columns.
     low : float
         Minimum period of oscillations. Features below low periodicity are

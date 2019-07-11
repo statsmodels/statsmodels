@@ -22,7 +22,7 @@ def _asarray_2d_null_rows(x):
     Makes sure input is an array and is 2d. Makes sure output is 2d. True
     indicates a null in the rows of 2d x.
     """
-    #Have to have the asarrays because isnull doesn't account for array-like
+    #Have to have the asarrays because isnull doesn't account for array_like
     #input
     x = np.asarray(x)
     if x.ndim == 1:
@@ -34,7 +34,7 @@ def _nan_rows(*arrs):
     """
     Returns a boolean array which is True where any of the rows in any
     of the _2d_ arrays in arrs are NaNs. Inputs can be any mixture of Series,
-    DataFrames or array-like.
+    DataFrames or array_like.
     """
     if len(arrs) == 1:
         arrs += ([[False]],)

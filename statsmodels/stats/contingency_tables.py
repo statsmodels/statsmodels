@@ -79,7 +79,7 @@ class Table(object):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A contingency table.
     shift_zeros : boolean
         If True and any cell count is zero, add 0.5 to all values
@@ -87,7 +87,7 @@ class Table(object):
 
     Attributes
     ----------
-    table_orig : array-like
+    table_orig : array_like
         The original table is cached as `table_orig`.
 
     See Also
@@ -129,7 +129,7 @@ class Table(object):
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             The raw data, from which a contingency table is constructed
             using the first two columns.
         shift_zeros : boolean
@@ -187,9 +187,9 @@ class Table(object):
 
         Parameters
         ----------
-        row_scores : array-like
+        row_scores : array_like
             An array of numeric row scores
-        col_scores : array-like
+        col_scores : array_like
             An array of numeric column scores
 
         Returns
@@ -433,7 +433,7 @@ class SquareTable(Table):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A square contingency table, or DataFrame that is converted
         to a square form.
     shift_zeros : boolean
@@ -639,7 +639,7 @@ class Table2x2(SquareTable):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A 2x2 contingency table
     shift_zeros : boolean
         If true, 0.5 is added to all cells of the table if any cell is
@@ -675,7 +675,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             The raw data, the first column defines the rows and the
             second column defines the columns.
         shift_zeros : boolean
@@ -987,7 +987,7 @@ class StratifiedTable(object):
         strata : int or string
             The column index or name of `data` specifying the variable
             defining the strata.
-        data : array-like
+        data : array_like
             The raw data.  A cross-table for analysis is constructed
             from the first two columns.
 
@@ -1292,7 +1292,7 @@ def mcnemar(table, exact=True, correction=True):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A square contingency table.
     exact : bool
         If exact is true, then the binomial distribution will be used.

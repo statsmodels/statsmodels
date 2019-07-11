@@ -44,7 +44,7 @@ class KDEUnivariate(object):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The variable for which the density estimate is desired.
 
     Notes
@@ -267,7 +267,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         The variable for which the density estimate is desired.
     kernel : str
         The Kernel to be used. Choices are
@@ -380,7 +380,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         The variable for which the density estimate is desired.
     kernel : str
         ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.

@@ -325,7 +325,7 @@ def _norm_plot_pos(observations):
 
     Parameters
     ----------
-    observations : array-like
+    observations : array_like
         Sequence of observed quantities.
 
     Returns

@@ -19,7 +19,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         Original array of data.
     trend : str {"c","t","ct","ctt"}
         "c" add constant only
@@ -702,14 +702,14 @@ def unintegrate_levels(x, d):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The original series
     d : int
         The number of differences of the differenced series.
 
     Returns
     -------
-    y : array-like
+    y : array_like
         The increasing differences from 0 to d-1 of the first d elements
         of x.
 
@@ -727,7 +727,7 @@ def unintegrate(x, levels):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The n-th differenced series
     levels : list
         A list of the first-value in each differenced series, for
@@ -735,7 +735,7 @@ def unintegrate(x, levels):
 
     Returns
     -------
-    y : array-like
+    y : array_like
         The original series de-differenced
 
     Examples

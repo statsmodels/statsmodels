@@ -25,7 +25,7 @@ class SUR(object):
     sys : list
         [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
         where M is the number of equations endog = exog.
-    sigma : array-like
+    sigma : array_like
         M x M array where sigma[i,j] is the covariance between equation i and j
     dfk : None, 'dfk1', or 'dfk2'
         Default is None.  Correction for the degrees of freedom

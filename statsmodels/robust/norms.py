@@ -119,7 +119,7 @@ class LeastSquares(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -138,7 +138,7 @@ class LeastSquares(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -197,7 +197,7 @@ class HuberT(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -220,7 +220,7 @@ class HuberT(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -242,7 +242,7 @@ class HuberT(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -294,7 +294,7 @@ class RamsayE(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -314,7 +314,7 @@ class RamsayE(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -333,7 +333,7 @@ class RamsayE(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -389,7 +389,7 @@ class AndrewWave(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -414,7 +414,7 @@ class AndrewWave(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -438,7 +438,7 @@ class AndrewWave(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -499,7 +499,7 @@ class TrimmedMean(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -522,7 +522,7 @@ class TrimmedMean(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -545,7 +545,7 @@ class TrimmedMean(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -611,7 +611,7 @@ class Hampel(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -645,7 +645,7 @@ class Hampel(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -679,7 +679,7 @@ class Hampel(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -742,7 +742,7 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -763,7 +763,7 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -786,7 +786,7 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns

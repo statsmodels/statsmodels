@@ -123,7 +123,7 @@ class ParameterConstraint(object):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
            The exogeneous data for the model.
         """
 
@@ -136,7 +136,7 @@ class ParameterConstraint(object):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
            The exogeneous data for the model.
         """
         return self.exog_fulltrans[:, 0:self.lhs0.shape[1]]
@@ -174,19 +174,19 @@ _gee_init_doc = """
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1d array of endogenous values (i.e. responses, outcomes,
         dependent variables, or 'Y' values).
-    exog : array-like
+    exog : array_like
         2d array of exogeneous values (i.e. covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
         default and should be added by the user. See
         `statsmodels.tools.add_constant`.
-    groups : array-like
+    groups : array_like
         A 1d array of length `nobs` containing the group labels.
-    time : array-like
+    time : array_like
         A 2d array of time (or other index) values, used by some
         dependence structures to define similarity relationships among
         observations within a cluster.
@@ -197,10 +197,10 @@ _gee_init_doc = """
         structure use cov_struct = Exchangeable().  See
         statsmodels.genmod.cov_struct.CovStruct for more
         information.
-    offset : array-like
+    offset : array_like
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
-    dep_data : array-like
+    dep_data : array_like
         Additional data passed to the dependence structure.
     constraint : (ndarray, ndarray)
         If provided, the constraint is a tuple (L, R) such that the
@@ -212,7 +212,7 @@ _gee_init_doc = """
     update_dep : bool
         If true, the dependence parameters are optimized, otherwise
         they are held fixed at their starting values.
-    weights : array-like
+    weights : array_like
         An array of weights to use in the analysis.  The weights must
         be constant within each group.  These correspond to
         probability weights (pweights) in Stata.
@@ -286,7 +286,7 @@ _gee_fit_doc = """
     ctol : float
         The convergence criterion for stopping the Gauss-Seidel
         iterations
-    start_params : array-like
+    start_params : array_like
         A vector of starting values for the regression
         coefficients.  If None, a default is chosen.
     params_niter : integer
@@ -657,25 +657,25 @@ class GEE(base.Model):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        groups : array-like or string
+        groups : array_like or string
             Array of grouping labels.  If a string, this is the name
             of a variable in `data` that contains the grouping labels.
-        data : array-like
+        data : array_like
             The data for the model.
-        subset : array-like
+        subset : array_like
             An array-like object of booleans, integers, or index
             values that indicate the subset of the data to used when
             fitting the model.
-        time : array-like or string
+        time : array_like or string
             The time values, used for dependence structures involving
             distances between observations.  If a string, this is the
             name of a variable in `data` that contains the time
             values.
-        offset : array-like or string
+        offset : array_like or string
             The offset values, added to the linear predictor.  If a
             string, this is the name of a variable in `data` that
             contains the offset values.
-        exposure : array-like or string
+        exposure : array_like or string
             The exposure values, only used if the link function is the
             logarithm function, in which case the log of `exposure`
             is added to the offset (if any).  If a string, this is the
@@ -695,7 +695,7 @@ class GEE(base.Model):
 
         Optional arguments
         ------------------
-        dep_data : string or array-like
+        dep_data : string or array_like
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g. Nested) for
             details.  If `dep_data` is a string, it is interpreted as
@@ -930,9 +930,9 @@ class GEE(base.Model):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
            The exogeneous data at which the derivative is computed.
-        lin_pred : array-like
+        lin_pred : array_like
            The values of the linear predictor.
 
         Returns
@@ -956,12 +956,12 @@ class GEE(base.Model):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
             Values of the independent variables at which the derivative
             is calculated.
-        params : array-like
+        params : array_like
             Parameter values at which the derivative is calculated.
-        offset_exposure : array-like, optional
+        offset_exposure : array_like, optional
             Combined offset and exposure.
 
         Returns
@@ -981,10 +981,10 @@ class GEE(base.Model):
         """
         Returns
         -------
-        update : array-like
+        update : array_like
             The update vector such that params + update is the next
             iterate when solving the score equations.
-        score : array-like
+        score : array_like
             The current value of the score equations, not
             incorporating the scale parameter.  If desired,
             multiply this vector by the scale parameter to
@@ -1059,15 +1059,15 @@ class GEE(base.Model):
 
         Returns
         -------
-        cov_robust : array-like
+        cov_robust : array_like
            The robust, or sandwich estimate of the covariance, which
            is meaningful even if the working covariance structure is
            incorrectly specified.
-        cov_naive : array-like
+        cov_naive : array_like
            The model-based estimate of the covariance, which is
            meaningful if the covariance structure is correctly
            specified.
-        cmat : array-like
+        cmat : array_like
            The center matrix of the sandwich expression, used in
            obtaining score test results.
         """
@@ -1162,15 +1162,15 @@ class GEE(base.Model):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Parameters / coefficients of a marginal regression model.
-        exog : array-like, optional
+        exog : array_like, optional
             Design / exogenous data. If exog is None, model exog is
             used.
-        offset : array-like, optional
+        offset : array_like, optional
             Offset for exog if provided.  If offset is None, model
             offset is used.
-        exposure : array-like, optional
+        exposure : array_like, optional
             Exposure for exog, if exposure is None, model exposure is
             used.  Only allowed if link function is the logarithm.
         linear : bool
@@ -1555,17 +1555,17 @@ class GEE(base.Model):
 
         Parameters
         ----------
-        mean_params : array-like
+        mean_params : array_like
             A parameter vector estimate for the reduced model.
-        bcov : array-like
+        bcov : array_like
             The covariance matrix of mean_params.
 
         Returns
         -------
-        mean_params : array-like
+        mean_params : array_like
             The input parameter vector mean_params, expanded to the
             coordinate system of the full model
-        bcov : array-like
+        bcov : array_like
             The input covariance matrix bcov, expanded to the
             coordinate system of the full model
         """
@@ -1675,11 +1675,11 @@ class GEE(base.Model):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The GEE estimates of the regression parameters.
         scale : scalar
             Estimated scale parameter
-        cov_params : array-like
+        cov_params : array_like
             An estimate of the covariance matrix for the
             model parameters.  Conventionally this is the robust
             covariance matrix.
@@ -2026,7 +2026,7 @@ class GEEResults(base.LikelihoodModelResults):
         alpha : float, optional
              The `alpha` level for the confidence interval.  i.e., The
              default `alpha` = .05 returns a 95% confidence interval.
-        cols : array-like, optional
+        cols : array_like, optional
              `cols` specifies which confidence intervals to return
         cov_type : string
              The covariance type used for computing standard errors;
@@ -2186,7 +2186,7 @@ class GEEResults(base.LikelihoodModelResults):
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
-        atexog : array-like, optional
+        atexog : array_like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
             as the zero-indexed column number and the value of the dictionary.
@@ -2232,7 +2232,7 @@ class GEEResults(base.LikelihoodModelResults):
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        xpoints : scalar or array-like
+        xpoints : scalar or array_like
             If scalar, the number of points equally spaced points on
             the time difference axis used to define bins for
             calculating local means.  If an array, the specific points
@@ -2297,16 +2297,16 @@ class GEEResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        dep_params_first : array-like
+        dep_params_first : array_like
             The first dep_params in the sequence
-        dep_params_last : array-like
+        dep_params_last : array_like
             The last dep_params in the sequence
         num_steps : int
             The number of dep_params in the sequence
 
         Returns
         -------
-        results : array-like
+        results : array_like
             The GEEResults objects resulting from the fits.
         """
 
@@ -2502,7 +2502,7 @@ class OrdinalGEEResults(GEEResults):
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        exog_values : array-like
+        exog_values : array_like
             A list of dictionaries, with each dictionary mapping
             variable names to values at which the variable is held
             fixed.  The values P(endog=y | exog) are plotted for all
@@ -2592,10 +2592,10 @@ def _score_test_submodel(par, sub):
 
     Returns
     -------
-    qm : array-like
+    qm : array_like
         Matrix mapping the design matrix of the parent to the design matrix
         for the sub-model.
-    qc : array-like
+    qc : array_like
         Matrix mapping the design matrix of the parent to the orthogonal
         complement of the columnspace of the submodel in the columnspace
         of the parent.
@@ -2748,10 +2748,10 @@ class NominalGEE(GEE):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
            The exogeneous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
-        lin_pred : array-like
+        lin_pred : array_like
            The values of the linear predictor, length must be multiple
            of `ncut`.
 
@@ -2792,10 +2792,10 @@ class NominalGEE(GEE):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
            The exogeneous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
-        lpr : array-like
+        lpr : array_like
            The linear predictor values, length must be multiple of
            `ncut`.
 
@@ -2888,7 +2888,7 @@ class NominalGEEResults(GEEResults):
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        exog_values : array-like
+        exog_values : array_like
             A list of dictionaries, with each dictionary mapping
             variable names to values at which the variable is held
             fixed.  The values P(endog=y | exog) are plotted for all
@@ -2992,7 +2992,7 @@ class _MultinomialLogit(Link):
 
         Parameters
         ----------
-        lpr : array-like (length must be divisible by `ncut`)
+        lpr : array_like (length must be divisible by `ncut`)
             The linear predictors
 
         Returns

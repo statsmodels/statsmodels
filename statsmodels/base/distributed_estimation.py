@@ -156,9 +156,9 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
     ----------
     mod : statsmodels model class instance
         The model for the current partition.
-    params : array-like
+    params : array_like
         The estimated coefficients for the current partition.
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -200,7 +200,7 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
     ----------
     mod : statsmodels model class instance
         The model for the current partition.
-    params : array-like
+    params : array_like
         The estimated coefficients for the current partition.
     hess_kwds : dict-like or None
         Keyword arguments for the hessian function.
@@ -337,9 +337,9 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
         An instance of DistributedModel.
     pnum : scalar
         index of current partition.
-    endog : array-like
+    endog : array_like
         endogenous data for current partition.
-    exog : array-like
+    exog : array_like
         exogenous data for current partition.
     fit_kwds : dict-like
         Keywords needed for the model fitting.
@@ -659,7 +659,7 @@ class DistributedResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        exog : array-like NOT optional
+        exog : array_like NOT optional
             The values for which we want to predict, unlike standard
             predict this is NOT optional since the data in self.model
             is fake.

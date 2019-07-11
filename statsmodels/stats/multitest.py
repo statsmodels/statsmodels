@@ -459,7 +459,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
 
     Parameters
     ----------
-    zscores : array-like
+    zscores : array_like
         A vector of Z-scores
     null_proportion : float
         The assumed proportion of true null hypotheses
@@ -474,7 +474,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
 
     Returns
     -------
-    fdr : array-like
+    fdr : array_like
         A vector of FDR values
 
     References
@@ -552,7 +552,7 @@ class NullDistribution(object):
 
     Parameters
     ----------
-    zscores : array-like
+    zscores : array_like
         The observed Z-scores.
     null_lb : float
         Z-scores between `null_lb` and `null_ub` are all considered to be
@@ -678,7 +678,7 @@ class NullDistribution(object):
 
         Parameters
         ----------
-        zscores : scalar or array-like
+        zscores : scalar or array_like
             The point or points at which the density is to be
             evaluated.
 

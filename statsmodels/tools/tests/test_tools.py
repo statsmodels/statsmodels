@@ -178,7 +178,7 @@ def test_estimable():
     assert not isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X)
     assert not isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X)
     assert isestimable(np.hstack([np.eye(5), np.eye(5)]), X)
-    # Test array-like for design
+    # Test array_like for design
     XL = X.tolist()
     assert isestimable(np.hstack([np.eye(5), np.eye(5)]), XL)
     # Test ValueError for incorrect number of columns

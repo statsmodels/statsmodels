@@ -18,11 +18,11 @@ def durbin_watson(resids, axis=0):
 
     Parameters
     ----------
-    resids : array-like
+    resids : array_like
 
     Returns
     -------
-    dw : float, array-like
+    dw : float, array_like
         The Durbin-Watson statistic.
 
     Notes
@@ -53,7 +53,7 @@ def omni_normtest(resids, axis=0):
 
     Parameters
     ----------
-    resid : array-like
+    resid : array_like
     axis : int, optional
         Default is 0
 
@@ -80,7 +80,7 @@ def jarque_bera(resids, axis=0):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Data to test for normality
     axis : int, optional
         Axis to use if data has more than 1 dimension. Default is 0
@@ -133,7 +133,7 @@ def robust_skewness(y, axis=0):
 
     Parameters
     ----------
-    y : array-like
+    y : array_like
 
     axis : int or None, optional
         Axis along which the skewness measures are computed.  If `None`, the
@@ -209,7 +209,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
 
     Parameters
     ----------
-    y : array-like, 1-d
+    y : array_like, 1-d
     alpha : float, optional
         Lower cut-off for measuring expectation in tail.
     beta :  float, optional
@@ -289,7 +289,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     Parameters
     ----------
-    y : array-like
+    y : array_like
     axis : int or None, optional
         Axis along which the kurtoses are computed.  If `None`, the
         entire array is used.
@@ -377,7 +377,7 @@ def _medcouple_1d(y):
 
     Parameters
     ----------
-    y : array-like, 1-d
+    y : array_like, 1-d
 
     Returns
     -------
@@ -438,7 +438,7 @@ def medcouple(y, axis=0):
 
     Parameters
     ----------
-    y : array-like
+    y : array_like
     axis : int or None, optional
         Axis along which the medcouple statistic is computed.  If `None`, the
         entire array is used.

@@ -66,7 +66,7 @@ _fit_regularized_doc =\
         ----------
         method : string
             'elastic_net' and 'sqrt_lasso' are currently implemented.
-        alpha : scalar or array-like
+        alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
@@ -75,7 +75,7 @@ _fit_regularized_doc =\
             The fraction of the penalty given to the L1 penalty term.
             Must be between 0 and 1 (inclusive).  If 0, the fit is a
             ridge fit, if 1 it is a lasso fit.
-        start_params : array-like
+        start_params : array_like
             Starting values for ``params``.
         profile_scale : bool
             If True the penalized fit is computed using the profile
@@ -94,7 +94,7 @@ _fit_regularized_doc =\
         partitions : scalar
             The number of partitions desired for the distributed
             estimation.
-        threshold : scalar or array-like
+        threshold : scalar or array_like
             The threshold below which coefficients are zeroed out,
             only used for distributed estimation
 
@@ -342,9 +342,9 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Parameters of a linear model
-        exog : array-like, optional.
+        exog : array_like, optional.
             Design / exogenous data. Model exog is used if None.
 
         Returns
@@ -369,11 +369,11 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The model parameters (regression coefficients).
         scale : scalar
             The variance parameter.
-        exog : array-like
+        exog : array_like
             The predictor variable matrix.
         dist_class : class
             A random number generator class.  Must take 'loc' and 'scale'
@@ -497,7 +497,7 @@ class GLS(RegressionModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             Data to be whitened.
 
         Returns
@@ -528,7 +528,7 @@ class GLS(RegressionModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter estimates
 
         Returns
@@ -624,7 +624,7 @@ class WLS(RegressionModel):
     to be transformed by 1/sqrt(W) you must supply weights = 1/W.
 
     %(params)s
-    weights : array-like, optional
+    weights : array_like, optional
         1d array of weights.  If you supply 1/W then the variables are
         pre- multiplied by 1/sqrt(W).  If no weights are supplied the
         default value is 1 and WLS results are the same as OLS.
@@ -695,12 +695,12 @@ class WLS(RegressionModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             Data to be whitened
 
         Returns
         -------
-        whitened : array-like
+        whitened : array_like
             sqrt(weights)*X
         """
 
@@ -719,7 +719,7 @@ class WLS(RegressionModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter estimates.
 
         Returns
@@ -845,7 +845,7 @@ class OLS(WLS):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The coefficients with which to estimate the log-likelihood.
         scale : float or None
             If None, return the profile (concentrated) log likelihood
@@ -886,7 +886,7 @@ class OLS(WLS):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter vector at which the score function is
             computed.
         scale : float or None
@@ -927,7 +927,7 @@ class OLS(WLS):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter vector at which the Hessian is computed.
         scale : float or None
             If None, return the profile (concentrated) log likelihood
@@ -1082,7 +1082,7 @@ class OLS(WLS):
 
         Parameters
         ----------
-        alpha : scalar or array-like
+        alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
@@ -1256,7 +1256,7 @@ class GLSAR(GLS):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             The data to be whitened,
 
         Returns
@@ -1287,7 +1287,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         1d array
     order : integer, optional
         The order of the autoregressive process.  Default is 1.
@@ -1364,7 +1364,7 @@ def burg(endog, order=1, demean=True):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The endogenous variable
     order : int, optional
         Order of the AR.  Default is 1.
@@ -1531,7 +1531,7 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha : float, optional
             The `alpha` level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
-        cols : array-like, optional
+        cols : array_like, optional
             `cols` specifies which confidence intervals to return
 
         Notes

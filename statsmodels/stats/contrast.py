@@ -206,8 +206,8 @@ class Contrast(object):
 
     Parameters
     ----------
-    term : array-like
-    design : array-like
+    term : array_like
+    design : array_like
 
     Attributes
     ----------
@@ -312,8 +312,8 @@ def contrastfromcols(L, D, pseudo=None):
 
     Parameters
     ----------
-    L : array-like
-    D : array-like
+    L : array_like
+    D : array_like
     """
     L = np.asarray(L)
     D = np.asarray(D)

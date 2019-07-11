@@ -22,7 +22,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
 
     Parameters
     ----------
-    a : array-like
+    a : array_like
         Input array.
     c : float, optional
         The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),

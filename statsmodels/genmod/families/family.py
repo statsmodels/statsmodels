@@ -117,7 +117,7 @@ class Family(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             The transformed mean response variable in the exponential family
 
         Returns
@@ -142,13 +142,13 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array-like
+        endog : array_like
             The endogenous response variable
-        mu : array-like
+        mu : array_like
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
-        freq_weights : array-like
+        freq_weights : array_like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
@@ -184,11 +184,11 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array-like
+        endog : array_like
             The endogenous response variable
-        mu : array-like
+        mu : array_like
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
@@ -261,7 +261,7 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -291,9 +291,9 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
-        freq_weights : array-like
+        freq_weights : array_like
             1d array of frequency weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -329,7 +329,7 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -440,7 +440,7 @@ class Poisson(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -470,7 +470,7 @@ class Poisson(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -563,7 +563,7 @@ class Gaussian(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -612,7 +612,7 @@ class Gaussian(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -709,7 +709,7 @@ class Gamma(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -749,7 +749,7 @@ class Gamma(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -902,7 +902,7 @@ class Binomial(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -952,7 +952,7 @@ class Binomial(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1083,7 +1083,7 @@ class InverseGaussian(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1117,7 +1117,7 @@ class InverseGaussian(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1238,7 +1238,7 @@ class NegativeBinomial(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1289,7 +1289,7 @@ class NegativeBinomial(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1457,7 +1457,7 @@ class Tweedie(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1514,7 +1514,7 @@ class Tweedie(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).

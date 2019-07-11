@@ -68,9 +68,9 @@ _discrete_results_docs = """
     Parameters
     ----------
     model : A DiscreteModel instance
-    params : array-like
+    params : array_like
         The parameters of a fitted model.
-    hessian : array-like
+    hessian : array_like
         The hessian of the fitted model.
     scale : float
         A scale parameter for the covariance matrix.
@@ -232,7 +232,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
         method : 'l1' or 'l1_cvxopt_cp'
@@ -438,9 +438,9 @@ class BinaryModel(DiscreteModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Fitted parameters of the model.
-        exog : array-like
+        exog : array_like
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used.
         linear : bool, optional
@@ -572,10 +572,10 @@ class MultinomialModel(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             2d array of fitted parameters of the model. Should be in the
             order returned from the model.
-        exog : array-like
+        exog : array_like
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used. If a 1d array is given
             it assumed to be 1 row of exogenous variables. If you only have
@@ -914,7 +914,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             `X` is the linear predictor of the model.  See notes.
 
         Returns
@@ -942,7 +942,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             `X` is the linear predictor of the model.  See notes.
 
         Returns
@@ -972,7 +972,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -997,12 +997,12 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
-        loglike : array-like
+        loglike : array_like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1145,7 +1145,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1174,12 +1174,12 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
-        score : array-like
+        score : array_like
             The score vector (nobs, k_vars) of the model evaluated at `params`
 
         Notes
@@ -1204,12 +1204,12 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
-        score : array-like
+        score : array_like
             The score factor (nobs, ) of the model evaluated at `params`
 
         Notes
@@ -1235,7 +1235,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1265,7 +1265,7 @@ class Poisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1338,7 +1338,7 @@ class GeneralizedPoisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -1363,7 +1363,7 @@ class GeneralizedPoisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -1555,7 +1555,7 @@ class GeneralizedPoisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1587,7 +1587,7 @@ class GeneralizedPoisson(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1716,7 +1716,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             `X` is the linear predictor of the logit model.  See notes.
 
         Returns
@@ -1741,7 +1741,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             `X` is the linear predictor of the logit model.  See notes.
 
         Returns
@@ -1765,7 +1765,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the logit model.
 
         Returns
@@ -1794,7 +1794,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the logit model.
 
         Returns
@@ -1825,7 +1825,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params: array-like
+        params: array_like
             The parameters of the model
 
         Returns
@@ -1850,12 +1850,12 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params: array-like
+        params: array_like
             The parameters of the model
 
         Returns
         -------
-        jac : array-like
+        jac : array_like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -1878,7 +1878,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1927,7 +1927,7 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             The linear predictor of the model (XB).
 
         Returns
@@ -1947,7 +1947,7 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        X : array-like
+        X : array_like
             The linear predictor of the model (XB).
 
         Returns
@@ -1970,7 +1970,7 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -1998,12 +1998,12 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
-        loglike : array-like
+        loglike : array_like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -2028,7 +2028,7 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -2058,12 +2058,12 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
-        jac : array-like
+        jac : array_like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -2090,7 +2090,7 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -2130,12 +2130,12 @@ class MNLogit(MultinomialModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         `endog` is an 1-d vector of the endogenous response.  `endog` can
         contain strings, ints, or floats.  Note that if it contains strings,
         every distinct string will be a category.  No stripping of whitespace
         is done.
-    exog : array-like
+    exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
@@ -2201,7 +2201,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the multinomial logit model.
 
         Returns
@@ -2233,12 +2233,12 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the multinomial logit model.
 
         Returns
         -------
-        loglike : array-like
+        loglike : array_like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -2318,7 +2318,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        jac : array-like
+        jac : array_like
             The derivative of the loglikelihood for each observation evaluated
             at `params` .
 
@@ -2344,7 +2344,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -2568,7 +2568,7 @@ class NegativeBinomial(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model. If `loglike_method` is nb1 or
             nb2, then the ancillary parameter is expected to be the
             last element.
@@ -2959,7 +2959,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -2976,7 +2976,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -3011,7 +3011,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -3055,7 +3055,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -3077,7 +3077,7 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -3274,10 +3274,10 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             2d array of fitted parameters of the model. Should be in the
             order returned from the model.
-        exog : array-like, optional
+        exog : array_like, optional
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used. If a 1d array is given
             it assumed to be 1 row of exogenous variables. If you only have
@@ -3564,7 +3564,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
-        atexog : array-like, optional
+        atexog : array_like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
             as the zero-indexed column number and the value of the dictionary.
@@ -3795,7 +3795,7 @@ class PoissonResults(CountResults):
 
         Parameters
         ----------
-        n : array-like or int
+        n : array_like or int
             The counts for which you want the probabilities. If n is None
             then the probabilities for each count from 0 to max(y) are
             given.

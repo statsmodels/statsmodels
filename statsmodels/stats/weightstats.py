@@ -231,7 +231,7 @@ class DescrStatsW(object):
 
         Parameters
         ----------
-        probs : array-like
+        probs : array_like
             A vector of probability points at which to calculate the
             quantiles.  Each element of `probs` should fall in [0, 1].
         return_pandas : bool
@@ -739,7 +739,7 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        data1, data2 : array-like, 1-D or 2-D
+        data1, data2 : array_like, 1-D or 2-D
             compared datasets
         weights1, weights2 : None or 1-D ndarray
             weights for each observation of data1 and data2 respectively,

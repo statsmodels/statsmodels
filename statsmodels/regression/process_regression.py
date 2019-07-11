@@ -44,12 +44,12 @@ class ProcessCovariance(object):
 
         Parameters
         ----------
-        time : array-like
+        time : array_like
             The time points for the observations.  If len(time) = p,
             a pxp covariance matrix is returned.
-        sc : array-like
+        sc : array_like
             The scaling parameters for the observations.
-        sm : array-like
+        sm : array_like
             The smoothness parameters for the observation.  See class
             docstring for details.
         """
@@ -215,23 +215,23 @@ class ProcessMLE(base.LikelihoodModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variable.
-    exog : array-like
+    exog : array_like
         The design matrix for the mean structure
-    exog_scale : array-like
+    exog_scale : array_like
         The design matrix for the scaling structure
-    exog_smooth : array-like
+    exog_smooth : array_like
         The design matrix for the smoothness structure
-    exog_noise : array-like
+    exog_noise : array_like
         The design matrix for the white noise structure. The
         linear predictor is the log of the white noise standard
         deviation.
-    time : array-like (1-dimensional)
+    time : array_like (1-dimensional)
         The univariate index values, used to calculate distances
         between observations in the same group, which determines
         their correlations.
-    groups : array-like (1-dimensional)
+    groups : array_like (1-dimensional)
         The group values.
     cov : a ProcessCovariance instance
         Defaults to GaussianCovariance.
@@ -432,7 +432,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The packed parameters for the model.
 
         Returns
@@ -482,7 +482,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The packed parameters for the model.
 
         Returns
@@ -576,7 +576,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array-like
+        start_params : array_like
             Optional starting values.
         method : string or array of strings
             Method or sequence of methods for scipy optimize.
@@ -661,13 +661,13 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        time : array-like
+        time : array_like
             The time points at which the fitted covariance matrix is
             calculated.
-        scale_params : array-like
+        scale_params : array_like
             The regression parameters for the scaling part
             of the covariance structure.
-        smooth_params : array-like
+        smooth_params : array_like
             The regression parameters for the smoothing part
             of the covariance structure.
         scale_data : Dataframe
@@ -710,10 +710,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The model parameters, may be truncated to include only mean
             parameters.
-        exog : array-like
+        exog : array_like
             The design matrix for the mean structure.  If not provided,
             the model's design matrix is used.
         """
@@ -770,13 +770,13 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         Parameters
         ----------
-        time : array-like
+        time : array_like
             The time points at which the fitted covariance
             matrix is calculated.
-        scale : array-like
+        scale : array_like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth: array-like
+        smooth: array_like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 

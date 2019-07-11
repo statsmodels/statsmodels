@@ -32,7 +32,7 @@ class VarianceFunction(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns
@@ -93,7 +93,7 @@ class Power(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns
@@ -184,7 +184,7 @@ class Binomial(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns
@@ -253,7 +253,7 @@ class NegativeBinomial(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns

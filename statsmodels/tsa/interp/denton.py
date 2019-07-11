@@ -12,7 +12,7 @@ from numpy.linalg import solve
 #
 #    Parameters
 #    ----------
-#    benchmark : array-like
+#    benchmark : array_like
 #        The higher frequency benchmark.  A 1d or 2d data series in columns.
 #        If 2d, then M series are assumed.
 #    indicator
@@ -97,7 +97,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         A low-frequency indicator series.  It is assumed that there are no
         pre-sample indicators.  Ie., the first indicators line up with
         the first benchmark.
-    benchmark : array-like
+    benchmark : array_like
         The higher frequency benchmark.  A 1d or 2d data series in columns.
         If 2d, then M series are assumed.
     freq : str {"aq","qm", "other"}

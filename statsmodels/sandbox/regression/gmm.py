@@ -166,9 +166,9 @@ class IV2SLS(LikelihoodModel):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
             Design / exogenous data
-        params : array-like, optional after fit has been called
+        params : array_like, optional after fit has been called
             Parameters of a linear model
 
         Returns

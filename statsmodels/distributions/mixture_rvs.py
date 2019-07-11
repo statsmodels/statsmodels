@@ -21,11 +21,11 @@ def mixture_rvs(prob, size, dist, kwargs=None):
 
     Parameters
     ----------
-    prob : array-like
+    prob : array_like
         Probability of sampling from each distribution in dist
     size : int
         The length of the returned sample.
-    dist : array-like
+    dist : array_like
         An iterable of distributions objects from scipy.stats.
     kwargs : tuple of dicts, optional
         A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
@@ -86,11 +86,11 @@ class MixtureDistribution(object):
 
         Parameters
         ----------
-        x : array-like
+        x : array_like
             Array containing locations where the PDF should be evaluated
-        prob : array-like
+        prob : array_like
             Probability of sampling from each distribution in dist
-        dist : array-like
+        dist : array_like
             An iterable of distributions objects from scipy.stats.
         kwargs : tuple of dicts, optional
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
@@ -136,13 +136,13 @@ class MixtureDistribution(object):
 
         Parameters
         ----------
-        x : array-like
+        x : array_like
             Array containing locations where the CDF should be evaluated
-        prob : array-like
+        prob : array_like
             Probability of sampling from each distribution in dist
         size : int
             The length of the returned sample.
-        dist : array-like
+        dist : array_like
             An iterable of distributions objects from scipy.stats.
         kwargs : tuple of dicts, optional
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
@@ -189,11 +189,11 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
 
     Parameters
     ----------
-    prob : array-like
+    prob : array_like
         Probability of sampling from each distribution in dist
     size : int
         The length of the returned sample.
-    dist : array-like
+    dist : array_like
         An iterable of distributions instances with callable method rvs.
     nvargs : int
         dimension of the multivariate distribution, could be inferred instead

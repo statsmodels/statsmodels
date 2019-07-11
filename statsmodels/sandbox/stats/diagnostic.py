@@ -544,7 +544,7 @@ def het_breuschpagan(resid, exog_het):
 
     Parameters
     ----------
-    resid : array-like
+    resid : array_like
         For the Breusch-Pagan test, this should be the residual of a regression.
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should

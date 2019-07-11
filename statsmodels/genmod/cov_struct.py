@@ -66,7 +66,7 @@ class CovStruct(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Working values for the regression parameters.
         """
         raise NotImplementedError
@@ -78,7 +78,7 @@ class CovStruct(object):
 
         Parameters
         ----------
-        endog_expval: array-like
+        endog_expval: array_like
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
         index: integer
@@ -103,21 +103,21 @@ class CovStruct(object):
 
         Parameters
         ----------
-        expval: array-like
+        expval: array_like
            The expected value of endog for each observed value in the
            group.
         index: integer
            The group index.
-        stdev : array-like
+        stdev : array_like
             The standard deviation of endog for each observation in
             the group.
-        rhs : list/tuple of array-like
+        rhs : list/tuple of array_like
             A set of right-hand sides; each defines a matrix equation
             to be solved.
 
         Returns
         -------
-        soln : list/tuple of array-like
+        soln : list/tuple of array_like
             The solutions to the matrix equations.
 
         Notes
@@ -1201,7 +1201,7 @@ class Equivalence(CovStruct):
       one triangle of each covariance matrix should be included.
       Positions where j1 and j2 have the same value are variance
       parameters.
-    labels : array-like
+    labels : array_like
       An array of labels such that every distinct pair of labels
       defines an equivalence class.  Either `labels` or `pairs` must
       be provided.  When the two labels in a pair are equal two

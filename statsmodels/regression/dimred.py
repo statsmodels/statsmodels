@@ -37,9 +37,9 @@ class SlicedInverseReg(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array-like (1d)
+    endog : array_like (1d)
         The dependent variable
-    exog : array-like (2d)
+    exog : array_like (2d)
         The covariates
 
     References
@@ -88,9 +88,9 @@ class PrincipalHessianDirections(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array-like (1d)
+    endog : array_like (1d)
         The dependent variable
-    exog : array-like (2d)
+    exog : array_like (2d)
         The covariates
 
     References
@@ -143,9 +143,9 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array-like (1d)
+    endog : array_like (1d)
         The dependent variable
-    exog : array-like (2d)
+    exog : array_like (2d)
         The covariates
     bc : bool, optional
         If True, use the bias-correctedCSAVE method of Li and Zhu.
@@ -261,9 +261,9 @@ class CovarianceReduction(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variable, treated as group labels
-    exog : array-like
+    exog : array_like
         The independent variables.
     dim : integer
         The dimension of the subspace onto which the covariance
@@ -325,7 +325,7 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The projection matrix used to reduce the covariances, flattened
             to 1d.
 
@@ -352,7 +352,7 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The projection matrix used to reduce the covariances,
             flattened to 1d.
 
@@ -379,7 +379,7 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        start_params : array-like
+        start_params : array_like
             Starting value for the projection matrix. May be
             rectangular, or flattened.
         maxiter : integer
