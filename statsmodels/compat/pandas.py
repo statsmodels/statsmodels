@@ -5,7 +5,8 @@ from distutils.version import LooseVersion
 import pandas
 
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
-           'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing']
+           'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
+           'cache_readonly']
 
 version = LooseVersion(pandas.__version__)
 pandas_lt_25_0 = version < LooseVersion('0.25.0')
@@ -23,6 +24,11 @@ except ImportError:
 data_klasses = (pandas.Series, pandas.DataFrame)
 if pandas_lt_25_0:
     data_klasses += (pandas.Panel,)
+
+if version >= '0.20':
+    from pandas.util._decorators import cache_readonly
+else:
+    from pandas.util.decorators import cache_readonly
 
 try:
     import pandas.testing as testing

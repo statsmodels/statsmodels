@@ -1,5 +1,7 @@
 from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
+from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
+
 import warnings
 
 __all__ = ['cache_readonly', 'cache_writable']
@@ -66,6 +68,18 @@ class cache_writable(_cache_readonly):
     def __call__(self, func):
         return CachedWritableAttribute(func,
                                        cachename=self.cachename)
+
+
+# cached_value and cached_data behave identically to cache_readonly, but
+# are used by `remove_data` to
+#   a) identify array-like attributes to remove (cached_data)
+#   b) make sure certain values are evaluated before caching (cached_value)
+class cached_data(PandasCacheReadonly):
+    pass
+
+
+class cached_value(PandasCacheReadonly):
+    pass
 
 
 def nottest(fn):

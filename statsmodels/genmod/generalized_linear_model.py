@@ -19,7 +19,8 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 import numpy as np
 from . import families
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.decorators import (cache_readonly,
+                                          cached_data, cached_value)
 
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
@@ -1472,7 +1473,7 @@ class GLMResults(base.LikelihoodModelResults):
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
 
-    @cache_readonly
+    @cached_data
     def resid_response(self):
         """
         Respnose residuals.  The response residuals are defined as
@@ -1480,7 +1481,7 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return self._n_trials * (self._endog-self.mu)
 
-    @cache_readonly
+    @cached_data
     def resid_pearson(self):
         """
         Pearson residuals.  The Pearson residuals are defined as
@@ -1492,7 +1493,7 @@ class GLMResults(base.LikelihoodModelResults):
                 np.sqrt(self._var_weights) /
                 np.sqrt(self.family.variance(self.mu)))
 
-    @cache_readonly
+    @cached_data
     def resid_working(self):
         """
         Working residuals.  The working residuals are defined as
@@ -1504,7 +1505,7 @@ class GLMResults(base.LikelihoodModelResults):
         val *= self._n_trials
         return val
 
-    @cache_readonly
+    @cached_data
     def resid_anscombe(self):
         """
         Anscombe residuals.  See statsmodels.families.family for distribution-
@@ -1518,7 +1519,7 @@ class GLMResults(base.LikelihoodModelResults):
                                           var_weights=self._var_weights,
                                           scale=1.)
 
-    @cache_readonly
+    @cached_data
     def resid_anscombe_scaled(self):
         """
         Scaled Anscombe residuals.  See statsmodels.families.family for
@@ -1528,7 +1529,7 @@ class GLMResults(base.LikelihoodModelResults):
                                           var_weights=self._var_weights,
                                           scale=self.scale)
 
-    @cache_readonly
+    @cached_data
     def resid_anscombe_unscaled(self):
         """
         Unscaled Anscombe residuals.  See statsmodels.families.family for
@@ -1538,7 +1539,7 @@ class GLMResults(base.LikelihoodModelResults):
                                           var_weights=self._var_weights,
                                           scale=1.)
 
-    @cache_readonly
+    @cached_data
     def resid_deviance(self):
         """
         Deviance residuals.  See statsmodels.families.family for distribution-
@@ -1549,7 +1550,7 @@ class GLMResults(base.LikelihoodModelResults):
                                     scale=1.)
         return dev
 
-    @cache_readonly
+    @cached_value
     def pearson_chi2(self):
         """
         Pearson's Chi-Squared statistic is defined as the sum of the squares
@@ -1560,7 +1561,7 @@ class GLMResults(base.LikelihoodModelResults):
         chisqsum = np.sum(chisq)
         return chisqsum
 
-    @cache_readonly
+    @cached_data
     def fittedvalues(self):
         """
         Linear predicted values for the fitted model.
@@ -1568,7 +1569,7 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return self.mu
 
-    @cache_readonly
+    @cached_data
     def mu(self):
         """
         See GLM docstring.
@@ -1621,7 +1622,7 @@ class GLMResults(base.LikelihoodModelResults):
                                    freq_weights=self._freq_weights,
                                    scale=self.scale)
 
-    @cache_readonly
+    @cached_value
     def llf(self):
         """
         Value of the loglikelihood function evalued at params.
@@ -1642,7 +1643,7 @@ class GLMResults(base.LikelihoodModelResults):
                                    scale=scale)
         return val
 
-    @cache_readonly
+    @cached_value
     def aic(self):
         """
         Akaike Information Criterion
@@ -1650,7 +1651,7 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return -2 * self.llf + 2 * (self.df_model + 1)
 
-    @cache_readonly
+    @cached_value
     def bic(self):
         """
         Bayes Information Criterion
