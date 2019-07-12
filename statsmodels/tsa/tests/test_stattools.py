@@ -885,7 +885,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
 
     # Test that the two approaches are identical
     atol = 1e-6 if PLATFORM_WIN else 0.0
-    assert_allclose(u, res.forecasts_error[0], atol=atol)
+    assert_allclose(u, res.forecasts_error[0], rtol=1e-6, atol=atol)
     assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
                     atol=atol)
     assert_allclose(llf_obs, res.llf_obs, atol=atol)
