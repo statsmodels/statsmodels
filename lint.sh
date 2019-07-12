@@ -115,7 +115,7 @@ if [ "$LINT" == true ]; then
     fi
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
     git fetch origin --quiet
-    NEW_FILES=$(git diff origin/master --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)
+    NEW_FILES=$(git diff origin/maintenance/0.10.x --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)
     if [ -n "$NEW_FILES" ]; then
         echo "Linting newly added files with strict rules"
         echo "New files: $NEW_FILES"
