@@ -1,4 +1,4 @@
-r'''
+'''
 
 from pystatsmodels mailinglist 20100524
 
@@ -57,21 +57,6 @@ Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
 
 TODO
 ----
-
-* handle exception if empty, shows up only sometimes when running this
-- DONE I think
-
-Traceback (most recent call last):
-  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\multicomp.py", line 711, in <module>
-    print('sh', multipletests(tpval, alpha=0.05, method='sh')
-  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\multicomp.py", line 241, in multipletests
-    rejectmax = np.max(np.nonzero(reject))
-  File "C:\Programs\Python25\lib\site-packages\numpy\core\fromnumeric.py", line 1765, in amax
-    return _wrapit(a, 'max', axis, out)
-  File "C:\Programs\Python25\lib\site-packages\numpy\core\fromnumeric.py", line 37, in _wrapit
-    result = getattr(asarray(obj),method)(*args, **kwds)
-ValueError: zero-size array to ufunc.reduce without identity
-
 * name of function multipletests, rename to something like pvalue_correction?
 
 
@@ -84,7 +69,6 @@ import math
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats, interpolate
-
 from statsmodels.compat.python import lzip, range, lrange, zip
 from statsmodels.iolib.table import SimpleTable
 #temporary circular import
@@ -1504,12 +1488,6 @@ def tukey_pvalues(std_range, nm, df):
     tstat = std_range / np.sqrt(2) * np.ones(corr.shape[0]) #need len of all pairs
     return multicontrast_pvalues(tstat, corr, df=df)
 
-def test_tukey_pvalues():
-    #testcase with 3 is not good because all pairs has also 3*(3-1)/2=3 elements
-    res = tukey_pvalues(3.649, 3, 16) #3.649*np.ones(3), 16)
-    assert_almost_equal(0.05, res[0], 3)
-    assert_almost_equal(0.05*np.ones(3), res[1], 3)
-
 
 def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-sided'):
     '''pvalues for simultaneous tests
@@ -1801,8 +1779,6 @@ def set_remove_subs(ssli):
     return part
 
 
-
-
 if __name__ == '__main__':
 
     examples = ['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
@@ -1813,49 +1789,11 @@ if __name__ == '__main__':
         x = np.array([[0,0,1]]).T + np.random.randn(3, 20)
         print(Tukeythreegene(*x))
 
-        #Example FDR
-        #------------
-
+    # Example FDR
+    # ------------
     if ('fdr' in examples) or ('bonf' in examples):
-        x1 = [1,1,1,0,-1,-1,-1,0,1,1,-1,1]
-        print(lzip(np.arange(len(x1)), x1))
-        print(maxzero(x1))
-        #[(0, 1), (1, 1), (2, 1), (3, 0), (4, -1), (5, -1), (6, -1), (7, 0), (8, 1), (9, 1), (10, -1), (11, 1)]
-        #(11, array([ 3,  7, 11]))
-
-        print(maxzerodown(-np.array(x1)))
-
-        locs = np.linspace(0,1,10)
-        locs = np.array([0.]*6 + [0.75]*4)
-        rvs = locs + stats.norm.rvs(size=(20,10))
-        tt, tpval = stats.ttest_1samp(rvs, 0)
-        tpval_sortind = np.argsort(tpval)
-        tpval_sorted = tpval[tpval_sortind]
-
-        reject = tpval_sorted < ecdf(tpval_sorted)*0.05
-        reject2 = max(np.nonzero(reject))
-        print(reject)
-
-        res = np.array(lzip(np.round(rvs.mean(0),4),np.round(tpval,4),
-                           reject[tpval_sortind.argsort()]),
-                       dtype=[('mean',float),
-                              ('pval',float),
-                              ('reject', np.bool8)])
-        print(SimpleTable(res, headers=res.dtype.names))
-        print(fdrcorrection_bak(tpval, alpha=0.05))
-        print(reject)
-
-        print('\nrandom example')
-        print('bonf', multipletests(tpval, alpha=0.05, method='bonf'))
-        print('sidak', multipletests(tpval, alpha=0.05, method='sidak'))
-        print('hs', multipletests(tpval, alpha=0.05, method='hs'))
-        print('sh', multipletests(tpval, alpha=0.05, method='sh'))
-        pvals = np.array('0.0020 0.0045 0.0060 0.0080 0.0085 0.0090 0.0175 0.0250 '
-                 '0.1055 0.5350'.split(), float)
-        print('\nexample from lecturnotes')
-        for meth in ['bonf', 'sidak', 'hs', 'sh']:
-            print(meth)
-            print(multipletests(pvals, alpha=0.05, method=meth))
+        from .ex_multicomp import example_fdr_bonferroni
+        example_fdr_bonferroni()
 
     if 'fdrmc' in examples:
         mcres = mcfdr(nobs=100, nrepl=1000, ntests=30, ntrue=30, mu=0.1, alpha=0.05, rho=0.3)
@@ -2015,5 +1953,4 @@ if __name__ == '__main__':
     print(fdrcorrection_twostage(pvals, alpha=0.05, iter=True))
     print('fdr_gbs', multipletests(pvals, alpha=0.05, method='fdr_gbs'))
     #multicontrast_pvalues(tstat, tcorr, df)
-    test_tukey_pvalues()
     tukey_pvalues(3.649, 3, 16)

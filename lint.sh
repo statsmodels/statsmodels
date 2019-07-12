@@ -65,6 +65,8 @@ if [ "$LINT" == true ]; then
         statsmodels/sandbox/regression/tests/results_gmm_griliches_iter.py \
         statsmodels/sandbox/regression/tests/results_gmm_poisson.py \
         statsmodels/sandbox/regression/tests/results_ivreg2_griliches.py \
+        statsmodels/sandbox/stats/ex_multicomp.py \
+        statsmodels/sandbox/stats/tests/test_multicomp.py \
         statsmodels/stats/__init__.py \
         statsmodels/stats/_knockoff.py \
         statsmodels/stats/base.py \
