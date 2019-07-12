@@ -1,7 +1,7 @@
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/process/templates?view=azure-devops#passing-parameters
 
 trigger:
-- master
+- maintenance/0.10.x
 
 variables:
   MKL_NUM_THREADS: 1

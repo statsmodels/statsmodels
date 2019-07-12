@@ -29,9 +29,9 @@ providing feedback.
 
 Thanks to all of the contributors for the 0.10 release (based on git log):
 
+.. TODO: Remove if none
 
-* Someone
-* Someone Else
+* Someone??
 
 These lists of names are automatically generated based on git log, and may not
 be complete.
@@ -41,6 +41,7 @@ Merged Pull Requests
 
 The following Pull Requests were merged since the last release:
 
+* :pr:`5784`: MAINT: implement parts of #5220, deprecate ancient aliases
 * :pr:`5892`: BUG: fix pandas compat
 * :pr:`5893`: BUG: exponential smoothing - damped trend gives incorrect param, predictions
 * :pr:`5895`: DOC: improvements to BayesMixedGLM docs, argument checking
@@ -49,3 +50,4 @@ The following Pull Requests were merged since the last release:
 * :pr:`5917`: BUG: TVTP for Markov regression
 * :pr:`5921`: BUG: Ensure exponential smoothers has continuous double data
 * :pr:`5930`: BUG: Limit lags in KPSS
+* :pr:`5933`: MAINT: Fix test that fails with positive probability
