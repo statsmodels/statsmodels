@@ -64,8 +64,9 @@ class TestSVAR(object):
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
         res1 = self.res1
-        errband1 = res1.sirf_errband_mc(orth=False, repl=50, T=10, signif=0.05,
-                                        seed=987123, burn=100, cum=False)
+        errband1 = res1.sirf_errband_mc(orth=False, repl=50, steps=10,
+                                        signif=0.05, seed=987123, burn=100,
+                                        cum=False)
 
         irf = res1.irf()
         errband2 = irf.errband_mc(orth=False, svar=True, repl=50,

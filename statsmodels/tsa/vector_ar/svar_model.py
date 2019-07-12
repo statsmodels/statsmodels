@@ -7,11 +7,13 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from __future__ import print_function, division
-from statsmodels.compat.python import range
 
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
+
+from statsmodels.compat.python import range
+from statsmodels.compat.pandas import deprecate_kwarg
 
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_hess, approx_fprime
@@ -628,7 +630,8 @@ class SVARResults(SVARProcess, VARResults):
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
-    def sirf_errband_mc(self, orth=False, repl=1000, T=10,
+    @deprecate_kwarg('T', 'steps')
+    def sirf_errband_mc(self, orth=False, repl=1000, steps=10,
                         signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
@@ -640,7 +643,7 @@ class SVARResults(SVARProcess, VARResults):
             Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        steps: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -669,7 +672,7 @@ class SVARResults(SVARProcess, VARResults):
         df_model = self.df_model
         nobs = self.nobs
 
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -707,7 +710,7 @@ class SVARResults(SVARProcess, VARResults):
                 # save estimates for starting val if in first 10
                 g_list.append(np.append(sres.A[A_mask].tolist(),
                                         sres.B[B_mask].tolist()))
-            ma_coll[i] = agg(sres.svar_ma_rep(maxn=T))
+            ma_coll[i] = agg(sres.svar_ma_rep(maxn=steps))
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         index = (int(round(signif / 2 * repl) - 1),

@@ -98,7 +98,8 @@ def comp_matrix(coefs):
          0 ...       I_K   0]
     """
     p, k, k2 = coefs.shape
-    assert(k == k2)
+    if k1 != k2:
+        raise ValueError('coefs must be 3-d with shape (p, k, k).')
 
     kp = k * p
 
