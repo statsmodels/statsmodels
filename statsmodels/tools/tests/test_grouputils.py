@@ -1,4 +1,3 @@
-from statsmodels.compat.python import PY37
 
 import numpy as np
 from numpy.testing import assert_equal
@@ -61,8 +60,10 @@ class CheckGrouping(object):
         np.testing.assert_array_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, np.ndarray))
 
-    @pytest.mark.xfail(condition=PY37,
-                       reason='Unexplained conversion to complex on Python 3.7')
+    # FIXME: dont leave commented-out
+    #@pytest.mark.xfail(condition=PY37,
+    #                   reason='Unexplained conversion to complex on Python 3.7',
+    #                   strict=True)
     def test_transform_dataframe(self):
         names = self.data.index.names
         transformed_dataframe = self.grouping.transform_dataframe(
@@ -83,8 +84,10 @@ class CheckGrouping(object):
             np.testing.assert_array_equal(transformed_dataframe,
                                           expected.values)
 
-    @pytest.mark.xfail(condition=PY37,
-                       reason='Unexplained conversion to complex on Python 3.7')
+    # FIXME: dont leave commented-out
+    #@pytest.mark.xfail(condition=PY37,
+    #                   reason='Unexplained conversion to complex on Python 3.7',
+    #                   strict=True)
     def test_transform_array(self):
         names = self.data.index.names
         transformed_array = self.grouping.transform_array(

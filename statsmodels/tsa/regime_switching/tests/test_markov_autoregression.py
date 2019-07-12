@@ -795,7 +795,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 
@@ -833,11 +833,11 @@ class TestFilardo(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit(self, **kwargs):
         pass
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 
@@ -878,11 +878,11 @@ class TestFilardoPandas(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit(self, **kwargs):
         pass
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 

@@ -160,7 +160,8 @@ class TestHoltWinters(object):
                                     trend='add', seasonal='mul').fit()
         assert_almost_equal(fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3)
 
-    @pytest.mark.xfail(reason='Optimizer does not converge')
+    # FIXME: this is passing 2019-05-22; what has changed?
+    # @pytest.mark.xfail(reason='Optimizer does not converge')
     def test_forecast(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
                                     seasonal='add').fit()
@@ -346,7 +347,8 @@ class TestHoltWinters(object):
         # assert_almost_equal(fit5.forecast(1), [60.60], 2)
         # assert_almost_equal(fit6.forecast(1), [61.47], 2)
 
-    @pytest.mark.xfail(reason='Optimizer does not converge')
+    # FIXME: this is passing 2019-05-22; what has changed?
+    # @pytest.mark.xfail(reason='Optimizer does not converge')
     def test_hw_seasonal_buggy(self):
         fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     seasonal='add').fit(use_boxcox=True)

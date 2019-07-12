@@ -18,14 +18,6 @@ def test_cache_readonly():
         def b(self):
             return 1
 
-        @cache_readonly
-        def e(self):
-            return 4
-
-        @cache_readonly
-        def f(self):
-            return self.e + 1
-
     ex = Example()
 
     # Try accessing/setting a readonly attribute

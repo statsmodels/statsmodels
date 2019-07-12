@@ -38,7 +38,7 @@ def compare_t_est(sp, sp_dict, decimal=(14, 14)):
                     rtol=10 ** -decimal[0])
 
 
-def notyet_atst():
+def notyet_atst():  # FIXME: make this a test or move/remove
     d = macrodata.load(as_pandas=False).data
 
     realinv = d['realinv']
@@ -748,6 +748,7 @@ def test_spec_white():
             assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
 
 
+# FIXME: make this a test or move/remove
 def grangertest():
     #> gt = grangertest(ginv, ggdp, order=4)
     #> gt

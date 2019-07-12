@@ -347,9 +347,12 @@ class TestProbitNewton(CheckBinaryResults):
         res2 = Spector.probit
         cls.res2 = res2
 
-    #def test_predict(self):
-    #    assert_almost_equal(self.res1.model.predict(self.res1.params),
-    #            self.res2.predict, DECIMAL_4)
+    @pytest.mark.xfail(reason="res2 has no predict attribute",
+                       raises=AttributeError, strict=True)
+    def test_predict(self):
+        assert_almost_equal(self.res1.model.predict(self.res1.params),
+                            self.res2.predict,
+                            DECIMAL_4)
 
 
 class TestProbitBFGS(CheckBinaryResults):

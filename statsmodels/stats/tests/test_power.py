@@ -41,6 +41,7 @@ class CheckPowerMixin(object):
         res1 = self.cls()
         assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=decimal)
 
+    #@pytest.mark.xfail(strict=True)
     def test_positional(self):
 
         res1 = self.cls()
@@ -542,7 +543,7 @@ class TestChisquarePower(CheckPowerMixin):
 
         cls.cls = smp.GofChisquarePower
 
-    def _test_positional(self):
+    def test_positional(self):
 
         res1 = self.cls()
         args_names = ['effect_size','nobs', 'alpha', 'n_bins']
@@ -738,7 +739,7 @@ def test_power_solver():
 
 
 # TODO: can something useful be made from this?
-@pytest.mark.skip(reason='Known failure on modern SciPy >= 0.10')
+@pytest.mark.xfail(reason='Known failure on modern SciPy >= 0.10', strict=True)
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,

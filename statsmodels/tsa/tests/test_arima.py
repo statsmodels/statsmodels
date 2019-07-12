@@ -185,10 +185,10 @@ class CheckDynamicForecastMixin(object):
         assert_almost_equal(self.res1.forecast_res_dyn, self.res2.forecast_dyn,
                             self.decimal_forecast_dyn)
 
-    #def test_forecasterr(self):
-    #    assert_almost_equal(self.res1.forecast_err_dyn,
-    #                        self.res2.forecasterr_dyn,
-    #                        DECIMAL_4)
+    def test_forecasterr(self):
+        assert_almost_equal(self.res1.forecast_err_dyn,
+                            self.res2.forecasterr_dyn,
+                            DECIMAL_4)
 
 
 class CheckArimaResultsMixin(CheckArmaResultsMixin):
@@ -2006,10 +2006,9 @@ class TestARMA00(object):
         roots = self.arma_00_res.maroots
         assert_equal(roots.size, 0)
 
-    @pytest.mark.skip
+    @pytest.mark.skip("This test is invalid since the ICs differ due to "
+                      "df_model differences between OLS and ARIMA")
     def test_information_criteria(self):
-        # This test is invalid since the ICs differ due to df_model differences
-        # between OLS and ARIMA
         res = self.arma_00_res
         y = self.y
         ols_res = OLS(y, np.ones_like(y)).fit(disp=-1)

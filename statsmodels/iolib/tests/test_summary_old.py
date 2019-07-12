@@ -1,7 +1,10 @@
 import warnings
 
+import pytest
 
-def _est_regression_summary():
+
+@pytest.mark.xfail(strict=True)
+def test_regression_summary():
     #little luck getting this test to pass (It should?), can be used for
     #visual testing of the regression.summary table
     #fixed, might fail at minute changes

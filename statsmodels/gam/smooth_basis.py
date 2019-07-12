@@ -45,7 +45,7 @@ def _R_compat_quantile(x, probs):
 def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     try:
         from scipy.interpolate import splev
-    except ImportError:  # pragma: no cover
+    except ImportError:
         raise ImportError("spline functionality requires scipy")
     # 'knots' are assumed to be already pre-processed. E.g. usually you
     # want to include duplicate copies of boundary knots; you should do

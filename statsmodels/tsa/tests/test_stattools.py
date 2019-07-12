@@ -87,6 +87,7 @@ class TestADFConstantTrend(CheckADF):
         cls.critvalues = [-4.007, -3.437, -3.137]
 
 
+# FIXME: don't leave commented-out
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
@@ -187,9 +188,10 @@ class TestACF(CheckCorrGram):
         assert_almost_equal(self.res1[2][:40], self.qstat, DECIMAL_3)
         # 3 decimal places because of stata rounding
 
-#    def pvalue(self):
-#        pass
-#NOTE: shouldn't need testing if Q stat is correct
+    # FIXME: enable/xfail/skip or delete
+    #def pvalue(self):
+    #    pass
+    # NOTE: shouldn't need testing if Q stat is correct
 
 
 class TestACF_FFT(CheckCorrGram):
@@ -243,6 +245,7 @@ class TestACFMissing(CheckCorrGram):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
 
+# FIXME: enable/xfail/skip or delete
 # how to do this test? the correct q_stat depends on whether nobs=len(x) is
 # used when x contains NaNs or whether nobs<len(x) when x contains NaNs
 #    def test_qstat_drop(self):
@@ -335,6 +338,7 @@ def test_coint():
     y += const
     y = np.round(y, 4)
 
+    # FIXME: enable/xfail/skip or delete
     for trend in []:#['c', 'ct', 'ctt', 'nc']:
         print('\n', trend)
         print(coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None))

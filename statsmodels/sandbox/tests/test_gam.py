@@ -79,6 +79,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
 from scipy import stats
+import pytest
 
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
@@ -98,9 +99,10 @@ class CheckAM(object):
         assert_almost_equal(self.res1.y_predshort,
                             self.res2.y_pred[:10], decimal=2)
 
-
-    def _est_fitted(self):
-        #check definition of fitted in GLM: eta or mu
+    @pytest.mark.xfail(reason="Unknown, results do not match expected",
+                       raises=AssertionError, strict=True)
+    def test_fitted(self):
+        # check definition of fitted in GLM: eta or mu
         assert_almost_equal(self.res1.y_pred,
                             self.res2.fittedvalues, decimal=2)
         assert_almost_equal(self.res1.y_predshort,
@@ -115,20 +117,26 @@ class CheckAM(object):
         assert_almost_equal(self.res1.params[1],
                             self.res2.params[1], decimal=2)
 
-    def _est_df(self):
-        #not used yet, copied from PolySmoother tests
+    @pytest.mark.xfail(reason="res_ps attribute does not exist",
+                       strict=True, raises=AttributeError)
+    def test_df(self):
+        # not used yet, copied from PolySmoother tests
         assert_equal(self.res_ps.df_model(), self.res2.df_model)
         assert_equal(self.res_ps.df_fit(), self.res2.df_model) #alias
         assert_equal(self.res_ps.df_resid(), self.res2.df_resid)
 
+
 class CheckGAM(CheckAM):
 
     def test_mu(self):
-        #problem with scale for precision
+        # problem with scale for precision
         assert_almost_equal(self.res1.mu_pred,
                             self.res2.mu_pred, decimal=0)
-#        assert_almost_equal(self.res1.y_predshort,
-#                            self.res2.y_pred[:10], decimal=2)
+
+    def test_prediction(self):
+        # problem with scale for precision
+        assert_almost_equal(self.res1.y_predshort,
+                            self.res2.y_pred[:10], decimal=2)
 
 
 class BaseAM(object):
@@ -188,6 +196,11 @@ class TestAdditiveModel(BaseAM, CheckAM):
         const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
         #print const, slopes
         res1.params = np.array([const] + slopes)
+
+    def test_fitted(self):
+        # We have to override the base class because this case doesn't fail,
+        #  while all others in this module do (as of 2019-05-22)
+        super(TestAdditiveModel, self).test_fitted()
 
 
 class BaseGAM(BaseAM, CheckGAM):
@@ -262,7 +275,10 @@ class TestGAMBinomial(BaseGAM):
 
         cls.init()
 
-class _estGAMGaussianLogLink(BaseGAM):
+
+@pytest.mark.xfail(reason="Unknown, results do not match expected.",
+                   strict=True, raises=AssertionError)
+class TestGAMGaussianLogLink(BaseGAM):
     #test failure, but maybe precision issue, not far off
     #>>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))
     #0.80409736263199649
@@ -273,9 +289,9 @@ class _estGAMGaussianLogLink(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(_estGAMGaussianLogLink, cls).setup_class() #initialize DGP
+        super(TestGAMGaussianLogLink, cls).setup_class()  # initialize DGP
 
-        cls.family =  family.Gaussian(links.log)
+        cls.family = family.Gaussian(links.log)
         cls.rvs = stats.norm.rvs
         cls.scale = 5
 
@@ -293,26 +309,34 @@ class TestGAMGamma(BaseGAM):
 
         cls.init()
 
-class _estGAMNegativeBinomial(BaseGAM):
-    #rvs generation doesn't work, nbinom needs 2 parameters
+
+@pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
+                          "to _parse_args_rvs",
+                   strict=True, raises=TypeError)
+class TestGAMNegativeBinomial(BaseGAM):
+    # TODO: rvs generation doesn't work, nbinom needs 2 parameters
 
     @classmethod
     def setup_class(cls):
-        super(_estGAMNegativeBinomial, cls).setup_class() #initialize DGP
+        super(TestGAMNegativeBinomial, cls).setup_class()  # initialize DGP
 
         cls.family =  family.NegativeBinomial()
         cls.rvs = stats.nbinom.rvs
 
         cls.init()
 
-if __name__ == '__main__':
-    t1 = TestAdditiveModel()
-    t1.test_predict()
-    t1.test_params()
+    @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
+                              "to _parse_args_rvs",
+                       strict=True, raises=TypeError)
+    def test_fitted(self):
+        # We have to override the base class method in order to correctly
+        #  specify the type of failure we are expecting.
+        super(TestGAMNegativeBinomial, self).test_fitted()
 
-    for tt in [TestGAMPoisson, TestGAMBinomial, TestGAMGamma,
-               _estGAMGaussianLogLink]: #, TestGAMNegativeBinomial]:
-        tt = tt()
-        tt.test_predict()
-        tt.test_params()
-        tt.test_mu
+    @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
+                              "to _parse_args_rvs",
+                       strict=True, raises=TypeError)
+    def test_df(self):
+        # We have to override the base class method in order to correctly
+        #  specify the type of failure we are expecting.
+        super(TestGAMNegativeBinomial, self).test_df()

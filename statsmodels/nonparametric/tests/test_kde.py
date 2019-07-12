@@ -62,7 +62,7 @@ class CheckKDE(object):
 
     def test_density(self):
         npt.assert_almost_equal(self.res1.density, self.res_density,
-                self.decimal_density)
+                                self.decimal_density)
 
     def test_evaluate(self):
         # disable test
@@ -144,6 +144,8 @@ class TestKDEBiweight(CheckKDE):
         cls.res1 = res1
         cls.res_density = KDEResults["biw_d"]
 
+
+# FIXME: enable/xfail/skip or delete
 #NOTE: This is a knownfailure due to a definitional difference of Cosine kernel
 #class TestKDECosine(CheckKDE):
 #    @classmethod
@@ -152,6 +154,7 @@ class TestKDEBiweight(CheckKDE):
 #        res1.fit(kernel="cos", fft=False, bw="silverman")
 #        cls.res1 = res1
 #        cls.res_density = KDEResults["cos_d"]
+
 
 #weighted estimates taken from matlab so we can allow len(weights) != gridsize
 class TestKdeWeights(CheckKDE):
@@ -201,9 +204,11 @@ class CheckKDEWeights(object):
 
     decimal_density = 7
 
-    def t_est_density(self):
+    @pytest.mark.xfail(reason="Not almost equal to 7 decimals",
+                       raises=AssertionError, strict=True)
+    def test_density(self):
         npt.assert_almost_equal(self.res1.density, self.res_density,
-                self.decimal_density)
+                                self.decimal_density)
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':

@@ -57,7 +57,7 @@ try:
         pd.period_range(start='1950-01-01', periods=nobs, freq='2Q'),
         pd.period_range(start='1950-01-01', periods=nobs, freq='5s'),
         pd.period_range(start='1950-01-01', periods=nobs, freq='1D10min')]
-except:
+except AttributeError:
     pass
 
 date_indexes = [

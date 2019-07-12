@@ -96,7 +96,7 @@ class TestHuber(object):
         np.random.seed(54321)
         cls.X = standard_normal((40, 10))
 
-    def basic_functionality(self):
+    def test_huber_result_shape(self):
         h = scale.Huber(maxiter=100)
         m, s = h(self.X)
         assert_equal(m.shape, (10,))

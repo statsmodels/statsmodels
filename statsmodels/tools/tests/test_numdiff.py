@@ -306,7 +306,7 @@ def test_dtypes():
     assert_allclose(approx_fprime(np.array([1.+0j, 2.+0j]), f), desired)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # FIXME: turn into tests or move/remove
 
     epsilon = 1e-6
     nobs = 200

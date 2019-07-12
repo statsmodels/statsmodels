@@ -56,7 +56,7 @@ def bivariate_var_result(bivariate_var_data):
     return mod.fit()
 
 
-class CheckVAR(object):
+class CheckVAR(object):  # FIXME: not inherited, so these tests are never run!
     # just so pylint won't complain
     res1 = None
     res2 = None
@@ -119,14 +119,14 @@ def get_macrodata():
     return nd.ravel().view(data.dtype, type=np.ndarray)
 
 
-def generate_var():
+def generate_var():  # FIXME: make a test?
     from rpy2.robjects import r
     import pandas.rpy.common as prp
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
 
-def write_generate_var():
+def write_generate_var():  # FIXME: make a test?
     result = generate_var()
     np.savez('tests/results/vars_results.npz', **result)
 
@@ -218,6 +218,7 @@ class CheckIRF(object):
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
 
+@pytest.mark.smoke
 class CheckFEVD(object):
 
     fevd = None
@@ -235,11 +236,13 @@ class CheckFEVD(object):
     def test_fevd_summary(self):
         self.fevd.summary()
 
-    @pytest.mark.xfail(reason="FEVD.cov() is not implemented")
+    @pytest.mark.xfail(reason="FEVD.cov() is not implemented",
+                       raises=NotImplementedError, strict=True)
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
         covs = self.fevd.cov()
+        raise NotImplementedError
 
 
 class TestVARResults(CheckIRF, CheckFEVD):
@@ -286,6 +289,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(Exception):
             self.res.get_eq_index('foo')
 
+    @pytest.mark.smoke
     def test_repr(self):
         # just want this to work
         foo = str(self.res)
@@ -294,19 +298,24 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
 
+    @pytest.mark.smoke
     def test_cov_params(self):
         # do nothing for now
         self.res.cov_params
 
+    @pytest.mark.smoke
     def test_cov_ybar(self):
         self.res.cov_ybar()
 
+    @pytest.mark.smoke
     def test_tstat(self):
         self.res.tvalues
 
+    @pytest.mark.smoke
     def test_pvalues(self):
         self.res.pvalues
 
+    @pytest.mark.smoke
     def test_summary(self):
         summ = self.res.summary()
 
@@ -373,6 +382,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(Exception):
             self.res.test_causality(0, 1, kind='foo')
 
+    @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
         result = self.model.fit(10, ic='fpe', verbose=True)
@@ -413,12 +423,15 @@ class TestVARResults(CheckIRF, CheckFEVD):
         recovered = np.array(recovered)
         assert_allclose(recovered, c, atol=1e-7)
 
+    @pytest.mark.smoke
     def test_acorr(self):
         acorrs = self.res.acorr(10)
 
+    @pytest.mark.smoke
     def test_forecast(self):
-        point = self.res.forecast(self.res.endog[-5:], 5)
+        self.res.forecast(self.res.endog[-5:], 5)
 
+    @pytest.mark.smoke
     def test_forecast_interval(self):
         y = self.res.endog[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)

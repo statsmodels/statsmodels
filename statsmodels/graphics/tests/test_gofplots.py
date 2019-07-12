@@ -6,6 +6,7 @@ import statsmodels.api as sm
 
 
 class BaseProbplotMixin(object):
+    # TODO: can this be setup_class?  same below
     def setup(self):
         try:
             import matplotlib.pyplot as plt
@@ -37,8 +38,9 @@ class BaseProbplotMixin(object):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
+    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
-    def t_est_probplot_other_array(self, close_figures):
+    def test_probplot_other_array(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_array)
 
@@ -52,8 +54,9 @@ class BaseProbplotMixin(object):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
+    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
-    def t_est_probplot_other_prbplt(self, close_figures):
+    def test_probplot_other_prbplt(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_prbplot)
 
