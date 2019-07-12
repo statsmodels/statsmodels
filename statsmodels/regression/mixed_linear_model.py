@@ -283,7 +283,7 @@ class MixedLMParams(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The mode parameters packed into a single vector.
         k_fe : integer
             The number of covariates with fixed effects
@@ -346,16 +346,16 @@ class MixedLMParams(object):
 
         Parameters
         ----------
-        fe_params : array-like
+        fe_params : array_like
             The fixed effects parameter (a 1-dimensional array).  If
             None, there are no fixed effects.
-        cov_re : array-like
+        cov_re : array_like
             The random effects covariance matrix (a square, symmetric
             2-dimensional array).
-        cov_re_sqrt : array-like
+        cov_re_sqrt : array_like
             The Cholesky (lower triangular) square root of the random
             effects covariance matrix.
-        vcomp : array-like
+        vcomp : array_like
             The variance component parameters.  If None, there are no
             variance components.
 
@@ -460,7 +460,7 @@ def _smw_solver(s, A, AtA, Qi, di):
         The matrix `B` is q x q, where q = r + d.  `B` consists of a r
         x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
-    di : 1d array-like
+    di : 1d array_like
         See documentation for Qi.
 
     Returns
@@ -524,7 +524,7 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
         The matrix `B` is q x q, where q = r + d.  `B` consists of a r
         x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
-    di : 1d array-like
+    di : 1d array_like
         See documentation for Qi.
     B_logdet : real
         The log determinant of B
@@ -590,15 +590,15 @@ class MixedLM(base.LikelihoodModel):
 
     Parameters
     ----------
-    endog : 1d array-like
+    endog : 1d array_like
         The dependent variable
-    exog : 2d array-like
+    exog : 2d array_like
         A matrix of covariates used to determine the
         mean structure (the "fixed effects" covariates).
-    groups : 1d array-like
+    groups : 1d array_like
         A vector of labels determining the groups -- data from
         different groups are independent
-    exog_re : 2d array-like
+    exog_re : 2d array_like
         A matrix of covariates used to determine the variance and
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
@@ -848,7 +848,7 @@ class MixedLM(base.LikelihoodModel):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        data : array-like
+        data : array_like
             The data for the model. See Notes.
         re_formula : string
             A one-sided formula defining the variance structure of the
@@ -860,7 +860,7 @@ class MixedLM(base.LikelihoodModel):
             `vc`.  The formula is processed into a matrix, and the columns
             of this matrix are linearly combined with independent random
             coefficients having mean zero and a common variance.
-        subset : array-like
+        subset : array_like
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
@@ -1047,13 +1047,13 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Parameters of a mixed linear model.  Can be either a
             MixedLMParams instance, or a vector containing the packed
             model parameters in which the fixed effects parameters are
             at the beginning of the vector, or a vector containing
             only the fixed effects parameters.
-        exog : array-like, optional
+        exog : array_like, optional
             Design / exogenous data for the fixed effects. Model exog
             is used if None.
 
@@ -1099,7 +1099,7 @@ class MixedLM(base.LikelihoodModel):
         ----------
         method : string of Penalty object
             Method for regularization.  If a string, must be 'l1'.
-        alpha : array-like
+        alpha : array_like
             Scalar or vector of penalty weights.  If a scalar, the
             same weight is applied to all coefficients; if a vector,
             it contains a weight for each coefficient.  If method is a
@@ -1250,7 +1250,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        cov_re : array-like
+        cov_re : array_like
             The covariance matrix of the random effects.
 
         Returns
@@ -1354,7 +1354,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        vcomp : array-like
+        vcomp : array_like
             The variance parameters for the variance components.
         group_ix : integer
             The group index
@@ -1408,7 +1408,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams, or array-like.
+        params : MixedLMParams, or array_like.
             The parameter value.  If array-like, must be a packed
             parameter vector containing only the covariance
             parameters.
@@ -1513,7 +1513,7 @@ class MixedLM(base.LikelihoodModel):
         marginal covariance matrix with respect to the random effects
         variance and covariance parameters.
 
-        ex_r : array-like
+        ex_r : array_like
             The random effects design matrix
         solver : function
             A function that given x returns V^{-1}x, where V
@@ -1595,7 +1595,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedLMParams or array_like
             The parameter at which the score function is evaluated.
             If array-like, must contain the packed random effects
             parameters (cov_re and vcomp) without fe_params.
@@ -1606,13 +1606,13 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        score_fe : array-like
+        score_fe : array_like
             The score vector with respect to the fixed effects
             parameters.
-        score_re : array-like
+        score_re : array_like
             The score vector with respect to the random effects
             parameters (excluding variance components parameters).
-        score_vc : array-like
+        score_vc : array_like
             The score vector with respect to variance components
             parameters.
 
@@ -1749,7 +1749,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedLMParams or array_like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
         calc_fe : boolean
@@ -1759,13 +1759,13 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        score_fe : array-like
+        score_fe : array_like
             The score vector with respect to the fixed effects
             parameters.
-        score_re : array-like
+        score_re : array_like
             The score vector with respect to the random effects
             parameters (excluding variance components parameters).
-        score_vc : array-like
+        score_vc : array_like
             The score vector with respect to variance components
             parameters.
         """
@@ -1795,7 +1795,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedLMParams or array_like
             The model parameters at which the Hessian is calculated.
             If array-like, must contain the packed parameters in a
             form that is compatible with this model instance.
@@ -1952,11 +1952,11 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        fe_params : array-like
+        fe_params : array_like
             The regression slope estimates
-        cov_re : 2d array-like
+        cov_re : 2d array_like
             Estimate of the random effects covariance matrix
-        vcomp : array-like
+        vcomp : array_like
             Estimate of the variance components
 
         Returns
@@ -2004,7 +2004,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params: array-like or MixedLMParams
+        start_params: array_like or MixedLMParams
             Starting values for the profile log-likelihood.  If not a
             `MixedLMParams` instance, this should be an array
             containing the packed parameters for the profile
@@ -2207,12 +2207,12 @@ class _mixedlm_distribution(object):
     ----------
     model : MixedLM instance
         A mixed linear model
-    params : array-like
+    params : array_like
         A parameter vector defining a mixed linear model.  See
         notes for more information.
     scale : scalar
         The unexplained variance
-    exog : array-like
+    exog : array_like
         An array of fixed effect covariates.  If None, model.exog
         is used.
 
@@ -2505,7 +2505,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         Parameters
         ----------
-        r_matrix : array-like
+        r_matrix : array_like
             If an array is given, a p x k 2d array or length k 1d
             array specifying the linear restrictions. It is assumed
             that the linear combination is equal to zero.

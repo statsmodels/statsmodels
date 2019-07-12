@@ -57,12 +57,12 @@ class Factor(Model):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Variables in columns, observations in rows.  May be `None` if
         `corr` is not `None`.
     n_factor : int
         The number of factors to extract
-    corr : array-like
+    corr : array_like
         Directly specify the correlation matrix instead of estimating
         it from `endog`.  If provided, `endog` is not used for the
         factor analysis, it may be used in post-estimation.
@@ -183,7 +183,7 @@ class Factor(Model):
         tol : float
             Stopping critera (error tolerance) for iterative estimation
             algorithms
-        start : array-like
+        start : array_like
             Starting values, currently only used for ML estimation
         opt_method : string
             Optimization method for ML estimation

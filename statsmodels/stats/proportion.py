@@ -753,7 +753,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
-    nobs : integer or array-like
+    nobs : integer or array_like
         the number of trials or observations, with the same length as
         count.
     value : float, array_like or None, optional

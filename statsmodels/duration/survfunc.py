@@ -171,16 +171,16 @@ class CumIncidenceRight(object):
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         An array of times (censoring times or event times)
-    status : array-like
+    status : array_like
         If status >= 1 indicates which event occured at time t.  If
         status = 0, the subject was censored at time t.
     title : string
         Optional title used for plots and summary output.
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
-    exog : array-like
+    exog : array_like
         Optional, if present used to account for violation of
         independent censoring.
     bw_factor : float
@@ -195,7 +195,7 @@ class CumIncidenceRight(object):
 
     Attributes
     ----------
-    times : array-like
+    times : array_like
         The distinct times at which the incidence rates are estimated
     cinc : list of arrays
         cinc[k-1] contains the estimated cumulative incidence rates
@@ -271,22 +271,22 @@ class SurvfuncRight(object):
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         An array of times (censoring times or event times)
-    status : array-like
+    status : array_like
         Status at the event time, status==1 is the 'event'
         (e.g. death, failure), meaning that the event
         occurs at the given value in `time`; status==0
         indicates that censoring has occured, meaning that
         the event occurs after the given value in `time`.
-    entry : array-like, optional An array of entry times for handling
+    entry : array_like, optional An array of entry times for handling
         left truncation (the subject is not in the risk set on or
         before the entry time)
     title : string
         Optional title used for plots and summary output.
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
-    exog : array-like
+    exog : array_like
         Optional, if present used to account for violation of
         independent censoring.
     bw_factor : float
@@ -295,18 +295,18 @@ class SurvfuncRight(object):
 
     Attributes
     ----------
-    surv_prob : array-like
+    surv_prob : array_like
         The estimated value of the survivor function at each time
         point in `surv_times`.
-    surv_prob_se : array-like
+    surv_prob_se : array_like
         The standard errors for the values in `surv_prob`.  Not available
         if exog is provided.
-    surv_times : array-like
+    surv_times : array_like
         The points where the survival function changes.
-    n_risk : array-like
+    n_risk : array_like
         The number of subjects at risk just before each time value in
         `surv_times`.  Not available if exog is provided.
-    n_events : array-like
+    n_events : array_like
         The number of events (e.g. deaths) that occur at each point
         in `surv_times`.  Not available if exog is provided.
 
@@ -523,10 +523,10 @@ class SurvfuncRight(object):
 
         Returns
         -------
-        lcb : array-like
+        lcb : array_like
             The lower confidence limits corresponding to the points
             in `surv_times`.
-        ucb : array-like
+        ucb : array_like
             The upper confidence limits corresponding to the points
             in `surv_times`.
         """
@@ -570,13 +570,13 @@ def survdiff(time, status, group, weight_type=None, strata=None,
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         The event or censoring times.
-    status : array-like
+    status : array_like
         The censoring status variable, status=1 indicates that the
         event occured, status=0 indicates that the observation was
         censored.
-    group : array-like
+    group : array_like
         Indicators of the two groups
     weight_type : string
         The following weight types are implemented:
@@ -589,9 +589,9 @@ def survdiff(time, status, group, weight_type=None, strata=None,
             gb : Gehan-Breslow, weights by the number at risk
             tw : Tarone-Ware, weights by the square root of the number
                  at risk
-    strata : array-like
+    strata : array_like
         Optional stratum indicators for a stratified test
-    entry : array-like
+    entry : array_like
         Entry times to handle left truncation. The subject is not in
         the risk set on or before the entry time.
 
@@ -734,7 +734,7 @@ def plot_survfunc(survfuncs, ax=None):
 
     Parameters
     ----------
-    survfuncs : object or array-like
+    survfuncs : object or array_like
         A single SurvfuncRight object, or a list or SurvfuncRight
         objects that are plotted together.
 

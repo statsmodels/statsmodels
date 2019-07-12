@@ -58,11 +58,11 @@ class GLM(base.LikelihoodModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1d array of endogenous response variable.  This array can be 1d or 2d.
         Binomial family models accept a 2d array with two columns. If
         supplied, each observation is expected to be [success, failure].
-    exog : array-like
+    exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user (models specified using a formula
@@ -72,20 +72,20 @@ class GLM(base.LikelihoodModel):
         family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
-    offset : array-like or None
+    offset : array_like or None
         An offset to be included in the model.  If provided, must be
         an array whose length is the number of rows in exog.
-    exposure : array-like or None
+    exposure : array_like or None
         Log(exposure) will be added to the linear prediction in the model.
         Exposure is only valid if the log link is used. If provided, it must be
         an array with the same length as endog.
-    freq_weights : array-like
+    freq_weights : array_like
         1d array of frequency weights. The default is None. If None is selected
         or a blank value, then the algorithm will replace with an array of 1's
         with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    var_weights : array-like
+    var_weights : array_like
         1d array of variance (analytic) weights. The default is None. If None
         is selected or a blank value, then the algorithm will replace with an
         array of 1's with length equal to the endog.
@@ -106,7 +106,7 @@ class GLM(base.LikelihoodModel):
         See Notes.  Note that `endog` is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    exposure : array-like
+    exposure : array_like
         Include ln(exposure) in model with coefficient constrained to 1. Can
         only be used if the link is the logarithm function.
     exog : array
@@ -142,7 +142,7 @@ class GLM(base.LikelihoodModel):
     normalized_cov_params : array
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
-    offset : array-like
+    offset : array_like
         Include offset in model with coefficient constrained to 1.
     scale : float
         The estimate of the scale / dispersion of the model fit.  Only
@@ -781,7 +781,7 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             Fitted mean response variable
         method : str, defaults to 'brentq'
             Scipy optimizer used to solve the Pearson equation. Only brentq
@@ -819,14 +819,14 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Parameters / coefficients of a GLM.
-        exog : array-like, optional
+        exog : array_like, optional
             Design / exogenous data. Is exog is None, model exog is used.
-        exposure : array-like, optional
+        exposure : array_like, optional
             Exposure time values, only can be used with the log link
             function.  See notes for details.
-        offset : array-like, optional
+        offset : array_like, optional
             Offset values.  See notes for details.
         linear : bool
             If True, returns the linear predicted values.  If False,
@@ -883,11 +883,11 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The model parameters.
         scale : scalar
             The scale parameter.
-        exog : array-like
+        exog : array_like
             The predictor variable matrix.
 
         Returns
@@ -945,7 +945,7 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
@@ -1211,12 +1211,12 @@ class GLM(base.LikelihoodModel):
         ----------
         method :
             Only the `elastic_net` approach is currently implemented.
-        alpha : scalar or array-like
+        alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        start_params : array-like
+        start_params : array_like
             Starting values for `params`.
         refit : bool
             If True, the model is refit using only the variables that

@@ -81,16 +81,16 @@ _init_doc = r"""
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Vector of response values.
-    exog : array-like
+    exog : array_like
         Array of covariates for the fixed effects part of the mean
         structure.
-    exog_vc : array-like
+    exog_vc : array_like
         Array of covariates for the random part of the model.  A
         scipy.sparse array may be provided, or else the passed
         array will be converted to sparse internally.
-    ident : array-like
+    ident : array_like
         Array of integer labels showing which random terms (columns
         of `exog_vc`) have a common variance.
     vcp_p : float
@@ -540,10 +540,10 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter vector, may be the full parameter vector, or may
             be truncated to include only the mean parameters.
-        exog : array-like
+        exog : array_like
             The design matrix for the mean structure.  If omitted, use the
             model's design matrix.
         linear : bool
@@ -700,9 +700,9 @@ class _VariationalBayesMixedGLM(object):
 
         Parameters
         ----------
-        mean : array-like
+        mean : array_like
             Starting value for VB mean vector
-        sd : array-like
+        sd : array_like
             Starting value for VB standard deviation vector
         fit_method : string
             Algorithm for scipy.minimize
@@ -858,19 +858,19 @@ class BayesMixedGLMResults(object):
 
     Attributes
     ----------
-    fe_mean : array-like
+    fe_mean : array_like
         Posterior mean of the fixed effects coefficients.
-    fe_sd : array-like
+    fe_sd : array_like
         Posterior standard deviation of the fixed effects coefficients
-    vcp_mean : array-like
+    vcp_mean : array_like
         Posterior mean of the logged variance component standard
         deviations.
-    vcp_sd : array-like
+    vcp_sd : array_like
         Posterior standard deviation of the logged variance component
         standard deviations.
-    vc_mean : array-like
+    vc_mean : array_like
         Posterior mean of the random coefficients
-    vc_sd : array-like
+    vc_sd : array_like
         Posterior standard deviation of the random coefficients
     """
 
@@ -989,7 +989,7 @@ class BayesMixedGLMResults(object):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
             The design matrix for the mean structure.  If None,
             use the model's design matrix.
         linear : bool

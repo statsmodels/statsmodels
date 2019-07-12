@@ -88,7 +88,7 @@ class PanelModel(object):
 
     Parameters
     ----------
-    endog : array-like or str
+    endog : array_like or str
         If a pandas object is used then endog should be the name of the
         endogenous variable as a string.
 #    exog

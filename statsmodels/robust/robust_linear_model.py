@@ -140,9 +140,9 @@ class RLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like, optional after fit has been called
+        params : array_like, optional after fit has been called
             Parameters of a linear model
-        exog : array-like, optional.
+        exog : array_like, optional.
             Design / exogenous data. Model exog is used if None.
 
         Returns

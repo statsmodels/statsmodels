@@ -45,7 +45,7 @@ def _isdummy(X):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         A 1d or 2d array of numbers
 
     Examples
@@ -82,7 +82,7 @@ def _iscount(X):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         A 1d or 2d array of numbers
 
     Examples
@@ -263,11 +263,11 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         The model that returned the fitted results. Its pdf method is used
         for computing the Jacobian of discrete variables in dummy_ind and
         count_ind
-    params : array-like
+    params : array_like
         estimated model parameters
-    exog : array-like
+    exog : array_like
         exogenous variables at which to calculate the derivative
-    cov_params : array-like
+    cov_params : array_like
         The variance-covariance of the parameters
     at : str
        Options are:
@@ -281,15 +281,15 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
 
         Only overall has any effect here.you
 
-    derivative : function or array-like
+    derivative : function or array_like
         If a function, it returns the marginal effects of the model with
         respect to the exogenous variables evaluated at exog. Expected to be
         called derivative(params, exog). This will be numerically
         differentiated. Otherwise, it can be the Jacobian of the marginal
         effects with respect to the parameters.
-    dummy_ind : array-like
+    dummy_ind : array_like
         Indices of the columns of exog that contain dummy variables
-    count_ind : array-like
+    count_ind : array_like
         Indices of the columns of exog that contain count variables
 
     Notes
@@ -633,7 +633,7 @@ class DiscreteMargins(object):
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
-        atexog : array-like, optional
+        atexog : array_like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
             as the zero-indexed column number and the value of the dictionary.

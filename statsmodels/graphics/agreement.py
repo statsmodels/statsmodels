@@ -22,7 +22,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
 
     Parameters
     ----------
-    m1, m2: pandas Series or array-like
+    m1, m2: pandas Series or array_like
     sd_limit : float, default 1.96
         The limit of agreements expressed in terms of the standard deviation of
         the differences. If `md` is the mean of the differences, and `sd` is

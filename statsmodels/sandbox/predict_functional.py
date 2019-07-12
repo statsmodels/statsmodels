@@ -50,9 +50,9 @@ _predict_functional_doc =\
     num_points : integer
         The number of equally-spaced quantile points where the
         prediction is made.
-    exog : array-like
+    exog : array_like
         Explicitly provide points to cover with the confidence band.
-    exog2 : array-like
+    exog2 : array_like
         Explicitly provide points to contrast to `exog` in a functional
         confidence band.
     kwargs :
@@ -60,12 +60,12 @@ _predict_functional_doc =\
 
     Returns
     -------
-    pred : array-like
+    pred : array_like
         The predicted mean values.
-    cb : array-like
+    cb : array_like
         An array with two columns, containing respectively the lower
         and upper limits of a confidence band.
-    fvals : array-like
+    fvals : array_like
         The values of the focus variable at which the prediction is
         made.
 
@@ -390,7 +390,7 @@ def _glm_basic_scr(result, exog, alpha):
     ----------
     result : results instance
         The fitted GLM results instance
-    exog : array-like
+    exog : array_like
         The exog values spanning the interval
     alpha : float
         `1 - alpha` is the coverage probability.

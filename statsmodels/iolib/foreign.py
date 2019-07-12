@@ -640,7 +640,7 @@ class StataWriter(object):
     ----------
     fname : file path or buffer
         Where to save the dta file.
-    data : array-like
+    data : array_like
         Array-like input to save. Pandas objects are also accepted.
     convert_dates : dict
         Dictionary mapping column of datetime types to the stata internal

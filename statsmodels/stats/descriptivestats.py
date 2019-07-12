@@ -31,7 +31,7 @@ _sign_test_doc = '''
 
     Parameters
     ----------
-    samp : array-like
+    samp : array_like
         1d array. The sample for which you want to perform the signs
         test.
     mu0 : float
@@ -80,7 +80,7 @@ class Describe(object):
 
     Parameters
     ----------
-    dataset : array-like
+    dataset : array_like
         2D dataset for descriptive statistics.
     '''
     def __init__(self, dataset):

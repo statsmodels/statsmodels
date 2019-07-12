@@ -106,9 +106,9 @@ class NBin(GenericLikelihoodModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1-d array of the response variable.
-    exog : array-like
+    exog : array_like
         `exog` is an n x p array where n is the number of observations and p
         is the number of regressors including the intercept if one is
         included in the data.

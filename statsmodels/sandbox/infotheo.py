@@ -50,7 +50,7 @@ def logsumexp(a, axis=None):
 
     Parameters
     ----------
-    a : array-like
+    a : array_like
         The vector to exponentiate and sum
     axis : int, optional
         The axis along which to apply the operation.  Defaults is None.
@@ -196,7 +196,7 @@ def shannoninfo(px, logbase=2):
 
     Parameters
     ----------
-    px : float or array-like
+    px : float or array_like
         `px` is a discrete probability distribution
 
     Returns
@@ -218,9 +218,9 @@ def condentropy(px, py, pxpy=None, logbase=2):
 
     Parameters
     ----------
-    px : array-like
-    py : array-like
-    pxpy : array-like, optional
+    px : array_like
+    py : array_like
+    pxpy : array_like, optional
         If pxpy is None, the distributions are assumed to be independent
         and conendtropy(px,py) = shannonentropy(px)
     logbase : int or np.e
@@ -250,11 +250,11 @@ def mutualinfo(px,py,pxpy, logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like
+    pxpy : 2d array_like
         The joint probability distribution of random variables X and Y.
         Note that if X and Y are independent then the mutual information
         is zero.
@@ -284,11 +284,11 @@ def corrent(px,py,pxpy,logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional
@@ -324,11 +324,11 @@ def covent(px,py,pxpy,logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional
@@ -366,7 +366,7 @@ def renyientropy(px,alpha=1,logbase=2,measure='R'):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X.  Note that
         px is assumed to be a proper probability distribution.
     logbase : int or np.e, optional
@@ -417,11 +417,11 @@ def gencrossentropy(px,py,pxpy,alpha=1,logbase=2, measure='T'):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional

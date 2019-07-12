@@ -21,7 +21,7 @@ _tsa_doc = """
     Parameters
     ----------
     %(params)s
-    dates : array-like of datetime, optional
+    dates : array_like of datetime, optional
         An array-like object of datetime objects. If a pandas object is given
         for endog or exog, it is assumed to have a DateIndex.
     freq : str, optional

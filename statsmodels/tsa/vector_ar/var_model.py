@@ -503,11 +503,11 @@ class VAR(tsbase.TimeSeriesModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         2-d endogenous response variable. The independent variable.
-    exog : array-like
+    exog : array_like
         2-d exogenous variable.
-    dates : array-like
+    dates : array_like
         must match number of rows of endog
 
     References
@@ -1132,7 +1132,7 @@ class VARResults(VARProcess):
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
-    names : array-like
+    names : array_like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
     exog : array

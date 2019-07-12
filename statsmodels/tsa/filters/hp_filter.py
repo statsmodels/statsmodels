@@ -12,7 +12,7 @@ def hpfilter(X, lamb=1600):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         The 1d ndarray timeseries to filter of length (nobs,) or (nobs,1)
     lamb : float
         The Hodrick-Prescott smoothing parameter. A value of 1600 is

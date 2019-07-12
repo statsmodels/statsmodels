@@ -78,7 +78,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k. Default is no
         exogenous regressors.
-    dates : array-like of datetime, optional
+    dates : array_like of datetime, optional
         An array-like object of datetime objects. If a Pandas object is given
         for endog, it is assumed to have a DateIndex.
     freq : str, optional

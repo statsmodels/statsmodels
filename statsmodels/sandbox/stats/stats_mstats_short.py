@@ -64,9 +64,9 @@ def quantiles(a, prob=list([.25,.5,.75]), alphap=.4, betap=.4, axis=None,
 
     Parameters
     ----------
-    a : array-like
+    a : array_like
         Input data, as a sequence or array of dimension at most 2.
-    prob : array-like, optional
+    prob : array_like, optional
         List of quantiles to compute.
     alpha : float, optional
         Plotting positions parameter, default is 0.4.

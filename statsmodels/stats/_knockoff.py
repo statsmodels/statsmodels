@@ -34,9 +34,9 @@ class RegressionFDR(object):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variable of the regression
-    exog : array-like
+    exog : array_like
         The independent variables of the regression
     regeffects : RegressionEffects instance
         An instance of a RegressionEffects class that can compute

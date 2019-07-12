@@ -8,11 +8,11 @@ def _calc_nodewise_row(exog, idx, alpha):
 
     Parameters
     ----------
-    exog : array-like
+    exog : array_like
         The weighted design matrix for the current partition.
     idx : scalar
         Index of the current variable.
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -50,13 +50,13 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
 
     Parameters
     ----------
-    exog : array-like
+    exog : array_like
         The weighted design matrix for the current partition.
-    nodewise_row : array-like
+    nodewise_row : array_like
         The nodewise_row values for the current variable.
     idx : scalar
         Index of the current variable
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -131,12 +131,12 @@ class RegularizedInvCovariance(object):
 
     Parameters
     ----------
-    exog : array-like
+    exog : array_like
         A weighted design matrix for covariance
 
     Attributes
     ----------
-    exog : array-like
+    exog : array_like
         A weighted design matrix for covariance
     alpha : scalar
         Regularizing constant

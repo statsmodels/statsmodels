@@ -37,17 +37,17 @@ class SVAR(tsbase.TimeSeriesModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1-d endogenous response variable. The independent variable.
-    dates : array-like
+    dates : array_like
         must match number of rows of endog
     svar_type : str
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
-    A : array-like
+    A : array_like
         neqs x neqs with unknown parameters marked with 'E' for estimate
-    B : array-like
+    B : array_like
         neqs x neqs with unknown parameters marked with 'E' for estimate
 
     References
@@ -114,10 +114,10 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        A_guess : array-like, optional
+        A_guess : array_like, optional
             A vector of starting values for all parameters to be estimated
             in A.
-        B_guess : array-like, optional
+        B_guess : array_like, optional
             A vector of starting values for all parameters to be estimated
             in B.
         maxlags : int
@@ -508,7 +508,7 @@ class SVARResults(SVARProcess, VARResults):
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
-    names : array-like
+    names : array_like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
 

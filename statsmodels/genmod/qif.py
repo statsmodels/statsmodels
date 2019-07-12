@@ -106,11 +106,11 @@ class QIF(base.Model):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variables of the regression.
-    exog : array-like
+    exog : array_like
         The independent variables of the regression.
-    groups : array-like
+    groups : array_like
         Labels indicating which group each observation belongs to.
         Observations in different groups should be independent.
     family : genmod family
@@ -180,14 +180,14 @@ class QIF(base.Model):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The model parameters at which the gradient is evaluated.
 
         Returns
         -------
-        grad : array-like
+        grad : array_like
             The gradient vector of the QIF objective function.
-        gn_deriv : array-like
+        gn_deriv : array_like
             The gradients of each estimating equation with
             respect to the parameter.
         """
@@ -307,13 +307,13 @@ class QIF(base.Model):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        groups : array-like or string
+        groups : array_like or string
             Array of grouping labels.  If a string, this is the name
             of a variable in `data` that contains the grouping labels.
-        data : array-like
+        data : array_like
             The data for the model.
-        subset : array-like
-            An array-like object of booleans, integers, or index
+        subset : array_like
+            An array_like object of booleans, integers, or index
             values that indicate the subset of the data to used when
             fitting the model.
 
@@ -340,7 +340,7 @@ class QIF(base.Model):
         ----------
         maxiter : integer
             Maximum number of iterations.
-        start_params : array-like, optional
+        start_params : array_like, optional
             Starting values
         tol : float
             Convergence threshold for difference of successive

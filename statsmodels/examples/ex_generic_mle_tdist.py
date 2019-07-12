@@ -61,7 +61,7 @@ class MyT(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns

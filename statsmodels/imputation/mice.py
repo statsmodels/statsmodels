@@ -265,7 +265,7 @@ class MICEData(object):
 
         Returns
         -------
-        data : array-like
+        data : array_like
             An imputed dataset from the MICE chain.
 
         Notes
@@ -1169,7 +1169,7 @@ class MICE(object):
 
         Returns
         -------
-        params : array-like
+        params : array_like
             The model parameters for the analysis model.
 
         Notes

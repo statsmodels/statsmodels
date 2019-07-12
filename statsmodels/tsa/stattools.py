@@ -46,9 +46,9 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     ----------
     mod : Model class
         Model estimator class
-    endog : array-like
+    endog : array_like
         nobs array containing endogenous variable
-    exog : array-like
+    exog : array_like
         nobs by (startlag + maxlag) array containing lags and possibly other
         variables
     startlag : int
@@ -446,7 +446,7 @@ def q_stat(x, nobs, type="ljungbox"):
     """
     Return's Ljung-Box Q Statistic
 
-    x : array-like
+    x : array_like
         Array of autocorrelation coefficients.  Can be obtained from acf.
     nobs : int
         Number of observations in the entire sample (ie., not just the length
@@ -603,7 +603,7 @@ def pacf_burg(x, nlags=None, demean=True):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Observations of time series for which pacf is calculated
     nlags : int, optional
         Number of lags to compute the partial autocorrelations.  If omitted,
@@ -891,7 +891,7 @@ def periodogram(X):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         Array for which the periodogram is desired.
 
     Returns
@@ -988,7 +988,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     Parameters
     ----------
-    pacf : array-like
+    pacf : array_like
         Partial autocorrelation array for lags 0, 1, ... p
     nlags : int, optional
         Number of lags in the AR model.  If omitted, returns coefficients from
@@ -1040,7 +1040,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
 
     Parameters
     ----------
-    acov : array-like
+    acov : array_like
         Array containing autocovariances including lag 0
     nobs : int, optional
         Number of periods to run the algorithm.  If not provided, nobs is
@@ -1123,7 +1123,7 @@ def innovations_filter(endog, theta):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The time series to filter (nobs,). Should be demeaned if not mean 0.
     theta : ndarray
         Innovation coefficients of MA representation. Array must be (nobs, q)
@@ -1478,7 +1478,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
 
     Parameters
     ----------
-    y : array-like
+    y : array_like
         Time-series data
     max_ar : int
         Maximum number of AR lags to use. Default 4.

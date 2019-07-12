@@ -57,7 +57,7 @@ _plot_ceres_residuals_doc = """\
     frac : float
         Lowess tuning parameter for the adjusted model used in the
         CERES analysis.  Not used if `cond_means` is provided.
-    cond_means : array-like, optional
+    cond_means : array_like, optional
         If provided, the columns of this array span the space of the
         conditional means E[exog | focus exog], where exog ranges over
         some or all of the columns of exog (other than the focus exog).

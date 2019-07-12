@@ -510,7 +510,7 @@ class MVElliptical(object):
 
         Parameters
         ----------
-        x : array-like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -553,7 +553,7 @@ class MVElliptical(object):
 
         Parameters
         ----------
-        x : array-like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -586,7 +586,7 @@ class MVElliptical(object):
 
         Parameters
         ----------
-        x : array-like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -730,7 +730,7 @@ class MVNormal0(object):
 
         Parameters
         ----------
-        X : array-like, 1d or 2d
+        X : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 

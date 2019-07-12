@@ -10,7 +10,7 @@ def _conf_set(F, alpha=.05):
 
     Parameters
     ----------
-    F : array-like
+    F : array_like
         The empirical distributions
     alpha : float
         Set alpha for a (1 - alpha) % confidence band.
@@ -41,8 +41,8 @@ class StepFunction(object):
 
     Parameters
     ----------
-    x : array-like
-    y : array-like
+    x : array_like
+    y : array_like
     ival : float
         ival is the value given to the values to the left of x[0]. Default
         is 0.
@@ -111,7 +111,7 @@ class ECDF(StepFunction):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Observations
     side : {'left', 'right'}, optional
         Default is 'right'. Defines the shape of the intervals constituting the

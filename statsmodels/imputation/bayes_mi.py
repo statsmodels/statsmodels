@@ -374,9 +374,9 @@ class MIResults(LikelihoodModelResults):
         This can be any instance from the multiple imputation runs.
         It is used to get class information, the specific parameter
         and data values are not used.
-    params : array-like
+    params : array_like
         The overall multiple imputation parameter estimates.
-    normalized_cov_params : array-like (2d)
+    normalized_cov_params : array_like (2d)
         The overall variance covariance matrix of the estimates.
     """
 

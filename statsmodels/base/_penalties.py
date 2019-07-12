@@ -41,7 +41,7 @@ class Penalty(object):
 
     Parameters
     ----------
-    weights : array-like
+    weights : array_like
         A vector of weights that determines the weight of the penalty
         for each parameter.
 
@@ -60,7 +60,7 @@ class Penalty(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             A vector of parameters.
 
         Returns
@@ -76,7 +76,7 @@ class Penalty(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             A vector of parameters
 
         Returns

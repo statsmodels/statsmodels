@@ -9,17 +9,17 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         The observed time values
-    status : array-like
+    status : array_like
         The status values.  status == 0 indicates censoring,
         status == 1, 2, ... are the events.
-    exog : array-like
+    exog : array_like
         Covariates such that censoring becomes independent of
         outcome times conditioned on the covariate values.
     kfunc : function
         A kernel function
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
     dimred : boolean
         If True, proportional hazards regression models are used to
@@ -122,24 +122,24 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         The observed times for each subject
-    status : array-like
+    status : array_like
         The status for each subject (1 indicates event, 0 indicates
         censoring)
-    exog : array-like
+    exog : array_like
         Covariates such that censoring is independent conditional on
         exog
     kfunc : function
         Kernel function
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
 
     Returns
     -------
-    probs : array-like
+    probs : array_like
         The estimated survival probabilities
-    times : array-like
+    times : array_like
         The times at which the survival probabilities are estimated
 
     References

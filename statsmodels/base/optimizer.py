@@ -23,7 +23,7 @@ class Optimizer(object):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
         method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping',

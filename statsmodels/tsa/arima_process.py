@@ -714,12 +714,12 @@ class ArmaProcess(object):
 
         Parameters
         ----------
-        arcoefs : array-like, optional
+        arcoefs : array_like, optional
             Coefficient for autoregressive lag polynomial, not including zero
             lag. The sign is inverted to conform to the usual time series
             representation of an ARMA process in statistics. See the class
             docstring for more information.
-        macoefs : array-like, optional
+        macoefs : array_like, optional
             Coefficient for moving-average lag polynomial, excluding zero lag
         nobs : int, optional
             Length of simulated time series. Used, for example, if a sample

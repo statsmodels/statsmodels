@@ -434,9 +434,9 @@ class FactoredPSDMatrix:
 
     Parameters
     ----------
-    diag : 1d array-like
+    diag : 1d array_like
         See above
-    root : 2d array-like
+    root : 2d array_like
         See above
 
     Notes
@@ -467,7 +467,7 @@ class FactoredPSDMatrix:
 
         Parameters
         ----------
-        rhs : array-like
+        rhs : array_like
             A 2 dimensional array with the same number of rows as the
             PSD matrix represented by the class instance.
 
@@ -505,7 +505,7 @@ class FactoredPSDMatrix:
 
         Parameters
         ----------
-        rhs : array-like
+        rhs : array_like
             A 2 dimensional array with the same number of rows as the
             PSD matrix represented by the class instance.
 
@@ -696,7 +696,7 @@ def cov_nearest_factor_homog(cov, rank):
 
     Parameters
     ----------
-    cov : array-like
+    cov : array_like
         The input array, must be square but need not be positive
         semidefinite
     rank : positive integer
@@ -880,7 +880,7 @@ class MultivariateKernel(object):
 
         Parameters
         ----------
-        bw : array-like
+        bw : array_like
             A vector of non-negative bandwidth values.
         """
 
@@ -899,7 +899,7 @@ class MultivariateKernel(object):
 
         Parameters
         ----------
-        loc : array-like
+        loc : array_like
             Values from the domain to which the kernel will
             be applied.
         bwm : scalar, optional
@@ -946,19 +946,19 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
 
     Parameters
     ----------
-    exog : array-like
+    exog : array_like
         The rows of exog are realizations of the process obtained at
         specified points.
-    loc : array-like
+    loc : array_like
         The rows of loc are the locations (e.g. in space or time) at
         which the rows of exog are observed.
-    groups : array-like
+    groups : array_like
         The values of groups are labels for distinct independent copies
         of the process.
     kernel : MultivariateKernel instance, optional
         An instance of MultivariateKernel, defaults to
         GaussianMultivariateKernel.
-    bw : array-like or scalar
+    bw : array_like or scalar
         A bandwidth vector, or bandwith multiplier.  If a 1d array, it
         contains kernel bandwidths for each component of the process, and
         must have length equal to the number of columns of exog.  If a scalar,

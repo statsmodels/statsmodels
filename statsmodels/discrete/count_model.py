@@ -106,7 +106,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -130,7 +130,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -237,7 +237,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -333,7 +333,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -370,7 +370,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
         exog : array, optional
             A reference to the exogenous design.

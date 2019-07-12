@@ -8,14 +8,14 @@ class _MinimalWLS(object):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1-d endogenous response variable. The dependent variable.
-    exog : array-like
+    exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See
         :func:`statsmodels.tools.add_constant`.
-    weights : array-like, optional
+    weights : array_like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
         is 1 and WLS reults are the same as OLS.

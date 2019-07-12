@@ -51,12 +51,12 @@ _armax_notes = r"""
 """
 
 _arma_params = \
-"""endog : array-like
+"""endog : array_like
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
-    exog : array-like, optional
+    exog : array_like, optional
         An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
@@ -65,12 +65,12 @@ _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
 _arima_params = \
-"""endog : array-like
+"""endog : array_like
         The endogenous variable.
     order : iterable
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
-    exog : array-like, optional
+    exog : array_like, optional
         An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
@@ -119,7 +119,7 @@ _predict = """
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction.
-        exog : array-like, optional
+        exog : array_like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requested, exog must be given. Note that you'll need to pass
             `k_ar` additional lags for any exogenous variables. E.g., if you
@@ -145,7 +145,7 @@ _predict_returns = """predict : array
 """
 
 _arma_predict = _predict % {"Model" : "ARMA",
-                            "params" : """params : array-like
+                            "params" : """params : array_like
             The fitted parameters of the model.""",
                             "extra_params" : "",
                             "returns" : _predict_returns,
@@ -163,7 +163,7 @@ _arima_extras = """typ : str {'linear', 'levels'}
               variables.\n"""
 
 _arima_predict = _predict % {"Model" : "ARIMA",
-                             "params" : """params : array-like
+                             "params" : """params : array_like
             The fitted parameters of the model.""",
                              "extra_params" : _arima_extras,
                              "returns" : _predict_returns,
@@ -657,9 +657,9 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The fitted ARMA parameters
-        order : array-like
+        order : array_like
             3 item iterable, with the number of AR, MA, and exogenous
             parameters, including the trend
         """
@@ -819,7 +819,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Starting parameters for ARMA(p,q). If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional
@@ -1073,7 +1073,7 @@ class ARIMA(ARMA):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             Starting parameters for ARMA(p,q).  If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional

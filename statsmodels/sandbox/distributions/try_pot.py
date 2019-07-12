@@ -13,7 +13,7 @@ def mean_residual_life(x, frac=None, alpha=0.05):
 
     Parameters
     ----------
-    x : 1-dimensional array-like
+    x : 1-dimensional array_like
     frac : list[float], optional
         All entries must be between 0 and 1
     alpha : float, default 0.05

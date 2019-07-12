@@ -172,7 +172,7 @@ class LikelihoodModel(Model):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             An optional
 
         method : str
@@ -766,7 +766,7 @@ class AR(LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array-like, optional
+        start_params : array_like, optional
             A first guess on the parameters.  Defaults is a vector of zeros.
         method : str, optional
             Unconstrained solvers:

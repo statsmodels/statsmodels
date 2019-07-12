@@ -23,7 +23,7 @@ class PCA(object):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Variables in columns, observations in rows
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the

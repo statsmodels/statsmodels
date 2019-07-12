@@ -37,7 +37,7 @@ class RecursiveLS(MLEModel):
         The observed time-series process :math:`y`
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
-    constraints : array-like, str, or tuple
+    constraints : array_like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed that the
               linear combination is equal to zero.

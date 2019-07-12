@@ -138,7 +138,7 @@ class MultivariateGamPenalty(Penalty):
     alpha : list of float
         default penalty weight, list with length equal to the number of smooth
         terms. ``alpha`` can also be provided to each method.
-    weights: array-like
+    weights: array_like
         currently not used
         is a list of doubles of the same length as alpha or a list
         of ndarrays where each component has the length equal to the number

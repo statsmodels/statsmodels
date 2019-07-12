@@ -8,7 +8,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
 
     Parameters
     ----------
-    eigenvals : array-like
+    eigenvals : array_like
         THe eigenvalues
     total_var : float
         the total variance (for plotting percent variance explained)
@@ -91,7 +91,7 @@ def plot_loadings(loadings, col_names=None, row_names=None,
         Specify plots. Each tuple (i, j) represent one figure, i and j is
         the loading number for x-axis and y-axis, respectively. If `None`,
         all combinations of the loadings will be plotted.
-    percent_variance : array-like
+    percent_variance : array_like
         The percent variance explained by each factor.
 
     Returns

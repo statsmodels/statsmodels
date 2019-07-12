@@ -593,7 +593,7 @@ class GLMGam(PenalizedMixin, GLM):
 
         Parameters
         ----------
-        alpha : scalar, list or array-like
+        alpha : scalar, list or array_like
             penalization weight
 
         Returns

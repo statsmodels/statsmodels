@@ -306,10 +306,10 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Seasonal data to plot. If dates is None, x must be a pandas object
         with a PeriodIndex or DatetimeIndex with a monthly frequency.
-    dates : array-like, optional
+    dates : array_like, optional
         If `x` is not a pandas object, then dates must be supplied.
     ylabel : str, optional
         The label for the y-axis. Will attempt to use the `name` attribute
@@ -355,10 +355,10 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Seasonal data to plot. If dates is None, x must be a pandas object
         with a PeriodIndex or DatetimeIndex with a monthly frequency.
-    dates : array-like, optional
+    dates : array_like, optional
         If `x` is not a pandas object, then dates must be supplied.
     ylabel : str, optional
         The label for the y-axis. Will attempt to use the `name` attribute

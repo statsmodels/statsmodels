@@ -56,9 +56,9 @@ class KernelReg(GenericKDE):
 
     Parameters
     ----------
-    endog: array-like
+    endog: array_like
         This is the dependent variable.
-    exog: array-like
+    exog: array_like
         The training data for the independent variable(s)
         Each element in the list is a separate variable
     var_type: str

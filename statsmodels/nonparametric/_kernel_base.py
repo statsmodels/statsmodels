@@ -401,7 +401,7 @@ class LeaveOneOut(object):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         2-D array.
 
     Examples
@@ -482,7 +482,7 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
 
     Returns
     -------
-    dens: array-like
+    dens: array_like
         The generalized product kernel density estimator.
 
     Notes

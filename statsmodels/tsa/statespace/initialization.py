@@ -263,12 +263,12 @@ class Initialization(object):
             The type of initialization used for the states selected by `index`.
             Must be one of 'known', 'diffuse', 'approximate_diffuse', or
             'stationary'.
-        constant : array-like, optional
+        constant : array_like, optional
             A vector of constant values, denoted :math:`a`. Most often used
             with 'known' initialization, but may also be used with
             'approximate_diffuse' (although it will then likely have little
             effect).
-        stationary_cov : array-like, optional
+        stationary_cov : array_like, optional
             The covariance matrix of the stationary part, denoted :math:`Q_0`.
             Only used with 'known' initialization.
         approximate_diffuse_variance : float, optional

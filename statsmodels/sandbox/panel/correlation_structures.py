@@ -116,7 +116,7 @@ def whiten_ar(x, ar_coefs, order):
 
     Parameters
     ----------
-    x : array-like, (nobs,) or (nobs, k_vars)
+    x : array_like, (nobs,) or (nobs, k_vars)
         The data to be whitened along axis 0
     ar_coefs : array
         coefficients of AR lag- polynomial,   TODO: ar or ar_coefs?
@@ -150,7 +150,7 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
 
     Parameters
     ----------
-    acov : array-like, 1d
+    acov : array_like, 1d
         auto-covariance
     order : integer, optional
         The order of the autoregressive process.  Default is 1.

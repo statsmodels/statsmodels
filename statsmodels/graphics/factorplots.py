@@ -24,14 +24,14 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The `x` factor levels constitute the x-axis. If a `pandas.Series` is
         given its name will be used in `xlabel` if `xlabel` is None.
-    trace : array-like
+    trace : array_like
         The `trace` factor levels will be drawn as lines in the plot.
         If `trace` is a `pandas.Series` its name will be used as the
         `legendtitle` if `legendtitle` is None.
-    response : array-like
+    response : array_like
         The reponse or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
     func : function
@@ -159,7 +159,7 @@ def _recode(x, levels):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         array like object supporting with numpy array methods of categorially
         coded data.
     levels : dict

@@ -316,7 +316,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     title_kwargs : dict
         Keyword arguments to pass on for the title. The key to control the
         fonts is fontdict.
-    obs_labels : bool or array-like
+    obs_labels : bool or array_like
         Whether or not to annotate the plot points with their observation
         labels. If obs_labels is a boolean, the point labels will try to do
         the right thing. First it will try to use the index of data, then
@@ -440,7 +440,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         if obs_labels is None:
             obs_labels = lrange(len(exog_i))
 
-    if obs_labels is not False:  # could be array-like
+    if obs_labels is not False:  # could be array_like
         if len(obs_labels) != len(exog_i):
             raise ValueError("obs_labels does not match length of exog_i")
         label_kwargs.update(dict(ha="center", va="bottom"))
@@ -742,9 +742,9 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         The intercept of the line
     slope : float
         The slope of the line
-    horiz : float or array-like
+    horiz : float or array_like
         Data for horizontal lines on the y-axis
-    vert : array-like
+    vert : array_like
         Data for verterical lines on the x-axis
     model_results : statsmodels results instance
         Any object that has a two-value `params` attribute. Assumed that it
@@ -1053,7 +1053,7 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     frac : float, optional
         Lowess smoothing parameter for estimating the conditional
         means.  Not used if `cond_means` is provided.
-    cond_means : array-like, optional
+    cond_means : array_like, optional
         If provided, the columns of this array are the conditional
         means E[exog | focus exog], where exog ranges over some
         or all of the columns of exog other than focus exog.  If
@@ -1204,9 +1204,9 @@ def added_variable_resids(results, focus_exog, resid_type=None,
 
     Returns
     -------
-    endog_resid : array-like
+    endog_resid : array_like
         The residuals for the original exog
-    focus_exog_resid : array-like
+    focus_exog_resid : array_like
         The residuals for the focus predictor
 
     Notes

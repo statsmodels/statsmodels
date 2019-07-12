@@ -1339,7 +1339,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
         The Q critical value studentized range statistic from Tukey's HSD
     var : float
         The group variance
-    groupnobs : array-like object
+    groupnobs : array_like object
         Number of observations contained in each group.
     pairindices : tuple of lists, optional
         Indices corresponding to the upper triangle of matrix. Computed

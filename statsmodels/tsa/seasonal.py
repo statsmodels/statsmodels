@@ -57,11 +57,11 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Time series. If 2d, individual series are in columns.
     model : str {"additive", "multiplicative"}
         Type of seasonal component. Abbreviations are accepted.
-    filt : array-like
+    filt : array_like
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional

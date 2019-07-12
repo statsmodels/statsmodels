@@ -13,7 +13,7 @@ def logdet_symm(m, check_symm=False):
 
     Parameters
     ----------
-    m : array-like
+    m : array_like
         2d array that is positive-definite (and symmetric)
 
     Returns
@@ -38,10 +38,10 @@ def stationary_solve(r, b):
 
     Parameters
     ----------
-    r : array-like
+    r : array_like
         A vector describing the coefficient matrix.  r[0] is the first
         band next to the diagonal, r[1] is the second band, etc.
-    b : array-like
+    b : array_like
         The right-hand side for which we are solving, i.e. we solve
         Tx = b and return b, where T is the Toeplitz coefficient matrix.
 

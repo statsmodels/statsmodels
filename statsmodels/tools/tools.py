@@ -26,8 +26,8 @@ def drop_missing(Y, X=None, axis=1):
     """
     Returns views on the arrays Y and X where missing observations are dropped.
 
-    Y : array-like
-    X : array-like, optional
+    Y : array_like
+    X : array_like, optional
     axis : int
         Axis along which to look for missing observations.  Default is 1, ie.,
         observations in rows.
@@ -226,9 +226,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
                                   asrecarray=type(data) is np.recarray)
         return data
 
-    # Catch array-like for an error
+    # Catch array_like for an error
     elif not isinstance(data, np.ndarray):
-        raise NotImplementedError("Array-like objects are not supported")
+        raise NotImplementedError("array_like objects are not supported")
     else:
         if isinstance(col, (int, long)):
             offset = data.shape[1]          # need error catching here?
@@ -269,7 +269,7 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         ``data`` is the column-ordered design matrix
     prepend : bool
         If true, the constant is in the first column.  Else the constant is
@@ -324,9 +324,9 @@ def isestimable(C, D):
 
     Parameters
     ----------
-    C : (Q, P) array-like
+    C : (Q, P) array_like
         contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
-    D: (N, P) array-like
+    D: (N, P) array_like
         design matrix
 
     Returns

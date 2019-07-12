@@ -21,7 +21,7 @@ class ProbPlot(object):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         1d data array
     dist : A scipy.stats or statsmodels distribution
         Compare x against dist. The default is
@@ -268,7 +268,7 @@ class ProbPlot(object):
                 - 'q': A line is fit through the quartiles.
                 - None: by default no reference line is added to the plot.
 
-        other : ProbPlot, array-like, or None, optional
+        other : ProbPlot, array_like, or None, optional
             If provided, ECDF(x) will be plotted against p(x) where x are
             sorted samples from `self`. ECDF is an empirical cumulative
             distribution function estimated from `other` and
@@ -345,7 +345,7 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-        other : `ProbPlot` instance, array-like, or None, optional
+        other : `ProbPlot` instance, array_like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. Sample size of `other` must be equal or larger than
@@ -488,7 +488,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         1d data array
     dist : A scipy.stats or statsmodels distribution
         Compare x against dist. The default
@@ -594,7 +594,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
 
     Parameters
     ----------
-    data1, data2 : array-like (1d) or `ProbPlot` instances
+    data1, data2 : array_like (1d) or `ProbPlot` instances
     xlabel, ylabel : str or None
         User-provided labels for the x-axis and y-axis. If None (default),
         other values are used.
@@ -822,7 +822,7 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
 
     Parameteters
     ------------
-    x, y : array-like
+    x, y : array_like
         Data to be plotted
     dist : scipy.stats.distribution
         A scipy.stats distribution, needed if `line` is 'q'.

@@ -11,7 +11,7 @@ def bkfilter(X, low=6, high=32, K=12):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
     low : float
         Minimum period for oscillations, ie., Baxter and King suggest that
