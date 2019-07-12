@@ -13,6 +13,7 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
+from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_hess, approx_fprime
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
@@ -54,13 +55,15 @@ class SVAR(tsbase.TimeSeriesModel):
     ----------
     Hamilton (1994) Time Series Analysis
     """
+
+    y = deprecated_alias("y", "endog", remove_version="0.11.0")
+
     def __init__(self, endog, svar_type, dates=None,
                  freq=None, A=None, B=None, missing='none'):
         super(SVAR, self).__init__(endog, None, dates, freq, missing=missing)
         #(self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
-        self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
         types = ['A', 'B', 'AB']
@@ -560,16 +563,20 @@ class SVARResults(SVARProcess, VARResults):
 
     _model_type = 'SVAR'
 
+    y = deprecated_alias("y", "endog", remove_version="0.11.0")
+    ys_lagged = deprecated_alias("ys_lagged", "endog_lagged",
+                                 remove_version="0.11.0")
+
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
                  trend='c', names=None, dates=None):
 
         self.model = model
-        self.y = self.endog = endog  #keep alias for now
-        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
+        self.endog = endog
+        self.endog_lagged = endog_lagged
         self.dates = dates
 
-        self.n_totobs, self.neqs = self.y.shape
+        self.n_totobs, self.neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
@@ -630,7 +637,7 @@ class SVARResults(SVARProcess, VARResults):
         Parameters
         ----------
         orth: bool, default False
-            Compute orthoganalized impulse response error bands
+            Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
         T: int, default 10
