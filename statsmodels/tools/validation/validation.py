@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 import numpy as np
 import pandas as pd
 
@@ -210,3 +212,178 @@ class PandasWrapper(object):
             return pd.DataFrame(obj, columns=columns, index=index)
         else:
             raise ValueError('Can only wrap 1 or 2-d array_like')
+
+
+def bool_like(value, name, optional=False, strict=False):
+    """
+    Convert to bool or raise if not bool_like
+
+    Parameters
+    ----------
+    value : object
+        Value to verify
+    name : str
+        Variable name for exceptions
+    optional : bool
+        Flag indicating whether None is allowed
+    strict : bool
+        If True, then only allow bool. If False, allow types that support
+        casting to bool.
+
+    Returns
+    -------
+    converted : bool
+        value converted to a bool
+    """
+    if optional and value is None:
+        return value
+    extra_text = ' or None' if optional else ''
+    if strict:
+        if isinstance(value, bool):
+            return value
+        else:
+            raise TypeError('{0} must be a bool{1}'.format(name, extra_text))
+
+    if hasattr(value, 'squeeze') and callable(value.squeeze):
+        value = value.squeeze()
+    try:
+        return bool(value)
+    except Exception:
+        raise TypeError('{0} must be a bool (or bool-compatible)'
+                        '{1}'.format(name, extra_text))
+
+
+def int_like(value, name, optional=False, strict=False):
+    """
+    Convert to int or raise if not int_like
+
+    Parameters
+    ----------
+    value : object
+        Value to verify
+    name : str
+        Variable name for exceptions
+    optional : bool
+        Flag indicating whether None is allowed
+    strict : bool
+        If True, then only allow int or np.integer that are not bool. If False,
+        allow types that support integer division by 1 and conversion to int.
+
+    Returns
+    -------
+    converted : int
+        value converted to a int
+    """
+    if optional and value is None:
+        return None
+    is_bool_timedelta = isinstance(value, (bool, np.timedelta64))
+
+    if hasattr(value, 'squeeze') and callable(value.squeeze):
+        value = value.squeeze()
+
+    if isinstance(value, (int, np.integer)) and not is_bool_timedelta:
+        return int(value)
+    elif not strict and not is_bool_timedelta:
+        try:
+            if value == (value // 1):
+                return int(value)
+        except Exception:
+            pass
+    extra_text = ' or None' if optional else ''
+    raise TypeError('{0} must be integer_like (int or np.integer, but not bool'
+                    ' or timedelta64){1}'.format(name, extra_text))
+
+
+def float_like(value, name, optional=False, strict=False):
+    """
+    Convert to float or raise if not float_like
+
+    Parameters
+    ----------
+    value : object
+        Value to verify
+    name : str
+        Variable name for exceptions
+    optional : bool
+        Flag indicating whether None is allowed
+    strict : bool
+        If True, then only allow int, np.integer, float or np.inexact that are
+        not bool or complex. If False, allow complex types with 0 imag part or
+        any other type that is float like in the sense that it support
+        multiplication by 1.0 and conversion to float.
+
+    Returns
+    -------
+    converted : float
+        value converted to a float
+    """
+    if optional and value is None:
+        return None
+    is_bool = isinstance(value, bool)
+    is_complex = isinstance(value, (complex, np.complexfloating))
+    if hasattr(value, 'squeeze') and callable(value.squeeze):
+        value = value.squeeze()
+
+    if (isinstance(value, (int, np.integer, float, np.inexact)) and
+            not (is_bool or is_complex)):
+        return float(value)
+    elif not strict and is_complex:
+        imag = np.imag(value)
+        if imag == 0:
+            return float(np.real(value))
+    elif not strict and not is_bool:
+        try:
+            return float(value / 1.0)
+        except Exception:
+            pass
+    extra_text = ' or None' if optional else ''
+    raise TypeError('{0} must be float_like (float or np.inexact)'
+                    '{1}'.format(name, extra_text))
+
+
+def string_like(value, name, optional=False, options=None, lower=True):
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        extra_text = ' or None' if optional else ''
+        raise TypeError('{0} must be a string{1}'.format(name, extra_text))
+    if lower:
+        value = value.lower()
+    if options is not None and value not in options:
+        extra_text = 'If not None,' if optional else ''
+        options_text = "'" + '\', \''.join(options) + "'"
+        msg = '{0}{1} must be one of: {2}'.format(extra_text,
+                                                  name, options_text)
+        raise ValueError(msg)
+    return value
+
+
+def dict_like(value, name, optional=False, strict=True):
+    """
+    Check if dict_like (dict, Mapping) or raise if not
+
+    Parameters
+    ----------
+    value : object
+        Value to verify
+    name : str
+        Variable name for exceptions
+    optional : bool
+        Flag indicating whether None is allowed
+    strict : bool
+        If True, then only allow dict. If False, allow any Mapping-like object.
+
+    Returns
+    -------
+    converted : dict_like
+        value
+    """
+    if optional and value is None:
+        return None
+    if (not isinstance(value, Mapping) or
+            (strict and not(isinstance(value, dict)))):
+        extra_text = 'If not None,' if optional else ''
+        strict_text = ' or dict_like (i.e., a Mapping)' if strict else ''
+        msg = '{0}{1} must be a dict{2}'.format(extra_text, name, strict_text)
+        raise TypeError(msg)
+    return value

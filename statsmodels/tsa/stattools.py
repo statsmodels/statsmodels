@@ -10,13 +10,15 @@ from statsmodels.compat.scipy import _next_regular
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
+import pandas as pd
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (InterpolationWarning,
                                              MissingDataError,
                                              CollinearityWarning)
 from statsmodels.tools.tools import add_constant, Bunch
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import (array_like, string_like, bool_like,
+                                          int_like, dict_like, float_like)
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_filter, innovations_algo
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
@@ -208,6 +210,14 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
     x = array_like(x, 'x')
+    maxlag = int_like(maxlag, 'maxlag', optional=True)
+    regression = string_like(regression, 'regression',
+                             options=('c', 'ct', 'ctt', 'nc'))
+    autolag = string_like(autolag, 'autolag', optional=True,
+                          options=('aic', 'bic', 't-stat'))
+    store = bool_like(store, 'store')
+    regresults = bool_like(regresults, 'regresults')
+
     if regresults:
         store = True
 
@@ -215,8 +225,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     if regression is None or isinstance(regression, (int, long)):
         regression = trenddict[regression]
     regression = regression.lower()
-    if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood") % regression
     nobs = x.shape[0]
 
     ntrend = len(regression) if regression != 'nc' else 0
@@ -346,6 +354,13 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
+    unbiased = bool_like(unbiased, 'unbiased')
+    demean = bool_like(demean, 'demean')
+    fft = bool_like(fft, 'fft', optional=True)
+    missing = string_like(missing, 'missing',
+                          options=('none', 'raise', 'conservative', 'drop'))
+    nlag = int_like(nlag, 'nlag', optional=True)
+
     if fft is None:
         import warnings
         msg = 'fft=True will become the default in a future version of ' \
@@ -440,7 +455,7 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
     return acov
 
 
-def q_stat(x, nobs, type="ljungbox"):
+def q_stat(x, nobs, type=None):
     """
     Return's Ljung-Box Q Statistic
 
@@ -462,9 +477,14 @@ def q_stat(x, nobs, type="ljungbox"):
     Written to be used with acf.
     """
     x = array_like(x, 'x')
-    if type == "ljungbox":
-        ret = (nobs * (nobs + 2) *
-               np.cumsum((1. / (nobs - np.arange(1, len(x) + 1))) * x**2))
+    nobs = int_like(nobs, 'nobs')
+
+    if type is not None:
+        import warnings
+        warnings.warn('The `type` argument is deprecated and has no effect',
+                      FutureWarning)
+    ret = (nobs * (nobs + 2) *
+           np.cumsum((1. / (nobs - np.arange(1, len(x) + 1))) * x ** 2))
     chi2 = stats.chi2.sf(ret, np.arange(1, len(x) + 1))
     return ret, chi2
 
@@ -531,6 +551,14 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
        Statistics, Series A, pp.383-392.
 
     """
+    unbiased = bool_like(unbiased, 'unbiased')
+    nlags = int_like(nlags, 'nlags')
+    qstat = bool_like(qstat, 'qstat')
+    fft = bool_like(fft, 'fft', optional=True)
+    alpha = float_like(alpha, 'alpha', optional=True)
+    missing = string_like(missing, 'missing',
+                          options=('none', 'raise', 'conservative', 'drop'))
+
     if fft is None:
         import warnings
         msg = 'fft=True will become the default in a future version of ' \
@@ -590,6 +618,9 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     currently duplicate calculations.
     '''
     x = array_like(x, 'x')
+    nlags = int_like(nlags, 'nlags')
+    method = string_like(method, 'method', options=('unbiased', 'mle'))
+
     pacf = [1.]
     for k in range(1, nlags + 1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
@@ -708,6 +739,10 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
        Time series analysis: forecasting and control. John Wiley & Sons, p. 66
     """
     x = array_like(x, 'x')
+    nlags = int_like(nlags, 'nlags')
+    efficient = bool_like(efficient, 'efficient')
+    unbiased = bool_like(unbiased, 'unbiased')
+
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
@@ -787,6 +822,14 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
     consistently worse than the other options.
     """
+    nlags = int_like(nlags, 'nlags')
+    methods = ('ols', 'ols-inefficient', 'ols-unbiased', 'yw', 'ywu', 'ld',
+               'ywunbiased', 'yw_unbiased', 'ywm', 'ywmle', 'yw_mle', 'ldu',
+               'ldunbiased', 'ld_unbiased', 'ldb', 'ldbiased', 'ld_biased')
+    method = string_like(method, 'method', options=methods)
+
+    alpha = float_like(alpha, 'alpha', optional=True)
+
     if method in ('ols', 'ols-inefficient', 'ols-unbiased'):
         efficient = 'inefficient' not in method
         unbiased = 'unbiased' in method
@@ -800,14 +843,13 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
     # inconsistent naming with ywmle
-    elif method in ('ldb', 'ldbiased', 'ld_biased'):
+    else:  # method in ('ldb', 'ldbiased', 'ld_biased')
         acv = acovf(x, unbiased=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
-    else:
-        raise ValueError('method not available')
+
     if alpha is not None:
-        varacf = 1. / len(x) # for all lags >=1
+        varacf = 1. / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1. - alpha / 2.) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
@@ -838,6 +880,9 @@ def ccovf(x, y, unbiased=True, demean=True):
     '''
     x = array_like(x, 'x')
     y = array_like(y, 'y')
+    unbiased = bool_like(unbiased, 'unbiased')
+    demean = bool_like(demean, 'demean')
+
     n = len(x)
     if demean:
         xo = x - x.mean()
@@ -879,6 +924,8 @@ def ccf(x, y, unbiased=True):
     '''
     x = array_like(x, 'x')
     y = array_like(y, 'y')
+    unbiased = bool_like(unbiased, 'unbiased')
+
     cvf = ccovf(x, y, unbiased=unbiased, demean=True)
     return cvf / (np.std(x) * np.std(y))
 
@@ -960,6 +1007,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     (biased, no fft).
     """
     s = array_like(s, 's')
+    nlags = int_like(nlags, 'nlags')
+    isacov = bool_like(isacov, 'isacov')
+
     order = nlags
 
     if isacov:
@@ -1012,6 +1062,9 @@ def levinson_durbin_pacf(pacf, nlags=None):
         and forecasting. Springer.
     """
     pacf = array_like(pacf, 'pacf')
+    nlags = int_like(nlags, 'nlags', optional=True)
+    pacf = np.squeeze(np.asarray(pacf))
+
     if pacf[0] != 1:
         raise ValueError('The first entry of the pacf corresponds to lags 0 '
                          'and so must be 1.')
@@ -1051,6 +1104,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     maxlag : integer
         the Granger causality test results are calculated for all lags up to
         maxlag
+    addconst : bool
+        Include a constant in the model
     verbose : bool
         print results if true
 
@@ -1088,7 +1143,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     Greene: Econometric Analysis
 
     """
-    from scipy import stats
+    maxlag = int_like(maxlag, 'maxlag')
+    addconst = bool_like(addconst, 'addconst')
+    verbose = bool_like(verbose, 'verbose')
 
     x = array_like(x, 'x', ndim=2)
 
@@ -1260,12 +1317,15 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         Queen's University, Dept of Economics Working Papers 1227.
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-
-    trend = trend.lower()
-    if trend not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("trend option %s not understood" % trend)
     y0 = array_like(y0, 'y0')
     y1 = array_like(y1, 'y1', ndim=2)
+    trend = string_like(trend, 'trend', options=('c', 'nc', 'ct', 'ctt'))
+    method = string_like(method, 'method', options=('aeg',))
+    maxlag = int_like(maxlag, 'maxlag', optional=True)
+    autolag = string_like(autolag, 'autolag', optional=True,
+                          options=('aic', 'bic', 't-stat'))
+    return_results = bool_like(return_results, 'return_results', optional=True)
+
     nobs, k_vars = y1.shape
     k_vars += 1   # add 1 for y0
 
@@ -1382,7 +1442,11 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     will be provided in the future. In the meantime, consider passing
     {method : 'css'} to fit_kw.
     """
-    from pandas import DataFrame
+    max_ar = int_like(max_ar, 'max_ar')
+    max_ma = int_like(max_ma, 'max_ma')
+    trend = string_like(trend, 'trend', options=('nc', 'c'))
+    model_kw = dict_like(model_kw, 'model_kw', optional=True)
+    fit_kw = dict_like(fit_kw, 'fit_kw', optional=True)
 
     ar_range = lrange(0, max_ar + 1)
     ma_range = lrange(0, max_ma + 1)
@@ -1409,7 +1473,8 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = [DataFrame(res, columns=ma_range, index=ar_range) for res in results]
+    dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in
+           results]
 
     res = dict(zip(ic, dfs))
 
@@ -1506,8 +1571,11 @@ def kpss(x, regression='c', lags=None, store=False):
     from warnings import warn
 
     x = array_like(x, 'x')
+    regression = string_like(regression, 'regression', options=('c', 'ct'))
+    store = bool_like(store, 'store')
+
     nobs = x.shape[0]
-    hypo = regression.lower()
+    hypo = regression
 
     # if m is not one, n != m * n
     if nobs != x.size:
@@ -1524,8 +1592,6 @@ def kpss(x, regression='c', lags=None, store=False):
         # hypothesis is that the data is stationary around r_0).
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
-    else:
-        raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
         lags = 'legacy'
