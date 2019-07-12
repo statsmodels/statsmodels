@@ -17,7 +17,7 @@ import scipy.stats as stats
 import scipy.linalg
 
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
@@ -514,13 +514,14 @@ class VAR(tsbase.TimeSeriesModel):
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
+
+    y = deprecated_alias("y", "endog", remove_version="0.11.0")
+
     def __init__(self, endog, exog=None, dates=None, freq=None,
                  missing='none'):
         super(VAR, self).__init__(endog, exog, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
-        self.y = self.endog  # keep alias for now
-        # TODO: get rid of this alias
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
 
@@ -551,7 +552,7 @@ class VAR(tsbase.TimeSeriesModel):
             intercept = params[:k_trend]
             predictedvalues += intercept
 
-        y = self.y
+        y = self.endog
         X = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
         fittedvalues = np.dot(X, params)
 
@@ -1165,17 +1166,19 @@ class VARResults(VARProcess):
     ys_lagged
     """
     _model_type = 'VAR'
+    y = deprecated_alias("y", "endog", remove_version="0.11.0")
+    ys_lagged = deprecated_alias("ys_lagged", "endog_lagged",
+                                 remove_version="0.11.0")
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None, exog=None):
 
         self.model = model
-        self.y = self.endog = endog   # keep alias for now
-        self.ys_lagged = self.endog_lagged = endog_lagged  # keep alias for now
-        # TODO: Let's finally remove these aliases
+        self.endog = endog
+        self.endog_lagged = endog_lagged
         self.dates = dates
 
-        self.n_totobs, neqs = self.y.shape
+        self.n_totobs, neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         self.trend = trend
         k_trend = util.get_trendorder(trend)
@@ -1213,7 +1216,8 @@ class VARResults(VARProcess):
     def plot(self):
         """Plot input time series
         """
-        return plotting.plot_mts(self.y, names=self.names, index=self.dates)
+        return plotting.plot_mts(self.endog, names=self.names,
+                                 index=self.dates)
 
     @property
     def df_model(self):
@@ -1230,17 +1234,17 @@ class VARResults(VARProcess):
     def fittedvalues(self):
         """The predicted insample values of the response variables of the model.
         """
-        return np.dot(self.ys_lagged, self.params)
+        return np.dot(self.endog_lagged, self.params)
 
     @cache_readonly
     def resid(self):
         """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.k_ar:] - self.fittedvalues
+        return self.endog[self.k_ar:] - self.fittedvalues
 
     def sample_acov(self, nlags=1):
         """Sample acov"""
-        return _compute_acov(self.y[self.k_ar:], nlags=nlags)
+        return _compute_acov(self.endog[self.k_ar:], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
         """Sample acorr"""
@@ -1308,7 +1312,7 @@ class VARResults(VARProcess):
                       "starting in version 0.11.0 `VARResults.cov_params` "
                       "will be a method instead of a property.",
                       category=FutureWarning)
-        z = self.ys_lagged
+        z = self.endog_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
     def _cov_params(self):
@@ -1341,7 +1345,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def _zz(self):
         # Z'Z
-        return np.dot(self.ys_lagged.T, self.ys_lagged)
+        return np.dot(self.endog_lagged.T, self.endog_lagged)
 
     @property
     def _cov_alpha(self):
@@ -1432,9 +1436,10 @@ class VARResults(VARProcess):
         """
         Plot forecast
         """
-        mid, lower, upper = self.forecast_interval(self.y[-self.k_ar:], steps,
+        mid, lower, upper = self.forecast_interval(self.endog[-self.k_ar:],
+                                                   steps,
                                                    alpha=alpha)
-        fig = plotting.plot_var_forc(self.y, mid, lower, upper,
+        fig = plotting.plot_var_forc(self.endog, mid, lower, upper,
                                      names=self.names, plot_stderr=plot_stderr)
         return fig
 
@@ -2234,7 +2239,7 @@ if __name__ == '__main__':
     est = model.fit(maxlags=2)
     irf = est.irf()
 
-    y = est.y[-2:]
+    y = est.endog[-2:]
     """
     # irf.plot_irf()
 
