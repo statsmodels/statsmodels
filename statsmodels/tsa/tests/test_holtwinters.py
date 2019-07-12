@@ -450,9 +450,8 @@ def test_float_boxcox(trend, seasonal):
 def test_equivalence_cython_python(trend, seasonal):
     mod = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal)
 
-    warn = RuntimeWarning if trend == seasonal == 'mul' else None
-    with pytest.warns(warn):
-        # Overflow in mul-mul case
+    with pytest.warns(None):
+        # Overflow in mul-mul case fixed
         res = mod.fit()
 
     res.summary()  # Smoke test
