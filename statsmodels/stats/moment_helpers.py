@@ -114,7 +114,7 @@ def mnc2cum(mnc):
     """convert non-central moments to cumulants
     recursive formula produces as many cumulants as moments
 
-    http://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
+    https://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
     """
     X = _convert_to_multidim(mnc)
 

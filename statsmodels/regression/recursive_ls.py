@@ -615,7 +615,7 @@ class RecursiveLSResults(MLEResults):
                 # Only add CI to legend for the first plot
                 if i == 0:
                     # Proxy artist for fill_between legend entry
-                    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+                    # See https://matplotlib.org/1.3.1/users/legend_guide.html
                     p = plt.Rectangle((0, 0), 1, 1,
                                       fc=ci_poly.get_facecolor()[0])
 

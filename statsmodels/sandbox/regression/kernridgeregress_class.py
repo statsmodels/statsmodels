@@ -33,7 +33,7 @@ class GaussProcess(object):
     * automatic selection or proposal of smoothing parameters
 
     Note: this is different from kernel smoothing regression,
-       see for example http://en.wikipedia.org/wiki/Kernel_smoother
+       see for example https://en.wikipedia.org/wiki/Kernel_smoother
 
     In this version of the kernel ridge regression, the training points
     are fitted exactly.

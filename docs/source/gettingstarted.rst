@@ -20,7 +20,7 @@ few modules and functions:
     import pandas
     from patsy import dmatrices
 
-`pandas <http://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
+`pandas <https://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
 rich data structures and data analysis tools. The ``pandas.DataFrame`` function
 provides labelled arrays of (potentially heterogenous) data, similar to the
 ``R`` "data.frame". The ``pandas.read_csv`` function can be used to convert a
@@ -94,7 +94,7 @@ capita (*Lottery*). :math:`X` is :math:`N \times 7` with an intercept, the
 *Literacy* and *Wealth* variables, and 4 region binary variables.
 
 The ``patsy`` module provides a convenient function to prepare design matrices
-using ``R``-like formulas. You can find more information `here <http://patsy.readthedocs.io/en/latest/>`_.
+using ``R``-like formulas. You can find more information `here <https://patsy.readthedocs.io/en/latest/>`_.
 
 We use ``patsy``'s ``dmatrices`` function to create design matrices:
 
@@ -116,7 +116,7 @@ Notice that ``dmatrices`` has
 * returned ``pandas`` DataFrames instead of simple numpy arrays. This is useful because DataFrames allow ``statsmodels`` to carry-over meta-data (e.g. variable names) when reporting results.
 
 The above behavior can of course be altered. See the `patsy doc pages
-<http://patsy.readthedocs.io/en/latest/>`_.
+<https://patsy.readthedocs.io/en/latest/>`_.
 
 Model fit and summary
 ---------------------

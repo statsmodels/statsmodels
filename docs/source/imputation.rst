@@ -48,5 +48,5 @@ Implementation Details
 ----------------------
 
 Internally, this function uses
-`pandas.isnull <http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
+`pandas.isnull <https://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
 Anything that returns True from this function will be treated as missing data.

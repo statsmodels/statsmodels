@@ -23,7 +23,7 @@ patsy >= 0.4.0
 
 cython >= 0.24
 
-    http://cython.org/
+    https://cython.org/
 
     Cython is required if you are building the source from github. However,
     if you have are building from source distribution archive then the 
@@ -36,7 +36,7 @@ Optional Dependencies
 
 X-12-ARIMA or X-13ARIMA-SEATS
 
-    http://www.census.gov/srd/www/x13as/
+    https://www.census.gov/srd/www/x13as/
 
     If available, time-series analysis can be conducted using either 
     X-12-ARIMA or the newer X-13ARIMA-SEATS. You should place the 
@@ -45,7 +45,7 @@ X-12-ARIMA or X-13ARIMA-SEATS
 
 matplotlib >= 1.5
 
-    http://matplotlib.org/
+    https://matplotlib.org/
 
     Matplotlib is needed for plotting functionality and running many of the 
     examples.
@@ -95,7 +95,7 @@ Installing from Source
 
 Download and extract the source distribution from PyPI or github
 
-    http://pypi.python.org/pypi/statsmodels
+    https://pypi.python.org/pypi/statsmodels
     https://github.com/statsmodels/statsmodels/tags
 
 Or clone the bleeding edge code from our repository on github at

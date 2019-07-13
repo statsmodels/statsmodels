@@ -586,7 +586,7 @@ def het_breuschpagan(resid, exog_het):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
+    https://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
     Greene 5th edition
     Breusch, Pagan article
 

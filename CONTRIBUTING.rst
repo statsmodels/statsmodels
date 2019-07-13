@@ -5,7 +5,7 @@ This page explains how you can contribute to the development of `statsmodels`
 by submitting patches, statistical tests, new models, or examples.
 
 `statsmodels` is developed on `Github <https://github.com/statsmodels/statsmodels>`_
-using the `Git <http://git-scm.com/>`_ version control system.
+using the `Git <https://git-scm.com/>`_ version control system.
 
 Submitting a Bug Report
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,7 +49,7 @@ How to Submit a Pull Request
 So you want to submit a patch to `statsmodels` but aren't too familiar with github? Here are the steps you need to take.
 
 1. `Fork <https://help.github.com/articles/fork-a-repo>`_ the `statsmodels repository <https://github.com/statsmodels/statsmodels>`_ on Github.
-2. `Create a new feature branch <http://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging>`_. Each branch must be self-contained, with a single new feature or bugfix.
+2. `Create a new feature branch <https://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging>`_. Each branch must be self-contained, with a single new feature or bugfix.
 3. Make sure the test suite passes. This includes testing on Python 3. The easiest way to do this is to either enable `Travis-CI <https://travis-ci.org/>`_ on your fork, or to make a pull request and check there.
 4. Document your changes by editing the appropriate file in ``docs/source/``. If it is a big, new feature add a note and an example to the latest ``docs/source/release/versionX.X.rst`` file. See older versions for examples. If it's a minor change, it will be included automatically in our relase notes.
 5. Add an example. If it is a big, new feature please submit an example notebook by following `these instructions <https://www.statsmodels.org/devel/dev/examples.html>`_.
@@ -58,7 +58,7 @@ So you want to submit a patch to `statsmodels` but aren't too familiar with gith
 Mailing List
 ~~~~~~~~~~~~
 
-Conversations about development take place on the `statsmodels mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`__.
+Conversations about development take place on the `statsmodels mailing list <https://groups.google.com/group/pystatsmodels?hl=en>`__.
 
 Learn More
 ~~~~~~~~~~
@@ -70,4 +70,4 @@ License
 ~~~~~~~
 
 Statsmodels is released under the
-`Modified (3-clause) BSD license <http://www.opensource.org/licenses/BSD-3-Clause>`_.
+`Modified (3-clause) BSD license <https://www.opensource.org/licenses/BSD-3-Clause>`_.

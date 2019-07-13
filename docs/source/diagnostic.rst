@@ -210,7 +210,7 @@ individual outliers and might not be able to identify groups of outliers.
    - resid_studentized_internal
    - ess_press
    - hat_matrix_diag
-   - cooks_distance - Cook's Distance `Wikipedia <http://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
+   - cooks_distance - Cook's Distance `Wikipedia <https://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
    - cov_ratio
    - dfbetas
    - dffits

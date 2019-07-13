@@ -33,7 +33,7 @@ which follows the methods outlined in
 
 Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
 "Communication-Efficient Sparse Regression: A One-Shot Approach."
-arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
+arXiv:1503.04337. 2015. https://arxiv.org/abs/1503.04337.
 
 There are several variables that are taken from the source paper
 for which the interpretation may not be directly clear from the

@@ -69,7 +69,7 @@ It is now possible to fit negative binomial models for count data via maximum-li
 l1-penalized Discrete Choice Models
 -----------------------------------
 
-A new optimization method has been added to the discrete models, which includes Logit, Probit, MNLogit and Poisson, that makes it possible to estimate the models with an l1, linear, penalization. This shrinks parameters towards zero and can set parameters that are not very different from zero to zero. This is especially useful if there are a large number of explanatory variables and a large associated number of parameters. `CVXOPT <http://cvxopt.org/>`_ is now an optional dependency that can be used for fitting these models.
+A new optimization method has been added to the discrete models, which includes Logit, Probit, MNLogit and Poisson, that makes it possible to estimate the models with an l1, linear, penalization. This shrinks parameters towards zero and can set parameters that are not very different from zero to zero. This is especially useful if there are a large number of explanatory variables and a large associated number of parameters. `CVXOPT <https://cvxopt.org/>`_ is now an optional dependency that can be used for fitting these models.
 
 New and Improved Graphics
 -------------------------

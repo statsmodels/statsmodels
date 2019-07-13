@@ -1383,7 +1383,7 @@ def cochrans_q(x, return_object=True):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Cochran_test
+    https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
     """
 

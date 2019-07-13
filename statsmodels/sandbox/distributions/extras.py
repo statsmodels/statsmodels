@@ -302,7 +302,7 @@ def pdf_mvsk(mvsk):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Edgeworth_series
+    https://en.wikipedia.org/wiki/Edgeworth_series
     Johnson N.L., S. Kotz, N. Balakrishnan: Continuous Univariate
     Distributions, Volume 1, 2nd ed., p.30
     """
@@ -350,7 +350,7 @@ def pdf_moments(cnt):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Edgeworth_series
+    https://en.wikipedia.org/wiki/Edgeworth_series
     Johnson N.L., S. Kotz, N. Balakrishnan: Continuous Univariate
     Distributions, Volume 1, 2nd ed., p.30
     """

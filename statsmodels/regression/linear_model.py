@@ -1283,7 +1283,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
 
     See, for example:
 
-    http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
+    https://en.wikipedia.org/wiki/Autoregressive_moving_average_model
 
     Parameters
     ----------

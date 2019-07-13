@@ -126,7 +126,7 @@ font.monospace       : Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, 
 
 #text.color          : black
 
-### LaTeX customizations. See http://www.scipy.org/Wiki/Cookbook/Matplotlib/UsingTex
+### LaTeX customizations. See https://www.scipy.org/Wiki/Cookbook/Matplotlib/UsingTex
 #text.usetex         : False  # use latex for all text handling. The following fonts
                               # are supported through the usual rc parameter settings:
                               # new century schoolbook, bookman, times, palatino,
@@ -200,7 +200,7 @@ axes.axisbelow      : True   # whether axis gridlines and ticks are below
                                # of the axis range is smaller than the
                                # first or larger than the second
 #axes.unicode_minus  : True    # use unicode for the minus symbol
-                               # rather than hypen.  See http://en.wikipedia.org/wiki/Plus_sign#Plus_sign
+                               # rather than hypen.  See https://en.wikipedia.org/wiki/Plus_sign#Plus_sign
 axes.color_cycle    : 348ABD, 7A68A6, A60628, 467821, CF4457, 188487, E24A33
                       # E24A33 : orange
                       # 7A68A6 : purple
