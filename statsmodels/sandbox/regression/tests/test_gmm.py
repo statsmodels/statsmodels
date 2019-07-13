@@ -10,14 +10,12 @@ from statsmodels.compat.python import lrange, lmap
 
 import os
 import copy
-import os
 
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
-from statsmodels import iolib
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 import statsmodels.sandbox.regression.gmm as gmm
