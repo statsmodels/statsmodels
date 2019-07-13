@@ -4,7 +4,7 @@ Author: Josef Perktold
 License: BSD-3
 
 TODO: update script to use sharex, sharey, and visible=False
-    see http://www.scipy.org/Cookbook/Matplotlib/Multiple_Subplots_with_One_Axis_Label
+    see https://www.scipy.org/Cookbook/Matplotlib/Multiple_Subplots_with_One_Axis_Label
     for sharex I need to have the ax of the last_row when editing the earlier
     rows. Or you axes_grid1, imagegrid
     http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html

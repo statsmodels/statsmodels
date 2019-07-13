@@ -31,7 +31,7 @@ import statsmodels.api as sm
 # How can you use `statsmodels` to fit a straight line model to this data?
 #
 # For an extensive discussion see [Hogg et al. (2010), "Data analysis
-# recipes: Fitting a model to data"](http://arxiv.org/abs/1008.4686) ...
+# recipes: Fitting a model to data"](https://arxiv.org/abs/1008.4686) ...
 # we'll use the example data given by them in Table 1.
 #
 # So the model is `f(x) = a * x + b` and on Figure 1 they print the result

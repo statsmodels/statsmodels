@@ -8,7 +8,7 @@ Author: Josef Perktold
 Notes:
 
 Compound Poisson has mass point at zero
-http://en.wikipedia.org/wiki/Compound_Poisson_distribution
+https://en.wikipedia.org/wiki/Compound_Poisson_distribution
 and would need special treatment
 
 need a distribution that has discrete mass points and contiuous range, e.g.

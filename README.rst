@@ -149,7 +149,7 @@ Discussion and Development
 
 Discussions take place on our mailing list.
 
-http://groups.google.com/group/pystatsmodels
+https://groups.google.com/group/pystatsmodels
 
 We are very interested in feedback about usability and suggestions for
 improvements.

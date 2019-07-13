@@ -148,7 +148,7 @@ class ExpandedNormal(rv_continuous):
          specification of distributions, Revue de l'Institut Internat.
          de Statistique. 5: 307 (1938), reprinted in
          R.A. Fisher, Contributions to Mathematical Statistics. Wiley, 1950.
-    .. [*] http://en.wikipedia.org/wiki/Edgeworth_series
+    .. [*] https://en.wikipedia.org/wiki/Edgeworth_series
     .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
 

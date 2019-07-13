@@ -18,8 +18,8 @@ License: BSD-3
 References
 ----------
 Wikipedia: kappa's initially based on these two pages
-    http://en.wikipedia.org/wiki/Fleiss%27_kappa
-    http://en.wikipedia.org/wiki/Cohen's_kappa
+    https://en.wikipedia.org/wiki/Fleiss%27_kappa
+    https://en.wikipedia.org/wiki/Cohen's_kappa
 SAS-Manual : formulas for cohens_kappa, especially variances
 see also R package irr
 
@@ -226,7 +226,7 @@ def fleiss_kappa(table, method='fleiss'):
 
     References
     ----------
-    Wikipedia http://en.wikipedia.org/wiki/Fleiss%27_kappa
+    Wikipedia https://en.wikipedia.org/wiki/Fleiss%27_kappa
 
     Fleiss, Joseph L. 1971. "Measuring Nominal Scale Agreement among Many
     Raters." Psychological Bulletin 76 (5): 378-82.

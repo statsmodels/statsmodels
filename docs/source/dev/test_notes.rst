@@ -24,7 +24,7 @@ tests versus an existing statistical package, if possible.
 
 Introduction to pytest
 ----------------------
-Like many packages, statsmodels uses the `pytest testing system <https://docs.pytest.org/en/latest/contents.html>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__.  Pytest will find any file, directory, function, or class name that starts with ``test`` or ``Test`` (classes only). Test function should start with ``test``, test classes should start with ``Test``. These functions and classes should be placed in files with names beginning with ``test`` in a directory called ``tests``.
+Like many packages, statsmodels uses the `pytest testing system <https://docs.pytest.org/en/latest/contents.html>`__ and the convenient extensions in `numpy.testing <https://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__.  Pytest will find any file, directory, function, or class name that starts with ``test`` or ``Test`` (classes only). Test function should start with ``test``, test classes should start with ``Test``. These functions and classes should be placed in files with names beginning with ``test`` in a directory called ``tests``.
 
 .. _run-tests:
 

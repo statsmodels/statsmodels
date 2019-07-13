@@ -122,7 +122,7 @@ def reset_ramsey(res, degree=5):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Ramsey_RESET_test
+    https://en.wikipedia.org/wiki/Ramsey_RESET_test
 
     """
     order = degree + 1
@@ -174,7 +174,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Variance_inflation_factor
+    https://en.wikipedia.org/wiki/Variance_inflation_factor
 
     """
     k_vars = exog.shape[1]
@@ -748,7 +748,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         References
         ----------
-        `Wikipedia <http://en.wikipedia.org/wiki/DFFITS>`_
+        `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
 
         """
         # TODO: do I want to use different sigma estimate in

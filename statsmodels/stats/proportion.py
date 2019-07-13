@@ -67,7 +67,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
+    https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
 
     Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
         Estimation for a Binomial Proportion",

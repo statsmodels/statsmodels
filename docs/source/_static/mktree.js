@@ -4,7 +4,7 @@
  * Dual licensed under the MIT and GPL licenses.
  * This basically means you can use this code however you want for
  * free, but don't claim to have written it yourself!
- * Donations always accepted: http://www.JavascriptToolbox.com/donate/
+ * Donations always accepted: https://www.JavascriptToolbox.com/donate/
  *
  * Please do not link to the .js files on javascripttoolbox.com from
  * your site. Copy the files locally to your server instead.

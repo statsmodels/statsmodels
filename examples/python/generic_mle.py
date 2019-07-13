@@ -157,7 +157,7 @@ class NBin(GenericLikelihoodModel):
 # dataset is hosted in CSV format at the [Rdatasets repository](https://ra
 # w.githubusercontent.com/vincentarelbundock/Rdatasets). We use the
 # ``read_csv``
-# function from the [Pandas library](http://pandas.pydata.org) to load the
+# function from the [Pandas library](https://pandas.pydata.org) to load the
 # data
 # in memory. We then print the first few columns:
 #

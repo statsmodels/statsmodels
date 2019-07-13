@@ -229,7 +229,7 @@ class CumIncidenceRight(object):
     D. Zeng (2004).  Estimating marginal survival function by
     adjusting for dependent censoring using many covariates.  Annals
     of Statistics 32:4.
-    http://arxiv.org/pdf/math/0409180.pdf
+    https://arxiv.org/pdf/math/0409180.pdf
     """
 
     def __init__(self, time, status, title=None, freq_weights=None,
@@ -325,7 +325,7 @@ class SurvfuncRight(object):
     D. Zeng (2004).  Estimating marginal survival function by
     adjusting for dependent censoring using many covariates.  Annals
     of Statistics 32:4.
-    http://arxiv.org/pdf/math/0409180.pdf
+    https://arxiv.org/pdf/math/0409180.pdf
     """
 
     def __init__(self, time, status, entry=None, title=None,

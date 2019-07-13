@@ -214,7 +214,7 @@ class KDEMultivariate(GenericKDE):
 
         Notes
         -----
-        See http://en.wikipedia.org/wiki/Cumulative_distribution_function
+        See https://en.wikipedia.org/wiki/Cumulative_distribution_function
         For more details on the estimation see Ref. [5] in module docstring.
 
         The multivariate CDF for mixed data (continuous and ordered/unordered
@@ -392,7 +392,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     References
     ----------
-    .. [1] http://en.wikipedia.org/wiki/Conditional_probability_distribution
+    .. [1] https://en.wikipedia.org/wiki/Conditional_probability_distribution
 
     Examples
     --------

@@ -1615,7 +1615,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha) * 100)
 
             # Proxy artist for fill_between legend entry
-            # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
+            # See e.g. https://matplotlib.org/1.3.1/users/legend_guide.html
             p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
 
             # Legend

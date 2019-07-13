@@ -47,7 +47,7 @@ sm.OLS.from_formula
 # All of the lower case models accept ``formula`` and ``data`` arguments,
 # whereas upper case ones take ``endog`` and ``exog`` design matrices.
 # ``formula`` accepts a string which describes the model in terms of a
-# ``patsy`` formula. ``data`` takes a [pandas](http://pandas.pydata.org/)
+# ``patsy`` formula. ``data`` takes a [pandas](https://pandas.pydata.org/)
 # data frame or any other data structure that defines a ``__getitem__`` for
 # variable names like a structured array or a dictionary of variables.
 #

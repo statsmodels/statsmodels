@@ -1228,7 +1228,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Granger_causality
+    https://en.wikipedia.org/wiki/Granger_causality
     Greene: Econometric Analysis
 
     """

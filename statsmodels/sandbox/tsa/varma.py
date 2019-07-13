@@ -60,8 +60,8 @@ def VAR(x,B, const=0):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Vector_Autoregression
-    http://en.wikipedia.org/wiki/General_matrix_notation_of_a_VAR(p)
+    https://en.wikipedia.org/wiki/Vector_Autoregression
+    https://en.wikipedia.org/wiki/General_matrix_notation_of_a_VAR(p)
     '''
     p = B.shape[0]
     T = x.shape[0]

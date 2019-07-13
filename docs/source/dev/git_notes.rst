@@ -12,7 +12,7 @@ contribute you will need to `sign up for a free Github account <https://github.c
 Version Control and Git
 -----------------------
 
-We use the `Git <http://git-scm.com/>`_ version control system for development.
+We use the `Git <https://git-scm.com/>`_ version control system for development.
 Git allows many people to work together on the same project.  In a nutshell, it
 allows you to make changes to the code independent of others who may also be
 working on the code and allows you to easily contribute your changes to the
@@ -27,7 +27,7 @@ To learn more about Git, you may want to visit:
 + `Git documentation (book and videos) <https://git-scm.com/documentation>`_
 + `Github help pages <https://help.github.com/>`_
 + `NumPy documentation <https://docs.scipy.org/doc/numpy/dev/index.html>`_
-+ `Matthew Brett's Pydagogue <http://matthew-brett.github.io/pydagogue/>`_
++ `Matthew Brett's Pydagogue <https://matthew-brett.github.io/pydagogue/>`_
 
 Below, we describe the bare minimum git commands you need to contribute to
 `statsmodels`.
@@ -217,7 +217,7 @@ could introduce bugs. However, if you have only a few commits, this might not
 be such a concern. One great place to start learning about rebase is
 :ref:`rebasing without tears <pydagogue:actual-rebase>`.  In particular, `heed
 the warnings
-<http://matthew-brett.github.io/pydagogue/rebase_without_tears.html#safety>`__.
+<https://matthew-brett.github.io/pydagogue/rebase_without_tears.html#safety>`__.
 Namely, **always make a new branch before doing a rebase**. This is good
 general advice for working with git. I would also add **never use rebase on
 work that has already been published**. If another developer is using your

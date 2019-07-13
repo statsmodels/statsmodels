@@ -78,7 +78,7 @@ def _fitstart_beta(self, x, fixed=None):
     References
     ----------
     for method of moment estimator for known loc and scale
-    http://en.wikipedia.org/wiki/Beta_distribution#Parameter_estimation
+    https://en.wikipedia.org/wiki/Beta_distribution#Parameter_estimation
     http://www.itl.nist.gov/div898/handbook/eda/section3/eda366h.htm
     NIST reference also includes reference to MLE in
     Johnson, Kotz, and Balakrishan, Volume II, pages 221-235
@@ -140,7 +140,7 @@ def _fitstart_poisson(self, x, fixed=None):
     References
     ----------
     MLE :
-    http://en.wikipedia.org/wiki/Poisson_distribution#Maximum_likelihood
+    https://en.wikipedia.org/wiki/Poisson_distribution#Maximum_likelihood
 
     '''
     #todo: separate out this part to be used for other compact support distributions
