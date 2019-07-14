@@ -1,34 +1,33 @@
 Dependencies
 ------------
 
-python >= 2.7
+python >= 3.5
 
     www.python.org
 
-numpy >= 1.11
+numpy >= 1.14
 
     www.numpy.org
 
-scipy >= 0.18
+scipy >= 1.0
     
     www.scipy.org
 
-pandas >= 0.19
+pandas >= 0.21
 
     pandas.pydata.org
 
-patsy >= 0.4.0
+patsy >= 0.5.0
 
     patsy.readthedocs.org
 
-cython >= 0.24
+cython >= 0.29
 
     https://cython.org/
 
     Cython is required if you are building the source from github. However,
     if you have are building from source distribution archive then the 
-    generated C files are included and Cython is not necessary. If you are 
-    building for Python 3.4, then you must use Cython >= 0.24. Earlier
+    generated C files are included and Cython is not necessary. Earlier
     versions may be ok for earlier versions of Python.
 
 Optional Dependencies
@@ -43,7 +42,7 @@ X-12-ARIMA or X-13ARIMA-SEATS
     appropriate executable on your PATH or set the X12PATH or X13PATH 
     environmental variable to take advantage.
 
-matplotlib >= 1.5
+matplotlib >= 2.2
 
     https://matplotlib.org/
 
@@ -62,7 +61,7 @@ pytest >= 3.0
 
     Pytest is needed to run the tests.
 
-IPython >= 3.0
+IPython >= 5.0
 
     Needed to build the docs.
 
