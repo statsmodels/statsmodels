@@ -33,12 +33,11 @@ env:
 matrix:
   fast_finish: true
   include:
-    # Python 2.7 until 0.10.1 has been released, then change to Python 3.7
-    - python: 2.7
+    - python: 3.7
       env:
-        - PYTHON=2.7
+        - PYTHON=3.7
         - PANDAS=0.24
-        - COVERAGE=true
+        - LINT=true
     # Python 3.7 + cutting edge packages
     - python: 3.7
       env:
@@ -57,6 +56,7 @@ matrix:
         - PANDAS=0.22
         - SCIPY=1.1
         - BLAS="nomkl blas=*=openblas"
+        - COVERAGE=true
     # Python 3.5 + oldest packages
     - python: 3.5
       env:
