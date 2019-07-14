@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import statsmodels.api as sm
+from statsmodels.tools.sm_exceptions import HessianInversionWarning
 import statsmodels.tools._testing as smt
 from statsmodels.formula.api import ols, glm
 
@@ -107,10 +108,15 @@ class CheckGenericMixin(object):
         assert_equal(res1.bse[drop_index], 0)
         # OSX has many slight failures on this test
         tol = 1e-8 if PLATFORM_OSX else 1e-10
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=tol,
-                        atol=tol)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=tol,
-                        atol=tol)
+        with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+            # division by zero in bse
+            tvals1 = res1.tvalues[keep_index_p]
+        assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
+
+        with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+            # passing NaN into scipy.stats functions
+            pvals1 = res1.pvalues[keep_index_p]
+        assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
@@ -179,6 +185,11 @@ class CheckGenericMixin(object):
             keep_index_p += list(range(k_vars, k_vars + mod.k_extra))
             k_extra = mod.k_extra
 
+        # TODO: Can we choose a test case without this issue?
+        #  If not, should we be getting this warning for all
+        #  model subclasses?
+        warn_cls = HessianInversionWarning if isinstance(mod, sm.GLM) else None
+
         cov_types = ['nonrobust', 'HC0']
 
         for cov_type in cov_types:
@@ -198,20 +209,23 @@ class CheckGenericMixin(object):
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
 
                 start_params[keep_index_p] = sp
-                res1 = mod._fit_collinear(cov_type=cov_type,
-                                          start_params=start_params,
-                                          method=method, disp=0)
+                with pytest.warns(warn_cls):
+                    res1 = mod._fit_collinear(cov_type=cov_type,
+                                              start_params=start_params,
+                                              method=method, disp=0)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
-                    res2 = self.results.model.fit(cov_type=cov_type,
-                                                  start_params=sp,
-                                                  method=method, disp=0)
+                    with pytest.warns(warn_cls):
+                        res2 = self.results.model.fit(cov_type=cov_type,
+                                                      start_params=sp,
+                                                      method=method, disp=0)
             else:
-                # more special casing RLM
-                if (isinstance(self.results.model, (sm.RLM))):
-                    res1 = mod._fit_collinear()
-                else:
-                    res1 = mod._fit_collinear(cov_type=cov_type)
+                with pytest.warns(warn_cls):
+                    # more special casing RLM
+                    if (isinstance(self.results.model, (sm.RLM))):
+                        res1 = mod._fit_collinear()
+                    else:
+                        res1 = mod._fit_collinear(cov_type=cov_type)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
                     res2 = self.results.model.fit(cov_type=cov_type)
@@ -239,9 +253,15 @@ class CheckGenericMixin(object):
             assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
             assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-8)
             assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=5e-8)
-            assert_allclose(res1.pvalues[keep_index_p], res2.pvalues,
-                            rtol=1e-6, atol=1e-30)
+            with pytest.warns(RuntimeWarning, match="invalid value"):
+                # zero in bse, so division by zero warning
+                tvals1 = res1.tvalues[keep_index_p]
+            assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
+
+            with pytest.warns(RuntimeWarning, match="invalid value"):
+                # passing NaNs into scipy.stats functions
+                pvals1 = res1.pvalues[keep_index_p]
+            assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):
                 # discrete models, Logit don't have `resid` yet

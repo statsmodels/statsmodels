@@ -449,7 +449,11 @@ def test_float_boxcox(trend, seasonal):
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_equivalence_cython_python(trend, seasonal):
     mod = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal)
-    res = mod.fit()
+
+    with pytest.warns(None):
+        # Overflow in mul-mul case fixed
+        res = mod.fit()
+
     res.summary()  # Smoke test
     params = res.params
     nobs = housing_data.shape[0]

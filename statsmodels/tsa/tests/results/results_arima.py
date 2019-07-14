@@ -50,7 +50,7 @@ class ARIMA111(object):
             self.cov_params = [[0.0423583,   -0.00167449,    0.00262911],
                                [-0.00167449, 0.00208858,    -0.0035068],
                                [0.00262911, -0.0035068, 0.00805622]]
-            self.bse = np.diag(np.sqrt(self.cov_params))
+            self.bse = np.sqrt(np.diag(self.cov_params))
             # these bse are approx [.205811, .0457010, .0897565]
 
             # from stata
@@ -90,7 +90,7 @@ class ARIMA111(object):
             #                        [0, 0, 0.00342769]])
             # self.cov_params = cov_params + cov_params.T - \
             #                np.diag(np.diag(cov_params))
-            # self.bse = np.diag(np.sqrt(self.cov_params))
+            # self.bse = np.sqrt(np.diag(self.cov_params))
 
             self.resid = [-0.015830, -0.236884, -0.093946, -0.281152,
                           -0.089983, -0.226336, -0.351666, -0.198703,
@@ -224,7 +224,7 @@ class ARIMA211(object):
                 [0, 0, 0,                      0.00484898]])
             self.cov_params = (
                 cov_params + cov_params.T - np.diag(np.diag(cov_params)))
-            self.bse = np.diag(np.sqrt(self.cov_params))
+            self.bse = np.sqrt(np.diag(self.cov_params))
             # these bse are approx [0.248376, 0.102617, 0.0871312, 0.0696346]
 
             self.forecast = forecast_results['fc211c'][-25:]
@@ -259,7 +259,7 @@ class ARIMA211(object):
                 [0, 0, 0, 0.00245324]])
             self.cov_params = (
                 cov_params + cov_params.T - np.diag(np.diag(cov_params)))
-            self.bse = np.diag(np.sqrt(self.cov_params))
+            self.bse = np.sqrt(np.diag(self.cov_params))
             # forecasting isn't any different for css
             # except you lose the first p+1 observations for in-sample
             self.forecast = forecast_results['fc111c_css'][-25:]
@@ -293,7 +293,7 @@ class ARIMA112(object):
                 [0, 0, 0, 0.00713662]])
             self.cov_params = (
                 cov_params + cov_params.T - np.diag(np.diag(cov_params)))
-            self.bse = np.diag(np.sqrt(self.cov_params))
+            self.bse = np.sqrt(np.diag(self.cov_params))
 
             # from gretl
             self.forecast = forecast_results['fc112c'][-25:]
@@ -441,7 +441,7 @@ class ARIMA112(object):
             #         [0, 0, 0, 0.00713662]])
             # self.cov_params = cov_params + cov_params.T - \
             #                np.diag(np.diag(cov_params))
-            # self.bse = np.diag(np.sqrt(self.cov_params))
+            # self.bse = np.sqrt(np.diag(self.cov_params))
             self.forecast = forecast_results['fc112c_css'][-25:]
             self.forecasterr = forecast_results['fc112cse_css'][-25:]
             self.forecast_dyn = forecast_results['fc112cdyn_css']

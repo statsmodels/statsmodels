@@ -1852,8 +1852,10 @@ def test_bad_start_params():
         838.849345,     761.92338873,   731.7842242,    770.4641844])
 
     mod = ARMA(endog, (15, 0))
-    with pytest.raises(ValueError):
-        mod.fit()
+    with pytest.raises(ValueError, match="pass your own start_params"):
+        with pytest.warns(RuntimeWarning, match="encountered in sqrt"):
+            # numpy warns "invalid value encountered in sqrt"
+            mod.fit()
 
     inv = load_macrodata_pandas().data['realinv'].values
     arima_mod = ARIMA(np.log(inv), (1, 1, 2))

@@ -16,7 +16,6 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
-from statsmodels import iolib
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 import statsmodels.sandbox.regression.gmm as gmm
@@ -25,9 +24,7 @@ import statsmodels.sandbox.regression.gmm as gmm
 def get_griliches76_data():
     curdir = os.path.split(__file__)[0]
     path = os.path.join(curdir, 'griliches76.dta')
-    with pytest.warns(FutureWarning):
-        griliches76_data = iolib.genfromdta(path, missing_flt=np.NaN,
-                                            pandas=True)
+    griliches76_data = pd.read_stata(path)
 
     # create year dummies
     years = griliches76_data['year'].unique()
