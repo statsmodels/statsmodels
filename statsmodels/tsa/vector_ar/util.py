@@ -97,18 +97,18 @@ def comp_matrix(coefs):
          0   I_K ... 0     0
          0 ...       I_K   0]
     """
-    p, k, k2 = coefs.shape
+    p, k1, k2 = coefs.shape
     if k1 != k2:
         raise ValueError('coefs must be 3-d with shape (p, k, k).')
 
-    kp = k * p
+    kp = k1 * p
 
     result = np.zeros((kp, kp))
-    result[:k] = np.concatenate(coefs, axis=1)
+    result[:k1] = np.concatenate(coefs, axis=1)
 
     # Set I_K matrices
     if p > 1:
-        result[np.arange(k, kp), np.arange(kp-k)] = 1
+        result[np.arange(k1, kp), np.arange(kp-k1)] = 1
 
     return result
 
