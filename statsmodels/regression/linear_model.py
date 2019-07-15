@@ -711,7 +711,7 @@ class WLS(RegressionModel):
             return np.sqrt(self.weights)[:, None]*X
 
     def loglike(self, params):
-        """
+        r"""
         Returns the value of the gaussian log-likelihood function at params.
 
         Given the whitened design matrix, the log-likelihood is evaluated
@@ -729,9 +729,11 @@ class WLS(RegressionModel):
 
         Notes
         --------
-        .. math:: -\\frac{n}{2}\\log\\left(Y-\\hat{Y}\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}log\\left(\\left|W\\right|\\right)
+        .. math:: -\frac{n}{2}\log SSR -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\log\left(\left|W\right|\right)
 
-        where :math:`W` is a diagonal matrix
+        where :math:`W` is a diagonal weight matrix matrix and
+        :math:`SSR=\left(Y-\hat{Y}\right)^\prime W \left(Y-\hat{Y}\right)` is
+        the sum of the squared weighted residuals.
         """
         nobs2 = self.nobs / 2.0
         SSR = np.sum((self.wendog - np.dot(self.wexog, params))**2, axis=0)
