@@ -33,15 +33,12 @@ env:
 matrix:
   fast_finish: true
   include:
+    # Python 3.7 + fixed pandas
     - python: 3.7
       env:
         - PYTHON=3.7
         - PANDAS=0.24
         - LINT=true
-    # Python 3.7 + cutting edge packages
-    - python: 3.7
-      env:
-        - PYTHON=3.7
         - COVERAGE=true
     # Documentation build (on Python 3.7 + cutting edge packages)
     - python: 3.7
@@ -70,13 +67,6 @@ matrix:
     - python: 3.7
       env:
         - PIP_PRE=true
-        - BUILD_INIT=tools/ci/travis_pip.sh
-    - os: osx
-      language: generic
-      env:
-        - PYTHON=3.6.6
-        - NUMPY=1.15
-        - SCIPY=1.2
         - BUILD_INIT=tools/ci/travis_pip.sh
     - os: osx
       language: generic
