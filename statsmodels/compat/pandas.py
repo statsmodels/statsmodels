@@ -38,7 +38,6 @@ else:
 
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
                     pandas.WidePanel)
-    from pandas.core.common import is_numeric_dtype
 
 try:
     import pandas.testing as testing
