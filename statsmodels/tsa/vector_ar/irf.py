@@ -295,11 +295,11 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         if svar:
-            return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.sirf_errband_mc(orth=orth, repl=repl, steps=periods,
                                          signif=signif, seed=seed,
                                          burn=burn, cum=False)
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.irf_errband_mc(orth=orth, repl=repl, steps=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
 
@@ -336,8 +336,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                    burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods,
+                                    seed=seed, burn=burn)
         q = util.norm_signif_level(signif)
 
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)

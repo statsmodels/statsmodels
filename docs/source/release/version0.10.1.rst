@@ -24,15 +24,6 @@ and the general maintainer and code reviewer
 
 * Josef Perktold
 
-Additionally, many users contributed by participation in github issues and
-providing feedback.
-
-Thanks to all of the contributors for the 0.10 release (based on git log):
-
-.. TODO: Remove if none
-
-* Someone??
-
 These lists of names are automatically generated based on git log, and may not
 be complete.
 
@@ -51,3 +42,5 @@ The following Pull Requests were merged since the last release:
 * :pr:`5921`: BUG: Ensure exponential smoothers has continuous double data
 * :pr:`5930`: BUG: Limit lags in KPSS
 * :pr:`5933`: MAINT: Fix test that fails with positive probability
+* :pr:`5935`: CLN: port parts of #5220
+* :pr:`5940`: MAINT: Fix linting failures

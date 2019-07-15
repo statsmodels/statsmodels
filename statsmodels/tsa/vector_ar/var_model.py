@@ -10,6 +10,7 @@ Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 from __future__ import division, print_function
 from statsmodels.compat.python import (range, lrange, string_types,
                                        StringIO, iteritems)
+from statsmodels.compat.pandas import deprecate_kwarg
 from collections import defaultdict
 
 import numpy as np
@@ -553,12 +554,12 @@ class VAR(tsbase.TimeSeriesModel):
             predictedvalues += intercept
 
         y = self.endog
-        X = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
-        fittedvalues = np.dot(X, params)
+        x = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
+        fittedvalues = np.dot(x, params)
 
         fv_start = start - k_ar
         pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(fittedvalues), end-k_ar+1)
+        fv_end = min(len(fittedvalues), end - k_ar + 1)
         predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
 
         if not out_of_sample:
@@ -698,7 +699,7 @@ class VAR(tsbase.TimeSeriesModel):
         # equivalent definition
         # .. math:: \frac{1}{T - Kp - 1} Y^\prime (I_T - Z (Z^\prime Z)^{-1}
         # Z^\prime) Y
-        # Ref: Lutkepohl p.75
+        # Ref: Lütkepohl p.75
         # df_resid right now is T - Kp - 1, which is a suggested correction
 
         avobs = len(y_sample)
@@ -745,7 +746,7 @@ class VAR(tsbase.TimeSeriesModel):
         for p in range(p_min, maxlags + 1):
             # exclude some periods to same amount of data used for each lag
             # order
-            result = self._estimate_var(p, offset=maxlags-p, trend=trend)
+            result = self._estimate_var(p, offset=maxlags - p, trend=trend)
 
             for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
@@ -807,7 +808,7 @@ class VARProcess(object):
             self.intercept = np.zeros(self.neqs)
 
     def get_eq_index(self, name):
-        "Return integer position of requested equation name"
+        """Return integer position of requested equation name"""
         return util.get_index(self.names, name)
 
     def __str__(self):
@@ -898,7 +899,8 @@ class VARProcess(object):
         return plotting.plot_mts(y)
 
     def intercept_longrun(self):
-        r"""Long run intercept of stable VAR process
+        r"""
+        Long run intercept of stable VAR process
 
         Lütkepohl eq. 2.1.23
 
@@ -909,7 +911,8 @@ class VARProcess(object):
         return np.linalg.solve(self._char_mat, self.intercept)
 
     def mean(self):
-        r"""Long run intercept of stable VAR process
+        r"""
+        Long run intercept of stable VAR process
 
         Warning: trend and exog except for intercept are ignored for this.
         This might change in future versions.
@@ -923,7 +926,8 @@ class VARProcess(object):
         return self.intercept_longrun()
 
     def ma_rep(self, maxn=10):
-        r"""Compute MA(:math:`\infty`) coefficient matrices
+        r"""
+        Compute MA(:math:`\infty`) coefficient matrices
 
         Parameters
         ----------
@@ -937,7 +941,8 @@ class VARProcess(object):
         return ma_rep(self.coefs, maxn=maxn)
 
     def orth_ma_rep(self, maxn=10, P=None):
-        r"""Compute orthogonalized MA coefficient matrices using P matrix such
+        r"""
+        Compute orthogonalized MA coefficient matrices using P matrix such
         that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
         decomposition of :math:`\Sigma_u`
 
@@ -970,6 +975,7 @@ class VARProcess(object):
 
     @cache_readonly
     def _char_mat(self):
+        """Characteristic matrix of the VAR"""
         return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
@@ -982,16 +988,24 @@ class VARProcess(object):
         return var_acf(self.coefs, self.sigma_u, nlags=nlags)
 
     def acorr(self, nlags=None):
-        """Compute theoretical autocorrelation function
+        """
+        Autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int or None
+            The number of lags to include in the autocovariance function. The
+            default is the number of lags included in the model.
 
         Returns
         -------
-        acorr : ndarray (p x k x k)
+        acorr : ndarray
+            Autocorrelation and cross correlations (nlags, neqs, neqs)
         """
         return util.acf_to_acorr(self.acf(nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
-        "Plot theoretical autocorrelation function"
+        """Plot theoretical autocorrelation function"""
         fig = plotting.plot_full_acorr(self.acorr(nlags=nlags),
                                        linewidth=linewidth)
         return fig
@@ -1033,7 +1047,7 @@ class VARProcess(object):
         if exog_future is not None:
             exogs.append(exog_future)
 
-        if exogs == []:
+        if not exogs:
             exog_future = None
         else:
             exog_future = np.column_stack(exogs)
@@ -1081,20 +1095,38 @@ class VARProcess(object):
         return covs[:, inds, inds]
 
     def forecast_interval(self, y, steps, alpha=0.05, exog_future=None):
-        """Construct forecast interval estimates assuming the y are Gaussian
+        """
+        Construct forecast interval estimates assuming the y are Gaussian
 
         Parameters
         ----------
+        y : {ndarray, None}
+            The initial values to use for the forecasts. If None,
+            the last k_ar values of the original endogenous variables are
+            used.
+        steps : int
+            Number of steps ahead to forecast
+        alpha : float, optional
+            The significance level for the confidence intervals.
+        exog_future : ndarray, optional
+            Forecast values of the exogenous variables. Should include
+            constant, trend, etc. as needed, including extrapolating out
+            of sample.
+        Returns
+        -------
+        point : ndarray
+            Mean value of forecast
+        lower : ndarray
+            Lower bound of confidence interval
+        upper : ndarray
+            Upper bound of confidence interval
 
         Notes
         -----
         Lütkepohl pp. 39-40
-
-        Returns
-        -------
-        (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
-        assert(0 < alpha < 1)
+        if not 0 < alpha < 1:
+            raise ValueError('alpha must be between 0 and 1')
         q = util.norm_signif_level(alpha)
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
@@ -1214,14 +1246,14 @@ class VARResults(VARProcess):
                                          _params_info=_params_info)
 
     def plot(self):
-        """Plot input time series
-        """
+        """Plot input time series"""
         return plotting.plot_mts(self.endog, names=self.names,
                                  index=self.dates)
 
     @property
     def df_model(self):
-        """Number of estimated parameters, including the intercept / trends
+        """
+        Number of estimated parameters, including the intercept / trends
         """
         return self.neqs * self.k_ar + self.k_exog
 
@@ -1232,13 +1264,15 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def fittedvalues(self):
-        """The predicted insample values of the response variables of the model.
+        """
+        The predicted insample values of the response variables of the model.
         """
         return np.dot(self.endog_lagged, self.params)
 
     @cache_readonly
     def resid(self):
-        """Residuals of response variable resulting from estimated coefficients
+        """
+        Residuals of response variable resulting from estimated coefficients
         """
         return self.endog[self.k_ar:] - self.fittedvalues
 
@@ -1252,7 +1286,24 @@ class VARResults(VARProcess):
         return _acovs_to_acorrs(acovs)
 
     def plot_sample_acorr(self, nlags=10, linewidth=8):
-        "Plot theoretical autocorrelation function"
+        """
+        Plot sample autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int
+            The number of lags to use in compute the autocorrelation. Does
+            not count the zero lag, which will be returned.
+        linewidth : int
+            The linewidth for the plots.
+        plot_kwargs : kwargs
+            Will be passed to `matplotlib.pyplot.axvlines`
+
+        Returns
+        -------
+        fig : matplotlib.Figure
+            The figure that contains the plot axes.
+        """
         fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
                                        linewidth=linewidth)
         return fig
@@ -1286,7 +1337,9 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def resid_corr(self):
-        "Centered residual correlation matrix"
+        """
+        Centered residual correlation matrix
+        """
         return self.resid_acorr(0)[0]
 
     @cache_readonly
@@ -1478,7 +1531,8 @@ class VARResults(VARProcess):
         return fc_cov
 
     # Monte Carlo irf standard errors
-    def irf_errband_mc(self, orth=False, repl=1000, T=10,
+    @deprecate_kwarg('T', 'steps')
+    def irf_errband_mc(self, orth=False, repl=1000, steps=10,
                        signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
@@ -1487,10 +1541,10 @@ class VARResults(VARProcess):
         Parameters
         ----------
         orth: bool, default False
-            Compute orthoganalized impulse response error bands
+            Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        steps: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -1509,7 +1563,7 @@ class VARResults(VARProcess):
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
-        ma_coll = self.irf_resim(orth=orth, repl=repl, T=T,
+        ma_coll = self.irf_resim(orth=orth, repl=repl, steps=steps,
                                  seed=seed, burn=burn, cum=cum)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
@@ -1520,7 +1574,8 @@ class VARResults(VARProcess):
         upper = ma_sort[upp_idx, :, :, :]
         return lower, upper
 
-    def irf_resim(self, orth=False, repl=1000, T=10,
+    @deprecate_kwarg('T', 'steps')
+    def irf_resim(self, orth=False, repl=1000, steps=10,
                   seed=None, burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
@@ -1532,7 +1587,7 @@ class VARResults(VARProcess):
             Compute orthoganalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        steps: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -1545,31 +1600,29 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse Response." Econometrica 67: 1113-1155.
+        .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
+           Response." Econometrica 67: 1113-1155.
 
         Returns
         -------
         Array of simulated impulse response functions
-
         """
         neqs = self.neqs
-        # mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        # df_model = self.df_model
         nobs = self.nobs
 
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
         def fill_coll(sim):
             ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
+            ret = ret.orth_ma_rep(maxn=steps) if orth else ret.ma_rep(maxn=steps)
             return ret.cumsum(axis=0) if cum else ret
 
         for i in range(repl):
-            # discard first hundred to eliminate correct for starting bias
+            # discard first burn to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
@@ -1620,8 +1673,8 @@ class VARResults(VARProcess):
         upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
-        I = np.eye(lower_dim)  # noqa:E741
-        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
+        eye = np.eye(lower_dim)
+        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), eye,
                                  np.zeros((lower_dim, self.neqs))))
 
         return np.vstack((upper, self.params.T, lower))
@@ -1775,7 +1828,7 @@ class VARResults(VARProcess):
                     C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
 
-        # Lutkepohl 3.6.5
+        # Lütkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
         middle = scipy.linalg.inv(chain_dot(C, self._cov_params(), C.T))
 
@@ -1879,7 +1932,7 @@ class VARResults(VARProcess):
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
 
-        num_restr = len(causing) * len(caused)  # called N in Lutkepohl
+        num_restr = len(causing) * len(caused)  # called N in Lütkepohl
 
         sigma_u = self.sigma_u
         vech_sigma_u = util.vech(sigma_u)
@@ -2031,7 +2084,7 @@ class VARResults(VARProcess):
 
         ld = logdet_symm(self.sigma_u_mle)
 
-        # See Lutkepohl pp. 146-150
+        # See Lütkepohl pp. 146-150
 
         aic = ld + (2. / nobs) * free_params
         bic = ld + (np.log(nobs) / nobs) * free_params
