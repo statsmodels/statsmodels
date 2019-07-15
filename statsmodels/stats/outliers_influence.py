@@ -697,10 +697,17 @@ class OLSInfluence(_BaseInfluenceMixin):
     # same computation as GLMInfluence
     @cache_readonly
     def cooks_distance(self):
-        """Cooks distance
+        """
+        Cooks distance
 
-        uses original results, no nobs loop
+        Uses original results, no nobs loop
 
+        References
+        ----------
+        .. [*] Eubank, R. L. (1999). Nonparametric regression and spline
+            smoothing. CRC press.
+        .. [*] Cook's distance. (n.d.). In Wikipedia. July 2019, from
+            https://en.wikipedia.org/wiki/Cook%27s_distance
         """
         hii = self.hat_matrix_diag
         # Eubank p.93, 94
