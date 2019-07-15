@@ -39,7 +39,7 @@ Subsetting your data
 --------------------
 
 If your entire data set is too large to store in memory, you might try storing
-it in a columnar container like `Apache Paruqet <https://parquet.apache.org/>`_
+it in a columnar container like `Apache Parquet <https://parquet.apache.org/>`_
 or `bcolz <http://bcolz.blosc.org/en/latest/>`_. Using the patsy formula
 interface, statsmodels will use the `__getitem__` function (i.e. data['Item'])
 to pull only the specified columns.
