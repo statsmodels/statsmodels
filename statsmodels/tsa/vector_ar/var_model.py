@@ -1618,7 +1618,7 @@ class VARResults(VARProcess):
 
         def fill_coll(sim):
             ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=steps)
+            ret = ret.orth_ma_rep(maxn=steps) if orth else ret.ma_rep(maxn=steps)
             return ret.cumsum(axis=0) if cum else ret
 
         for i in range(repl):
