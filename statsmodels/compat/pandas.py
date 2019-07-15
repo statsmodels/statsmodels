@@ -3,7 +3,12 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion
 
 import pandas
+from pandas.util._decorators import cache_readonly, deprecate_kwarg
 
+
+__all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
+           'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
+           'cache_readonly', 'deprecate_kwarg']
 
 version = LooseVersion(pandas.__version__)
 pandas_lte_0_19_2 = version <= LooseVersion('0.19.2')
@@ -33,6 +38,7 @@ else:
 
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
                     pandas.WidePanel)
+    from pandas.core.common import is_numeric_dtype
 
 try:
     import pandas.testing as testing
