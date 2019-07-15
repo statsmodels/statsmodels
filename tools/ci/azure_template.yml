@@ -41,8 +41,8 @@ jobs:
       displayName: 'Install compiler'
 
   - script: |
-      python -m pip install --upgrade pip
-      pip install "numpy<=1.16"
+      python -m pip install --upgrade pip setuptools
+      pip install numpy
       pip install -r requirements.txt
       pip install -r requirements-dev.txt
       pip install pytest-xdist
