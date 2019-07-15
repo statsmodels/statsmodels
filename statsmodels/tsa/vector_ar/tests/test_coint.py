@@ -38,6 +38,12 @@ class CheckCointJoh(object):
         assert_almost_equal(table2,
                             self.res2_m.reshape(table2.shape, order='F'))
 
+    def test_normalization(self):
+        # GH 5517
+        evec = self.res.evec
+        non_zero = evec.flat != 0
+        assert evec.flat[non_zero][0] > 0
+
 
 class TestCointJoh12(CheckCointJoh):
 
