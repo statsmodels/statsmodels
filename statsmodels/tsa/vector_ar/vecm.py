@@ -596,7 +596,8 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     References
     ----------
-    .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+    .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
+        Analysis. Springer.
     """
     import warnings
     if det_order not in [-1, 0, 1]:
@@ -662,6 +663,11 @@ def coint_johansen(endog, det_order, k_ar_diff):
     aind = np.flipud(auind)
     a = au[aind]
     d = dt[:, aind]
+    # Normalize by first non-zero element of d, usually [0, 0]
+    # GH 5517
+    non_zero_d = d.flat != 0
+    if np.any(non_zero_d):
+        d *= np.sign(d.flat[non_zero_d][0])
 
     #  Compute the trace and max eigenvalue statistics
     lr1 = np.zeros(neqs)
