@@ -144,9 +144,10 @@ DEFINE_MACROS = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 exts = dict(
     _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
+    _innovations={'source': 'statsmodels/tsa/_innovations.pyx'},
     _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa: E501
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
-    _innovations={'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'},  # noqa: E501
+    _arma_innovations={'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'},  # noqa: E501
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
