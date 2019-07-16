@@ -1671,16 +1671,17 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         return smry
 
     def summary2(self, title=None, alpha=.05, float_format="%.4f"):
-        """Experimental summary function for ARIMA Results
+        """
+        Experimental summary function for ARIMA Results
 
         Parameters
         ----------
-        title : string, optional
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
-        float_format: string
+        float_format : str, optional
             print format for floats in parameters summary
 
         Returns

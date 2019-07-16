@@ -727,7 +727,8 @@ def summary_return(tables, return_fmt='text'):
 
 
 class Summary(object):
-    '''class to hold tables for result summary presentation
+    """
+    Result summary
 
     Construction does not take any parameters. Tables and text can be added
     with the `add_` methods.
@@ -737,10 +738,10 @@ class Summary(object):
     tables : list of tables
         Contains the list of SimpleTable instances, horizontally concatenated
         tables are not saved separately.
-    extra_txt : string
+    extra_txt : str
         extra lines that are added to the text output, used for warnings
         and explanations.
-    '''
+    """
     def __init__(self):
         self.tables = []
         self.extra_txt = None
@@ -757,30 +758,27 @@ class Summary(object):
 
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None,
                         yname=None, xname=None):
-        '''add a double table, 2 tables with one column merged horizontally
+        """
+        Add a double table, 2 tables with one column merged horizontally
 
         Parameters
         ----------
         res : results instance
             some required information is directly taken from the result
             instance
-        title : string or None
+        title : str, optional
             if None, then a default title is used.
-        gleft : list of tuples
+        gleft : list[tuple], optional
             elements for the left table, tuples are (name, value) pairs
             If gleft is None, then a default table is created
-        gright : list of tuples or None
+        gright : list[tuple], optional
             elements for the right table, tuples are (name, value) pairs
-        yname : string or None
+        yname : str, optional
             optional name for the endogenous variable, default is "y"
-        xname : list of strings or None
-            optional names for the exogenous variables, default is "var_xx"
-
-        Returns
-        -------
-        None : tables are attached
-
-        '''
+        xname : list[str], optional
+            optional names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model.
+        """
 
         table = summary_top(res, title=title, gleft=gleft, gright=gright,
                             yname=yname, xname=xname)

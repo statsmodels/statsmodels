@@ -612,9 +612,9 @@ class SquareTable(Table):
         ----------
         alpha : float
             `1 - alpha` is the nominal coverage probability of the interval.
-        float_format : string
+        float_format : str
             Used to format numeric values in the table.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -879,9 +879,9 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the confidence
             intervals.
-        float_format : string
+        float_format : str
             Used to format the numeric values in the table.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -1238,9 +1238,9 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence intervals.
-        float_format : string
+        float_format : str
             Used for formatting numeric values in the summary.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """

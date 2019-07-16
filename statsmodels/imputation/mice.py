@@ -1289,7 +1289,7 @@ class MICEResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        title : string, optional
+        title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
         alpha : float

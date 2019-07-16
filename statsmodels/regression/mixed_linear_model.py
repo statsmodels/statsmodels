@@ -2549,13 +2549,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         Parameters
         ----------
-        yname : string, optional
+        yname : str, optional
             Default is `y`
         xname_fe : list of strings, optional
             Fixed effects covariate names
         xname_re : list of strings, optional
             Random effects covariate names
-        title : string, optional
+        title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
         alpha : float
