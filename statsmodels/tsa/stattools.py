@@ -885,31 +885,37 @@ def ccf(x, y, unbiased=True):
     return cvf / (np.std(x) * np.std(y))
 
 
-def periodogram(X):
+def periodogram(x):
     """
     Returns the periodogram for the natural frequency of X
 
+    .. deprecated::
+       Use scipy.signal.periodogram instead
+
     Parameters
     ----------
-    X : array_like
+    x : array_like
         Array for which the periodogram is desired.
 
     Returns
     -------
     pgram : array
-        1./len(X) * np.abs(np.fft.fft(X))**2
-
+        1./len(x) * np.abs(np.fft.fft(x))**2
 
     References
     ----------
     .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
-    X = np.asarray(X)
+    # TODO: Remove after 0.11
+    import warnings
+    warnings.warn('periodogram is deprecated and will be removed after 0.11. '
+                  'Use scipy.signal.periodogram instead.', FutureWarning)
+    x = np.asarray(x)
     # if kernel == "bartlett":
     #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
-    pergr = 1. / len(X) * np.abs(np.fft.fft(X))**2
+    pergr = 1. / len(x) * np.abs(np.fft.fft(x)) ** 2
     pergr[0] = 0.  # what are the implications of this?
     return pergr
 
