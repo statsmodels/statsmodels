@@ -25,6 +25,7 @@ if [ "$LINT" == true ]; then
         statsmodels/base/tests/test_transform.py \
         statsmodels/base/tests/test_distributed_estimation.py \
         statsmodels/compat/ \
+        statsmodels/datasets/elec_equip \
         statsmodels/datasets/tests/ \
         statsmodels/discrete/tests/test_constrained.py \
         statsmodels/discrete/tests/results/ \
@@ -107,6 +108,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/tests/results/ \
         statsmodels/tsa/statespace/ \
         statsmodels/tsa/tests/results/ \
+        statsmodels/tsa/tests/test_stl.py \
         statsmodels/__init__.py \
         statsmodels/conftest.py \
         statsmodels/tools/sm_exceptions.py \

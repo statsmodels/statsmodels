@@ -1,13 +1,18 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat.python import lmap, range, iteritems
+from statsmodels.compat.python import lmap, range
 import numpy as np
+import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 from .filters._utils import (_maybe_get_pandas_wrapper_freq,
                              _maybe_get_pandas_wrapper)
 from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
+from statsmodels.tsa._stl import STL
+
+__all__ = ['STL', 'seasonal_decompose', 'seasonal_mean',
+           'DecomposeResult']
 
 
 def seasonal_mean(x, freq):
@@ -81,7 +86,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
 
     Returns
     -------
-    results : obj
+    results : DecomposeResult
         A object with seasonal, trend, and resid attributes.
 
     Notes
@@ -103,6 +108,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     statsmodels.tsa.filters.cf_filter.xffilter
     statsmodels.tsa.filters.hp_filter.hpfilter
     statsmodels.tsa.filters.convolution_filter
+    statsmodels.tsa.seasonal.STL
     """
     if freq is None:
         _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
@@ -168,35 +174,100 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
 
 
 class DecomposeResult(object):
-    def __init__(self, **kwargs):
-        for key, value in iteritems(kwargs):
-            setattr(self, key, value)
-        self.nobs = len(self.observed)
+    def __init__(self, observed, seasonal, trend, resid, weights=None):
+        self._seasonal = seasonal
+        self._trend = trend
+        if weights is None:
+            weights = np.ones_like(observed)
+            if isinstance(observed, pd.Series):
+                weights = pd.Series(weights, index=observed.index,
+                                    name='weights')
+        self._weights = weights
+        self._resid = resid
+        self._observed = observed
 
-    def plot(self):
+    @property
+    def observed(self):
+        """Observed data"""
+        return self._observed
+
+    @property
+    def seasonal(self):
+        """The estimated seasonal component"""
+        return self._seasonal
+
+    @property
+    def trend(self):
+        """The estimated trend component"""
+        return self._trend
+
+    @property
+    def resid(self):
+        """The estimated residuals"""
+        return self._resid
+
+    @property
+    def weights(self):
+        """The weights used in the robust estimation"""
+        return self._weights
+
+    @property
+    def nobs(self):
+        """Number of observations"""
+        return self._observed.shape
+
+    def plot(self, observed=True, seasonal=True, trend=True, resid=True,
+             weights=False):
+        """
+        Plot estimated components
+
+        Parameters
+        ----------
+        observed: bool
+            Include the observed series in the plot
+        seasonal: bool
+            Include the seasonal component in the plot
+        trend: bool
+            Include the trend component in the plot
+        resid: bool
+            Include the residual in the plot
+        weights: bool
+            Include the weights in the plot (if any)
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure instance that containing the plot
+        """
         from statsmodels.graphics.utils import _import_mpl
+        from pandas.plotting import register_matplotlib_converters
         plt = _import_mpl()
-        fig, axes = plt.subplots(4, 1, sharex=True)
-        if hasattr(self.observed, 'plot'):  # got pandas use it
-            self.observed.plot(ax=axes[0], legend=False)
-            axes[0].set_ylabel('Observed')
-            self.trend.plot(ax=axes[1], legend=False)
-            axes[1].set_ylabel('Trend')
-            self.seasonal.plot(ax=axes[2], legend=False)
-            axes[2].set_ylabel('Seasonal')
-            self.resid.plot(ax=axes[3], legend=False)
-            axes[3].set_ylabel('Residual')
+        register_matplotlib_converters()
+        series = [(self._observed, 'Observed')] if observed else []
+        series += [(self.trend, 'trend')] if trend else []
+        series += [(self.seasonal, 'seasonal')] if seasonal else []
+        series += [(self.resid, 'residual')] if resid else []
+        series += [(self.weights, 'weights')] if weights else []
+
+        if isinstance(self._observed, (pd.DataFrame, pd.Series)):
+            nobs = self._observed.shape[0]
+            xlim = self._observed.index[0], self._observed.index[nobs - 1]
         else:
-            axes[0].plot(self.observed)
-            axes[0].set_ylabel('Observed')
-            axes[1].plot(self.trend)
-            axes[1].set_ylabel('Trend')
-            axes[2].plot(self.seasonal)
-            axes[2].set_ylabel('Seasonal')
-            axes[3].plot(self.resid)
-            axes[3].set_ylabel('Residual')
-            axes[3].set_xlabel('Time')
-            axes[3].set_xlim(0, self.nobs)
+            xlim = (0, self._observed.shape[0] - 1)
+
+        fig, axs = plt.subplots(len(series), 1)
+        for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):
+            if def_name != 'residual':
+                ax.plot(series)
+            else:
+                ax.plot(series, marker='o', linestyle='none')
+                ax.plot(xlim, (0, 0), color='#000000', zorder=-3)
+            name = getattr(series, 'name', def_name)
+            if def_name != 'Observed':
+                name = name.capitalize()
+            title = ax.set_title if i == 0 and observed else ax.set_ylabel
+            title(name)
+            ax.set_xlim(xlim)
 
         fig.tight_layout()
         return fig
