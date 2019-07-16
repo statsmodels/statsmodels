@@ -1,17 +1,19 @@
 from __future__ import division
+
 from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
 
-from numpy.testing import assert_, assert_raises
-import pandas as pd
-import pytest
-
-# utilities for the tests
-
 from collections import OrderedDict
-from statsmodels.api import datasets
+from io import BytesIO
+from itertools import product
 
 import numpy as np
-from itertools import product
+import pandas as pd
+import pytest
+from numpy.testing import assert_, assert_raises
+
+from statsmodels.api import datasets
+
+# utilities for the tests
 
 try:
     import matplotlib.pyplot as plt  # noqa:F401
@@ -428,3 +430,19 @@ def test_default_arg_index(close_figures):
                        'length' : ['long', 'short', 'short', 'long', 'long',
                                    'short']})
     assert_raises(ValueError, mosaic, data=df, title='foobar')
+
+
+@pytest.mark.matplotlib
+def test_missing_category(close_figures):
+    # GH5639
+    animal = ['dog', 'dog', 'dog', 'cat', 'dog', 'cat', 'cat',
+              'dog', 'dog', 'cat']
+    size = ['medium', 'large', 'medium', 'medium', 'medium', 'medium',
+            'large', 'large', 'large', 'small']
+    testdata = pd.DataFrame({'animal': animal, 'size': size})
+    testdata['size'] = pd.Categorical(testdata['size'],
+                                      categories=['small', 'medium', 'large'])
+    testdata = testdata.sort_values('size')
+    fig, _ = mosaic(testdata, ['animal', 'size'])
+    bio = BytesIO()
+    fig.savefig(bio, format='png')
