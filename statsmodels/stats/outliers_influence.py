@@ -108,6 +108,12 @@ def reset_ramsey(res, degree=5):
     This is a general specification test, for additional non-linear effects
     in a model.
 
+    Parameters
+    ----------
+    degree : int
+        Maximum power to include in the RESET test.  Powers 0 and 1 are
+        excluded, so that degree tests powers 2, ..., degree of the fitted
+        values.
 
     Notes
     -----
@@ -119,18 +125,20 @@ def reset_ramsey(res, degree=5):
     indicates that there might be additional non-linear effects in the model
     and that the linear model is mis-specified.
 
-
     References
     ----------
     https://en.wikipedia.org/wiki/Ramsey_RESET_test
-
     """
     order = degree + 1
     k_vars = res.model.exog.shape[1]
     # vander without constant and x, and drop constant
-    y_fitted_vander = np.vander(res.fittedvalues, order)[:, :-2]
+    norm_values = np.asarray(res.fittedvalues)
+    norm_values = norm_values / np.sqrt((norm_values ** 2).mean())
+    y_fitted_vander = np.vander(norm_values, order)[:, :-2]
     exog = np.column_stack((res.model.exog, y_fitted_vander))
-    res_aux = OLS(res.model.endog, exog).fit()
+    exog /= np.sqrt((exog ** 2).mean(0))
+    endog = res.model.endog / (res.model.endog ** 2).mean()
+    res_aux = OLS(endog, exog).fit()
     # r_matrix = np.eye(degree, exog.shape[1], k_vars)
     r_matrix = np.eye(degree - 1, exog.shape[1], k_vars)
     # df1 = degree - 1
