@@ -3602,11 +3602,12 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : string, optional
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        xname : list[str], optional
+            Names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
@@ -3671,16 +3672,17 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        xname : List of strings of length equal to the number of parameters
-            Names of the independent variables (optional)
-        yname : string
+        yname : str
             Name of the dependent variable (optional)
-        title : string, optional
+        xname : list[str], optional
+            List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
-        float_format: string
+        float_format : str
             print format for floats in parameters summary
 
         Returns
@@ -4157,7 +4159,7 @@ class MultinomialResults(DiscreteResults):
         ----------
         alpha : float
             significance level for the confidence intervals
-        float_format: string
+        float_format : str
             print format for floats in parameters summary
 
         Returns

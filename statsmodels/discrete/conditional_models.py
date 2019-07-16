@@ -423,11 +423,12 @@ class ConditionalResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : string, optional
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        xname : list[str], optional
+            Names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float

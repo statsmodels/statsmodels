@@ -104,13 +104,12 @@ class ContrastResults(object):
 
         Parameters
         ----------
-
-        xname : list of strings, optional
-            Default is `c_##` for ## in p the number of regressors
+        xname : list[str], optional
+            Default is `c_##` for ## in the number of regressors
         alpha : float
             significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
-        title : string, optional
+        title : str, optional
             Title for the params table. If not None, then this replaces the
             default title
 

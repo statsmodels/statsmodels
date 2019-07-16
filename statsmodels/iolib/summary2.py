@@ -43,9 +43,9 @@ class Summary(object):
             Reproduce the DataFrame column labels in summary table
         index: bool
             Reproduce the DataFrame row labels in summary table
-        float_format: string
+        float_format : str
             Formatting to float data columns
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -60,9 +60,9 @@ class Summary(object):
         Parameters
         ----------
         array : numpy array (2D)
-        float_format: string
+        float_format : str
             Formatting to array if type is float
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -332,7 +332,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     skip_headers : bool
         If false (default), then the header row is added. If true, then no
         header row is added.
-    float_format : string
+    float_format : str
         float formatting options (e.g. ".3g")
 
     Returns
@@ -441,10 +441,10 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
-    float_format : string, optional
+    float_format : str, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list of strings, optional
+    model_names : list[str], optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
     stars : bool
@@ -458,7 +458,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list of strings, optional
+    regressor_order : list[str], optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional

@@ -2063,16 +2063,18 @@ class GEEResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : string, optional
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        xname : list[str], optional
+            Names for the exogenous variables, default is `var_#` for ## in
+            the number of regressors. Must match the number of parameters in
+            the model
+        title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
         alpha : float
             significance level for the confidence intervals
-        cov_type : string
+        cov_type : str
             The covariance type used to compute the standard errors;
             one of 'robust' (the usual robust sandwich-type covariance
             estimate), 'naive' (ignores dependence), and 'bias
