@@ -330,6 +330,8 @@ def _normalize_dataframe(dataframe, index):
     grouped = data.groupby(index, sort=False)
     counted = grouped[index].count()
     averaged = counted.mean(axis=1)
+    # Fill empty missing with 0, see GH5639
+    averaged = averaged.fillna(0.0)
     return averaged
 
 
