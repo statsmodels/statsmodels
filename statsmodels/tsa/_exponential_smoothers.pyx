@@ -6,6 +6,7 @@ cimport numpy as np
 
 np.import_array()
 
+
 cdef object _holt_init(double[::1] x, np.uint8_t[::1] xi, double[::1] p,
                        y, double[::1] l, double[::1] b):
     """Initialization for the Holt Models"""
@@ -30,10 +31,10 @@ cdef object _holt_init(double[::1] x, np.uint8_t[::1] xi, double[::1] p,
 
 cdef double[::1] ensure_1d(object x):
     """
-    This is a work aound function that ensures that X is a 1-d array.  It is needed since 
-    scipy.optimize.brute in version <= 1.0 calls squueze so that 1-d arrays are squeezed to 
+    This is a work aound function that ensures that X is a 1-d array.  It is needed since
+    scipy.optimize.brute in version <= 1.0 calls squueze so that 1-d arrays are squeezed to
     scalars.
-    
+
     Fixed in SciPy 1.1
     """
     if x.ndim == 0:
@@ -46,7 +47,7 @@ def _holt__(object x, np.uint8_t[::1] xi, double[::1] p, double[::1] y, double[:
             double[::1] b, double[::1] s, Py_ssize_t m, Py_ssize_t n, double max_seen):
     """
     Compute the sum of squared residuals for Simple Exponential Smoothing
-    
+
     Returns
     -------
     sse : float
@@ -105,7 +106,7 @@ def _holt_add_dam(object x, np.uint8_t[::1] xi, double[::1] p, double[::1] y, do
     cdef double alpha, beta, phi, betac, alphac, err, sse
     cdef double[::1] x_arr
     cdef Py_ssize_t i
-    
+
     x_arr = ensure_1d(x)
     alpha, beta, phi, alphac, betac = _holt_init(x_arr, xi, p, y, l, b)
     if alpha == 0.0:

@@ -44,10 +44,10 @@ if prefix == 's':
 
 
 cpdef {{prefix}}kim_smoother_log(int nobs, int k_regimes, int order,
-                             {{cython_type}} [:,:,:] regime_transition,
-                             {{cython_type}} [:,:] predicted_joint_probabilities,
-                             {{cython_type}} [:,:] filtered_joint_probabilities,
-                             {{cython_type}} [:,:] smoothed_joint_probabilities):
+                             {{cython_type}} [:, :, :] regime_transition,
+                             {{cython_type}} [:, :] predicted_joint_probabilities,
+                             {{cython_type}} [:, :] filtered_joint_probabilities,
+                             {{cython_type}} [:, :] smoothed_joint_probabilities):
     cdef int t, i, j, k, ix, regime_transition_t = 0, time_varying_regime_transition
     cdef:
         int k_regimes_order_m1 = k_regimes**(order - 1)
@@ -81,7 +81,7 @@ cpdef {{prefix}}kim_smoother_log(int nobs, int k_regimes, int order,
 cdef void {{prefix}}kim_smoother_log_iteration(int tt, int k_regimes, int order,
                              {{cython_type}} [:] tmp_joint_probabilities,
                              {{cython_type}} [:] tmp_probabilities_fraction,
-                             {{cython_type}} [:,:] regime_transition,
+                             {{cython_type}} [:, :] regime_transition,
                              {{cython_type}} [:] predicted_joint_probabilities,
                              {{cython_type}} [:] filtered_joint_probabilities,
                              {{cython_type}} [:] prev_smoothed_joint_probabilities,
