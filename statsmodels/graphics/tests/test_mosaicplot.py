@@ -432,6 +432,7 @@ def test_default_arg_index(close_figures):
     assert_raises(ValueError, mosaic, data=df, title='foobar')
 
 
+@pytest.mark.matplotlib
 def test_missing_category(close_figures):
     # GH5639
     animal = ['dog', 'dog', 'dog', 'cat', 'dog', 'cat', 'cat',
