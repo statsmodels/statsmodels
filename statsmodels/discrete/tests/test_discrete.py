@@ -14,16 +14,19 @@ import os
 import warnings
 
 import numpy as np
-import pandas as pd
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
+import pandas as pd
+from pandas.testing import assert_index_equal
 import pytest
+from scipy import stats
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                Poisson, NegativeBinomial,
-                                                CountModel, GeneralizedPoisson,
-                                                NegativeBinomialP)
+                                                 Poisson, NegativeBinomial,
+                                                 CountModel,
+                                                 GeneralizedPoisson,
+                                                 NegativeBinomialP)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -2357,8 +2360,22 @@ def test_unchanging_degrees_of_freedom():
 
 def test_mnlogit_float_name():
     df = pd.DataFrame({"A": [0., 1.1, 0, 0, 1.1], "B": [0, 1, 0, 1, 1]})
-    result = smf.mnlogit(formula="A ~ B", data=df).fit()
     with pytest.warns(SpecificationWarning,
                       match='endog contains values are that not int-like'):
-        summ = result.summary().as_text()
+        result = smf.mnlogit(formula="A ~ B", data=df).fit()
+    summ = result.summary().as_text()
     assert 'A=1.1' in summ
+
+
+def test_cov_confint_pandas():
+    data = sm.datasets.anes96.load(as_pandas=True)
+    exog = sm.add_constant(data.exog, prepend=False)
+    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    cov = res1.cov_params()
+    ci = res1.conf_int()
+    se = np.sqrt(np.diag(cov))
+    se2 = (ci.iloc[:, 1] - ci.iloc[:, 0]) / (2 * stats.norm.ppf(0.975))
+    assert_allclose(se, se2)
+    assert_index_equal(ci.index, cov.index)
+    assert_index_equal(cov.index, cov.columns)
+    assert isinstance(ci.index, pd.MultiIndex)

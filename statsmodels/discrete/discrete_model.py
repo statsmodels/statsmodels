@@ -16,13 +16,13 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
-           "GeneralizedPoisson", "NegativeBinomialP"]
+           "GeneralizedPoisson", "NegativeBinomialP", "CountModel"]
 
 from statsmodels.compat.python import range
 from scipy.special import loggamma
 
 import numpy as np
-from pandas import get_dummies
+from pandas import get_dummies, MultiIndex
 
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special
@@ -2163,7 +2163,20 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params' : base._missing_param_doc}
+    """ % {'extra_params': base._missing_param_doc}
+
+    def __init__(self, endog, exog, **kwargs):
+        super(MNLogit, self).__init__(endog, exog, **kwargs)
+
+        # Override cov_names since multivariate model
+        yname = self.endog_names
+        ynames = self._ynames_map
+        ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
+        # use range below to ensure sortedness
+        ynames = [ynames[key] for key in range(int(self.J))]
+        idx = MultiIndex.from_product((ynames[1:], self.data.xnames),
+                                      names=(yname, None))
+        self.data.cov_names = idx
 
     def pdf(self, eXB):
         """
@@ -4051,7 +4064,8 @@ class MultinomialResults(DiscreteResults):
         self.J = model.J
         self.K = model.K
 
-    def _maybe_convert_ynames_int(self, ynames):
+    @staticmethod
+    def _maybe_convert_ynames_int(ynames):
         # see if they're integers
         issue_warning = False
         msg = ('endog contains values are that not int-like. Uses string '
@@ -4214,75 +4228,108 @@ class L1MultinomialResults(MultinomialResults):
 
 class OrderedResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
+
 
 class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
+
 
 class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(NegativeBinomialResultsWrapper,
                       NegativeBinomialResults)
 
+
 class GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
                       GeneralizedPoissonResults)
 
+
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
+
+
 wrap.populate_wrapper(PoissonResultsWrapper, PoissonResults)
+
 
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
+
 class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
+    # _methods = {
     #        "predict_prob" : "rows",
     #        }
-    #_wrap_methods = lm.wrap.union_dicts(
+    # _wrap_methods = lm.wrap.union_dicts(
     #                            lm.RegressionResultsWrapper._wrap_methods,
     #                            _methods)
+
+
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
+
 
 class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
                       L1NegativeBinomialResults)
 
+
 class L1GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1GeneralizedPoissonResultsWrapper,
                       L1GeneralizedPoissonResults)
 
+
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
-    _attrs = {"resid_dev" : "rows",
-              "resid_generalized" : "rows",
-              "resid_pearson" : "rows",
-              "resid_response" : "rows"
+    _attrs = {"resid_dev": "rows",
+              "resid_generalized": "rows",
+              "resid_pearson": "rows",
+              "resid_response": "rows"
               }
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
                                    _attrs)
+
+
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
+
 
 class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
 
+
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
-    _attrs = {"resid_misclassified" : "rows"}
+    _attrs = {"resid_misclassified": "rows"}
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
-            _attrs)
+                                   _attrs)
+    _methods = {'conf_int': 'multivariate_confint'}
+    _wrap_methods = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_methods,
+                                     _methods)
+
+
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
+
 
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)

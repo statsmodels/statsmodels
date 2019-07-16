@@ -13,6 +13,7 @@ from statsmodels.compat.python import (range, lrange, string_types,
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 import scipy.linalg
 import scipy.stats as stats
 
@@ -640,9 +641,8 @@ class VAR(TimeSeriesModel):
             self.data.xnames = (self.data.xnames[:k_trend] +
                                 x_names_to_add +
                                 self.data.xnames[k_trend:])
-        self.data.cov_names = ['.'.join((str(yn), str(xn)))
-                               for xn in self.data.xnames
-                               for yn in self.data.ynames]
+        self.data.cov_names = pd.MultiIndex.from_product((self.data.xnames,
+                                                          self.data.ynames))
         return self._estimate_var(lags, trend=trend)
 
     def _estimate_var(self, lags, offset=0, trend='c'):
@@ -2137,9 +2137,10 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
-    _methods = {}
+    _methods = {'conf_int': 'multivariate_confint'}
     _wrap_methods = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
+
 wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
