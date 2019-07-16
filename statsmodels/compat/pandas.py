@@ -3,7 +3,10 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion
 
 import pandas
-from pandas.util._decorators import cache_readonly, deprecate_kwarg
+try:
+    from pandas.util._decorators import cache_readonly, deprecate_kwarg
+except ImportError:
+    from pandas.util.decorators import cache_readonly, deprecate_kwarg
 
 
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',

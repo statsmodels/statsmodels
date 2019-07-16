@@ -44,3 +44,6 @@ The following Pull Requests were merged since the last release:
 * :pr:`5933`: MAINT: Fix test that fails with positive probability
 * :pr:`5935`: CLN: port parts of #5220
 * :pr:`5940`: MAINT: Fix linting failures
+* :pr:`5944`: BUG: Restore ResettableCache
+* :pr:`5951`: BUG: Fix mosaic plot with missing category
+
