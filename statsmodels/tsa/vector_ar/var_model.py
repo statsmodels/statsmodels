@@ -6,32 +6,31 @@ References
 ----------
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
-
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import (range, lrange, string_types,
                                        StringIO, iteritems)
-from statsmodels.compat.pandas import deprecate_kwarg
+
 from collections import defaultdict
 
 import numpy as np
-import scipy.stats as stats
 import scipy.linalg
+import scipy.stats as stats
 
+import statsmodels.base.wrapper as wrap
+from statsmodels.tsa.base.tsa_model import (TimeSeriesModel,
+                                            TimeSeriesResultsWrapper)
+import statsmodels.tsa.tsatools as tsa
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly, deprecated_alias
+from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
+from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
     CausalityTestResults, NormalityTestResults, WhitenessTestResults
-
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
-
-import statsmodels.tsa.tsatools as tsa
-from statsmodels.tsa.vector_ar import output, plotting, util
-import statsmodels.tsa.base.tsa_model as tsbase
-import statsmodels.base.wrapper as wrap
 
 
 # -------------------------------------------------------------------------------
@@ -495,7 +494,7 @@ class LagOrderResults:
 # VARProcess class: for known or unknown VAR process
 
 
-class VAR(tsbase.TimeSeriesModel):
+class VAR(TimeSeriesModel):
     r"""
     Fit VAR(p) process and do lag order selection
 
@@ -641,7 +640,9 @@ class VAR(tsbase.TimeSeriesModel):
             self.data.xnames = (self.data.xnames[:k_trend] +
                                 x_names_to_add +
                                 self.data.xnames[k_trend:])
-
+        self.data.cov_names = ['.'.join((str(yn), str(xn)))
+                               for xn in self.data.xnames
+                               for yn in self.data.ynames]
         return self._estimate_var(lags, trend=trend)
 
     def _estimate_var(self, lags, offset=0, trend='c'):
@@ -1347,7 +1348,6 @@ class VARResults(VARProcess):
         """
         return self.sigma_u * self.df_resid / self.nobs
 
-    @cache_readonly
     def cov_params(self):
         """Estimated variance-covariance of model coefficients
 
@@ -1359,19 +1359,8 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
-        import warnings
-        warnings.warn("For consistency with other statmsodels models, "
-                      "starting in version 0.11.0 `VARResults.cov_params` "
-                      "will be a method instead of a property.",
-                      category=FutureWarning)
         z = self.endog_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
-
-    def _cov_params(self):
-        """Wrapper to avoid FutureWarning.  Remove after 0.11"""
-        import warnings
-        with warnings.catch_warnings(record=True):
-            return self.cov_params
 
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
@@ -1405,7 +1394,8 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self._cov_params()[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
+        kn = self.k_exog * self.neqs
+        return self.cov_params()[kn:, kn:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1427,7 +1417,7 @@ class VARResults(VARProcess):
     def stderr(self):
         """Standard errors of coefficients, reshaped to match in size
         """
-        stderr = np.sqrt(np.diag(self._cov_params()))
+        stderr = np.sqrt(np.diag(self.cov_params()))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1829,7 +1819,7 @@ class VARResults(VARProcess):
 
         # Lütkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self._cov_params(), C.T))
+        middle = scipy.linalg.inv(chain_dot(C, self.cov_params(), C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
@@ -2145,12 +2135,11 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'tvalues': 'columns_eq', 'sigma_u': 'cov_eq',
               'sigma_u_mle': 'cov_eq',
               'stderr': 'columns_eq'}
-    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+    _wrap_attrs = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
     _methods = {}
-    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+    _wrap_methods = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-    _wrap_methods.pop('cov_params')  # not yet a method in VARResults
 wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 

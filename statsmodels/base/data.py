@@ -53,6 +53,7 @@ class ModelData(object):
     appropriate form
     """
     _param_names = None
+    _cov_names = None
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
@@ -350,6 +351,24 @@ class ModelData(object):
     def param_names(self, values):
         self._param_names = values
 
+    @property
+    def cov_names(self):
+        """
+        Labels for covariance matrices
+
+        In multidimensional models, each dimension of a covariance matrix
+        differs from the number of param_names.
+
+        If not set, returns param_names
+        """
+        # for handling names of covariance names in multidimensional models
+        return self._cov_names or self.param_names
+
+    @cov_names.setter
+    def cov_names(self, value):
+        # for handling names of covariance names in multidimensional models
+        self._cov_names = value
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog
@@ -531,8 +550,7 @@ class PandasData(ModelData):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
-        return DataFrame(result, index=self.param_names,
-                         columns=self.param_names)
+        return DataFrame(result, index=self.cov_names, columns=self.cov_names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
