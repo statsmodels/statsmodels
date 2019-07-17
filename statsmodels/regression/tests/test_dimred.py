@@ -61,6 +61,98 @@ def test_poisson():
         assert_equal(np.abs(q) > 0.95, True)
 
 
+def test_sir_regularized_numdiff():
+
+    np.random.seed(93482)
+
+    n = 1000
+    p = 10
+    xmat = np.random.normal(size=(n, p))
+    y1 = np.dot(xmat, np.linspace(-1, 1, p))
+    y2 = xmat.sum(1)
+    y = y2 / (1 + y1**2) + np.random.normal(size=n)
+    model = SlicedInverseReg(y, xmat)
+    rslt = model.fit()
+
+    fmat = np.zeros((p-2, p))
+    for i in range(p-2):
+        fmat[i, i:i+3] = [1, -2, 1]
+
+    rslt2 = model.fit_regularized(2, 3*fmat)
+
+    # Compare the gradients to the numerical derivatives
+    for k in range(5):
+        pa = np.random.normal(size=(p, 2))
+        pa, _, _ = np.linalg.svd(pa, 0)
+        gn = approx_fprime(pa.ravel(), model._regularized_objective, 1e-7)
+        gr = model._regularized_grad(pa.ravel())
+        assert_allclose(gn, gr, atol=1e-5, rtol=1e-4)
+
+def test_sir_regularized_1d():
+    # Compare regularized SIR to traditional SIR, in a setting where the regularization
+    # is compatiable with the true parameters (i.e. there is no regulariation bias).
+
+    np.random.seed(93482)
+
+    n = 1000
+    p = 10
+    xmat = np.random.normal(size=(n, p))
+    y = np.dot(xmat[:, 0:4], np.r_[1, 1, -1, -1]) + np.random.normal(size=n)
+    model = SlicedInverseReg(y, xmat)
+    rslt = model.fit()
+
+    # The penalty drives p[0] ~ p[1] and p[2] ~ p[3]]
+    fmat = np.zeros((2, p))
+    fmat[0, 0:2] = [1, -1]
+    fmat[1, 2:4] = [1, -1]
+
+    rslt2 = model.fit_regularized(1, 3*fmat)
+
+    pa0 = np.zeros(p)
+    pa0[0:4] = [1, 1, -1, -1]
+    pa1 = rslt.params[:, 0]
+    pa2 = rslt2.params[:, 0:2]
+
+    # Compare two 1d subspaces
+    def sim(x, y):
+        x = x / np.sqrt(np.sum(x * x))
+        y = y / np.sqrt(np.sum(y * y))
+        return 1 - np.abs(np.dot(x, y))
+
+    # Regularized SIRshould be closer to the truth than traditional SIR
+    assert_equal(sim(pa0, pa1) > sim(pa0, pa2), True)
+
+    # Regularized SIR should be close to the truth
+    assert_equal(sim(pa0, pa2) < 1e-3, True)
+
+    # Regularized SIR should have a smaller penalty value than traditional SIR
+    assert_equal(np.sum(np.dot(fmat, pa1)**2) > np.sum(np.dot(fmat, pa2)**2), True)
+
+def test_sir_regularized_2d():
+    # Compare regularized SIR to traditional SIR when there is no penalty.
+    # The two procedures should agree exactly.
+
+    np.random.seed(93482)
+
+    n = 1000
+    p = 10
+    xmat = np.random.normal(size=(n, p))
+    y1 = np.dot(xmat[:, 0:4], np.r_[1, 1, -1, -1])
+    y2 = np.dot(xmat[:, 4:8], np.r_[1, 1, -1, -1])
+    y = y1 + np.arctan(y2) + np.random.normal(size=n)
+    model = SlicedInverseReg(y, xmat)
+    rslt1 = model.fit()
+
+    fmat = np.zeros((1, p))
+
+    for d in 1, 2, 3, 4:
+        rslt2 = model.fit_regularized(d, fmat)
+        pa1 = rslt1.params[:, 0:d]
+        pa1, _, _ = np.linalg.svd(pa1, 0)
+        pa2 = rslt2.params
+        u, s, vt = np.linalg.svd(np.dot(pa1.T, pa2))
+        assert_allclose(np.sum(s), d, atol=1e-1, rtol=1e-1)
+
 def test_covreduce():
 
     np.random.seed(34324)
