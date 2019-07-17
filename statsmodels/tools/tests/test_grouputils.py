@@ -1,16 +1,14 @@
-
 import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
 from pandas.util import testing as tm
+import pytest
 from scipy import sparse
 
-from statsmodels.tools.grouputils import (
-    dummy_sparse,
-    Grouping, Group, combine_indices, group_sums)
+from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
+                                          combine_indices, group_sums)
 from statsmodels.tools.tools import categorical
 from statsmodels.datasets import grunfeld, anes96
-import pytest
 
 
 class CheckGrouping(object):
@@ -60,10 +58,6 @@ class CheckGrouping(object):
         np.testing.assert_array_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, np.ndarray))
 
-    # FIXME: dont leave commented-out
-    #@pytest.mark.xfail(condition=PY37,
-    #                   reason='Unexplained conversion to complex on Python 3.7',
-    #                   strict=True)
     def test_transform_dataframe(self):
         names = self.data.index.names
         transformed_dataframe = self.grouping.transform_dataframe(
@@ -84,10 +78,6 @@ class CheckGrouping(object):
             np.testing.assert_array_equal(transformed_dataframe,
                                           expected.values)
 
-    # FIXME: dont leave commented-out
-    #@pytest.mark.xfail(condition=PY37,
-    #                   reason='Unexplained conversion to complex on Python 3.7',
-    #                   strict=True)
     def test_transform_array(self):
         names = self.data.index.names
         transformed_array = self.grouping.transform_array(

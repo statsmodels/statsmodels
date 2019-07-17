@@ -1,4 +1,4 @@
-from statsmodels.compat.python import iteritems, StringIO, PY3
+from statsmodels.compat.python import iteritems, StringIO
 import warnings
 
 from statsmodels.formula.api import ols
@@ -220,6 +220,6 @@ def test_predict_nondataframe():
 
     model = ols('Absorbance ~ BSA', data=df)
     fit = model.fit()
-    error = patsy.PatsyError if PY3 else TypeError
+    error = patsy.PatsyError
     with pytest.raises(error):
         fit.predict([0.25])

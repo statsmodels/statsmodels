@@ -11,8 +11,8 @@ numpy.lib.io
 """
 import warnings
 
-from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
-                                       asbytes, asstr, range, PY3)
+from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types,
+                                       long, lfilter, asbytes, asstr, range)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -396,22 +396,15 @@ class StataReader(object):
             self._file.seek(loc)
         return self._next()
 
-    ### Private methods
+    # Private methods
 
     def _null_terminate(self, s, encoding):
-        if PY3: # have bytes not strings, so must decode
-            null_byte = asbytes('\x00')
-            try:
-                s = s.lstrip(null_byte)[:s.index(null_byte)]
-            except:
-                pass
-            return s.decode(encoding)
-        else:
-            null_byte = asbytes('\x00')
-            try:
-                return s.lstrip(null_byte)[:s.index(null_byte)]
-            except:
-                return s
+        null_byte = asbytes('\x00')
+        try:
+            s = s.lstrip(null_byte)[:s.index(null_byte)]
+        except Exception:
+            pass
+        return s.decode(encoding)
 
     def _parse_header(self, file_object):
         self._file = file_object
@@ -939,18 +932,14 @@ class StataWriter(object):
                         var = MISSING_VALUES[typ]
                     self._write(pack(byteorder+TYPE_MAP[typ], var))
 
-
     def _null_terminate(self, s, encoding):
         null_byte = '\x00'
-        if PY3:
-            s += null_byte
-            return s.encode(encoding)
-        else:
-            s += null_byte
-            return s
+        s += null_byte
+        return s.encode(encoding)
+
 
 def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
-                convert_dates=True):
+               convert_dates=True):
     """
     Returns an ndarray or DataFrame from a Stata .dta file.
 
@@ -1023,22 +1012,23 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
                 i = col
                 col = data.columns[col]
                 data[col] = data[col].apply(_stata_elapsed_date_to_datetime,
-                        args=(fmtlist[i],))
+                                            args=(fmtlist[i],))
     elif convert_dates:
-        #date_cols = np.where(map(lambda x : x in _date_formats,
+        # date_cols = np.where(map(lambda x : x in _date_formats,
         #                                                    fmtlist))[0]
         # make the dtype for the datetime types
-        cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
+        cols = np.where(lmap(lambda x: x in _date_formats, fmtlist))[0]
         dtype = data.dtype.descr
         dtype = [(sub_dtype[0], object) if i in cols else sub_dtype
-                  for i, sub_dtype in enumerate(dtype)]
-        data = data.astype(dtype) # have to copy
+                 for i, sub_dtype in enumerate(dtype)]
+        data = data.astype(dtype)  # have to copy
         for col in cols:
             def convert(x):
                 return _stata_elapsed_date_to_datetime(x, fmtlist[col])
             data[data.dtype.names[col]] = lmap(convert,
-                                              data[data.dtype.names[col]])
+                                               data[data.dtype.names[col]])
     return data
+
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     """

@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-from statsmodels.compat import PY3
-
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -189,8 +187,8 @@ def test_structural():
     # Fixed intercept
     # (in practice this is a deterministic constant, because an irregular
     #  component must be added)
-    warning = SpecificationWarning if PY3 else None
-    match = 'irregular component added' if PY3 else None
+    warning = SpecificationWarning
+    match = 'irregular component added'
     with pytest.warns(warning, match=match):
         mod = structural.UnobservedComponents([0], 'fixed intercept')
     actual = mod.simulate([1.], nobs, measurement_shocks=eps,
@@ -220,8 +218,8 @@ def test_structural():
     # Fixed slope
     # (in practice this is a deterministic trend, because an irregular
     #  component must be added)
-    warning = SpecificationWarning if PY3 else None
-    match = 'irregular component added' if PY3 else None
+    warning = SpecificationWarning
+    match = 'irregular component added'
     with pytest.warns(warning, match=match):
         mod = structural.UnobservedComponents([0], 'fixed slope')
     actual = mod.simulate([1., 1.], nobs, measurement_shocks=eps,
@@ -361,8 +359,8 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) - single series
-    warning = EstimationWarning if PY3 else None
-    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    warning = EstimationWarning
+    match = r'VARMA\(p,q\) models is not'
     with pytest.warns(warning, match=match):
         mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
@@ -373,8 +371,8 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
-    warning = EstimationWarning if PY3 else None
-    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    warning = EstimationWarning
+    match = r'VARMA\(p,q\) models is not'
     with pytest.warns(warning, match=match):
         mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
@@ -435,8 +433,8 @@ def test_varmax():
 
     # VARMA(2, 2) + trend + exog
     # TODO: This is just a smoke test
-    warning = EstimationWarning if PY3 else None
-    match = r"VARMA\(p,q\) models is not" if PY3 else None
+    warning = EstimationWarning
+    match = r"VARMA\(p,q\) models is not"
     with pytest.warns(warning, match=match):
         mod = varmax.VARMAX(
             np.random.normal(size=(nobs, 2)), order=(2, 2), trend='c',

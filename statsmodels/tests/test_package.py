@@ -1,12 +1,8 @@
 import subprocess
 
-import pytest
-
-from statsmodels.compat import PY3
 from statsmodels.compat.platform import PLATFORM_WIN
 
 
-@pytest.mark.skipif(PLATFORM_WIN, reason="subprocess does not play nicely")
 def test_lazy_imports():
     # Check that when statsmodels.api is imported, matplotlib is _not_ imported
     cmd = ("import statsmodels.api as sm; "
@@ -15,7 +11,7 @@ def test_lazy_imports():
            "assert not mods, mods")
 
     # TODO: is there a cleaner way to do this import in an isolated environment
-    pyexe = 'python3' if PY3 else 'python'
+    pyexe = 'python3' if not PLATFORM_WIN else 'python'
     p = subprocess.Popen(pyexe + ' -c "' + cmd + '"',
                          shell=True, close_fds=True)
     p.wait()

@@ -4,10 +4,7 @@ Tests for impulse responses of time series
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from __future__ import division, absolute_import, print_function
-
-from statsmodels.compat import PY3
 
 import warnings
 
@@ -217,8 +214,8 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
-    warning = EstimationWarning if PY3 else None
-    match = r'VARMA\(p,q\) models is not' if PY3 else None
+    warning = EstimationWarning
+    match = r'VARMA\(p,q\) models is not'
     with pytest.warns(warning, match=match):
         mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')

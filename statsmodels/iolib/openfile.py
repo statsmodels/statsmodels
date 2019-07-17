@@ -2,7 +2,6 @@
 Handle file opening for read/write
 """
 from numpy.lib._iotools import _is_string_like
-from statsmodels.compat.python import PY3
 
 
 class EmptyContextManager(object):
@@ -25,20 +24,12 @@ class EmptyContextManager(object):
         return getattr(self._obj, name)
 
 
-if PY3:
-    def _open(fname, mode, encoding):
-        if fname.endswith('.gz'):
-            import gzip
-            return gzip.open(fname, mode, encoding=encoding)
-        else:
-            return open(fname, mode, encoding=encoding)
-else:
-    def _open(fname, mode, encoding):
-        if fname.endswith('.gz'):
-            import gzip
-            return gzip.open(fname, mode)
-        else:
-            return open(fname, mode)
+def _open(fname, mode, encoding):
+    if fname.endswith('.gz'):
+        import gzip
+        return gzip.open(fname, mode, encoding=encoding)
+    else:
+        return open(fname, mode, encoding=encoding)
 
 
 def get_file_obj(fname, mode='r', encoding=None):

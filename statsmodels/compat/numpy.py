@@ -44,10 +44,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .python import PY3
-
 NP_LT_114 = LooseVersion(np.__version__) < LooseVersion('1.14')
-NP_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
@@ -66,18 +63,7 @@ def recarray_select(recarray, fields):
         recarray = DataFrame.from_records(recarray)
         selection = recarray[fields].to_records(index=False)
 
-    _bytelike_dtype_names(selection)
     return selection
-
-
-def _bytelike_dtype_names(arr):
-    # See # 3658
-    if not PY3:
-        dtype = arr.dtype
-        names = dtype.names
-        names = [bytes(name) if isinstance(name, unicode)  # noqa:F821
-                 else name for name in names]
-        dtype.names = names
 
 
 def lstsq(a, b, rcond=None):

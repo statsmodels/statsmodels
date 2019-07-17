@@ -25,9 +25,8 @@ TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X               
 TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  bfgs
 TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
-"""
+"""  # noqa: E501
 from __future__ import division
-from statsmodels.compat.python import PY3
 
 import warnings
 
@@ -779,7 +778,7 @@ def test_warnings_raised():
     cov_kwds = {'groups': gid, 'use_correction': False}
 
     # Work around for buggy pytest repeated warning capture on Python 2.7
-    warning_type = SpecificationWarning if PY3 else None
+    warning_type = SpecificationWarning
     with pytest.warns(warning_type):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), freq_weights=weights
