@@ -189,7 +189,7 @@ class HuberT(RobustNorm):
         Huber's T is defined piecewise over the range for z
         """
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.t)
+        return np.less_equal(np.abs(z), self.t)
 
     def rho(self, z):
         r"""
@@ -210,7 +210,7 @@ class HuberT(RobustNorm):
         z = np.asarray(z)
         test = self._subset(z)
         return (test * 0.5 * z**2 +
-                (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
+                (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
         r"""
@@ -254,7 +254,7 @@ class HuberT(RobustNorm):
         """
         z = np.asarray(z)
         test = self._subset(z)
-        absz = np.fabs(z)
+        absz = np.abs(z)
         absz[test] = 1.0
         return test + (1 - test) * self.t / absz
 
@@ -266,10 +266,10 @@ class HuberT(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-        return np.less_equal(np.fabs(z), self.t)
+        return np.less_equal(np.abs(z), self.t)
 
 
-#TODO: untested, but looks right.  RamsayE not available in R or SAS?
+# TODO: untested, but looks right.  RamsayE not available in R or SAS?
 class RamsayE(RobustNorm):
     """
     Ramsay's Ea for M estimation.
@@ -303,8 +303,8 @@ class RamsayE(RobustNorm):
             rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
         """
         z = np.asarray(z)
-        return (1 - np.exp(-self.a * np.fabs(z)) *
-                (1 + self.a * np.fabs(z))) / self.a**2
+        return (1 - np.exp(-self.a * np.abs(z)) *
+                (1 + self.a * np.abs(z))) / self.a**2
 
     def psi(self, z):
         r"""
@@ -323,7 +323,7 @@ class RamsayE(RobustNorm):
             psi(z) = z*exp(-a*\|z\|)
         """
         z = np.asarray(z)
-        return z * np.exp(-self.a * np.fabs(z))
+        return z * np.exp(-self.a * np.abs(z))
 
     def weights(self, z):
         r"""
@@ -343,7 +343,7 @@ class RamsayE(RobustNorm):
         """
 
         z = np.asarray(z)
-        return np.exp(-self.a * np.fabs(z))
+        return np.exp(-self.a * np.abs(z))
 
     def psi_deriv(self, z):
         """
@@ -353,9 +353,12 @@ class RamsayE(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-
-        return np.exp(-self.a * np.fabs(z)) + z**2*\
-                np.exp(-self.a*np.fabs(z))*-self.a/np.fabs(z)
+        a = self.a
+        x = np.exp(-a * np.abs(z))
+        dx = -a * x * np.sign(z)
+        y = z
+        dy = 1
+        return x * dy + y * dx
 
 
 class AndrewWave(RobustNorm):
@@ -381,7 +384,7 @@ class AndrewWave(RobustNorm):
         Andrew's wave is defined piecewise over the range of z.
         """
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.a * np.pi)
+        return np.less_equal(np.abs(z), self.a * np.pi)
 
     def rho(self, z):
         r"""
@@ -451,7 +454,16 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return test * np.sin(z / a) / (z / a)
+        ratio = z / a
+        small = np.abs(ratio) < np.finfo(np.double).eps
+        if np.any(small):
+            weights = np.ones_like(ratio)
+            large = ~small
+            ratio = ratio[large]
+            weights[large] = test[large] * np.sin(ratio) / ratio
+        else:
+            weights = test * np.sin(ratio) / ratio
+        return weights
 
     def psi_deriv(self, z):
         """
@@ -491,7 +503,7 @@ class TrimmedMean(RobustNorm):
         """
 
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.c)
+        return np.less_equal(np.abs(z), self.c)
 
     def rho(self, z):
         r"""
@@ -599,7 +611,7 @@ class Hampel(RobustNorm):
         """
         Hampel's function is defined piecewise over the range of z
         """
-        z = np.fabs(np.asarray(z))
+        z = np.abs(np.asarray(z))
         t1 = np.less_equal(z, self.a)
         t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
         t3 = np.less_equal(z, self.c) * np.greater(z, self.b)
@@ -626,7 +638,7 @@ class Hampel(RobustNorm):
             rho(z) = a*(b + c - a)                  for \|z\| > c
         """
 
-        z = np.fabs(z)
+        z = np.abs(z)
         a = self.a
         b = self.b
         c = self.c
@@ -665,7 +677,7 @@ class Hampel(RobustNorm):
         c = self.c
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
-        z = np.fabs(z)
+        z = np.abs(z)
         v = s * (t1 * z +
                  t2 * a*s +
                  t3 * a*s * (c - z) / (c - b))
@@ -699,15 +711,25 @@ class Hampel(RobustNorm):
         b = self.b
         c = self.c
         t1, t2, t3 = self._subset(z)
-        v = (t1 +
-            t2 * a/np.fabs(z) +
-            t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
-        v[np.where(np.isnan(v))]=1. # for some reason 0 returns a nan?
+
+        v = np.zeros_like(z)
+        v[t1] = 1.0
+        abs_z = np.abs(z)
+        v[t2] = a / abs_z[t2]
+        abs_zt3 = abs_z[t3]
+        v[t3] = a * (c - abs_zt3) / (abs_zt3 * (c - b))
+        v[np.where(np.isnan(v))] = 1.  # for some reason 0 returns a nan?
         return v
 
     def psi_deriv(self, z):
         t1, t2, t3 = self._subset(z)
-        return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
+        a, b, c = self.a, self.b, self.c
+        # default is t1
+        d = np.zeros_like(z)
+        d[t1] = 1.0
+        zt3 = z[t3]
+        d[t3] = (a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+        return d
 
 
 class TukeyBiweight(RobustNorm):
@@ -733,7 +755,7 @@ class TukeyBiweight(RobustNorm):
         """
         Tukey's biweight is defined piecewise over the range of z
         """
-        z = np.fabs(np.asarray(z))
+        z = np.abs(np.asarray(z))
         return np.less_equal(z, self.c)
 
     def rho(self, z):
@@ -856,7 +878,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     for iter in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
-        if np.alltrue(np.less(np.fabs(mu - nmu), scale * tol)):
+        if np.alltrue(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu

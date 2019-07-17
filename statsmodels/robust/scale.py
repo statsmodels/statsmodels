@@ -42,7 +42,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     a = np.asarray(a)
     if callable(center):
         center = np.apply_over_axes(center, a, axis)
-    return np.median((np.fabs(a-center))/c, axis=axis)
+    return np.median((np.abs(a-center))/c, axis=axis)
 
 
 class Huber(object):
@@ -157,16 +157,18 @@ class Huber(object):
                 nmu = mu.squeeze()
             nmu = tools.unsqueeze(nmu, axis, a.shape)
 
-            subset = np.less_equal(np.fabs((a - mu)/scale), self.c)
+            subset = np.less_equal(np.abs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
-            nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
-                    / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
+            nscale = np.sqrt(np.sum(subset * (a - nmu) ** 2, axis)
+                             / (n * self.gamma -
+                                (a.shape[axis] - card) * self.c ** 2))
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),
-                        nscale * self.tol))
-            test2 = np.alltrue(np.less_equal(np.fabs(mu - nmu), nscale*self.tol))
+            test1 = np.alltrue(np.less_equal(np.abs(scale - nscale),
+                                             nscale * self.tol))
+            test2 = np.alltrue(
+                np.less_equal(np.abs(mu - nmu), nscale * self.tol))
             if not (test1 and test2):
                 mu = nmu
                 scale = nscale
@@ -219,21 +221,28 @@ class HuberScale(object):
         self.maxiter = maxiter
 
     def __call__(self, df_resid, nobs, resid):
-        h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
-                    Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
-                    np.exp(-.5*self.d**2))
+        h = (df_resid) / nobs * (self.d ** 2 + (1 - self.d ** 2) *
+                                 Gaussian.cdf(self.d) - .5 - self.d / (
+                                     np.sqrt(2 * np.pi)) *
+                                 np.exp(-.5 * self.d ** 2))
         s = mad(resid)
-        subset = lambda x: np.less(np.fabs(resid/x),self.d)
-        chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
-        scalehist = [np.inf,s]
+
+        def subset(x):
+            return np.less(np.abs(resid / x), self.d)
+
+        def chi(s):
+            return subset(s) * (resid / s) ** 2 / 2 + (1 - subset(s)) * \
+                   (self.d ** 2 / 2)
+
+        scalehist = [np.inf, s]
         niter = 1
-        while (np.abs(scalehist[niter-1] - scalehist[niter])>self.tol \
-                and niter < self.maxiter):
-            nscale = np.sqrt(1/(nobs*h)*np.sum(chi(scalehist[-1]))*\
-                    scalehist[-1]**2)
+        while (np.abs(scalehist[niter - 1] - scalehist[niter]) > self.tol
+               and niter < self.maxiter):
+            nscale = np.sqrt(1 / (nobs * h) * np.sum(chi(scalehist[-1])) *
+                             scalehist[-1] ** 2)
             scalehist.append(nscale)
             niter += 1
-            #if niter == self.maxiter:
+            # if niter == self.maxiter:
             #    raise ValueError("Huber's scale failed to converge")
         return scalehist[-1]
 

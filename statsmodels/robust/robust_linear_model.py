@@ -17,6 +17,7 @@ import numpy as np
 import scipy.stats as stats
 
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 import statsmodels.regression.linear_model as lm
 import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
@@ -28,7 +29,7 @@ __all__ = ['RLM']
 
 
 def _check_convergence(criterion, iteration, tol, maxiter):
-    cond = np.fabs(criterion[iteration] - criterion[iteration - 1])
+    cond = np.abs(criterion[iteration] - criterion[iteration - 1])
     return not (np.any(cond > tol) and iteration < maxiter)
 
 
@@ -140,7 +141,7 @@ class RLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array_like, optional after fit has been called
+        params : array_like
             Parameters of a linear model
         exog : array_like, optional.
             Design / exogenous data. Model exog is used if None.
@@ -148,10 +149,6 @@ class RLM(base.LikelihoodModel):
         Returns
         -------
         An array of fitted values
-
-        Notes
-        -----
-        If the model as not yet been fit, params is not optional.
         """
         # copied from linear_model
         if exog is None:
@@ -240,8 +237,8 @@ class RLM(base.LikelihoodModel):
 
         Returns
         -------
-        results : object
-            statsmodels.rlm.RLMresults
+        results : statsmodels.rlm.RLMresults
+            Results instance
         """
         if cov.upper() not in ["H1", "H2", "H3"]:
             raise ValueError("Covariance matrix %s not understood" % cov)
@@ -286,6 +283,12 @@ class RLM(base.LikelihoodModel):
         iteration = 1
         converged = 0
         while not converged:
+            if self.scale == 0.0:
+                import warnings
+                warnings.warn('Estimated scale is 0.0 indicating that the most'
+                              ' last iteration produced a perfect fit of the '
+                              'weighted data.', ConvergenceWarning)
+                break
             self.weights = self.M.weights(wls_results.resid / self.scale)
             wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
                                                 weights=self.weights,
@@ -347,7 +350,7 @@ class RLMResults(base.LikelihoodModelResults):
         errors are taken from the robust covariance matrix specified in the
         argument to fit.
     chisq : array
-        An array of the chi-squared values of the paramter estimates.
+        An array of the chi-squared values of the parameter estimates.
     df_model
         See RLM.df_model
     df_resid
@@ -419,6 +422,10 @@ class RLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def sresid(self):
+        if self.scale == 0.0:
+            sresid = self.resid.copy()
+            sresid[:] = 0.0
+            return sresid
         return self.resid / self.scale
 
     @cache_readonly
