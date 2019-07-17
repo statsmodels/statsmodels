@@ -63,8 +63,12 @@ class TestMad(object):
         assert_equal(m.shape, (10,))
 
     def test_mad_empty(self):
-        empty = np.asarray([])
-        assert_equal(np.isnan(empty)[0],True)
+        empty = np.empty(0)
+        assert np.isnan(scale.mad(empty))
+        empty = np.empty((10, 100, 0))
+        assert_equal(scale.mad(empty, axis=1), np.empty((10, 0)))
+        empty = np.empty((100, 100, 0, 0))
+        assert_equal(scale.mad(empty, axis=-1), np.empty((100, 100, 0)))
 
     def test_mad_center(self):
         n = scale.mad(self.X, center=0)

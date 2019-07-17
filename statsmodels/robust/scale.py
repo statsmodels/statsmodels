@@ -13,6 +13,7 @@ import numpy as np
 from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
+from statsmodels.tools.validation import array_like, float_like
 
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
@@ -39,12 +40,14 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     mad : float
         `mad` = median(abs(`a` - center))/`c`
     """
-    if a.size == 0:
-        return np.array([np.nan])
-    a = np.asarray(a)
-    if callable(center):
+    a = array_like(a, 'a', ndim=None)
+    c = float_like(c, 'c')
+    if callable(center) and a.size:
         center = np.apply_over_axes(center, a, axis)
-    return np.median((np.abs(a-center))/c, axis=axis)
+    else:
+        center = 0.0
+
+    return np.median((np.abs(a-center)) / c, axis=axis)
 
 
 class Huber(object):
