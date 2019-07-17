@@ -129,6 +129,7 @@ class SlicedInverseReg(_DimReductionRegression):
         Q = np.dot(covxa.T, covxa)
         Qi = np.linalg.inv(Q)
         jm = np.zeros((p, ndim))
+        qcv = np.linalg.solve(Q, covxa.T)
 
         ft = [None] * (p * ndim)
         for q in range(p):
@@ -138,7 +139,7 @@ class SlicedInverseReg(_DimReductionRegression):
                 umat = np.dot(covx2a.T, jm)
                 umat += umat.T
                 umat = -np.dot(Qi, np.dot(umat, Qi))
-                fmat = np.dot(np.dot(covx, jm), np.linalg.solve(Q, covxa.T))
+                fmat = np.dot(np.dot(covx, jm), qcv)
                 fmat += np.dot(covxa, np.dot(umat, covxa.T))
                 fmat += np.dot(covxa, np.linalg.solve(Q, np.dot(jm.T, covx)))
                 ft[q*ndim + r] = fmat
@@ -156,7 +157,7 @@ class SlicedInverseReg(_DimReductionRegression):
         return gr.ravel()
 
     def fit_regularized(self, ndim=1, pen_mat=None, slice_n=20, maxiter=100,
-                        gtol=1e-5, **kwargs):
+                        gtol=1e-3, **kwargs):
         """
         Estimate the EDR space using regularized SIR.
 
@@ -185,9 +186,10 @@ class SlicedInverseReg(_DimReductionRegression):
         Notes
         -----
         If the covariates (rows of exog) are equally-spaced sequential
-        values, then setting the rows of `pen_mat` to [[1, -1, 1, ...],
+        values, then setting the rows of `pen_mat` to [[1, -2, 1, ...],
         [0, 1, -2, 1, ..], ...] will give smooth EDR coefficients.  This
-        is a form of "functional SIR".
+        is a form of "functional SIR" using the squared second derivative
+        as a penalty.
         """
 
         if len(kwargs) > 0:
@@ -252,7 +254,7 @@ class SlicedInverseReg(_DimReductionRegression):
 
 class PrincipalHessianDirections(_DimReductionRegression):
     """
-    Principal Hessian Directions
+    Principal Hessian Directions (PHD)
 
     Parameters
     ----------
@@ -260,6 +262,11 @@ class PrincipalHessianDirections(_DimReductionRegression):
         The dependent variable
     exog : array_like (2d)
         The covariates
+
+    Returns
+    -------
+    A model instance.  Call `fit` to obtain a results instance,
+    from which the estimated parameters can be obtained.
 
     References
     ----------
@@ -278,6 +285,11 @@ class PrincipalHessianDirections(_DimReductionRegression):
             If True, use least squares regression to remove the
             linear relationship between each covariate and the
             response, before conducting PHD.
+
+        Returns
+        -------
+        A results instance which can be used to access the estimated
+        parameters.
         """
 
         resid = kwargs.get("resid", False)
@@ -316,7 +328,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
     exog : array_like (2d)
         The covariates
     bc : bool, optional
-        If True, use the bias-correctedCSAVE method of Li and Zhu.
+        If True, use the bias-corrected CSAVE method of Li and Zhu.
 
     References
     ----------
@@ -405,6 +417,14 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 class DimReductionResults(model.Results):
     """
     Results class for a dimension reduction regression.
+
+    Notes
+    -----
+    The `params` attribute is a matrix whose columns span
+    the effective dimension reduction (EDR) space.  Some
+    methods produce a corresponding set of eigenvalues
+    (`eigs`) that indicate how much information is contained
+    in each basis direction.
     """
 
     def __init__(self, model, params, eigs):
@@ -469,6 +489,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     for _ in range(maxiter):
 
+        # Project the gradient to the tangent space
         g = grad(params)
         g -= np.dot(g, params) * params / np.dot(params, params)
 
@@ -484,11 +505,11 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
         def geo(t):
             # Parameterize the geodesic path in the direction
-            # of the gradient as a function of t (real).
+            # of the gradient as a function of a real value t.
             pa = pa0 * np.cos(s * t) + u * np.sin(s * t)
             return np.dot(pa, vt).ravel()
 
-        # Try to find an uphill step along the geodesic path.
+        # Try to find a downhill step along the geodesic path.
         step = 2.
         while step > 1e-10:
             pa = geo(-step)
@@ -519,9 +540,8 @@ class CovarianceReduction(_DimReductionRegression):
 
     Returns
     -------
-    An orthogonal matrix P such that replacing each group's
-    covariance matrix C with P'CP optimally preserves the
-    differences among these matrices.
+    A model instance.  Call `fit` on the model instance to obtain
+    a results instance, which contains the fitted model parameters.
 
     Notes
     -----
@@ -531,8 +551,8 @@ class CovarianceReduction(_DimReductionRegression):
     C_j | P'C_jP are equal in distribution for all i, j, where
     the C_i are the within-group covariance matrices.
 
-    The model and methodology are as described in Cook and Forzani,
-    but the optimization method follows Edelman et. al.
+    The model and methodology are as described in Cook and Forzani.
+    The optimization method follows Edelman et. al.
 
     References
     ----------
@@ -637,7 +657,8 @@ class CovarianceReduction(_DimReductionRegression):
 
         Returns
         -------
-        An orthogonal p x d matrix P that optimizes the likelihood.
+        A results instance that can be used to access the
+        fitted parameters.
         """
 
         p = self.covm.shape[0]
@@ -651,6 +672,8 @@ class CovarianceReduction(_DimReductionRegression):
         else:
             params = start_params
 
+        # _grass_opt is designed for minimization, we are doing maximization
+        # here so everything needs to be flipped.
         params, llf, cnvrg = _grass_opt(params, lambda x: -self.loglike(x),
                                         lambda x: -self.score(x), maxiter,
                                         gtol)

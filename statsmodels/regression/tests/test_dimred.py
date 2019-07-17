@@ -62,6 +62,8 @@ def test_poisson():
 
 
 def test_sir_regularized_numdiff():
+    # Use numeric gradients to check the analytic gradient
+    # for the regularized SIRobjective function.
 
     np.random.seed(93482)
 
@@ -74,6 +76,7 @@ def test_sir_regularized_numdiff():
     model = SlicedInverseReg(y, xmat)
     _ = model.fit()
 
+    # Second difference penalty matrix.
     fmat = np.zeros((p-2, p))
     for i in range(p-2):
         fmat[i, i:i+3] = [1, -2, 1]
@@ -91,7 +94,7 @@ def test_sir_regularized_numdiff():
 
 def test_sir_regularized_1d():
     # Compare regularized SIR to traditional SIR, in a setting where the
-    # regularization is compatiable with the true parameters (i.e. there
+    # regularization is compatible with the true parameters (i.e. there
     # is no regularization bias).
 
     np.random.seed(93482)
@@ -154,7 +157,7 @@ def test_sir_regularized_2d():
         pa1 = rslt1.params[:, 0:d]
         pa1, _, _ = np.linalg.svd(pa1, 0)
         pa2 = rslt2.params
-        u, s, _ = np.linalg.svd(np.dot(pa1.T, pa2))
+        _, s, _ = np.linalg.svd(np.dot(pa1.T, pa2))
         assert_allclose(np.sum(s), d, atol=1e-1, rtol=1e-1)
 
 
