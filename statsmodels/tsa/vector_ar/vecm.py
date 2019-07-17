@@ -14,7 +14,6 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tools.testing import Holder
 from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -529,13 +528,12 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
 
 def coint_johansen(endog, det_order, k_ar_diff):
     """
-    Perform the Johansen cointegration test for determining the cointegration
-    rank of a VECM.
+    Johansen cointegration test of the cointegration rank of a VECM
 
     Parameters
     ----------
     endog : array_like (nobs_tot x neqs)
-        The data with presample.
+        Data to test
     det_order : int
         * -1 - no deterministic terms
         * 0 - constant term
@@ -545,54 +543,21 @@ def coint_johansen(endog, det_order, k_ar_diff):
 
     Returns
     -------
-    result : Holder
-        An object containing the results which can be accessed using
-        dot-notation. The object's attributes are
+    result : JohansenTestResult
+        An object containing the test's results. The most important attributes
+        of the result class are:
 
-        * eig: (neqs)
-
-          Eigenvalues.
-
-        * evec: (neqs x neqs)
-
-          Eigenvectors.
-
-        * lr1: (neqs)
-
-          Trace statistic.
-
-        * lr2: (neqs)
-
-          Maximum eigenvalue statistic.
-
-        * cvt: (neqs x 3)
-
-          Critical values (90%, 95%, 99%) for trace statistic.
-
-        * cvm: (neqs x 3)
-
-          Critical values (90%, 95%, 99%) for maximum eigenvalue
-          statistic.
-
-        * method: str
-          "johansen"
-
-        * r0t: (nobs x neqs)
-
-          Residuals for :math:`\\Delta Y`. See p. 292 in [1]_.
-
-        * rkt: (nobs x neqs)
-
-          Residuals for :math:`Y_{-1}`. See p. 292 in [1]_.
-
-        * ind: (neqs)
-
-          Order of eigenvalues.
+        * trace_stat and trace_stat_crit_vals
+        * max_eig_stat and max_eig_stat_crit_vals
 
     Notes
     -----
     The implementation might change to make more use of the existing VECM
     framework.
+
+    See Also
+    --------
+    statsmodels.tsa.vector_ar.vecm.select_coint_rank
 
     References
     ----------
@@ -684,20 +649,103 @@ def coint_johansen(endog, det_order, k_ar_diff):
         cvt[i, :] = c_sjt(neqs - i, det_order)
         aind[i] = i
 
-    result = Holder()
-    # estimation results, residuals
-    result.rkt = rkt
-    result.r0t = r0t
-    result.eig = a
-    result.evec = d
-    result.lr1 = lr1
-    result.lr2 = lr2
-    result.cvt = cvt
-    result.cvm = cvm
-    result.ind = aind
-    result.meth = 'johansen'
+    return JohansenTestResult(rkt, r0t, a, d, lr1, lr2, cvt, cvm, aind)
 
-    return result
+
+class JohansenTestResult(object):
+    """
+    Results class for Johansen's cointegration test
+
+    Notes
+    -----
+    See p. 292 in [1]_ for r0t and rkt
+
+    References
+    ----------
+    .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
+        Analysis. Springer.
+    """
+    def __init__(self, rkt, r0t, eig, evec, lr1, lr2, cvt, cvm, ind):
+        self._meth = 'johansen'
+        self._rkt = rkt
+        self._r0t = r0t
+        self._eig = eig
+        self._evec = evec
+        self._lr1 = lr1
+        self._lr2 = lr2
+        self._cvt = cvt
+        self._cvm = cvm
+        self._ind = ind
+
+    @property
+    def rkt(self):
+        """Residuals for :math:`Y_{-1}`"""
+        return self._rkt
+
+    @property
+    def r0t(self):
+        """Residuals for :math:`\\Delta Y`."""
+        return self._r0t
+
+    @property
+    def eig(self):
+        """Eigenvalues of VECM coefficient matrix"""
+        return self._eig
+
+    @property
+    def evec(self):
+        """Eigenvectors of VECM coefficient matrix"""
+        return self._evec
+
+    @property
+    def trace_stat(self):
+        """Trace statistic"""
+        return self._lr1
+
+    @property
+    def lr1(self):
+        """Trace statistic"""
+        return self._lr1
+
+    @property
+    def max_eig_stat(self):
+        """Maximum eigenvalue statistic"""
+        return self._lr2
+
+    @property
+    def lr2(self):
+        """Maximum eigenvalue statistic"""
+        return self._lr2
+
+    @property
+    def trace_stat_crit_vals(self):
+        """Critical values (90%, 95%, 99%) of trace statistic"""
+        return self._cvt
+
+    @property
+    def cvt(self):
+        """Critical values (90%, 95%, 99%) of trace statistic"""
+        return self._cvt
+
+    @property
+    def cvm(self):
+        """Critical values (90%, 95%, 99%) of maximum eigenvalue statistic."""
+        return self._cvm
+
+    @property
+    def max_eig_stat_crit_vals(self):
+        """Critical values (90%, 95%, 99%) of maximum eigenvalue statistic."""
+        return self._cvm
+
+    @property
+    def ind(self):
+        """Order of eigenvalues"""
+        return self._ind
+
+    @property
+    def meth(self):
+        """Test method"""
+        return self._meth
 
 
 class VECM(tsbase.TimeSeriesModel):
