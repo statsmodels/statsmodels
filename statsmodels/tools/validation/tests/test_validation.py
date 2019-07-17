@@ -1,8 +1,13 @@
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import (array_like, PandasWrapper, bool_like,
+                                          dict_like, float_like, int_like,
+                                          string_like)
+
 from statsmodels.tools.validation.validation import _right_squeeze
 
 
@@ -224,3 +229,136 @@ def test_wrap_pandas_append():
     wrapped = PandasWrapper(a).wrap(b, append='appended')
     expected = [c + '_appended' for c in a.columns]
     assert list(wrapped.columns) == expected
+
+
+class CustomDict(dict):
+    pass
+
+
+@pytest.fixture(params=(dict, OrderedDict, CustomDict, None))
+def dict_type(request):
+    return request.param
+
+
+def test_optional_dict_like(dict_type):
+    val = dict_type() if dict_type is not None else dict_type
+    out = dict_like(val, 'value', optional=True)
+    assert isinstance(out, type(val))
+
+
+def test_optional_dict_like_error():
+    match = r'value must be a dict or dict_like \(i.e., a Mapping\)'
+    with pytest.raises(TypeError, match=match):
+        dict_like([], 'value', optional=True)
+    with pytest.raises(TypeError, match=match):
+        dict_like({'a'}, 'value', optional=True)
+    with pytest.raises(TypeError, match=match):
+        dict_like('a', 'value', optional=True)
+
+
+def test_string():
+    out = string_like('apple', 'value')
+    assert out == 'apple'
+
+    out = string_like('apple', 'value', options=('apple', 'banana', 'cherry'))
+    assert out == 'apple'
+
+    with pytest.raises(TypeError, match='value must be a string'):
+        string_like(1, 'value')
+    with pytest.raises(TypeError, match='value must be a string'):
+        string_like(b'4', 'value')
+    with pytest.raises(ValueError, match='value must be one of: \'apple\','
+                                         ' \'banana\', \'cherry\''):
+        string_like('date', 'value',
+                            options=('apple', 'banana', 'cherry'))
+
+
+def test_optional_string():
+    out = string_like('apple', 'value')
+    assert out == 'apple'
+
+    out = string_like('apple', 'value', options=('apple', 'banana', 'cherry'))
+    assert out == 'apple'
+
+    out = string_like(None, 'value', optional=True)
+    assert out is None
+
+    out = string_like(None, 'value', optional=True,
+                      options=('apple', 'banana', 'cherry'))
+    assert out is None
+
+    with pytest.raises(TypeError, match='value must be a string'):
+        string_like(1, 'value', optional=True)
+    with pytest.raises(TypeError, match='value must be a string'):
+        string_like(b'4', 'value', optional=True)
+
+
+@pytest.fixture(params=(1., 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
+def floating(request):
+    return request.param
+
+
+@pytest.fixture(params=(np.empty(2), 1.2 + 1j, True, '3.2', None))
+def not_floating(request):
+    return request.param
+
+
+def test_float_like(floating):
+    assert isinstance(float_like(floating, 'floating'), float)
+    assert isinstance(float_like(floating, 'floating', optional=True), float)
+    assert float_like(None, 'floating', optional=True) is None
+    if isinstance(floating, (int, np.integer, float, np.inexact)):
+        assert isinstance(float_like(floating, 'floating', strict=True), float)
+        assert float_like(None, 'floating', optional=True,
+                          strict=True) is None
+
+
+def test_not_float_like(not_floating):
+    with pytest.raises(TypeError):
+        float_like(not_floating, 'floating')
+
+
+@pytest.fixture(params=(1., 2, np.float32(3.0), np.array([4.0])))
+def integer(request):
+    return request.param
+
+
+@pytest.fixture(params=(3.2, np.float32(3.2), 3 + 2j, np.complex(2.3 + 0j),
+                        'apple', 1.0 + 0j, np.timedelta64(2)))
+def not_integer(request):
+    return request.param
+
+
+def test_int_like(integer):
+    assert isinstance(int_like(integer, 'integer'), int)
+    assert isinstance(int_like(integer, 'integer', optional=True), int)
+    assert int_like(None, 'floating', optional=True) is None
+    if isinstance(integer, (int, np.integer)):
+        assert isinstance(int_like(integer, 'integer', strict=True), int)
+        assert int_like(None, 'floating', optional=True, strict=True) is None
+
+
+def test_not_int_like(not_integer):
+    with pytest.raises(TypeError):
+        int_like(not_integer, 'integer')
+
+
+@pytest.fixture(params=[True, False, 1, 1.2, 'a', ''])
+def boolean(request):
+    return request.param
+
+
+def test_bool_like(boolean):
+    assert isinstance(bool_like(boolean, 'boolean'), bool)
+    assert bool_like(None, 'boolean', optional=True) is None
+    if isinstance(boolean, bool):
+        assert isinstance(bool_like(boolean, 'boolean', strict=True),
+                          bool)
+    else:
+        with pytest.raises(TypeError):
+            bool_like(boolean, 'boolean', strict=True)
+
+
+def test_not_bool_like():
+    with pytest.raises(TypeError):
+        bool_like(np.array([True, True]), boolean)

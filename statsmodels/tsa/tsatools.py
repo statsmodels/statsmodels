@@ -1,5 +1,4 @@
-
-from statsmodels.compat.python import range, lrange, lzip
+from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.numpy import recarray_select
 
 import numpy as np
@@ -9,6 +8,7 @@ from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
+from statsmodels.tools.validation import int_like, bool_like, string_like
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.tools.validation import array_like
@@ -50,8 +50,12 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     --------
     statsmodels.tools.tools.add_constant
     """
+    prepend = bool_like(prepend, 'prepend')
+    trend = string_like(trend, 'trend', options=('c', 't', 'ct', 'ctt'))
+    has_constant = string_like(has_constant, 'has_constant',
+                               options=('raise', 'add', 'skip'))
+
     # TODO: could be generalized for trend of aribitrary order
-    trend = trend.lower()
     columns = ['const', 'trend', 'trend_squared']
     if trend == "c":  # handles structured arrays
         columns = columns[:1]
@@ -63,8 +67,6 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
-    else:
-        raise ValueError("trend %s not understood" % trend)
 
     is_recarray = _is_recarray(x)
     is_pandas = _is_using_pandas(x, None) or is_recarray
@@ -174,6 +176,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     so that the length of the returned array is len(`X`) - lags. The lags are
     returned in increasing order, ie., t-1,t-2,...,t-lags
     """
+    lags = int_like(lags, 'lags')
+    drop = bool_like(drop, 'drop')
+
     if x.dtype.names:
         names = x.dtype.names
         if not col and np.squeeze(x).ndim > 1:
@@ -288,6 +293,9 @@ def detrend(x, order=1, axis=0):
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
     """
+    order = int_like(order, 'order')
+    axis = int_like(axis, 'axis')
+
     if x.ndim == 2 and int(axis) == 1:
         x = x.T
     elif x.ndim > 2:
@@ -369,9 +377,15 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
     Notes
     -----
     When using a pandas DataFrame or Series with use_pandas=True, trim can only
-    be 'forward' or 'both' since it is not possible to consistently extend index
-    values.
+    be 'forward' or 'both' since it is not possible to consistently extend
+    index values.
     """
+    maxlag = int_like(maxlag, 'maxlag')
+    use_pandas = bool_like(use_pandas, 'use_pandas')
+    trim = string_like(trim, 'trim', optional=True,
+                       options=('forward', 'backward', 'both', 'none'))
+    original = string_like(original, 'original', options=('ex', 'sep', 'in'))
+
     # TODO:  allow list of lags additional to maxlag
     orig = x
     x = array_like(x, 'x', ndim=2, dtype=None)
@@ -463,7 +477,10 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
     -----
     Inefficient implementation for unequal lags, implemented for convenience
     """
-
+    maxlag0 = int_like(maxlag0, 'maxlag0')
+    maxlagex = int_like(maxlagex, 'maxlagex', optional=True)
+    trim = string_like(trim, 'trim', optional=True,
+                       options=('forward', 'backward', 'both', 'none'))
     if maxlagex is None:
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
@@ -553,6 +570,7 @@ def duplication_matrix(n):
     -------
     D_n : ndarray
     """
+    n = int_like(n, 'n')
     tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
 
@@ -569,6 +587,7 @@ def elimination_matrix(n):
     -------
 
     """
+    n = int_like(n, 'n')
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
 
@@ -586,6 +605,9 @@ def commutation_matrix(p, q):
     -------
     K : ndarray (pq x pq)
     """
+    p = int_like(p, 'p')
+    q = int_like(q, 'q')
+
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
@@ -700,6 +722,7 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
+    d = int_like(d, 'd')
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
 

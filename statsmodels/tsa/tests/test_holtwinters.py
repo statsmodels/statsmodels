@@ -158,9 +158,10 @@ class TestHoltWinters(object):
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(self.aust.values, seasonal_periods=4,
                                     trend='add', seasonal='mul').fit()
-        assert_almost_equal(fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3)
+        assert_almost_equal(fit1.forecast(4),
+                            [61.3083, 37.3730, 46.9652, 51.5578], 3)
 
-    # FIXME: this is passing 2019-05-22; what has changed?
+    # FIXME: this is passing 2019-05-22 on some platforms; what has changed?
     @pytest.mark.xfail(reason='Optimizer does not converge', strict=False)
     def test_forecast(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',

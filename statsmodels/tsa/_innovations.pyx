@@ -3,7 +3,9 @@ import numpy as np
 
 cimport numpy as np
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import (array_like, PandasWrapper,
+                                          int_like, float_like)
+
 
 def innovations_algo(acov, nobs=None, rtol=None):
     """
@@ -57,14 +59,19 @@ def innovations_algo(acov, nobs=None, rtol=None):
     cdef double[:, ::1] theta
     cdef Py_ssize_t i, j, k, max_lag
     cdef double sub, _rtol
-    _acov = array_like(acov, 'acov', contiguous=True, ndim=1)
+
+    acov = array_like(acov, 'acov', contiguous=True, ndim=1)
+    nobs = int_like(nobs, 'nobs', optional=True)
+    rtol = float_like(rtol, 'rtol', optional=True)
+    _acov = acov
+
     rtol = 0.0 if rtol is None else rtol
-    if not isinstance(rtol, float):
+    if not rtol >= 0:
         raise ValueError('rtol must be a non-negative float or None.')
     _rtol = rtol
-    if nobs is not None and (nobs != int(nobs) or nobs < 1):
+    if nobs is not None and nobs < 1:
         raise ValueError('nobs must be a positive integer')
-    n = acov.shape[0] if nobs is None else int(nobs)
+    n = acov.shape[0] if nobs is None else nobs
     max_lag = int(np.max(np.argwhere(acov != 0)))
 
     v = np.zeros(n + 1)
@@ -87,6 +94,7 @@ def innovations_algo(acov, nobs=None, rtol=None):
                 v[i + 1:] = v[i]
                 theta[i + 1:] = theta[i]
                 break
+
     return np.asarray(theta[:n, 1:]), np.asarray(v[:n])
 
 

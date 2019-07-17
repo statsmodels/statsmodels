@@ -815,13 +815,13 @@ def test_innovations_algo_rtol():
 def test_innovations_errors():
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         innovations_algo(acovf, nobs=2.2)
     with pytest.raises(ValueError):
         innovations_algo(acovf, nobs=-1)
     with pytest.raises(ValueError):
         innovations_algo(np.empty((2, 2)))
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         innovations_algo(acovf, rtol='none')
 
 
