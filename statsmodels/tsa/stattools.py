@@ -16,6 +16,7 @@ from statsmodels.tools.sm_exceptions import (InterpolationWarning,
                                              MissingDataError,
                                              CollinearityWarning)
 from statsmodels.tools.tools import add_constant, Bunch
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_filter, innovations_algo
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
@@ -206,7 +207,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-
+    x = array_like(x, 'x')
     if regresults:
         store = True
 
@@ -216,7 +217,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     regression = regression.lower()
     if regression not in ['c', 'nc', 'ct', 'ctt']:
         raise ValueError("regression option %s not understood") % regression
-    x = np.asarray(x)
     nobs = x.shape[0]
 
     ntrend = len(regression) if regression != 'nc' else 0
@@ -354,9 +354,7 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
         warnings.warn(msg, FutureWarning)
         fft = False
 
-    x = np.squeeze(np.asarray(x))
-    if x.ndim > 1:
-        raise ValueError("x must be 1d. Got %d dims." % x.ndim)
+    x = array_like(x, 'x', ndim=1)
 
     missing = missing.lower()
     if missing not in ['none', 'raise', 'conservative', 'drop']:
@@ -463,7 +461,7 @@ def q_stat(x, nobs, type="ljungbox"):
     -----
     Written to be used with acf.
     """
-    x = np.asarray(x)
+    x = array_like(x, 'x')
     if type == "ljungbox":
         ret = (nobs * (nobs + 2) *
                np.cumsum((1. / (nobs - np.arange(1, len(x) + 1))) * x**2))
@@ -540,7 +538,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
               'fft=False.'
         warnings.warn(msg, FutureWarning)
         fft = False
-
+    x = array_like(x, 'x')
     nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
     acf = avf[:nlags + 1] / avf[0]
@@ -591,6 +589,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     This solves yule_walker for each desired lag and contains
     currently duplicate calculations.
     '''
+    x = array_like(x, 'x')
     pacf = [1.]
     for k in range(1, nlags + 1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
@@ -629,9 +628,7 @@ def pacf_burg(x, nlags=None, demean=True):
     .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
-    x = np.squeeze(np.asarray(x))
-    if x.ndim != 1:
-        raise ValueError('x must be 1-d or squeezable to 1-d.')
+    x = array_like(x, 'x')
     if demean:
         x = x - x.mean()
     nobs = x.shape[0]
@@ -710,11 +707,9 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
     .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
        Time series analysis: forecasting and control. John Wiley & Sons, p. 66
     """
+    x = array_like(x, 'x')
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
-    x = np.squeeze(np.asarray(x))
-    if x.ndim != 1:
-        raise ValueError('x must be squeezable to a 1-d array')
     if efficient:
         xlags, x0 = lagmat(x, nlags, original='sep')
         xlags = add_constant(xlags)
@@ -792,7 +787,6 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
     consistently worse than the other options.
     """
-
     if method in ('ols', 'ols-inefficient', 'ols-unbiased'):
         efficient = 'inefficient' not in method
         unbiased = 'unbiased' in method
@@ -842,6 +836,8 @@ def ccovf(x, y, unbiased=True, demean=True):
     This uses np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
     '''
+    x = array_like(x, 'x')
+    y = array_like(y, 'y')
     n = len(x)
     if demean:
         xo = x - x.mean()
@@ -881,6 +877,8 @@ def ccf(x, y, unbiased=True):
     but the autocorrelation is not an unbiased estimtor.
 
     '''
+    x = array_like(x, 'x')
+    y = array_like(y, 'y')
     cvf = ccovf(x, y, unbiased=unbiased, demean=True)
     return cvf / (np.std(x) * np.std(y))
 
@@ -911,7 +909,7 @@ def periodogram(x):
     import warnings
     warnings.warn('periodogram is deprecated and will be removed after 0.11. '
                   'Use scipy.signal.periodogram instead.', FutureWarning)
-    x = np.asarray(x)
+    x = array_like(x, 'x')
     # if kernel == "bartlett":
     #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
@@ -961,7 +959,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sample autocovariance function is calculated with the default options
     (biased, no fft).
     """
-    s = np.asarray(s)
+    s = array_like(s, 's')
     order = nlags
 
     if isacov:
@@ -1013,9 +1011,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
     .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
-    pacf = np.squeeze(np.asarray(pacf))
-    if pacf.ndim != 1:
-        raise ValueError('pacf must be 1-d or squeezable to 1-d.')
+    pacf = array_like(pacf, 'pacf')
     if pacf[0] != 1:
         raise ValueError('The first entry of the pacf corresponds to lags 0 '
                          'and so must be 1.')
@@ -1094,7 +1090,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     """
     from scipy import stats
 
-    x = np.asarray(x)
+    x = array_like(x, 'x', ndim=2)
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError("Insufficient observations. Maximum allowable "
@@ -1193,9 +1189,9 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
     Parameters
     ----------
-    y1 : array_like, 1d
+    y0 : array_like, 1d
         first element in cointegrating vector
-    y2 : array_like
+    y1 : array_like
         remaining elements in cointegrating vector
     trend : str {'c', 'ct'}
         trend term included in regression for cointegrating equation
@@ -1268,10 +1264,8 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
     trend = trend.lower()
     if trend not in ['c', 'nc', 'ct', 'ctt']:
         raise ValueError("trend option %s not understood" % trend)
-    y0 = np.asarray(y0)
-    y1 = np.asarray(y1)
-    if y1.ndim < 2:
-        y1 = y1[:, None]
+    y0 = array_like(y0, 'y0')
+    y1 = array_like(y1, 'y1', ndim=2)
     nobs, k_vars = y1.shape
     k_vars += 1   # add 1 for y0
 
@@ -1400,7 +1394,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
     model_kw = {} if model_kw is None else model_kw
     fit_kw = {} if fit_kw is None else fit_kw
-    y_arr = np.asarray(y)
+    y_arr = array_like(y, 'y', contiguous=True)
     for ar in ar_range:
         for ma in ma_range:
             if ar == 0 and ma == 0 and trend == 'nc':
@@ -1511,8 +1505,8 @@ def kpss(x, regression='c', lags=None, store=False):
     """
     from warnings import warn
 
-    nobs = len(x)
-    x = np.asarray(x)
+    x = array_like(x, 'x')
+    nobs = x.shape[0]
     hypo = regression.lower()
 
     # if m is not one, n != m * n

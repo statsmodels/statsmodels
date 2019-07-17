@@ -17,6 +17,7 @@ from scipy.signal import lfilter
 from numpy import dot, log, zeros, pi
 from numpy.linalg import inv
 
+
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
@@ -29,6 +30,7 @@ from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = r"""
@@ -421,9 +423,7 @@ class ARMA(tsbase.TimeSeriesModel):
                  missing='none'):
         super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
         # GH 2575
-        _endog = endog if hasattr(endog, 'ndim') else np.asarray(endog)
-        if (_endog.ndim == 2 and _endog.shape[1] != 1) or _endog.ndim > 2:
-            raise ValueError('endog must be 1-d or 2-d with 1 column')
+        array_like(endog, 'endog')
         exog = self.data.exog  # get it after it's gone through processing
         _check_estimable(len(self.endog), sum(order))
         self.k_ar = k_ar = order[0]
@@ -719,7 +719,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         if exog is not None:
             # Note: we ignore currently the index of exog if it is available
-            exog = np.asarray(exog)
+            exog = array_like(exog, 'exog', ndim=2)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
 
@@ -931,8 +931,7 @@ class ARMA(tsbase.TimeSeriesModel):
             self.nobs = len(self.endog) - k_ar
 
         if start_params is not None:
-            start_params = np.asarray(start_params)
-
+            start_params = array_like(start_params, 'start_params')
         else:  # estimate starting parameters
             start_params = self._fit_start_params((k_ar, k_ma, k), method,
                                                   start_ar_lags)
@@ -1535,7 +1534,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if exog is not None:
             #TODO: make a convenience function for this. we're using the
             # pattern elsewhere in the codebase
-            exog = np.asarray(exog)
+            exog = array_like(exog, 'exog', maxdim=2)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
             elif exog.ndim == 1:

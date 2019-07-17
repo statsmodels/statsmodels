@@ -2462,7 +2462,7 @@ def test_multidim_endog(reset_randomstate):
     with pytest.raises(ValueError):
         ARMA(y, order=(1, 1))
 
-    y = np.random.randn(1000, 1, 1)
+    y = np.random.randn(1, 1, 1000)
     with pytest.raises(ValueError):
         ARMA(y, order=(1, 1))
 

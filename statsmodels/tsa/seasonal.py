@@ -1,18 +1,16 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat.python import lmap, range
+from statsmodels.compat.python import range
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
-from .filters._utils import (_maybe_get_pandas_wrapper_freq,
-                             _maybe_get_pandas_wrapper)
 from .filters.filtertools import convolution_filter
+from statsmodels.tools.validation import array_like, PandasWrapper
 from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tsa._stl import STL
 
-__all__ = ['STL', 'seasonal_decompose', 'seasonal_mean',
-           'DecomposeResult']
+__all__ = ['STL', 'seasonal_decompose', 'seasonal_mean', 'DecomposeResult']
 
 
 def seasonal_mean(x, freq):
@@ -110,12 +108,12 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     statsmodels.tsa.filters.convolution_filter
     statsmodels.tsa.seasonal.STL
     """
+    pfreq = freq
+    pw = PandasWrapper(x)
     if freq is None:
-        _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
-    else:
-        _pandas_wrapper = _maybe_get_pandas_wrapper(x)
-        pfreq = None
-    x = np.asanyarray(x).squeeze()
+        pfreq = getattr(getattr(x, 'index', None), 'inferred_freq', None)
+
+    x = array_like(x, 'x', maxdim=2)
     nobs = len(x)
 
     if not np.all(np.isfinite(x)):
@@ -168,7 +166,10 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     else:
         resid = detrended - seasonal
 
-    results = lmap(_pandas_wrapper, [seasonal, trend, resid, x])
+    results = []
+    for s, name in zip((seasonal, trend, resid, x),
+                       ('seasonal', 'trend', 'resid', None)):
+        results.append(pw.wrap(s.squeeze(), columns=name))
     return DecomposeResult(seasonal=results[0], trend=results[1],
                            resid=results[2], observed=results[3])
 
