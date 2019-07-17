@@ -238,7 +238,7 @@ class SlicedInverseReg(_DimReductionRegression):
             params = start_params
 
         params, _, cnvrg = _grass_opt(params, self._regularized_objective,
-                                         self._regularized_grad, maxiter, gtol)
+                                      self._regularized_grad, maxiter, gtol)
 
         if not cnvrg:
             g = self._regularized_grad(params.ravel())
@@ -652,12 +652,13 @@ class CovarianceReduction(_DimReductionRegression):
             params = start_params
 
         params, llf, cnvrg = _grass_opt(params, lambda x: -self.loglike(x),
-                                        lambda x:-self.score(x), maxiter, gtol)
+                                        lambda x: -self.score(x), maxiter,
+                                        gtol)
         llf *= -1
         if not cnvrg:
             g = self.score(params.ravel())
             gn = np.sqrt(np.sum(g * g))
-            msg = "CovReduce optimization did not converge, |g|=%f" %gn
+            msg = "CovReduce optimization did not converge, |g|=%f" % gn
             warnings.warn(msg)
 
         results = DimReductionResults(self, params, eigs=None)
