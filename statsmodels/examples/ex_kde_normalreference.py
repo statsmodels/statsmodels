@@ -7,7 +7,6 @@ from a mixture of gaussians. Distribution has been chosen to be reasoanbly close
 to normal.
 """
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt

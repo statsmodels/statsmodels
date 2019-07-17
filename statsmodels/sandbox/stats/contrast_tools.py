@@ -22,7 +22,6 @@ Idea for second part
 
 
 
-from __future__ import print_function
 from numpy.testing import assert_equal
 
 from statsmodels.compat.python import zip

@@ -4,7 +4,6 @@ State Space Representation, Kalman Filter, Smoother, and Simulation Smoother
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .kalman_smoother import KalmanSmoother

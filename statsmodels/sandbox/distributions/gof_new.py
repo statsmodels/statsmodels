@@ -17,7 +17,6 @@ References
 ----------
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import range, lmap, string_types
 import numpy as np
 

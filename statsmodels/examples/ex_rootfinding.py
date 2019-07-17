@@ -5,7 +5,6 @@ Created on Sat Mar 23 13:35:51 2013
 
 Author: Josef Perktold
 """
-from __future__ import print_function
 import numpy as np
 from statsmodels.tools.rootfinding import brentq_expanding
 

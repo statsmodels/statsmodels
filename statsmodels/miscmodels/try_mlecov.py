@@ -5,7 +5,6 @@ toeplitz structure is not exploited, need cholesky or inv for toeplitz
 Author: josef-pktd
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import linalg
 from scipy.linalg import toeplitz

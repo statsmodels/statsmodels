@@ -6,7 +6,6 @@ finite difference Hessian has some problems that I didn't look at yet
 Should Hessian also work per observation, if fun returns 2d
 
 '''
-from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 import statsmodels.api as sm

@@ -6,7 +6,6 @@ Author: Luca Puggini
 
 """
 
-from __future__ import division
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
 import itertools

@@ -3,7 +3,6 @@ Does not run because of missing mtx files, now included
 
 changes: JP corrections to imports so it runs, comment out print
 '''
-from __future__ import print_function
 import numpy as np
 from numpy import dot,  outer, random
 from scipy import io, linalg, optimize

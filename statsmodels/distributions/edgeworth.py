@@ -1,10 +1,9 @@
-from __future__ import division, print_function, absolute_import
 
 import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-from statsmodels.compat.scipy import factorial
+from scipy.special import factorial
 from scipy.stats import rv_continuous
 import scipy.special as special
 

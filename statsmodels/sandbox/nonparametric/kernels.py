@@ -21,7 +21,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 from statsmodels.compat.python import lzip, lfilter, zip
 import numpy as np
 import scipy.integrate
-from statsmodels.compat.scipy import factorial
+from scipy.special import factorial
 from numpy import exp, multiply, square, divide, subtract, inf
 
 

@@ -4,7 +4,6 @@ doesn't seem to work so well anymore even with nobs=1000 ???
 works ok if noise variance is large
 '''
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.arima_process import arma_generate_sample

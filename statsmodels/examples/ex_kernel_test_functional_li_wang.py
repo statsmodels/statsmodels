@@ -59,7 +59,6 @@ aymp.normal p-value (upper) 0.306629578855
 
 """
 
-from __future__ import print_function
 
 
 if __name__ == '__main__':

@@ -4,8 +4,6 @@
 
 author: Yichuan Liu
 """
-from __future__ import division
-
 import numpy as np
 from numpy.linalg import svd
 import scipy

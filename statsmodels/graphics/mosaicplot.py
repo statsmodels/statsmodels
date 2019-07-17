@@ -7,7 +7,6 @@ see the docstring of the mosaic function for more informations.
 """
 # Author: Enrico Giampieri - 21 Jan 2013
 
-from __future__ import division
 from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
                                 itervalues, zip, range)
 import numpy as np

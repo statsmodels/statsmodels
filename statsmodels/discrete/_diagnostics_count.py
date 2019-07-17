@@ -5,8 +5,6 @@ Created on Fri Sep 15 12:53:45 2017
 Author: Josef Perktold
 """
 
-from __future__ import division
-
 import numpy as np
 from scipy import stats
 

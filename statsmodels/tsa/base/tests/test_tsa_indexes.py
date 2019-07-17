@@ -9,7 +9,6 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
-from __future__ import division, absolute_import, print_function
 
 import pytest
 import warnings

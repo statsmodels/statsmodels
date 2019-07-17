@@ -1,5 +1,3 @@
-from __future__ import division
-
 from numpy.testing import assert_almost_equal
 from statsmodels.emplike.originregress import ELOriginRegress
 from statsmodels.datasets import cancer

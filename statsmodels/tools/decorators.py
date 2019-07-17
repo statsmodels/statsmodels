@@ -1,4 +1,3 @@
-from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
 

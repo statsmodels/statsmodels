@@ -17,7 +17,6 @@ The standard l1 solver is fmin_slsqp and is included with scipy.  It
 The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
-from __future__ import print_function
 from statsmodels.compat.python import range
 import statsmodels.api as sm
 import matplotlib.pyplot as plt

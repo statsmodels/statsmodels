@@ -6,7 +6,6 @@ We will be using the Stanford Heart Transplant data
 
 """
 
-from __future__ import print_function
 import statsmodels.api as sm
 import numpy as np
 

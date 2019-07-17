@@ -1,7 +1,6 @@
 """
 Statistical tools for time series analysis
 """
-from __future__ import division
 from statsmodels.compat.python import (iteritems, range, lrange, string_types,
                                        lzip, zip, long)
 from statsmodels.compat.numpy import lstsq

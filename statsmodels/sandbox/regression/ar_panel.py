@@ -21,7 +21,6 @@ Could be extended to AR(p) errors, but then requires panel with larger T
 '''
 
 
-from __future__ import print_function
 import numpy as np
 from scipy import optimize
 

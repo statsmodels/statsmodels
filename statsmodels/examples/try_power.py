@@ -6,7 +6,6 @@ Created on Sat Mar 02 14:38:17 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 
 import statsmodels.stats.power as smp
 

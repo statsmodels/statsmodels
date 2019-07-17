@@ -80,7 +80,6 @@ Author: josef-pktd, parts based on David Huard
 License: BSD
 
 '''
-from __future__ import print_function
 import scipy.interpolate as interpolate
 import numpy as np
 

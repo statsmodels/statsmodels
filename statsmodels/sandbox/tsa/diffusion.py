@@ -48,7 +48,6 @@ finance applications ? option pricing, interest rate models
 
 
 '''
-from __future__ import print_function
 import numpy as np
 from scipy import stats, signal
 import matplotlib.pyplot as plt

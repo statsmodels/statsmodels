@@ -1,4 +1,3 @@
-from __future__ import print_function
 from time import time
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.api import ARMA

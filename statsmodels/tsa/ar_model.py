@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
 from statsmodels.compat.python import iteritems, range, lmap
 
 import numpy as np

@@ -27,7 +27,6 @@ Not all methods and options have been tried out yet after refactoring
 
 need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 """
-from __future__ import print_function
 from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd

@@ -777,15 +777,13 @@ def test_warnings_raised():
 
     cov_kwds = {'groups': gid, 'use_correction': False}
 
-    # Work around for buggy pytest repeated warning capture on Python 2.7
-    warning_type = SpecificationWarning
-    with pytest.warns(warning_type):
+    with pytest.warns(SpecificationWarning):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), freq_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         res1.summary()
 
-    with pytest.warns(warning_type):
+    with pytest.warns(SpecificationWarning):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), var_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)

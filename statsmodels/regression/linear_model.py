@@ -31,7 +31,6 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
-from __future__ import print_function
 
 from statsmodels.compat.python import lrange, lzip, range
 

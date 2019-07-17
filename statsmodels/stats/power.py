@@ -30,7 +30,6 @@ refactoring
 
 
 """
-from __future__ import print_function
 from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats, optimize

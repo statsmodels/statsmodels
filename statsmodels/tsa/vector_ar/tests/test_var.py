@@ -12,13 +12,6 @@ import sys
 import numpy as np
 import pytest
 
-try:
-    import matplotlib  # noqa: F401
-    from distutils.version import LooseVersion
-    MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
-except ImportError:
-    MATPLOTLIB_GT_15 = False
-
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
@@ -706,29 +699,35 @@ class TestVARExtras(object):
 
         irf = res0.irf()
 
-        # partially SMOKE test
-        if MATPLOTLIB_GT_15:
-            res0.plotsim()
-            res0.plot_acorr()
+    @pytest.mark.matplotlib
+    def test_process_plotting(self, close_figures):
+        # Partially a smoke test
+        res0 = self.res0
+        k_ar = res0.k_ar
+        fc20 = res0.forecast(res0.endog[-k_ar:], 20)
+        irf = res0.irf()
 
-            fig = res0.plot_forecast(20)
-            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
-            # Note values are equal, but keep rtol buffer
-            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
-            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
-            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
+        res0.plotsim()
+        res0.plot_acorr()
 
-            fig_asym = irf.plot()
-            fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
+        fig = res0.plot_forecast(20)
+        fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+        # Note values are equal, but keep rtol buffer
+        assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+        fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+        fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-            for k in range(3):
-                a = fig_asym.axes[1].get_children()[k].get_ydata()
-                m = fig_mc.axes[1].get_children()[k].get_ydata()
-                # use m as desired because it is larger
-                # a is for some irf much smaller than m
-                assert_allclose(a, m, atol=0.1, rtol=0.9)
+        fig_asym = irf.plot()
+        fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
+
+        for k in range(3):
+            a = fig_asym.axes[1].get_children()[k].get_ydata()
+            m = fig_mc.axes[1].get_children()[k].get_ydata()
+            # use m as desired because it is larger
+            # a is for some irf much smaller than m
+            assert_allclose(a, m, atol=0.1, rtol=0.9)
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only

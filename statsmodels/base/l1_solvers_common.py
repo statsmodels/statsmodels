@@ -1,7 +1,6 @@
 """
 Holds common functions for l1 solvers.
 """
-from __future__ import print_function
 
 import numpy as np
 

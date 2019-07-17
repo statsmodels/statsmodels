@@ -4,7 +4,6 @@ Created on Sat Mar 13 07:56:22 2010
 
 Author: josef-pktd
 """
-from __future__ import print_function
 import sympy as sy
 
 

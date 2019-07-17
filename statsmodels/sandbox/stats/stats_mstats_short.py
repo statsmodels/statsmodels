@@ -21,7 +21,6 @@ weighted plotting_positions
 
 
 '''
-from __future__ import print_function
 import numpy as np
 from numpy import ma
 from scipy import stats

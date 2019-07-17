@@ -11,7 +11,6 @@ Created on Wed Oct 14 23:02:19 2009
 
 Author: josef-pktd
 """
-from __future__ import print_function
 import numpy as np
 from scipy import signal, ndimage
 import matplotlib.mlab as mlb

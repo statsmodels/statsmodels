@@ -27,8 +27,6 @@ Statistics. 14:3, 643-656.
 
 
 """
-from __future__ import division
-
 import numpy as np
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.tools import add_constant

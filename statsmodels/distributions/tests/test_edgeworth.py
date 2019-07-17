@@ -1,4 +1,3 @@
-from __future__ import division, print_function, absolute_import
 
 import warnings
 
@@ -7,8 +6,7 @@ from numpy.testing import (assert_equal, assert_raises,
                            assert_allclose)
 import numpy.testing as npt
 
-from statsmodels.compat.scipy import factorial, factorial2
-from scipy.special import gamma
+from scipy.special import gamma, factorial, factorial2
 import scipy.stats as stats
 
 from statsmodels.distributions.edgeworth import (_faa_di_bruno_partitions,

@@ -7,7 +7,6 @@ there might still be problems with loc and scale,
 '''
 
 
-from __future__ import division
 from scipy import stats
 __date__ = "2010-12-29 dec"
 

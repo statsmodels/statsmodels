@@ -2,7 +2,6 @@
 Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
-from __future__ import print_function
 
 import numpy as np
 from scipy import optimize

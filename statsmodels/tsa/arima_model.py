@@ -4,7 +4,6 @@
 #       This code does not allow this, but it adds consistency with other
 #       packages such as gretl and X12-ARIMA
 
-from __future__ import absolute_import
 from statsmodels.compat.python import string_types, range, long
 # for 2to3 with extensions
 

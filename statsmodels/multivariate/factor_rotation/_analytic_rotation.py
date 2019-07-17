@@ -3,9 +3,6 @@
 This file contains analytic implementations of rotation methods.
 """
 
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import scipy as sp
 

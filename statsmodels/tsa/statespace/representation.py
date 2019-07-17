@@ -4,7 +4,6 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .tools import (

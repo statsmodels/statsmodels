@@ -6,7 +6,6 @@ Created on Thu Jul 18 14:57:46 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 
 from statsmodels.genmod.generalized_estimating_equations import GEE, GEEMargins

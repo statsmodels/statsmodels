@@ -1,5 +1,3 @@
-from __future__ import division
-
 import numpy as np
 from scipy.stats import scoreatpercentile as sap
 from statsmodels.sandbox.nonparametric import kernels

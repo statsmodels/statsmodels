@@ -4,7 +4,6 @@ Tests for Markov Autoregression models
 Author: Chad Fulton
 License: BSD-3
 """
-from __future__ import division, absolute_import, print_function
 
 import warnings
 import os

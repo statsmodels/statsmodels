@@ -4,7 +4,6 @@ General tests for Markov switching models
 Author: Chad Fulton
 License: BSD-3
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from numpy.testing import assert_equal, assert_allclose, assert_raises

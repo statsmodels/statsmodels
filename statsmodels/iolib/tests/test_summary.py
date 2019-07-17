@@ -2,7 +2,6 @@
 
 
 '''
-from __future__ import print_function
 
 import numpy as np  # noqa: F401
 import pytest

@@ -144,7 +144,6 @@ What's currently there?
 'standardize', 'standardized', 'std', 'std_sigma', 'whiten']
 
 """
-from __future__ import print_function
 import numpy as np
 from scipy import special
 

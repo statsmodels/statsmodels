@@ -1,6 +1,3 @@
-from __future__ import division
-from statsmodels.compat.scipy import SP_GTE_019
-
 import numpy as np
 from numpy.testing import (assert_,
                            assert_equal, assert_array_equal, assert_allclose)
@@ -295,7 +292,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
 
         # Ser random_state here to improve reproducibility
         random_state = np.random.RandomState(1)
-        seed = {'seed': random_state} if SP_GTE_019 else {}
+        seed = {'seed': random_state}
         res_bh = model.fit(start_params=start_params,
                            method='basinhopping', niter=500, stepsize=0.1,
                            niter_success=None, disp=0, interval=1, **seed)

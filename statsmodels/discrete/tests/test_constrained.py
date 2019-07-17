@@ -6,8 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-from __future__ import division
-
 from statsmodels.compat.python import StringIO
 
 import numpy as np

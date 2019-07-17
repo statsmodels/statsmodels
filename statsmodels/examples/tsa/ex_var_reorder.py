@@ -1,5 +1,4 @@
 
-from __future__ import print_function
 from statsmodels.tsa.vector_ar.tests.test_var import TestVARResults
 
 test_VAR = TestVARResults()

@@ -8,11 +8,7 @@ Author: Josef Perktold
 created on 08/07/2015
 """
 
-from __future__ import division
-try:
-    from collections.abc import Iterable
-except ImportError:  # Python 2.7
-    from collections import Iterable
+from collections.abc import Iterable
 import copy  # check if needed when dropping python 2.7
 
 import numpy as np

@@ -23,7 +23,6 @@ Author: josef-pktd
 License: BSD (simplified)
 '''
 
-from __future__ import print_function
 from statsmodels.compat.python import zip
 import numpy as np
 import numpy.lib.recfunctions as recf

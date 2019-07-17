@@ -6,7 +6,6 @@ Created on Sat Dec 24 07:31:47 2011
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.sandbox.stats.diagnostic as dia
 

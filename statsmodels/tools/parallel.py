@@ -9,7 +9,6 @@ changes for statsmodels (Josef Perktold)
 - try import from joblib directly, (doesn't import all of sklearn)
 
 """
-from __future__ import print_function
 
 from statsmodels.tools.sm_exceptions import (ModuleUnavailableWarning,
                                              module_unavailable_doc)

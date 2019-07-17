@@ -15,7 +15,6 @@ check: instead of bound checking I could use the fill-value of the interpolators
 
 
 """
-from __future__ import print_function
 from statsmodels.compat.python import range
 import numpy as np
 from scipy.interpolate import interp1d, interp2d, Rbf

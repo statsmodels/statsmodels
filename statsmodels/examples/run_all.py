@@ -7,7 +7,6 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import lzip, input
 import matplotlib.pyplot as plt #matplotlib is required for many examples
 

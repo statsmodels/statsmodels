@@ -12,7 +12,6 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd

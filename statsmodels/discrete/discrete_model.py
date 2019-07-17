@@ -15,13 +15,11 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
-from __future__ import division
-
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
 from statsmodels.compat.python import range
-from statsmodels.compat.scipy import loggamma
+from scipy.special import loggamma
 
 import numpy as np
 from pandas import get_dummies

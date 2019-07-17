@@ -12,7 +12,6 @@ TODO:
 
 '''
 
-from __future__ import print_function
 from statsmodels.compat.python import lmap
 import numpy as np
 #from scipy import stats

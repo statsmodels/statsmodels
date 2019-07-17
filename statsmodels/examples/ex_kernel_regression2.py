@@ -6,7 +6,6 @@ Created on Wed Jan 02 13:43:44 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.nonparametric.api as nparam
 

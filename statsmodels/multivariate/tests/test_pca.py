@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 
 from statsmodels.compat.platform import PLATFORM_WIN32
 
