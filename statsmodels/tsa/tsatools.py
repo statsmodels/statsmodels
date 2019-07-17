@@ -1,5 +1,5 @@
 
-from statsmodels.compat.python import range, lrange, lzip, long, PY3
+from statsmodels.compat.python import range, lrange, lzip
 from statsmodels.compat.numpy import recarray_select
 
 import numpy as np
@@ -128,14 +128,6 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         else:
             descr = descr + new_descr[-extra_col:]
 
-        if not PY3:
-            # See 3658
-            names = [entry[0] for entry in descr]
-            dtypes = [entry[1] for entry in descr]
-            names = [bytes(name) for name in names]
-            # Fail loudly if there is a non-ascii name
-            descr = list(zip(names, dtypes))
-
         x = x.astype(np.dtype(descr))
 
     return x
@@ -188,17 +180,8 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             raise IndexError("col is None and the input array is not 1d")
         elif len(names) == 1:
             col = names[0]
-        if isinstance(col, (int, long)):
+        if isinstance(col, int):
             col = x.dtype.names[col]
-        if not PY3:
-            # TODO: Get rid of this kludge.  See GH # 3658
-            names = [bytes(name)
-                     if isinstance(name, unicode)  # noqa:F821
-                     else name for name in names]
-            # Fail loudly if there is a non-ascii name.
-            x.dtype.names = names
-            if isinstance(col, unicode):  # noqa:F821
-                col = bytes(col)
 
         contemp = x[col]
 

@@ -35,10 +35,6 @@ from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from .initialization import Initialization
 from .tools import prepare_exog, concat
 
-if bytes != str:
-    # PY3
-    unicode = str
-
 
 def _handle_args(names, defaults, *args, **kwargs):
     output_args = []
@@ -2402,7 +2398,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, unicode)):
+        if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction

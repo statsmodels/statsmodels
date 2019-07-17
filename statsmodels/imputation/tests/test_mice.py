@@ -122,11 +122,7 @@ class TestMICEData(object):
                 warnings.simplefilter('always')
                 miceData.update_all()
 
-                # on Python 3.4, throws warning
-                # "DeprecationWarning('pandas.core.common.is_categorical_dtype is deprecated. import from the public API:
-                # pandas.api.types.is_categorical_dtype instead',)"
-                # ignore this warning, as this is not what is being tested in this test
-                assert ((len(ws) == 0) or all([w.category == DeprecationWarning for w in ws]))
+                assert len(ws) == 0
 
     def test_next_sample(self):
 

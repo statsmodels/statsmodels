@@ -1,8 +1,6 @@
 """
 Tests for iolib/foreign.py
 """
-from statsmodels.compat import PY3
-
 import os
 import warnings
 from datetime import datetime
@@ -55,8 +53,6 @@ def test_stata_writer_structured():
     dta = macrodata.load(as_pandas=False).data
     dtype = dta.dtype
     dt = [('year', int), ('quarter', int)] + dtype.descr[2:]
-    if not PY3:  # Remove unicode
-        dt = [(name.encode('ascii'), typ) for name, typ in dt]
     dta = dta.astype(np.dtype(dt))
 
     with pytest.warns(FutureWarning):

@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-from statsmodels.compat import PY3
-
 import warnings
 
 import numpy as np
@@ -121,8 +119,8 @@ def test_irregular(close_figures):
 def test_fixed_intercept(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
-    warning = SpecificationWarning if PY3 else None
-    match = 'Specified model does not contain' if PY3 else None
+    warning = SpecificationWarning
+    match = 'Specified model does not contain'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_intercept')
 
@@ -140,8 +138,8 @@ def test_local_level(close_figures):
 
 
 def test_fixed_slope(close_figures):
-    warning = SpecificationWarning if PY3 else None
-    match = 'irregular component added' if PY3 else None
+    warning = SpecificationWarning
+    match = 'irregular component added'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_slope')
 
@@ -150,8 +148,8 @@ def test_fixed_slope_warn(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
-    warning = SpecificationWarning if PY3 else None
-    match = 'irregular component added' if PY3 else None
+    warning = SpecificationWarning
+    match = 'irregular component added'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_slope')
 
@@ -235,8 +233,8 @@ def test_specifications():
 
     # Test that when nothing specified, a warning is issued and the model that
     # is fit is one with irregular=True and nothing else.
-    warning = SpecificationWarning if PY3 else None
-    match = 'irregular component added' if PY3 else None
+    warning = SpecificationWarning
+    match = 'irregular component added'
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog)
         assert_equal(mod.trend_specification, 'irregular')
@@ -247,8 +245,8 @@ def test_specifications():
 
     # Test that if a trend component is specified without a level component,
     # a warning is issued and a deterministic level component is added
-    warning = SpecificationWarning if PY3 else None
-    match = 'Trend component specified without' if PY3 else None
+    warning = SpecificationWarning
+    match = 'Trend component specified without'
     with pytest.warns(warning, match=match):
         mod = UnobservedComponents(endog, trend=True, irregular=True)
         assert_equal(mod.trend_specification, 'deterministic trend')
@@ -260,8 +258,8 @@ def test_specifications():
     for attribute in trend_attributes:
         kwargs = {attribute: True}
 
-        warning = SpecificationWarning if PY3 else None
-        match = 'may be overridden when the trend' if PY3 else None
+        warning = SpecificationWarning
+        match = 'may be overridden when the trend'
         with pytest.warns(warning, match=match):
             UnobservedComponents(endog, 'deterministic trend', **kwargs)
 

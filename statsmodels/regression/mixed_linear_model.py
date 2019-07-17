@@ -2842,7 +2842,6 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
         forms.extend(vc_formula.values())
 
     import tokenize
-    from statsmodels.compat import PY3
     from statsmodels.compat.python import StringIO, asunicode
     skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
 
@@ -2856,10 +2855,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
         g = tokenize.generate_tokens(rlu)
         for tok in g:
             if tok not in skiptoks:
-                if PY3:
-                    tokens.add(tok.string)
-                else:
-                    tokens.add(tok[1])
+                tokens.add(tok.string)
     tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
