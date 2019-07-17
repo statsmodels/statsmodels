@@ -291,3 +291,26 @@ def test_missing():
 
     d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]}
     smf.rlm('Foo ~ Bar', data=d)
+
+
+def test_rlm_start_values():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+    results = model.fit()
+    start_params = [0.7156402, 1.29528612, -0.15212252, -39.91967442]
+    result_sv = model.fit(start_params=start_params)
+    assert_allclose(results.params, result_sv.params)
+
+
+def test_rlm_start_values_errors():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+    start_params = [0.7156402, 1.29528612, -0.15212252]
+    with pytest.raises(ValueError):
+        model.fit(start_params=start_params)
+
+    start_params = np.array([start_params, start_params]).T
+    with pytest.raises(ValueError):
+        model.fit(start_params=start_params)

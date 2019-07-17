@@ -100,7 +100,20 @@ class _MinimalWLS(object):
         else:
             params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog,
                                               rcond=-1)
+        return self.results(params)
 
+    def results(self, params):
+        """
+        Construct results
+
+        params : array
+            Model parameters
+
+        Notes
+        -----
+        Allows results to be constructed from either existing parameters or
+        when estimated using using ``fit``
+        """
         fitted_values = self.exog.dot(params)
         resid = self.endog - fitted_values
         wresid = self.wendog - self.wexog.dot(params)
