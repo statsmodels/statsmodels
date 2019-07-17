@@ -461,6 +461,7 @@ Reference
 
    vecm.VECM
    vecm.coint_johansen
+   vecm.JohansenTestResult
    vecm.select_order
    vecm.select_coint_rank
    vecm.VECMResults
