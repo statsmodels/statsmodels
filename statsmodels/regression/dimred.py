@@ -102,7 +102,7 @@ class SlicedInverseReg(_DimReductionRegression):
 
         # The SIR objective function
         covxa = np.dot(covx, A)
-        q, r = np.linalg.qr(covxa)
+        q, _ = np.linalg.qr(covxa)
         qd = np.dot(q, np.dot(q.T, mn.T))
         qu = mn.T - qd
         v += np.dot(ph, (qu * qu).sum(0))
@@ -150,7 +150,8 @@ class SlicedInverseReg(_DimReductionRegression):
             v = mn[i, :]
             for q in range(p):
                 for r in range(ndim):
-                    gr[q, r] -= 2 * ph[i] * np.dot(u, np.dot(ft[q*ndim + r], v))
+                    f = np.dot(u, np.dot(ft[q*ndim + r], v))
+                    gr[q, r] -= 2 * ph[i] * f
 
         return gr.ravel()
 
@@ -183,9 +184,10 @@ class SlicedInverseReg(_DimReductionRegression):
 
         Notes
         -----
-        If the covariates (rows of exog) are equally-spaced sequential values, then
-        setting the rows of `pen_mat` to [[1, -1, 1, ...], [0, 1, -2, 1, ..], ...]
-        will give smooth EDR coefficients.  This is a form of "Functional SIR".
+        If the covariates (rows of exog) are equally-spaced sequential
+        values, then setting the rows of `pen_mat` to [[1, -1, 1, ...],
+        [0, 1, -2, 1, ..], ...] will give smooth EDR coefficients.  This
+        is a form of "functional SIR".
         """
 
         if len(kwargs) > 0:
@@ -231,10 +233,11 @@ class SlicedInverseReg(_DimReductionRegression):
             params = params
         else:
             if start_params.shape[1] != ndim:
-                raise ValueError("Shape of start_params is not compatible with ndim")
+                msg = "Shape of start_params is not compatible with ndim"
+                raise ValueError(msg)
             params = start_params
 
-        params, fval, cnvrg = _grass_opt(params, self._regularized_objective,
+        params, _, cnvrg = _grass_opt(params, self._regularized_objective,
                                          self._regularized_grad, maxiter, gtol)
 
         if not cnvrg:
@@ -448,8 +451,8 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     Notes
     -----
-    `params` is 2-d, but `fun` and `grad` should take 1-d arrays `params.ravel()` as
-    arguments.
+    `params` is 2-d, but `fun` and `grad` should take 1-d arrays
+    `params.ravel()` as arguments.
 
     Reference
     ---------
@@ -498,6 +501,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     params = params.reshape((p, d))
     return params, f0, cnvrg
+
 
 class CovarianceReduction(_DimReductionRegression):
     """

@@ -72,25 +72,27 @@ def test_sir_regularized_numdiff():
     y2 = xmat.sum(1)
     y = y2 / (1 + y1**2) + np.random.normal(size=n)
     model = SlicedInverseReg(y, xmat)
-    rslt = model.fit()
+    _ = model.fit()
 
     fmat = np.zeros((p-2, p))
     for i in range(p-2):
         fmat[i, i:i+3] = [1, -2, 1]
 
-    rslt2 = model.fit_regularized(2, 3*fmat)
+    _ = model.fit_regularized(2, 3*fmat)
 
     # Compare the gradients to the numerical derivatives
-    for k in range(5):
+    for _ in range(5):
         pa = np.random.normal(size=(p, 2))
         pa, _, _ = np.linalg.svd(pa, 0)
         gn = approx_fprime(pa.ravel(), model._regularized_objective, 1e-7)
         gr = model._regularized_grad(pa.ravel())
         assert_allclose(gn, gr, atol=1e-5, rtol=1e-4)
 
+
 def test_sir_regularized_1d():
-    # Compare regularized SIR to traditional SIR, in a setting where the regularization
-    # is compatiable with the true parameters (i.e. there is no regulariation bias).
+    # Compare regularized SIR to traditional SIR, in a setting where the
+    # regularization is compatiable with the true parameters (i.e. there
+    # is no regularization bias).
 
     np.random.seed(93482)
 
@@ -126,7 +128,9 @@ def test_sir_regularized_1d():
     assert_equal(sim(pa0, pa2) < 1e-3, True)
 
     # Regularized SIR should have a smaller penalty value than traditional SIR
-    assert_equal(np.sum(np.dot(fmat, pa1)**2) > np.sum(np.dot(fmat, pa2)**2), True)
+    assert_equal(np.sum(np.dot(fmat, pa1)**2) > np.sum(np.dot(fmat, pa2)**2),
+                 True)
+
 
 def test_sir_regularized_2d():
     # Compare regularized SIR to traditional SIR when there is no penalty.
@@ -150,8 +154,9 @@ def test_sir_regularized_2d():
         pa1 = rslt1.params[:, 0:d]
         pa1, _, _ = np.linalg.svd(pa1, 0)
         pa2 = rslt2.params
-        u, s, vt = np.linalg.svd(np.dot(pa1.T, pa2))
+        u, s, _ = np.linalg.svd(np.dot(pa1.T, pa2))
         assert_allclose(np.sum(s), d, atol=1e-1, rtol=1e-1)
+
 
 def test_covreduce():
 
