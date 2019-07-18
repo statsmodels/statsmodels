@@ -138,8 +138,8 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
     y = endog   # now just alias
     x = exog
-           
-    if not 0<=frac<=1:
+
+    if not 0 <= frac <= 1:
            raise ValueError("Lowess `frac` must be in the range [0,1]!")
 
     n = x.shape[0]

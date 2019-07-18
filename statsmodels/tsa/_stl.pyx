@@ -81,15 +81,14 @@ work    workspace of (n+2*np)*5 locations.
 """
 import pandas as pd
 import numpy as np
-cimport numpy as np 
 from libc.math cimport fabs, sqrt, isnan, NAN
 
 from statsmodels.tsa.tsatools import freq_to_period
 
-np.import_array()
 
 def _is_pos_int(x, odd):
-    valid = isinstance(x, (int, np.integer))
+    valid = (isinstance(x, (int, np.integer))
+             and not isinstance(x, np.timedelta64))
     valid = valid and not isinstance(x, (float, np.floating))
     try:
         valid = valid and x > 0
