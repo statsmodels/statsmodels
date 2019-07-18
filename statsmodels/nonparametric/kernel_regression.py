@@ -29,8 +29,6 @@ References
 """
 
 # TODO: make default behavior efficient=True above a certain n_obs
-
-from statsmodels.compat.python import next
 import copy
 
 import numpy as np

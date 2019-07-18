@@ -82,7 +82,7 @@ Potential problems for Python 3
 :change: 2010-05-06 add `label_cells` to `SimpleTable`
 """
 
-from statsmodels.compat.python import lmap, lrange, next, iteritems
+from statsmodels.compat.python import lmap, lrange, iteritems
 
 from itertools import cycle, zip_longest
 import csv

@@ -1,10 +1,13 @@
-from statsmodels.compat.python import (urlopen, HTTPError, URLError,
-                                       lrange, urljoin)
+from statsmodels.compat.python import lrange
+
 from io import StringIO
 import pickle
 import shutil
 from os import environ, makedirs
 from os.path import expanduser, exists, dirname, abspath, join
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+from urllib.parse import urljoin
 
 import numpy as np
 from pandas import read_stata, read_csv, DataFrame, Series, Index

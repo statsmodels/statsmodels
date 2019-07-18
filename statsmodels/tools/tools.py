@@ -8,9 +8,18 @@ import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 import pandas as pd
 
-from statsmodels.compat.python import lzip, lmap, asstr2
+from statsmodels.compat.python import lzip, lmap
 
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
+
+
+def asstr2(s):
+    if isinstance(s, str):
+        return s
+    elif isinstance(s, bytes):
+        return s.decode('latin1')
+    else:
+        return str(s)
 
 
 def _make_dictnames(tmp_arr, offset=0):

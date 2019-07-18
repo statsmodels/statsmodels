@@ -1,15 +1,7 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
-__all__ = ['HTTPError', 'URLError']
-
 import sys
-import urllib
-import inspect
-from collections import namedtuple
-import urllib.request
-import urllib.parse
-from urllib.error import HTTPError, URLError
 
 PY37 = (sys.version_info[:2] == (3, 7))
 
@@ -28,15 +20,6 @@ def asstr(s):
     return s.decode('latin1')
 
 
-def asstr2(s):  # added JP, not in numpy version
-    if isinstance(s, str):
-        return s
-    elif isinstance(s, bytes):
-        return s.decode('latin1')
-    else:
-        return str(s)
-
-
 # list-producing versions of the major Python iterating functions
 def lrange(*args, **kwargs):
     return list(range(*args, **kwargs))
@@ -52,48 +35,6 @@ def lmap(*args, **kwargs):
 
 def lfilter(*args, **kwargs):
     return list(filter(*args, **kwargs))
-
-
-urlopen = urllib.request.urlopen
-urljoin = urllib.parse.urljoin
-urlretrieve = urllib.request.urlretrieve
-urlencode = urllib.parse.urlencode
-
-ArgSpec = namedtuple('ArgSpec',
-                     ['args', 'varargs', 'keywords', 'defaults'])
-
-
-def getargspec(func):
-    """
-    Simple workaroung for getargspec deprecation that returns
-    an ArgSpec-like object
-    """
-    sig = inspect.signature(func)
-    parameters = sig.parameters
-    args, defaults = [], []
-    varargs, keywords = None, None
-
-    for key in parameters:
-        parameter = parameters[key]
-
-        if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
-            varargs = key
-        elif parameter.kind == inspect.Parameter.VAR_KEYWORD:
-            keywords = key
-        else:
-            args.append(key)
-        if parameter.default is not parameter.empty:
-            defaults.append(parameter.default)
-    defaults = None if len(defaults) == 0 else defaults
-
-    return ArgSpec(args, varargs, keywords, defaults)
-
-
-try:
-    next = next
-except NameError:
-    def next(it):
-        return it.next()
 
 
 def iteritems(obj, **kwargs):
@@ -120,14 +61,6 @@ def itervalues(obj, **kwargs):
     if not func:
         func = obj.values
     return func(**kwargs)
-
-
-def get_class(func):
-    try:
-        return func.im_class
-    except AttributeError:
-        # Python 3
-        return func.__self__.__class__
 
 
 def with_metaclass(meta, *bases):
