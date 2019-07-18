@@ -16,7 +16,7 @@ The results "prove" that the regularization paths are the same.  Note that
     finding the reparameterization is non-trivial since the coefficient paths
     are NOT monotonic.  As a result, the paths don't match up perfectly.
 """
-from statsmodels.compat.python import range, lrange
+from statsmodels.compat.python import lrange
 from sklearn import linear_model
 import statsmodels.api as sm
 import numpy as np

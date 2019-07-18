@@ -10,7 +10,6 @@ from scipy import stats
 import pandas as pd
 from patsy import DesignInfo
 
-from statsmodels.compat import string_types
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
@@ -280,7 +279,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         else:
             raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
                              ' len(hypotheses)=%d' % len(hypo))
-        if any(isinstance(j, string_types) for j in L):
+        if any(isinstance(j, str) for j in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
@@ -291,7 +290,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                                  (L.shape[1], k_xvar))
         if M is None:
             M = np.eye(k_yvar)
-        elif any(isinstance(j, string_types) for j in M):
+        elif any(isinstance(j, str) for j in M):
             M = DesignInfo(endog_names).linear_constraint(M).coefs.T
         else:
             if M is not None:

@@ -4,9 +4,6 @@
 #       This code does not allow this, but it adds consistency with other
 #       packages such as gretl and X12-ARIMA
 
-from statsmodels.compat.python import string_types, range, long
-# for 2to3 with extensions
-
 from datetime import datetime
 
 import numpy as np
@@ -1039,12 +1036,12 @@ class ARIMA(ARMA):
             else:
                 start = k_ar
             start = self._index[start]
-        elif isinstance(start, (int, long, np.integer)):
+        elif isinstance(start, (int, np.integer)):
             start -= k_diff
             if start < 0:
                 raise ValueError('The start index %d of the original series '
                                  ' has been differenced away' % start)
-        if isinstance(end, (int, long, np.integer)):
+        if isinstance(end, (int, np.integer)):
             end -= k_diff
 
         start, end, out_of_sample, prediction_index = (
@@ -1158,7 +1155,7 @@ class ARIMA(ARMA):
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         # go ahead and convert to an index for easier checking
-        if isinstance(start, (string_types, datetime)):
+        if isinstance(start, (str, datetime)):
             # start = _index_date(start, self.data.dates)
             start, _, _ = self._get_index_label_loc(start)
             if isinstance(start, slice):

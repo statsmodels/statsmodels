@@ -11,8 +11,6 @@ practice. OTexts, 2014.
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-from statsmodels.compat.python import string_types
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import basinhopping, brute, minimize
@@ -382,7 +380,7 @@ class HoltWintersResults(Results):
                   'mul': 'Multiplicative', 'multiplicative': 'Multiplicative', None: 'None'}
         transform = self.params['use_boxcox']
         box_cox_transform = True if transform else False
-        box_cox_coeff = transform if isinstance(transform, string_types) else self.params['lamda']
+        box_cox_coeff = transform if isinstance(transform, str) else self.params['lamda']
         if isinstance(box_cox_coeff, float):
             box_cox_coeff = '{:>10.5f}'.format(box_cox_coeff)
         top_left = [('Dep. Variable:', [dep_variable]),

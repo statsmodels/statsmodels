@@ -2,9 +2,10 @@
 """
 Test VAR Model
 """
+from statsmodels.compat.python import iteritems, lrange
+
+from io import StringIO, BytesIO
 import warnings
-from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
-                                       range)
 
 import os
 import sys

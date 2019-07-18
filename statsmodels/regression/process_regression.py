@@ -20,7 +20,6 @@ import patsy
 import statsmodels.base.model as base
 import statsmodels.api as sm
 import collections
-from statsmodels.compat.python import string_types
 from scipy.optimize import minimize
 from statsmodels.iolib import summary2
 from statsmodels.tools.numdiff import approx_fprime
@@ -354,10 +353,10 @@ class ProcessMLE(base.LikelihoodModel):
         if drop_cols is not None:
             warnings.warn("'drop_cols' is ignored")
 
-        if isinstance(time, string_types):
+        if isinstance(time, str):
             time = np.asarray(data[time])
 
-        if isinstance(groups, string_types):
+        if isinstance(groups, str):
             groups = np.asarray(data[groups])
 
         exog_scale = patsy.dmatrix(scale_formula, data)

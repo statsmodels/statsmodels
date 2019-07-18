@@ -1,6 +1,8 @@
-from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.python import lrange
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
+from io import BytesIO
+import pickle
 import os
 import warnings
 
@@ -2397,7 +2399,7 @@ def test_arma_pickle():
     x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
                                                              burnin=1000)
     mod = ARMA(x, (1, 1))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.fit(trend="c", disp=-1, solver='newton')
     pkl_res = pkl_mod.fit(trend="c", disp=-1, solver='newton')
@@ -2412,7 +2414,7 @@ def test_arma_pickle():
 def test_arima_pickle():
     endog = y_arma[:, 6]
     mod = ARIMA(endog, (1, 1, 1))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.fit(trend="c", disp=-1, solver='newton')
     pkl_res = pkl_mod.fit(trend="c", disp=-1, solver='newton')

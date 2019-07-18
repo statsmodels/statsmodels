@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 
 from statsmodels.tsa.arima_model import ARMA
 from unittest import TestCase

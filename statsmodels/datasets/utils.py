@@ -1,8 +1,13 @@
-from statsmodels.compat.python import (StringIO, urlopen, HTTPError, URLError,
-                                       lrange, cPickle, urljoin, long)
+from statsmodels.compat.python import lrange
+
+from io import StringIO
+import pickle
 import shutil
 from os import environ, makedirs
 from os.path import expanduser, exists, dirname, abspath, join
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+from urllib.parse import urljoin
 
 import numpy as np
 from pandas import read_stata, read_csv, DataFrame, Series, Index
@@ -63,7 +68,7 @@ class Dataset(dict):
 def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     names = data.columns
 
-    if isinstance(endog_idx, (int, long)):
+    if isinstance(endog_idx, int):
         endog_name = names[endog_idx]
         endog = data[endog_name].copy()
         if exog_idx is None:
@@ -75,7 +80,7 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, (int, long)):
+        elif isinstance(exog_idx, int):
             exog = data[names[exog_idx]].copy()
         else:
             exog = data[names[exog_idx]].copy()
@@ -116,14 +121,14 @@ def _get_cache(cache):
 def _cache_it(data, cache_path):
     import zlib
     data = data.decode('utf-8')
-    open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data)))
+    open(cache_path, "wb").write(zlib.compress(pickle.dumps(data)))
 
 
 def _open_cache(cache_path):
     import zlib
     data = zlib.decompress(open(cache_path, 'rb').read())
     # return as bytes object encoded in utf-8 for cross-compat of cached
-    data = cPickle.loads(data).encode('utf-8')
+    data = pickle.loads(data).encode('utf-8')
     return data
 
 

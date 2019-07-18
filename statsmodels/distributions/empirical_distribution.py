@@ -167,7 +167,7 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
 if __name__ == "__main__":
     #TODO: Make sure everything is correctly aligned and make a plotting
     # function
-    from statsmodels.compat.python import urlopen
+    from urllib.request import urlopen
     import matplotlib.pyplot as plt
     nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
     nerve_data = np.loadtxt(nerve_data)

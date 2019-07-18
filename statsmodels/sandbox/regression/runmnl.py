@@ -22,8 +22,6 @@ Koppelman, Frank S., and Chandra Bhat with technical support from Vaneet Sethi,
 Author: josef-pktd
 License: BSD (simplified)
 '''
-
-from statsmodels.compat.python import zip
 import numpy as np
 import numpy.lib.recfunctions as recf
 from scipy import optimize

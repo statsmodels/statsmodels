@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from statsmodels.compat.python import reduce
+from functools import reduce
 import sys
 from os.path import dirname
 

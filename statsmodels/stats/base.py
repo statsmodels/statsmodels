@@ -5,7 +5,7 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip, zip
+from statsmodels.compat.python import lzip
 import numpy as np
 
 

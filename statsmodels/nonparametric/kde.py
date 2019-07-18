@@ -11,7 +11,6 @@ https://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels

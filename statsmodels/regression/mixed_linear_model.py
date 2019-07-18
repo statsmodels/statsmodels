@@ -152,8 +152,6 @@ from scipy import sparse
 import pandas as pd
 import patsy
 from collections import OrderedDict
-from statsmodels.compat.python import string_types
-from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
@@ -944,7 +942,7 @@ class MixedLM(base.LikelihoodModel):
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
         group_name = "Group"
-        if isinstance(groups, string_types):
+        if isinstance(groups, str):
             group_name = groups
             groups = np.asarray(data[groups])
         else:
@@ -1143,7 +1141,7 @@ class MixedLM(base.LikelihoodModel):
         http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
         """
 
-        if isinstance(method, string_types) and (method.lower() != 'l1'):
+        if isinstance(method, str) and (method.lower() != 'l1'):
             raise ValueError("Invalid regularization method")
 
         # If method is a smooth penalty just optimize directly.
@@ -2842,7 +2840,8 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
         forms.extend(vc_formula.values())
 
     import tokenize
-    from statsmodels.compat.python import StringIO, asunicode
+    from io import StringIO
+    from statsmodels.compat.python import asunicode
     skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
 
     for fml in forms:

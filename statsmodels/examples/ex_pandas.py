@@ -5,7 +5,6 @@
 
 
 from statsmodels.compat.pandas import frequencies
-from statsmodels.compat.python import zip
 from datetime import datetime
 
 import numpy as np

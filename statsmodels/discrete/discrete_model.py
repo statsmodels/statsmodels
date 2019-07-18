@@ -18,7 +18,6 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP", "CountModel"]
 
-from statsmodels.compat.python import range
 from scipy.special import loggamma
 
 import numpy as np

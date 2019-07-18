@@ -11,7 +11,6 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
-from statsmodels.compat.python import range
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import numpy as np

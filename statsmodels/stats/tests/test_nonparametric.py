@@ -5,7 +5,7 @@ Created on Fri Jul 05 14:05:24 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip, range
+from statsmodels.compat.python import lzip
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pytest

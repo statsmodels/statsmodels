@@ -1,8 +1,6 @@
 """
 Test functions for models.GLM
 """
-from statsmodels.compat import range
-
 import warnings
 import os
 import numpy as np

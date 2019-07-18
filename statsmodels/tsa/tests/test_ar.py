@@ -2,7 +2,6 @@
 Test AR Model
 """
 import statsmodels.api as sm
-from statsmodels.compat.python import range
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_model import ARMA
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
@@ -38,7 +37,7 @@ class CheckARMixin(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
 
     def test_pickle(self):
-        from statsmodels.compat.python import BytesIO
+        from io import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res1.save(fh)

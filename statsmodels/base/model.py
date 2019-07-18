@@ -1,4 +1,7 @@
-from statsmodels.compat.python import lzip, range, reduce
+from statsmodels.compat.python import lzip
+
+from functools import reduce
+
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data

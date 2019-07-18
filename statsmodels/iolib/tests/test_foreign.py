@@ -4,6 +4,7 @@ Tests for iolib/foreign.py
 import os
 import warnings
 from datetime import datetime
+from io import BytesIO
 
 from numpy.testing import assert_array_equal, assert_, assert_equal
 import numpy as np
@@ -11,7 +12,7 @@ from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
 import pytest
 
-from statsmodels.compat.python import BytesIO, asbytes
+from statsmodels.compat.python import asbytes
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
 from statsmodels.datasets import macrodata

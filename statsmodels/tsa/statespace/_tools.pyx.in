@@ -680,7 +680,7 @@ cdef int _{{prefix}}ldl({{cython_type}} * A, int n) except *:
     cdef:
         int info = 0
         int j, i, k
-        cdef np.npy_intp dim[1]
+        np.npy_intp dim[1]
         np.float64_t tol = 1e-15
         {{cython_type}} [:] v
 

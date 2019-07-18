@@ -5,8 +5,10 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import iterkeys, cPickle, BytesIO
+from statsmodels.compat.python import iterkeys
 
+import pickle
+from io import BytesIO
 import warnings
 
 import numpy as np
@@ -18,10 +20,10 @@ import statsmodels.api as sm
 
 def check_pickle(obj):
     fh = BytesIO()
-    cPickle.dump(obj, fh, protocol=cPickle.HIGHEST_PROTOCOL)
+    pickle.dump(obj, fh, protocol=pickle.HIGHEST_PROTOCOL)
     plen = fh.tell()
     fh.seek(0, 0)
-    res = cPickle.load(fh)
+    res = pickle.load(fh)
     fh.close()
     return res, plen
 
@@ -97,7 +99,7 @@ class RemoveDataPickle(object):
 
     def test_pickle_wrapper(self):
 
-        fh = BytesIO()  # use cPickle with binary content
+        fh = BytesIO()  # use pickle with binary content
 
         # test unwrapped results load save pickle
         self.results._results.save(fh)

@@ -5,8 +5,9 @@ Created on Wed Feb 29 10:34:00 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat import lrange, zip_longest
-from itertools import combinations
+from statsmodels.compat import lrange
+
+from itertools import combinations, zip_longest
 from numpy.testing import assert_
 
 

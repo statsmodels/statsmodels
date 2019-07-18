@@ -10,7 +10,7 @@ Created on Fri Nov 04 13:45:43 2011
 Author: Josef Perktold
 
 """
-from statsmodels.compat.python import lrange, zip
+from statsmodels.compat.python import lrange
 
 import numpy as np
 

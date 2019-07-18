@@ -8,7 +8,6 @@ License: Simplified-BSD
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat import unicode
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
@@ -511,7 +510,7 @@ class RecursiveLSResults(MLEResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, unicode)):
+        if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):

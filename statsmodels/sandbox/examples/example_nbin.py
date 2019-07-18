@@ -20,6 +20,7 @@ The NB-P and left-truncated model results have not been compared to other
 implementations. Note that NB-P appears to only have been implemented in the
 LIMDEP software.
 '''
+from urllib.request import urlopen
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -28,7 +29,6 @@ from scipy.stats import nbinom
 import pandas
 import patsy
 
-from statsmodels.compat.python import urlopen
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.model import GenericLikelihoodModelResults
 

@@ -6,7 +6,6 @@ License: BSD-3
 
 '''
 
-from statsmodels.compat.python import range
 
 from collections import OrderedDict
 

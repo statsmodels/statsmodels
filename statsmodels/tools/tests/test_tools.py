@@ -1,7 +1,7 @@
 """
 Test functions for models.tools
 """
-from statsmodels.compat.python import lrange, range
+from statsmodels.compat.python import lrange
 
 import string
 

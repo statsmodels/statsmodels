@@ -28,7 +28,7 @@ missing:
 
 
 """
-from statsmodels.compat.python import iteritems, map, long
+from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
@@ -281,7 +281,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     nobs = x.shape[0]
     if lags is None:
         lags = np.arange(1, min((nobs // 2 - 2), 40) + 1)
-    elif isinstance(lags, (int, long)):
+    elif isinstance(lags, int):
         lags = np.arange(1, lags + 1)
     lags = np.asarray(lags)
     maxlag = max(lags)

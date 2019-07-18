@@ -12,8 +12,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from statsmodels.compat.python import long
-
 from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
@@ -2430,7 +2428,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        if isinstance(steps, (int, long)):
+        if isinstance(steps, int):
             end = self.nobs + steps - 1
         else:
             end = steps
@@ -2495,7 +2493,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        if isinstance(steps, (int, long)):
+        if isinstance(steps, int):
             end = self.nobs + steps - 1
         else:
             end = steps

@@ -2,7 +2,9 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+from statsmodels.compat.python import iteritems, lmap
+
+from functools import reduce
 
 import numpy as np
 from pandas import DataFrame, Series, isnull, MultiIndex

@@ -191,7 +191,7 @@ def _convert_out_to_series(x, dates, name):
     Convert x to a DataFrame where x is a string in the format given by
     x-13arima-seats output.
     """
-    from statsmodels.compat import StringIO
+    from io import StringIO
     from pandas import read_csv
     out = read_csv(StringIO(x), skiprows=2,
                    header=None, sep='\t', engine='python')

@@ -1,14 +1,25 @@
 '''
 Utility functions models code
 '''
+from functools import reduce
+
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 import pandas as pd
 
-from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, range,
-                                       long, string_types)
+from statsmodels.compat.python import lzip, lmap
+
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
+
+
+def asstr2(s):
+    if isinstance(s, str):
+        return s
+    elif isinstance(s, bytes):
+        return s.decode('latin1')
+    else:
+        return str(s)
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -145,7 +156,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
         else:
             raise ValueError("Can only convert one column at a time")
     if (not isinstance(data, (pd.DataFrame, pd.Series)) and
-            not isinstance(col, (string_types, int)) and
+            not isinstance(col, (str, int)) and
             col is not None):
         raise TypeError('col must be a str, int or None')
 
@@ -177,7 +188,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     elif data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
-        if isinstance(col, (int, long)):
+        if isinstance(col, int):
             col = data.dtype.names[col]
         if col is None and data.dtype.names and len(data.dtype.names) == 1:
             col = data.dtype.names[0]
@@ -230,7 +241,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     elif not isinstance(data, np.ndarray):
         raise NotImplementedError("array_like objects are not supported")
     else:
-        if isinstance(col, (int, long)):
+        if isinstance(col, int):
             offset = data.shape[1]          # need error catching here?
             tmp_arr = np.unique(data[:, col])
             tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)

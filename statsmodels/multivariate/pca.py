@@ -7,7 +7,6 @@ Modified by Kevin Sheppard
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat.python import range
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
 

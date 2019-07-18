@@ -8,7 +8,6 @@ TODO: check everywhere initialization of signal.lfilter
 
 """
 
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import signal, optimize
 from statsmodels.base.model import GenericLikelihoodModel

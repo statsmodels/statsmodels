@@ -1,7 +1,6 @@
 #cython: language_level=3, wraparound=False, cdivision=True, boundscheck=False
 import numpy as np
 
-cimport numpy as np
 
 from statsmodels.tools.validation import (array_like, PandasWrapper,
                                           int_like, float_like)

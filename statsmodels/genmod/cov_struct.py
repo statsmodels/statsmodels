@@ -7,7 +7,7 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-from statsmodels.compat.python import iterkeys, itervalues, zip, range
+from statsmodels.compat.python import iterkeys, itervalues
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
 import pandas as pd

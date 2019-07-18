@@ -46,7 +46,6 @@ benchmark against the parametric GLM results.
 # NOTE: example script is now in examples folder
 #update: I did some of the above, see module docstring
 
-from statsmodels.compat.python import range
 import numpy as np
 
 from statsmodels.genmod import families

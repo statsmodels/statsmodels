@@ -15,8 +15,6 @@ In the case of linear models with no interactions involving the
 mediator, the results should be similar or identical to the earlier
 Barron-Kenny approach.
 """
-from statsmodels.compat.python import string_types
-
 import numpy as np
 import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
@@ -163,7 +161,7 @@ class Mediation(object):
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
-        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, string_types))
+        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, str))
 
         if exp_is_2:
             if model == 'outcome':

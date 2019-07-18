@@ -7,7 +7,7 @@ from numpy.linalg import inv, svd
 import scipy
 import scipy.stats
 
-from statsmodels.compat.python import range, string_types, iteritems
+from statsmodels.compat.python import iteritems
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
@@ -1810,7 +1810,7 @@ class VECMResults(object):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (string_types, int)
+        allowed_types = (str, int)
 
         if isinstance(caused, allowed_types):
             caused = [caused]

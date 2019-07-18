@@ -4,8 +4,8 @@
 Created on Fri Dec 16 12:52:13 2011
 Author: Josef Perktold
 """
+from urllib.request import urlretrieve
 
-from statsmodels.compat.python import urlretrieve
 import numpy as np
 from numpy.testing import assert_almost_equal
 

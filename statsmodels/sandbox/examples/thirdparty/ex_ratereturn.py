@@ -8,12 +8,11 @@ to see graphs, uncomment plt.show()
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
 """
+import pickle
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-from statsmodels.compat.python import cPickle
 
 import statsmodels.sandbox.tools as sbtools
 
@@ -21,7 +20,7 @@ from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 
 try:
     with open('dj30rr', 'rb') as fd:
-        rrdm = cPickle.load(fd)
+        rrdm = pickle.load(fd)
 except Exception: #blanket for any unpickling error
     print("Error with unpickling, a new pickle file can be created with findow_1")
     raise

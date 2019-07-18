@@ -8,7 +8,6 @@ from warnings import warn
 
 import numpy as np
 
-from statsmodels.compat.python import long
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.decorators import cache_readonly
@@ -333,12 +332,12 @@ class SARIMAX(MLEModel):
         # Assume that they are given from lowest degree to highest, that all
         # degrees except for the constant are included, and that they are
         # boolean vectors (0 for not included, 1 for included).
-        if isinstance(order[0], (int, long, np.integer)):
+        if isinstance(order[0], (int, np.integer)):
             self.polynomial_ar = np.r_[1., np.ones(order[0])]
         else:
             self.polynomial_ar = np.r_[1., order[0]]
         self._polynomial_ar = self.polynomial_ar.copy()
-        if isinstance(order[2], (int, long, np.integer)):
+        if isinstance(order[2], (int, np.integer)):
             self.polynomial_ma = np.r_[1., np.ones(order[2])]
         else:
             self.polynomial_ma = np.r_[1., order[2]]
@@ -346,7 +345,7 @@ class SARIMAX(MLEModel):
         # Assume that they are given from lowest degree to highest, that the
         # degrees correspond to (1*s, 2*s, ..., P*s), and that they are
         # boolean vectors (0 for not included, 1 for included).
-        if isinstance(seasonal_order[0], (int, long, np.integer)):
+        if isinstance(seasonal_order[0], (int, np.integer)):
             self.polynomial_seasonal_ar = np.r_[
                 1.,  # constant
                 ([0] * (self.seasonal_periods - 1) + [1]) * seasonal_order[0]
@@ -359,7 +358,7 @@ class SARIMAX(MLEModel):
                 tmp = (i + 1) * self.seasonal_periods
                 self.polynomial_seasonal_ar[tmp] = seasonal_order[0][i]
         self._polynomial_seasonal_ar = self.polynomial_seasonal_ar.copy()
-        if isinstance(seasonal_order[2], (int, long, np.integer)):
+        if isinstance(seasonal_order[2], (int, np.integer)):
             self.polynomial_seasonal_ma = np.r_[
                 1.,  # constant
                 ([0] * (self.seasonal_periods - 1) + [1]) * seasonal_order[2]

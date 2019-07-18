@@ -9,7 +9,6 @@ polynomial regression with systematic deviations above
 import numpy as np
 import matplotlib.pyplot as plt
 
-from statsmodels.compat.python import zip
 from scipy import stats
 import statsmodels.api as sm
 
