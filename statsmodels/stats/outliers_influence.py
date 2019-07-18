@@ -146,7 +146,7 @@ def reset_ramsey(res, degree=5):
     return res_aux.f_test(r_matrix)  # , r_matrix, res_aux
 
 
-def variance_inflation_factor(exog, exog_idx):
+def variance_inflation_factor(exog, exog_idx, hasconst=None):
     """variance inflation factor, VIF, for one exogenous variable
 
     The variance inflation factor is a measure for the increase of the
@@ -166,7 +166,12 @@ def variance_inflation_factor(exog, exog_idx):
         regression
     exog_idx : int
         index of the exogenous variable in the columns of exog
-
+    hasconst : None or bool
+        indicates whether the exog includes a user-supplied constant. If True,
+        a constant is not checked for and k_constant is set to 1 and all result
+        statistics are calculated as if a constant is present. If False, a
+        constant is not checked for and k_constant is set to 0.
+    
     Returns
     -------
     vif : float
@@ -189,7 +194,7 @@ def variance_inflation_factor(exog, exog_idx):
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
     x_noti = exog[:, mask]
-    r_squared_i = OLS(x_i, x_noti).fit().rsquared
+    r_squared_i = OLS(x_i, x_noti, hasconst=hasconst).fit().rsquared
     vif = 1. / (1. - r_squared_i)
     return vif
 
