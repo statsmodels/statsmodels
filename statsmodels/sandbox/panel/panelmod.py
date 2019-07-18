@@ -6,9 +6,11 @@ References
 
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
-from statsmodels.compat.python import range, reduce
-from statsmodels.regression.linear_model import GLS
+from functools import reduce
+
 import numpy as np
+
+from statsmodels.regression.linear_model import GLS
 
 __all__ = ["PanelModel"]
 

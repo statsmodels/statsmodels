@@ -6,7 +6,7 @@ Created on Fri Mar 01 00:23:07 2013
 Author: Josef Perktold
 License: BSD-3
 """
-from statsmodels.compat.python import lzip, range
+from statsmodels.compat.python import lzip
 import numpy as np
 from scipy import stats, optimize
 from sys import float_info

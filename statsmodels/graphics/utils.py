@@ -1,5 +1,5 @@
 """Helper functions for graphics with Matplotlib."""
-from statsmodels.compat.python import lrange, range, long
+from statsmodels.compat.python import lrange
 
 __all__ = ['create_mpl_ax', 'create_mpl_fig']
 
@@ -98,7 +98,7 @@ def maybe_name_or_idx(idx, model):
     """
     if idx is None:
         idx = lrange(model.exog.shape[1])
-    if isinstance(idx, (int, long)):
+    if isinstance(idx, int):
         exog_name = model.exog_names[idx]
         exog_idx = idx
     # anticipate index as list and recurse

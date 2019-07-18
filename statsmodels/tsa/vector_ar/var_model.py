@@ -7,10 +7,11 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
-from statsmodels.compat.python import (range, lrange,
-                                       StringIO, iteritems)
+from statsmodels.compat.python import lrange, iteritems
 from statsmodels.compat.pandas import deprecate_kwarg
+
 from collections import defaultdict
+from io import StringIO
 
 import numpy as np
 import scipy.stats as stats

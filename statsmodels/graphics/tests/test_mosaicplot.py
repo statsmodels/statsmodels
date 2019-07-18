@@ -1,4 +1,4 @@
-from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
+from statsmodels.compat.python import iterkeys, lrange, iteritems
 
 from collections import OrderedDict
 from io import BytesIO

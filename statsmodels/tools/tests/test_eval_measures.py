@@ -6,7 +6,6 @@ Created on Tue Nov 08 22:28:48 2011
 """
 import pytest
 
-from statsmodels.compat.python import zip
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 

@@ -7,7 +7,6 @@ Author: Josef Perktold
 import numpy as np
 import matplotlib.pyplot as plt
 
-from statsmodels.compat.python import zip
 import statsmodels.api as sm
 
 from statsmodels.regression.quantile_regression import QuantReg

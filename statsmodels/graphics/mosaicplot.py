@@ -8,7 +8,7 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from statsmodels.compat.python import (iteritems, iterkeys, lrange, lzip,
-                                itervalues, zip, range)
+                                       itervalues)
 import numpy as np
 from collections import OrderedDict
 from itertools import product

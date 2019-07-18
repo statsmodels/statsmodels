@@ -30,7 +30,7 @@ References
 
 # TODO: make default behavior efficient=True above a certain n_obs
 
-from statsmodels.compat.python import range, next
+from statsmodels.compat.python import next
 import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles

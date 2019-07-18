@@ -9,8 +9,7 @@ namespace : dictionary
 
 """
 from collections import OrderedDict
-from statsmodels.compat.python import (iterkeys, lrange,
-                                       itervalues, range)
+from statsmodels.compat.python import iterkeys, lrange, itervalues
 import copy
 import numpy as np
 

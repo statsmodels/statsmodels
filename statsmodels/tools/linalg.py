@@ -1,7 +1,6 @@
 """
 Linear Algebra solvers and other helpers
 """
-from statsmodels.compat.python import range
 import numpy as np
 from scipy.linalg import pinv, pinv2, lstsq  # noqa:F401
 

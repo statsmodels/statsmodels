@@ -1,4 +1,6 @@
-from statsmodels.compat.python import iteritems, StringIO
+from statsmodels.compat.python import iteritems
+
+from io import StringIO
 import warnings
 
 from statsmodels.formula.api import ols

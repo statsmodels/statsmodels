@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat.python import iteritems, range
+from statsmodels.compat.python import iteritems
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch

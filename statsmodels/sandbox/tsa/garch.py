@@ -72,7 +72,6 @@ see notes_references.txt
 Created on Feb 6, 2010
 @author: "josef pktd"
 '''
-from statsmodels.compat.python import zip
 import numpy as np
 from numpy.testing import assert_almost_equal
 

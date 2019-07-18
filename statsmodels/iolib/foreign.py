@@ -11,8 +11,8 @@ numpy.lib.io
 """
 import warnings
 
-from statsmodels.compat.python import (zip, lzip, lmap, lrange,
-                                       long, lfilter, asbytes, asstr, range)
+from statsmodels.compat.python import (lzip, lmap, lrange,
+                                       lfilter, asbytes, asstr)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -389,7 +389,7 @@ class StataReader(object):
 
         k is zero-indexed.  Prefer using R.data() for performance.
         """
-        if not (isinstance(k, (int, long))) or k < 0 or k > len(self)-1:
+        if not (isinstance(k, int)) or k < 0 or k > len(self)-1:
             raise IndexError(k)
         loc = self._data_location + sum(self._col_size()) * k
         if self._file.tell() != loc:

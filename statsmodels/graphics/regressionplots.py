@@ -10,7 +10,7 @@ update
 2011-10-27 : docstrings
 
 '''
-from statsmodels.compat.python import lrange, lzip, range
+from statsmodels.compat.python import lrange, lzip
 import numpy as np
 import pandas as pd
 from patsy import dmatrix

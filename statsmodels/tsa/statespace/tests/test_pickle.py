@@ -12,13 +12,13 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
+import pickle
 
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_allclose
 import pytest
 
-from statsmodels.compat import cPickle
 from statsmodels.tsa.statespace import sarimax
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.representation import Representation
@@ -41,7 +41,7 @@ def data():
 def test_pickle_fit_sarimax(data):
     # Fit an ARIMA(1,1,0) to log GDP
     mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.fit(disp=-1, full_output=True, method='newton')
     pkl_res = pkl_mod.fit(disp=-1, full_output=True, method='newton')
@@ -73,7 +73,7 @@ def test_unobserved_components_pickle():
 
     for mod in models:
         # Smoke tests
-        pkl_mod = cPickle.loads(cPickle.dumps(mod))
+        pkl_mod = pickle.loads(pickle.dumps(mod))
         assert_equal(mod.start_params, pkl_mod.start_params)
         res = mod.fit(disp=False)
         pkl_res = pkl_mod.fit(disp=False)
@@ -118,7 +118,7 @@ def test_kalman_filter_pickle(data):
         model.transition[:, :, 0].T
     )
     model.initialize_known(initial_state, initial_state_cov)
-    pkl_mod = cPickle.loads(cPickle.dumps(model))
+    pkl_mod = pickle.loads(pickle.dumps(model))
 
     results = model.filter()
     pkl_results = pkl_mod.filter()
@@ -139,7 +139,7 @@ def test_representation_pickle():
     arr = np.arange(nobs * k_endog).reshape(k_endog, nobs) * 1.
     endog = np.asfortranarray(arr)
     mod = Representation(endog, k_states=2)
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     assert_equal(mod.nobs, pkl_mod.nobs)
     assert_equal(mod.k_endog, pkl_mod.k_endog)

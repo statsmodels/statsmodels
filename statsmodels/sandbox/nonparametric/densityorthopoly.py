@@ -37,7 +37,6 @@ enhancements:
 
 
 '''
-from statsmodels.compat.python import zip
 from scipy import stats, integrate, special
 
 import numpy as np

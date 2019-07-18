@@ -4,9 +4,6 @@ Created on Wed Jul 28 08:28:04 2010
 
 Author: josef-pktd
 """
-
-
-from statsmodels.compat.python import zip
 import numpy as np
 
 from scipy import stats, special, optimize

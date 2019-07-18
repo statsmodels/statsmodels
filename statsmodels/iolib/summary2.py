@@ -1,9 +1,10 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
-                                       reduce, itervalues, zip,
-                                       range)
+                                       itervalues)
+
 
 from collections import OrderedDict
 import datetime
+from functools import reduce
 import re
 import textwrap
 

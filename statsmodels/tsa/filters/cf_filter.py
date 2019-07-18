@@ -1,6 +1,5 @@
 import numpy as np
 
-from statsmodels.compat.python import range
 from statsmodels.tools.validation import array_like, PandasWrapper
 
 

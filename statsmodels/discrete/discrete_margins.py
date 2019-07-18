@@ -1,6 +1,6 @@
 #Splitting out maringal effects to see if they can be generalized
 
-from statsmodels.compat.python import lzip, range
+from statsmodels.compat.python import lzip
 import numpy as np
 from scipy.stats import norm
 from statsmodels.tools.decorators import cache_readonly

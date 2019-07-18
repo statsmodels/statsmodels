@@ -10,7 +10,7 @@ distribution fit, but these are neither general nor verified.
 Author: josef-pktd
 License: Simplified BSD
 '''
-from statsmodels.compat.python import range, lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 from scipy import stats, optimize, integrate
 

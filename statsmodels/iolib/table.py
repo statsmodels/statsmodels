@@ -82,10 +82,9 @@ Potential problems for Python 3
 :change: 2010-05-06 add `label_cells` to `SimpleTable`
 """
 
-from statsmodels.compat.python import (lmap, lrange, zip, next, iteritems,
-                                       zip_longest, range, long)
+from statsmodels.compat.python import lmap, lrange, next, iteritems
 
-from itertools import cycle
+from itertools import cycle, zip_longest
 import csv
 
 
@@ -314,7 +313,7 @@ class SimpleTable(list):
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
             request = [0] * ncols
-        elif isinstance(request, (int, long)):
+        elif isinstance(request, int):
             request = [request] * ncols
         elif len(request) < ncols:
             request = [request[i % len(request)] for i in range(ncols)]
@@ -676,7 +675,7 @@ class Cell(object):
         fmt = self._get_fmt(output_format, **fmt_dict)
         datatype = self.datatype
         data_aligns = fmt.get('data_aligns', 'c')
-        if isinstance(datatype, (int, long)):
+        if isinstance(datatype, int):
             align = data_aligns[datatype % len(data_aligns)]
         elif datatype == 'stub':
             # still support deprecated `stubs_align`
@@ -719,7 +718,7 @@ class Cell(object):
             if data_fmt is None:
                 data_fmt = '%s'
             data_fmts = [data_fmt]
-        if isinstance(datatype, (int, long)):
+        if isinstance(datatype, int):
             datatype = datatype % len(data_fmts)  # constrain to indexes
             content = data_fmts[datatype] % (data,)
             if datatype == 0:

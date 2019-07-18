@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-from statsmodels.compat.python import StringIO
+from io import StringIO
 
 import numpy as np
 

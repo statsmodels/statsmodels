@@ -57,7 +57,7 @@ import scipy
 from scipy import stats, special
 from scipy.stats import distributions
 
-from statsmodels.compat.python import range, iteritems
+from statsmodels.compat.python import iteritems
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 
 

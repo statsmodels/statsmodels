@@ -1,4 +1,7 @@
-from statsmodels.compat.python import lzip, StringIO, range
+from statsmodels.compat.python import lzip
+
+from io import StringIO
+
 import numpy as np
 
 from statsmodels.iolib import SimpleTable

@@ -5,8 +5,8 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
+from io import StringIO
 
-from statsmodels.compat.python import StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats

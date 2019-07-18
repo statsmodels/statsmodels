@@ -1,7 +1,6 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat.python import range
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean

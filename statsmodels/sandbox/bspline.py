@@ -15,7 +15,6 @@ General references:
     Numerische Mathematik, 47(1), 99-106.
 '''
 
-from statsmodels.compat.python import range
 import numpy as np
 import numpy.linalg as L
 

@@ -152,7 +152,6 @@ from scipy import sparse
 import pandas as pd
 import patsy
 from collections import OrderedDict
-from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
@@ -2841,7 +2840,8 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
         forms.extend(vc_formula.values())
 
     import tokenize
-    from statsmodels.compat.python import StringIO, asunicode
+    from io import StringIO
+    from statsmodels.compat.python import asunicode
     skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
 
     for fml in forms:

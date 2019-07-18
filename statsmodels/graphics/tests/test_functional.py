@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal

@@ -1,27 +1,18 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
-__all__ = ['HTTPError', 'URLError', 'BytesIO']
+__all__ = ['HTTPError', 'URLError']
 
-import functools
-import itertools
 import sys
 import urllib
 import inspect
 from collections import namedtuple
-from io import StringIO, BytesIO
-import pickle as cPickle
 import urllib.request
 import urllib.parse
 from urllib.error import HTTPError, URLError
 
 PY37 = (sys.version_info[:2] == (3, 7))
 
-cStringIO = StringIO
-pickle = cPickle
-bytes = bytes
-str = str
-unicode = str
 asunicode = lambda x, _: str(x)  # noqa:E731
 
 
@@ -44,17 +35,6 @@ def asstr2(s):  # added JP, not in numpy version
         return s.decode('latin1')
     else:
         return str(s)
-
-
-# have to explicitly put builtins into the namespace
-range = range
-map = map
-zip = zip
-filter = filter
-reduce = functools.reduce
-long = int
-unichr = chr
-zip_longest = itertools.zip_longest
 
 
 # list-producing versions of the major Python iterating functions

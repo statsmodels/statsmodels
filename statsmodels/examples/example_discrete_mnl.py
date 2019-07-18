@@ -53,14 +53,14 @@ endog_names = [anes_data.endog_name+'=%d' % i for i in np.unique(mlogit_res.mode
 print(mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names))
 
 
-''' #trying cPickle
-from statsmodels.compat.python import cPickle #, copy
+''' #trying pickle
+from statsmodels.compat.python import pickle #, copy
 
 #copy.deepcopy(mlogit_res)  #raises exception: AttributeError: 'ResettableCache' object has no attribute '_resetdict'
 mnl_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 mnl_res.cov_params()
 #mnl_res.model.endog = None
 #mnl_res.model.exog = None
-cPickle.dump(mnl_res, open('mnl_res.dump', 'w'))
-mnl_res_l = cPickle.load(open('mnl_res.dump', 'r'))
+pickle.dump(mnl_res, open('mnl_res.dump', 'w'))
+mnl_res_l = pickle.load(open('mnl_res.dump', 'r'))
 '''

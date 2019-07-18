@@ -1,8 +1,8 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import (iteritems, range, lrange,
-                                       lzip, zip, long)
+from statsmodels.compat.python import (iteritems, lrange,
+                                       lzip)
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
@@ -221,7 +221,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         store = True
 
     trenddict = {None: 'nc', 0: 'c', 1: 'ct', 2: 'ctt'}
-    if regression is None or isinstance(regression, (int, long)):
+    if regression is None or isinstance(regression, int):
         regression = trenddict[regression]
     regression = regression.lower()
     nobs = x.shape[0]

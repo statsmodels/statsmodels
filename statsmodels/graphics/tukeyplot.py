@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as lines

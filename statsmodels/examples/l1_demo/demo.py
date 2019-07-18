@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 from optparse import OptionParser
 import statsmodels.api as sm
 import scipy as sp

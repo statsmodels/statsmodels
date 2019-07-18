@@ -2,7 +2,7 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat.python import range, asbytes, long
+from statsmodels.compat.python import asbytes
 from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
@@ -245,7 +245,7 @@ def get_index(lst, name):
     try:
         result = lst.index(name)
     except Exception:
-        if not isinstance(name, (int, long)):
+        if not isinstance(name, int):
             raise
         result = name
     return result

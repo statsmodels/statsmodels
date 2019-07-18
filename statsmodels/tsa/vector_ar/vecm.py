@@ -7,7 +7,7 @@ from numpy.linalg import inv, svd
 import scipy
 import scipy.stats
 
-from statsmodels.compat.python import range, iteritems
+from statsmodels.compat.python import iteritems
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly

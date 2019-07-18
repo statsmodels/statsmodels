@@ -1,3 +1,4 @@
+from io import StringIO
 from textwrap import dedent
 
 import numpy.testing as npt
@@ -9,7 +10,6 @@ import pandas
 import pytest
 
 from statsmodels.imputation import ros
-from statsmodels.compat.python import StringIO
 
 
 def load_basic_data():

@@ -17,7 +17,7 @@ References
 ----------
 
 '''
-from statsmodels.compat.python import range, lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 
 from scipy.stats import distributions
