@@ -55,6 +55,7 @@ class ModelData(object):
     appropriate form
     """
     _param_names = None
+    _cov_names = None
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
@@ -352,6 +353,26 @@ class ModelData(object):
     def param_names(self, values):
         self._param_names = values
 
+    @property
+    def cov_names(self):
+        """
+        Labels for covariance matrices
+
+        In multidimensional models, each dimension of a covariance matrix
+        differs from the number of param_names.
+
+        If not set, returns param_names
+        """
+        # for handling names of covariance names in multidimensional models
+        if self._cov_names is not None:
+            return self._cov_names
+        return self.param_names
+
+    @cov_names.setter
+    def cov_names(self, value):
+        # for handling names of covariance names in multidimensional models
+        self._cov_names = value
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog
@@ -427,6 +448,8 @@ class ModelData(object):
             return self.attach_generic_columns_2d(obj, names)
         elif how == 'ynames':
             return self.attach_ynames(obj)
+        elif how == 'multivariate_confint':
+            return self.attach_mv_confint(obj)
         else:
             return obj
 
@@ -446,6 +469,9 @@ class ModelData(object):
         return result
 
     def attach_dates(self, result):
+        return result
+
+    def attach_mv_confint(self, result):
         return result
 
     def attach_generic_columns(self, result, *args, **kwargs):
@@ -533,8 +559,7 @@ class PandasData(ModelData):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
-        return DataFrame(result, index=self.param_names,
-                         columns=self.param_names)
+        return DataFrame(result, index=self.cov_names, columns=self.cov_names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
@@ -564,6 +589,11 @@ class PandasData(ModelData):
         else:
             return DataFrame(result, index=self.predict_dates,
                              columns=self.ynames)
+
+    def attach_mv_confint(self, result):
+        return DataFrame(result.reshape((-1, 2)),
+                         index=self.cov_names,
+                         columns=['lower', 'upper'])
 
     def attach_ynames(self, result):
         squeezed = result.squeeze()

@@ -11,6 +11,8 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
+from pandas.testing import assert_index_equal
 import pytest
 
 
@@ -803,3 +805,15 @@ class TestVARExtras(object):
 def test_deprecated_attributes_varresults(bivariate_var_result, attr):
     with pytest.warns(FutureWarning):
         getattr(bivariate_var_result, attr)
+
+
+def test_var_cov_params(bivariate_var_data):
+    df = pd.DataFrame(bivariate_var_data, columns=['x', 'y'])
+    mod = VAR(df)
+    res = mod.fit(2)
+    cov = res.cov_params()
+    assert isinstance(cov, pd.DataFrame)
+    exog_names = ('const', 'L1.x', 'L1.y', 'L2.x', 'L2.y')
+    index = pd.MultiIndex.from_product((exog_names, ('x', 'y')))
+    assert_index_equal(cov.index, cov.columns)
+    assert_index_equal(cov.index, index)
