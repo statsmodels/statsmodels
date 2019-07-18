@@ -17,7 +17,6 @@ import scipy.fftpack as fft
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
 
-from statsmodels.compat.python import range
 from statsmodels.tools.validation import array_like, PandasWrapper
 
 def _pad_nans(x, head=None, tail=None):

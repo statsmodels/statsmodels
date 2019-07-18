@@ -11,7 +11,6 @@ Note: uncomment plt.show() to display graphs
 import time
 
 import numpy as np
-from statsmodels.compat.python import zip
 import numpy.random as R
 import matplotlib.pyplot as plt
 import scipy.stats

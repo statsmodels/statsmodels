@@ -16,9 +16,8 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
-from statsmodels.compat import cPickle
-
 import copy
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -181,7 +180,7 @@ class Clark1987(object):
         )
 
     def test_pickled_filter(self):
-        pickled = cPickle.loads(cPickle.dumps(self.filter))
+        pickled = pickle.loads(pickle.dumps(self.filter))
         #  Run the filters
         self.filter()
         pickled()

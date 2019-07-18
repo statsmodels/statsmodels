@@ -16,7 +16,6 @@ interpolators
 import numpy as np
 from scipy.interpolate import interp1d, interp2d, Rbf
 
-from statsmodels.compat.python import range
 from statsmodels.tools.decorators import cache_readonly
 
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from statsmodels.compat.python import lzip, zip
+from statsmodels.compat.python import lzip
 import numpy as np
 from . import kernels
 

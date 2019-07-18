@@ -6,7 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-from statsmodels.compat.python import StringIO
+from io import StringIO
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_

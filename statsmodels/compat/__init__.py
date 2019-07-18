@@ -2,24 +2,15 @@ from statsmodels.tools._testing import PytestTester
 
 from .python import (
     PY37,
-    bytes, str, unicode, string_types,
-    asunicode, asbytes, asstr, asstr2,
-    range, zip, filter, map,
+    asunicode, asbytes, asstr,
     lrange, lzip, lmap, lfilter,
-    cStringIO, StringIO, BytesIO,
-    cPickle, pickle,
     iteritems, iterkeys, itervalues,
-    urlopen, urljoin, urlencode, HTTPError, URLError,
-    reduce, long, unichr, zip_longest,
-    getargspec, next, get_class
 )
 
-__all__ = ['PY37', 'bytes', 'str', 'unicode', 'string_types',
-           'asunicode', 'asbytes', 'asstr', 'asstr2', 'range', 'zip',
-           'filter', 'map', 'lrange', 'lzip', 'lmap', 'lfilter', 'cStringIO',
-           'StringIO', 'BytesIO', 'cPickle', 'pickle', 'iteritems',
-           'iterkeys', 'itervalues', 'urlopen', 'urljoin', 'urlencode',
-           'HTTPError', 'URLError', 'reduce', 'long', 'unichr', 'zip_longest',
-           'getargspec', 'next', 'get_class', 'test']
+__all__ = ['PY37',
+           'asunicode', 'asbytes', 'asstr',
+           'lrange', 'lzip', 'lmap', 'lfilter',
+           'iteritems', 'iterkeys', 'itervalues',
+           'test']
 
 test = PytestTester()

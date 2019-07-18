@@ -3,7 +3,6 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
 
 import statsmodels.datasets.macrodata.data as macro
-from statsmodels.compat.python import range
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
     import sublists
 from statsmodels.tsa.vector_ar.var_model import VAR

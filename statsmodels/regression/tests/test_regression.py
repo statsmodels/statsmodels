@@ -2,7 +2,7 @@
 Test functions for models.regression
 """
 # TODO: Test for LM
-from statsmodels.compat.python import long, lrange
+from statsmodels.compat.python import lrange
 import warnings
 import pandas
 import numpy as np
@@ -691,7 +691,7 @@ class TestNonFit(object):
 
     def test_df_resid(self):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
-        assert_equal(self.ols_model.df_resid, long(9))
+        assert_equal(self.ols_model.df_resid, 9)
 
 
 class TestWLS_CornerCases(object):

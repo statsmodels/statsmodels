@@ -5,7 +5,8 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import urlretrieve
+from urllib.request import urlretrieve
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 

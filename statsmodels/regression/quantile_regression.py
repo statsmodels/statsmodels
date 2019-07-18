@@ -17,7 +17,6 @@ code written by James P. Lesage in Applied Econometrics Using MATLAB(1999).PP.
 Prinoth (christian at prinoth dot name).
 '''
 
-from statsmodels.compat.python import range
 import numpy as np
 import warnings
 import scipy.stats as stats

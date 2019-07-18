@@ -5,7 +5,6 @@ Created on Sun Sep 25 21:23:38 2011
 Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import stats
 

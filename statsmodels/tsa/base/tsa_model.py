@@ -1,4 +1,3 @@
-from statsmodels.compat.python import long
 from statsmodels.compat.pandas import is_numeric_dtype
 
 import numbers
@@ -280,7 +279,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         nobs = len(index)
 
         # Special handling for RangeIndex
-        if range_index and isinstance(key, (int, long, np.integer)):
+        if range_index and isinstance(key, (int, np.integer)):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
                 key = nobs + key
@@ -300,7 +299,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Special handling for Int64Index
         if (not range_index and int_index and not date_index and
-                isinstance(key, (int, long, np.integer))):
+                isinstance(key, (int, np.integer))):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
                 key = nobs + key
@@ -316,7 +315,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             else:
                 index_fn = period_range
             # Integer key (i.e. already given a location)
-            if isinstance(key, (int, long, np.integer)):
+            if isinstance(key, (int, np.integer)):
                 # Negative indices (that lie in the Index)
                 if key < 0 and -key < nobs:
                     key = index[nobs + key]
@@ -422,7 +421,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 self._get_index_loc(key, base_index))
         except KeyError as e:
             try:
-                if not isinstance(key, (int, long, np.integer)):
+                if not isinstance(key, (int, np.integer)):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise

@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat.python import iteritems, string_types, range
+from statsmodels.compat.python import iteritems
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
@@ -127,7 +127,7 @@ def _window_ols(y, x, window=None, window_type=None, min_periods=None):
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
         return window_type
-    elif isinstance(window_type, string_types):
+    elif isinstance(window_type, str):
         window_type_up = window_type.upper()
 
         if window_type_up in ('FULL SAMPLE', 'FULL_SAMPLE'):

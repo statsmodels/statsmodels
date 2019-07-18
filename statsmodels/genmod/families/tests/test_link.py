@@ -1,7 +1,6 @@
 """
 Test functions for genmod.families.links
 """
-from statsmodels.compat.python import range
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import statsmodels.genmod.families as families

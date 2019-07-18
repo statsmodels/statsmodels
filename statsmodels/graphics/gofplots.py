@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lzip, string_types
+from statsmodels.compat.python import lzip
 
 import numpy as np
 from scipy import stats
@@ -170,7 +170,7 @@ class ProbPlot(object):
         self.distargs = distargs
         self.fit = fit
 
-        if isinstance(dist, string_types):
+        if isinstance(dist, str):
             dist = getattr(stats, dist)
 
         self.fit_params = dist.fit(data)

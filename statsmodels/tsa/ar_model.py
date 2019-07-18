@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from statsmodels.compat.python import iteritems, range, lmap
+from statsmodels.compat.python import iteritems, lmap
 
 import numpy as np
 from numpy import dot, identity

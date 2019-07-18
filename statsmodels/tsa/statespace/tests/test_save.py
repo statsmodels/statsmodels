@@ -2,8 +2,7 @@
 Tests of save / load / remove_data state space functionality.
 """
 
-from statsmodels.compat import cPickle
-
+import pickle
 import tempfile
 import os
 
@@ -41,7 +40,7 @@ def test_sarimax(temp_filename):
 
 def test_sarimax_pickle():
     mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(mod.start_params)
@@ -66,7 +65,7 @@ def test_structural(temp_filename):
 def test_structural_pickle():
     mod = structural.UnobservedComponents(
         macrodata['realgdp'].values, 'llevel')
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(pkl_mod.start_params)
@@ -93,7 +92,7 @@ def test_dynamic_factor_pickle(temp_filename):
     mod = varmax.VARMAX(
         macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
         order=(1, 0))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(mod.start_params)

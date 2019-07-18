@@ -11,7 +11,6 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.compat.python import range
 from statsmodels.compat.pandas import deprecate_kwarg
 
 from statsmodels.tools.decorators import deprecated_alias

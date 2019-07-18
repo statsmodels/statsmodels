@@ -1,7 +1,8 @@
 import copy
+from itertools import zip_longest
 import time
 
-from statsmodels.compat.python import range, lrange, lmap, lzip, zip_longest
+from statsmodels.compat.python import lrange, lmap, lzip
 import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,

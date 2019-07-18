@@ -32,7 +32,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 
-from statsmodels.compat.python import lrange, lzip, range
+from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 from scipy.linalg import toeplitz

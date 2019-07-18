@@ -4,7 +4,6 @@ from numpy.testing import (assert_, assert_allclose, assert_raises,
                            assert_array_equal, assert_raises_regex)
 
 import statsmodels.datasets.interest_inflation.data as e6
-from statsmodels.compat.python import range
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import dt_s_tup_to_string
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import load_results_jmulti

@@ -1,6 +1,6 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat.python import iterkeys, lrange, lmap, zip
+from statsmodels.compat.python import iterkeys, lrange, lmap
 import math
 import scipy.stats
 from scipy.optimize import leastsq

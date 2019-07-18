@@ -68,7 +68,7 @@ import math
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats, interpolate
-from statsmodels.compat.python import lzip, range, lrange, zip
+from statsmodels.compat.python import lzip, lrange
 from statsmodels.iolib.table import SimpleTable
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage

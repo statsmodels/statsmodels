@@ -1,4 +1,6 @@
-from statsmodels.compat.python import lmap, BytesIO
+from statsmodels.compat.python import lmap
+
+from io import BytesIO
 
 import numpy as np
 import pandas as pd

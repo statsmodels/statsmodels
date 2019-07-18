@@ -1,6 +1,4 @@
 """Module for functional boxplots."""
-from statsmodels.compat.python import range, zip
-
 from scipy.special import factorial
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate

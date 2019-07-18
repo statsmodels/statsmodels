@@ -11,8 +11,8 @@ numpy.lib.io
 """
 import warnings
 
-from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types,
-                                       long, lfilter, asbytes, asstr, range)
+from statsmodels.compat.python import (lzip, lmap, lrange,
+                                       lfilter, asbytes, asstr)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -389,7 +389,7 @@ class StataReader(object):
 
         k is zero-indexed.  Prefer using R.data() for performance.
         """
-        if not (isinstance(k, (int, long))) or k < 0 or k > len(self)-1:
+        if not (isinstance(k, int)) or k < 0 or k > len(self)-1:
             raise IndexError(k)
         loc = self._data_location + sum(self._col_size()) * k
         if self._file.tell() != loc:
@@ -964,7 +964,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         "future version.  Use pandas.read_stata instead.",
         FutureWarning)
 
-    if isinstance(fname, string_types):
+    if isinstance(fname, str):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
                           encoding=encoding)
     elif not hasattr(fname, 'read'):
@@ -1143,7 +1143,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
             if len(fmt) != ncol:
                 raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
             format = delimiter.join(fmt)
-        elif isinstance(fmt, string_types):
+        elif isinstance(fmt, str):
             if fmt.count('%') == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)

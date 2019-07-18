@@ -24,7 +24,6 @@ Idea for second part
 
 from numpy.testing import assert_equal
 
-from statsmodels.compat.python import zip
 import numpy as np
 
 #next 3 functions copied from multicomp.py

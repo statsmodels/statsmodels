@@ -4,7 +4,6 @@ Holds common functions for l1 solvers.
 
 import numpy as np
 
-from statsmodels.compat.python import range
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 

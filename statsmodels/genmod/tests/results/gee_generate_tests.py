@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 import numpy as np
 from scipy.stats.distributions import norm
 

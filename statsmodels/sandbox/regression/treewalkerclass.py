@@ -101,7 +101,7 @@ still todo:
 Author: Josef Perktold
 License : BSD (3-clause)
 '''
-from statsmodels.compat.python import iteritems, itervalues, lrange, zip
+from statsmodels.compat.python import iteritems, itervalues, lrange
 import numpy as np
 from pprint import pprint
 
@@ -480,7 +480,7 @@ if __name__ == '__main__':
     ##############  Example similar to Greene
 
     #get pickled data
-    #endog3, xifloat3 = cPickle.load(open('xifloat2.pickle','rb'))
+    #endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
 
 
     tree0 = ('top',

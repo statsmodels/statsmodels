@@ -1,8 +1,7 @@
-from statsmodels.compat.python import HTTPError, URLError
-
 import os
 from ssl import SSLError
 from socket import timeout
+from urllib.error import HTTPError, URLError
 
 import numpy as np
 from numpy.testing import assert_, assert_array_equal

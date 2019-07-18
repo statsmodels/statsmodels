@@ -5,8 +5,9 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import BytesIO, asbytes, range
+from statsmodels.compat.python import asbytes
 
+from io import BytesIO
 import warnings
 
 import numpy as np

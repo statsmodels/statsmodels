@@ -1,7 +1,6 @@
 """
 Compatibility tools for various data structure inputs
 """
-from statsmodels.compat.python import range
 import numpy as np
 import pandas as pd
 
