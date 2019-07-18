@@ -9,7 +9,6 @@
 
 # # Autoregressive Moving Average (ARMA): Artificial data
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import pandas as pd

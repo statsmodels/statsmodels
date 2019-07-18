@@ -23,7 +23,6 @@
 
 # ## Estimate a regression model
 
-from __future__ import print_function
 from statsmodels.compat import lzip
 
 import numpy as np

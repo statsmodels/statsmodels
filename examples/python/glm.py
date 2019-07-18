@@ -9,7 +9,6 @@
 
 # # Generalized Linear Models
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 from scipy import stats

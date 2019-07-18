@@ -5,7 +5,6 @@ example is extended to look at the meaning of rsquared in WLS,
 at outliers, compares with RLM and a short bootstrap
 
 """
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt

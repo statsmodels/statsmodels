@@ -25,7 +25,6 @@
 # We first need to load some modules and to retrieve the data.
 # Conveniently, the Engel dataset is shipped with ``statsmodels``.
 
-from __future__ import print_function
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm

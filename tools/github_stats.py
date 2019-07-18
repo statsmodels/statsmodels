@@ -8,8 +8,6 @@ https://github.com/ipython/ipython/blob/master/tools/github_stats.py
 # Imports
 # -----------------------------------------------------------------------------
 
-from __future__ import print_function
-
 import sys
 
 from datetime import datetime, timedelta

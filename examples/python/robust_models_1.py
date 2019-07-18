@@ -10,7 +10,6 @@
 
 # # M-Estimators for Robust Linear Modeling
 
-from __future__ import print_function
 from statsmodels.compat import lmap
 import numpy as np
 from scipy import stats

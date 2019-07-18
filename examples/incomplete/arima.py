@@ -1,4 +1,3 @@
-from __future__ import print_function
 from statsmodels.datasets.macrodata import load_pandas
 from statsmodels.tsa.base.datetools import dates_from_range
 from statsmodels.tsa.arima_model import ARIMA

@@ -3,8 +3,6 @@
 Copied from IPython 9e82bc5
 https://github.com/ipython/ipython/blob/master/tools/gh_api.py
 """
-from __future__ import print_function
-
 try:
     input = raw_input
 except NameError:

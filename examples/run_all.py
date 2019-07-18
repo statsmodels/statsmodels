@@ -1,8 +1,6 @@
 """
 Run all python examples to make sure they do not raise
 """
-from __future__ import print_function
-
 import tempfile
 
 SHOW_PLOT = False

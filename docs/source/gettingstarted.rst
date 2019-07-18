@@ -15,7 +15,6 @@ few modules and functions:
 
 .. ipython:: python
 
-    from __future__ import print_function
     import statsmodels.api as sm
     import pandas
     from patsy import dmatrices

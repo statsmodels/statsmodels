@@ -13,7 +13,6 @@
 # `statsmodels.tsa.statespace.SARIMAX` class rather than the
 # `statsmodels.tsa.ARMA` class.
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import pandas as pd

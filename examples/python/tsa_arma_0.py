@@ -9,7 +9,6 @@
 
 # # Autoregressive Moving Average (ARMA): Sunspots data
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import pandas as pd
