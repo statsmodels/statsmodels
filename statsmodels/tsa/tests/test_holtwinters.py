@@ -374,7 +374,7 @@ def test_negative_multipliative(trend_seasonal):
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_dampen_no_trend(seasonal):
     y = -np.ones(100)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ExponentialSmoothing(housing_data, trend=False, seasonal=seasonal, damped=True,
                              seasonal_periods=10)
 

@@ -804,4 +804,4 @@ def freq_to_period(freq):
 
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
-           'vec', 'vech', 'unvec', 'unvech']
+           'vec', 'vech', 'unvec', 'unvech', 'freq_to_period']
