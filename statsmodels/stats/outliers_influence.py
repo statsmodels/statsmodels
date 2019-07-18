@@ -171,7 +171,7 @@ def variance_inflation_factor(exog, exog_idx, hasconst=None):
         a constant is not checked for and k_constant is set to 1 and all result
         statistics are calculated as if a constant is present. If False, a
         constant is not checked for and k_constant is set to 0.
-    
+
     Returns
     -------
     vif : float
