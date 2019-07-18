@@ -4,7 +4,7 @@ to a function's reference
 """
 import webbrowser
 
-from statsmodels.compat.python import urlencode, string_types
+from statsmodels.compat.python import urlencode
 from statsmodels import __version__
 
 BASE_URL = 'https://www.statsmodels.org/'
@@ -23,7 +23,7 @@ def _generate_url(arg, stable):
 
     if arg is None:
         return url
-    elif isinstance(arg, string_types):
+    elif isinstance(arg, str):
         url += 'search.html?'
         url += urlencode({'q': arg})
         url += '&check_keywords=yes&area=default'

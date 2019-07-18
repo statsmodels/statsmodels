@@ -7,7 +7,7 @@ import numpy.linalg as L
 import pandas as pd
 
 from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, range,
-                                       long, string_types)
+                                       long, str)
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 
@@ -145,7 +145,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
         else:
             raise ValueError("Can only convert one column at a time")
     if (not isinstance(data, (pd.DataFrame, pd.Series)) and
-            not isinstance(col, (string_types, int)) and
+            not isinstance(col, (str, int)) and
             col is not None):
         raise TypeError('col must be a str, int or None')
 

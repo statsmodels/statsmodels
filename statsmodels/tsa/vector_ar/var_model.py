@@ -7,7 +7,7 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
-from statsmodels.compat.python import (range, lrange, string_types,
+from statsmodels.compat.python import (range, lrange,
                                        StringIO, iteritems)
 from statsmodels.compat.pandas import deprecate_kwarg
 from collections import defaultdict
@@ -1726,7 +1726,7 @@ class VARResults(VARProcess):
             raise ValueError("Reorder specification length should match "
                              "number of endogenous variables")
         # This converts order to list of integers if given as strings
-        if isinstance(order[0], string_types):
+        if isinstance(order[0], str):
             order_new = []
             for i, nam in enumerate(order):
                 order_new.append(self.names.index(order[i]))
@@ -1787,7 +1787,7 @@ class VARResults(VARProcess):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (string_types, int)
+        allowed_types = (str, int)
 
         if isinstance(caused, allowed_types):
             caused = [caused]
@@ -1916,7 +1916,7 @@ class VARResults(VARProcess):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (string_types, int)
+        allowed_types = (str, int)
         if isinstance(causing, allowed_types):
             causing = [causing]
         if not all(isinstance(c, allowed_types) for c in causing):

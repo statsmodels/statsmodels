@@ -11,7 +11,7 @@ multigroup:
     more significant than outside the group.
 """
 
-from statsmodels.compat.python import iteritems, string_types
+from statsmodels.compat.python import iteritems
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
@@ -148,7 +148,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         column_list = [name for name in dataframe.columns
                       if dataframe[name].dtype != object and name not in model]
     # if it's a single string transform it in a single element list
-    if isinstance(column_list, string_types):
+    if isinstance(column_list, str):
         column_list = [column_list]
     if subset is not None:
         dataframe = dataframe.loc[subset]

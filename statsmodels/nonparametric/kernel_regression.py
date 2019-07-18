@@ -30,7 +30,7 @@ References
 
 # TODO: make default behavior efficient=True above a certain n_obs
 
-from statsmodels.compat.python import range, string_types, next
+from statsmodels.compat.python import range, next
 import copy
 
 import numpy as np
@@ -97,7 +97,7 @@ class KernelReg(GenericKDE):
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
-        if not isinstance(bw, string_types):
+        if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
                 raise ValueError('bw must have the same dimension as the '
@@ -108,7 +108,7 @@ class KernelReg(GenericKDE):
             self.bw = self._compute_efficient(bw)
 
     def _compute_reg_bw(self, bw):
-        if not isinstance(bw, string_types):
+        if not isinstance(bw, str):
             self._bw_method = "user-specified"
             return np.asarray(bw)
         else:

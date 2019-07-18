@@ -2,7 +2,7 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat.python import range, string_types, asbytes, long
+from statsmodels.compat.python import range, asbytes, long
 from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
@@ -62,13 +62,13 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
 
     """
     lag_names = []
-    if isinstance(names, string_types):
+    if isinstance(names, str):
         names = [names]
 
     # take care of lagged endogenous names
     for i in range(1, lag_order + 1):
         for name in names:
-            if not isinstance(name, string_types):
+            if not isinstance(name, str):
                 name = str(name) # will need consistent unicode handling
             lag_names.append('L'+str(i)+'.'+name)
 

@@ -17,7 +17,7 @@ References
 ----------
 
 '''
-from statsmodels.compat.python import range, lmap, string_types
+from statsmodels.compat.python import range, lmap
 import numpy as np
 
 from scipy.stats import distributions
@@ -239,7 +239,7 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
     (0.131016895759829, 0.058826222555312224)
 
     """
-    if isinstance(rvs, string_types):
+    if isinstance(rvs, str):
         #cdf = getattr(stats, rvs).cdf
         if (not cdf) or (cdf == rvs):
             cdf = getattr(distributions, rvs).cdf
@@ -248,7 +248,7 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
             raise AttributeError('if rvs is string, cdf has to be the same distribution')
 
 
-    if isinstance(cdf, string_types):
+    if isinstance(cdf, str):
         cdf = getattr(distributions, cdf).cdf
     if callable(rvs):
         kwds = {'size':N}
@@ -390,7 +390,7 @@ class GOF(object):
 
 
     def __init__(self, rvs, cdf, args=(), N=20):
-        if isinstance(rvs, string_types):
+        if isinstance(rvs, str):
             #cdf = getattr(stats, rvs).cdf
             if (not cdf) or (cdf == rvs):
                 cdf = getattr(distributions, rvs).cdf
@@ -399,7 +399,7 @@ class GOF(object):
                 raise AttributeError('if rvs is string, cdf has to be the same distribution')
 
 
-        if isinstance(cdf, string_types):
+        if isinstance(cdf, str):
             cdf = getattr(distributions, cdf).cdf
         if callable(rvs):
             kwds = {'size':N}

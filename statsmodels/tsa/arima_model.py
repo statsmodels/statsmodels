@@ -4,7 +4,7 @@
 #       This code does not allow this, but it adds consistency with other
 #       packages such as gretl and X12-ARIMA
 
-from statsmodels.compat.python import string_types, range, long
+from statsmodels.compat.python import range, long
 # for 2to3 with extensions
 
 from datetime import datetime
@@ -1158,7 +1158,7 @@ class ARIMA(ARMA):
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         # go ahead and convert to an index for easier checking
-        if isinstance(start, (string_types, datetime)):
+        if isinstance(start, (str, datetime)):
             # start = _index_date(start, self.data.dates)
             start, _, _ = self._get_index_label_loc(start)
             if isinstance(start, slice):

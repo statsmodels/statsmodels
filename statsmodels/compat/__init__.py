@@ -2,7 +2,7 @@ from statsmodels.tools._testing import PytestTester
 
 from .python import (
     PY37,
-    bytes, str, unicode, string_types,
+    bytes, str, unicode,
     asunicode, asbytes, asstr, asstr2,
     range, zip, filter, map,
     lrange, lzip, lmap, lfilter,
@@ -14,7 +14,7 @@ from .python import (
     getargspec, next, get_class
 )
 
-__all__ = ['PY37', 'bytes', 'str', 'unicode', 'string_types',
+__all__ = ['PY37', 'bytes', 'str', 'unicode',
            'asunicode', 'asbytes', 'asstr', 'asstr2', 'range', 'zip',
            'filter', 'map', 'lrange', 'lzip', 'lmap', 'lfilter', 'cStringIO',
            'StringIO', 'BytesIO', 'cPickle', 'pickle', 'iteritems',

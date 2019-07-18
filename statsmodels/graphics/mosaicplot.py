@@ -7,7 +7,7 @@ see the docstring of the mosaic function for more informations.
 """
 # Author: Enrico Giampieri - 21 Jan 2013
 
-from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
+from statsmodels.compat.python import (iteritems, iterkeys, lrange, lzip,
                                 itervalues, zip, range)
 import numpy as np
 from collections import OrderedDict
@@ -123,7 +123,7 @@ def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
     like a single integer number, but keep the string healthy)
     """
-    if np.iterable(obj) and not isinstance(obj, string_types):
+    if np.iterable(obj) and not isinstance(obj, str):
         res = tuple(str(o) for o in obj)
     else:
         res = (str(obj),)

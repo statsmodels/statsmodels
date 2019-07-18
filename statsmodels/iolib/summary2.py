@@ -1,5 +1,5 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
-                                       reduce, itervalues, zip, string_types,
+                                       reduce, itervalues, zip,
                                        range)
 
 from collections import OrderedDict
@@ -108,7 +108,7 @@ class Summary(object):
         provided but a results instance is provided, statsmodels attempts
         to construct a useful title automatically.
         '''
-        if isinstance(title, string_types):
+        if isinstance(title, str):
             self.title = title
         else:
             if results is not None:

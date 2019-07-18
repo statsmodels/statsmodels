@@ -2,7 +2,7 @@
 Module containing the base object for multivariate kernel density and
 regression, plus some utilities.
 """
-from statsmodels.compat.python import range, string_types
+from statsmodels.compat.python import range
 import copy
 
 import numpy as np
@@ -122,7 +122,7 @@ class GenericKDE (object):
         if bw is None:
             bw = 'normal_reference'
 
-        if not isinstance(bw, string_types):
+        if not isinstance(bw, str):
             self._bw_method = "user-specified"
             res = np.asarray(bw)
         else:
@@ -178,7 +178,7 @@ class GenericKDE (object):
 
         if bw is None:
             self._bw_method = 'normal_reference'
-        if isinstance(bw, string_types):
+        if isinstance(bw, str):
             self._bw_method = bw
         else:
             self._bw_method = "user-specified"

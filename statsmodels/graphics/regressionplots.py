@@ -10,7 +10,7 @@ update
 2011-10-27 : docstrings
 
 '''
-from statsmodels.compat.python import lrange, string_types, lzip, range
+from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
 from patsy import dmatrix
@@ -380,10 +380,10 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     fig, ax = utils.create_mpl_ax(ax)
 
     # strings, use patsy to transform to data
-    if isinstance(endog, string_types):
+    if isinstance(endog, str):
         endog = dmatrix(endog + "-1", data)
 
-    if isinstance(exog_others, string_types):
+    if isinstance(exog_others, str):
         RHS = dmatrix(exog_others, data)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
@@ -395,7 +395,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         RHS_isemtpy = True
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
-    if isinstance(exog_i, string_types):
+    if isinstance(exog_i, str):
         exog_i = dmatrix(exog_i + "-1", data)
 
     # all arrays or pandas-like

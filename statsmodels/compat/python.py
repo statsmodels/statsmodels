@@ -78,7 +78,6 @@ urlopen = urllib.request.urlopen
 urljoin = urllib.parse.urljoin
 urlretrieve = urllib.request.urlretrieve
 urlencode = urllib.parse.urlencode
-string_types = str
 
 ArgSpec = namedtuple('ArgSpec',
                      ['args', 'varargs', 'keywords', 'defaults'])

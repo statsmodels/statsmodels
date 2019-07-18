@@ -9,7 +9,7 @@ namespace : dictionary
 
 """
 from collections import OrderedDict
-from statsmodels.compat.python import (iterkeys, lrange, string_types,
+from statsmodels.compat.python import (iterkeys, lrange,
                                        itervalues, range)
 import copy
 import numpy as np
@@ -83,7 +83,7 @@ class Term(object):
         else:
             self.termname = termname
 
-        if not isinstance(self.termname, string_types):
+        if not isinstance(self.termname, str):
             raise ValueError('expecting a string for termname')
         if func:
             self.func = func
@@ -141,7 +141,7 @@ class Term(object):
         Return the names of the columns in design associated to the terms,
         i.e. len(self.names()) = self().shape[0].
         """
-        if isinstance(self.name, string_types):
+        if isinstance(self.name, str):
             return [self.name]
         else:
             return list(self.name)
@@ -479,7 +479,7 @@ class Formula(object):
         """
 
         if not isinstance(query_term, Formula):
-            if isinstance(query_term, string_types):
+            if isinstance(query_term, str):
                 try:
                     query = self[query_term]
                     return query.termname in self.termnames()

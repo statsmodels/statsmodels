@@ -1,7 +1,7 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import (iteritems, range, lrange, string_types,
+from statsmodels.compat.python import (iteritems, range, lrange,
                                        lzip, zip, long)
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
@@ -1449,7 +1449,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
 
     ar_range = lrange(0, max_ar + 1)
     ma_range = lrange(0, max_ma + 1)
-    if isinstance(ic, string_types):
+    if isinstance(ic, str):
         ic = [ic]
     elif not isinstance(ic, (list, tuple)):
         raise ValueError("Need a list or a tuple for ic if not a string.")
