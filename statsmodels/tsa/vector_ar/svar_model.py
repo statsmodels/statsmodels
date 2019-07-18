@@ -6,7 +6,6 @@ References
 ----------
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
-from __future__ import print_function, division
 
 import numpy as np
 import numpy.linalg as npl

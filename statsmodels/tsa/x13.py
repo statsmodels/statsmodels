@@ -7,7 +7,6 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-from __future__ import print_function
 import os
 import subprocess
 import tempfile

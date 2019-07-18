@@ -67,7 +67,6 @@ Potential problems for Python 3
 - Calls ``next`` instead of ``__next__``.
   The 2to3 tool should handle that no problem.
   (We will switch to the `next` function if 2.5 support is ever dropped.)
-- from __future__ import division
 - Let me know if you find other problems.
 
 :contact: alan dot isaac at gmail dot com
@@ -83,7 +82,6 @@ Potential problems for Python 3
 :change: 2010-05-06 add `label_cells` to `SimpleTable`
 """
 
-from __future__ import division
 from statsmodels.compat.python import (lmap, lrange, zip, next, iteritems,
                                        zip_longest, range, long)
 

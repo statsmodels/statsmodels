@@ -1,5 +1,3 @@
-from __future__ import division
-
 from textwrap import dedent
 
 import numpy.testing as npt

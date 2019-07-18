@@ -5,7 +5,6 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
-from __future__ import print_function
 from statsmodels.compat.python import iterkeys, cPickle, BytesIO
 
 import warnings

@@ -15,7 +15,6 @@ TODO:
 *
 
 '''
-from __future__ import print_function
 from scipy import stats
 import numpy as np
 import matplotlib.pyplot as plt

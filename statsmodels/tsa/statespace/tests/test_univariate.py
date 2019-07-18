@@ -12,7 +12,6 @@ univariate smoother must return a diagonal covariance matrix).
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 import os
 
 import numpy as np

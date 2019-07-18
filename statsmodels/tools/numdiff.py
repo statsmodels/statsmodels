@@ -43,7 +43,6 @@ without dependencies.
 #
 # in example: if J = d x*beta / d beta then J'J == X'X
 #    similar to https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
-from __future__ import print_function
 from statsmodels.compat.python import range
 import numpy as np
 

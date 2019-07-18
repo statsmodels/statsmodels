@@ -4,7 +4,6 @@ SARIMAX Model
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 from warnings import warn
 
 import numpy as np

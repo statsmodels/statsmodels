@@ -17,7 +17,6 @@ There are also R scripts included with most of the datasets to run
 some basic models for comparisons of results to statsmodels.
 '''
 
-from __future__ import print_function
 from statsmodels.compat.python import iterkeys
 from rpy import r
 import statsmodels.api as sm

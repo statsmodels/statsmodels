@@ -25,7 +25,6 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
-from __future__ import division
 from statsmodels.tools.decorators import cache_readonly
 import numpy as np
 from scipy import stats

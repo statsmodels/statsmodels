@@ -1,6 +1,5 @@
 
 
-from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 #import statsmodels.linear_model.regression as smreg

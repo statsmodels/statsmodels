@@ -1,4 +1,3 @@
-from __future__ import print_function
 from statsmodels.compat.python import lzip, range, reduce
 import numpy as np
 from scipy import stats

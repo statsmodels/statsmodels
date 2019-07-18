@@ -13,7 +13,6 @@ update 2010-10-22
 what the results are.
 Runs now without raising exception
 """
-from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_equal
 from scipy import signal, stats

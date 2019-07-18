@@ -49,7 +49,6 @@ Author: josef-pktd
 License: BSD
 
 '''
-from __future__ import print_function
 
 import numpy as np
 from numpy import poly1d,sqrt, exp

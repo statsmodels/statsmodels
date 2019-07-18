@@ -4,7 +4,6 @@
 """
 
 
-from __future__ import print_function
 from statsmodels.compat.pandas import frequencies
 from statsmodels.compat.python import zip
 from datetime import datetime

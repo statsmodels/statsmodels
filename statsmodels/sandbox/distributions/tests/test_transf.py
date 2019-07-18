@@ -15,7 +15,6 @@ Warning: The algorithm does not converge.  Roundoff error is detected
   the best which can be obtained.
 array(2981.0032380193438)
 """
-from __future__ import print_function
 import warnings # for silencing, see above...
 import numpy as np
 from numpy.testing import assert_almost_equal

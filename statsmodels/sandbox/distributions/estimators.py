@@ -87,7 +87,6 @@ added Maximum Product-of-Spacings 2010-05-12
 
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats, optimize, special
 

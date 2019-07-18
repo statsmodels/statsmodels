@@ -1,5 +1,4 @@
 
-from __future__ import print_function
 from statsmodels.tsa.tests.test_stattools import TestCoint_t
 
 

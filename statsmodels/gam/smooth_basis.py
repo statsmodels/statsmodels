@@ -8,7 +8,6 @@ Author: Josef Perktold
 Created on Fri Jun  5 16:32:00 2015
 """
 
-from __future__ import division
 # import useful only for development
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass

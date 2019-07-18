@@ -38,7 +38,6 @@ Author: josef-pktd
 License: BSD
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import iteritems
 
 from scipy import stats

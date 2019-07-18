@@ -48,7 +48,6 @@ License: BSD (3-clause)
 '''
 
 
-from __future__ import print_function
 from statsmodels.compat.python import lrange
 
 import numpy as np

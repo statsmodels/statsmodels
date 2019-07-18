@@ -5,7 +5,6 @@ Unit tests table.py.
 :see: http://agiletesting.blogspot.com/2005/01/python-unit-testing-part-1-unittest.html
 :see: http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/305292
 '''
-from __future__ import absolute_import
 from statsmodels.compat.python import zip
 
 import numpy as np

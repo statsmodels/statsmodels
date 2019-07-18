@@ -61,7 +61,6 @@ todo: add code and verify, check for longer lagpolys
 
 """
 
-from __future__ import print_function
 import numpy as np
 
 from scipy import optimize

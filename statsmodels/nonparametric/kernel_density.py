@@ -27,7 +27,6 @@ References
         Models", 2006, Econometric Reviews 25, 523-544
 
 """
-from __future__ import division
 # TODO: make default behavior efficient=True above a certain n_obs
 
 from statsmodels.compat.python import range, next

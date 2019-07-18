@@ -8,7 +8,6 @@ second part in here is ar2arma
 only examples left
 
 '''
-from __future__ import print_function
 import numpy as np
 from scipy.special import gamma
 from scipy import signal

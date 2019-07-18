@@ -6,7 +6,6 @@ Warning: not tried out or tested yet, Done
 
 Author: josef-pktd
 """
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy.special import comb

@@ -28,7 +28,6 @@ Extensions
 see also VAR section in Notes.txt
 
 """
-from __future__ import print_function
 import numpy as np
 from scipy import signal
 

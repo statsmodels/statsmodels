@@ -10,7 +10,6 @@ Created on Fri Jun 03 16:00:26 2011
 for comparison I used R mvtnorm version 0.9-96
 
 """
-from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import matplotlib.pyplot as plt

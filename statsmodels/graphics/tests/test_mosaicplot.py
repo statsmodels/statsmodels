@@ -1,5 +1,3 @@
-from __future__ import division
-
 from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
 
 from collections import OrderedDict

@@ -33,7 +33,6 @@ times: 8.34599995613 20.6909999847 666.373999834
 
 """
 
-from __future__ import print_function
 import time
 
 import numpy as np

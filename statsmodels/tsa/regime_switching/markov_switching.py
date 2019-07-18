@@ -4,14 +4,12 @@ Markov switching models
 Author: Chad Fulton
 License: BSD-3
 """
-from __future__ import division, absolute_import, print_function
-from statsmodels.compat.scipy import logsumexp
-
 import warnings
 from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
+from scipy.special import logsumexp
 
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs

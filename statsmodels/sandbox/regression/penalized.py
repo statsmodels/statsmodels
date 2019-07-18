@@ -33,7 +33,6 @@ problem with definition of df_model, it has 1 subtracted for constant
 
 
 """
-from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
 

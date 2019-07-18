@@ -5,7 +5,6 @@ sum is standing for likelihood calculations
 should collect and aggregate likelihood contributions bottom up
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import iteritems, itervalues, lrange, zip, long
 import numpy as np
 

@@ -1,7 +1,6 @@
 """Example: statsmodels.discretemod
 """
 
-from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
 import statsmodels.api as sm

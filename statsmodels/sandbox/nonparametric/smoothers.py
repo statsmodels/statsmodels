@@ -7,7 +7,6 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E0611
 # pylint: disable-msg=E1101
-from __future__ import print_function
 from statsmodels.compat.python import long
 
 import numpy as np

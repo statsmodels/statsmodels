@@ -22,7 +22,6 @@ Psychometrika, 67, 7-19.
 [5] http://www.stat.ucla.edu/research/gpa/GPderfree.txt
 """
 
-from __future__ import division
 import numpy as np
 
 

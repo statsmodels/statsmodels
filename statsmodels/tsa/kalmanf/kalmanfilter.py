@@ -24,7 +24,6 @@ Harvey uses Durbin and Koopman notation.
 # http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
-from __future__ import print_function
 import numpy as np
 
 from . import kalman_loglike

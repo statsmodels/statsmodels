@@ -6,7 +6,6 @@ Author: josef-pktd
 """
 
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt

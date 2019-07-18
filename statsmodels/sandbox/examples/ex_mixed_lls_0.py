@@ -11,7 +11,6 @@ effects and random coefficients, and uses OneWayMixed to estimate it.
 
 
 """
-from __future__ import print_function
 import numpy as np
 
 from statsmodels.sandbox.panel.mixed import OneWayMixed, Unit

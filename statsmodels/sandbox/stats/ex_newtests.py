@@ -1,5 +1,4 @@
 
-from __future__ import print_function
 from .diagnostic import unitroot_adf
 
 import statsmodels.datasets.macrodata.data as macro

@@ -6,7 +6,6 @@ Created on Thu Feb 28 15:37:53 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 from statsmodels.stats.gof import (chisquare, chisquare_power,

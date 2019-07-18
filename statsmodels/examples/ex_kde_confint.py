@@ -6,7 +6,6 @@ Created on Mon Dec 16 11:02:59 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt

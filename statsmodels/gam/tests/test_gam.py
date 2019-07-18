@@ -7,7 +7,6 @@ Author: Luca Puggini
 Created on 08/07/2015
 """
 
-from __future__ import division
 import os
 import numpy as np
 from numpy.testing import assert_allclose

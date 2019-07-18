@@ -1,7 +1,7 @@
 import inspect
 import functools
 
-from statsmodels.compat.python import iteritems, getargspec
+from statsmodels.compat.python import iteritems
 
 
 class ResultsWrapper(object):
@@ -95,15 +95,8 @@ def make_wrapper(func, how):
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
 
-    try:  # Python 3.3+
-        sig = inspect.signature(func)
-        formatted = str(sig)
-    except AttributeError:
-        # TODO: Remove when Python 2.7 is dropped
-        argspec = getargspec(func)
-        formatted = inspect.formatargspec(argspec[0],
-                                          varargs=argspec[1],
-                                          defaults=argspec[3])
+    sig = inspect.signature(func)
+    formatted = str(sig)
 
     wrapper.__doc__ = "%s%s\n%s" % (func.__name__, formatted, wrapper.__doc__)
 

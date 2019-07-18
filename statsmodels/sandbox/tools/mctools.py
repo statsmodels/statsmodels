@@ -23,7 +23,6 @@ I guess this is currently only for one sided test statistics, e.g. for
 two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
 

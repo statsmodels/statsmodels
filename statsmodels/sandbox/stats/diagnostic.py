@@ -28,7 +28,6 @@ missing:
 
 
 """
-from __future__ import print_function
 from statsmodels.compat.python import iteritems, map, long
 import numpy as np
 from scipy import stats

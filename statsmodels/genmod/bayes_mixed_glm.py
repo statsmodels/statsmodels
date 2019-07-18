@@ -46,7 +46,6 @@ within and between values of the `ident` array).  The model
 :math:`p(y | vc, fep)` depends on the specific GLM being fit.
 """
 
-from __future__ import division
 import numpy as np
 from scipy.optimize import minimize
 from scipy import sparse

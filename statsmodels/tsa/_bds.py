@@ -17,7 +17,6 @@ LeBaron, Blake. 1997.
 Studies in Nonlinear Dynamics & Econometrics 2 (2) (January 1).
 """
 
-from __future__ import division
 import numpy as np
 from scipy import stats
 

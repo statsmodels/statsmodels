@@ -14,7 +14,6 @@ Reference:
 Genz and Bretz for formula
 
 '''
-from __future__ import print_function
 import numpy as np
 from scipy import integrate, stats, special
 from scipy.stats import chi

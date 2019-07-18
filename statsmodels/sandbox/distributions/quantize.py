@@ -2,7 +2,6 @@
 
 Author: josef-pktd
 '''
-from __future__ import print_function
 from statsmodels.compat.python import range, lmap
 import numpy as np
 

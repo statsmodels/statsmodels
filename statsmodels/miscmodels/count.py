@@ -28,10 +28,9 @@ Issues
 
 
 """
-from __future__ import print_function
 import numpy as np
 from scipy import stats
-from statsmodels.compat.scipy import factorial
+from scipy.special import factorial
 from statsmodels.base.model import GenericLikelihoodModel
 
 

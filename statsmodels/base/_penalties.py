@@ -19,8 +19,6 @@ The penaties should be smooth so that they can be subtracted from log
 likelihood functions and optimized using standard methods (i.e. L1
 penalties do not belong here).
 """
-from __future__ import division
-
 import numpy as np
 
 

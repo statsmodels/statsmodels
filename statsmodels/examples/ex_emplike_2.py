@@ -3,7 +3,6 @@ This script is a basic tutorial on how to conduct empirical
 likelihood estimation and inference in linear regression models.
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 

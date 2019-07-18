@@ -17,7 +17,6 @@ With correctly specified model, convergence is fast, in 6 iterations in
 example.
 
 """
-from __future__ import print_function
 import numpy as np
 import numpy.linalg as L
 

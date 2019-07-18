@@ -4,7 +4,6 @@ Tests for structural time series models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import warnings
 

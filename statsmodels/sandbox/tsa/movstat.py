@@ -42,7 +42,6 @@ update
 2009-09-06: cosmetic changes, rearrangements
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import signal
 

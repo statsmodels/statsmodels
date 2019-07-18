@@ -6,7 +6,6 @@ Created on Sun Jan 06 09:50:54 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 
 
 if __name__ == '__main__':

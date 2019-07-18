@@ -5,8 +5,6 @@ Created on Fri Sep 15 13:38:13 2017
 Author: Josef Perktold
 """
 
-from __future__ import division
-
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest

@@ -15,8 +15,6 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 """
-from __future__ import division
-
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2, skew, kurtosis

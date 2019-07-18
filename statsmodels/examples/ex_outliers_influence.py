@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     res = res_ols #alias
 
-    #https://en.wikipedia.org/wiki/PRESS_statistic
+    #http://en.wikipedia.org/wiki/PRESS_statistic
     #predicted residuals, leave one out predicted residuals
     resid_press = res.resid / (1-hh)
     ess_press = np.dot(resid_press, resid_press)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     sigma2_est = np.sqrt(res.mse_resid) #can be replace by different estimators of sigma
     sigma_est = np.sqrt(sigma2_est)
     resid_studentized = res.resid / sigma_est / np.sqrt(1 - hh)
-    #https://en.wikipedia.org/wiki/DFFITS:
+    #http://en.wikipedia.org/wiki/DFFITS:
     dffits = resid_studentized * np.sqrt(hh / (1 - hh))
 
     nobs, k_vars = res.model.exog.shape
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     res_ols.df_modelwc = res_ols.df_model + 1
     n_params = res.model.exog.shape[1]
-    #https://en.wikipedia.org/wiki/Cook%27s_distance
+    #http://en.wikipedia.org/wiki/Cook%27s_distance
     cooks_d = res.resid**2 / sigma2_est / res_ols.df_modelwc * hh / (1 - hh)**2
     #or
     #Eubank p.93, 94

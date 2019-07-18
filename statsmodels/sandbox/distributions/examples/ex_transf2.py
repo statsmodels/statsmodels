@@ -4,7 +4,6 @@ Created on Sun May 09 22:23:22 2010
 Author: josef-pktd
 Licese: BSD
 """
-from __future__ import print_function
 import numpy as np
 
 from numpy.testing import assert_almost_equal

@@ -6,7 +6,6 @@ This script checks Poisson models.
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
 
-from __future__ import print_function
 import numpy as np
 from statsmodels.genmod.families import Poisson
 from .gee_gaussian_simulation_check import GEE_simulator

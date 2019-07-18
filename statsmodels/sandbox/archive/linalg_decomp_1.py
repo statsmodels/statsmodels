@@ -22,7 +22,6 @@ Author: josef-pktd
 Created on 2010-10-20
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import linalg
 

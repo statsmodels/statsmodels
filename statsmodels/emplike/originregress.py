@@ -16,8 +16,6 @@ General References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
-from __future__ import division
-
 import numpy as np
 from scipy.stats import chi2
 from scipy import optimize

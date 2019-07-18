@@ -6,7 +6,6 @@ Created on Wed Jan 02 09:17:40 2013
 Author: Josef Perktold based on test file by George Panterov
 """
 
-from __future__ import print_function
 import numpy as np
 import numpy.testing as npt
 import matplotlib.pyplot as plt

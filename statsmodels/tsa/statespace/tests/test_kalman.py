@@ -16,7 +16,6 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
-from __future__ import division, absolute_import, print_function
 from statsmodels.compat import cPickle
 
 import copy

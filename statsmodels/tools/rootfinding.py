@@ -10,7 +10,6 @@ TODO:
   - rewrite core loop to use for...except instead of while.
 
 """
-from __future__ import print_function
 import numpy as np
 from scipy import optimize
 

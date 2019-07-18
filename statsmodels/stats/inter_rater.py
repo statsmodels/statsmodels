@@ -35,7 +35,6 @@ convenience functions to create required data format from raw data
 
 """
 
-from __future__ import division
 import numpy as np
 from scipy import stats  #get rid of this? need only norm.sf
 

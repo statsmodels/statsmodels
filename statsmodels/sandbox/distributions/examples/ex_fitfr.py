@@ -7,7 +7,6 @@ methods.
 
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 # Note the following import attaches methods to scipy.stats.distributions

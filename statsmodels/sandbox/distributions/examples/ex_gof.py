@@ -1,4 +1,3 @@
-from __future__ import print_function
 from scipy import stats
 from statsmodels.stats import gof
 

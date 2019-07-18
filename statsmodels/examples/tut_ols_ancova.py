@@ -33,7 +33,6 @@ strongly rejected because differences in intercept are very large
 
 '''
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt

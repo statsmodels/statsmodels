@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division, print_function
 
 from ._analytic_rotation import target_rotation
 from ._gpa_rotation import oblimin_objective, orthomax_objective, CF_objective

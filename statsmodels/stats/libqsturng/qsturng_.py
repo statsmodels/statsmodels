@@ -22,7 +22,6 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
-from __future__ import print_function
 from statsmodels.compat.python import lrange, map
 import math
 import scipy.stats
