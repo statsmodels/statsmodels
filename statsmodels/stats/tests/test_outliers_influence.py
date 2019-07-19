@@ -23,7 +23,7 @@ def test_variance_inflation_factor():
     exog = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, 6, 7, 8]]).T
     exog = add_constant(exog)
     vif = variance_inflation_factor(exog, 1)
-    assert_almost_equal(vif, float('+inf'), decimal=4)
+    assert_almost_equal(vif, np.inf, decimal=4)
 
     # Test Case: partial collinear with constant component
     exog = np.array([[0, 0, 1, 1, 2, 2, 3, 3], [0, 0, 0, 0, 1, 1, 1, 1]]).T
