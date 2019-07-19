@@ -18,7 +18,7 @@ def test_reset_stata():
     assert_almost_equal(stat.pvalue, 0.2221, decimal=4)
 
 
-def test_variance_inflation_factor():    
+def test_variance_inflation_factor():
     # Test Case: perfect collinear with constant component
     exog = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, 6, 7, 8]]).T
     exog = add_constant(exog)
