@@ -46,4 +46,4 @@ The following Pull Requests were merged since the last release:
 * :pr:`5940`: MAINT: Fix linting failures
 * :pr:`5944`: BUG: Restore ResettableCache
 * :pr:`5951`: BUG: Fix mosaic plot with missing category
-
+* :pr:`5971`: BUG: Fix a future issue in ExpSmooth
