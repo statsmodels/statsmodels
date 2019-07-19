@@ -18,9 +18,21 @@ def test_reset_stata():
     assert_almost_equal(stat.pvalue, 0.2221, decimal=4)
 
 
-def test_variance_inflation_factor():
+def test_variance_inflation_factor():    
     # Test Case: perfect collinear with constant component
-    exog = np.stack([np.arange(8), 10. - np.arange(8)]).T
+    exog = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, 6, 7, 8]]).T
     exog = add_constant(exog)
-    vif = variance_inflation_factor(exog, 0)
-    assert_almost_equal(vif, 0., decimal=4)
+    vif = variance_inflation_factor(exog, 1)
+    assert_almost_equal(vif, float('+inf'), decimal=4)
+
+    # Test Case: partial collinear with constant component
+    exog = np.array([[0, 0, 1, 1, 2, 2, 3, 3], [0, 0, 0, 0, 1, 1, 1, 1]]).T
+    exog = add_constant(exog)
+    vif = variance_inflation_factor(exog, 1)
+    assert_almost_equal(vif, 5., decimal=4)
+
+    # Test Case: no collinear with constant component
+    exog = np.array([[0, 0, 0, 0, 2, 2, 2, 2], [0, 2, 0, 2, 0, 2, 0, 2]]).T
+    exog = add_constant(exog)
+    vif = variance_inflation_factor(exog, 1)
+    assert_almost_equal(vif, 1., decimal=4)
