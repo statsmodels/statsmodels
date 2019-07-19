@@ -1,10 +1,9 @@
 """
 Tests of save / load / remove_data state space functionality.
 """
-
 import pickle
-import tempfile
 import os
+import tempfile
 
 import pytest
 
@@ -12,6 +11,8 @@ from statsmodels import datasets
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 from numpy.testing import assert_allclose
+
+current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 
 
@@ -134,3 +135,9 @@ def test_varmax_pickle(temp_filename):
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
+
+
+def test_existing_pickle():
+    pkl_file = os.path.join(current_path, 'results', 'sm-0.9-sarimax.pkl')
+    loaded = sarimax.SARIMAXResults.load(pkl_file)
+    assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)

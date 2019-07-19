@@ -3,7 +3,15 @@ from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
 
 import warnings
 
-__all__ = ['cache_readonly', 'cache_writable', 'deprecated_alias']
+__all__ = ['cache_readonly', 'cache_writable', 'deprecated_alias',
+           'ResettableCache']
+
+
+class ResettableCache(dict):
+    """DO NOT USE. BACKWARD COMPAT ONLY"""
+    def __init__(self, *args, **kwargs):
+        super(ResettableCache, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 
 def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
