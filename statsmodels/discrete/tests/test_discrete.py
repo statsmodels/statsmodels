@@ -17,7 +17,7 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
 import pandas as pd
-from pandas.testing import assert_index_equal
+from pandas.util.testing import assert_index_equal
 import pytest
 from scipy import stats
 
