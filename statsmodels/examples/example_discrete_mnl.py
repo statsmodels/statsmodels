@@ -54,7 +54,7 @@ print(mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names))
 
 
 ''' #trying pickle
-from statsmodels.compat.python import pickle #, copy
+import pickle
 
 #copy.deepcopy(mlogit_res)  #raises exception: AttributeError: 'ResettableCache' object has no attribute '_resetdict'
 mnl_res = mlogit_mod.fit(method='bfgs', maxiter=100)

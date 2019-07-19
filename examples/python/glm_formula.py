@@ -15,7 +15,6 @@
 # To begin, we load the ``Star98`` dataset and we construct a formula and
 # pre-process the data:
 
-from __future__ import print_function
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 star98 = sm.datasets.star98.load_pandas().data

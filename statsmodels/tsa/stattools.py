@@ -1,8 +1,7 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import (iteritems, lrange,
-                                       lzip)
+from statsmodels.compat.python import iteritems, lrange, lzip
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 

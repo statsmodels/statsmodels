@@ -3,7 +3,7 @@ A collection of utilities to see if new ReST files need to be automatically
 generated from certain files in the project (examples, datasets).
 """
 import os
-from statsmodels.compat import cPickle
+import pickle
 
 file_path = os.path.dirname(__file__)
 
@@ -24,13 +24,13 @@ def update_hash_dict(filehash, filename):
     """
     try:
         with open(file_path + '/hash_dict.pickle', 'rb') as f:
-            hash_dict = cPickle.load(f)
+            hash_dict = pickle.load(f)
     except IOError:
         hash_dict = {}
 
     hash_dict.update({filename: filehash})
     with open(os.path.join(file_path, 'hash_dict.pickle'), 'wb') as f:
-        cPickle.dump(hash_dict, f)
+        pickle.dump(hash_dict, f)
 
 
 def check_hash(rawfile, filename):
@@ -39,7 +39,7 @@ def check_hash(rawfile, filename):
     """
     try:
         with open(file_path + '/hash_dict.pickle', 'rb') as f:
-            hash_dict = cPickle.load(f)
+            hash_dict = pickle.load(f)
     except IOError:
         hash_dict = {}
     try:

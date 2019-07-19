@@ -9,7 +9,6 @@
 
 # # Regression Plots
 
-from __future__ import print_function
 from statsmodels.compat import lzip
 import numpy as np
 import matplotlib.pyplot as plt

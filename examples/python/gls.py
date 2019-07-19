@@ -9,7 +9,6 @@
 
 # # Generalized Least Squares
 
-from __future__ import print_function
 import statsmodels.api as sm
 
 # The Longley dataset is a time series dataset:

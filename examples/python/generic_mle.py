@@ -22,7 +22,6 @@
 
 # ## Example 1: Probit model
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm

@@ -20,8 +20,6 @@ Copied from IPython 9e82bc5
 https://github.com/ipython/ipython/blob/master/tools/backport_pr.py
 """
 
-from __future__ import print_function
-
 import os
 import re
 import sys

@@ -26,8 +26,6 @@ TestBinomialVsVarWeights          statsmodels.GLM        X      X               
 TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """  # noqa: E501
-from __future__ import division
-
 import warnings
 
 import numpy as np

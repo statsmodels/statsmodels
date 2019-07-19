@@ -9,7 +9,6 @@
 
 # # Ordinary Least Squares
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
