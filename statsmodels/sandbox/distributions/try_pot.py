@@ -8,7 +8,7 @@ import numpy as np
 
 
 def mean_residual_life(x, frac=None, alpha=0.05):
-    '''emprirical mean residual life or expected shortfall
+    '''empirical mean residual life or expected shortfall
 
     Parameters
     ----------

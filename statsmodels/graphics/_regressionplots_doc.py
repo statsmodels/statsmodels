@@ -28,7 +28,7 @@ _plot_added_variable_doc = """\
 
 _plot_partial_residuals_doc = """\
     Create a partial residual, or 'component plus residual' plot for a
-    fited regression model.
+    fitted regression model.
 
     Parameters
     ----------

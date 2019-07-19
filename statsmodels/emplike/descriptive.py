@@ -565,7 +565,7 @@ class DescStatUV(_OptFuncts):
 
             When using 'gamma', amount to decrease (increase) the
             minimum (maximum) by to start the search for gamma.
-            If fucntion returns f(a) and f(b) must have differnt signs,
+            If function returns f(a) and f(b) must have differnt signs,
             consider lowering epsilon.
 
         Returns
@@ -602,7 +602,7 @@ class DescStatUV(_OptFuncts):
 
     def test_var(self, sig2_0, return_weights=False):
         """
-        Returns  -2 x log-likelihoog ratio and the p-value for the
+        Returns  -2 x log-likelihood ratio and the p-value for the
         hypothesized variance
 
         Parameters
@@ -1119,7 +1119,7 @@ class DescStatMV(_OptFuncts):
             Default is  99% confidence limit assuming normality.
 
         lower_bound : float
-            Minimum value the lower condidence limit can be.
+            Minimum value the lower confidence limit can be.
             Default is 99% confidence limit assuming normality.
 
         Returns

@@ -818,7 +818,7 @@ class FTestPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -899,7 +899,7 @@ class FTestAnovaPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -1127,7 +1127,7 @@ class _GofChisquareIndPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes

@@ -632,7 +632,7 @@ class DynamicFactor(MLEModel):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
 
         Notes
         -----
@@ -724,8 +724,8 @@ class DynamicFactor(MLEModel):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------
@@ -1031,7 +1031,7 @@ class DynamicFactorResults(MLEResults):
         Notes
         -----
         Although it can be difficult to interpret the estimated factor loadings
-        and factors, it is often helpful to use the cofficients of
+        and factors, it is often helpful to use the coefficients of
         determination from univariate regressions to assess the importance of
         each factor in explaining the variation in each endogenous variable.
 

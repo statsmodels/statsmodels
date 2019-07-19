@@ -132,7 +132,7 @@ md = sm.MixedLM(endog, exog, data["tree"], exog_re)
 mdf = md.fit()
 print(mdf.summary())
 
-# We can further explore the random effects struture by constructing plots
+# We can further explore the random effects structure by constructing plots
 # of the profile likelihoods. We start with the random intercept, generating
 # a plot of the profile likelihood from 0.1 units below to 0.1 units above
 # the MLE. Since each optimization inside the profile likelihood generates a

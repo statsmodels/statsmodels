@@ -583,7 +583,7 @@ def test_ftest_power():
 
 
     # TODO: no class yet
-    # examples agains R::pwr
+    # examples against R::pwr
     res2 = Holder()
     #> rf = pwr.f2.test(u=5, v=199, f2=0.1**2, sig.level=0.01)
     #> cat_items(rf, "res2.")

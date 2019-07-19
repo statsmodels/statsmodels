@@ -28,7 +28,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     as a measure of discrepancy between observed and expected data.
 
     This contains several goodness-of-fit tests as special cases, see the
-    describtion of lambd, the exponent of the power discrepancy. The pvalue
+    description of lambd, the exponent of the power discrepancy. The pvalue
     is based on the asymptotic chi-square distribution of the test statistic.
 
     freeman_tukey:

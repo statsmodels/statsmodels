@@ -41,6 +41,17 @@ else
   exit 1;
 fi;
 
+# Build documentation
+echo '========================================================================'
+echo '=                        Checking Spelling                             ='
+echo '========================================================================'
+echo 'make spelling > doc_spelling.log 2>&1'
+make spelling
+if [ -f "build/spelling/output.txt" ]; then
+  cat build/spelling/output.txt
+fi;
+
+
 # Deploy with doctr
 cd "$SRCDIR"
 if [[ -z "$TRAVIS_TAG" ]]; then

@@ -377,7 +377,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             - 'approx' for the observed information matrix estimator,
               calculated using a numerical approximation of the Hessian matrix.
             - 'robust' for an approximate (quasi-maximum likelihood) covariance
-              matrix that may be valid even in the presense of some
+              matrix that may be valid even in the presence of some
               misspecifications. Intermediate calculations use the 'oim'
               method.
             - 'robust_approx' is the same as 'robust' except that the
@@ -1356,7 +1356,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
 
         Notes
         -----
@@ -1373,8 +1373,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------
@@ -1696,7 +1696,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
           differences if `approx_complex_step=False` in the `cov_kwds`
           dictionary.
         - 'robust' for an approximate (quasi-maximum likelihood) covariance
-          matrix that may be valid even in the presense of some
+          matrix that may be valid even in the presence of some
           misspecifications. Intermediate calculations use the 'oim'
           method.
         - 'robust_approx' is the same as 'robust' except that the
@@ -1948,7 +1948,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Note that the `'standard'` formulas are returned from the `aic`, `bic`,
         and `hqic` results attributes.
 
-        The `'lutkepohl'` formuals are (Lütkepohl, 2010):
+        The `'lutkepohl'` formulas are (Lütkepohl, 2010):
 
         .. math::
 
@@ -2890,7 +2890,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         from top left):
 
         1. Standardized residuals over time
-        2. Histogram plus estimated density of standardized residulas, along
+        2. Histogram plus estimated density of standardized residuals, along
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram

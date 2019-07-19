@@ -1574,7 +1574,7 @@ class StepDown(object):
         self.distance_matrix = dres[0]
 
     def iter_subsets(self, indices):
-        """Iteratre substeps"""
+        """Iterate substeps"""
         for ii in range(len(indices)):
             idxsub = copy.copy(indices)
             idxsub.pop(ii)

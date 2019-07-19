@@ -172,7 +172,7 @@ class MICEData(object):
     separate files with filename pattern `dataXX.csv`.  The variables
     other than `x1` are imputed using linear models fit with OLS, with
     mean structures containing main effects of all other variables in
-    `data`.  The variable named `x1` has a condtional mean structure
+    `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     %(_mice_data_example_1)s
 
@@ -211,7 +211,7 @@ class MICEData(object):
         self.predict_kwds = {}
 
         # Assign the same perturbation method for all variables.
-        # Can be overriden when calling 'set_imputer'.
+        # Can be overridden when calling 'set_imputer'.
         self.perturbation_method = defaultdict(lambda:
                                                perturbation_method)
 

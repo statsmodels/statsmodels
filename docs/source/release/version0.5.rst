@@ -100,7 +100,7 @@ New and Improved Graphics
 Power and Sample Size Calculations
 ----------------------------------
 
-The power module (``statsmodel.stats.power``) currently implements power and sample size calculations for the t-tests (:class:`sm.stats.TTestPower <TTestPower>`, :class:`sm.stats.TTestIndPower <TTestIndPower>`), normal based test (:class:`sm.stats.NormIndPower <NormIndPower>`), F-tests (:class:`sm.stats.FTestPower <FTestPower>`, `:class:sm.stats.FTestAnovaPower <FTestAnovaPower>`) and Chisquare goodness of fit (:class:`sm.stats.GofChisquarePower <GofChisquarePower>`) test. The implementation is class based, but the module also provides three shortcut functions, :func:`sm.stats.tt_solve_power <tt_solve_power>`, :func:`sm.stats.tt_ind_solve_power <tt_ind_solve_power>` and :func:`sm.stats.zt_ind_solve_power <zt_ind_solve_power>` to solve for any one of the parameters of the power equations. See this `blog post <http://jpktd.blogspot.fr/2013/03/statistical-power-in-statsmodels.html>`_ for a more in-depth description of the additions.
+The power module (``statsmodels.stats.power``) currently implements power and sample size calculations for the t-tests (:class:`sm.stats.TTestPower <TTestPower>`, :class:`sm.stats.TTestIndPower <TTestIndPower>`), normal based test (:class:`sm.stats.NormIndPower <NormIndPower>`), F-tests (:class:`sm.stats.FTestPower <FTestPower>`, `:class:sm.stats.FTestAnovaPower <FTestAnovaPower>`) and Chisquare goodness of fit (:class:`sm.stats.GofChisquarePower <GofChisquarePower>`) test. The implementation is class based, but the module also provides three shortcut functions, :func:`sm.stats.tt_solve_power <tt_solve_power>`, :func:`sm.stats.tt_ind_solve_power <tt_ind_solve_power>` and :func:`sm.stats.zt_ind_solve_power <zt_ind_solve_power>` to solve for any one of the parameters of the power equations. See this `blog post <http://jpktd.blogspot.fr/2013/03/statistical-power-in-statsmodels.html>`_ for a more in-depth description of the additions.
 
 
 Other important new features
@@ -251,7 +251,7 @@ Pull Requests (172):
 * :ghpull:`1009`: MAINT: Add .mailmap file.
 * :ghpull:`817`: Add 3 new unit tests for arima_process
 * :ghpull:`1001`: BUG include_package_data for install closes #907
-* :ghpull:`1005`: GITHUB: Contributing guidlines
+* :ghpull:`1005`: GITHUB: Contributing guidelines
 * :ghpull:`1007`: Cleanup docs for release
 * :ghpull:`1003`: BUG: Workaround for bug in sphinx 1.1.3. See #1002.
 * :ghpull:`1004`: DOC: Update maintainer notes with branching instructions.
@@ -277,7 +277,7 @@ Pull Requests (172):
 * :ghpull:`949`: BUG fix lowess sort when nans closes #946
 * :ghpull:`932`: ENH: support basinhopping solver in LikelihoodModel.fit()
 * :ghpull:`927`: DOC: clearer minimal example
-* :ghpull:`919`: Ols summary crash
+* :ghpull:`919`: OLS summary crash
 * :ghpull:`918`: Fixes10 emplike lowess
 * :ghpull:`909`: Bugs in GLM pvalues, more tests, pylint
 * :ghpull:`906`: ENH: No fmax with Windows SDK so define inline.
@@ -526,7 +526,7 @@ Issues (208):
 * :ghissue:`549`: Ship released patsy source in statsmodels
 * :ghissue:`588`: patsy is a hard dependency?
 * :ghissue:`716`: Tests missing for functions if pandas is used
-* :ghissue:`715`: statmodels regression plots not working with pandas datatypes
+* :ghissue:`715`: statsmodels regression plots not working with pandas datatypes
 * :ghissue:`450`: BUG: full_output in optimizers Likelihood model
 * :ghissue:`709`: DOCstrings linear models don't have missing params
 * :ghissue:`370`: BUG weightstats has wrong cov
@@ -593,7 +593,7 @@ Issues (208):
 * :ghissue:`495`: ENH: add footer SimpleTable
 * :ghissue:`402`: model._data -> model.data?
 * :ghissue:`477`: VAR NaN Bug
-* :ghissue:`421`: Enhancment: Handle Missing Data
+* :ghissue:`421`: Enhancement: Handle Missing Data
 * :ghissue:`489`: Expose model._data as model.data
 * :ghissue:`315`: tsa models assume pandas object indices are dates
 * :ghissue:`440`: arima predict is broken for steps > q and q != 1

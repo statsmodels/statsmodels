@@ -272,7 +272,7 @@ approx_hess1.__doc__ = _hessian_docs % dict(scale="3",
 extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,
-extra_returns="""grad : nparray
+extra_returns="""grad : ndarray
         Gradient if return_grad == True
 """,
 equation_number="7",
@@ -314,7 +314,7 @@ approx_hess2.__doc__ = _hessian_docs % dict(scale="3",
 extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,
-extra_returns="""grad : nparray
+extra_returns="""grad : ndarray
         Gradient if return_grad == True
 """,
 equation_number="8",

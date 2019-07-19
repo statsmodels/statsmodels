@@ -72,7 +72,7 @@ class Factor(Model):
     smc : True or False
         Whether or not to apply squared multiple correlations (method='pa')
     endog_names: str
-        Names of endogeous variables.  If specified, it will be used
+        Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
     nobs : int
         The number of observations, not used if endog is present. Needs to

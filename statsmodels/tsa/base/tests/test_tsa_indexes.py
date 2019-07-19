@@ -933,24 +933,24 @@ def test_custom_index():
         mod._get_prediction_index(start_key, end_key, index=['f', 'g']))
     assert_equal(prediction_index.equals(pd.Index(['f', 'g'])), True)
 
-    # Test getting a location in the index w/o fallback to row lables
+    # Test getting a location in the index w/o fallback to row labels
     loc, index, index_was_expanded = mod._get_index_loc(2)
     assert_equal(loc, 2)
     assert_equal(index.equals(pd.RangeIndex(0, 3)), True)
     assert_equal(index_was_expanded, False)
     assert_equal(index_was_expanded, False)
 
-    # Test getting an invalid location in the index w/ fallback to row lables
+    # Test getting an invalid location in the index w/ fallback to row labels
     with pytest.raises(KeyError):
         mod._get_index_loc('c')
 
-    # Test getting a location in the index w/ fallback to row lables
+    # Test getting a location in the index w/ fallback to row labels
     loc, index, index_was_expanded = mod._get_index_label_loc('c')
     assert_equal(loc, 2)
     assert_equal(index.equals(pd.Index(['a', 'b', 'c'])), True)
     assert_equal(index_was_expanded, False)
 
-    # Test getting an invalid location in the index w/ fallback to row lables
+    # Test getting an invalid location in the index w/ fallback to row labels
     with pytest.raises(KeyError):
         mod._get_index_label_loc('aa')
 

@@ -366,7 +366,7 @@ class KDEMultivariateConditional(GenericKDE):
         The string should contain a type specifier for each variable, so for
         example ``dep_type='ccuo'``.
     indep_type: str
-        The type of the independent variables; specifed like `dep_type`.
+        The type of the independent variables; specified like `dep_type`.
     bw: array_like or str, optional
         If an array, it is a fixed user-specified bandwidth.  If a string,
         should be one of:

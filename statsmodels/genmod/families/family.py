@@ -479,7 +479,7 @@ class Poisson(Family):
         Returns
         -------
         resid_anscombe : array
-            The Anscome residuals for the Poisson family defined below
+            The Anscombe residuals for the Poisson family defined below
 
         Notes
         -----
@@ -1361,7 +1361,7 @@ class Tweedie(Family):
 
     Notes
     -----
-    Logliklihood function not implemented because of the complexity of
+    Loglikelihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.

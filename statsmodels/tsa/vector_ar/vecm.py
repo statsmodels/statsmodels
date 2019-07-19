@@ -1084,13 +1084,13 @@ class VECMResults(object):
     first_season : int, default: 0
         Season of the first observation.
     delta_y_1_T : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     y_lag1 : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     delta_x : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     model : :class:`VECM`
         An instance of the :class:`VECM`-class.

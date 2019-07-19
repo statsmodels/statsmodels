@@ -160,7 +160,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
     For example, handling missing observations requires not only substituting
     `obs`, `design`, and `obs_cov` matrices, but the new matrices actually have
-    different dimensions than the originals. This can be flexibly accomodated
+    different dimensions than the originals. This can be flexibly accommodated
     simply by replacing e.g. the `obs` pointer to the substituted `obs` array
     and replacing `k_endog` for that iteration. Then in the next iteration, when
     the `obs` vector may be missing different elements (or none at all), it can

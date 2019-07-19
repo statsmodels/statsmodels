@@ -1,7 +1,7 @@
 """
 Test functions for GEE
 
-External comparisons are to R and Stata.  The statmodels GEE
+External comparisons are to R and Stata.  The statsmodels GEE
 implementation should generally agree with the R GEE implementation
 for the independence and exchangeable correlation structures.  For
 other correlation structures, the details of the correlation

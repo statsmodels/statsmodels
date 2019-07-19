@@ -269,7 +269,7 @@ print(anova_str % anovadict(rest1))
 
 def dropname(ss, li):
     '''drop names from a list of strings,
-    names to drop are in space delimeted list
+    names to drop are in space delimited list
     does not change original list
     '''
     newli = li[:]

@@ -1052,7 +1052,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
         AR coefficients computed from the partial autocorrelations
     acf : ndarray
         acf computed from the partial autocorrelations. Array returned contains
-        the autocorelations corresponding to lags 0, 1, ..., p
+        the autocorrelations corresponding to lags 0, 1, ..., p
 
     References
     ----------
@@ -1112,7 +1112,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     results : dictionary
         all test results, dictionary keys are the number of lags. For each
         lag the values are a tuple, with the first element a dictionary with
-        teststatistic, pvalues, degrees of freedom, the second element are
+        test statistic, pvalues, degrees of freedom, the second element are
         the OLS estimation results for the restricted model, the unrestricted
         model and the restriction (contrast) matrix for the parameter f_test.
 

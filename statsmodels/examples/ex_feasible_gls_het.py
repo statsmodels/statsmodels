@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Examples for linear model with heteroscedasticity estimated by feasible GLS
 
-These are examples to check the results during developement.
+These are examples to check the results during development.
 
 The assumptions:
 

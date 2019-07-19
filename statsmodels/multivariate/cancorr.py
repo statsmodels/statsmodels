@@ -16,7 +16,7 @@ from .multivariate_ols import multivariate_stats
 
 class CanCorr(Model):
     """
-    Canonical correlation analysis using singluar value decomposition
+    Canonical correlation analysis using singular value decomposition
 
     For matrices exog=x and endog=y, find projections x_cancoef and y_cancoef
     such that:
@@ -35,7 +35,7 @@ class CanCorr(Model):
     cancorr : array
         The canonical correlation values
     y_cancoeff: array
-        The canonical coeefficients for endog
+        The canonical coefficients for endog
     x_cancoeff: array
         The canonical coefficients for exog
 

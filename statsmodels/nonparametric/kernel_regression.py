@@ -448,7 +448,7 @@ class KernelCensoredReg(KernelReg):
     """
     Nonparametric censored regression.
 
-    Calculates the condtional mean ``E[y|X]`` where ``y = g(X) + e``,
+    Calculates the conditional mean ``E[y|X]`` where ``y = g(X) + e``,
     where y is left-censored.  Left censored variable Y is defined as
     ``Y = min {Y', L}`` where ``L`` is the value at which ``Y`` is censored
     and ``Y'`` is the true value of the variable.

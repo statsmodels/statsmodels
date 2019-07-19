@@ -417,7 +417,7 @@ class DescrStatsW(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
         df : int or float
@@ -494,7 +494,7 @@ class DescrStatsW(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
 
@@ -880,7 +880,7 @@ class CompareMeans(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
         df : int or float
@@ -933,7 +933,7 @@ class CompareMeans(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the z-test
 
@@ -1152,7 +1152,7 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     Returns
     -------
     tstat : float
-        test statisic
+        test statistic
     pvalue : float
         pvalue of the t-test
     df : int or float
@@ -1339,7 +1339,7 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
     Returns
     -------
     tstat : float
-        test statisic
+        test statistic
     pvalue : float
         pvalue of the t-test
 

@@ -173,7 +173,7 @@ class SARIMAX(MLEModel):
     k_ar_params : int
         Number of autoregressive parameters to be estimated.
     k_diff : int
-        Order of intergration.
+        Order of integration.
     k_ma : int
         Highest moving average order in the model, zero-indexed.
     k_ma_params : int
@@ -185,7 +185,7 @@ class SARIMAX(MLEModel):
     k_seasonal_ar_params : int
         Number of seasonal autoregressive parameters to be estimated.
     k_seasonal_diff : int
-        Order of seasonal intergration.
+        Order of seasonal integration.
     k_seasonal_ma : int
         Highest seasonal moving average order in the model, zero-indexed.
     k_seasonal_ma_params : int

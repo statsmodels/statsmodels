@@ -355,7 +355,7 @@ class StataReader(object):
         -----
         If missing_values is True during instantiation of StataReader then
         observations with StataMissingValue(s) are not filtered and should
-        be handled by your applcation.
+        be handled by your application.
         """
 
         try:

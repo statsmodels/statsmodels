@@ -1072,7 +1072,7 @@ class ARIMA(ARMA):
             Starting parameters for ARMA(p,q).  If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional
-            Whehter or not to transform the parameters to ensure stationarity.
+            Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
         method : str {'css-mle','mle','css'}
@@ -1336,7 +1336,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         observations, even pre-sample values if the model is fit using `css`.
     params : array
         The parameters of the model. The order of variables is the trend
-        coefficients and the `k_exog` exognous coefficients, then the
+        coefficients and the `k_exog` exogenous coefficients, then the
         `k_ar` AR coefficients, and finally the `k_ma` MA coefficients.
     pvalues : array
         The p-values associated with the t-values of the coefficients. Note

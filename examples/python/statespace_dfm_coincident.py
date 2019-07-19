@@ -191,7 +191,7 @@ dta['std_emp'] = (
 # **Aside**: in their empirical example, Kim and Nelson (1999) actually
 # consider a slightly different model in which the employment variable is
 # allowed to also depend on lagged values of the factor - this model does
-# not fit into the built-in `DynamicFactor` class, but can be accomodated by
+# not fit into the built-in `DynamicFactor` class, but can be accommodated by
 # using a subclass to implement the required new parameters and restrictions
 # - see Appendix A, below.
 

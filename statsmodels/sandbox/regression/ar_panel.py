@@ -64,7 +64,7 @@ class PanelAR1(object):
 
 if __name__ == '__main__':
 
-    #------------ developement code for groupar1filter and example
+    #------------ development code for groupar1filter and example
     groups = np.array([0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,
                        2,2,2,2,2,2,2,2])
     nobs = len(groups)

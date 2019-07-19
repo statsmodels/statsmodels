@@ -664,7 +664,7 @@ Issues (252):
 * :ghissue:`1730`: ENH/Bug cov_params, generalize, avoid ValueError
 * :ghissue:`1754`: BUG/REF: assignment to slices in numpy >= 1.9 (emplike)
 * :ghissue:`1409`: GEE test errors on Debian Wheezy
-* :ghissue:`1521`: ubuntu failues: tsa_plot and grouputils
+* :ghissue:`1521`: ubuntu failures: tsa_plot and grouputils
 * :ghissue:`1415`: test failure test_arima.test_small_data
 * :ghissue:`1213`: df_diff in anova_lm
 * :ghissue:`1323`: Contrast Results after t_test summary broken for 1 parameter
@@ -691,7 +691,7 @@ Issues (252):
 * :ghissue:`1067`: Kalman Filter convergence. How close is close enough?
 * :ghissue:`1281`: Newton convergence failure prints warnings instead of warning
 * :ghissue:`1628`: Unable to install statsmodels in the same requirements file as numpy, pandas, etc.
-* :ghissue:`617`: Problem in installing statsmodel in Fedora 17 64-bit
+* :ghissue:`617`: Problem in installing statsmodels in Fedora 17 64-bit
 * :ghissue:`935`: ll_null in likelihoodmodels discrete
 * :ghissue:`704`: datasets.sunspot: wrong link in description
 * :ghissue:`1222`: NegativeBinomial ignores exposure

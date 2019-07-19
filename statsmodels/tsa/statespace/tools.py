@@ -116,7 +116,7 @@ def companion_matrix(polynomial):
         which to form the companion matrix. Polynomial coefficients are in
         order of increasing degree, and may be either scalars (as in an AR(p)
         model) or coefficient matrices (as in a VAR(p) model). If an integer,
-        it is interpereted as the size of a companion matrix of a scalar
+        it is interpreted as the size of a companion matrix of a scalar
         polynomial, where the polynomial coefficients are initialized to zeros.
         If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
         value 1 to indicate an identity matrix (doing so will improve the speed

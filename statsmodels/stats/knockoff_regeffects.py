@@ -39,7 +39,7 @@ class CorrelationEffects(RegressionEffects):
     -----
     This class implements the marginal correlation approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (1) in section 2.2 of the Barber and Candes
+    described under (1) in section 2.2 of the Barber and Candes
     paper.
     """
 
@@ -70,7 +70,7 @@ class ForwardEffects(RegressionEffects):
     -----
     This class implements the forward selection approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (5) in section 2.2 of the Barber and Candes
+    described under (5) in section 2.2 of the Barber and Candes
     paper.
     """
 

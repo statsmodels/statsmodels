@@ -51,8 +51,8 @@ _sign_test_doc = '''
     where N(+) is the number of values above `mu0`, N(-) is the number of
     values below.  Values equal to `mu0` are discarded.
 
-    The p-value for M is calculated using the binomial distrubution
-    and can be intrepreted the same as for a t-test. The test-statistic
+    The p-value for M is calculated using the binomial distribution
+    and can be interpreted the same as for a t-test. The test-statistic
     is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
     equals N(+) + N(-).
 

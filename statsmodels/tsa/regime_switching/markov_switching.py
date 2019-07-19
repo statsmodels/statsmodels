@@ -1422,7 +1422,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
 
         Notes
         -----
@@ -1472,8 +1472,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------

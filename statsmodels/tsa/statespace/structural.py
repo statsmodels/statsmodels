@@ -873,7 +873,7 @@ class UnobservedComponents(MLEModel):
         # Cyclical
         if self.cycle:
             _start_params['cycle_var'] = var_resid
-            # Clip this to make sure it is postive and strictly stationary
+            # Clip this to make sure it is positive and strictly stationary
             # (i.e. don't want negative or 1)
             _start_params['cycle_damp'] = np.clip(
                 np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
@@ -1540,7 +1540,7 @@ class UnobservedComponentsResults(MLEResults):
         6. Autoregressive
 
         Specific subplots will be removed if the component is not present in
-        the estimated model or if the corresponding keywork argument is set to
+        the estimated model or if the corresponding keyword argument is set to
         False.
 
         All plots contain (1 - `alpha`) %  confidence intervals.

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Using the state crime dataset seperately plot the effect of the each
+Using the state crime dataset separately plot the effect of the each
 variable on the on the outcome, murder rate while accounting for the effect
 of all other variables in the model.
 

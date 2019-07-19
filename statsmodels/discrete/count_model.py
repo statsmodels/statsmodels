@@ -779,7 +779,7 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Genaralized Negative Binomial",
+        "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
         "extra_attr": ""}
 
     @cache_readonly

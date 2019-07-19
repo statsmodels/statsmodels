@@ -1423,7 +1423,7 @@ class GeneralizedPoisson(CountModel):
             This parameter enable internal transformation to impose
             non-negativity. True to enable. Default is False.
             use_transparams=True imposes the no underdispersion (alpha > 0)
-            constaint. In case use_transparams=True and method="newton" or
+            constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
         """
         if use_transparams and method not in ['newton', 'ncg']:
@@ -2340,7 +2340,7 @@ class MNLogit(MultinomialModel):
 
         In the multinomial model the score vector is K x (J-1) but is returned
         as a flattened array. The Jacobian has the observations in rows and
-        the flatteded array of derivatives in columns.
+        the flattened array of derivatives in columns.
         """
         params = params.reshape(self.K, -1, order='F')
         firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
@@ -3188,7 +3188,7 @@ class NegativeBinomialP(CountModel):
             This parameter enable internal transformation to impose
             non-negativity. True to enable. Default is False.
             use_transparams=True imposes the no underdispersion (alpha > 0)
-            constaint. In case use_transparams=True and method="newton" or
+            constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
         """
         if use_transparams and method not in ['newton', 'ncg']:
@@ -3567,8 +3567,8 @@ class DiscreteResults(base.LikelihoodModelResults):
               are returned.  This is the default.
             - 'eyex' - estimate elasticities of variables in `exog` --
               d(lny)/d(lnx)
-            - 'dyex' - estimate semielasticity -- dy/d(lnx)
-            - 'eydx' - estimate semeilasticity -- d(lny)/dx
+            - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
+            - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed

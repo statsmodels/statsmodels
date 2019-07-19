@@ -118,7 +118,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
 
     # increasing or not ?
     if ((low is None) or (upp is None)) and increasing is None:
-        assert sl < su  # check during developement
+        assert sl < su  # check during development
         f_low = func(sl, *args)
         f_upp = func(su, *args)
 

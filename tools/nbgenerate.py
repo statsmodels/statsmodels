@@ -33,7 +33,7 @@ DST_DIR = os.path.abspath(os.path.join(pkgdir,
 
 error_message = """
 ******************************************************************************
-ERROR: Error occured when running {notebook}
+ERROR: Error occurred when running {notebook}
 {exception}
 {message}
 ******************************************************************************

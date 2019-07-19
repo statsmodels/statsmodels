@@ -326,7 +326,7 @@ class AR(tsbase.TimeSeriesModel):
         Notes
         -----
         Contains constant term.  If the model is fit by OLS then this returns
-        the conditonal maximum likelihood.
+        the conditional maximum likelihood.
 
         .. math:: \\frac{\\left(n-p\\right)}{2}\\left(\\log\\left(2\\pi\\right)+\\log\\left(\\sigma^{2}\\right)\\right)-\\frac{1}{\\sigma^{2}}\\sum_{i}\\epsilon_{i}^{2}
 
