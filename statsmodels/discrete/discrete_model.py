@@ -4268,12 +4268,6 @@ class L1CountResultsWrapper(lm.RegressionResultsWrapper):
 
 class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    # _methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    # _wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
 
 
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
