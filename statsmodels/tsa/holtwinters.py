@@ -604,12 +604,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         # Variable renames to alpha,beta, etc as this helps with following the
         # mathematical notation in general
-        alpha = smoothing_level
-        beta = smoothing_slope
-        gamma = smoothing_seasonal
-        phi = damping_slope
-        l0 = self._l0 = initial_level
-        b0 = self._b0 = initial_slope
+        alpha = float(smoothing_level) if smoothing_level is not None else None
+        beta = float(smoothing_slope) if smoothing_slope is not None else None
+        gamma = float(smoothing_seasonal) if smoothing_seasonal is not None else None
+        phi = float(damping_slope) if damping_slope is not None else None
+        self._l0 = float(initial_level) if initial_level is not None else None
+        self._b0 = float(initial_slope) if initial_slope is not None else None
 
         data = self.endog
         damped = self.damped
