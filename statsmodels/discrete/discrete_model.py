@@ -766,7 +766,27 @@ class CountModel(DiscreteModel):
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
         """
-        Predict response variable of a count model given exogenous variables.
+        Predict response variable of a count model given exogenous variables
+
+        Parameters
+        ----------
+        params : array_like
+            Model parameters
+        exog : array_like, optional
+            Design / exogenous data. Is exog is None, model exog is used.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with
+            coefficient equal to 1. If exposure is not provided and exog
+            is None, uses the model's exposure if present.  If not, uses
+            0 as the default value.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog
+            is None, uses the model's offset if present.  If not, uses
+            0 as the default value.
+        linear : bool
+            If True, returns the linear predicted values.  If False,
+            returns the exponential of the linear predicted value.
 
         Notes
         -----
