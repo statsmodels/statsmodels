@@ -10,6 +10,7 @@ currently all tests are against R
 
 """
 import os
+import json
 
 import numpy as np
 import pandas as pd
@@ -21,11 +22,9 @@ import pytest
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
-
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
-import json
-
+from statsmodels.tools.tools import Bunch
 import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
@@ -304,6 +303,11 @@ class TestDiagnosticG(object):
         bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
         bg3 = smsdia.acorr_breusch_godfrey(res, nlags=14)
         assert_almost_equal(bg2, bg3, decimal=13)
+
+    def test_acorr_breusch_godfrey_multidim(self):
+        res = Bunch(resid=np.empty((100,2)))
+        with pytest.raises(ValueError, match='Model resid must be a 1d array'):
+            smsdia.acorr_breusch_godfrey(res)
 
     def test_acorr_ljung_box(self):
 

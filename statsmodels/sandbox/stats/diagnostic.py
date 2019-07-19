@@ -489,7 +489,10 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
     '''
 
-    x = np.asarray(results.resid)
+    x = np.asarray(results.resid).squeeze()
+    if x.ndim != 1:
+        raise ValueError('Model resid must be a 1d array. Cannot be used on'
+                         ' multivariate models.')
     exog_old = results.model.exog
     nobs = x.shape[0]
     if nlags is None:
