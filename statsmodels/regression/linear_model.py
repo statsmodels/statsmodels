@@ -1520,9 +1520,6 @@ class RegressionResults(base.LikelihoodModelResults):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-    def __str__(self):
-        self.summary()
-
     def conf_int(self, alpha=.05, cols=None):
         """
         Returns the confidence interval of the fitted parameters.
