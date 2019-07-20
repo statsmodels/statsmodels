@@ -1528,7 +1528,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             2d array of the confidence interval for the forecast
         """
         if exog is not None:
-            #TODO: make a convenience function for this. we're using the
+            # TODO: make a convenience function for this. we're using the
             # pattern elsewhere in the codebase
             exog = array_like(exog, 'exog', maxdim=2)
             if self.k_exog == 1 and exog.ndim == 1:
