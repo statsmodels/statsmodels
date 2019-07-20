@@ -97,6 +97,8 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/web.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
+        statsmodels/tools/sm_exceptions.py \
+        statsmodels/tools/validation/ \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/base/tests/test_datetools.py \
@@ -111,7 +113,6 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/tests/test_stl.py \
         statsmodels/__init__.py \
         statsmodels/conftest.py \
-        statsmodels/tools/sm_exceptions.py \
         examples/ \
         tools/ \
         setup.py

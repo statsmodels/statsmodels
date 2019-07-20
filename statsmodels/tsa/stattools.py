@@ -559,13 +559,15 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
 
     if fft is None:
         import warnings
-        msg = 'fft=True will become the default in a future version of ' \
-              'statsmodels. To suppress this warning, explicitly set ' \
-              'fft=False.'
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(
+            'fft=True will become the default in a future version of '
+            'statsmodels. To suppress this warning, explicitly set '
+            'fft=False.',
+            FutureWarning
+        )
         fft = False
     x = array_like(x, 'x')
-    nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
+    nobs = len(x)  # TODO: should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
     acf = avf[:nlags + 1] / avf[0]
     if not (qstat or alpha):
@@ -955,8 +957,6 @@ def periodogram(x):
     warnings.warn('periodogram is deprecated and will be removed after 0.11. '
                   'Use scipy.signal.periodogram instead.', FutureWarning)
     x = array_like(x, 'x')
-    # if kernel == "bartlett":
-    #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
     pergr = 1. / len(x) * np.abs(np.fft.fft(x)) ** 2
     pergr[0] = 0.  # what are the implications of this?

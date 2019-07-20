@@ -339,25 +339,17 @@ def miso_lfilter(ar, ma, x, useic=False):
     '''
     ma = array_like(ma, 'ma')
     ar = array_like(ar, 'ar')
-    # inp = signal.convolve(x, ma, mode='valid')
-    # inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
-    # Note: convolve mixes up the variable left-right flip
-    # I only want the flip in time direction
-    # this might also be a mistake or problem in other code where I
-    # switched from correlate to convolve
-    # correct convolve version, for use with fftconvolve in other cases
-    # inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
     inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
     # for testing 2d equivalence between convolve and correlate
-    # np.testing.assert_almost_equal(inp2, inp)
+    #  inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
+    #  np.testing.assert_almost_equal(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end
 
-    # todo initialize also x for correlate
+    # TODO: initialize also x for correlate
     if useic:
         return signal.lfilter([1], ar, inp,
                               zi=signal.lfiltic(np.array([1., 0.]), ar,
                                                 useic))[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
-    # return signal.lfilter([1], ar, inp), inp
