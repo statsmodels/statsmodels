@@ -39,7 +39,7 @@ class TestPoissonMargin(CheckMarginMixin):
 
     @classmethod
     def setup_class(cls):
-        # here we don't need to check convergence from default start_params
+        # here we do not need to check convergence from default start_params
         start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368,  -7.9299,
                         -5.0529]
         mod_poi = Poisson(endog, exog)
@@ -58,7 +58,7 @@ class TestPoissonMarginDummy(CheckMarginMixin):
 
     @classmethod
     def setup_class(cls):
-        # here we don't need to check convergence from default start_params
+        # here we do not need to check convergence from default start_params
         start_params = [14.1709, 0.7085, -3.4548, -0.539, 3.2368,  -7.9299,
                         -5.0529]
         mod_poi = Poisson(endog, exog)
@@ -75,7 +75,7 @@ class TestNegBinMargin(CheckMarginMixin):
 
     @classmethod
     def setup_class(cls):
-        # here we don't need to check convergence from default start_params
+        # here we do not need to check convergence from default start_params
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
@@ -94,7 +94,7 @@ class TestNegBinMarginDummy(CheckMarginMixin):
 
     @classmethod
     def setup_class(cls):
-        # here we don't need to check convergence from default start_params
+        # here we do not need to check convergence from default start_params
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
@@ -113,7 +113,7 @@ class TestNegBinPMargin(CheckMarginMixin):
 
     @classmethod
     def setup_class(cls):
-        # here we don't need to check convergence from default start_params
+        # here we do not need to check convergence from default start_params
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomialP(endog, exog)   # checks also that default p=2

@@ -20,7 +20,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 class Intercepts(mlemodel.MLEModel):
     """
-    Test class for observation and state intercepts (which usually don't
+    Test class for observation and state intercepts (which usually do not
     get tested in other models).
     """
     def __init__(self, endog, **kwargs):
@@ -195,7 +195,7 @@ class TestIntercepts(object):
 
 class LargeStateCovAR1(mlemodel.MLEModel):
     """
-    Test class for k_posdef > k_states (which usually don't get tested in
+    Test class for k_posdef > k_states (which usually do not get tested in
     other models).
 
     This is just an AR(1) model with an extra unused state innovation

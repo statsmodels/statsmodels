@@ -471,7 +471,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     trend = _convert_out_to_series(trend, endog.index, 'trend')
     irregular = _convert_out_to_series(irregular, endog.index, 'irregular')
 
-    # NOTE: there isn't likely anything in stdout that's not in results
+    # NOTE: there is not likely anything in stdout that's not in results
     #       so may be safe to just suppress and remove it
     if not retspec:
         res = X13ArimaAnalysisResult(observed=endog, results=results,

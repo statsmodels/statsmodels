@@ -550,7 +550,7 @@ class ConditionalMNLogit(_ConditionalModel):
             c = self.k_cat - 1
             start_params = np.random.normal(size=q * c)
 
-        # Don't call super(...).fit because it can't handle the 2d-params.
+        # Do not call super(...).fit because it cannot handle the 2d-params.
         rslt = base.LikelihoodModel.fit(
             self,
             start_params=start_params,
@@ -564,7 +564,7 @@ class ConditionalMNLogit(_ConditionalModel):
         rslt = MultinomialResults(self, rslt)
 
         # Not clear what the null likelihood should be, there is no intercept
-        # so the null model isn't clearly defined.  This is needed for summary
+        # so the null model is not clearly defined.  This is needed for summary
         # to work.
         rslt.set_null_options(llnull=np.nan)
 

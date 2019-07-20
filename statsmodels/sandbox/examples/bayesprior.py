@@ -114,7 +114,7 @@ for draw in range(draws):
     theta1 = np.random.uniform(0,1)
     theta2 = np.random.normal(mu_, lambda_**2)
 #    mu = theta2/(1-theta1)
-#don't do this to maintain independence theta2 is the _location_
+#do not do this to maintain independence theta2 is the _location_
 #    y1 = np.random.normal(mu_, lambda_**2)
     y1 = theta2
 #    pmu_pairsp1[draw] = mu, theta1
@@ -180,7 +180,7 @@ fsp.axis([-20,20,-20,20])
 
 #plt.show()
 
-#TODO: this doesn't look the same as the working paper?
+#TODO: this does not look the same as the working paper?
 #NOTE: but it matches the language?  I think mine is right!
 
 # Contour plots.

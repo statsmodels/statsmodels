@@ -18,7 +18,7 @@ Issues
   -> hessian inverts and bse look ok if row and column are dropped, pinv also works
 * GenericMLE: still get somewhere (where?)
    "CacheWriteWarning: The attribute 'bse' cannot be overwritten"
-* bfgs is too fragile, doesn't come back
+* bfgs is too fragile, does not come back
 * `nm` is slow but seems to work
 * need good start_params and their use in genericmle needs to be checked for
   consistency, set as attribute or method (called as attribute)
@@ -160,7 +160,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
         super(PoissonOffsetGMLE, self).__init__(endog, exog, missing=missing,
                 **kwds)
 
-#this was added temporarily for bug-hunting, but shouldn't be needed
+#this was added temporarily for bug-hunting, but should not be needed
 #    def loglike(self, params):
 #        return -self.nloglikeobs(params).sum(0)
 

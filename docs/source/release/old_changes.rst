@@ -59,7 +59,7 @@ This is a bug-fix release, that affects mainly Big-Endian machines.
 *Bug Fixes*
 
 * discrete_model.MNLogit fix summary method
-* tsa.filters.hp_filter don't use umfpack on Big-Endian machine (scipy bug)
+* tsa.filters.hp_filter do not use umfpack on Big-Endian machine (scipy bug)
 * the remaining fixes are in the test suite, either precision problems
   on some machines or incorrect testing on Big-Endian machines.
 

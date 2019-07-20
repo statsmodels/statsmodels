@@ -53,7 +53,7 @@ def bivariate_var_result(bivariate_var_data):
 
 
 class CheckVAR(object):  # FIXME: not inherited, so these tests are never run!
-    # just so pylint won't complain
+    # just so pylint will not complain
     res1 = None
     res2 = None
 

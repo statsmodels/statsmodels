@@ -179,7 +179,7 @@ def shannonentropy(px, logbase=2):
     -----
     shannonentropy(0) is defined as 0
     """
-#TODO: haven't defined the px,py case?
+#TODO: have not defined the px,py case?
     px = np.asarray(px)
     if not np.all(px <= 1) or not np.all(px >= 0):
         raise ValueError("px does not define proper distribution")

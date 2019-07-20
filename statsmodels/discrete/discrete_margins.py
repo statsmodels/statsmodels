@@ -71,7 +71,7 @@ def _get_dummy_index(X, const_idx):
     dummy_ind = _isdummy(X)
     dummy = True
 
-    if dummy_ind.size == 0: # don't waste your time
+    if dummy_ind.size == 0: # do not waste your time
         dummy = False
         dummy_ind = None # this gets passed to stand err func
     return dummy_ind, dummy
@@ -106,7 +106,7 @@ def _get_count_index(X, const_idx):
     count_ind = _iscount(X)
     count = True
 
-    if count_ind.size == 0: # don't waste your time
+    if count_ind.size == 0: # do not waste your time
         count = False
         count_ind = None # for stand err func
     return count_ind, count
@@ -152,7 +152,7 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
         exog0[:, i] += 2
         effect1 = model.predict(params, exog0)
         #NOTE: done by analogy with dummy effects but untested bc
-        # stata doesn't handle both count and eydx anywhere
+        # stata does not handle both count and eydx anywhere
         if 'ey' in method:
             effect0 = np.log(effect0)
             effect1 = np.log(effect1)
@@ -309,7 +309,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         try:
             jacobian_mat = approx_fprime_cs(params, derivative,
                                             args=(exog,method))
-        except TypeError:  # norm.cdf doesn't take complex values
+        except TypeError:  # norm.cdf does not take complex values
             from statsmodels.tools.numdiff import approx_fprime
             jacobian_mat = approx_fprime(params, derivative,
                                             args=(exog,method))
@@ -326,7 +326,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     else:
         jacobian_mat = derivative
 
-    #NOTE: this won't go through for at == 'all'
+    #NOTE: this will not go through for at == 'all'
     return np.dot(np.dot(jacobian_mat, cov_params), jacobian_mat.T)
 
 def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
@@ -725,7 +725,7 @@ class DiscreteMargins(object):
                                                                   order='F')
                 self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
             else:
-                # don't care about at constant
+                # do not care about at constant
                 # hack truncate effects_idx again if necessary
                 # if eyex, then effects is truncated to be without extra params
                 effects_idx = effects_idx[:len(effects)]

@@ -274,7 +274,7 @@ class SVAR(tsbase.TimeSeriesModel):
         is estimated
         """
 
-        #TODO: this doesn't look robust if A or B is None
+        #TODO: this does not look robust if A or B is None
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -600,7 +600,7 @@ class SVARResults(SVARProcess, VARResults):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         #SVAR components
-        #TODO: if you define these here, you don't also have to define
+        #TODO: if you define these here, you do not also have to define
         #them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B

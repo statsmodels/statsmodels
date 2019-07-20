@@ -34,7 +34,7 @@ If there are only a few commits, you can rebase to keep a linear history::
     git rebase upstream-rw/master
 
 Rebasing will not automatically close the pull request however, if there is one,
-so don't forget to do this.
+so do not forget to do this.
 
 .. _merging:
 

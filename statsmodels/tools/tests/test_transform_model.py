@@ -34,7 +34,7 @@ def test_standardize1():
     assert_allclose(xs4, (2*x - transf.mean) / transf.scale,
                     rtol=1e-13, atol=1e-20)
 
-    # affine transform doesn't change standardized
+    # affine transform does not change standardized
     x2 = 2 * x + np.random.randn(4)
     transf2 = StandardizeTransform(x2)
     xs3 = transf2(x2)

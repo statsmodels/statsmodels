@@ -146,7 +146,7 @@ res_f.pearson_chi2 / res_f.df_resid
 # Next, we compare ``var_weights`` to ``freq_weights``. It is a common
 # practice to incorporate ``var_weights`` when the endogenous variable
 # reflects averages and not identical observations.
-# I don't see a theoretical reason why it produces the same results (in
+# I do not see a theoretical reason why it produces the same results (in
 # general).
 #
 # This produces the same results but ``df_resid``  differs the

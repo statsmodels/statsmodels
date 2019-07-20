@@ -540,7 +540,7 @@ def lm_robust_subset_parts(score, k_constraints,
     This is the same as lm_robust_subset with arguments in parts of
     partitioned matrices.
     This can be useful, when we have the parts based on different estimation
-    procedures, i.e. when we don't have the full unconstrained model.
+    procedures, i.e. when we do not have the full unconstrained model.
 
     Calculates mainly the covariance of the constraint part of the score.
 
@@ -583,7 +583,7 @@ def lm_robust_subset_parts(score, k_constraints,
     instead of calculating the score/lm test.
 
     Implementation similar to lm_robust_subset and is based on Boos 1992,
-    section 4.1 in the form attributed to Breslow (1990). It doesn't use the
+    section 4.1 in the form attributed to Breslow (1990). It does not use the
     computation attributed to Kent (1982) and Engle (1984).
     """
 
@@ -801,7 +801,7 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
         stat_ols = ht.statistic
         pval_ols = ht.pvalue
     else:
-        # we don't have controls and can use overall fit
+        # we do not have controls and can use overall fit
         nobs = endog_v.shape[0]
         rsquared_noncentered = 1 - res_ols.ssr/res_ols.uncentered_tss
         stat_ols = nobs * rsquared_noncentered
@@ -963,7 +963,7 @@ class CMTNewey(object):
     Parameters
     ----------
     moments : ndarray, 1-D
-        moments that are tested to be zero. They don't need to be derived
+        moments that are tested to be zero. They do not need to be derived
         from a likelihood function.
     moments_deriv : ndarray
         derivative of the moment function with respect to the parameters that
@@ -1127,7 +1127,7 @@ class CMTTauchen(object):
         derivative of score function with respect to the parameters that are
         estimated. This is the Hessian in quasi-maximum likelihood
     moments : ndarray, 1-D
-        moments that are tested to be zero. They don't need to be derived
+        moments that are tested to be zero. They do not need to be derived
         from a likelihood function.
     moments_deriv : ndarray
         derivative of the moment function with respect to the parameters that

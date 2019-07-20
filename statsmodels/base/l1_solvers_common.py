@@ -96,7 +96,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     Trims (set to zero) params that are zero at the theoretical minimum.
     Uses heuristics to account for the solver not actually finding the minimum.
 
-    In all cases, if alpha[i] == 0, then don't trim the ith param.
+    In all cases, if alpha[i] == 0, then do not trim the ith param.
     In all cases, do nothing with the added variables.
 
     Parameters
@@ -122,7 +122,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     auto_trim_tol : float
         For sue when trim_mode == 'auto'.  Use
     qc_tol : float
-        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        Print warning and do not allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
 
     Returns

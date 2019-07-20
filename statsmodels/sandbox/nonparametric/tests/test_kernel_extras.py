@@ -73,6 +73,6 @@ class TestSemiLinear(KernelExtrasTestBase):
                            var_type='c', k_linear=1)
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression
-        # Currently doesn't work well with the nonparametric part
+        # Currently does not work well with the nonparametric part
         # Needs some more work
         npt.assert_allclose(b1, b_hat, rtol=0.1)

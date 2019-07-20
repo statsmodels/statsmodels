@@ -237,7 +237,7 @@ print(rob_crime_model.summary())
 # data=dta, M=sm.robust.norms.TukeyBiweight()).fit(conv="weights")
 #print(rob_crime_model.summary())
 
-# There isn't yet an influence diagnostics method as part of RLM, but we
+# There is not yet an influence diagnostics method as part of RLM, but we
 # can recreate them. (This depends on the status of [issue
 # #888](https://github.com/statsmodels/statsmodels/issues/808))
 

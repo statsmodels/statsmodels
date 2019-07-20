@@ -175,7 +175,7 @@ model.ssm.transition[:, :, 0]
 # The second method is an unobserved components model, where the trend is
 # modeled as a fixed intercept and the seasonal components are modeled using
 # 10 constants summing to 0 and trigonometric functions with a primary
-# periodicities of 100 with 2 harmonics total.  Note that this isn't the
+# periodicities of 100 with 2 harmonics total.  Note that this is not the
 # generating model, as it presupposes that there are more state errors for
 # the shorter seasonal component than in reality. The process for the time
 # series can be written as:
@@ -224,7 +224,7 @@ plt.show()
 # The third method is an unobserved components model with a fixed
 # intercept and one seasonal component, which is modeled using trigonometric
 # functions with primary periodicity 100 and 50 harmonics. Note that this
-# isn't the generating model, as it presupposes that there are more
+# is not the generating model, as it presupposes that there are more
 # harmonics then in reality.  Because the variances are tied together, we
 # are not able to drive the estimated covariance of the non-existent
 # harmonics to 0.  What is lazy about this model specification is that we

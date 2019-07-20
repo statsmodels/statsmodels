@@ -694,7 +694,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
 
     Examples
     --------
-    Import the food expenditure dataset.  Plot annual food expendeture on x-axis
+    Import the food expenditure dataset.  Plot annual food expenditure on x-axis
     and household income on y-axis.  Use qqline to add regression line into the
     plot.
 
@@ -728,7 +728,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         raise ValueError("If line is not 45, x and y cannot be None.")
     elif line == 'r':
         # could use ax.lines[0].get_xdata(), get_ydata(),
-        # but don't know axes are 'clean'
+        # but do not know axes are 'clean'
         y = OLS(y, add_constant(x)).fit().fittedvalues
         ax.plot(x,y,fmt)
     elif line == 's':

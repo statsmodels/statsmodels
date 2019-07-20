@@ -913,7 +913,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.data.param_names = self.param_names
 
         # Hamilton filter
-        # TODO add option to filter to return logged values so that we don't
+        # TODO add option to filter to return logged values so that we do not
         # need to re-log them for smoother
         names = ['regime_transition', 'initial_probabilities',
                  'conditional_loglikelihoods',

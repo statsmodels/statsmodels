@@ -189,7 +189,7 @@ definition r(k) = E{s(n)s*(n-k)} where E{} is the expectation operator.
 
 #JP: with valid this returns a single value, if x and y have same length
 #   e.g. norm_corr(x, x)
-#   using std subtracts mean, but correlate doesn't, requires means are exactly 0
+#   using std subtracts mean, but correlate does not, requires means are exactly 0
 #   biased, no n-k correction for laglength
 #from nitime.utils
 def norm_corr(x,y,mode = 'valid'):

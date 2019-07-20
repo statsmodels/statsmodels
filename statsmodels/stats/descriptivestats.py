@@ -203,7 +203,7 @@ class Describe(object):
             stats = ('obs', 'mean', 'std', 'min', 'max')
         elif stats == 'all':
             #stats = self.univariate.keys()
-            #dict doesn't keep an order, use full list instead
+            #dict does not keep an order, use full list instead
             stats = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var',
                      'mode_val', 'mode_bin', 'median', 'uss', 'skew',
                      'kurtosis', 'percentiles']
@@ -234,7 +234,7 @@ class Describe(object):
 
 
 
-        #JP: this doesn't allow a change in sequence, sequence in stats is
+        #JP: this does not allow a change in sequence, sequence in stats is
         #ignored
         #this is just an if condition
         if any([aitem[1] for aitem in iteritems(self.univariate) if aitem[0] in

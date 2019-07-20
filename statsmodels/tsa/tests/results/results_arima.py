@@ -181,7 +181,7 @@ class ARIMA111(object):
                 204.7540, 207.2581, 208.6696, 210.5136, 214.1399,
                 215.5866, 220.6022, 218.2942, 212.6785, 213.2020,
                 215.2081]
-            # forecasting isn't any different for css
+            # forecasting is not any different for css
             # except you lose the first p+1 observations for in-sample
             # these results are from x-12 arima
             self.forecast = forecast_results['fc111c_css'][-25:]
@@ -260,7 +260,7 @@ class ARIMA211(object):
             self.cov_params = (
                 cov_params + cov_params.T - np.diag(np.diag(cov_params)))
             self.bse = np.sqrt(np.diag(self.cov_params))
-            # forecasting isn't any different for css
+            # forecasting is not any different for css
             # except you lose the first p+1 observations for in-sample
             self.forecast = forecast_results['fc111c_css'][-25:]
             self.forecasterr = forecast_results['fc111cse_css'][-25:]

@@ -206,7 +206,7 @@ def form2design(ss, data):
     Notes
     -----
 
-    with sorted dict, separate name list wouldn't be necessary
+    with sorted dict, separate name list would not be necessary
     '''
     vars = {}
     names = []
@@ -294,7 +294,7 @@ print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
 m = dta.mask.view(bool)
 droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
 # get complete data as plain structured array
-# maybe doesn't work with masked arrays
+# maybe does not work with masked arrays
 dta_use_b1 = dta[~droprows,:].data
 print(dta_use_b1.shape)
 print(dta_use_b1.dtype)

@@ -151,7 +151,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     count_dict.  This is the function that actually perform the tiling
     for the creation of the mosaic plot.  If the gap array has been specified
     it will insert a corresponding amount of space (proportional to the
-    unit lenght), while retaining the proportionality of the tiles.
+    unit length), while retaining the proportionality of the tiles.
 
     Parameters
     ----------
@@ -159,14 +159,14 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         Dictionary containing the contingency table.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be representes; if that is not true, will
+        of keys to be represents; if that is not true, will
         automatically consider the missing values as 0
     horizontal : bool
         The starting direction of the split (by default along
         the horizontal axis)
     gap : float or array of floats
         The list of gaps to be applied on each subdivision.
-        If the lenght of the given array is less of the number
+        If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
 
@@ -229,7 +229,7 @@ def _create_default_properties(data):
     first it will varies the color hue (first category) then the color
     saturation (second category) and then the color value
     (third category).  If a fourth category is found, it will put
-    decoration on the rectangle.  Doesn't manage more than four
+    decoration on the rectangle.  Does not manage more than four
     level of categories
     """
     categories_levels = _categories_level(list(iterkeys(data)))
@@ -309,7 +309,7 @@ def _normalize_data(data, index):
     data = contingency
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
-    # right now it doesn't do any check, but can be modified in the future
+    # right now it does not do any check, but can be modified in the future
     index = lrange(len(categories_levels)) if index is None else index
     contingency = OrderedDict()
     for key, value in iteritems(data):
@@ -481,7 +481,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be representes; if that is not true, will
+        of keys to be represents; if that is not true, will
         automatically consider the missing values as 0.  The order
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
@@ -490,7 +490,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         numerical labels.
     index: list, optional
         Gives the preferred order for the category ordering. If not specified
-        will default to the given order.  It doesn't support named indexes
+        will default to the given order.  It does not support named indexes
         for hierarchical Series.  If a DataFrame is provided, it expects
         a list with the name of the columns.
     ax : matplotlib.Axes, optional
@@ -501,7 +501,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         the horizontal axis)
     gap : float or array of floats
         The list of gaps to be applied on each subdivision.
-        If the lenght of the given array is less of the number
+        If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
     labelizer : function (key) -> string, optional
@@ -587,7 +587,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> mosaic(data, title='hierarchical index series')
     >>> plt.show()
 
-    The third accepted data structureis the np array, for which a
+    The third accepted data structure is the np array, for which a
     very simple index will be created.
 
     >>> rand = np.random.random

@@ -74,10 +74,10 @@ class Model(object):
         self.endog = self.data.endog
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog'])
-        if 'formula' not in kwargs:  # won't be able to unpickle without these
+        if 'formula' not in kwargs:  # will not be able to unpickle without these
             self._data_attr.extend(['data.orig_endog', 'data.orig_exog'])
         # store keys for extras if we need to recreate model instance
-        # we don't need 'missing', maybe we need 'hasconst'
+        # we do not need 'missing', maybe we need 'hasconst'
         self._init_keys = list(kwargs.keys())
         if hasconst is not None:
             self._init_keys.append('hasconst')
@@ -96,7 +96,7 @@ class Model(object):
         for key in kwargs:
             if key in ['design_info', 'formula']:  # leave attached to data
                 continue
-            # pop so we don't start keeping all these twice or references
+            # pop so we do not start keeping all these twice or references
             try:
                 setattr(self, key, data.__dict__.pop(key))
             except KeyError:  # panel already pops keys in data handling
@@ -437,7 +437,7 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
-        # user-supplied and numerically evaluated estimate frprime doesn't take
+        # user-supplied and numerically evaluated estimate frprime does not take
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
@@ -587,8 +587,8 @@ class LikelihoodModel(Model):
         # create dummy results Instance, TODO: wire up properly
         # TODO: this could be moved into separate private method if needed
         # discrete L1 fit_regularized doens't reestimate AFAICS
-        # RLM doesn't have method, disp nor warn_convergence keywords
-        # OLS, WLS swallows extra kwds with **kwargs, but doesn't have method='nm'
+        # RLM does not have method, disp nor warn_convergence keywords
+        # OLS, WLS swallows extra kwds with **kwargs, but does not have method='nm'
         try:
             # Note: addding full_output=False causes exceptions
             res = self.fit(maxiter=0, disp=0, method='nm', skip_hessian=True,
@@ -701,7 +701,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     and a Hessian is 'newton'
 
     If they are not overwritten by a subclass, then numerical gradient,
-    Jacobian and Hessian of the log-likelihood are caclulated by numerical
+    Jacobian and Hessian of the log-likelihood are calculated by numerical
     forward differentiation. This might results in some cases in precision
     problems, and the Hessian might not be positive definite. Even if the
     Hessian is not positive definite the covariance matrix of the parameter
@@ -748,7 +748,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         super(GenericLikelihoodModel, self).__init__(endog, exog,
                                                      missing=missing)
 
-        # this won't work for ru2nmnl, maybe np.ndim of a dict?
+        # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
             self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
 
@@ -917,7 +917,7 @@ class GenericLikelihoodModel(LikelihoodModel):
                 self._set_extra_params_names(['par%d' % i
                                               for i in range(-k_miss)])
             else:
-                # I don't want to raise after we have already fit()
+                # I do not want to raise after we have already fit()
                 import warnings
                 warnings.warn('more exog_names than parameters', ValueWarning)
 
@@ -1245,7 +1245,7 @@ class LikelihoodModelResults(Results):
                 if cov_kwds is None:
                     cov_kwds = {}
                 use_t = self.use_t
-                # TODO: we shouldn't need use_t in get_robustcov_results
+                # TODO: we should not need use_t in get_robustcov_results
                 get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                       use_t=use_t, **cov_kwds)
 
@@ -1268,7 +1268,7 @@ class LikelihoodModelResults(Results):
                              'covariance matrix of the errors is correctly ' +
                              'specified.'}
         else:
-            # TODO: we shouldn't need use_t in get_robustcov_results
+            # TODO: we should not need use_t in get_robustcov_results
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
 
@@ -1755,7 +1755,7 @@ class LikelihoodModelResults(Results):
                               'rank is %d' % (J, J_), ValueWarning)
                 J = J_
 
-        # TODO streamline computation, we don't need to compute J if given
+        # TODO streamline computation, we do not need to compute J if given
         if df_constraints is not None:
             # let caller override J by df_constraint
             J = df_constraints

@@ -259,7 +259,7 @@ class RecursiveLSResults(MLEResults):
         super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
-        # Since we are overriding params with things that aren't MLE params,
+        # Since we are overriding params with things that are not MLE params,
         # need to adjust df's
         q = max(self.loglikelihood_burn, self.k_diffuse_states)
         self.df_model = q - self.model.k_constraints
@@ -500,7 +500,7 @@ class RecursiveLSResults(MLEResults):
 
     def get_prediction(self, start=None, end=None, dynamic=False,
                        index=None, **kwargs):
-        # Note: need to override this, because we currently don't support
+        # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
         if start is None:
             start = self.model._index[0]
@@ -519,7 +519,7 @@ class RecursiveLSResults(MLEResults):
                                       ' constraints.')
 
         # Perform the prediction
-        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # This is a (k_endog x npredictions) array; do not want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)

@@ -57,6 +57,6 @@ print('\n')
 
 print(dlddf.subs(dict(y=1,mu=1,sigma2=1.5,df=10.0001)))
 print(dlddf.subs(dict(y=1,mu=1,sigma2=1.5,df=10.0001)).evalf())
-# Note: derivatives of nested function doesn't work in sympy
+# Note: derivatives of nested function does not work in sympy
 #       at least not higher order derivatives (second or larger)
 #       looks like print(failure

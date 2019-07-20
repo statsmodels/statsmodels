@@ -15,7 +15,7 @@ other versions need normalization
 TODO:
 
 * check fourier case again:  base is orthonormal,
-  but needs offsetfact = 0 and doesn't integrate to 1, rescaled looks good
+  but needs offsetfact = 0 and does not integrate to 1, rescaled looks good
 * hermite: works but DensityOrthoPoly requires currently finite bounds
   I use it with offsettfactor 0.5 in example
 * not implemented methods:
@@ -47,7 +47,7 @@ sqr2 = np.sqrt(2.)
 class FPoly(object):
     '''Orthonormal (for weight=1) Fourier Polynomial on [0,1]
 
-    orthonormal polynomial but density needs corfactor that I don't see what
+    orthonormal polynomial but density needs corfactor that I do not see what
     it is analytically
 
     parameterization on [0,1] from
@@ -72,7 +72,7 @@ class FPoly(object):
 class F2Poly(object):
     '''Orthogonal (for weight=1) Fourier Polynomial on [0,pi]
 
-    is orthogonal but first component doesn't square-integrate to 1
+    is orthogonal but first component does not square-integrate to 1
     final result seems to need a correction factor of sqrt(pi)
     _corfactor = sqrt(pi) from integrating the density
 
@@ -381,7 +381,7 @@ class DensityOrthoPoly(object):
         '''
 
         #use domain from first instance
-        #class doesn't have domain  self.polybase.domain[0] AttributeError
+        #class does not have domain  self.polybase.domain[0] AttributeError
         domain = self.polys[0].domain
 
         ilen = (domain[1] - domain[0])

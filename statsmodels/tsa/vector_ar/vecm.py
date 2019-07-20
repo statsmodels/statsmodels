@@ -188,7 +188,7 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
     Returns
     -------
     exog : ndarray or None
-        None, if the function's arguments don't contain deterministic terms.
+        None, if the function's arguments do not contain deterministic terms.
         Otherwise, an ndarray representing these deterministic terms.
     """
     exogs = []
@@ -793,7 +793,7 @@ class VECM(tsbase.TimeSeriesModel):
         Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
         linear trend with intercept). When using a constant term you have to
         choose whether you want to restrict it to the cointegration relation
-        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Don't use
+        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
         when using a linear term. See the Notes-section for more information.
     seasons : int, default: 0
@@ -1658,7 +1658,7 @@ class VECMResults(object):
                              "argument!")
         if self.exog is None and exog_fc is not None:
             raise ValueError("This VECMResult-instance's exog attribute is "
-                             "None. Please don't pass a non-None value as the "
+                             "None. Please do not pass a non-None value as the "
                              "method's exog_fc-argument.")
         if exog_fc is not None and exog_fc.shape[0] < steps:
             raise ValueError("The argument exog_fc must have at least steps "
@@ -1670,7 +1670,7 @@ class VECMResults(object):
                              "exog_coint_fc argument!")
         if self.exog_coint is None and exog_coint_fc is not None:
             raise ValueError("This VECMResult-instance's exog_coint attribute "
-                             "is None. Please don't pass a non-None value as "
+                             "is None. Please do not pass a non-None value as "
                              "the method's exog_coint_fc-argument.")
         if exog_coint_fc is not None and exog_coint_fc.shape[0] < steps - 1:
             raise ValueError("The argument exog_coint_fc must have at least "

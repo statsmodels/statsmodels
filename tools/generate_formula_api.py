@@ -35,7 +35,7 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
     for sub in subs:
         if sub not in _seen and sub.__name__ not in template_classes:
             _seen.add(sub)
-            # we don't want to yield the templates, but we do want to
+            # we do not want to yield the templates, but we do want to
             # recurse on them
             yield sub
         for sub in iter_subclasses(sub, _seen, template_classes):
@@ -49,7 +49,7 @@ def write_formula_api(directory):
                         'TimeSeriesModel',
                         # this class should really be deleted
                         'ARIMAProcess',
-                        # these need some more work, so don't expose them
+                        # these need some more work, so do not expose them
                         'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA',
                         ]
 

@@ -100,7 +100,7 @@ def cancorr(x1, x2, demean=True, standardize=False):
         x2 = (x2 - x2.mean(0))
 
     if standardize:
-        #std doesn't make a difference to canonical correlation coefficients
+        #std does not make a difference to canonical correlation coefficients
         x1 /= x1.std(0)
         x2 /= x2.std(0)
 

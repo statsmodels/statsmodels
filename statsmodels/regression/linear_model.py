@@ -354,7 +354,7 @@ class RegressionModel(base.LikelihoodModel):
         -----
         If the model has not yet been fit, params is not optional.
         """
-        # JP: this doesn't look correct for GLMAR
+        # JP: this does not look correct for GLMAR
         # SS: it needs its own predict method
 
         if exog is None:
@@ -1237,7 +1237,7 @@ class GLSAR(GLS):
                 del self.pinv_wexog
             self.initialize()
 
-        # if converged then this is a duplicate fit, because we didn't
+        # if converged then this is a duplicate fit, because we did not
         # update rho
         results = self.fit(history=history, **kwds)
         results.iter = i + 1
@@ -1845,7 +1845,7 @@ class RegressionResults(base.LikelihoodModelResults):
             raise ValueError('Method requires residuals.')
         eps = np.finfo(self.wresid.dtype).eps
         if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
-            # don't divide if scale is zero close to numerical precision
+            # do not divide if scale is zero close to numerical precision
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.",
                  RuntimeWarning)
@@ -2274,7 +2274,7 @@ class RegressionResults(base.LikelihoodModelResults):
             df_correction = kwds.get('df_correction', None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False:  # i.e. in [None, True]:
-                # user didn't explicitely set it to False
+                # user did not explicitely set it to False
                 adjust_df = True
 
         res.cov_kwds['adjust_df'] = adjust_df
@@ -2464,7 +2464,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         # TODO: requiring list/iterable is a bit annoying
         #   need more control over formatting
-        # TODO: default don't work if it's not identically spelled
+        # TODO: default do not work if it's not identically spelled
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),

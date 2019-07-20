@@ -17,7 +17,7 @@ class EmptyContextManager(object):
         return self._obj
 
     def __exit__(self, *args):
-        '''Don't hide anything'''
+        '''Do not hide anything'''
         return False
 
     def __getattr__(self, name):

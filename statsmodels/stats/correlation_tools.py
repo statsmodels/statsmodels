@@ -335,7 +335,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     Notes
     -----
     This can be an effective heuristic algorithm for problems where no
-    gauranteed algorithm for computing a global minimizer is known.
+    guaranteed algorithm for computing a global minimizer is known.
 
     There are a number of tuning parameters, but these generally
     should not be changed except for `maxiter` (positive integer) and
@@ -587,7 +587,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     population correlation matrix.  The factor structure allows these
     tasks to be done without constructing any n x n matrices.
 
-    This is a non-convex problem with no known gauranteed globally
+    This is a non-convex problem with no known guaranteed globally
     convergent algorithm for computing the solution.  Borsdof, Higham
     and Raydan (2010) compared several methods for this problem and
     found the spectral projected gradient (SPG) method (used here) to

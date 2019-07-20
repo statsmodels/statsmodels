@@ -101,14 +101,14 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     date - ty
         years since 0000
 
-    If you don't have pandas with datetime support, then you can't do
+    If you do not have pandas with datetime support, then you cannot do
     milliseconds accurately.
     """
     #NOTE: we could run into overflow / loss of precision situations here
-    # casting to int, but I'm not sure what to do. datetime won't deal with
-    # numpy types and numpy datetime isn't mature enough / we can't rely on
+    # casting to int, but I'm not sure what to do. datetime will not deal with
+    # numpy types and numpy datetime is not mature enough / we cannot rely on
     # pandas version > 0.7.1
-    #TODO: IIRC relative delta doesn't play well with np.datetime?
+    #TODO: IIRC relative delta does not play well with np.datetime?
     date = int(date)
     stata_epoch = datetime.datetime(1960, 1, 1)
     if fmt in ["%tc", "tc"]:
@@ -140,7 +140,7 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     elif fmt in ["%ty", "ty"]:
         if date > 0:
             return datetime.datetime(date, 1, 1)
-        else: # don't do negative years bc can't mix dtypes in column
+        else: # do not do negative years bc cannot mix dtypes in column
             raise ValueError("Year 0 and before not implemented")
     else:
         raise ValueError("Date fmt %s not understood" % fmt)
@@ -900,7 +900,7 @@ class StataWriter(object):
                             var = _type_converters[typ](var)
                         self._write(pack(byteorder+TYPE_MAP[typ], var))
                     except struct_error:
-                        # have to be strict about type pack won't do any
+                        # have to be strict about type pack will not do any
                         # kind of casting
                         self._write(pack(byteorder+TYPE_MAP[typ],
                                     _type_converters[typ](var)))
@@ -993,7 +993,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     data = np.zeros((nobs), dtype=dt) # init final array
 
     for rownum,line in enumerate(stata_dta):
-        # doesn't handle missing value objects, just casts
+        # does not handle missing value objects, just casts
         # None will only work without missing value object.
         if None in line:
             for i,val in enumerate(line):

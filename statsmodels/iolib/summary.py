@@ -292,7 +292,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('No. Observations:', lambda: [d_or_f(results.nobs)]),
           ('Df Model:', lambda: [d_or_f(results.df_model)]),
           ('Df Residuals:', lambda: [d_or_f(results.df_resid)]),
-          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception
+          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # does not exist for RLM - exception
     ])
 
     if title is None:
@@ -347,7 +347,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
             # fill up with blank lines to same length, just to keep it symmetric
             gen_left += [(' ', ' ')] * (len(gen_right) - len(gen_left))
 
-        # padding in SimpleTable doesn't work like I want
+        # padding in SimpleTable does not work like I want
         #force extra spacing and exact string length in right table
         gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
         gen_stubs_right, gen_data_right = zip_longest(*gen_right) #transpose row col
@@ -411,7 +411,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     if isinstance(results, tuple):
         # for multivariate endog
-        # TODO: check whether I don't want to refactor this
+        # TODO: check whether I do not want to refactor this
         #we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
@@ -492,7 +492,7 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
 
     if isinstance(results, tuple):
         # for multivariate endog
-        # TODO: check whether I don't want to refactor this
+        # TODO: check whether I do not want to refactor this
         #we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
@@ -625,7 +625,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
             raise ValueError('endog_names has wrong length')
         n_equ = 1
 
-    #VAR doesn't have conf_int
+    #VAR does not have conf_int
     #params = res.params.T # this is a convention for multi-eq models
 
     # check that we have the right length of names

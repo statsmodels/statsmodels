@@ -219,7 +219,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         # Initialize the simulated model memoryviews
         # Note: the actual initialization is replaced in the simulate()
-        # function below, but will complain if the memoryviews haven't been
+        # function below, but will complain if the memoryviews have not been
         # first initialized, which this call does.
         self.simulated_model.initialize_approximate_diffuse()
         if self.has_missing:

@@ -4,7 +4,7 @@ no failures but needs cleanup
 update 2012-09-09:
    added test after fixing bug in covariance
    TODOs:
-     - I don't remember what all the commented out code is doing
+     - I do not remember what all the commented out code is doing
      - should be refactored to use generator or inherited tests
      - still gaps in test coverage
        - value/diff in ttest_ind is tested in test_tost.py
@@ -259,7 +259,7 @@ class TestWeightstats(object):
         resss = stats.ttest_ind(x1r_2d, x2r_2d)
         assert_almost_equal(ressm[:2], resss, 14)
 
-#        doesn't work for 2d, levene doesn't use weights
+#        does not work for 2d, levene does not use weights
 #        cm = CompareMeans(d1w_2d, d2w_2d)
 #        ressm = cm.test_equal_var()
 #        resss = stats.levene(x1r_2d, x2r_2d)

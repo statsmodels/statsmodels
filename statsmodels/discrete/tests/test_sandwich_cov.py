@@ -33,7 +33,7 @@ data_raw = pd.read_csv(filepath, index_col=False)
 data = data_raw.dropna()
 
 #mod = smd.Poisson.from_formula('accident ~ yr_con + op_75_79', data=dat)
-# Don't use formula for tests against Stata because intercept needs to be last
+# Do not use formula for tests against Stata because intercept needs to be last
 endog = data['accident']
 exog_data = data['yr_con op_75_79'.split()]
 exog = add_constant(exog_data, prepend=False)
@@ -484,7 +484,7 @@ class TestGLMProbit(CheckDiscreteGLM):
     def test_score_hessian(self):
         res1 = self.res1
         res2 = self.res2
-        # Note scale is fixed at 1, so we don't need to fix it explicitly
+        # Note scale is fixed at 1, so we do not need to fix it explicitly
         score1 = res1.model.score(res1.params * 0.98)
         score2 = res2.model.score(res1.params * 0.98)
         assert_allclose(score1, score2, rtol=1e-13)

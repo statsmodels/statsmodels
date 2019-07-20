@@ -27,7 +27,7 @@ y = y[positive]
 xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 
 
-# FIXME: don't leave this commented-out; use or move/remove
+# FIXME: do not leave this commented-out; use or move/remove
 #kern_name = 'gau'
 #kern = kernels.Gaussian()
 #kern_name = 'epan2'
@@ -37,7 +37,7 @@ xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 #kern_name = 'tri'
 #kern = kernels.Triangular()
 #kern_name = 'cos'
-#kern = kernels.Cosine()  #doesn't match up, nan in Stata results ?
+#kern = kernels.Cosine()  #does not match up, nan in Stata results ?
 #kern_name = 'bi'
 #kern = kernels.Biweight()
 
@@ -89,7 +89,7 @@ class CheckKernelMixin(object):
             # raises: RuntimeWarning: invalid value encountered in divide
             print(fitted / res_fitted - 1)
             print(se / res_se - 1)
-        # Stata only displays ci, doesn't save it
+        # Stata only displays ci, does not save it
         res_upp = res_fitted + crit * res_se
         res_low = res_fitted - crit * res_se
         self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))

@@ -76,7 +76,7 @@ def test_kde_1d():
     # get kde for original sample
     gkde = stats.gaussian_kde(xn)
 
-    # evaluate the density funtion for the kde for some points
+    # evaluate the density function for the kde for some points
     xs = np.linspace(-7,7,501)
     kdepdf = gkde.evaluate(xs)
     normpdf = stats.norm.pdf(xs, loc=xnmean, scale=xnstd)
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     # get kde for original sample
     #gkde = stats.gaussian_kde(xn)
     gkde = gaussian_kde_covfact(xn, 0.1)
-    # evaluate the density funtion for the kde for some points
+    # evaluate the density function for the kde for some points
     ind = np.linspace(-7,7,101)
     kdepdf = gkde.evaluate(ind)
 

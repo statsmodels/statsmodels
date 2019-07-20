@@ -1187,7 +1187,7 @@ class PHReg(model.LikelihoodModel):
             standard_errors = None
         ret_val = bunch()
 
-        # Don't do anything with offset here because we want to allow
+        # Do not do anything with offset here because we want to allow
         # different offsets to be specified even if exog is the model
         # exog.
         exog_provided = True
@@ -1202,7 +1202,7 @@ class PHReg(model.LikelihoodModel):
         elif self.offset is not None and not exog_provided:
             lhr += self.offset
 
-        # Handle lhr and hr prediction first, since they don't make
+        # Handle lhr and hr prediction first, since they do not make
         # use of the hazard function.
 
         if pred_type == "lhr":
@@ -1408,7 +1408,7 @@ class PHRegResults(base.LikelihoodModelResults):
         -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
-        failure times wihtin a stratum.
+        failure times within a stratum.
         """
 
         return self.model.get_distribution(self.params)

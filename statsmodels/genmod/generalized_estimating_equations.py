@@ -231,7 +231,7 @@ _gee_init_doc = """
       Gaussian     |   x    x                        x
       inv Gaussian |   x    x                        x
       binomial     |   x    x    x     x       x     x    x           x      x
-      Poission     |   x    x                        x
+      Poisson     |   x    x                        x
       neg binomial |   x    x                        x          x
       gamma        |   x    x                        x
 
@@ -246,7 +246,7 @@ _gee_init_doc = """
     other packages.  The "naive" estimator gives smaller standard
     errors, but is only correct if the working correlation structure
     is correctly specified.  The "bias reduced" estimator of Mancl and
-    DeRouen (Biometrics, 2001) reduces the downard bias of the robust
+    DeRouen (Biometrics, 2001) reduces the downward bias of the robust
     estimator.
 
     The robust covariance provided here follows Liang and Zeger (1986)
@@ -1203,7 +1203,7 @@ class GEE(base.Model):
             exog = self.exog
 
             if not isinstance(self.family.link, families.links.Log):
-                # Don't need to worry about exposure
+                # Do not need to worry about exposure
                 if offset is None:
                     if self._offset_exposure is not None:
                         _offset = self._offset_exposure.copy()
@@ -1299,7 +1299,7 @@ class GEE(base.Model):
             self._fit_history['dep_params'].append(
                 self.cov_struct.dep_params)
 
-            # Don't exit until the association parameters have been
+            # Do not exit until the association parameters have been
             # updated at least once.
             if (del_params < ctol and
                     (num_assoc_updates > 0 or self.update_dep is False)):
@@ -1359,7 +1359,7 @@ class GEE(base.Model):
                         cov_robust_bc=bc_cov)
 
         # The superclass constructor will multiply the covariance
-        # matrix argument bcov by scale, which we don't want, so we
+        # matrix argument bcov by scale, which we do not want, so we
         # divide bcov by the scale parameter here
         results = GEEResults(self, mean_params, bcov / scale, scale,
                              cov_type=cov_type, use_t=False,
@@ -1774,7 +1774,7 @@ class GEEResults(base.LikelihoodModelResults):
         attr_kwds = kwds.pop('attr_kwds', {})
         self.__dict__.update(attr_kwds)
 
-        # we don't do this if the cov_type has already been set
+        # we do not do this if the cov_type has already been set
         # subclasses can set it through attr_kwds
         if not (hasattr(self, 'cov_type') and
                 hasattr(self, 'cov_params_default')):
@@ -2036,7 +2036,7 @@ class GEEResults(base.LikelihoodModelResults):
         -----
         The confidence interval is based on the Gaussian distribution.
         """
-        # super doesn't allow to specify cov_type and method is not
+        # super does not allow to specify cov_type and method is not
         # implemented,
         # FIXME: remove this method here
         if cov_type is None:
@@ -3250,7 +3250,7 @@ class GEEMargins(object):
                 model._derivative_exog, dummy_idx, count_idx,
                 method, 1)
 
-            # don't care about at constant
+            # do not care about at constant
             self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
             self.margeff_se = margeff_se[effects_idx]
             self.margeff = effects[effects_idx]

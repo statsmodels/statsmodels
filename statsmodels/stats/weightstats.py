@@ -27,7 +27,7 @@ since the estimates for the standard deviation will be based on the ddof that
 the user chooses.
 - fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
 
-Note: scipy has now a separate, pooled variance option in ttest, but I haven't
+Note: scipy has now a separate, pooled variance option in ttest, but I have not
 compared yet.
 
 '''
@@ -91,7 +91,7 @@ class DescrStatsW(object):
     array([  1.58414212e-12,   3.87842808e-02,   6.02752170e-01])
     44.0
 
-    #if weiqhts are integers, then asrepeats can be used
+    #if weights are integers, then asrepeats can be used
 
     >>> x1r = d1.asrepeats()
     >>> x1r.shape
@@ -1105,7 +1105,7 @@ class CompareMeans(object):
 
     #tost.__doc__ = tost_ind.__doc__
 
-#doesn't work for 2d, doesn't take weights into account
+#does not work for 2d, does not take weights into account
 ##    def test_equal_var(self):
 ##        '''Levene test for independence
 ##

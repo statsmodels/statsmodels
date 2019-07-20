@@ -1,6 +1,6 @@
 '''
 
-doesn't seem to work so well anymore even with nobs=1000 ???
+does not seem to work so well anymore even with nobs=1000 ???
 works ok if noise variance is large
 '''
 

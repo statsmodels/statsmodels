@@ -1033,7 +1033,7 @@ class InverseGaussian(Family):
 
     Notes
     -----
-    The inverse Guassian distribution is sometimes referred to in the
+    The inverse Gaussian distribution is sometimes referred to in the
     literature as the Wald distribution.
 
     """

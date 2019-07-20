@@ -6,7 +6,7 @@ in the matplotlib-user mailinglist  (links ???)
 Notes
 =====
 
-out of bounds interpolation raises exception and wouldn't be completely
+out of bounds interpolation raises exception and would not be completely
 defined ::
 
 >>> scoreatpercentile(x, [0,25,50,100])
@@ -52,7 +52,7 @@ empirical distribution with higher order interpolation
 * ppf how do I get the inverse function of a higher order spline?
   Chuck: resample and fit spline to inverse function
   this will have an approximation error in the inverse function
-* -> doesn't work: higher order spline doesn't preserve monotonicity
+* -> does not work: higher order spline does not preserve monotonicity
   see mailing list for response to my question
 * pmf from derivative available in spline
 
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     ppfs = ppfintp(cdf_ongrid)
     plt.plot(ppfs, cdf_ongrid)
     #ppfemp=interpolate.InterpolatedUnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3)
-    #Don't use interpolating splines for function approximation
+    #Do not use interpolating splines for function approximation
     #with s=0.03 the spline is monotonic at the evaluated values
     ppfemp=interpolate.UnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3, s=0.03)
     ppfe = ppfemp(cdf_ongrid)

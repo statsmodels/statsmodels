@@ -86,7 +86,7 @@ def kalman_filter_double(double[:] y not None,
         double alph = 1.0
         double beta = 0.0
 
-    # NOTE: not sure about just checking F_mat[0, 0], didn't appear to work
+    # NOTE: not sure about just checking F_mat[0, 0], did not appear to work
     while not F_mat == 1. and i < nobs:
         # Predict
         # Z_mat is just a selector matrix

@@ -155,7 +155,7 @@ class CompareJ(object):
     From description in Greene, section 8.3.3
 
     produces correct results for Example 8.3, Greene - not checked yet
-    #currently an exception, but I don't have clean reload in python session
+    #currently an exception, but I do not have clean reload in python session
 
     check what results should be attached
 
@@ -302,7 +302,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
 
-    This is a generic Lagrange Multiplier test for autocorrelation. I don't
+    This is a generic Lagrange Multiplier test for autocorrelation. I do not
     have a reference for it, but it returns Engle's ARCH test if x is the
     squared residual array. A variation on it with additional exogenous
     variables is the Breusch-Godfrey autocorrelation test.
@@ -573,7 +573,7 @@ def het_breuschpagan(resid, exog_het):
     Assumes x contains constant (for counting dof and calculation of R^2).
     In the general description of LM test, Greene mentions that this test
     exaggerates the significance of results in small or moderately large
-    samples. In this case the F-statistic is preferrable.
+    samples. In this case the F-statistic is preferable.
 
     *Verification*
 
@@ -949,7 +949,7 @@ def linear_lm(resid, exog, func=None):
     '''Lagrange multiplier test for linearity against functional alternative
 
     limitations: Assumes currently that the first column is integer.
-    Currently it doesn't check whether the transformed variables contain NaNs,
+    Currently it does not check whether the transformed variables contain NaNs,
     for example log of negative number.
 
     Parameters
@@ -1397,7 +1397,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
-    Is this really necessary? I don't see how it can affect the test statistic
+    Is this really necessary? I do not see how it can affect the test statistic
     under the null. It does make a difference under the alternative.
     Also, the asymptotic distribution of test statistic depends on this.
 

@@ -4,7 +4,7 @@
 Sandbox
 =======
 
-This sandbox contains code that is for various resons not ready to be
+This sandbox contains code that is for various reasons not ready to be
 included in statsmodels proper. It contains modules from the old stats.models
 code that have not been tested, verified and updated to the new statsmodels
 structure: cox survival model, mixed effects model with repeated measures,

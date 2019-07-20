@@ -154,7 +154,7 @@ class MICEData(object):
     Parameters
     ----------
     data : Pandas data frame
-        The data set, whch is copied internally.
+        The data set, which is copied internally.
     perturbation_method : string
         The default perturbation method
     k_pmm : int
@@ -339,7 +339,7 @@ class MICEData(object):
             If regularized[name]=True, `fit_regularized` rather than
             `fit` is called when fitting imputation models for this
             variable.  When regularized[name]=True for any variable,
-            pertrurbation_method must be set to boot.
+            perturbation_method must be set to boot.
 
         Notes
         -----

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """trying out VAR filtering and multidimensional fft
 
-Note: second half is copy and paste and doesn't run as script
+Note: second half is copy and paste and does not run as script
 incomplete definitions of variables, some I created in shell
 
 Created on Thu Jan 07 12:23:40 2010
@@ -9,7 +9,7 @@ Created on Thu Jan 07 12:23:40 2010
 Author: josef-pktd
 
 update 2010-10-22
-2 arrays were not defined, copied from fft_filter.log.py but I didn't check
+2 arrays were not defined, copied from fft_filter.log.py but I did not check
 what the results are.
 Runs now without raising exception
 """

@@ -58,7 +58,7 @@
 
 * other models in draft stage  -> requires cleaning
   - gaussian process   -> might fit in
-  - multinomial logit -> requires ML, result statistics don't fit into current classes ?
+  - multinomial logit -> requires ML, result statistics do not fit into current classes ?
 
 * stochastic processes, time series  -> first step is relatively easy
   more simulators, random process generators, for fun and Monte Carlo and testing

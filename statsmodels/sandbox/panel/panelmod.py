@@ -73,7 +73,7 @@ def repanel_cov(groups, sigmas):
         groupuniq = np.unique(group)
         dummygr = sigmas[igr] * (group == groupuniq).astype(float)
         omega +=  np.dot(dummygr, dummygr.T)
-    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    ev, evec = np.linalg.eigh(omega)  #eig does not work
     omegainv = np.dot(evec, (1/ev * evec).T)
     omegainvhalf = evec/np.sqrt(ev)
     return omega, omegainv, omegainvhalf
@@ -180,7 +180,7 @@ class PanelModel(object):
 # on the pandas LongPanel structure for speed and convenience.
 # not sure this part is finished...
 
-#TODO: doesn't conform to new initialize
+#TODO: does not conform to new initialize
     def initialize_pandas(self, panel_data, endog_name, exog_name):
         self.panel_data = panel_data
         endog = panel_data[endog_name].values # does this create a copy?
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     import numpy.lib.recfunctions as nprf
 
     data = sm.datasets.grunfeld.load(as_pandas=False)
-    # Baltagi doesn't include American Steel
+    # Baltagi does not include American Steel
     endog = data.endog[:-20]
     fullexog = data.exog[:-20]
 #    fullexog.sort(order=['firm','year'])
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     year = fullexog['year']
     panel_mod = PanelModel(endog, exog, panel, year, xtnames=['firm','year'],
             equation='invest value capital')
-# note that equation doesn't actually do anything but name the variables
+# note that equation does not actually do anything but name the variables
     panel_ols = panel_mod.fit(model='pooled')
 
     panel_be = panel_mod.fit(model='between', effects='oneway')
@@ -404,7 +404,7 @@ if __name__ == "__main__":
     omega = np.dot(dummyall, dummyall.T) + sigma* np.eye(nobs)
     print(omega)
     print(np.linalg.cholesky(omega))
-    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    ev, evec = np.linalg.eigh(omega)  #eig does not work
     omegainv = np.dot(evec, (1/ev * evec).T)
     omegainv2 = np.linalg.inv(omega)
     omegacomp = np.dot(evec, (ev * evec).T)
@@ -412,7 +412,7 @@ if __name__ == "__main__":
     #check
     #print(np.dot(omegainv,omega)
     print(np.max(np.abs(np.dot(omegainv,omega) - np.eye(nobs))))
-    omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev shouldn't be column
+    omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev should not be column
     print(np.max(np.abs(np.dot(omegainvhalf,omegainvhalf.T) - omegainv)))
 
     # now we can use omegainvhalf in GLS (instead of the cholesky)

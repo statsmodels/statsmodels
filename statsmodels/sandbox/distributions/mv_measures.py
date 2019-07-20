@@ -102,7 +102,7 @@ def mutualinfo_binned(y, x, bins, normed=True):
         qbin_sqr = np.sqrt(5./nobs)
         quantiles = np.linspace(0, 1, 1./qbin_sqr)
         quantile_index = ((nobs-1)*quantiles).astype(int)
-        #move edges so that they don't coincide with an observation
+        #move edges so that they do not coincide with an observation
         shift = 1e-6 + np.ones(quantiles.shape)
         shift[0] -= 2*1e-6
         binsy = ys[quantile_index] + shift

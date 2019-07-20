@@ -1,7 +1,7 @@
 '''Testing numerical differentiation
 
 Still some problems, with API (args tuple versus *args)
-finite difference Hessian has some problems that I didn't look at yet
+finite difference Hessian has some problems that I did not look at yet
 
 Should Hessian also work per observation, if fun returns 2d
 
@@ -113,7 +113,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
             assert_almost_equal(he, hefd, decimal=DEC8)
 
             #NOTE: notice the accuracy below and the epsilon changes
-            # this doesn't work well for score -> hessian with non-cs step
+            # this does not work well for score -> hessian with non-cs step
             # it's a little better around the optimum
             assert_almost_equal(he, hefd, decimal=7)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
@@ -128,7 +128,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
 
             hecs = numdiff.approx_hess_cs(test_params, self.mod.loglike)
             assert_almost_equal(he, hecs, decimal=5)
-            #NOTE: these just don't work well
+            #NOTE: these just do not work well
             #hecs = numdiff.approx_hess1(test_params, self.mod.loglike, 1e-3)
             #assert_almost_equal(he, hecs, decimal=1)
             #hecs = numdiff.approx_hess2(test_params, self.mod.loglike, 1e-4)
@@ -211,7 +211,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if hetrue is not None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian does not work for 2d return of fun
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
@@ -233,7 +233,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if hetrue is not None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian does not work for 2d return of fun
                 fun = self.fun()
                 hecs = numdiff.approx_hess_cs(test_params, fun, args=self.args)
                 assert_almost_equal(hetrue, hecs, decimal=DEC6)
@@ -330,7 +330,7 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     print(numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x))
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
-    g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
+    g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this should not be transposed
     gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
     print(maxabs(g, gt))
     print(maxabs(gd, gt))
@@ -345,7 +345,7 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     score = mod.score
     hess = mod.hessian
 
-    #cs doesn't work for Probit because special.ndtr doesn't support complex
+    #cs does not work for Probit because special.ndtr does not support complex
     #maybe calculating ndtr for real and imag parts separately, if we need it
     #and if it still works in this case
     print('sm', score(test_params))

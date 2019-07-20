@@ -17,10 +17,10 @@ change/check: instead of using marep, use fft-transform of ar and ma
     -> use pade (scipy.misc) approximation to get starting polynomial
        from autocorrelation (is autocorrelation of AR(p) related to marep?)
        check if pade is fast, not for larger arrays ?
-       maybe pade doesn't do the right thing for this, not tried yet
+       maybe pade does not do the right thing for this, not tried yet
        scipy.pade([ 1.    ,  0.6,  0.25, 0.125, 0.0625, 0.1],2)
        raises LinAlgError: singular matrix
-       also doesn't have roots inside unit circle ??
+       also does not have roots inside unit circle ??
     -> even without initialization, it might be fast for estimation
     -> how do I enforce stationarity and invertibility,
        need helper function
@@ -49,7 +49,7 @@ class ArmaFft(ArmaProcess):
     Notes
     -----
     TODO:
-    check whether we don't want to fix maxlags, and create new instance if
+    check whether we do not want to fix maxlags, and create new instance if
     maxlag changes. usage for different lengths of timeseries ?
     or fix frequency and length for fft
 
@@ -192,7 +192,7 @@ class ArmaFft(ArmaProcess):
         n = npos
         w = fft.fftfreq(2*n) * 2 * np.pi
         hw = self.fftarma(2*n)  #not sure, need to check normalization
-        #return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi #doesn't show in plot
+        #return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi #does not show in plot
         return (hw*hw.conj()).real * 0.5 / np.pi, w
 
     def spdshift(self, n):

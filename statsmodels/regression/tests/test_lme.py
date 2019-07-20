@@ -151,8 +151,8 @@ class TestMixedLM(object):
                 ngr = nd.approx_fprime(params_vec, loglike)
                 assert_allclose(gr, ngr, rtol=1e-3)
 
-            # Check Hessian matrices at the MLE (we don't have
-            # the profile Hessian matrix and we don't care
+            # Check Hessian matrices at the MLE (we do not have
+            # the profile Hessian matrix and we do not care
             # about the Hessian for the square root
             # transformed parameter).
             if (profile_fe is False) and (use_sqrt is False):
@@ -559,7 +559,7 @@ class TestMixedLM(object):
         # logLik(r)
         assert_allclose(result.llf, -123.49, rtol=1e-1)
 
-        # don't provide aic/bic with REML
+        # do not provide aic/bic with REML
         assert_equal(result.aic, np.nan)
         assert_equal(result.bic, np.nan)
 

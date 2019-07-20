@@ -4,7 +4,7 @@ uses dispatch to mstats version for difficult cases:
   - data is masked array
   - data requires nan handling (masknan=True)
   - data should be trimmed (limit is non-empty)
-handle simple cases directly, which doesn't require apply_along_axis
+handle simple cases directly, which does not require apply_along_axis
 changes compared to mstats: plotting_positions for n-dim with axis argument
 addition: plotting_positions_w1d: with weights, 1d ndarray only
 
@@ -16,7 +16,7 @@ convert examples to tests
 rename alphap, betap for consistency
 timing question: one additional argsort versus apply_along_axis
 weighted plotting_positions
-- I haven't figured out nd version of weighted plotting_positions
+- I have not figured out nd version of weighted plotting_positions
 - add weighted quantiles
 
 
@@ -262,7 +262,7 @@ def plotting_positions(data, alpha=0.4, beta=0.4, axis=0, masknan=False):
         plpos = np.empty(data.shape, dtype=float)
         plpos[data.argsort()] = (np.arange(1,n+1) - alpha)/(n+1.-alpha-beta)
     else:
-        #nd assignment instead of second argsort doesn't look easy
+        #nd assignment instead of second argsort does not look easy
         plpos = (data.argsort(axis).argsort(axis) + 1. - alpha)/(n+1.-alpha-beta)
     return plpos
 
@@ -344,7 +344,7 @@ if __name__ == '__main__':
         print((quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all())
         print((stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all())
 
-    #stats version doesn't have axis
+    #stats version does not have axis
     print((stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all())
 
     #test 3d

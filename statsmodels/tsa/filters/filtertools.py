@@ -44,7 +44,7 @@ def _pad_nans(x, head=None, tail=None):
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 
-# don't do these imports, here just for copied fftconvolve
+# do not do these imports, here just for copied fftconvolve
 #get rid of these imports
 #from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
 #     ifftn, fftfreq
@@ -56,12 +56,12 @@ def fftconvolveinv(in1, in2, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
 
     copied from scipy.signal.signaltools, but here used to try out inverse filter
-    doesn't work or I can't get it to work
+    does not work or I cannot get it to work
 
     2010-10-23:
     looks ok to me for 1d,
     from results below with padded data array (fftp)
-    but it doesn't work for multidimensional inverse filter (fftn)
+    but it does not work for multidimensional inverse filter (fftn)
     original signal.fftconvolve also uses fftn
 
     """
@@ -77,7 +77,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     #IN1 *= fftn(in2,fsize) #JP: this looks like the only change I made
     IN1 /= fft.fftn(in2,fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
-    # is this correct, NO  doesn't seem to work for VARMA
+    # is this correct, NO  does not seem to work for VARMA
     fslice = tuple([slice(0, int(sz)) for sz in size])
     ret = fft.ifftn(IN1)[fslice].copy()
     del IN1
@@ -106,12 +106,12 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
       since I'm using max of in2, in3 shapes and not the sum
 
     copied from scipy.signal.signaltools, but here used to try out inverse
-    filter doesn't work or I can't get it to work
+    filter does not work or I cannot get it to work
 
     2010-10-23
     looks ok to me for 1d,
     from results below with padded data array (fftp)
-    but it doesn't work for multidimensional inverse filter (fftn)
+    but it does not work for multidimensional inverse filter (fftn)
     original signal.fftconvolve also uses fftn
     """
     if (in2 is None) and (in3 is None):
@@ -138,7 +138,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if in3 is not None:
         IN1 /= fft.fftn(in3, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
-    # is this correct, NO  doesn't seem to work for VARMA
+    # is this correct, NO  does not seem to work for VARMA
     IN1 *= fft.fftn(in1, fsize)
     fslice = tuple([slice(0, int(sz)) for sz in size])
     ret = fft.ifftn(IN1)[fslice].copy()

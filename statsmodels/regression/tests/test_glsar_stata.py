@@ -86,7 +86,7 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         res1 = mod1.fit()
         res0 = mod1.iterative_fit(0)
         res0b = mod1.iterative_fit(1)
-        # check iterative_fit(0) or iterative_fit(1) doesn't update rho
+        # check iterative_fit(0) or iterative_fit(1) does not update rho
         assert_allclose(res0.params, res1.params, rtol=1e-11)
         assert_allclose(res0b.params, res1.params, rtol=1e-11)
         assert_allclose(res0.model.rho, rho, rtol=1e-11)

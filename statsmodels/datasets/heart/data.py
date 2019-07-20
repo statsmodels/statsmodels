@@ -7,7 +7,7 @@ COPYRIGHT   = """???"""
 
 TITLE       = """Transplant Survival Data"""
 
-SOURCE      = """ Miller, R. (1976). Least squares regression with censored dara. Biometrica, 63 (3). 449-464.
+SOURCE      = """Miller, R. (1976). Least squares regression with censored data. Biometrica, 63 (3). 449-464.
 
 """
 

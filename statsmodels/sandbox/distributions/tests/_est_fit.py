@@ -1,5 +1,5 @@
 # NOTE: contains only one test, _est_cont_fit, that is renamed so that
-#       the test runner doesn't run it
+#       the test runner does not run it
 # I put this here for the record and for the case when someone wants to
 # verify the quality of fit
 # with current parameters: relatively small sample size, default starting values
@@ -14,7 +14,7 @@ from scipy import stats
 from .distparams import distcont
 
 # this is not a proper statistical test for convergence, but only
-# verifies that the estimate and true values don't differ by too much
+# verifies that the estimate and true values do not differ by too much
 n_repl1 = 1000 # sample size for first run
 n_repl2 = 5000 # sample size for second run, if first run fails
 thresh_percent = 0.25 # percent of true parameters for fail cut-off
@@ -25,7 +25,7 @@ thresh_min = 0.75  # minimum difference estimate - true to fail test
 def _est_cont_fit():
     # this tests the closeness of the estimated parameters to the true
     # parameters with fit method of continuous distributions
-    # Note: is slow, some distributions don't converge with sample size <= 10000
+    # Note: is slow, some distributions do not converge with sample size <= 10000
 
     for distname, arg in distcont:
         yield check_cont_fit, distname,arg

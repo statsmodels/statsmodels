@@ -96,7 +96,7 @@ class SimulationSmoother(KalmanSmoother):
             Additional keyword arguments. Present so that calls to this method
             can use \*\*kwargs without clearing out additional arguments.
         """
-        # If we don't explicitly have simulation_output, try to get it from
+        # If we do not explicitly have simulation_output, try to get it from
         # kwargs
         if simulation_output is None:
             simulation_output = 0
@@ -111,7 +111,7 @@ class SimulationSmoother(KalmanSmoother):
             # Handle case of no information in kwargs
             if simulation_output == 0:
 
-                # If some arguments were passed, but we still don't have any
+                # If some arguments were passed, but we still do not have any
                 # simulation output, raise an exception
                 argument_set = not all([
                     simulate_state is None, simulate_disturbance is None,

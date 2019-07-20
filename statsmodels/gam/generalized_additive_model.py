@@ -357,7 +357,7 @@ class GLMGamResults(GLMResults):
             ax.plot(x, y_est + 1.96 * se, '-', c='blue')
             ax.plot(x, y_est - 1.96 * se, '-', c='blue')
         if cpr:
-            # TODO: resid_response doesn't make sense with nonlinear link
+            # TODO: resid_response does not make sense with nonlinear link
             # use resid_working ?
             cpr_ = y_est + self.resid_working
             ax.plot(x, cpr_, '.', lw=2)
@@ -729,7 +729,7 @@ class GLMGam(PenalizedMixin, GLM):
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
-            # We don't need to update scale in GLM/LEF models
+            # We do not need to update scale in GLM/LEF models
             # We might need it in dispersion models.
             # self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
@@ -968,7 +968,7 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
     results : Results instance of WLS
     """
     y, x, s = endog, exog, penalty_matrix
-    # TODO: I don't understand why I need 2 * s
+    # TODO: I do not understand why I need 2 * s
     aug_y, aug_x, aug_weights = make_augmented_matrix(y, x, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     # TODO: use MinimalWLS during iterations, less overhead

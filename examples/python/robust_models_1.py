@@ -291,7 +291,7 @@ wls_model = sm.WLS(y, X, weights=weights).fit()
 abline_plot(model_results=wls_model, ax=ax, color='green')
 
 # * MM estimators are good for this type of problem, unfortunately, we
-# don't yet have these yet.
+# do not yet have these yet.
 # * It's being worked on, but it gives a good excuse to look at the R cell
 # magics in the notebook.
 

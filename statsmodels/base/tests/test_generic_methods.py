@@ -118,7 +118,7 @@ class CheckGenericMixin(object):
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, 'resid'):
-            # discrete models, Logit don't have `resid` yet
+            # discrete models, Logit do not have `resid` yet
             # atol discussion at gh-5158
             rtol = 1e-10
             atol = 1e-12
@@ -263,7 +263,7 @@ class CheckGenericMixin(object):
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):
-                # discrete models, Logit don't have `resid` yet
+                # discrete models, Logit do not have `resid` yet
                 assert_allclose(res1.resid, res2.resid, rtol=1e-5, atol=1e-10)
 
             ex = res1.model.exog.mean(0)

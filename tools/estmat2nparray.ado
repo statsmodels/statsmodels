@@ -12,7 +12,7 @@
 * add estimation results from e(), e(scalars) and e(macros), not the matrices in e
 * make estimation result optional
 * add aliases for params_table
-* don't split col or row names if only 1 - changed my mind: always list
+* do not split col or row names if only 1 - changed my mind: always list
 
 * Issues
 * ------

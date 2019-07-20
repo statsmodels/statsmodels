@@ -306,7 +306,7 @@ def summary_model(results):
         try:
             out[key] = func(results)
         except (AttributeError, KeyError, NotImplementedError):
-            # NOTE: some models don't have loglike defined (RLM),
+            # NOTE: some models do not have loglike defined (RLM),
             #   so raise NotImplementedError
             pass
     return out

@@ -93,7 +93,7 @@ class TestPredictOLS(CheckPredictReturns):
         x = np.random.randn(nobs, 3)
         y = x.sum(1) + np.random.randn(nobs)
         index = ['obs%02d' % i for i in range(nobs)]
-        # add one extra column to check that it doesn't matter
+        # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
                                 columns='y var1 var2 var3'.split(),
                                 index=index)
@@ -110,7 +110,7 @@ class TestPredictGLM(CheckPredictReturns):
         x = np.random.randn(nobs, 3)
         y = x.sum(1) + np.random.randn(nobs)
         index = ['obs%02d' % i for i in range(nobs)]
-        # add one extra column to check that it doesn't matter
+        # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(np.round(np.column_stack((y, x)), 4),
                                 columns='y var1 var2 var3'.split(),
                                 index=index)

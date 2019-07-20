@@ -329,7 +329,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
                           init_kwds_e={}):
     """handles the model fitting for each machine. NOTE: this
     is primarily handled outside of DistributedModel because
-    joblib can't handle class methods.
+    joblib cannot handle class methods.
 
     Parameters
     ----------

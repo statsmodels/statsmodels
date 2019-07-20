@@ -162,10 +162,10 @@ class TestInfluenceBinomialGLMMLE(InfluenceCompareExact):
         # > imI <- influence.measures(glmI)
         # > t(imI$infmat)
 
-        # dfbeta/dfbetas and dffits don't make sense to me and are furthe away from
+        # dfbeta/dfbetas and dffits do not make sense to me and are furthe away from
         # looo than mine
         # resid seem to be resid_deviance based and not resid_pearson
-        # I didn't compare cov.r
+        # I did not compare cov.r
         infl1 = self.infl1
         cooks_d = [0.25220202795934726, 0.26107981497746285, 1.28985614424132389,
                    0.08449722285516942, 0.36362110845918005]

@@ -142,7 +142,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     >>> multiOLS('GNP + 0', df, 'GNPDEFL')
     """
     # data normalization
-    # if None take all the numerical columns that aren't present in the model
+    # if None take all the numerical columns that are not present in the model
     # it's not waterproof but is a good enough criterion for everyday use
     if column_list is None:
         column_list = [name for name in dataframe.columns

@@ -37,7 +37,7 @@ def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
 
     Notes
     -----
-    Make sure baseurl has trailing forward slash. Doesn't do any
+    Make sure baseurl has trailing forward slash. Does not do any
     error checking in response URLs.
     """
     url = urljoin(baseurl, data+'.dta')
@@ -148,7 +148,7 @@ def _urlopen_cached(url, cache):
         except:
             pass
 
-    # not using the cache or didn't find it in cache
+    # not using the cache or did not find it in cache
     if not from_cache:
         data = urlopen(url, timeout=3).read()
         if cache is not None:  # then put it in the cache
@@ -249,7 +249,7 @@ def get_data_home(data_home=None):
     in the user home folder.
 
     Alternatively, it can be set by the 'STATSMODELS_DATA' environment
-    variable or programatically by giving an explit folder path. The
+    variable or programatically by giving an explicit folder path. The
     '~' symbol is expanded to the user home folder.
 
     If the folder does not already exist, it is automatically created.

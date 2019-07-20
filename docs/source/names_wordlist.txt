@@ -89,3 +89,11 @@ Longley
 Koenker
 gliptak
 Spector
+Wes
+statawriter
+Nonparameteric
+prerotated
+uniq
+exceedance
+separatevar
+

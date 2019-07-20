@@ -1,4 +1,4 @@
-'''run all examples to make sure we don't get an exception
+'''run all examples to make sure we do not get an exception
 
 Note:
 If an example contaings plt.show(), then all plot windows have to be closed

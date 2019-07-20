@@ -3,7 +3,7 @@ Statistical tests to be used in conjunction with the models
 
 Notes
 -----
-These functions haven't been formally tested.
+These functions have not been formally tested.
 """
 
 from scipy import stats
@@ -312,7 +312,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     kr2 : ndarray
           Kurtosis estimator based on octiles.
     kr3 : ndarray
-          Kurtosis estimators based on exceedence expectations.
+          Kurtosis estimators based on exceedance expectations.
     kr4 : ndarray
           Kurtosis measure based on the spread between high and low quantiles.
 

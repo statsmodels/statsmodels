@@ -6,7 +6,7 @@ Author: Alexandre Gramfort <gramfort@nmr.mgh.harvard.edu>
 License: Simplified BSD
 
 changes for statsmodels (Josef Perktold)
-- try import from joblib directly, (doesn't import all of sklearn)
+- try import from joblib directly, (does not import all of sklearn)
 
 """
 

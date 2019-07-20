@@ -93,7 +93,7 @@ class TryCLogit(object):
         xb = self.xbetas(params)
         expxb = np.exp(xb)
         sumexpxb = expxb.sum(1)#[:,None]
-        probs = expxb/expxb.sum(1)[:,None]  #we don't really need this for all
+        probs = expxb/expxb.sum(1)[:,None]  #we do not really need this for all
         loglike = (self.endog * np.log(probs)).sum(1)
         #is this the same: YES
         #self.logliketest = (self.endog * xb).sum(1) - np.log(sumexpxb)
@@ -110,7 +110,7 @@ class TryNCLogit(object):
     '''
     Nested Conditional Logit (RUNMNL), data handling test
 
-    unfinished, doesn't do anything yet
+    unfinished, does not do anything yet
 
     '''
 
@@ -240,10 +240,10 @@ class RU2NMNL(object):
 dta = np.genfromtxt('TableF23-2.txt', skip_header=1,
                     names='Mode   Ttme   Invc    Invt      GC     Hinc    PSize'.split())
 
-endog = dta['Mode'].reshape(-1,4).copy() #I don't want a view
+endog = dta['Mode'].reshape(-1,4).copy() #I do not want a view
 nobs, nchoices = endog.shape
 datafloat = dta.view(float).reshape(-1,7)
-exog = datafloat[:,1:].reshape(-1,6*nchoices).copy() #I don't want a view
+exog = datafloat[:,1:].reshape(-1,6*nchoices).copy() #I do not want a view
 
 print(endog.sum(0))
 varnames = dta.dtype.names
@@ -289,7 +289,7 @@ xivar = [['GC', 'Ttme', 'Const', 'Hinc'],
 xi = []
 for ii in range(4):
     xi.append(dta1[xivar[ii]][choice_index==ii])
-    #this doesn't change sequence of columns, bug report by Skipper I think
+    #this does not change sequence of columns, bug report by Skipper I think
 
 ncommon = 2
 betaind = [len(xi[ii].dtype.names)-ncommon for ii in range(4)]

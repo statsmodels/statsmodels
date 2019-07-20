@@ -38,7 +38,7 @@ print(branch(tree))
 
 
 #new version that also keeps track of branch name and allows V_j for a branch
-#   as in Greene, V_j + lamda * IV doesn't look the same as including the
+#   as in Greene, V_j + lamda * IV does not look the same as including the
 #   explanatory variables in leaf X_j, V_j is linear in X, IV is logsumexp of X,
 
 

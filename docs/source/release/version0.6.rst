@@ -298,10 +298,10 @@ Pull Requests (276):
 * :ghpull:`1954`: ENH: PHReg formula improvements
 * :ghpull:`2007`: BLD: Fix build issues
 * :ghpull:`2006`: BLD: Do not generate cython on clean. Closes #1852.
-* :ghpull:`2000`: BLD: Let pip/setuptools handle dependencies that aren't installed at all.
+* :ghpull:`2000`: BLD: Let pip/setuptools handle dependencies that are not installed at all.
 * :ghpull:`1999`: Gee offset exposure 1994 rebased
 * :ghpull:`1998`: BUG/ENH Lasso emptymodel rebased
-* :ghpull:`1989`: BUG/ENH: WLS generic robust cov_type didn't use whitened,
+* :ghpull:`1989`: BUG/ENH: WLS generic robust cov_type did not use whitened,
 * :ghpull:`1587`: ENH: Wrap X12/X13-ARIMA AUTOMDL. Closes #442.
 * :ghpull:`1563`: ENH: Add plot_predict method to ARIMA models.
 * :ghpull:`1995`: BUG: Fix issue #1993
@@ -331,7 +331,7 @@ Pull Requests (276):
 * :ghpull:`1938`: ENH: Enable Python 3.4 testing
 * :ghpull:`1924`: Bug gee cov type 1906 rebased
 * :ghpull:`1870`: robust covariance, cov_type in fit
-* :ghpull:`1859`: BUG: Don't use negative indexing with k_ar == 0. Closes #1858.
+* :ghpull:`1859`: BUG: Do not use negative indexing with k_ar == 0. Closes #1858.
 * :ghpull:`1914`: BUG: LikelihoodModelResults.pvalues use df_resid_inference
 * :ghpull:`1899`: TST: fix assert_equal for pandas index
 * :ghpull:`1895`: Bug multicomp pandas
@@ -347,7 +347,7 @@ Pull Requests (276):
 * :ghpull:`1867`: Ref covtype fit
 * :ghpull:`1865`: Disable tst distribution 1864
 * :ghpull:`1856`: _spg_optim returns history of objective function values
-* :ghpull:`1854`: BLD: Don't hard-code path for building notebooks. Closes #1249
+* :ghpull:`1854`: BLD: Do not hard-code path for building notebooks. Closes #1249
 * :ghpull:`1851`: MAINT: Cor nearest factor tests
 * :ghpull:`1847`: Newton regularize
 * :ghpull:`1623`: BUG Negbin fit regularized
@@ -379,17 +379,17 @@ Pull Requests (276):
 * :ghpull:`1692`: OSL Example: redundant cell in example removed
 * :ghpull:`1688`: Kshedden mixed rebased of #1398
 * :ghpull:`1629`: Pull request to fix bandwidth bug in issue 597
-* :ghpull:`1666`: Include pyx in sdist but don't install
+* :ghpull:`1666`: Include pyx in sdist but do not install
 * :ghpull:`1683`: TST: GLM shorten random seed closes #1682
 * :ghpull:`1681`: Dotplot kshedden rebased of 1294
 * :ghpull:`1679`: BUG: Fix problems with predict handling offset and exposure
 * :ghpull:`1677`: Update docstring of RegressionModel.predict()
-* :ghpull:`1635`: Allow offset and exposure to be used together with log link; raise excep...
+* :ghpull:`1635`: Allow offset and exposure to be used together with log link; raise except...
 * :ghpull:`1676`: Tests for SVAR
 * :ghpull:`1671`: ENH: avoid hard-listed bandwidths -- use present dictionary (+typos fixed)
 * :ghpull:`1643`: Allow matrix structure in covariance matrices to be exploited
 * :ghpull:`1657`: BUG: Fix refactor victim.
-* :ghpull:`1630`: DOC: typo, "interecept"
+* :ghpull:`1630`: DOC: typo, "intercept"
 * :ghpull:`1619`: MAINT: Dataset docs cleanup and automatic build of docs
 * :ghpull:`1612`: BUG/ENH Fix negbin exposure #1611
 * :ghpull:`1610`: BUG/ENH fix llnull, extra kwds to recreate model
@@ -478,7 +478,7 @@ Pull Requests (276):
 * :ghpull:`1404`: Tst fix genmod link tests
 * :ghpull:`1396`: REF: Multipletests reduce memory usage
 * :ghpull:`1380`: DOC :Update vector_ar.rst
-* :ghpull:`1381`: BLD: Don't check dependencies on egg_info for pip. Closes #1267.
+* :ghpull:`1381`: BLD: Do not check dependencies on egg_info for pip. Closes #1267.
 * :ghpull:`1302`: BUG: Fix typo.
 * :ghpull:`1375`: STY: Remove unused imports and comment out unused libraries in setup.py
 * :ghpull:`1143`: DOC: Update backport notes for new workflow.
@@ -562,7 +562,7 @@ Issues (252):
 * :ghissue:`1220`: missing in extra data (example sandwiches, robust covariances)
 * :ghissue:`1877`: error with GEE on missing data.
 * :ghissue:`805`: nan with categorical in formula
-* :ghissue:`2036`: test in links require exact class so Logit can't work in place of logit
+* :ghissue:`2036`: test in links require exact class so Logit cannot work in place of logit
 * :ghissue:`2010`: Go over deprecations again for 0.6.
 * :ghissue:`1303`: patsy library not automatically installed
 * :ghissue:`2024`: genmod Links numerical improvements
@@ -577,7 +577,7 @@ Issues (252):
 * :ghissue:`1875`: dtype bug object arrays (raises in clustered standard errors code)
 * :ghissue:`1842`: dtype object, glm.fit() gives AttributeError: sqrt
 * :ghissue:`1300`: Doc errors, missing
-* :ghissue:`1164`: RLM cov_params, t_test, f_test don't use bcov_scaled
+* :ghissue:`1164`: RLM cov_params, t_test, f_test do not use bcov_scaled
 * :ghissue:`1019`: 0.6.0 Roadmap
 * :ghissue:`554`: Prediction Standard Errors
 * :ghissue:`333`: ENH tools: squeeze in R export file
@@ -625,12 +625,12 @@ Issues (252):
 * :ghissue:`1256`: REF: GEE handling of default covariance matrices
 * :ghissue:`1760`: Changing covariance_type on results
 * :ghissue:`1906`: BUG: GEE default covariance is not used
-* :ghissue:`1931`: BUG: GEE subclasses NominalGEE don't work with pandas exog
-* :ghissue:`1904`: GEE Results doesn't have a Wrapper
+* :ghissue:`1931`: BUG: GEE subclasses NominalGEE do not work with pandas exog
+* :ghissue:`1904`: GEE Results does not have a Wrapper
 * :ghissue:`1918`: GEE: required attributes missing, df_resid
 * :ghissue:`1919`: BUG GEE.predict uses link instead of link.inverse
 * :ghissue:`1858`: BUG: arimax forecast should special case k_ar == 0
-* :ghissue:`1903`: BUG: pvalues for cluster robust, with use_t don't use df_resid_inference
+* :ghissue:`1903`: BUG: pvalues for cluster robust, with use_t do not use df_resid_inference
 * :ghissue:`1243`: kde silverman bandwidth for non-gaussian kernels
 * :ghissue:`1866`: Pip dependencies
 * :ghissue:`1850`: TST test_corr_nearest_factor fails on Ubuntu
@@ -653,7 +653,7 @@ Issues (252):
 * :ghissue:`1453`: Discrete NegativeBinomialModel regularized_fit ValueError: matrices are not aligned
 * :ghissue:`1836`: BUG Got an TypeError trying to import statsmodels.api
 * :ghissue:`1829`: BUG: GLM summary show "t"  use_t=True for summary
-* :ghissue:`1828`: BUG summary2 doesn't propagate/use use_t
+* :ghissue:`1828`: BUG summary2 does not propagate/use use_t
 * :ghissue:`1812`: BUG/ REF conf_int and use_t
 * :ghissue:`1835`: Problems with installation using easy_install
 * :ghissue:`1801`: BUG 'f_gen' missing in scipy 0.14.0
@@ -670,7 +670,7 @@ Issues (252):
 * :ghissue:`1323`: Contrast Results after t_test summary broken for 1 parameter
 * :ghissue:`109`: TestProbitCG failure on Ubuntu
 * :ghissue:`1690`: TestProbitCG: 8 failing tests (Python 3.4 / Ubuntu 12.04)
-* :ghissue:`1763`: Johansen method doesn't give correct index values
+* :ghissue:`1763`: Johansen method does not give correct index values
 * :ghissue:`1761`: doc build failures: ipython version ? ipython directive
 * :ghissue:`1762`: Unable to build
 * :ghissue:`1745`: UnicodeDecodeError raised by get_rdataset("Guerry", "HistData")
@@ -734,7 +734,7 @@ Issues (252):
 * :ghissue:`1462`: qqplot line kwarg is broken/docstring is wrong
 * :ghissue:`1457`: BUG/BLD: Failed build if "sandbox" anywhere in statsmodels path
 * :ghissue:`1441`: wls function: syntax error "unexpected EOF while parsing" occurs when name of dependent variable starts with digits
-* :ghissue:`1428`: ipython_directive doesn't work with ipython master
+* :ghissue:`1428`: ipython_directive does not work with ipython master
 * :ghissue:`1385`: SimpleTable in Summary (e.g. OLS) is slow for large models
 * :ghissue:`1399`: UnboundLocalError: local variable 'fittedvalues' referenced before assignment
 * :ghissue:`1377`: TestAnova2.test_results fails with pandas 0.13.1
@@ -746,7 +746,7 @@ Issues (252):
 * :ghissue:`990`: AR fit with bfgs: large score
 * :ghissue:`14`: arma with exog
 * :ghissue:`1348`: reset_index + set_index with drop=False
-* :ghissue:`1343`: ARMA doesn't pass missing keyword up to TimeSeriesModel
+* :ghissue:`1343`: ARMA does not pass missing keyword up to TimeSeriesModel
 * :ghissue:`1326`: formula example notebook broken
 * :ghissue:`1327`: typo in docu-code for "Outlier and Influence Diagnostic Measures"
 * :ghissue:`1309`: Box-Cox transform (some code needed: lambda estimator)
@@ -777,11 +777,11 @@ Issues (252):
 * :ghissue:`1116`: Typo in Example Doc?
 * :ghissue:`1123`: BUG : arima_model._get_predict_out_of_sample, ignores exogenous of there is no trend ?
 * :ghissue:`1155`: ARIMA - The computed initial AR coefficients are not stationary
-* :ghissue:`979`: Win64 binary can't find Python installation
+* :ghissue:`979`: Win64 binary cannot find Python installation
 * :ghissue:`1046`: TST: test_arima_small_data_bug on current master
 * :ghissue:`1146`: ARIMA fit failing for small set of data due to invalid maxlag
 * :ghissue:`1081`: streamline linear algebra for linear model
-* :ghissue:`1138`: BUG: pacf_yw doesn't demean
+* :ghissue:`1138`: BUG: pacf_yw does not demean
 * :ghissue:`1127`: Allow linear link model with Binomial families
 * :ghissue:`1122`: no data cleaning for statsmodels.genmod.families.varfuncs.NegativeBinomial()
 * :ghissue:`658`: robust.mad is not being computed correctly or is non-standard definition; it returns the median

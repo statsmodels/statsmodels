@@ -70,7 +70,7 @@ print(sm_probit_canned.cov_params())
 print(sm_probit_manual.cov_params())
 
 # Notice that the ``GenericMaximumLikelihood`` class provides automatic
-# differentiation, so we didn't have to provide Hessian or Score functions
+# differentiation, so we did not have to provide Hessian or Score functions
 # in order to calculate the covariance estimates.
 
 #

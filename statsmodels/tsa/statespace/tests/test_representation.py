@@ -744,7 +744,7 @@ def test_cython():
     mod._initialize_filter()
     kf = mod._kalman_filters['d']
 
-    # Rebind data, still float, check that we haven't changed
+    # Rebind data, still float, check that we have not changed
     mod.bind(endog)
     mod._initialize_filter()
     assert_equal(mod._kalman_filter, kf)

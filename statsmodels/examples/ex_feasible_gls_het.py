@@ -14,8 +14,8 @@ Created on Wed Dec 21 12:28:17 2011
 
 Author: Josef Perktold
 
-There might be something fishy with the example, but I don't see it.
-Or maybe it's supposed to be this way because in the first case I don't
+There might be something fishy with the example, but I do not see it.
+Or maybe it's supposed to be this way because in the first case I do not
 include a constant and in the second case I include some of the same
 regressors as in the main equation.
 

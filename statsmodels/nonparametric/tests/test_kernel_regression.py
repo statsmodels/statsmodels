@@ -175,7 +175,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason="Test doesn't make much sense - always passes "
+    @pytest.mark.xfail(reason="Test does not make much sense - always passes "
                               "with very small bw.")
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
         nobs = 200

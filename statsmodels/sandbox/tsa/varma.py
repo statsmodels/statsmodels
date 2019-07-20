@@ -1,6 +1,6 @@
 '''VAR and VARMA process
 
-this doesn't actually do much, trying out a version for a time loop
+this does not actually do much, trying out a version for a time loop
 
 alternative representation:
 * textbook, different blocks in matrices

@@ -201,7 +201,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if use_self:
         res = self
     else:
-        # this doesn't work for most models, use raw instance instead from fit
+        # this does not work for most models, use raw instance instead from fit
         res = self.__class__(self.model, self.params,
                    normalized_cov_params=self.normalized_cov_params,
                    scale=self.scale)
@@ -218,7 +218,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         df_correction = kwds.get('df_correction', None)
         # TODO: check also use_correction, do I need all combinations?
         if df_correction is not False: # i.e. in [None, True]:
-            # user didn't explicitely set it to False
+            # user did not explicitely set it to False
             adjust_df = True
 
     res.cov_kwds['adjust_df'] = adjust_df
@@ -235,7 +235,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
         res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
         if res.cov_params_default is None:
-            # results classes that don't have cov_HCx attribute
+            # results classes that do not have cov_HCx attribute
             res.cov_params_default = sw.cov_white_simple(self,
                                                          use_correction=False)
     elif cov_type.lower() == 'hac':

@@ -214,7 +214,7 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
     >>> kstest(x,'norm', alternative = 'greater')
     (0.0072115233216311081, 0.98531158590396395)
 
-    Don't reject equal distribution against alternative hypothesis: greater
+    Do not reject equal distribution against alternative hypothesis: greater
 
     >>> kstest(x,'norm', mode='asymp')
     (0.12464329735846891, 0.08944488871182088)
@@ -472,7 +472,7 @@ class GOF(object):
 
     @cache_readonly
     def asqu(self):
-        '''Stephens 1974, doesn't have p-value formula for A^2'''
+        '''Stephens 1974, does not have p-value formula for A^2'''
         nobs = self.nobs
         cdfvals = self.cdfvals
 

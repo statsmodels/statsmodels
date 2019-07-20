@@ -102,5 +102,5 @@ print(supb, pval, crit)
 ##check whether this works directly: Ploberger/Kramer framing of standard cusum
 ##no, it's different, there is another denominator
 #print breaks_cusumolsresid(rresid[skip:])
-#this function is still completely wrong, cut and paste doesn't apply
+#this function is still completely wrong, cut and paste does not apply
 #print breaks_cusum(rresid[skip:])

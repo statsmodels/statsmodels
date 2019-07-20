@@ -267,7 +267,7 @@ class VariableScreening(object):
         keep = np.ones(k_keep, np.bool_)
         idx_excl = np.arange(k_keep, k_vars)
         mod_pen = model_class(endog, x0, **self.init_kwds)
-        # don't penalize initial estimate
+        # do not penalize initial estimate
         mod_pen.pen_weight = 0
         res_pen = mod_pen.fit(**fit_kwds)
         start_params = res_pen.params

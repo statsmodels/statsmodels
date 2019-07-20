@@ -63,7 +63,7 @@ class StatTestMC(object):
        not be updated, and, therefore, not correspond to the same run.
 
     .. Warning::
-       Under Construction, don't expect stability in Api or implementation
+       Under Construction, do not expect stability in Api or implementation
 
 
     Examples
@@ -165,7 +165,7 @@ class StatTestMC(object):
 
         does not do any plotting
 
-        I don't remember what I wanted here, looks similar to the new cdf
+        I do not remember what I wanted here, looks similar to the new cdf
         method, but this also does a binned pdf (self.histo)
 
 
@@ -331,7 +331,7 @@ class StatTestMC(object):
 
 
         import matplotlib.pyplot as plt
-        #I don't want to figure this out now
+        #I do not want to figure this out now
 #        if ax=None:
 #            fig = plt.figure()
 #            ax = fig.addaxis()

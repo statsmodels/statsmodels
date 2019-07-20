@@ -767,12 +767,12 @@ class _VariationalBayesMixedGLM(object):
             # caller)
             s = np.log(sd)
 
-        # Don't allow the variance parameter starting mean values to
+        # Do not allow the variance parameter starting mean values to
         # be too small.
         i1, i2 = self.k_fep, self.k_fep + self.k_vcp
         m[i1:i2] = np.where(m[i1:i2] < -1, -1, m[i1:i2])
 
-        # Don't allow the posterior standard deviation starting values
+        # Do not allow the posterior standard deviation starting values
         # to be too small.
         s = np.where(s < -1, -1, s)
 
