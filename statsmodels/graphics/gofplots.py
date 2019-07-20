@@ -247,15 +247,15 @@ class ProbPlot(object):
                ax=None, **plotkwargs):
         """
         P-P plot of the percentiles (probabilities) of x versus the
-        probabilities (percetiles) of a distribution.
+        probabilities (percentiles) of a distribution.
 
         Parameters
         ----------
         xlabel : str or None, optional
-            User-provided lables for the x-axis. If None (default),
+            User-provided labels for the x-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         ylabel : str or None, optional
-            User-provided lables for the y-axis. If None (default),
+            User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
@@ -332,7 +332,7 @@ class ProbPlot(object):
         Parameters
         ----------
         xlabel, ylabel : str or None, optional
-            User-provided lables for the x-axis and y-axis. If None (default),
+            User-provided labels for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
@@ -411,7 +411,7 @@ class ProbPlot(object):
                  exceed=False, ax=None, **plotkwargs):
         """
         Probability plot of the unscaled quantiles of x versus the
-        probabilities of a distibution (not to be confused with a P-P plot).
+        probabilities of a distribution (not to be confused with a P-P plot).
 
         The x-axis is scaled linearly with the quantiles, but the probabilities
         are used to label the axis.
@@ -419,7 +419,7 @@ class ProbPlot(object):
         Parameters
         ----------
         xlabel, ylabel : str or None, optional
-            User-provided lables for the x-axis and y-axis. If None (default),
+            User-provided labels for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:

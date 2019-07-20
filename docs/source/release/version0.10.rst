@@ -663,7 +663,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5275`: ENH/BUG Modify GEE indexing to remove numpy warnings
 * :pr:`5277`: DOC: Clarify/fix docs on GLM scale estimation for negative binomial
 * :pr:`5292`: DOC: Remove only_directive
-* :pr:`5295`: TST: Added random seed to test_gee and verifed working
+* :pr:`5295`: TST: Added random seed to test_gee and verified working
 * :pr:`5300`: DOC fix docstring in stattools.py
 * :pr:`5301`: BUG: MICEData sets initial imputation incorrectly
 * :pr:`5304`: ENH: conditional logistic and Poisson regression

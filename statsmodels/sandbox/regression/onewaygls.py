@@ -318,7 +318,7 @@ Alternative model: all coefficients are allowed to be different'
 not verified but looks close to f-test result'
 
 
-Ols parameters by group from individual, separate ols regressions'
+OLS parameters by group from individual, separate ols regressions'
 %(olsbg)s
 for group in sorted(res.olsbygroup):
     r = res.olsbygroup[group]

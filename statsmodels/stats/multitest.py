@@ -673,7 +673,7 @@ class NullDistribution(object):
     # The fitted null density function
     def pdf(self, zscores):
         """
-        Evaluates the fitted emirical null Z-score density.
+        Evaluates the fitted empirical null Z-score density.
 
         Parameters
         ----------

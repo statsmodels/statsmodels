@@ -339,7 +339,7 @@ class EstimatorSettings(object):
     """
     Object to specify settings for density estimation or regression.
 
-    `EstimatorSettings` has several proporties related to how bandwidth
+    `EstimatorSettings` has several properties related to how bandwidth
     estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
     `KernelReg` and `CensoredKernelReg` classes behaves.
 

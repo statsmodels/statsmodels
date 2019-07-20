@@ -71,7 +71,7 @@ def test_brentq_expanding():
     # RuntimeError: Failed to converge after 3 iterations.
     assert_raises(RuntimeError, brentq_expanding, func, args=(-50000,), maxiter_bq=3)
 
-    # cannot determin whether increasing, all 4 low trial points return nan
+    # cannot determine whether increasing, all 4 low trial points return nan
     assert_raises(ValueError, brentq_expanding, func_nan, args=(-20, 0.6))
 
     # test for full_output

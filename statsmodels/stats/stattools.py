@@ -291,7 +291,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     ----------
     y : array_like
     axis : int or None, optional
-        Axis along which the kurtoses are computed.  If `None`, the
+        Axis along which the kurtosis are computed.  If `None`, the
         entire array is used.
     ab: iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail

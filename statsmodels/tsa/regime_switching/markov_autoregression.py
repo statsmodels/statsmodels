@@ -81,7 +81,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     regression effects) and the variance of the error term may be switching
     across regimes.
 
-    The `trend` is accomodated by prepending columns to the `exog` array. Thus
+    The `trend` is accommodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
@@ -404,7 +404,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
         """
         # Inherited parameters
         constrained = super(MarkovAutoregression, self).transform_params(
@@ -428,8 +428,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------

@@ -155,7 +155,7 @@ def corr_clipped(corr, threshold=1e-15):
 def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
     """
-    Find the nearest covariance matrix that is postive (semi-) definite
+    Find the nearest covariance matrix that is positive (semi-) definite
 
     This leaves the diagonal, i.e. the variance, unchanged
 
@@ -721,7 +721,7 @@ def cov_nearest_factor_homog(cov, rank):
     that does not require repeated eigen-decompositions.
 
     If the input matrix is sparse, then cov - k*I is also sparse, so
-    the eigen-decomposition can be done effciciently using sparse
+    the eigen-decomposition can be done efficiently using sparse
     routines.
 
     The one-dimensional search for the optimal value of k is not
@@ -959,7 +959,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         An instance of MultivariateKernel, defaults to
         GaussianMultivariateKernel.
     bw : array_like or scalar
-        A bandwidth vector, or bandwith multiplier.  If a 1d array, it
+        A bandwidth vector, or bandwidth multiplier.  If a 1d array, it
         contains kernel bandwidths for each component of the process, and
         must have length equal to the number of columns of exog.  If a scalar,
         bw is a bandwidth multiplier used to adjust the default bandwidth; if

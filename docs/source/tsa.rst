@@ -99,7 +99,7 @@ Estimation
 The following are the main estimation classes, which can be accessed through
 statsmodels.tsa.api and their result classes
 
-Univariate Autogressive Processes (AR)
+Univariate Autoregressive Processes (AR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
@@ -111,7 +111,7 @@ Univariate Autogressive Processes (AR)
    ar_model.ARResults
 
 
-Autogressive Moving-Average Processes (ARMA) and Kalman Filter
+Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa

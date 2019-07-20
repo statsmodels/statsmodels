@@ -170,7 +170,7 @@ the import speed if a library or user only needs specific functions.
 * Time Series Analysis model (tsa)
 
   - Vector Autoregression Models VAR (tsa.VAR)
-  - Autogressive Models AR (tsa.AR)
+  - Autoregressive Models AR (tsa.AR)
   - Autoregressive Moving Average Models ARMA (tsa.ARMA)
     optionally uses Cython for Kalman Filtering
     use setup.py install with option --with-cython

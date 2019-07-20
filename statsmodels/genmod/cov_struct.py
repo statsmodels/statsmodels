@@ -82,7 +82,7 @@ class CovStruct(object):
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
         index: integer
-           The index of the cluster for which the covariane or
+           The index of the cluster for which the covariance or
            correlation matrix will be returned
 
         Returns
@@ -139,7 +139,7 @@ class CovStruct(object):
 
         This is a default implementation, it can be reimplemented in
         subclasses to optimize the linear algebra according to the
-        struture of the covariance matrix.
+        structure of the covariance matrix.
         """
 
         vmat, is_cor = self.covariance_matrix(expval, index)

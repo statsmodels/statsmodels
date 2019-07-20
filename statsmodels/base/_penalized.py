@@ -68,7 +68,7 @@ class PenalizedMixin(object):
 
     def loglike(self, params, pen_weight=None, **kwds):
         """
-        Log-likelihodo of model at params
+        Log-likelihood of model at params
         """
         if pen_weight is None:
             pen_weight = self.pen_weight

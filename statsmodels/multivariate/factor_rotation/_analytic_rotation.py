@@ -97,7 +97,7 @@ def procrustes(A, H):
 
     References
     ----------
-    [1] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [1] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     return np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H)
@@ -136,7 +136,7 @@ def promax(A, k=2):
     [1] Browne (2001) - An overview of analytic rotation in exploratory
     factor analysis
 
-    [2] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [2] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     assert k > 0

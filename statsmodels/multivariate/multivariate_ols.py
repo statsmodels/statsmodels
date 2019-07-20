@@ -474,7 +474,7 @@ class MultivariateTestResults(object):
     ----------
     results : dict
        For hypothesis name `key`:
-           results[key]['stat'] contains the multivaraite test results
+           results[key]['stat'] contains the multivariate test results
            results[key]['contrast_L'] contains the contrast_L matrix
            results[key]['transform_M'] contains the transform_M matrix
            results[key]['constant_C'] contains the constant_C matrix

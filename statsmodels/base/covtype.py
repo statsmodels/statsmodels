@@ -119,9 +119,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         - `groups` array_like, integer (required) :
               index of clusters or groups
         - `use_correction` bool (optional) :
-              If True the sandwich covariance is calulated with a small
+              If True the sandwich covariance is calculated with a small
               sample correction.
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               If True (default), then the degrees of freedom for the
@@ -143,7 +143,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               currently available kernels are ['bartlett', 'uniform'],
               default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
               If `use_correction = 'cluster'` (default), then the same
               small sample correction as in the case of 'covtype='cluster''
@@ -169,7 +169,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               currently available kernels are ['bartlett', 'uniform'],
               default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               adjustment to df_resid, see cov_type 'cluster' above

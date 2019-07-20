@@ -439,7 +439,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
 
     Notes
     -----
-    verified agains R:FinTS::ArchTest
+    verified against R:FinTS::ArchTest
 
     '''
 
@@ -614,7 +614,7 @@ def het_white(resid, exog, retres=False):
         residuals, square of it is used as endogenous variable
     exog : array_like
         possible explanatory variables for variance, squares and interaction
-        terms are included in the auxilliary regression.
+        terms are included in the auxiliary regression.
     resstore : instance (optional)
         a class instance that holds intermediate results. Only returned if
         store=True
@@ -974,7 +974,7 @@ def linear_lm(resid, exog, func=None):
     Notes
     -----
     written to match Gretl's linearity test.
-    The test runs an auxilliary regression of the residuals on the combined
+    The test runs an auxiliary regression of the residuals on the combined
     original and transformed regressors.
     The Null hypothesis is that the linear specification is correct.
 
@@ -1393,7 +1393,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     Notes
     -----
-    tested agains R:strucchange
+    tested against R:strucchange
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
@@ -1406,7 +1406,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     References
     ----------
-    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
 
     '''
@@ -1437,7 +1437,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 #
 #    References
 #    ----------
-#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
 #    Econometrica 60, no. 2 (March 1992): 271-285.
 #
 #    '''

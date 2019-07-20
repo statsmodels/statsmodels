@@ -2180,8 +2180,8 @@ class GEEResults(base.LikelihoodModelResults):
               are returned.  This is the default.
             - 'eyex' - estimate elasticities of variables in `exog` --
               d(lny)/d(lnx)
-            - 'dyex' - estimate semielasticity -- dy/d(lnx)
-            - 'eydx' - estimate semeilasticity -- d(lny)/dx
+            - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
+            - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
@@ -2496,7 +2496,7 @@ class OrdinalGEEResults(GEEResults):
     def plot_distribution(self, ax=None, exog_values=None):
         """
         Plot the fitted probabilities of endog in an ordinal model,
-        for specifed values of the predictors.
+        for specified values of the predictors.
 
         Parameters
         ----------
@@ -2882,7 +2882,7 @@ class NominalGEEResults(GEEResults):
     def plot_distribution(self, ax=None, exog_values=None):
         """
         Plot the fitted probabilities of endog in an nominal model,
-        for specifed values of the predictors.
+        for specified values of the predictors.
 
         Parameters
         ----------

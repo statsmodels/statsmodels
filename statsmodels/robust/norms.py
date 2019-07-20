@@ -66,7 +66,7 @@ class RobustNorm(object):
 
     def psi_deriv(self, z):
         """
-        Deriative of psi.  Used to obtain robust covariance matrix.
+        Derivative of psi.  Used to obtain robust covariance matrix.
 
         See statsmodels.rlm for more information.
 

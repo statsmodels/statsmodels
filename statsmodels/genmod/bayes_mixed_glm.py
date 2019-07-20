@@ -421,7 +421,7 @@ class _BayesMixedGLM(base.Model):
         vc_formulas : dictionary
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
-            prameter.  If using categorical (factor) variables to
+            parameter.  If using categorical (factor) variables to
             produce variance components, note that generally `0 + ...`
             should be used so that an intercept is not included.
         data : data frame
@@ -604,7 +604,7 @@ class _VariationalBayesMixedGLM(object):
             The contribution of the model to the ELBO function can be
             expressed as y_i*lp_i + Eh_i(z), where y_i and lp_i are
             the response and linear predictor for observation i, and z
-            is a standard normal rangom variable.  This formulation
+            is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
         """

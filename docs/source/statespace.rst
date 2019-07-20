@@ -389,7 +389,7 @@ behind those classes.
 
 Maximum likelihood estimation requires evaluating the likelihood function of
 the model, and for models in state space form the likelihood function is
-evaluted as a byproduct of running the Kalman filter.
+evaluated as a byproduct of running the Kalman filter.
 
 There are two classes used by `MLEModel` that facilitate specification of the
 state space model and Kalman filtering: `Representation` and `KalmanFilter`.

@@ -1573,7 +1573,7 @@ class VARResults(VARProcess):
         Parameters
         ----------
         orth: bool, default False
-            Compute orthoganalized impulse response error bands
+            Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
         steps: int, default 10

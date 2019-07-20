@@ -69,7 +69,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     i.e. the model is a dynamic linear regression where the coefficients and
     the variance of the error term may be switching across regimes.
 
-    The `trend` is accomodated by prepending columns to the `exog` array. Thus
+    The `trend` is accommodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
@@ -368,7 +368,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
         """
         # Inherited parameters
         constrained = super(MarkovRegression, self).transform_params(
@@ -392,8 +392,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------

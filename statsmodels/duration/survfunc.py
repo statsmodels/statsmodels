@@ -43,7 +43,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     else:
         n = np.cumsum(n[::-1])[::-1]
 
-    # Only retain times where an event occured.
+    # Only retain times where an event occurred.
     if compress:
         ii = np.flatnonzero(d > 0)
         d = d[ii]
@@ -174,7 +174,7 @@ class CumIncidenceRight(object):
     time : array_like
         An array of times (censoring times or event times)
     status : array_like
-        If status >= 1 indicates which event occured at time t.  If
+        If status >= 1 indicates which event occurred at time t.  If
         status = 0, the subject was censored at time t.
     title : string
         Optional title used for plots and summary output.
@@ -277,7 +277,7 @@ class SurvfuncRight(object):
         Status at the event time, status==1 is the 'event'
         (e.g. death, failure), meaning that the event
         occurs at the given value in `time`; status==0
-        indicates that censoring has occured, meaning that
+        indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
     entry : array_like, optional An array of entry times for handling
         left truncation (the subject is not in the risk set on or
@@ -488,7 +488,7 @@ class SurvfuncRight(object):
         """
         Return a summary of the estimated survival function.
 
-        The summary is a datafram containing the unique event times,
+        The summary is a dataframe containing the unique event times,
         estimated survival function values, and related quantities.
         """
 
@@ -574,7 +574,7 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         The event or censoring times.
     status : array_like
         The censoring status variable, status=1 indicates that the
-        event occured, status=0 indicates that the observation was
+        event occurred, status=0 indicates that the observation was
         censored.
     group : array_like
         Indicators of the two groups

@@ -335,7 +335,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
         polynomial must be greater than zero and no larger than 4. The
-        order for the seaonal polynomial may be 1 or 2.
+        order for the seasonal polynomial may be 1 or 2.
     maxdiff : tuple
         The maximum orders for regular and seasonal differencing in the
         automatic differencing procedure. Acceptable inputs for regular
@@ -369,7 +369,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
         Must be givein if ``endog`` does not have date information in its
-        index. Anything accapted by pandas.DatetimeIndex for the freq value.
+        index. Anything accepted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -491,7 +491,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                            start=None, freq=None, print_stdout=False,
                            x12path=None, prefer_x13=True):
     """
-    Perform automatic seaonal ARIMA order identification using x12/x13 ARIMA.
+    Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA.
 
     Parameters
     ----------
@@ -504,7 +504,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
         polynomial must be greater than zero and no larger than 4. The
-        order for the seaonal polynomial may be 1 or 2.
+        order for the seasonal polynomial may be 1 or 2.
     maxdiff : tuple
         The maximum orders for regular and seasonal differencing in the
         automatic differencing procedure. Acceptable inputs for regular
@@ -532,7 +532,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
         Must be givein if ``endog`` does not have date information in its
-        index. Anything accapted by pandas.DatetimeIndex for the freq value.
+        index. Anything accepted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.

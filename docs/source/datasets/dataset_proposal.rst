@@ -2,7 +2,7 @@
 
 .. _dataset_proposal:
 
-Dataset for statmodels: design proposal
+Dataset for statsmodels: design proposal
 ===============================================
 
 One of the thing numpy/scipy is missing now is a set of datasets, available for

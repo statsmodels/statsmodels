@@ -220,11 +220,11 @@ class GLM(base.LikelihoodModel):
     assumption that that the inverse variance scales proportionally to the
     weight--an observation that is deemed more credible should have less
     variance and therefore have more weight. For the ``Poisson`` family--which
-    assumes that occurences scale proportionally with time--a natural practice
+    assumes that occurrences scale proportionally with time--a natural practice
     would be to use the amount of time as the variance weight and set ``endog``
-    to be a rate (occurrances per period of time). Similarly, using a
+    to be a rate (occurrences per period of time). Similarly, using a
     compound Poisson family, namely ``Tweedie``, makes a similar assumption
-    about the rate (or frequency) of occurences having variance proportional to
+    about the rate (or frequency) of occurrences having variance proportional to
     time.
 
     Both frequency and variance weights are verified for all basic results with

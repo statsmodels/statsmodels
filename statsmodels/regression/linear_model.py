@@ -2202,7 +2202,7 @@ class RegressionResults(base.LikelihoodModelResults):
                   currently available kernels are ['bartlett', 'uniform'],
                   default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the the sandwich covariance is calulated without
+                  If False the the sandwich covariance is calculated without
                   small sample correction.
                   If `use_correction = 'cluster'` (default), then the same
                   small sample correction as in the case of 'covtype='cluster''

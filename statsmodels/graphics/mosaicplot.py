@@ -519,8 +519,8 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         and it will be internally converted to the correct function
     statistic: bool, optional (default False)
         if true will use a crude statistical model to give colors to the plot.
-        If the tile has a containt that is more than 2 standard deviation
-        from the expected value under independence hipotesys, it will
+        If the tile has a constraint that is more than 2 standard deviation
+        from the expected value under independence hypothesis, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
     title: string, optional
@@ -551,7 +551,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         Michael Friendly, York University, Psychology Department
         Proceedings of the Statistical Graphics Section, 1992, 61-68.
 
-    Mosaic displays for multi-way contingecy tables.
+    Mosaic displays for multi-way contingency tables.
         Michael Friendly, York University, Psychology Department
         Journal of the american statistical association
         March 1994, Vol. 89, No. 425, Theory and Methods
