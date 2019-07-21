@@ -113,7 +113,7 @@ class CheckRegressionResults(object):
 
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
-        # didn't change this, not sure it should complain -inf not equal -inf
+        # did not change this, not sure it should complain -inf not equal -inf
         # if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
         assert_almost_equal(self.res1.fvalue, self.res2.fvalue,
                             self.decimal_fvalue)
@@ -527,7 +527,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
         assert_raises(ValueError, GLS, self.endog, self.exog,
                       sigma=np.ones((n-1, n-1)))
 
-# FIXME: don't leave commented-out, use or move/remove
+# FIXME: do not leave commented-out, use or move/remove
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
@@ -821,7 +821,7 @@ class TestGLS_OLS(CheckRegressionResults):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 
-# FIXME: don't leave this commented-out sitting here
+# FIXME: do not leave this commented-out sitting here
 # TODO: test AR
 # why the two-stage in AR?
 # class TestAR(object):

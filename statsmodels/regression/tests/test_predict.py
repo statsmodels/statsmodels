@@ -15,7 +15,7 @@ from statsmodels.regression._prediction import get_prediction
 
 
 def test_predict_se():
-    # this test doesn't use reference values
+    # this test does not use reference values
     # checks conistency across options, and compares to direct calculation
 
     # generate dataset

@@ -88,7 +88,7 @@ class TestADFConstantTrend(CheckADF):
         cls.critvalues = [-4.007, -3.437, -3.137]
 
 
-# FIXME: don't leave commented-out
+# FIXME: do not leave commented-out
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
@@ -192,7 +192,7 @@ class TestACF(CheckCorrGram):
     # FIXME: enable/xfail/skip or delete
     #def pvalue(self):
     #    pass
-    # NOTE: shouldn't need testing if Q stat is correct
+    # NOTE: should not need testing if Q stat is correct
 
 
 class TestACF_FFT(CheckCorrGram):
@@ -315,7 +315,7 @@ class CheckCoint(object):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
 
 
-# this doesn't produce the old results anymore
+# this does not produce the old results anymore
 class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals

@@ -215,7 +215,7 @@ fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 # polynomial, it implies that all polynomial terms up to that degree are
 # included. Notice that this is *not* the model we want to use, because it
 # would include terms for $\epsilon_{t-2}$ and $\epsilon_{t-3}$, which we
-# don't want here.
+# do not want here.
 #
 # What we want is a polynomial that has terms for the 1st and 4th degrees,
 # but leaves out the 2nd and 3rd terms. To do that, we need to provide a

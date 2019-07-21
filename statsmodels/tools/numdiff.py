@@ -8,7 +8,7 @@ Notes
 These are simple forward differentiation, so that we have them available
 without dependencies.
 
-* Jacobian should be faster than numdifftools because it doesn't use loop over
+* Jacobian should be faster than numdifftools because it does not use loop over
   observations.
 * numerical precision will vary and depend on the choice of stepsizes
 """

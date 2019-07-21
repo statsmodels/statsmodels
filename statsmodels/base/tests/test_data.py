@@ -12,7 +12,7 @@ from statsmodels.genmod import families
 from statsmodels.discrete.discrete_model import Logit
 
 
-# FIXME: don't leave commented-out, enable or move/remove
+# FIXME: do not leave commented-out, enable or move/remove
 # class TestDates(object):
 #    @classmethod
 #    def setup_class(cls):
@@ -434,7 +434,7 @@ def test_alignment():
 
     endog = gs_l_realinv
 
-    # re-index because they won't conform to lint
+    # re-index because they will not conform to lint
     realgdp = gs_l_realgdp.reindex(lint.index, method='bfill')
     data = dict(const=np.ones_like(lint), lrealgdp=realgdp, lint=lint)
     exog = pd.DataFrame(data)
@@ -860,7 +860,7 @@ def test_dtype_object():
 
 def test_formula_missing_extra_arrays():
     np.random.seed(1)
-    # because patsy can't turn off missing data-handling as of 0.3.0, we need
+    # because patsy cannot turn off missing data-handling as of 0.3.0, we need
     # separate tests to make sure that missing values are handled correctly
     # when going through formulas
 

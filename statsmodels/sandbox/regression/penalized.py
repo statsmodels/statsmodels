@@ -22,12 +22,12 @@ open issues
 
 
 there is something fishy with the result instance, some things, e.g.
-normalized_cov_params, don't look like they update correctly as we
+normalized_cov_params, do not look like they update correctly as we
 search over lambda -> some stale state again ?
 
 I added df_model to result class using the hatmatrix, but df_model is defined
 in model instance not in result instance. -> not clear where refactoring should
-occur. df_resid doesn't get updated correctly.
+occur. df_resid does not get updated correctly.
 problem with definition of df_model, it has 1 subtracted for constant
 
 
@@ -98,7 +98,7 @@ class TheilGLS(GLS):
 
     Baum, Christopher slides for tgmixed in Stata
 
-    (I don't remember what I used when I first wrote the code.)
+    (I do not remember what I used when I first wrote the code.)
 
     Parameters
     ----------
@@ -283,7 +283,7 @@ class TheilGLS(GLS):
         if optim_args is None:
             optim_args = {}
 
-        #this doesn't make sense, since number of parameters stays unchanged
+        #this does not make sense, since number of parameters stays unchanged
         # information criteria changes if we use df_model based on trace(hat_matrix)
         #need leave-one-out, gcv; or some penalization for weak priors
         #added extra penalization for lambd
@@ -336,7 +336,7 @@ class TheilRegressionResults(RegressionResults):
         '''
         # TODO is this still correct with sandwich normalized_cov_params, I guess not
         xpxi = self.model.normalized_cov_params
-        #something fishy with self.normalized_cov_params in result, doesn't update
+        #something fishy with self.normalized_cov_params in result, does not update
         #print(self.model.wexog.shape, np.dot(xpxi, self.model.wexog.T).shape
         return (self.model.wexog * np.dot(xpxi, self.model.wexog.T).T).sum(1)
 
@@ -346,7 +346,7 @@ class TheilRegressionResults(RegressionResults):
         """
         return self.hatmatrix_diag.sum()
 
-##    #this doesn't update df_resid
+##    #this does not update df_resid
 ##    @property   #needs to be property or attribute (no call)
 ##    def df_model(self):
 ##        return self.hatmatrix_trace()

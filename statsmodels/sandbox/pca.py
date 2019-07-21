@@ -154,7 +154,7 @@ class Pca(object):
         if nonnones == 0:
             m = slice(None)
         elif nonnones > 1:
-            raise ValueError("can't specify more than one threshold")
+            raise ValueError("cannot specify more than one threshold")
         else:
             if enthresh is not None:
                 m = self.energies() > enthresh
@@ -170,7 +170,7 @@ class Pca(object):
         else:
             vals = np.array(vals,copy=False)
             if self.N.T.shape[0] != vals.shape[0]:
-                raise ValueError("shape for vals doesn't match")
+                raise ValueError("shape for vals does not match")
         proj = np.matrix(self.getEigenvectors()).T*vals
         return proj[m].T
 
@@ -212,7 +212,7 @@ class Pca(object):
         else:
             vals = vals.T
             if vals.shape[1]!= self.A.shape[1]:
-                raise ValueError("vals don't have the correct number of components")
+                raise ValueError("vals do not have the correct number of components")
 
         pcs=self.project()
         zpcs=np.zeros_like(pcs)

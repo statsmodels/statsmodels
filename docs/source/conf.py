@@ -148,7 +148,7 @@ pygments_style = 'sphinx'
 # html_theme = 'default'
 
 if 'htmlhelp' in sys.argv:
-    # html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
+    # html_theme = 'statsmodels_htmlhelp'  #does not look nice yet
     html_theme = 'default'
     print('################# using statsmodels_htmlhelp ############')
 else:

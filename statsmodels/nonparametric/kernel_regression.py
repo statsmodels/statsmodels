@@ -472,7 +472,7 @@ class KernelCensoredReg(KernelReg):
     bw: array_like
         Either a user-specified bandwidth or
         the method for bandwidth selection.
-        cv_ls: cross-validaton least squares
+        cv_ls: cross-validation least squares
         aic: AIC Hurvich Estimator
     censor_val: float
         Value at which the dependent variable is censored
@@ -761,7 +761,7 @@ class TestRegCoefC(object):
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
         #fct = np.std(b)  # Pivot the statistic by dividing by SE
-        fct = 1.  # Don't Pivot -- Bootstrapping works better if Pivot
+        fct = 1.  # Do not Pivot -- Bootstrapping works better if Pivot
         lam = ((b / fct) ** 2).sum() / float(n)
         return lam
 
@@ -851,7 +851,7 @@ class TestRegCoefD(TestRegCoefC):
 
     Notes
     -----
-    This class currently doesn't allow joint hypothesis.
+    This class currently does not allow joint hypothesis.
     Only one variable can be tested at a time
 
     References

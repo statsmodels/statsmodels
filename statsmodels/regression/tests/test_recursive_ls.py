@@ -213,7 +213,7 @@ def test_glm(constraints=None):
     # used in OLS. Compute new ic based on llf_alternative to compare.
     actual_aic = aic(llf_alternative, res.nobs_effective, res.df_model)
     assert_allclose(actual_aic, res_glm.aic)
-    # See gh#1733 for details on why the BIC doesn't match while AIC does
+    # See gh#1733 for details on why the BIC does not match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
 

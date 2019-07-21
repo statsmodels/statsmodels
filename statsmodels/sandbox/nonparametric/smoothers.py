@@ -61,7 +61,7 @@ class KernelSmoother(object):
         confidence.
         These bounds are based on variance only, and do not include the bias.
         If the bandwidth is much larger than the curvature of the underlying
-        funtion then the bias could be large.
+        function then the bias could be large.
 
         x is the points on which you want to evaluate the fit and the errors.
 
@@ -100,7 +100,7 @@ class PolySmoother(object):
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
     #   smoother in gam.py  initialized by function default_smoother
-    #   Only fixed exceptions, I didn't check whether it is statistically
+    #   Only fixed exceptions, I did not check whether it is statistically
     #   correctand I think it is not, there are still be some dimension
     #   problems, and there were some dimension problems initially.
     # TODO: undo adjustments and fix dimensions correctly
@@ -228,7 +228,7 @@ class PolySmoother(object):
 ##        if x is None:
 ##            x = self.tau[(self.M-1):-(self.M-1)] # internal knots
 ##
-##        if pen == 0.: # can't use cholesky for singular matrices
+##        if pen == 0.: # cannot use cholesky for singular matrices
 ##            banded = False
 ##
 ##        if x.shape != y.shape:

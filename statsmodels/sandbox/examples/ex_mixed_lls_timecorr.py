@@ -23,15 +23,15 @@ each unit.
 
 I needed to remove the first observation from the time dummies to avoid a
 singular matrix. So, interpretation of time effects should be relative to
-first observation. (I didn't check the math.)
+first observation. (I did not check the math.)
 TODO:
-Note, I don't already have constant in X. Constant for first
+Note, I do not already have constant in X. Constant for first
 time observation is missing.
 Do I need all dummies in exog_fe, Z, but not in exog_re, Z?  Tried this and
 it works.
 In the error decomposition we also have the noise variable, I guess this works
 like constant, so we get full rank (square) with only T-1 time dummies.
-But we don't get correlation with the noise, or do we? conditional?
+But we do not get correlation with the noise, or do we? conditional?
 -> sample correlation of estimated random effects looks a bit high,
    upward bias? or still some problems with initial condition?
    correlation from estimated cov_random looks good.
@@ -43,7 +43,7 @@ arbitrary trends, different constants in each period.
 Intertemporal correlation in data generating process, DGP, to see if
 the results correctly estimate it.
 used AR(1) as example, but only starting at second period. (?)
-Note: we don't impose AR structure in the estimation
+Note: we do not impose AR structure in the estimation
 
 """
 
@@ -168,7 +168,7 @@ if 'ex1' in examples:
     >>> m.cov_random()
     array([[ 0.0348722 , -0.00909159],
            [-0.00909159,  0.26846254]])
-    >>> #note cov_random doesn't subtract mean!
+    >>> #note cov_random does not subtract mean!
     '''
     print('\nchecking the random effects distribution and prediction')
     gamma_re_true = np.array(gamma_re_true)
@@ -191,7 +191,7 @@ if 'ex1' in examples:
     print('rmse_perc (std)', rmse_perc)
     #from numpy.testing import assert_almost_equal
     #assert is for n_units=100 in original example
-    #I changed random number generation, so this won't work anymore
+    #I changed random number generation, so this will not work anymore
     #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
 
     #now returns res

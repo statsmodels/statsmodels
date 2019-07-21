@@ -215,7 +215,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             else:
                 last_names.pop(last_names.index(col))
 
-        if first_names: # only do this if x isn't "empty"
+        if first_names: # only do this if x is not "empty"
             # Workaround to avoid NumPy FutureWarning
             _x = recarray_select(x, first_names)
             first_arr = nprf.append_fields(_x[lags:], tmp_names, ndlags.T,

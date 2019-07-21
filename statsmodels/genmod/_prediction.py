@@ -134,8 +134,8 @@ class PredictionResults(object):
         to_include['mean_ci_upper'] = ci_mean[:, 1]
 
         self.table = to_include
-        #OrderedDict doesn't work to preserve sequence
-        # pandas dict doesn't handle 2d_array
+        #OrderedDict does not work to preserve sequence
+        # pandas dict does not handle 2d_array
         #data = np.column_stack(list(to_include.values()))
         #names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,

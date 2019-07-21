@@ -39,7 +39,7 @@ class TransformRestriction(object):
         b1 + b2 = 0 and b1 + 2*b2 = 0, implies that b2 = 0.
 
     The transformation applied from full to reduced parameter space does not
-    raise and exception if the constraint doesn't hold.
+    raise and exception if the constraint does not hold.
     TODO: maybe change this, what's the behavior in this case?
 
 
@@ -246,7 +246,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     if start_params is not None:
         start_params =  transf.reduce(start_params)
 
-    #need copy, because we don't want to change it, we don't need deepcopy
+    #need copy, because we do not want to change it, we do not need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
 

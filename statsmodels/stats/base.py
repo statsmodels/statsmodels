@@ -78,7 +78,7 @@ class AllPairsResults(object):
         '''
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
-        # if we don't assume we have all pairs
+        # if we do not assume we have all pairs
         pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
         return pvals_mat
 

@@ -17,7 +17,7 @@ from scipy import stats, optimize, integrate
 
 ########## patching scipy
 
-#vonmises doesn't define finite bounds, because it is intended for circular
+#vonmises does not define finite bounds, because it is intended for circular
 #support which does not define a proper pdf on the real line
 
 stats.distributions.vonmises.a = -np.pi

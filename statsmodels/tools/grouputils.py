@@ -272,7 +272,7 @@ class GroupSorted(Group):
         individual, then no values for that individual are returned.
 
         TODO: for the unbalanced case, I should get the same truncation for
-        the array with lag=0. From the return of lag_idx we wouldn't know
+        the array with lag=0. From the return of lag_idx we would not know
         which individual is missing.
 
         TODO: do I want the full equivalent of lagmat in tsa?
@@ -383,7 +383,7 @@ class Grouping(object):
         """
         Resets the index in-place.
         """
-        # NOTE: this isn't of much use if the rest of the data doesn't change
+        # NOTE: this is not of much use if the rest of the data does not change
         # This needs to reset cache
         if names is None:
             names = self.group_names
@@ -492,7 +492,7 @@ class Grouping(object):
         processed = np.array(processed)
         return processed.reshape(-1, processed.shape[-1])
 
-    # TODO: this isn't general needs to be a PanelGrouping object
+    # TODO: this is not general needs to be a PanelGrouping object
     def dummies_time(self):
         self.dummy_sparse(level=1)
         return self._dummies

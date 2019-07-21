@@ -264,13 +264,13 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         # just one group
         assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
 
-        # group_order doesn't select all observations, only one group left
+        # group_order does not select all observations, only one group left
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             assert_raises(ValueError, MultiComparison, np.array([1] * 10),
                          [1, 2] * 5, group_order=[1])
 
-        # group_order doesn't select all observations,
+        # group_order does not select all observations,
         # we do tukey_hsd with reduced set of observations
         data = np.arange(15)
         groups = np.repeat([1, 2, 3], 5)

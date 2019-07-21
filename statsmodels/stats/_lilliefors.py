@@ -198,7 +198,7 @@ def pval_lf(d_max, n):
     Notes
     -----
     This is mainly a helper function where the calling code should dispatch
-    on bound violations. Therefore it doesn't check whether the pvalue is in
+    on bound violations. Therefore it does not check whether the pvalue is in
     the valid range.
 
     Precision for the pvalues is around 2 to 3 decimals. This approximation is

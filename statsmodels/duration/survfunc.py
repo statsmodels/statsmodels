@@ -381,7 +381,7 @@ class SurvfuncRight(object):
         >>> li[0].set_color('purple')
         >>> li[1].set_color('purple')
 
-        Don't show the censoring points:
+        Do not show the censoring points:
 
         >>> fig = sf.plot()
         >>> ax = fig.get_axes()[0]

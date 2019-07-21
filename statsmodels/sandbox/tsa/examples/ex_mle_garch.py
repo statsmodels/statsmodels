@@ -233,7 +233,7 @@ if 'rpysim' in examples:
 '''based on R default simulation
 model = list(omega = 1e-06, alpha = 0.1, beta = 0.8)
 nobs = 1000
-(with nobs=500, gjrgarch doesn't do well
+(with nobs=500, gjrgarch does not do well
 
 >>> ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
 Optimization terminated successfully.

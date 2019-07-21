@@ -98,12 +98,12 @@ class TimeSeriesModel(base.LikelihoodModel):
         else:
             index = self.data.row_labels
 
-        # Sanity check that we don't have a `freq` without an index
+        # Sanity check that we do not have a `freq` without an index
         if index is None and freq is not None:
             raise ValueError('Frequency provided without associated index.')
 
         # If an index is available, see if it is a date-based index or if it
-        # can be coerced to one. (If it can't we'll fall back, below, to an
+        # can be coerced to one. (If it cannot we'll fall back, below, to an
         # internal, 0, 1, ... nobs-1 integer index for modeling purposes)
         inferred_freq = False
         if index is not None:
@@ -116,7 +116,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # object dtype array in earlier versions of Pandas (and so
                     # will not have is_numeric_dtype == True), so explicitly
                     # check for it here. But note also that in very early
-                    # Pandas (~0.12), Float64Index doesn't exist (and so the
+                    # Pandas (~0.12), Float64Index does not exist (and so the
                     # Statsmodels compat makes it an empty tuple, so in that
                     # case also check if the first element is a float.
                     _index = np.asarray(index)
@@ -142,7 +142,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     index = _index
                 except:
                     # Only want to actually raise an exception if `dates` was
-                    # provided but can't be coerced. If we got the index from
+                    # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
                     # index below
                     if dates is not None:
@@ -257,9 +257,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             The location of the key
         index : pd.Index
             The index including the key; this is a copy of the original index
-            unless the index had to be expanded to accomodate `key`.
+            unless the index had to be expanded to accommodate `key`.
         index_was_expanded : bool
-            Whether or not the index was expanded to accomodate `key`.
+            Whether or not the index was expanded to accommodate `key`.
 
         Notes
         -----
@@ -404,9 +404,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             The location of the key
         index : pd.Index
             The index including the key; this is a copy of the original index
-            unless the index had to be expanded to accomodate `key`.
+            unless the index had to be expanded to accommodate `key`.
         index_was_expanded : bool
-            Whether or not the index was expanded to accomodate `key`.
+            Whether or not the index was expanded to accommodate `key`.
 
         Notes
         -----

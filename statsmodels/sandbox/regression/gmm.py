@@ -18,7 +18,7 @@ Issues
      but not tested yet.
   DONE `fitonce` in DistQuantilesGMM, params are the same as in direct call to fitgmm
       move it to GMM class (once it's clearer for which cases I need this.)
-* GMM doesn't know anything about the underlying model, e.g. y = X beta + u or panel
+* GMM does not know anything about the underlying model, e.g. y = X beta + u or panel
   data model. It would be good if we can reuse methods from regressions, e.g.
   predict, fitted values, calculating the error term, and some result statistics.
   What's the best way to do this, multiple inheritance, outsourcing the functions,
@@ -37,7 +37,7 @@ Unclear
     jval in jtest looks to large in example, but I have no idea about the size
 * bse for fitonce look too large (no time for checking now)
     formula for calc_cov_params for the case without optimal weighting matrix
-    is wrong. I don't have an estimate for omega in that case. And I'm confusing
+    is wrong. I do not have an estimate for omega in that case. And I'm confusing
     between weights and omega, which are *not* the same in this case.
 
 
@@ -129,7 +129,7 @@ class IV2SLS(LikelihoodModel):
         linear models.
 
         Parameter estimates and covariance are correct, but other results
-        haven't been tested yet, to seee whether they apply without changes.
+        have not been tested yet, to see whether they apply without changes.
 
         '''
         #Greene 5th edt., p.78 section 5.4
@@ -230,7 +230,7 @@ class IVRegressionResults(RegressionResults):
         endog, exog = self.model.endog, self.model.exog
         resols = OLS(endog, exog).fit()
         normalized_cov_params_ols = resols.model.normalized_cov_params
-        # Stata `ivendog` doesn't use df correction for se
+        # Stata `ivendog` does not use df correction for se
         #se2 = resols.mse_resid #* resols.df_resid * 1. / len(endog)
         se2 = resols.ssr / len(endog)
 
@@ -304,7 +304,7 @@ class IVRegressionResults(RegressionResults):
 
         #TODO: requiring list/iterable is a bit annoying
         #need more control over formatting
-        #TODO: default don't work if it's not identically spelled
+        #TODO: default do not work if it's not identically spelled
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -436,7 +436,7 @@ class GMM(Model):
         array of instruments, see notes
     nmoms : None or int
         number of moment conditions, if None then it is set equal to the
-        number of columns of instruments. Mainly needed to determin the shape
+        number of columns of instruments. Mainly needed to determine the shape
         or size of start parameters and starting weighting matrix.
     kwds : anything
         this is mainly if additional variables need to be stored for the
@@ -479,7 +479,7 @@ class GMM(Model):
         '''
         maybe drop and use mixin instead
 
-        TODO: GMM doesn't really care about the data, just the moment conditions
+        TODO: GMM does not really care about the data, just the moment conditions
         '''
         instrument = self._check_inputs(instrument, endog) # attaches if needed
         super(GMM, self).__init__(endog, exog, missing=missing,
@@ -982,7 +982,7 @@ class GMM(Model):
 
         centered = not ('centered' in wargs and not wargs['centered'])
         if not centered:
-            # caller doesn't want centered moment conditions
+            # caller does not want centered moment conditions
             moms_ = moms
         else:
             moms_ = moms - moms.mean()
@@ -990,7 +990,7 @@ class GMM(Model):
         # TODO: store this outside to avoid doing this inside optimization loop
         # TODO: subclasses need to be able to add weights_methods, and remove
         #       IVGMM can have homoscedastic (OLS),
-        #       some options won't make sense in some cases
+        #       some options will not make sense in some cases
         #       possible add all here and allow subclasses to define a list
         # TODO: should other weights_methods also have `ddof`
         if weights_method == 'cov':
@@ -1033,14 +1033,14 @@ class GMM(Model):
 
         elif weights_method == 'iid':
             # only when we have instruments and residual mom = Z * u
-            # TODO: problem we don't have params in argument
+            # TODO: problem we do not have params in argument
             #       I cannot keep everything in here w/o params as argument
             u = self.get_error(params)
 
             if centered:
                 # Note: I'm not centering instruments,
-                #    shouldn't we always center u? Ok, with centered as default
-                u -= u.mean(0)  #demean inplace, we don't need original u
+                #    should not we always center u? Ok, with centered as default
+                u -= u.mean(0)  #demean inplace, we do not need original u
 
             instrument = self.instrument
             w = np.dot(instrument.T, instrument).dot(np.dot(u.T, u)) / nobs
@@ -1148,14 +1148,14 @@ class GMMResults(LikelihoodModelResults):
         # this should use by default whatever options have been specified in
         # fit
 
-        # TODO: don't do this when we want to change options
+        # TODO: do not do this when we want to change options
 #         if hasattr(self, '_cov_params'):
 #             #replace with decorator later
 #             return self._cov_params
 
         # set defaults based on fit arguments
         if 'wargs' not in kwds:
-            # Note: we don't check the keys in wargs, use either all or nothing
+            # Note: we do not check the keys in wargs, use either all or nothing
             kwds['wargs'] = self.wargs
         if 'weights_method' not in kwds:
             kwds['weights_method'] = self.options_other['weights_method']
@@ -1702,7 +1702,7 @@ class DistQuantilesGMM(GMM):
         self.epsilon_iter = 1e-5
 
         self.distfn = kwds['distfn']
-        #done by super doesn't work yet
+        #done by super does not work yet
         #TypeError: super does not take keyword arguments
         self.endog = endog
 
@@ -1802,7 +1802,7 @@ class DistQuantilesGMM(GMM):
         self.results.params = params  #required before call to self.cov_params
         self.results.wargs = {} #required before call to self.cov_params
         self.results.options_other = {'weights_method':'cov'}
-        # TODO: which weights_method?  There shouldn't be any needed ?
+        # TODO: which weights_method?  There should not be any needed ?
         _cov_params = self.results.cov_params(weights=weights,
                                       has_optimal_weights=has_optimal_weights)
 

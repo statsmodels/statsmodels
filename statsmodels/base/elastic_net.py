@@ -151,7 +151,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     params_zero = np.zeros(len(params), dtype=bool)
 
     init_args = model._get_init_kwds()
-    # we don't need a copy of init_args because get_init_kwds provides new dict
+    # we do not need a copy of init_args b/c get_init_kwds provides new dict
     init_args['hasconst'] = False
     model_offset = init_args.pop('offset', None)
     if 'exposure' in init_args and init_args['exposure'] is not None:
@@ -171,7 +171,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         for k in range(k_exog):
 
             # Under the active set method, if a parameter becomes
-            # zero we don't try to change it again.
+            # zero we do not try to change it again.
             # TODO : give the user the option to switch this off
             if params_zero[k]:
                 continue

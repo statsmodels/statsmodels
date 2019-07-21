@@ -198,7 +198,7 @@ class ShortPanelGLS(GLS):
         redundant recalculations (whitening or calculating pinv_wexog).
 
         """
-        #Note: in contrast to GLSHet, we don't have an auxiliary regression here
+        #Note: in contrast to GLSHet, we do not have an auxiliary regression here
         #      might be needed if there is more structure in cov_i
 
         #because we only have the loop we are not attaching the ols_pooled

@@ -178,7 +178,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     See Also
     --------
-    xxx : class for regression diagnostics  TODO: doesn't exist yet
+    xxx : class for regression diagnostics  TODO: does not exist yet
 
     References
     ----------
@@ -543,7 +543,7 @@ class MLEInfluence(_BaseInfluenceMixin):
             hat_diag=self.hat_matrix_diag,
             dffits_internal=self.d_fittedvalues_scaled),
             index=row_labels)
-        # NOTE: if we don't give columns, order of above will be arbitrary
+        # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
 
@@ -570,7 +570,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     is not too large. One possible approach for LOOO measures would be to
     identify possible problem observations with the _internal measures, and
     then run the leave-one-observation-out only with observations that are
-    possible outliers. (However, this is not yet available in an automized way.)
+    possible outliers. (However, this is not yet available in an automated way.)
 
     This should be extended to general least squares.
 
@@ -829,7 +829,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         requires leave one out loop for observations
 
         """
-        # don't use inplace division / because then we change original
+        # do not use inplace division / because then we change original
         cov_ratio = (self.det_cov_params_not_obsi
                      / np.linalg.det(self.results.cov_params()))
         return cov_ratio
@@ -1016,7 +1016,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             dffits=self.dffits[0],
         ),
             index=row_labels)
-        # NOTE: if we don't give columns, order of above will be arbitrary
+        # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
 

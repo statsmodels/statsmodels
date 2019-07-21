@@ -127,7 +127,7 @@ class ContrastResults(object):
             if title is None:
                 title = 'Test for Constraints'
             elif title == '':
-                # don't add any title,
+                # do not add any title,
                 # I think SimpleTable skips on None - check
                 title = None
             # we have everything for a params table
@@ -355,7 +355,7 @@ class WaldTestResults(object):
         #self.sd = sd
         self.dist_args = dist_args
 
-        # The following is because I don't know which we want
+        # The following is because I do not know which we want
         if table is not None:
             self.statistic = table['statistic'].values
             self.pvalues = table['pvalue'].values
@@ -395,7 +395,7 @@ class WaldTestResults(object):
         # needs to be a method for consistency
         if hasattr(self, '_dframe'):
             return self._dframe
-        # rename the column nambes, but don't copy data
+        # rename the column nambes, but do not copy data
         renaming = dict(zip(self.table.columns, self.col_names))
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe

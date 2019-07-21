@@ -3,7 +3,7 @@
  *
  * Dual licensed under the MIT and GPL licenses.
  * This basically means you can use this code however you want for
- * free, but don't claim to have written it yourself!
+ * free, but do not claim to have written it yourself!
  * Donations always accepted: https://www.JavascriptToolbox.com/donate/
  *
  * Please do not link to the .js files on javascripttoolbox.com from
@@ -103,7 +103,7 @@ function convertTrees() {
 	setDefault("nodeLinkClass","bullet");
 	setDefault("preProcessTrees",true);
 	if (preProcessTrees) {
-		if (!document.createElement) { return; } // Without createElement, we can't do anything
+		if (!document.createElement) { return; } // Without createElement, we cannot do anything
 		var uls = document.getElementsByTagName("ul");
 		if (uls==null) { return; }
 		var uls_length = uls.length;

@@ -190,7 +190,7 @@ def test_ols_det_terms():
 
             err_msg = build_err_msg(ds, dt_s, "PARAMETER MATRICES EXOG")
             det_key_ref = "Deterministic term"
-            # If there are no det. terms, just make sure we don't compute any:
+            # If there are no det. terms, just make sure we do not compute any:
             if det_key_ref not in results_ref[ds][dt_s]["est"].keys():
                 assert_((results_sm[ds][dt_s].coefs_exog.size == 0 and
                          results_sm[ds][dt_s].stderr_dt.size == 0 and
@@ -341,7 +341,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 g_t_obt_str = granger_sm_str.test_statistic
                 assert_allclose(g_t_obt_str, g_t_obt, 1e-07, 0, False,
                                 err_msg_g_t + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
@@ -352,7 +352,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     g_t_obt_single = granger_sm_single_ind.test_statistic
                     assert_allclose(g_t_obt_single, g_t_obt, 1e-07, 0, False,
                                     err_msg_g_t + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
                 # test p-value for Granger non-causality:
                 g_p_obt = granger_sm_ind.pvalue
@@ -363,14 +363,14 @@ def test_causality():  # test Granger- and instantaneous causality
                 g_p_obt_str = granger_sm_str.pvalue
                 assert_allclose(g_p_obt_str, g_p_obt, 1e-07, 0, False,
                                 err_msg_g_t + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
                     assert_allclose(g_p_obt_single, g_p_obt, 1e-07, 0, False,
                         err_msg_g_t + " - list of int and int as ".upper() + \
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
                 # test instantaneous causality ################################
                 inst_sm_ind = results_sm[ds][dt].test_inst_causality(
@@ -386,7 +386,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 t_obt_str = inst_sm_str.test_statistic
                 assert_allclose(t_obt_str, t_obt, 1e-07, 0, False,
                                 err_msg_i_t + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -395,7 +395,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     t_obt_single = inst_sm_single_ind.test_statistic
                     assert_allclose(t_obt_single, t_obt, 1e-07, 0, False,
                                     err_msg_i_t + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
                 # test p-value for instantaneous non-causality
                 p_obt = results_sm[ds][dt].test_inst_causality(
@@ -407,7 +407,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 p_obt_str = inst_sm_str.pvalue
                 assert_allclose(p_obt_str, p_obt, 1e-07, 0, False,
                                 err_msg_i_p + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -416,7 +416,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     p_obt_single = inst_sm_single_ind.pvalue
                     assert_allclose(p_obt_single, p_obt, 1e-07, 0, False,
                                     err_msg_i_p + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
 
 def test_impulse_response():
@@ -481,7 +481,7 @@ def test_normality():
             obt_pvalue = obtained.pvalue
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             assert_allclose(obt_pvalue, des_pvalue, rtol, atol, False, err_msg)
-            # call methods to assure they don't raise exceptions
+            # call methods to assure they do not raise exceptions
             obtained.summary()
             str(obtained)  # __str__()
 

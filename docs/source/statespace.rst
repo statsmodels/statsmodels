@@ -377,7 +377,7 @@ other Statsmodels results objects, including standard errors, z-statistics,
 and prediction / forecasting.
 
 More advanced usage is possible, including specifying parameter
-transformations, and specifing names for parameters for a more informative
+transformations, and specifying names for parameters for a more informative
 output summary.
 
 State space representation and Kalman filtering

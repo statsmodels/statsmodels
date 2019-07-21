@@ -643,7 +643,7 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
     alpha : float in (0,1)
         significance level of the test
     dist : string in ['norm', 'binom']
-        This defines the distribution to evalute the power of the test. The
+        This defines the distribution to evaluate the power of the test. The
         critical values of the TOST test are always based on the normal
         approximation, but the distribution for the power can be either the
         normal (default) or the binomial (exact) distribution.

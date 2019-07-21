@@ -180,7 +180,7 @@ class Factor(Model):
         maxiter : int
             Maximum number of iterations for iterative estimation algorithms
         tol : float
-            Stopping critera (error tolerance) for iterative estimation
+            Stopping criteria (error tolerance) for iterative estimation
             algorithms
         start : array_like
             Starting values, currently only used for ML estimation
@@ -382,7 +382,7 @@ class Factor(Model):
         dl += 2*luz
         dl -= 2*np.dot(lud, luz)
 
-        # Can't use _pack because we are working with the square root
+        # Cannot use _pack because we are working with the square root
         # uniquenesses directly.
         return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
@@ -509,7 +509,7 @@ class FactorResults(object):
         Each column is the loading vector for one factor
     loadings_no_rot : ndarray
         Unrotated loadings, not available under maximum likelihood
-        analyis.
+        analysis.
     eigenvalues : ndarray
         The eigenvalues for a factor analysis obtained using
         principal components; not available under ML estimation.
@@ -791,7 +791,7 @@ class FactorResults(object):
                applied
             * 'display' add sorting and styling as defined by other keywords
             * 'strings' returns a DataFrame with string elements with optional sorting
-               and surpressing small loading coefficients.
+               and suppressing small loading coefficients.
 
         sort_ : boolean
             If True, then the rows of the DataFrame is sorted by contribution of each

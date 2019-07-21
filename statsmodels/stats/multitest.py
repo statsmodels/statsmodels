@@ -384,7 +384,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     linear step-up procedure (fdrcorrection0 with method='indep') corrected
     for the estimated fraction of true hypotheses.
     This means that the rejection decision can be obtained with
-    ``pval_corrected <= alpha``, where ``alpha`` is the origianal significance
+    ``pval_corrected <= alpha``, where ``alpha`` is the original significance
     level.
     (Note: This has changed from earlier versions (<0.5.0) of statsmodels.)
 
@@ -431,7 +431,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
             break
         elif ri < ri_old:
             # prevent cycles and endless loops
-            raise RuntimeError(" oops - shouldn't be here")
+            raise RuntimeError(" oops - should not be here")
         ri_old = ri
 
     # make adjustment to pvalscorr to reflect estimated number of Non-Null cases

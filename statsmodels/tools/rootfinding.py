@@ -124,7 +124,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
 
         # special case for F-distribution (symmetric around zero for effect
         # size)
-        # chisquare also takes an indefinite time (didn't wait see if it
+        # chisquare also takes an indefinite time (did not wait see if it
         # returns)
         if np.max(np.abs(f_upp - f_low)) < 1e-15 and sl == -1 and su == 1:
             sl = 1e-8
@@ -137,7 +137,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         delta = su - sl
         if np.isnan(f_low):
             # try just 3 points to find ``increasing``
-            # don't change sl because brentq can handle one nan bound
+            # do not change sl because brentq can handle one nan bound
             for fraction in [0.25, 0.5, 0.75]:
                 sl_ = sl + fraction * delta
                 f_low = func(sl_, *args)

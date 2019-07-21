@@ -17,7 +17,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     Interaction plot for factor level statistics.
 
     Note. If categorial factors are supplied levels will be internally
-    recoded to integers. This ensures matplotlib compatiblity.
+    recoded to integers. This ensures matplotlib compatibility.
 
     uses pandas.DataFrame to calculate an `aggregate` statistic for each
     level of the factor or group given by `trace`.

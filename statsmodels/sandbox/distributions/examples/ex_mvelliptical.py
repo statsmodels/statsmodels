@@ -97,7 +97,7 @@ mv2c = mvn3.conditional(np.array([0]), [1, 1])
 print(res.model.predict(np.array([1,1,1])))
 print(mv2c.mean)
 
-#the following wrong input doesn't raise an exception but produces wrong numbers
+#the following wrong input does not raise an exception but produces wrong numbers
 #mv2c = mvn3.conditional(np.array([0]), [[1, 1],[2,2]])
 
 #************** multivariate t distribution ***************

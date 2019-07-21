@@ -82,7 +82,7 @@ class CheckModelResultsMixin(object):
 
     def test_aic_R(self):
         # R includes the estimation of the scale as a lost dof
-        # Doesn't with Gamma though
+        # Does not with Gamma though
         if self.res1.scale != 1:
             dof = 2
         else:
@@ -255,7 +255,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
 
     def test_compare_OLS(self):
         res1 = self.res1
-        # OLS doesn't define score_obs
+        # OLS does not define score_obs
         from statsmodels.regression.linear_model import OLS
         resd = OLS(self.data.endog, self.data.exog).fit()
         self.resd = resd  # attach to access from the outside
@@ -511,7 +511,7 @@ class TestGlmGamma(CheckModelResultsMixin):
         cls.res1 = res1
 #        res2 = RModel(data.endog, data.exog, r.glm, family=r.Gamma)
         res2 = Scotvote()
-        res2.aic_R += 2 # R doesn't count degree of freedom for scale with gamma
+        res2.aic_R += 2 # R does not count degree of freedom for scale with gamma
         cls.res2 = res2
 
 class TestGlmGammaLog(CheckModelResultsMixin):
@@ -686,14 +686,14 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
                 family=fam).fit(scale='x2')
         from .results.results_glm import Committee
         res2 = Committee()
-        res2.aic_R += 2 # They don't count a degree of freedom for the scale
+        res2.aic_R += 2 # They do not count a degree of freedom for the scale
         cls.res2 = res2
 
 # FIXME: enable or delete
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
-#        r.library('MASS')  # this doesn't work when done in rmodelwrap?
+#        r.library('MASS')  # this does not work when done in rmodelwrap?
 #        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
 #                family=r.negative_binomial(1))
 #        self.res2.null_deviance = 27.8110469364343
@@ -1321,7 +1321,7 @@ class CheckWtdDuplicationMixin(object):
 
     decimal_resids = DECIMAL_4
 
-    # TODO: This doesn't work... Arrays are of different shape.
+    # TODO: This does not work... Arrays are of different shape.
     # Perhaps we use self.res1.model.family.resid_XXX()?
     """
     def test_residuals(self):
@@ -1340,7 +1340,7 @@ class CheckWtdDuplicationMixin(object):
 
     def test_aic(self):
         # R includes the estimation of the scale as a lost dof
-        # Doesn't with Gamma though
+        # Does not with Gamma though
         assert_allclose(self.res1.aic, self.res2.aic,  atol=1e-6, rtol=1e-6)
 
     def test_deviance(self):
@@ -1548,7 +1548,7 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
     @classmethod
     def setup_class(cls):
         '''
-        Tests InverseGuassian family with log link.
+        Tests InverseGaussian family with log link.
         '''
         super(TestWtdGlmInverseGaussian, cls).setup_class()
         family_link = sm.families.InverseGaussian(sm.families.links.log())
@@ -2006,7 +2006,7 @@ def test_tweedie_EQL_upper_limit():
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
     #
-    # Ideally, this would match the following R code, but I can't make it work...
+    # Ideally, this would match the following R code, but I cannot make it work...
     #
     # setwd('c:/workspace')
     # data <- read.csv('cpunish.csv', sep=",")

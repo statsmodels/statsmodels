@@ -25,7 +25,7 @@ label variable var10 "fweight"
 rename var10 fweight
 label variable LN_VC100k96 "LN_VC100k96"
 
-/* for checkin Poisson produces the same, poisson doesn't allow aweights */
+/* for checkin Poisson produces the same, poisson does not allow aweights */
 /*poisson executions income perpoverty perblack LN_VC100k96 south degree */
 
 
@@ -151,7 +151,7 @@ estmat2nparray params_table cov infocrit predicted resids, saving(`filename') fo
 /*------------------*/
 
 /*******************************************************************/
-/***********  next with robust = HC1, don't save resid and similar */
+/***********  next with robust = HC1, do not save resid and similar */
 
 drop `pred' `res'
 glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(robust)

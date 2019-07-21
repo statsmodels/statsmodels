@@ -391,7 +391,7 @@ class RLMResults(base.LikelihoodModelResults):
         from the robust covariance matrix specified in the argument to fit.
     weights : array
         The reported weights are determined by passing the scaled residuals
-        from the last weighted least squares fit in the IRLS algortihm.
+        from the last weighted least squares fit in the IRLS algorithm.
 
     See Also
     --------

@@ -472,7 +472,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`4853`: CLN/REF: Remove recarrays from datasets
 * :pr:`4855`: BUG: Attach vc_names for mixed Poisson models
 * :pr:`4858`: MAINT: Delete migrate_issues_gh
-* :pr:`4859`: Fix some NameErrors, don't delete unused [...]
+* :pr:`4859`: Fix some NameErrors, do not delete unused [...]
 * :pr:`4861`: DOC: Fix small doc errors
 * :pr:`4864`: CLN: fix and lint for W391 blank line at end of file
 * :pr:`4869`: Update setup.cfg
@@ -525,7 +525,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`4979`: [MAINT/TST] remove np.testing.dec unused imports (nose dependency)
 * :pr:`4980`: [MAINT/TST] skip/xfail tests instead of mangling/commenting-out in genmod, regression
 * :pr:`4981`: [MAINT] Remove info.py
-* :pr:`4982`: DOC Fix typo Paramters-->Parameters
+* :pr:`4982`: DOC Fix typo Parameters-->Parameters
 * :pr:`4983`: [TST] xfail/skip instead of commenting-out/mangling discrete tests
 * :pr:`4984`: [TST/DOC] make commented-out code in tests/results into readable docs
 * :pr:`4985`: [TST/DOC] Make test comments more readable
@@ -545,7 +545,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5007`: MAINT: unused imports in robust
 * :pr:`5011`: [MAINT] remove text file relics from scikits/statsmodels
 * :pr:`5012`: [MAINT/TST] move misplaced results files in regressions/tests
-* :pr:`5013`: [MAINT] fix typo depricated-->deprecated
+* :pr:`5013`: [MAINT] fix typo deprecated-->deprecated
 * :pr:`5014`: [MAINT] typo in __init__ signature
 * :pr:`5015`: [MAINT] move misplaced test_tsa_indexes
 * :pr:`5016`: ENH: Burgs algorithm
@@ -559,7 +559,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5043`: BUG: Initialization when simulating
 * :pr:`5045`: MAINT: strict linting for tsa.statespace.tests.results
 * :pr:`5057`: BUG: Correct check for callable
-* :pr:`5058`: BUG: Don't use mutable default values
+* :pr:`5058`: BUG: Do not use mutable default values
 * :pr:`5059`: BLD: Add line displaying CPU info to CI
 * :pr:`5065`: TST: Fix incorrect assertion
 * :pr:`5070`: MAINT: remove file that just says to remove it
@@ -572,7 +572,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5083`: ENH: Add "(uncentered)" after rsquared label in .summary, .summary2 when appropriate
 * :pr:`5086`: TST: parametrize tests instead of using for loops
 * :pr:`5088`: DOC: Add javascript to link to other doc versions
-* :pr:`5090`: MAINT: Chrome doesn't like having a secure link with an unsecure image
+* :pr:`5090`: MAINT: Chrome does not like having a secure link with an unsecure image
 * :pr:`5093`: Allow results to be stored for multiple imputation
 * :pr:`5096`: ENH remove unneeded restriction on QIC (GEE)
 * :pr:`5099`: MAINT: fix and lint for W292 newline at end of file
@@ -763,7 +763,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5640`: ENH: Improve error when ARMA endog is not 1d
 * :pr:`5641`: Josef pkt svar irf errband 5280
 * :pr:`5642`: TST: Relax tolerance on OSX for OpenBlas issues
-* :pr:`5643`: MAINT: Consoliate platform checks
+* :pr:`5643`: MAINT: Consolidate platform checks
 * :pr:`5644`: CLN/DOC: Remove unused module, vbench references
 * :pr:`5645`: TST: Allow network failure in web tests
 * :pr:`5646`: BUG: Fix MANOVA when not using formulas
@@ -806,7 +806,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5695`: MAINT: remove NameError-having version of levinson_durbin, just keep …
 * :pr:`5696`: CLN: remove identical functions from garch
 * :pr:`5697`: CLN: strict linting for examples/
-* :pr:`5698`: PERF: Avoid impplicit check when hasconst
+* :pr:`5698`: PERF: Avoid implicit check when hasconst
 * :pr:`5699`: BUG: Limit lag length in adf
 * :pr:`5700`: MAINT: Update import of URLError
 * :pr:`5701`: MAINT: missing imports, typos, fixes several NameErrors
@@ -838,7 +838,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5740`: CLN: strict linting for tsa.tests.results
 * :pr:`5742`: CLN: strict linting for remaining results directories
 * :pr:`5743`: CLN: strict linting for results files in sandbox/regression/tests/
-* :pr:`5744`: CLN: Fix/lint for dangerious redefinitions and comparisons
+* :pr:`5744`: CLN: Fix/lint for dangerous redefinitions and comparisons
 * :pr:`5746`: MAINT: fix missing or redundant imports
 * :pr:`5748`: CLN: clean up adfvalues, avoid using `eval`
 * :pr:`5750`: CLN: E131 hanging indentation alignment

@@ -6,7 +6,7 @@ idea for general version
 subclass defines geterrors(parameters) besides loglike,...
 and covariance matrix of parameter estimates (e.g. from hessian
 or outerproduct of jacobian)
-update: I don't really need geterrors directly, but get_h the conditional
+update: I do not really need geterrors directly, but get_h the conditional
     variance process
 
 new version Garch0 looks ok, time to clean up and test
@@ -16,7 +16,7 @@ in some cases: "Warning: Maximum number of function evaluations has been exceede
 Notes
 -----
 
-idea: cache intermediate design matrix for geterrors so it doesn't need
+idea: cache intermediate design matrix for geterrors so it does not need
     to be build at each function call
 
 superclass or result class calculates result statistic based
@@ -342,7 +342,7 @@ class Garch0(TSMLEModel):
         icetax = self._icetax  #read ic-eta-x, initial condition
 
         #TODO: where does my go with lfilter ?????????????
-        #      shouldn't matter except for interpretation
+        #      should not matter except for interpretation
 
         nobs = etax.shape[0]
 
@@ -390,7 +390,7 @@ class Garch0(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(h)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #no choice of axis
 
@@ -459,7 +459,7 @@ class GarchX(TSMLEModel):
         icetax = self._icetax  #read ic-eta-x, initial condition
 
         #TODO: where does my go with lfilter ?????????????
-        #      shouldn't matter except for interpretation
+        #      should not matter except for interpretation
 
         nobs = self.nobs
 
@@ -516,7 +516,7 @@ class GarchX(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(h)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #no choice of axis
 
@@ -613,7 +613,7 @@ class Garch(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(errorsest)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #not used
 #        muy = errorsest.mean()
@@ -870,7 +870,7 @@ class Arma(LikelihoodModel):
         sigma2 = np.maximum(params[-1]**2, 1e-6)
         axis = 0
         nobs = len(errorsest)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
 #        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
 #                          + np.sum((errorsest**2)/sigma2, axis)
@@ -1485,7 +1485,7 @@ if __name__ == '__main__':
     #armodel.fit(method='tnc')
     #powell should be the most robust, see Hamilton 5.7
     armodel.fit(method='powell', penalty=True)
-    # The below don't work yet
+    # The below do not work yet
     #armodel.fit(method='newton', penalty=True)
     #armodel.fit(method='broyden', penalty=True)
     print("Unconditional MLE for AR(1) y_t = .9*y_t-1 +.01 * err")

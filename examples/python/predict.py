@@ -66,7 +66,7 @@ data = {"x1": x1, "y": y}
 
 res = ols("y ~ x1 + np.sin(x1) + I((x1-5)**2)", data=data).fit()
 
-# We use the `I` to indicate use of the Identity transform. Ie., we don't
+# We use the `I` to indicate use of the Identity transform. Ie., we do not
 # want any expansion magic from using `**2`
 
 res.params

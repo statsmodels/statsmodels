@@ -26,7 +26,7 @@ rpath = os.path.join(curdir, 'results')
 class TestLowess(object):
 
     def test_import(self):
-        #this doesn't work
+        #this does not work
         #from statsmodels.api.nonparametric import lowess as lowess1
         import statsmodels.api as sm
         lowess1 = sm.nonparametric.lowess

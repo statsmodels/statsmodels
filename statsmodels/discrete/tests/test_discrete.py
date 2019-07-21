@@ -704,7 +704,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
-        alpha[-1] = 0  # don't penalize alpha
+        alpha[-1] = 0  # do not penalize alpha
 
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
         cls.res_reg = mod_reg.fit_regularized(
@@ -1367,7 +1367,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
         # the rows should add up for pred table
         assert_array_equal(self.res1.pred_table().sum(0), np.bincount(pred))
 
-        # note this is just a regression test, gretl doesn't have a prediction
+        # note this is just a regression test, gretl does not have a prediction
         # table
         pred = [[ 126.,   41.,    2.,    0.,    0.,   12.,   19.],
                 [  77.,   73.,    3.,    0.,    0.,   15.,   12.],
@@ -1460,7 +1460,7 @@ def test_poisson_predict():
 
 
 def test_poisson_newton():
-    #GH: 24, Newton doesn't work well sometimes
+    #GH: 24, Newton does not work well sometimes
     nobs = 10000
     np.random.seed(987689)
     x = np.random.randn(nobs, 3)
@@ -1752,7 +1752,7 @@ class TestGeneralizedPoisson_p1(object):
     def test_fit_regularized(self):
         model = self.res1.model
 
-        # don't penalize constant and dispersion parameter
+        # do not penalize constant and dispersion parameter
         alpha = np.ones(len(self.res1.params))
         alpha[-2:] = 0
         # the first prints currently a warning, irrelevant here
@@ -2064,7 +2064,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
-        alpha[-1] = 0  # don't penalize alpha
+        alpha[-1] = 0  # do not penalize alpha
 
         mod_reg = sm.NegativeBinomialP(rand_data.endog, rand_exog)
         cls.res_reg = mod_reg.fit_regularized(
@@ -2143,7 +2143,7 @@ class CheckNull(object):
 
         res_null1 = self.res_null
         assert_allclose(llf0, res_null1.llf, rtol=1e-6)
-        # Note default convergence tolerance doesn't get lower rtol
+        # Note default convergence tolerance does not get lower rtol
         # from different starting values (using bfgs)
         assert_allclose(res_null0.params, res_null1.params, rtol=5e-5)
 
@@ -2351,7 +2351,7 @@ def test_unchanging_degrees_of_freedom():
     # If res2.df_model == res1.df_model, then this test is invalid.
 
     res3 = model.fit(start_params=params, disp=0)
-    # Test that the call to `fit_regularized` didn't
+    # Test that the call to `fit_regularized` did not
     # modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)

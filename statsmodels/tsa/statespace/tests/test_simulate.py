@@ -19,7 +19,7 @@ from statsmodels.tsa.statespace import (sarimax, structural, varmax,
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
     # Note: the first elements of the generated SARIMAX datasets are based on
-    # the initial state, so we don't include them in the comparisons
+    # the initial state, so we do not include them in the comparisons
     np.random.seed(10239)
     nobs = 100
     eps = np.random.normal(size=nobs)
@@ -50,7 +50,7 @@ def test_arma_direct():
     # Tests of an ARMA model simulation against direct construction
     # This is useful for e.g. trend components
     # Note: the first elements of the generated SARIMAX datasets are based on
-    # the initial state, so we don't include them in the comparisons
+    # the initial state, so we do not include them in the comparisons
     np.random.seed(10239)
     nobs = 100
     eps = np.random.normal(size=nobs)

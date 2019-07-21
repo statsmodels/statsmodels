@@ -76,7 +76,7 @@ class SUR(object):
 
     Notes
     -----
-    All individual equations are assumed to be well-behaved, homoeskedastic
+    All individual equations are assumed to be well-behaved, homoskedastic
     iid errors.  This is basically an extension of GLS, using sparse matrices.
 
     .. math:: \\Sigma=\\left[\\begin{array}{cccc}
@@ -178,7 +178,7 @@ exogenous variables.  Got length %s" % len(sys))
                     div[i+j] = nobs - np.max(self.df_model[i]+1,
                         self.df_model[j]+1)
             div.reshape(M,M)
-# doesn't handle (#,)
+# does not handle (#,)
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sig/div)).T
         return sig/div
 
@@ -238,7 +238,7 @@ exogenous variables.  Got length %s" % len(sys))
         while igls and (np.any(np.abs(conv[-2] - conv[-1]) > tol)) and \
                 (self.iterations < maxiter):
             fittedvalues = (self.sp_exog*beta).reshape(M,-1)
-            resids = self.endog - fittedvalues # don't attach results yet
+            resids = self.endog - fittedvalues # do not attach results yet
             self.sigma = self._compute_sigma(resids) # need to attach for compute?
             self.wendog = self.whiten(self.endog)
             self.wexog = self.whiten(self.sp_exog)
@@ -269,7 +269,7 @@ class Sem2SLS(object):
     indep_endog : dict
         A dictionary mapping the equation to the column numbers of the
         the independent endogenous regressors in each equation.
-        It is assumed that the system is inputed as broken up into
+        It is assumed that the system is entered as broken up into
         LHS and RHS. For now, the values of the dict have to be sequences.
         Note that the keys for the equations should be zero-indexed.
     instruments : array

@@ -313,12 +313,7 @@ class VARMAX(MLEModel):
 
         # A. Run a multivariate regression to get beta estimates
         endog = pd.DataFrame(self.endog.copy())
-        # Pandas < 0.13 didn't support the same type of DataFrame interpolation
-        # TODO remove this now that we have dropped support for Pandas < 0.13
-        try:
-            endog = endog.interpolate()
-        except TypeError:
-            pass
+        endog = endog.interpolate()
         endog = endog.fillna(method='backfill').values
         exog = None
         if self.k_trend > 0 and self.k_exog > 0:
@@ -677,7 +672,7 @@ class VARMAX(MLEModel):
 
         # - Trend
         if self.k_trend > 0:
-            # If we didn't set the intercept above, zero it out so we can
+            # If we did not set the intercept above, zero it out so we can
             # just += later
             if not self.mle_regression:
                 zero = np.array(0, dtype=params.dtype)
@@ -920,7 +915,7 @@ class VARMAXResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         # If we had exog, then the last predicted_state has been set to NaN
-        # since we didn't have the appropriate exog to create it. Then, if
+        # since we did not have the appropriate exog to create it. Then, if
         # we are forecasting, we now have new exog that we need to put into
         # the existing state_intercept array (and we will take it out, below)
         if last_intercept is not None:

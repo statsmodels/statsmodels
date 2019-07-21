@@ -198,7 +198,7 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
             if last_fit_i >= n-1:
                 break
 
-        # Calculate residual weights, but don't bother on the last iteration.
+        # Calculate residual weights, but do not bother on the last iteration.
         if robiter < it - 1:
             resid_weights = calculate_residual_weights(y, y_fit)
 

@@ -284,7 +284,7 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
             mu = np.array([mu]*steps)
     elif k_exog > 0:
         X = np.dot(exog, exparams)
-        #NOTE: you shouldn't have to give in-sample exog!
+        #NOTE: you should not have to give in-sample exog!
         X = lagmat(X, p, original='in', trim='both')
         mu = (np.r_[1, -arparams[::-1]] * X).sum(1)[:, None]
     else:
@@ -480,7 +480,7 @@ class ARMA(tsbase.TimeSeriesModel):
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
             if p != 0:
-                # make sure we don't run into small data problems in AR fit
+                # make sure we do not run into small data problems in AR fit
                 nobs = len(endog)
                 if start_ar_lags is None:
                     maxlag = int(round(12*(nobs/100.)**(1/4.)))
@@ -494,7 +494,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
-                # doesn't leave enough obs. No consistent way to fix.
+                # does not leave enough obs. No consistent way to fix.
                 if p_tmp + q >= len(endog):
                     raise ValueError("Proper starting parameters cannot"
                                      " be found for this order with this "
@@ -699,7 +699,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return errors.squeeze()
 
     def predict(self, params, start=None, end=None, exog=None, dynamic=False):
-        method = getattr(self, 'method', 'mle')  # don't assume fit
+        method = getattr(self, 'method', 'mle')  # do not assume fit
         #params = np.asarray(params)
 
         # will return an index of a date
@@ -949,7 +949,7 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams:  # transform parameters back
             params = self._transparams(params)
 
-        self.transparams = False  # so methods don't expect transf.
+        self.transparams = False  # so methods do not expect transf.
 
         normalized_cov_params = None  # TODO: fix this
         armafit = ARMAResults(self, params, normalized_cov_params)
@@ -1431,7 +1431,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def bse(self):
         params = self.params
         hess = self.model.hessian(params)
-        if len(params) == 1:  # can't take an inverse, ensure 1d
+        if len(params) == 1:  # cannot take an inverse, ensure 1d
             return np.sqrt(-1./hess[0])
         return np.sqrt(np.diag(-inv(hess)))
 

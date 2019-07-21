@@ -609,7 +609,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
          cls.res1.forecast_err,
          conf_int)              = cls.res1.forecast(25)
         #cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=226, typ='levels', dynamic=True)
-        #TODO: fix the indexing for the end here, I don't think this is right
+        #TODO: fix the indexing for the end here, I do not think this is right
         # if we're going to treat it like indexing
         # the forecast from 2005Q1 through 2009Q4 is indices
         # 184 through 227 not 226
@@ -672,7 +672,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
         # cls.res1.forecast_err,
         # conf_int)              = cls.res1.forecast(25)
         #cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=226, typ='levels', dynamic=True)
-        #TODO: fix the indexing for the end here, I don't think this is right
+        #TODO: fix the indexing for the end here, I do not think this is right
         # if we're going to treat it like indexing
         # the forecast from 2005Q1 through 2009Q4 is indices
         # 184 through 227 not 226
@@ -680,7 +680,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
         # predictions
         #cls.res1.forecast_res_dyn = self.predict(start=164, end=164+63,
         #                                         typ='levels', dynamic=True)
-        # since we got from gretl don't have linear prediction in differences
+        # since we got from gretl do not have linear prediction in differences
         cls.decimal_arroots = 3
         cls.decimal_maroots = 2
         cls.decimal_t = 1
@@ -873,7 +873,7 @@ def test_arima_predict_mle():
     fv = res1.predict(start, end, typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_3)
     # start >nobs, end >nobs 2009q4 - 2015q4
-    #NOTE: this raises but shouldn't, dynamic forecasts could start
+    #NOTE: this raises but should not, dynamic forecasts could start
     #one period out
     start, end = 203, 227
     fv = res1.predict(start, end, typ='levels')
@@ -1627,7 +1627,7 @@ def test_1dexog():
 
 
 def test_arima_predict_bug():
-    #predict_start_date wasn't getting set on start = None
+    #predict_start_date was not getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
     dta.index = pd.date_range(start='1700', end='2009', freq='A')[:309]
@@ -1828,7 +1828,7 @@ def test_arimax():
     X.iloc[0] = 0
     res = ARIMA(y, (2, 1, 1), X).fit(disp=False)
 
-    # gretl won't estimate this - looks like maybe a bug on their part,
+    # gretl will not estimate this - looks like maybe a bug on their part,
     # but we can just fine, we're close to Stata's answer
     # from Stata
     params = [19.5656863783347, 0.32653841355833396198,
@@ -2304,7 +2304,7 @@ def test_arima_exog_predict():
     mod_002 = ARIMA(np.asarray(data_sample['loginv']), (0, 0, 2),
                     exog=np.asarray(data_sample[['loggdp', 'logcons']]))
 
-    # doesn't converge with default starting values
+    # does not converge with default starting values
     start_params = np.concatenate((res.params[[0, 1, 2, 4]], [0]))
     res_002 = mod_002.fit(start_params=start_params, disp=0,
                           solver='bfgs', maxiter=5000)
@@ -2350,7 +2350,7 @@ def test_arima_fit_multiple_calls():
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
-    mod.exog = None  # FIXME: this shouldn't be necessary
+    mod.exog = None  # FIXME: this should not be necessary
     with pytest.warns(HessianInversionWarning, match="no bse or cov"):
         res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
@@ -2364,7 +2364,7 @@ def test_arima_fit_multiple_calls():
     mod.fit(disp=0, start_params=[np.mean(y)])
     assert_equal(mod.exog_names,  ['const'])
 
-    mod.exog = None  # FIXME: this shouldn't be necessary
+    mod.exog = None  # FIXME: this should not be necessary
     res = mod.fit(disp=0, start_params=[np.mean(y)])
     assert_equal(mod.exog_names,  ['const'])
 

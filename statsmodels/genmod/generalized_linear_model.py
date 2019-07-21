@@ -196,7 +196,7 @@ class GLM(base.LikelihoodModel):
      Gaussian      x     x   x     x      x       x   x     x      x
      inv Gaussian  x     x                        x
      binomial      x     x   x     x      x       x   x           x      x
-     Poission      x     x                        x
+     Poisson      x     x                        x
      neg binomial  x     x                        x        x
      gamma         x     x                        x
      Tweedie       x     x                        x
@@ -207,7 +207,7 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
-    Statsmodels supports two separte definitions of weights: frequency weights
+    Statsmodels supports two separate definitions of weights: frequency weights
     and variance weights.
 
     Frequency weights produce the same results as repeating observations by the
@@ -1003,7 +1003,7 @@ class GLM(base.LikelihoodModel):
             'lstsq' and 'pinv' regularize the estimate in singular and
             near-singular cases by truncating small singular values based
             on `rcond` of the respective numpy.linalg function. 'qr' is
-            only valied for cases that are not singular nor near-singular.
+            only valid for cases that are not singular nor near-singular.
         optim_hessian : {'eim', 'oim'}, optional
             (available with scipy optimizer fits) When 'oim'--the default--the
             observed Hessian is used in fitting. 'eim' is the expected Hessian.

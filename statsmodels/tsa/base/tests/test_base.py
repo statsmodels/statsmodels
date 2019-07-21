@@ -19,7 +19,7 @@ def test_pandas_nodates_index():
     # TODO: Remove this, this is now valid
     # npt.assert_raises(ValueError, TimeSeriesModel, s)
 
-    # Test with a non-date index that doesn't raise an exception because it
+    # Test with a non-date index that does not raise an exception because it
     # can be coerced into a nanosecond DatetimeIndex
     data = [988, 819, 964]
     # index=pd.date_range('1970-01-01', periods=3, freq='QS')

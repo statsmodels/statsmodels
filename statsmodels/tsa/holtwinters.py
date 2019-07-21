@@ -348,7 +348,7 @@ class HoltWintersResults(Results):
             end = self.model._index[-1] + steps * freq
             return self.model.predict(self.params, start=start, end=end)
         except (AttributeError, ValueError):
-            # May occur when the index doesn't have a freq
+            # May occur when the index does not have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
 
     def summary(self):

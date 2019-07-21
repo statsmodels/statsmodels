@@ -245,7 +245,7 @@ print(np.column_stack([getattr(ols_fit, se, None)
 # a quick bootstrap analysis
 # --------------------------
 #
-# (I didn't check whether this is fully correct statistically)
+# (I did not check whether this is fully correct statistically)
 
 # **With OLS on full sample**
 
@@ -380,12 +380,12 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 # for statsmodels
 #
 # * In this case rsquared for original data looks less random/arbitrary.
-# * Don't change definition of rsquared from centered tss to uncentered
+# * Do not change definition of rsquared from centered tss to uncentered
 #   tss when calculating rsquared in WLS if the original exog contains
 #   a constant. The increase in rsquared because of a change in definition
 #   will be very misleading.
 # * Whether there is a constant in the transformed exog, wexog, or not,
-#   might affect also the degrees of freedom calculation, but I haven't
+#   might affect also the degrees of freedom calculation, but I have not
 #   checked this. I would guess that the df_model should stay the same,
 #   but needs to be verified with a textbook.
 # * df_model has to be adjusted if the original data does not have a
@@ -396,7 +396,7 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 #   This can be done through keyword parameter to model.__init__ or
 #   through autodedection with hasconst = (exog.var(0)<1e-10).any()
 #   I'm not sure about fixed effects with a full dummy set but
-#   without a constant. In this case autodedection wouldn't work this
+#   without a constant. In this case autodedection would not work this
 #   way. Also, I'm not sure whether a ddof keyword parameter can also
 #   handle the hasconst case.
 '''  # noqa:E501

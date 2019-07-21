@@ -55,7 +55,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             stop criterion, algorithm stops if Frobenius norm of gradient is
             smaller then tol
 
-        For analytic, the supporeted arguments depend on the method, see above.
+        For analytic, the supported arguments depend on the method, see above.
 
         See the lower level functions for more details.
 

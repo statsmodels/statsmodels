@@ -191,9 +191,9 @@ def companion_matrix(polynomial):
 
         if isinstance(polynomial, list) or isinstance(polynomial, tuple):
             try:
-                # Note: can't use polynomial[0] because of the special behavior
-                # associated with matrix polynomials and the constant 1, see
-                # below.
+                # Note: cannot use polynomial[0] because of the special
+                # behavior associated with matrix polynomials and the constant
+                # 1, see below.
                 m = len(polynomial[1])
             except TypeError:
                 m = 1
@@ -593,7 +593,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
     if not transform_variance:
         initial_variance = error_variance
         # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
+        # do not lead to zero-matrices due to roundoff error, which would case
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
@@ -1426,7 +1426,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
         raise ValueError('Invalid dimensions for %s matrix: requires %d'
                          ' columns, got %d' % (name, ncols, shape[1]))
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
         raise ValueError('Invalid dimensions for %s matrix: time-varying'
                          ' matrices cannot be given unless `nobs` is specified'
@@ -1473,7 +1473,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
         raise ValueError('Invalid dimensions for %s vector: requires %d'
                          ' rows, got %d' % (name, nrows, shape[0]))
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
         raise ValueError('Invalid dimensions for %s vector: time-varying'
                          ' vectors cannot be given unless `nobs` is specified'
@@ -1614,8 +1614,8 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     if not inplace:
         B = np.copy(B, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
             raise ValueError()
@@ -1660,8 +1660,8 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     if not inplace:
         b = np.copy(b, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
             raise ValueError()
@@ -1717,8 +1717,8 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     if not inplace:
         B = np.copy(B, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
             raise ValueError()
@@ -1763,8 +1763,8 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     if not inplace:
         b = np.copy(b, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
             raise ValueError()

@@ -254,7 +254,7 @@ class SARIMAX(MLEModel):
     estimation.
 
     In this implementation of differenced models, the Hamilton representation
-    is not able to accomodate differencing in the state vector, so
+    is not able to accommodate differencing in the state vector, so
     `simple_differencing` (which performs differencing prior to estimation so
     that the first d + sD observations are lost) must be used.
 
@@ -608,7 +608,7 @@ class SARIMAX(MLEModel):
 
         # Save the indices corresponding to the reduced form lag polynomial
         # parameters in the transition and selection matrices so that they
-        # don't have to be recalculated for each update()
+        # do not have to be recalculated for each update()
         start_row = self._k_states_diff
         end_row = start_row + self.k_ar + self.k_seasonal_ar
         col = self._k_states_diff
@@ -659,7 +659,7 @@ class SARIMAX(MLEModel):
             init.set((self._k_states_diff + self._k_order,
                       self._k_states_diff + self._k_order + self.k_exog),
                      'approximate_diffuse')
-        # If we're not enforcing a stationarity, then we can't initialize a
+        # If we're not enforcing a stationarity, then we cannot initialize a
         # stationary component
         else:
             init.set(None, 'approximate_diffuse')

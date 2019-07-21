@@ -54,7 +54,7 @@ def target_rotation(A, H, full_rank=False):
     [2] Schonemann (1966) - A generalized solution of the orthogonal
     procrustes problem
 
-    [3] Gower, Dijksterhuis (2004) - Procustes problems
+    [3] Gower, Dijksterhuis (2004) - Procrustes problems
     """
     ATH = A.T.dot(H)
     if full_rank or np.linalg.matrix_rank(ATH) == A.shape[1]:
@@ -112,7 +112,7 @@ def promax(A, k=2):
 
     Promax rotation is performed in the following steps:
 
-    * Deterine varimax rotated patterns :math:`V`.
+    * Determine varimax rotated patterns :math:`V`.
 
     * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}`
 

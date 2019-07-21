@@ -147,7 +147,7 @@ class QuantReg(RegressionModel):
         beta = np.ones(exog_rank)
         # TODO: better start, initial beta is used only for convergence check
 
-        # Note the following doesn't work yet,
+        # Note the following does not work yet,
         # the iteration loop always starts with OLS as initial beta
 #        if start_params is not None:
 #            if len(start_params) != rank:
@@ -179,7 +179,7 @@ class QuantReg(RegressionModel):
             history['mse'].append(np.mean(resid*resid))
 
             if (n_iter >= 300) and (n_iter % 100 == 0):
-                # check for convergence circle, shouldn't happen
+                # check for convergence circle, should not happen
                 for ii in range(2, 10):
                     if np.all(beta == history['params'][-ii]):
                         cycle = True

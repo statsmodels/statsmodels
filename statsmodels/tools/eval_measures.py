@@ -405,7 +405,7 @@ def hqic(llf, nobs, df_modelwc):
 
     References
     ----------
-    Wikipedia doesn't say much
+    Wikipedia does not say much
 
     """
     return -2. * llf + 2 * np.log(np.log(nobs)) * df_modelwc

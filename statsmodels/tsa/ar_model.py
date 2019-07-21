@@ -36,7 +36,7 @@ def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
     arparams = params[k_trend:][::-1]  # reverse for dot
 
     # dynamic endogenous variable
-    endog = np.zeros(k_ar + steps)  # this is one too big but doesn't matter
+    endog = np.zeros(k_ar + steps)  # this is one too big but does not matter
     if start:
         endog[:k_ar] = y[start-k_ar:start]
     else:
@@ -135,7 +135,7 @@ class AR(tsbase.TimeSeriesModel):
         if start is None:
             if method == 'mle' and not dynamic:
                 start = 0
-            else:  # can't do presample fit for cmle or dynamic
+            else:  # cannot do presample fit for cmle or dynamic
                 start = k_ar
             start = self._index[start]
         if end is None:
@@ -581,12 +581,12 @@ class AR(tsbase.TimeSeriesModel):
                 params = self._transparams(params)
                 self.transparams = False  # turn off now for other results
 
-        # don't use yw, because we can't estimate the constant
+        # do not use yw, because we cannot estimate the constant
         #elif method == "yw":
         #    params, omega = yule_walker(endog, order=maxlag,
         #            method="mle", demean=False)
         #    # how to handle inference after Yule-Walker?
-        #    self.params = params #TODO: don't attach here
+        #    self.params = params #TODO: do not attach here
         #    self.omega = omega
 
         pinv_exog = np.linalg.pinv(X)
@@ -874,7 +874,7 @@ if __name__ == "__main__":
                               ts_dr.toordinal().astype(int)))
     sunspots = pandas.Series(sunspots.endog, index=dt_dates)
 
-    #NOTE: pandas can't handle pre-1900 dates
+    #NOTE: pandas cannot handle pre-1900 dates
     mod = AR(sunspots, freq='A')
     res = mod.fit(method='mle', maxlag=9)
 

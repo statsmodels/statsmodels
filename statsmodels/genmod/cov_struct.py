@@ -167,7 +167,7 @@ class CovStruct(object):
 
         self.cov_adjust.append(cov_adjust)
 
-        # Last resort if we still can't factor the covariance matrix.
+        # Last resort if we still cannot factor the covariance matrix.
         if not success:
             warnings.warn(
                 "Unable to condition covariance matrix to an SPD "
@@ -675,7 +675,7 @@ class Autoregressive(CovStruct):
 
     The autocorrelation parameter is estimated using weighted
     nonlinear least squares, regressing each value within a cluster on
-    each preceeding value in the same cluster.
+    each preceding value in the same cluster.
 
     Parameters
     ----------
@@ -1289,7 +1289,7 @@ class Equivalence(CovStruct):
             bmat = np.ascontiguousarray(mat).view(dtype)
             _, idx = np.unique(bmat, return_index=True)
         except TypeError:
-            # workaround for old numpy that can't call unique with complex
+            # workaround for old numpy that cannot call unique with complex
             # dtypes
             rs = np.random.RandomState(4234)
             bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))

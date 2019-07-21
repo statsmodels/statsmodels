@@ -327,7 +327,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
     are zero distance apart and the same for the last two levels. This is
-    the sampe as forming two aggregated levels by merging the first two and
+    the sample as forming two aggregated levels by merging the first two and
     the last two levels, respectively.
 
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these

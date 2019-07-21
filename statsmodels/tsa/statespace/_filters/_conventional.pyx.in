@@ -86,7 +86,7 @@ cdef int {{prefix}}updating_missing_conventional({{prefix}}KalmanFilter kfilter,
 
 cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant)  except *:
     # Since the inverse of the forecast error covariance matrix is not
-    # stored, we don't need to fill it (e.g. with NPY_NAN values). Instead,
+    # stored, we do not need to fill it (e.g. with NPY_NAN values). Instead,
     # just do a noop here and return a zero determinant ($|0|$).
     return 0.0
 

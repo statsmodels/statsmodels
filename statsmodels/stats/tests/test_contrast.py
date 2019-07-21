@@ -36,7 +36,7 @@ class TestContrast(object):
     def test_estimable(self):
         X2 = np.column_stack((self.X, self.X[:,5]))
         c = Contrast(self.X[:,5],X2)
-        #TODO: I don't think this should be estimable?  isestimable correct?
+        #TODO: I do not think this should be estimable?  isestimable correct?
 
 
 def test_constraints():

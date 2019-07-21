@@ -40,7 +40,7 @@ def _ll_nbp(y, X, beta, alph, Q):
 
     References:
 
-    Greene, W. 2008. "Functional forms for the negtive binomial model
+    Greene, W. 2008. "Functional forms for the negative binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
 

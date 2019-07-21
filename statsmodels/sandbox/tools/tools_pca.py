@@ -47,7 +47,7 @@ def pca(data, keepdim=0, normalize=0, demean=True):
 
     '''
     x = np.array(data)
-    #make copy so original doesn't change, maybe not necessary anymore
+    #make copy so original does not change, maybe not necessary anymore
     if demean:
         m = x.mean(0)
     else:
@@ -114,13 +114,13 @@ def pcasvd(data, keepdim=0, demean=True):
 
     Notes
     -----
-    This doesn't have yet the normalize option of pca.
+    This does not have yet the normalize option of pca.
 
     '''
     nobs, nvars = data.shape
     #print nobs, nvars, keepdim
     x = np.array(data)
-    #make copy so original doesn't change
+    #make copy so original does not change
     if demean:
         m = x.mean(0)
     else:

@@ -98,7 +98,7 @@ def meanexcess(thresh, shape, scale):
 
 def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
     if method == 'est':
-        #doesn't make much sense yet,
+        #does not make much sense yet,
         #estimate the parameters and use theoretical meanexcess
         if params is None:
             raise NotImplementedError

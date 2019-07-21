@@ -364,7 +364,7 @@ class CheckOLSRobustCluster(CheckOLSRobust):
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
+        #asserts do not work for pandas
         cls.res1 = OLS(dtapa_endog, exog).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
@@ -718,7 +718,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
+        #asserts do not work for pandas
         cls.res1 = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
@@ -817,7 +817,7 @@ class TestWLSOLSRobustSmall(object):
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
+        #asserts do not work for pandas
         cls.res_wls = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
         w_sqrt = 1 / np.sqrt(np.asarray(dtapa_exog['value']))
         cls.res_ols = OLS(dtapa_endog * w_sqrt,
@@ -853,7 +853,7 @@ class TestWLSOLSRobustSmall(object):
             assert_allclose(res1.cov_params(), res2.cov_params(), rtol=1e-13)
             assert_allclose(res1.bse, res2.bse, rtol=1e-13)
             assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-13)
-            #Note: Fvalue doesn't match up, difference in calculation ?
+            #Note: Fvalue does not match up, difference in calculation ?
             #      The only difference should be in the constant detection
             #assert_allclose(res1.fvalue, res2.fvalue, rtol=1e-13)
             #assert_allclose(res1.f_pvalue, res2.f_pvalue, rtol=1e-13)

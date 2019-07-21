@@ -655,7 +655,7 @@ class VAR(TimeSeriesModel):
         trend : string or None
             As per above
         """
-        # have to do this again because select_order doesn't call fit
+        # have to do this again because select_order does not call fit
         self.k_trend = k_trend = util.get_trendorder(trend)
 
         if offset < 0:  # pragma: no cover

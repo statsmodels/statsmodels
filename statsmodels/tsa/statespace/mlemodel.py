@@ -185,7 +185,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         raise NotImplementedError
 
     def _clone_from_init_kwds(self, endog, exog=None, **kwargs):
-        # Can't make this the default, because there is extra work required
+        # Cannot make this the default, because there is extra work required
         # for subclasses to make _get_init_kwds useful.
         use_kwargs = self._get_init_kwds()
         use_kwargs.update(kwargs)
@@ -713,7 +713,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         if not transformed:
             params = self.transform_params(params)
 
-        # If we're using complex-step differentiation, then we can't use
+        # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
@@ -748,7 +748,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                              res=None, **kwargs):
         params = np.array(params, ndmin=1)
 
-        # We can't use complex-step differentiation with non-transformed
+        # We cannot use complex-step differentiation with non-transformed
         # parameters
         if approx_complex_step is None:
             approx_complex_step = transformed
@@ -757,7 +757,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                              " calculate the observed_information_matrix"
                              " with untransformed parameters.")
 
-        # If we're using complex-step differentiation, then we can't use
+        # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
@@ -872,7 +872,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Setup
         n = len(params)
 
-        # We can't use complex-step differentiation with non-transformed
+        # We cannot use complex-step differentiation with non-transformed
         # parameters
         if approx_complex_step is None:
             approx_complex_step = transformed
@@ -884,7 +884,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Get values at the params themselves
         self.update(params, transformed=transformed,
                     complex_step=approx_complex_step)
-        # If we're using complex-step differentiation, then we can't use
+        # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
@@ -946,7 +946,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         NBER Chapters. National Bureau of Economic Research, Inc.
 
         """
-        # We can't use complex-step differentiation with non-transformed
+        # We cannot use complex-step differentiation with non-transformed
         # parameters
         if approx_complex_step is None:
             approx_complex_step = transformed
@@ -1462,7 +1462,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         simulated_obs, simulated_states = self.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
 
-        # Simulated obs is (nobs x k_endog); don't want to squeeze in
+        # Simulated obs is (nobs x k_endog); do not want to squeeze in
         # case of nsimulations = 1
         if simulated_obs.shape[1] == 1:
             simulated_obs = simulated_obs[:, 0]
@@ -1517,7 +1517,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         irfs = self.ssm.impulse_responses(
             steps, impulse, orthogonalized, cumulative, **kwargs)
 
-        # IRF is (nobs x k_endog); don't want to squeeze in case of steps = 1
+        # IRF is (nobs x k_endog); do not want to squeeze in case of steps = 1
         if irfs.shape[1] == 1:
             irfs = irfs[:, 0]
 
@@ -2002,7 +2002,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The predicted values of the model. An (nobs x k_endog) array.
         """
-        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # This is a (k_endog x nobs array; do not want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
         fittedvalues = self.forecasts
@@ -2057,7 +2057,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The model residuals. An (nobs x k_endog) array.
         """
-        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # This is a (k_endog x nobs array; do not want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
         resid = self.forecasts_error
@@ -2399,7 +2399,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction
-        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # This is a (k_endog x npredictions) array; do not want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)
@@ -2609,7 +2609,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
         refit : bool, optional
-            Wheter to re-fit the parameters, based on the combined dataset.
+            Whether to re-fit the parameters, based on the combined dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
         **kwargs
@@ -2795,7 +2795,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
         refit : bool, optional
-            Wheter to re-fit the parameters, using the new dataset.
+            Whether to re-fit the parameters, using the new dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
         **kwargs
@@ -3168,7 +3168,7 @@ class PredictionResults(pred.PredictionResults):
 
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
-        #       by attach_* methods. However, they don't currently support
+        #       by attach_* methods. However, they do not currently support
         #       this use case.
         conf_int = super(PredictionResults, self).conf_int(
             method, alpha, **kwds)
@@ -3206,8 +3206,8 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-        # OrderedDict doesn't work to preserve sequence
-        # pandas dict doesn't handle 2d_array
+        # OrderedDict does not work to preserve sequence
+        # pandas dict does not handle 2d_array
         # data = np.column_stack(list(to_include.values()))
         # names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,

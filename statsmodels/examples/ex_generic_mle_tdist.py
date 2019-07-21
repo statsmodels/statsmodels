@@ -14,7 +14,7 @@ from statsmodels.tools.numdiff import approx_hess
 #import for kstest based estimation
 #should be replace
 # FIXME: importing these patches scipy distribution classes in-place.
-#  Don't do this.
+#  Do not do this.
 import statsmodels.sandbox.distributions.sppatch  # noqa:F401
 
 
@@ -155,7 +155,7 @@ print(pp.max(0))
 
 
 ##################### Example: Pareto
-# estimating scale doesn't work yet, a bug somewhere ?
+# estimating scale does not work yet, a bug somewhere ?
 # fit_ks works well, but no bse or other result statistics yet
 
 
@@ -195,7 +195,7 @@ class MyPareto(GenericLikelihoodModel):
         '''fit Pareto with nested optimization
 
         originally published on stackoverflow
-        this doesn't trim lower values during ks optimization
+        this does not trim lower values during ks optimization
 
         '''
         rvs = self.endog
@@ -311,7 +311,7 @@ print(res_parks)
 
 print(res_par.params[1:].sum(), sum(res_parks[1:]), mod_par.endog.min())
 
-#start new model, so we don't get two result instances with the same model instance
+#start new model, so we do not get two result instances with the same model instance
 mod_par = MyPareto(y)
 mod_par.fixed_params = fixdf
 mod_par.fixed_paramsmask = np.isnan(fixdf)

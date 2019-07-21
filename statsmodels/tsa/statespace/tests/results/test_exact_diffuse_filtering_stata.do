@@ -44,7 +44,7 @@ disp %20.19g e(ll)
 
 
 // Local linear trend + missing
-// Have to skip this since Stata doesn't allow missing values, even using sspace
+// Have to skip this since Stata does not allow missing values, even using sspace
 // clear
 // input x t
 // 10.2394 1

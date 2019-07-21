@@ -141,7 +141,7 @@ def test_instantiation_valid():
     # 2. Int64Index with values exactly equal to 0, 1, ..., nobs-1
     # 3. DatetimeIndex with frequency
     # 4. PeriodIndex with frequency
-    # 5. Anything that doesn't fall into the above categories also should
+    # 5. Anything that does not fall into the above categories also should
     #    only raise an exception if it was passed to dates, and may trigger
     #    a warning otherwise.
     #
@@ -156,13 +156,13 @@ def test_instantiation_valid():
     # 8. Series of date strings (requires freq)
     # 9. Series of datetime objects (requires freq)
     # 10. Series of pandas timestamps (requires freq)
-    # 11. Anything that doesn't fall into the above categories should raise
+    # 11. Anything that does not fall into the above categories should raise
     #     an exception.
     #
     # `freq` can be:
     # 0. None
     # 1. Something that can be passed to `pd.to_offset`
-    # 2. Anything that can't should raise an Exception
+    # 2. Anything that cannot should raise an Exception
     #
     # Each test will be denoted by:
     # endog.index:exog.index/date/freq where the corresponding
@@ -297,7 +297,7 @@ def test_instantiation_valid():
                 assert_equal(mod.data.freq, freq)
 
         # Increment index (this is a "supported" index in the sense that it
-        # doesn't raise a warning, but obviously not a date index)
+        # does not raise a warning, but obviously not a date index)
         endog = base_endog.copy()
         endog.index = supported_increment_indexes[0][0]
 
@@ -393,13 +393,13 @@ def test_instantiation_valid():
                 assert_equal(mod.data.dates.equals(mod._index), True)
 
                 # Note: here, we need to hedge the test a little bit because
-                # inferred frequencies aren't always the same as the original
+                # inferred frequencies are not always the same as the original
                 # frequency. From the examples above, when the actual freq is
                 # 2QS-OCT, the inferred freq is 2QS-JAN. This is an issue with
                 # inferred frequencies, but since we are warning the user, it's
                 # not a failure of the code. Thus we only test the "major" part
                 # of the freq, and just test that the right message is given
-                # (even though it won't have the actual freq of the data in
+                # (even though it will not have the actual freq of the data in
                 # it).
                 assert_equal(mod.data.freq.split('-')[0], freq.split('-')[0])
                 assert_equal(str(w[-1].message), message % mod.data.freq)

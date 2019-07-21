@@ -156,7 +156,7 @@ cdef class STL(object):
 
     Examples
     --------
-    The original example uses STL to decompos CO2 data into level, season and a
+    The original example uses STL to decompose CO2 data into level, season and a
     residual.
 
     Start by aggregating to monthly, and filling any missing values

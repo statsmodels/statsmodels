@@ -513,7 +513,7 @@ class UnobservedComponents(MLEModel):
             self.trend * self.stochastic_trend * 0x10
         )
 
-        # Create the trend specification, if it wasn't given
+        # Create the trend specification, if it was not given
         if self.trend_specification is None:
             # trend specification may be none, e.g. if the model is only
             # a stochastic cycle, etc.
@@ -549,8 +549,8 @@ class UnobservedComponents(MLEModel):
             self.autoregressive
         )
 
-        # The ar states are initialized as stationary, so they don't need to be
-        # burned.
+        # The ar states are initialized as stationary, so they do not need to
+        # be burned.
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         k_states
                                         - self.ar_order)
@@ -874,7 +874,7 @@ class UnobservedComponents(MLEModel):
         if self.cycle:
             _start_params['cycle_var'] = var_resid
             # Clip this to make sure it is positive and strictly stationary
-            # (i.e. don't want negative or 1)
+            # (i.e. do not want negative or 1)
             _start_params['cycle_damp'] = np.clip(
                 np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
             )

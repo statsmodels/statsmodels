@@ -476,7 +476,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     A functional boxplot is the analog of a boxplot for functional data.
     Functional data is any type of data that varies over a continuum, i.e.
-    curves, probabillity distributions, seasonal data, etc.
+    curves, probability distributions, seasonal data, etc.
 
     The data is first ordered, the order statistic used here is `banddepth`.
     Plotted are then the median curve, the envelope of the 50% central region,
@@ -543,7 +543,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     Outliers are defined as curves that fall outside the band created by
     multiplying the central region by `wfactor`.  Note that the range over
-    which they fall outside this band doesn't matter, a single data point
+    which they fall outside this band does not matter, a single data point
     outside the band is enough.  If the data is noisy, smoothing may therefore
     be required.
 

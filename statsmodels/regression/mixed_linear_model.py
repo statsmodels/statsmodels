@@ -754,7 +754,7 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 0
 
         if not self.data._param_names:
-            # HACK: could've been set in from_formula already
+            # HACK: could have been set in from_formula already
             # needs refactor
             (param_names, exog_re_names,
              exog_re_names_full) = self._make_param_names(exog_re)
@@ -1105,7 +1105,7 @@ class MixedLM(base.LikelihoodModel):
             regularization, the weights are used directly.
         ceps : positive real scalar
             Fixed effects parameters smaller than this value
-            in magnitude are treaded as being zero.
+            in magnitude are treated as being zero.
         ptol : positive real scalar
             Convergence occurs when the sup norm difference
             between successive values of `fe_params` is less than
@@ -1264,7 +1264,7 @@ class MixedLM(base.LikelihoodModel):
         else:
             cov_re_inv = np.linalg.inv(cov_re)
 
-        # Cache these quantities that don't change.
+        # Cache these quantities that do not change.
         if not hasattr(self, "_endex_li"):
             self._endex_li = []
             for group_ix, _ in enumerate(self.group_labels):
@@ -2025,7 +2025,7 @@ class MixedLM(base.LikelihoodModel):
         free : MixedLMParams object
             If not `None`, this is a mask that allows parameters to be
             held fixed at specified values.  A 1 indicates that the
-            correspondinig parameter is estimated, a 0 indicates that
+            corresponding parameter is estimated, a 0 indicates that
             it is fixed at its starting value.  Setting the `cov_re`
             component to the identity matrix fits a model with
             independent random effects.  Note that some optimization
@@ -2705,7 +2705,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             begin calculating points on the profile likelihood.
         num_high : integer
             The number of points at which to calculate the likelihood
-            abov the MLE of the parameter of interest.
+            above the MLE of the parameter of interest.
         dist_high : float
             The distance above the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.

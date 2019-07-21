@@ -187,7 +187,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     Load the Statewide Crime data set and build a model with regressors
     including the rate of high school graduation (hs_grad), population in urban
     areas (urban), households below poverty line (poverty), and single person
-    households (single).  Outcome variable is the muder rate (murder).
+    households (single).  Outcome variable is the murder rate (murder).
 
     Build a 2 by 2 figure based on poverty showing fitted versus actual murder
     rate, residuals versus the poverty rate, partial regression plot of poverty,
@@ -284,7 +284,7 @@ def _partial_regression(endog, exog_i, exog_others):
          exog_others
 
     """
-    #FIXME: This function doesn't appear to be used.
+    #FIXME: This function does not appear to be used.
     res1a = OLS(endog, exog_others).fit()
     res1b = OLS(exog_i, exog_others).fit()
     res1c = OLS(res1a.resid, res1b.resid).fit()
@@ -321,7 +321,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         labels. If obs_labels is a boolean, the point labels will try to do
         the right thing. First it will try to use the index of data, then
         fall back to the index of exog_i. Alternatively, you may give an
-        array-like object corresponding to the obseveration numbers.
+        array-like object corresponding to the observation numbers.
     labels_kwargs : dict
         Keyword arguments that control annotate for the observation labels.
     ax : Matplotlib AxesSubplot instance, optional
@@ -525,7 +525,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     exog = results.model.exog
 
     k_vars = exog.shape[1]
-    # this function doesn't make sense if k_vars=1
+    # this function does not make sense if k_vars=1
 
     nrows = (len(exog_idx) + 1) // 2
     ncols = 1 if nrows == len(exog_idx) else 2
@@ -778,7 +778,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     .. plot:: plots/graphics_regression_abline.py
 
     """
-    if ax is not None:  # get axis limits first thing, don't change these
+    if ax is not None:  # get axis limits first thing, do not change these
         x = ax.get_xlim()
     else:
         x = None
@@ -1091,7 +1091,7 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     if cond_means is None:
 
         # Below we calculate E[x | focus] where x is each column other
-        # than the focus column.  We don't want the intercept when we do
+        # than the focus column.  We do not want the intercept when we do
         # this so we remove it here.
         pexog = model.exog[:, ix_nf]
         pexog -= pexog.mean(0)

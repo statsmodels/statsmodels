@@ -4,7 +4,7 @@ based on binned data and Maximum Product-of-Spacings
 
 Warning: I'm still finding cut-and-paste and refactoring errors, e.g.
     hardcoded variables from outer scope in functions
-    some results don't seem to make sense for Pareto case,
+    some results do not seem to make sense for Pareto case,
     looks better now after correcting some name errors
 
 initially loosely based on a paper and blog for quantile matching
@@ -32,10 +32,10 @@ binned estimator
 
 example: t-distribution
 * works with quantiles if they contain tail quantiles
-* results with momentcondquant don't look as good as mle estimate
+* results with momentcondquant do not look as good as mle estimate
 
 TODOs
-* rearange and make sure I don't use module globals (as I did initially) DONE
+* rearange and make sure I do not use module globals (as I did initially) DONE
   make two version exactly identified method of moments with fsolve
   and GMM (?) version with fmin
   and maybe the special cases of JD Cook
@@ -136,7 +136,7 @@ def gammamomentcond2(distfn, params, mom2, quantile=None):
 
 
 
-######### fsolve doesn't move in small samples, fmin not very accurate
+######### fsolve does not move in small samples, fmin not very accurate
 def momentcondunbound(distfn, params, mom2, quantile=None):
     '''moment conditions for estimating distribution parameters using method
     of moments, uses mean, variance and one quantile for distributions
@@ -577,7 +577,7 @@ if __name__ == '__main__':
 
     ''' example results:
     standard error for df estimate looks large
-    note: iI don't impose that df is an integer, (b/c not necessary)
+    note: iI do not impose that df is an integer, (b/c not necessary)
     need Monte Carlo to check variance of estimators
 
 
@@ -633,7 +633,7 @@ if __name__ == '__main__':
     #example Maximum Product of Spacings Estimation
 
     # current results:
-    # doesn't look very good yet sensitivity to starting values
+    # does not look very good yet sensitivity to starting values
     # Pareto and Generalized Pareto look like a tough estimation problemprint('\n\nExample: Lognormal Distribution'
 
     print('\n\nExample: Lomax, Pareto, Generalized Pareto Distributions')

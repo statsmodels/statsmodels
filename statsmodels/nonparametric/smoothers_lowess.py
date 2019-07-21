@@ -184,5 +184,5 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
             yfitted_[mask_valid] = yfitted
             yfitted = yfitted_
 
-        # we don't need to return exog anymore
+        # we do not need to return exog anymore
         return yfitted

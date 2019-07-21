@@ -318,7 +318,7 @@ def get_root():
         # Certain runtime workflows (setup.py install/develop in a setuptools
         # tree) execute all dependencies in a single python process, so
         # "versioneer" may be imported multiple times, and python's shared
-        # module-import table will cache the first one. So we can't use
+        # module-import table will cache the first one. So we cannot use
         # os.path.dirname(__file__), as that will find whichever
         # versioneer.py was first imported, even in later projects.
         me = os.path.realpath(os.path.abspath(__file__))
@@ -546,14 +546,14 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
     if verbose:
         print("Tried directories %%s but none started with prefix %%s" %%
               (str(rootdirs), parentdir_prefix))
-    raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
+    raise NotThisMethod("rootdir does not start with parentdir_prefix")
 
 
 @register_vcs_handler("git", "get_keywords")
 def git_get_keywords(versionfile_abs):
     """Extract version information from the given file."""
     # the code embedded in _version.py can just fetch the value of these
-    # keywords. When used from setup.py, we don't want to import _version.py,
+    # keywords. When used from setup.py, we do not want to import _version.py,
     # so we do it with a regexp instead. This function is not used from
     # _version.py.
     keywords = {}
@@ -638,7 +638,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
     """Get version from 'git describe' in the root of the source tree.
 
     This only gets called if the git-archive 'subst' keywords were *not*
-    expanded, and _version.py hasn't already been rewritten with a short
+    expanded, and _version.py has not already been rewritten with a short
     version string, meaning we're inside a checked out source tree.
     """
     GITS = ["git"]
@@ -653,7 +653,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         raise NotThisMethod("'git rev-parse --git-dir' returned error")
 
     # if there is a tag matching tag_prefix, this yields TAG-NUM-gHEX[-dirty]
-    # if there isn't one, this yields HEX[-dirty] (no NUM)
+    # if there is not one, this yields HEX[-dirty] (no NUM)
     describe_out, rc = run_command(GITS, ["describe", "--tags", "--dirty",
                                           "--always", "--long",
                                           "--match", "%%s*" %% tag_prefix],
@@ -697,9 +697,9 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         full_tag = mo.group(1)
         if not full_tag.startswith(tag_prefix):
             if verbose:
-                fmt = "tag '%%s' doesn't start with prefix '%%s'"
+                fmt = "tag '%%s' does not start with prefix '%%s'"
                 print(fmt %% (full_tag, tag_prefix))
-            pieces["error"] = ("tag '%%s' doesn't start with prefix '%%s'"
+            pieces["error"] = ("tag '%%s' does not start with prefix '%%s'"
                                %% (full_tag, tag_prefix))
             return pieces
         pieces["closest-tag"] = full_tag[len(tag_prefix):]
@@ -726,7 +726,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
 
 
 def plus_or_dot(pieces):
-    """Return a + if we don't already have one, else return a ."""
+    """Return a + if we do not already have one, else return a ."""
     if "+" in pieces.get("closest-tag", ""):
         return "."
     return "+"
@@ -778,7 +778,7 @@ def render_pep440_post(pieces):
 
     The ".dev0" means dirty. Note that .dev0 sorts backwards
     (a dirty tree will appear "older" than the corresponding clean one),
-    but you shouldn't be releasing software with -dirty anyways.
+    but you should not be releasing software with -dirty anyways.
 
     Exceptions:
     1: no tags. 0.postDISTANCE[.dev0]
@@ -898,7 +898,7 @@ def get_versions():
     """Get version information or return default if unable to do so."""
     # I am in _version.py, which lives at ROOT/VERSIONFILE_SOURCE. If we have
     # __file__, we can work backwards from there to the root. Some
-    # py2exe/bbfreeze/non-CPython implementations don't do __file__, in which
+    # py2exe/bbfreeze/non-CPython implementations do not do __file__, in which
     # case we can only use expanded keywords.
 
     cfg = get_config()
@@ -945,7 +945,7 @@ def get_versions():
 def git_get_keywords(versionfile_abs):
     """Extract version information from the given file."""
     # the code embedded in _version.py can just fetch the value of these
-    # keywords. When used from setup.py, we don't want to import _version.py,
+    # keywords. When used from setup.py, we do not want to import _version.py,
     # so we do it with a regexp instead. This function is not used from
     # _version.py.
     keywords = {}
@@ -1030,7 +1030,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
     """Get version from 'git describe' in the root of the source tree.
 
     This only gets called if the git-archive 'subst' keywords were *not*
-    expanded, and _version.py hasn't already been rewritten with a short
+    expanded, and _version.py has not already been rewritten with a short
     version string, meaning we're inside a checked out source tree.
     """
     GITS = ["git"]
@@ -1045,7 +1045,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         raise NotThisMethod("'git rev-parse --git-dir' returned error")
 
     # if there is a tag matching tag_prefix, this yields TAG-NUM-gHEX[-dirty]
-    # if there isn't one, this yields HEX[-dirty] (no NUM)
+    # if there is not one, this yields HEX[-dirty] (no NUM)
     describe_out, rc = run_command(GITS, ["describe", "--tags", "--dirty",
                                           "--always", "--long",
                                           "--match", "%s*" % tag_prefix],
@@ -1089,9 +1089,9 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         full_tag = mo.group(1)
         if not full_tag.startswith(tag_prefix):
             if verbose:
-                fmt = "tag '%s' doesn't start with prefix '%s'"
+                fmt = "tag '%s' does not start with prefix '%s'"
                 print(fmt % (full_tag, tag_prefix))
-            pieces["error"] = ("tag '%s' doesn't start with prefix '%s'"
+            pieces["error"] = ("tag '%s' does not start with prefix '%s'"
                                % (full_tag, tag_prefix))
             return pieces
         pieces["closest-tag"] = full_tag[len(tag_prefix):]
@@ -1177,7 +1177,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
     if verbose:
         print("Tried directories %s but none started with prefix %s" %
               (str(rootdirs), parentdir_prefix))
-    raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
+    raise NotThisMethod("rootdir does not start with parentdir_prefix")
 
 
 SHORT_VERSION_PY = """
@@ -1227,7 +1227,7 @@ def write_to_version_file(filename, versions):
 
 
 def plus_or_dot(pieces):
-    """Return a + if we don't already have one, else return a ."""
+    """Return a + if we do not already have one, else return a ."""
     if "+" in pieces.get("closest-tag", ""):
         return "."
     return "+"
@@ -1279,7 +1279,7 @@ def render_pep440_post(pieces):
 
     The ".dev0" means dirty. Note that .dev0 sorts backwards
     (a dirty tree will appear "older" than the corresponding clean one),
-    but you shouldn't be releasing software with -dirty anyways.
+    but you should not be releasing software with -dirty anyways.
 
     Exceptions:
     1: no tags. 0.postDISTANCE[.dev0]
@@ -1534,7 +1534,7 @@ def get_cmdclass():
     #  setuptools/develop -> ?
     #  pip install:
     #   copies source tree to a tempdir before running egg_info/etc
-    #   if .git isn't copied too, 'git describe' will fail
+    #   if .git is not copied too, 'git describe' will fail
     #   then does setup.py bdist_wheel, or sometimes setup.py install
     #  setup.py egg_info -> ?
 
@@ -1561,7 +1561,7 @@ def get_cmdclass():
 
     if "cx_Freeze" in sys.modules:  # cx_freeze enabled?
         from cx_Freeze.dist import build_exe as _build_exe
-        # nczeczulin reports that py2exe won't like the pep440-style string
+        # nczeczulin reports that py2exe will not like the pep440-style string
         # as FILEVERSION, but it can be used for PRODUCTVERSION, e.g.
         # setup(console=[{
         #   "version": versioneer.get_version().split("+", 1)[0], # FILEVERSION
@@ -1734,12 +1734,12 @@ def do_setup():
         else:
             print(" %s unmodified" % ipy)
     else:
-        print(" %s doesn't exist, ok" % ipy)
+        print(" %s does not exist, ok" % ipy)
         ipy = None
 
     # Make sure both the top-level "versioneer.py" and versionfile_source
     # (PKG/_version.py, used by runtime code) are in MANIFEST.in, so
-    # they'll be copied into source distributions. Pip won't be able to
+    # they'll be copied into source distributions. Pip will not be able to
     # install the package without this.
     manifest_in = os.path.join(root, "MANIFEST.in")
     simple_includes = set()
@@ -1751,7 +1751,7 @@ def do_setup():
                         simple_includes.add(include)
     except EnvironmentError:
         pass
-    # That doesn't cover everything MANIFEST.in can do
+    # That does not cover everything MANIFEST.in can do
     # (http://docs.python.org/2/distutils/sourcedist.html#commands), so
     # it might give some false negatives. Appending redundant 'include'
     # lines is safe, though.

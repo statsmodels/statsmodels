@@ -132,7 +132,7 @@ def test_stata_writer_pandas():
     if dta5.dtypes[1] is np.dtype('int64'):
         ptesting.assert_frame_equal(dta.reset_index(), dta5)
     else:
-        # don't check index because it has different size, int32 versus int64
+        # do not check index because it has different size, int32 versus int64
         ptesting.assert_frame_equal(dta4, dta5[dta5.columns[1:]])
 
 def test_stata_writer_unicode():

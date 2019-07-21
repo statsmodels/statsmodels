@@ -1218,8 +1218,8 @@ class KalmanFilter(Representation):
             impulse = np.dot(state_chol, impulse)
 
         # If we have a time-invariant system, we can solve for the IRF directly
-        # Note that it doesn't matter if we have time-invariant intercepts,
-        # since those don't affect the IRF anyway
+        # Note that it does not matter if we have time-invariant intercepts,
+        # since those do not affect the IRF anyway
         time_invariant = (
             self._design.shape[2] == self._obs_cov.shape[2] ==
             self._transition.shape[2] == self._selection.shape[2] ==
@@ -2068,7 +2068,7 @@ class FilterResults(FrozenRepresentation):
                                  nforecast)
 
     def _predict(self, nstatic, ndynamic, nforecast, model):
-        # Note: this doesn't use self, and can either be a static method or
+        # Note: this does not use self, and can either be a static method or
         #       moved outside the class altogether.
 
         # Get the underlying filter

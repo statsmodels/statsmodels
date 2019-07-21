@@ -40,7 +40,7 @@ def fit_l1_cvxopt_cp(
     auto_trim_tol : float
         For sue when trim_mode == 'auto'.  Use
     qc_tol : float
-        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        Print warning and do not allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
     qc_verbose : Boolean
         If true, print out a full QC report upon failure
@@ -116,7 +116,7 @@ def fit_l1_cvxopt_cp(
         auto_trim_tol)
 
     ### Pack up return values for statsmodels
-    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
+    # TODO These retvals are returned as mle_retvals...but the fit was not ML
     if full_output:
         fopt = f_0(x)
         gopt = float('nan')  # Objective is non-differentiable

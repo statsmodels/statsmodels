@@ -919,7 +919,7 @@ def ccf(x, y, unbiased=True):
     series it is recommended to use fft convolution instead.
 
     If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimtor.
+    but the autocorrelation is not an unbiased estimator.
 
     '''
     x = array_like(x, 'x')
@@ -1350,7 +1350,7 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         crit = [np.nan] * 3  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
-        #  nobs - 1, the -1 is to match egranger in Stata, I don't know why.
+        #  nobs - 1, the -1 is to match egranger in Stata, I do not know why.
         #  TODO: check nobs or df = nobs - k
 
     pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
@@ -1367,7 +1367,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
         return
 
     except ValueError as error:
-        if start_params is not None:  # don't recurse again
+        if start_params is not None:  # do not recurse again
             # user supplied start_params only get one chance
             return
         # try a little harder, should be handled in fit really

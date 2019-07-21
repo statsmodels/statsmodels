@@ -69,7 +69,7 @@ def drop_missing(Y, X=None, axis=1):
 
 
 # TODO: needs to better preserve dtype and be more flexible
-# ie., if you still have a string variable in your array you don't
+# ie., if you still have a string variable in your array you do not
 # want to cast it to float
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):

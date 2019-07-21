@@ -190,7 +190,7 @@ def test_initial_probabilities():
     # Invalid known initial probabilities (too many elements)
     assert_raises(ValueError, mod.initialize_known, [0.2, 0.2, 0.6])
 
-    # Invalid known initial probabilities (doesn't sum to 1)
+    # Invalid known initial probabilities (does not sum to 1)
     assert_raises(ValueError, mod.initialize_known, [0.2, 0.2])
 
     # Valid steady-state probabilities

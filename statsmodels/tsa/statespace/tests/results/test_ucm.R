@@ -122,7 +122,7 @@ print(exp(res_reg$optim.out$par)) # [2.215447924]
 print(res_reg$optim.out$value)    # 379.6233483
 
 # Random trend + AR(1)
-# Note: KFAS doesn't want to estimate these parameters, so just fix them
+# Note: KFAS does not want to estimate these parameters, so just fix them
 # to the MLE estimates from Statsmodels and compare the loglikelihood
 # mod.update([])
 mod_rtrend_ar1 <- SSModel(dta$unemp ~ SSMtrend(2, Q=list(matrix(0), matrix(0.0609))) + SSMarima(ar=c(0.9592), Q=matrix(0.0097)), H=matrix(0))

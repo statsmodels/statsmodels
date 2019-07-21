@@ -164,7 +164,7 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
     alpha = base_alpha * N * sp.ones((num_nonconst_covariates+1, num_targets-1))
-    alpha[0,:] = 0  # Don't regularize the intercept
+    alpha[0,:] = 0  # Do not regularize the intercept
 
     #### Make the data and model
     exog = get_exog(N, num_nonconst_covariates, cor_length)

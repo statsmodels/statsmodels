@@ -264,7 +264,7 @@ class DiscreteModel(base.LikelihoodModel):
         auto_trim_tol : float
             For sue when trim_mode == 'auto'.  Use
         qc_tol : float
-            Print warning and don't allow auto trim when (ii) (above) is
+            Print warning and do not allow auto trim when (ii) (above) is
             violated by this much.
         qc_verbose : Boolean
             If true, print out a full QC report upon failure
@@ -587,7 +587,7 @@ class MultinomialModel(BinaryModel):
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
-        if exog is None: # do here to accomodate user-given exog
+        if exog is None: # do here to accommodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
             exog = exog[None]
@@ -2492,7 +2492,7 @@ class NegativeBinomial(CountModel):
 
     References
     ----------
-    Greene, W. 2008. "Functional forms for the negtive binomial model
+    Greene, W. 2008. "Functional forms for the negative binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
@@ -2526,7 +2526,7 @@ class NegativeBinomial(CountModel):
         else:
             self.k_extra = 0
         # store keys for extras if we need to recreate model instance
-        # we need to append keys that don't go to super
+        # we need to append keys that do not go to super
         self._init_keys.append('loglike_method')
 
     def _initialize(self):
@@ -2840,7 +2840,7 @@ class NegativeBinomial(CountModel):
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
 
-        # Note: don't let super handle robust covariance because it has
+        # Note: do not let super handle robust covariance because it has
         # transformed params
         self._transparams = False # always define attribute
         if self.loglike_method.startswith('nb') and method not in ['newton',
@@ -2882,7 +2882,7 @@ class NegativeBinomial(CountModel):
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
-            self._transparams = False # don't need to transform anymore now
+            self._transparams = False # do not need to transform anymore now
             # change from lnalpha to alpha
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
@@ -2908,7 +2908,7 @@ class NegativeBinomial(CountModel):
 
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
-            # don't penalize alpha if alpha is scalar
+            # do not penalize alpha if alpha is scalar
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
@@ -3385,7 +3385,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.__dict__.update(mlefit.__dict__)
 
         if not hasattr(self, 'cov_type'):
-            # do this only if super, i.e. mlefit didn't already add cov_type
+            # do this only if super, i.e. mlefit did not already add cov_type
             # robust covariance
             if use_t is not None:
                 self.use_t = use_t

@@ -412,7 +412,7 @@ class LeaveOneOut(object):
 
     Notes
     -----
-    A little lighter weight than sklearn LOO. We don't need test index.
+    A little lighter weight than sklearn LOO. We do not need test index.
     Also passes views on X, not the index.
     """
     def __init__(self, X):

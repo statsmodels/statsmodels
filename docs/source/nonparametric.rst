@@ -11,7 +11,7 @@ includes kernel density estimation for univariate and multivariate data,
 kernel regression and locally weighted scatterplot smoothing (lowess).
 
 sandbox.nonparametric contains additional functions that are work in progress
-or don't have unit tests yet. We are planning to include here nonparametric
+or do not have unit tests yet. We are planning to include here nonparametric
 density estimators, especially based on kernel or orthogonal polynomials,
 smoothers, and tools for nonparametric models and methods in other parts of
 statsmodels.

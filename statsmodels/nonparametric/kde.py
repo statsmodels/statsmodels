@@ -318,7 +318,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     nobs = len(X) # after trim
 
     if gridsize is None:
-        gridsize = max(nobs,50) # don't need to resize if no FFT
+        gridsize = max(nobs,50) # do not need to resize if no FFT
 
         # handle weights
     if weights is None:
@@ -354,7 +354,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     kern.seth(bw)
 
     # truncate to domain
-    if kern.domain is not None: # won't work for piecewise kernels like parzen
+    if kern.domain is not None: # will not work for piecewise kernels like parzen
         z_lo, z_high = kern.domain
         domain_mask = (k < z_lo) | (k > z_high)
         k = kern(k) # estimate density
@@ -422,7 +422,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Notes
     -----
-    Only the default kernel is implemented. Weights aren't implemented yet.
+    Only the default kernel is implemented. Weights are not implemented yet.
     This follows Silverman (1982) with changes suggested by Jones and Lotwick
     (1984). However, the discretization step is replaced by linear binning
     of Fan and Marron (1994). This should be extended to accept the parts
@@ -442,7 +442,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         Series C. 31.2, 93-9.
     """
     X = np.asarray(X)
-    X = X[np.logical_and(X > clip[0], X < clip[1])] # won't work for two columns.
+    X = X[np.logical_and(X > clip[0], X < clip[1])] # will not work for two columns.
                                                 # will affect underlying data?
 
     # Get kernel object corresponding to selection
@@ -488,7 +488,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     y = forrt(binned)
 
     # step 3 and 4 for optimal bw compute zstar and the density estimate f
-    # don't have to redo the above if just changing bw, ie., for cross val
+    # do not have to redo the above if just changing bw, ie., for cross val
 
 #NOTE: silverman_transform is the closed form solution of the FFT of the
 #gaussian kernel. Not yet sure how to generalize it.
@@ -544,4 +544,4 @@ if __name__ == "__main__":
     except:
 #        ft = np.loadtxt('./ft_silver.csv')
 #        smooth = np.loadtxt('./smooth_silver.csv')
-        print("Didn't get the estimates from the Silverman algorithm")
+        print("Did not get the estimates from the Silverman algorithm")

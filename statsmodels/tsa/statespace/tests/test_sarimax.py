@@ -977,7 +977,7 @@ class SARIMAXCoverageTest(object):
         )
 
     def test_start_params(self):
-        # just a quick test that start_params isn't throwing an exception
+        # just a quick test that start_params is not throwing an exception
         # (other than related to invertibility)
         stat = self.model.enforce_stationarity
         inv = self.model.enforce_invertibility
@@ -1970,7 +1970,7 @@ def test_simple_time_varying():
         time_varying_regression=True,
         mle_regression=False)
 
-    # Ignore the warning that MLE doesn't converge
+    # Ignore the warning that MLE does not converge
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = mod.fit(disp=-1)
@@ -2267,7 +2267,7 @@ def check_concentrated_scale(filter_univariate=False):
         # the non-concentrated model will expect as parameters
         if kwargs['time_varying_regression'] and kwargs['exog'] is not None:
             k_snr += 1
-        # Note: the log-likelihood isn't exactly the same between concentrated
+        # Note: the log-likelihood is not exactly the same between concentrated
         # and non-concentrated models with time-varying regression, so this
         # combinations raises NotImplementedError.
 
@@ -2309,7 +2309,7 @@ def check_concentrated_scale(filter_univariate=False):
             desired = getattr(res_orig.filter_results, name)
             assert_allclose(actual, desired, atol=atol)
 
-        # Note: don't want to compare the elements from any diffuse
+        # Note: do not want to compare the elements from any diffuse
         # initialization for things like covariances, so only compare for
         # periods past the loglikelihood_burn period
         filter_attr_burn = ['llf_obs', 'standardized_forecasts_error',
@@ -2386,7 +2386,7 @@ def check_concentrated_scale(filter_univariate=False):
         assert_allclose(actual.se_mean, desired.se_mean, atol=atol)
 
         # Test simulate
-        # Simulate is currently broken for time-varying models, so don't try
+        # Simulate is currently broken for time-varying models, so do not try
         # to test it here
         np.random.seed(13847)
         if mod_conc.ssm.time_invariant:

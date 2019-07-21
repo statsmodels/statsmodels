@@ -88,7 +88,7 @@ to_email = [email_name,
 # ------------ FUNCTIONS ------------
 
 def create_virtualenv():
-    # make a virtualenv for installation if it doesn't exist
+    # make a virtualenv for installation if it does not exist
     # and easy_install sphinx
     if not os.path.exists(virtual_dir):
         retcode = subprocess.call(['/home/skipper/.local/bin/virtualenv',
@@ -105,7 +105,7 @@ def create_virtualenv():
 
 def create_update_gitdir():
     """
-    Creates a directory for local repo if it doesn't exist,
+    Creates a directory for local repo if it does not exist,
     updates repo otherwise.
     """
     if not os.path.exists(gitdname):
@@ -115,7 +115,7 @@ def create_update_gitdir():
             msg = """There was a problem cloning the repo"""
             raise Exception(msg)
     else:
-        # directory exists, can't pull if you're not on a branch
+        # directory exists, cannot pull if you're not on a branch
         # just delete it and clone again. Lazy but clean solution.
         shutil.rmtree(gitdname)
         create_update_gitdir()
@@ -172,7 +172,7 @@ def newdir(dirs):
                    os.path.isfile(os.path.join(dname, i))])
     newdir = newdirs.difference(dirs)
     if len(newdir) != 1:
-        msg = ("There was more than one directory created. Don't know what "
+        msg = ("There was more than one directory created. Do not know what "
                "to delete.")
         raise Exception(msg)
     newdir = newdir.pop()
@@ -359,7 +359,7 @@ def main():
         except Exception:
             msg += traceback.format_exc()
 
-    if msg == '':  # if it doesn't something went wrong and was caught above
+    if msg == '':  # if it does not something went wrong and was caught above
         email_me()
     else:
         email_me(msg)

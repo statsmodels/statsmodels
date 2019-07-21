@@ -744,7 +744,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # #### `transform_params` and `untransform_params`
 #
 # The optimizer selects possibly parameter values in an unconstrained way.
-# That's not usually desired (since variances can't be negative, for
+# That's not usually desired (since variances cannot be negative, for
 # example), and `transform_params` is used to transform the unconstrained
 # values used by the optimizer to constrained values appropriate to the
 # model. Variances terms are typically squared (to force them to be
@@ -755,7 +755,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # parameters appropriate to the optimizer before we can begin the
 # optimization routine).
 #
-# Even though we don't need to transform or untransform our new parameters
+# Even though we do not need to transform or untransform our new parameters
 # (the loadings can in theory take on any values), we still need to modify
 # this function for two reasons:
 #

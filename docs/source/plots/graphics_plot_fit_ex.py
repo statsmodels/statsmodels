@@ -8,7 +8,7 @@ Author: Padarn Wilson
 """
 
 # Load the Statewide Crime data set and perform linear regression with
-#    'poverty' and 'hs_grad' as variables and 'muder' as the response
+#    'poverty' and 'hs_grad' as variables and 'murder' as the response
 
 
 import statsmodels.api as sm

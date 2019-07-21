@@ -368,7 +368,7 @@ class SimpleTable(list):
         fmt = self._get_fmt('txt', **fmt_dict)
         # get rows formatted as strings
         formatted_rows = [row.as_string('text', **fmt) for row in self]
-        rowlen = len(formatted_rows[-1])  # don't use header row
+        rowlen = len(formatted_rows[-1])  # do not use header row
 
         # place decoration above the table body, if desired
         table_dec_above = fmt.get('table_dec_above', '=')
@@ -618,7 +618,7 @@ class Row(list):
             elif output_format == 'latex':
                 result = row_as_string + "\n" + dec_below
             else:
-                raise ValueError("I can't decorate a %s header." %
+                raise ValueError("I cannot decorate a %s header." %
                                  output_format)
         return result
 

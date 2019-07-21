@@ -442,7 +442,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         else:
             _smooth_method = self.smooth_method
 
-        # Make sure we don't have an invalid smooth method for our filter
+        # Make sure we do not have an invalid smooth method for our filter
         # method
         if((_smooth_method & SMOOTH_UNIVARIATE) and not (self.filter_method & FILTER_UNIVARIATE) or 
                 (self.filter_method & FILTER_UNIVARIATE) and not (_smooth_method & SMOOTH_UNIVARIATE)):
@@ -482,7 +482,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         if not t == 0 and t >= self.model.nobs:
             raise IndexError("Observation index out of range")
 
-        # Make sure we haven't changed filter methods in-between seeking
+        # Make sure we have not changed filter methods in-between seeking
         if self.check_filter_method_changed():
             raise RuntimeError("Filter method in associated Kalman filter was"
                                " changed in between smoother seek() calls."
@@ -519,7 +519,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         if not self.t >= 0:
             raise StopIteration
 
-        # Make sure we haven't changed filter methods in-between iterations
+        # Make sure we have not changed filter methods in-between iterations
         if self.check_filter_method_changed():
             raise RuntimeError("Filter method in associated Kalman filter was"
                                " changed in between smoother iterations."
@@ -623,9 +623,9 @@ cdef class {{prefix}}KalmanSmoother(object):
             transform_diagonalize = self.kfilter.filter_method & FILTER_UNIVARIATE
 
         # Initialize object-level pointers to statespace arrays
-        # Note: doesn't matter what transformations were required for the
-        #       filter; we don't need to perform them for the smoother
-        # TODO  actually we do, to get _design, _obs_cov, etc. However we don't
+        # Note: does not matter what transformations were required for the
+        #       filter; we do not need to perform them for the smoother
+        # TODO  actually we do, to get _design, _obs_cov, etc. However we do not
         #       need it to recalculate the selected_obs and loglikelihood, so
         #       need to decouple those parts from the generalized collapse
         self.model.seek(self.t, transform_diagonalize, transform_generalized_collapse)
@@ -646,7 +646,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         # )
 
         # If a collapse should have occurred, the dimensions need to be
-        # adjusted (because we didn't tell the model about the collapse in the
+        # adjusted (because we did not tell the model about the collapse in the
         # seek() call above)
         # if collapse_occurred:
         #     self.model.set_dimensions(self.model.k_states,

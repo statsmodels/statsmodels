@@ -181,7 +181,7 @@ cdef class {{prefix}}KalmanFilter(object):
     and redefined matrices based on missing values.  
 
     `post_convergence` handles copying arrays from time $t-1$ to time $t$ when
-    the Kalman filter has converged and they don't need to be re-calculated.  
+    the Kalman filter has converged and they do not need to be re-calculated.  
 
     `forecasting` calls the Kalman filter `forcasting_<filter type>` routine
 
@@ -293,7 +293,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # cdef readonly {{cython_type}} [::1,:,:] tmp1, tmp3
 
     # Holds the determinant across calculations (this is done because after
-    # convergence, it doesn't need to be re-calculated anymore)
+    # convergence, it does not need to be re-calculated anymore)
     # cdef readonly {{cython_type}} determinant
 
     # ### Pointers to current-iteration arrays
@@ -915,7 +915,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Handle missing data
         if self.model._nmissing > 0 or (self.model.has_missing and self.filter_method & FILTER_UNIVARIATE):
             # TODO there is likely a way to allow convergence and the univariate filter, but it
-            # doesn't work "out-of-the-box" right now
+            # does not work "out-of-the-box" right now
             self.converged = 0
 
     cdef void initialize_filter_object_pointers(self):

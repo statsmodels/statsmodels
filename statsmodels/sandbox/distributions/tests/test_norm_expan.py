@@ -68,7 +68,7 @@ class TestExpandNormMom(CheckExpandNorm):
 
 
 class TestExpandNormSample(object):
-    # don't subclass CheckExpandNorm,
+    # do not subclass CheckExpandNorm,
     # precision not high enough because of mvsk from data
 
     @classmethod

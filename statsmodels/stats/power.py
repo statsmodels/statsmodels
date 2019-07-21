@@ -43,7 +43,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
         df = nobs - 1
 
     if alternative in ['two-sided', '2s']:
-        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+        alpha_ = alpha / 2.  #no inplace changes, does not work
     elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:
@@ -76,7 +76,7 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     d = effect_size
 
     if alternative in ['two-sided', '2s']:
-        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+        alpha_ = alpha / 2.  #no inplace changes, does not work
     elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:

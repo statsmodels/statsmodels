@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     y00 = 0.5*np.random.randn(nobs+1)
 
-    # I don't think a trend is handled yet
+    # I do not think a trend is handled yet
     data = np.arange(nobs) + y00[1:] + 0.2*y00[:-1] + 0.1*np.random.randn(nobs)
     #Are these AR(1) or MA(1) errors ???
     data = y00[1:] + 0.6*y00[:-1] #+ 0.1*np.random.randn(nobs)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     exog = np.ones(nobs)
     exog = group_dummy
     mod = PanelAR1(y, exog, groups=groups)
-    #mod = PanelAR1(data, exog, groups=groups) #data doesn't contain different means
+    #mod = PanelAR1(data, exog, groups=groups) #data does not contain different means
     #print(mod.ar1filter(mod.endog, 1))
     resa, reso = mod.fit()
     print(resa[0], reso.params)

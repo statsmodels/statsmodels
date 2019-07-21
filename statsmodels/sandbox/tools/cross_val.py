@@ -307,7 +307,7 @@ class KStepAhead(object):
 
         Notes
         -----
-        I don't think this is really useful, because it can be done with
+        I do not think this is really useful, because it can be done with
         a very simple loop instead.
         Useful as a plugin, but it could return slices instead for faster array access.
 

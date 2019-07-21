@@ -24,7 +24,7 @@ def _asarray_2d_null_rows(x):
     Makes sure input is an array and is 2d. Makes sure output is 2d. True
     indicates a null in the rows of 2d x.
     """
-    #Have to have the asarrays because isnull doesn't account for array_like
+    #Have to have the asarrays because isnull does not account for array_like
     #input
     x = np.asarray(x)
     if x.ndim == 1:
@@ -148,7 +148,7 @@ class ModelData(object):
                         break
                     values.append(value)
                 else:
-                    # we didn't break, no column of ones
+                    # we did not break, no column of ones
                     pos = (np.array(values) != 0)
                     if pos.any():
                         # take the first nonzero column
@@ -160,7 +160,7 @@ class ModelData(object):
             elif self.k_constant == 0:
                 check_implicit = True
             else:
-                # shouldn't be here
+                # should not be here
                 pass
 
             if check_implicit and not hasconst:
@@ -174,7 +174,7 @@ class ModelData(object):
                 self.const_idx = None
             elif hasconst:
                 # Ensure k_constant is 1 any time hasconst is True
-                # even if one isn't found
+                # even if one is not found
                 self.k_constant = 1
 
     @classmethod
@@ -232,7 +232,7 @@ class ModelData(object):
                     combined_2d_names += [key]
                 else:
                     raise ValueError("Arrays with more than 2 dimensions "
-                                     "aren't yet handled")
+                                     "are not yet handled")
 
         if missing_idx is not None:
             nan_mask = missing_idx
@@ -261,7 +261,7 @@ class ModelData(object):
             if combined_2d:
                 nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
-        if not np.any(nan_mask):  # no missing don't do anything
+        if not np.any(nan_mask):  # no missing do not do anything
             combined = dict(zip(combined_names, combined))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names, combined_2d)))
@@ -548,7 +548,7 @@ class PandasData(ModelData):
 
     def attach_columns(self, result):
         # this can either be a 1d array or a scalar
-        # don't squeeze because it might be a 2d row array
+        # do not squeeze because it might be a 2d row array
         # if it needs a squeeze, the bug is elsewhere
         if result.ndim <= 1:
             return Series(result, index=self.param_names)
