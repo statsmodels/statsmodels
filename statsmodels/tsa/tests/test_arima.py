@@ -1,28 +1,28 @@
+from statsmodels.compat.platform import (PLATFORM_OSX, PLATFORM_WIN,
+                                         PLATFORM_WIN32)
 from statsmodels.compat.python import lrange
-from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
-from io import BytesIO
-import pickle
 import os
+import pickle
 import warnings
+from io import BytesIO
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
-                           assert_raises)
 import pandas as pd
-from pandas import DatetimeIndex, date_range, period_range
 import pytest
+from numpy.testing import assert_almost_equal, assert_allclose, assert_raises
+from pandas import DatetimeIndex, date_range, period_range
 
-from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
-from statsmodels.tools.testing import assert_equal
+from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import (
     ValueWarning, HessianInversionWarning, SpecificationWarning)
-from statsmodels.tsa.arma_mle import Arma
+from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
-from statsmodels.regression.linear_model import OLS
-from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
+from statsmodels.tsa.arma_mle import Arma
+from statsmodels.tsa.tests.results import results_arma, results_arima
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -41,40 +41,31 @@ sun_predict_dates = period_range(start='2008', end='2033', freq='A')
 
 
 def test_compare_arma():
-    #this is a preliminary test to compare arma_kf, arma_cond_ls and arma_cond_mle
-    #the results returned by the fit methods are incomplete
-    #for now without random.seed
+    # this is a preliminary test to compare arma_kf, arma_cond_ls
+    # and arma_cond_mle
+    # the results returned by the fit methods are incomplete
+    # for now without random.seed
 
     np.random.seed(9876565)
     x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
-            burnin=1000)
+                                                             burnin=1000)
 
-    # this used kalman filter through descriptive
-    #d = ARMA(x)
-    #d.fit((1,1), trend='nc')
-    #dres = d.res
-
-    modkf = ARMA(x, (1,1))
-    ##rkf = mkf.fit((1,1))
-    ##rkf.params
+    modkf = ARMA(x, (1, 1))
     reskf = modkf.fit(trend='nc', disp=-1)
     dres = reskf
 
     modc = Arma(x)
-    resls = modc.fit(order=(1,1))
-    rescm = modc.fit_mle(order=(1,1), start_params=[0.4,0.4, 1.], disp=0)
+    resls = modc.fit(order=(1, 1))
+    rescm = modc.fit_mle(order=(1, 1), start_params=[0.4, 0.4, 1.], disp=0)
 
-    #decimal 1 corresponds to threshold of 5% difference
-    #still different sign  corrcted
-    #assert_almost_equal(np.abs(resls[0] / d.params), np.ones(d.params.shape), decimal=1)
+    # decimal 1 corresponds to threshold of 5% difference
+    # still different sign  corrcted
     assert_almost_equal(resls[0] / dres.params, np.ones(dres.params.shape),
-        decimal=1)
-    #rescm also contains variance estimate as last element of params
+                        decimal=1)
 
-    #assert_almost_equal(np.abs(rescm.params[:-1] / d.params), np.ones(d.params.shape), decimal=1)
+    # rescm also contains variance estimate as last element of params
     assert_almost_equal(rescm.params[:-1] / dres.params,
                         np.ones(dres.params.shape), decimal=1)
-    #return resls[0], d.params, rescm.params
 
 
 class CheckArmaResultsMixin(object):
@@ -86,7 +77,7 @@ class CheckArmaResultsMixin(object):
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params,
-                self.decimal_params)
+                            self.decimal_params)
 
     decimal_aic = DECIMAL_4
 
@@ -102,13 +93,13 @@ class CheckArmaResultsMixin(object):
 
     def test_arroots(self):
         assert_almost_equal(self.res1.arroots, self.res2.arroots,
-                    self.decimal_arroots)
+                            self.decimal_arroots)
 
     decimal_maroots = DECIMAL_4
 
     def test_maroots(self):
         assert_almost_equal(self.res1.maroots, self.res2.maroots,
-                    self.decimal_maroots)
+                            self.decimal_maroots)
 
     decimal_bse = DECIMAL_2
 
@@ -119,7 +110,7 @@ class CheckArmaResultsMixin(object):
 
     def test_covparams(self):
         assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
-                self.decimal_cov_params)
+                            self.decimal_cov_params)
 
     decimal_hqic = DECIMAL_4
 
@@ -135,21 +126,21 @@ class CheckArmaResultsMixin(object):
 
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid,
-                self.decimal_resid)
+                            self.decimal_resid)
 
     decimal_fittedvalues = DECIMAL_4
 
     def test_fittedvalues(self):
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
-                self.decimal_fittedvalues)
+                            self.decimal_fittedvalues)
 
     decimal_pvalues = DECIMAL_2
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues,
-                    self.decimal_pvalues)
+                            self.decimal_pvalues)
 
-    decimal_t = DECIMAL_2 # only 2 decimal places in gretl output
+    decimal_t = DECIMAL_2  # only 2 decimal places in gretl output
 
     def test_tvalues(self):
         assert_almost_equal(self.res1.tvalues, self.res2.tvalues,
@@ -159,11 +150,15 @@ class CheckArmaResultsMixin(object):
 
     def test_sigma2(self):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
-                self.decimal_sigma2)
+                            self.decimal_sigma2)
 
     @pytest.mark.smoke
     def test_summary(self):
         self.res1.summary()
+
+    @pytest.mark.smoke
+    def test_summary2(self):
+        self.res1.summary2()
 
 
 class CheckForecastMixin(object):
@@ -171,13 +166,13 @@ class CheckForecastMixin(object):
 
     def test_forecast(self):
         assert_almost_equal(self.res1.forecast_res, self.res2.forecast,
-                self.decimal_forecast)
+                            self.decimal_forecast)
 
     decimal_forecasterr = DECIMAL_4
 
     def test_forecasterr(self):
         assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
-                self.decimal_forecasterr)
+                            self.decimal_forecasterr)
 
 
 class CheckDynamicForecastMixin(object):
@@ -203,23 +198,23 @@ class CheckArimaResultsMixin(CheckArmaResultsMixin):
 
     def test_predict_levels(self):
         assert_almost_equal(self.res1.predict(typ='levels'), self.res2.linear,
-                self.decimal_predict_levels)
+                            self.decimal_predict_levels)
 
 
 class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,0]
-        cls.res1 = ARMA(endog, order=(1,1)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 0]
+        cls.res1 = ARMA(endog, order=(1, 1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11()
 
     def test_pickle(self):
         fh = BytesIO()
-        #test wrapped results load save pickle
+        # test wrapped results load save pickle
         self.res1.save(fh)
-        fh.seek(0,0)
+        fh.seek(0, 0)
         res_unpickled = self.res1.__class__.load(fh)
         assert type(res_unpickled) is type(self.res1)  # noqa: E721
 
@@ -227,8 +222,8 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,1]
-        cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 1]
+        cls.res1 = ARMA(endog, order=(1, 4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
 
 
@@ -236,10 +231,10 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,2]
-        cls.res1 = ARMA(endog, order=(4,1)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 2]
+        cls.res1 = ARMA(endog, order=(4, 1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma41()
         cls.decimal_maroots = DECIMAL_3
 
@@ -247,56 +242,56 @@ class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,3]
-        cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 3]
+        cls.res1 = ARMA(endog, order=(2, 2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
 
 
 class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,4]
-        cls.res1 = ARMA(endog, order=(5,0)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 4]
+        cls.res1 = ARMA(endog, order=(5, 0)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50()
 
 
 class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,5]
-        cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
+        endog = y_arma[:, 5]
+        cls.res1 = ARMA(endog, order=(0, 2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
 
 
 class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,6]
-        cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 6]
+        cls.res1 = ARMA(endog, order=(1, 1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
 
 
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,7]
-        cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 7]
+        cls.res1 = ARMA(endog, order=(1, 4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
 
 
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,8]
+        endog = y_arma[:, 8]
         cls.res2 = results_arma.Y_arma41c()
-        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1,
-                                                start_params=cls.res2.params)
+        cls.res1 = ARMA(endog, order=(4, 1)).fit(trend="c", disp=-1,
+                                                 start_params=cls.res2.params)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
@@ -306,8 +301,8 @@ class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
 class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,9]
-        cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 9]
+        cls.res1 = ARMA(endog, order=(2, 2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
 
     def test_summary(self):
@@ -340,18 +335,18 @@ class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,10]
-        cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 10]
+        cls.res1 = ARMA(endog, order=(5, 0)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50c()
 
 
 class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,11]
-        cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 11]
+        cls.res1 = ARMA(endog, order=(0, 2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
 
 
@@ -359,9 +354,9 @@ class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
 class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,0]
-        cls.res1 = ARMA(endog, order=(1,1)).fit(method="css", trend='nc',
-                            disp=-1)
+        endog = y_arma[:, 0]
+        cls.res1 = ARMA(endog, order=(1, 1)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma11("css")
         cls.decimal_t = DECIMAL_1
 
@@ -370,9 +365,9 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,1]
-        cls.res1 = ARMA(endog, order=(1,4)).fit(method="css", trend='nc',
-                            disp=-1)
+        endog = y_arma[:, 1]
+        cls.res1 = ARMA(endog, order=(1, 4)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma14("css")
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
@@ -384,9 +379,9 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,2]
-        cls.res1 = ARMA(endog, order=(4,1)).fit(method="css", trend='nc',
-                        disp=-1)
+        endog = y_arma[:, 2]
+        cls.res1 = ARMA(endog, order=(4, 1)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma41("css")
         cls.decimal_t = DECIMAL_1
         cls.decimal_pvalues = 0
@@ -394,13 +389,13 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_maroots = DECIMAL_1
 
 
-#same notes as above
+# same notes as above
 class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,3]
-        cls.res1 = ARMA(endog, order=(2,2)).fit(method="css", trend='nc',
-                            disp=-1)
+        endog = y_arma[:, 3]
+        cls.res1 = ARMA(endog, order=(2, 2)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma22("css")
         cls.decimal_t = DECIMAL_1
         cls.decimal_resid = DECIMAL_3
@@ -408,39 +403,39 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_fittedvalues = DECIMAL_3
 
 
-#NOTE: gretl just uses least squares for AR CSS
+# NOTE: gretl just uses least squares for AR CSS
 # so BIC, etc. is
 # -2*res1.llf + np.log(nobs)*(res1.q+res1.p+res1.k)
 # with no adjustment for p and no extra sigma estimate
-#NOTE: so our tests use x-12 arima results which agree with us and are
+# NOTE: so our tests use x-12 arima results which agree with us and are
 # consistent with the rest of the models
 class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,4]
-        cls.res1 = ARMA(endog, order=(5,0)).fit(method="css", trend='nc',
-                            disp=-1)
+        endog = y_arma[:, 4]
+        cls.res1 = ARMA(endog, order=(5, 0)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma50("css")
         cls.decimal_t = 0
-        cls.decimal_llf = DECIMAL_1 # looks like rounding error?
+        cls.decimal_llf = DECIMAL_1  # looks like rounding error?
 
 
 class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,5]
-        cls.res1 = ARMA(endog, order=(0,2)).fit(method="css", trend='nc',
-                            disp=-1)
+        endog = y_arma[:, 5]
+        cls.res1 = ARMA(endog, order=(0, 2)).fit(method="css", trend='nc',
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma02("css")
 
 
-#NOTE: our results are close to --x-12-arima option and R
+# NOTE: our results are close to --x-12-arima option and R
 class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,6]
-        cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 6]
+        cls.res1 = ARMA(endog, order=(1, 1)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma11c("css")
         cls.decimal_params = DECIMAL_3
         cls.decimal_cov_params = DECIMAL_3
@@ -450,9 +445,9 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,7]
-        cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 7]
+        cls.res1 = ARMA(endog, order=(1, 4)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma14c("css")
         cls.decimal_t = DECIMAL_1
         cls.decimal_pvalues = DECIMAL_1
@@ -461,9 +456,9 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,8]
-        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 8]
+        cls.res1 = ARMA(endog, order=(4, 1)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma41c("css")
         cls.decimal_t = DECIMAL_1
         cls.decimal_cov_params = DECIMAL_1
@@ -474,9 +469,9 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,9]
-        cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 9]
+        cls.res1 = ARMA(endog, order=(2, 2)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma22c("css")
         cls.decimal_t = 0
         cls.decimal_pvalues = DECIMAL_1
@@ -485,9 +480,9 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,10]
-        cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 10]
+        cls.res1 = ARMA(endog, order=(5, 0)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma50c("css")
         cls.decimal_t = DECIMAL_1
         cls.decimal_params = DECIMAL_3
@@ -497,95 +492,152 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
 class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,11]
-        cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", method="css",
-                        disp=-1)
+        endog = y_arma[:, 11]
+        cls.res1 = ARMA(endog, order=(0, 2)).fit(trend="c", method="css",
+                                                 disp=-1)
         cls.res2 = results_arma.Y_arma02c("css")
 
 
-def test_reset_trend():
-    endog = y_arma[:,0]
-    mod = ARMA(endog, order=(1,1))
-    res1 = mod.fit(trend="c", disp=-1)
-    res2 = mod.fit(trend="nc", disp=-1)
-    assert_equal(len(res1.params), len(res2.params)+1)
+def test_reset_trend_error():
+    endog = y_arma[:, 0]
+    mod = ARMA(endog, order=(1, 1))
+    mod.fit(trend="c", disp=-1)
+    with pytest.raises(RuntimeError):
+        mod.fit(trend="nc", disp=-1)
 
 
 @pytest.mark.slow
 def test_start_params_bug():
     data = np.array([1368., 1187, 1090, 1439, 2362, 2783, 2869, 2512, 1804,
-    1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997, 1862, 2525,
-    3250, 4023, 4018, 3585, 3004, 2500, 2441, 2749, 2466, 2157, 1847, 1463,
-    1146, 851, 993, 1448, 1719, 1709, 1455, 1950, 1763, 2075, 2343, 3570,
-    4690, 3700, 2339, 1679, 1466, 998, 853, 835, 922, 851, 1125, 1299, 1105,
-    860, 701, 689, 774, 582, 419, 846, 1132, 902, 1058, 1341, 1551, 1167,
-    975, 786, 759, 751, 649, 876, 720, 498, 553, 459, 543, 447, 415, 377,
-    373, 324, 320, 306, 259, 220, 342, 558, 825, 994, 1267, 1473, 1601,
-    1896, 1890, 2012, 2198, 2393, 2825, 3411, 3406, 2464, 2891, 3685, 3638,
-    3746, 3373, 3190, 2681, 2846, 4129, 5054, 5002, 4801, 4934, 4903, 4713,
-    4745, 4736, 4622, 4642, 4478, 4510, 4758, 4457, 4356, 4170, 4658, 4546,
-    4402, 4183, 3574, 2586, 3326, 3948, 3983, 3997, 4422, 4496, 4276, 3467,
-    2753, 2582, 2921, 2768, 2789, 2824, 2482, 2773, 3005, 3641, 3699, 3774,
-    3698, 3628, 3180, 3306, 2841, 2014, 1910, 2560, 2980, 3012, 3210, 3457,
-    3158, 3344, 3609, 3327, 2913, 2264, 2326, 2596, 2225, 1767, 1190, 792,
-    669, 589, 496, 354, 246, 250, 323, 495, 924, 1536, 2081, 2660, 2814, 2992,
-    3115, 2962, 2272, 2151, 1889, 1481, 955, 631, 288, 103, 60, 82, 107, 185,
-    618, 1526, 2046, 2348, 2584, 2600, 2515, 2345, 2351, 2355, 2409, 2449,
-    2645, 2918, 3187, 2888, 2610, 2740, 2526, 2383, 2936, 2968, 2635, 2617,
-    2790, 3906, 4018, 4797, 4919, 4942, 4656, 4444, 3898, 3908, 3678, 3605,
-    3186, 2139, 2002, 1559, 1235, 1183, 1096, 673, 389, 223, 352, 308, 365,
-    525, 779, 894, 901, 1025, 1047, 981, 902, 759, 569, 519, 408, 263, 156,
-    72, 49, 31, 41, 192, 423, 492, 552, 564, 723, 921, 1525, 2768, 3531, 3824,
-    3835, 4294, 4533, 4173, 4221, 4064, 4641, 4685, 4026, 4323, 4585, 4836,
-    4822, 4631, 4614, 4326, 4790, 4736, 4104, 5099, 5154, 5121, 5384, 5274,
-    5225, 4899, 5382, 5295, 5349, 4977, 4597, 4069, 3733, 3439, 3052, 2626,
-    1939, 1064, 713, 916, 832, 658, 817, 921, 772, 764, 824, 967, 1127, 1153,
-    824, 912, 957, 990, 1218, 1684, 2030, 2119, 2233, 2657, 2652, 2682, 2498,
-    2429, 2346, 2298, 2129, 1829, 1816, 1225, 1010, 748, 627, 469, 576, 532,
-    475, 582, 641, 605, 699, 680, 714, 670, 666, 636, 672, 679, 446, 248, 134,
-    160, 178, 286, 413, 676, 1025, 1159, 952, 1398, 1833, 2045, 2072, 1798,
-    1799, 1358, 727, 353, 347, 844, 1377, 1829, 2118, 2272, 2745, 4263, 4314,
-    4530, 4354, 4645, 4547, 5391, 4855, 4739, 4520, 4573, 4305, 4196, 3773,
-    3368, 2596, 2596, 2305, 2756, 3747, 4078, 3415, 2369, 2210, 2316, 2263,
-    2672, 3571, 4131, 4167, 4077, 3924, 3738, 3712, 3510, 3182, 3179, 2951,
-    2453, 2078, 1999, 2486, 2581, 1891, 1997, 1366, 1294, 1536, 2794, 3211,
-    3242, 3406, 3121, 2425, 2016, 1787, 1508, 1304, 1060, 1342, 1589, 2361,
-    3452, 2659, 2857, 3255, 3322, 2852, 2964, 3132, 3033, 2931, 2636, 2818,
-    3310, 3396, 3179, 3232, 3543, 3759, 3503, 3758, 3658, 3425, 3053, 2620,
-    1837, 923, 712, 1054, 1376, 1556, 1498, 1523, 1088, 728, 890, 1413, 2524,
-    3295, 4097, 3993, 4116, 3874, 4074, 4142, 3975, 3908, 3907, 3918, 3755,
-    3648, 3778, 4293, 4385, 4360, 4352, 4528, 4365, 3846, 4098, 3860, 3230,
-    2820, 2916, 3201, 3721, 3397, 3055, 2141, 1623, 1825, 1716, 2232, 2939,
-    3735, 4838, 4560, 4307, 4975, 5173, 4859, 5268, 4992, 5100, 5070, 5270,
-    4760, 5135, 5059, 4682, 4492, 4933, 4737, 4611, 4634, 4789, 4811, 4379,
-    4689, 4284, 4191, 3313, 2770, 2543, 3105, 2967, 2420, 1996, 2247, 2564,
-    2726, 3021, 3427, 3509, 3759, 3324, 2988, 2849, 2340, 2443, 2364, 1252,
-    623, 742, 867, 684, 488, 348, 241, 187, 279, 355, 423, 678, 1375, 1497,
-    1434, 2116, 2411, 1929, 1628, 1635, 1609, 1757, 2090, 2085, 1790, 1846,
-    2038, 2360, 2342, 2401, 2920, 3030, 3132, 4385, 5483, 5865, 5595, 5485,
-    5727, 5553, 5560, 5233, 5478, 5159, 5155, 5312, 5079, 4510, 4628, 4535,
-    3656, 3698, 3443, 3146, 2562, 2304, 2181, 2293, 1950, 1930, 2197, 2796,
-    3441, 3649, 3815, 2850, 4005, 5305, 5550, 5641, 4717, 5131, 2831, 3518,
-    3354, 3115, 3515, 3552, 3244, 3658, 4407, 4935, 4299, 3166, 3335, 2728,
-    2488, 2573, 2002, 1717, 1645, 1977, 2049, 2125, 2376, 2551, 2578, 2629,
-    2750, 3150, 3699, 4062, 3959, 3264, 2671, 2205, 2128, 2133, 2095, 1964,
-    2006, 2074, 2201, 2506, 2449, 2465, 2064, 1446, 1382, 983, 898, 489, 319,
-    383, 332, 276, 224, 144, 101, 232, 429, 597, 750, 908, 960, 1076, 951,
-    1062, 1183, 1404, 1391, 1419, 1497, 1267, 963, 682, 777, 906, 1149, 1439,
-    1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
+                     1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997,
+                     1862, 2525,
+                     3250, 4023, 4018, 3585, 3004, 2500, 2441, 2749, 2466,
+                     2157, 1847, 1463,
+                     1146, 851, 993, 1448, 1719, 1709, 1455, 1950, 1763, 2075,
+                     2343, 3570,
+                     4690, 3700, 2339, 1679, 1466, 998, 853, 835, 922, 851,
+                     1125, 1299, 1105,
+                     860, 701, 689, 774, 582, 419, 846, 1132, 902, 1058, 1341,
+                     1551, 1167,
+                     975, 786, 759, 751, 649, 876, 720, 498, 553, 459, 543,
+                     447, 415, 377,
+                     373, 324, 320, 306, 259, 220, 342, 558, 825, 994, 1267,
+                     1473, 1601,
+                     1896, 1890, 2012, 2198, 2393, 2825, 3411, 3406, 2464,
+                     2891, 3685, 3638,
+                     3746, 3373, 3190, 2681, 2846, 4129, 5054, 5002, 4801,
+                     4934, 4903, 4713,
+                     4745, 4736, 4622, 4642, 4478, 4510, 4758, 4457, 4356,
+                     4170, 4658, 4546,
+                     4402, 4183, 3574, 2586, 3326, 3948, 3983, 3997, 4422,
+                     4496, 4276, 3467,
+                     2753, 2582, 2921, 2768, 2789, 2824, 2482, 2773, 3005,
+                     3641, 3699, 3774,
+                     3698, 3628, 3180, 3306, 2841, 2014, 1910, 2560, 2980,
+                     3012, 3210, 3457,
+                     3158, 3344, 3609, 3327, 2913, 2264, 2326, 2596, 2225,
+                     1767, 1190, 792,
+                     669, 589, 496, 354, 246, 250, 323, 495, 924, 1536, 2081,
+                     2660, 2814, 2992,
+                     3115, 2962, 2272, 2151, 1889, 1481, 955, 631, 288, 103,
+                     60, 82, 107, 185,
+                     618, 1526, 2046, 2348, 2584, 2600, 2515, 2345, 2351, 2355,
+                     2409, 2449,
+                     2645, 2918, 3187, 2888, 2610, 2740, 2526, 2383, 2936,
+                     2968, 2635, 2617,
+                     2790, 3906, 4018, 4797, 4919, 4942, 4656, 4444, 3898,
+                     3908, 3678, 3605,
+                     3186, 2139, 2002, 1559, 1235, 1183, 1096, 673, 389, 223,
+                     352, 308, 365,
+                     525, 779, 894, 901, 1025, 1047, 981, 902, 759, 569, 519,
+                     408, 263, 156,
+                     72, 49, 31, 41, 192, 423, 492, 552, 564, 723, 921, 1525,
+                     2768, 3531, 3824,
+                     3835, 4294, 4533, 4173, 4221, 4064, 4641, 4685, 4026,
+                     4323, 4585, 4836,
+                     4822, 4631, 4614, 4326, 4790, 4736, 4104, 5099, 5154,
+                     5121, 5384, 5274,
+                     5225, 4899, 5382, 5295, 5349, 4977, 4597, 4069, 3733,
+                     3439, 3052, 2626,
+                     1939, 1064, 713, 916, 832, 658, 817, 921, 772, 764, 824,
+                     967, 1127, 1153,
+                     824, 912, 957, 990, 1218, 1684, 2030, 2119, 2233, 2657,
+                     2652, 2682, 2498,
+                     2429, 2346, 2298, 2129, 1829, 1816, 1225, 1010, 748, 627,
+                     469, 576, 532,
+                     475, 582, 641, 605, 699, 680, 714, 670, 666, 636, 672,
+                     679, 446, 248, 134,
+                     160, 178, 286, 413, 676, 1025, 1159, 952, 1398, 1833,
+                     2045, 2072, 1798,
+                     1799, 1358, 727, 353, 347, 844, 1377, 1829, 2118, 2272,
+                     2745, 4263, 4314,
+                     4530, 4354, 4645, 4547, 5391, 4855, 4739, 4520, 4573,
+                     4305, 4196, 3773,
+                     3368, 2596, 2596, 2305, 2756, 3747, 4078, 3415, 2369,
+                     2210, 2316, 2263,
+                     2672, 3571, 4131, 4167, 4077, 3924, 3738, 3712, 3510,
+                     3182, 3179, 2951,
+                     2453, 2078, 1999, 2486, 2581, 1891, 1997, 1366, 1294,
+                     1536, 2794, 3211,
+                     3242, 3406, 3121, 2425, 2016, 1787, 1508, 1304, 1060,
+                     1342, 1589, 2361,
+                     3452, 2659, 2857, 3255, 3322, 2852, 2964, 3132, 3033,
+                     2931, 2636, 2818,
+                     3310, 3396, 3179, 3232, 3543, 3759, 3503, 3758, 3658,
+                     3425, 3053, 2620,
+                     1837, 923, 712, 1054, 1376, 1556, 1498, 1523, 1088, 728,
+                     890, 1413, 2524,
+                     3295, 4097, 3993, 4116, 3874, 4074, 4142, 3975, 3908,
+                     3907, 3918, 3755,
+                     3648, 3778, 4293, 4385, 4360, 4352, 4528, 4365, 3846,
+                     4098, 3860, 3230,
+                     2820, 2916, 3201, 3721, 3397, 3055, 2141, 1623, 1825,
+                     1716, 2232, 2939,
+                     3735, 4838, 4560, 4307, 4975, 5173, 4859, 5268, 4992,
+                     5100, 5070, 5270,
+                     4760, 5135, 5059, 4682, 4492, 4933, 4737, 4611, 4634,
+                     4789, 4811, 4379,
+                     4689, 4284, 4191, 3313, 2770, 2543, 3105, 2967, 2420,
+                     1996, 2247, 2564,
+                     2726, 3021, 3427, 3509, 3759, 3324, 2988, 2849, 2340,
+                     2443, 2364, 1252,
+                     623, 742, 867, 684, 488, 348, 241, 187, 279, 355, 423,
+                     678, 1375, 1497,
+                     1434, 2116, 2411, 1929, 1628, 1635, 1609, 1757, 2090,
+                     2085, 1790, 1846,
+                     2038, 2360, 2342, 2401, 2920, 3030, 3132, 4385, 5483,
+                     5865, 5595, 5485,
+                     5727, 5553, 5560, 5233, 5478, 5159, 5155, 5312, 5079,
+                     4510, 4628, 4535,
+                     3656, 3698, 3443, 3146, 2562, 2304, 2181, 2293, 1950,
+                     1930, 2197, 2796,
+                     3441, 3649, 3815, 2850, 4005, 5305, 5550, 5641, 4717,
+                     5131, 2831, 3518,
+                     3354, 3115, 3515, 3552, 3244, 3658, 4407, 4935, 4299,
+                     3166, 3335, 2728,
+                     2488, 2573, 2002, 1717, 1645, 1977, 2049, 2125, 2376,
+                     2551, 2578, 2629,
+                     2750, 3150, 3699, 4062, 3959, 3264, 2671, 2205, 2128,
+                     2133, 2095, 1964,
+                     2006, 2074, 2201, 2506, 2449, 2465, 2064, 1446, 1382, 983,
+                     898, 489, 319,
+                     383, 332, 276, 224, 144, 101, 232, 429, 597, 750, 908,
+                     960, 1076, 951,
+                     1062, 1183, 1404, 1391, 1419, 1497, 1267, 963, 682, 777,
+                     906, 1149, 1439,
+                     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = ARMA(data, order=(4,1)).fit(start_ar_lags=5, disp=-1)
+        ARMA(data, order=(4, 1)).fit(start_ar_lags=5, disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
-    # just make sure this works
     @classmethod
     def setup_class(cls):
-        endog = y_arma[:,6]
-        cls.res1 = ARIMA(endog, (1,0,1)).fit(trend="c", disp=-1)
+        endog = y_arma[:, 6]
+        cls.res1 = ARIMA(endog, (1, 0, 1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
-                confint) = cls.res1.forecast(10)
+         confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
         cls.res2.k_diff = 0
         cls.res2.k_ar = 1
@@ -597,26 +649,27 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
     @classmethod
     def setup_class(cls):
         cpi = load_macrodata_pandas().data['cpi'].values
-        cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
+        cls.res1 = ARIMA(cpi, (1, 1, 1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
         # make sure endog names changes to D.cpi
         cls.decimal_llf = 3
         cls.decimal_aic = 3
         cls.decimal_bic = 3
-        cls.decimal_cov_params = 2 # this used to be better?
+        # TODO: why has dec_cov_params changed, used to be better
+        cls.decimal_cov_params = 2
         cls.decimal_t = 0
         (cls.res1.forecast_res,
          cls.res1.forecast_err,
-         conf_int)              = cls.res1.forecast(25)
-        #cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=226, typ='levels', dynamic=True)
-        #TODO: fix the indexing for the end here, I do not think this is right
+         conf_int) = cls.res1.forecast(25)
+        # TODO: fix the indexing for the end here, I do not think this is right
         # if we're going to treat it like indexing
         # the forecast from 2005Q1 through 2009Q4 is indices
         # 184 through 227 not 226
         # note that the first one counts in the count so 164 + 64 is 65
         # predictions
-        cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=164+63,
-                                            typ='levels', dynamic=True)
+        cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=164 + 63,
+                                                     typ='levels',
+                                                     dynamic=True)
 
     def test_freq(self):
         assert_almost_equal(self.res1.arfreq, [0.0000], 4)
@@ -628,18 +681,19 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
     @classmethod
     def setup_class(cls):
         cpi = load_macrodata_pandas().data['cpi'].values
-        cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
+        cls.res1 = ARIMA(cpi, (1, 1, 1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
         cls.res2.fittedvalues = - cpi[1:-1] + cls.res2.linear
         # make sure endog names changes to D.cpi
         (cls.res1.forecast_res,
          cls.res1.forecast_err,
-         conf_int)              = cls.res1.forecast(25)
+         conf_int) = cls.res1.forecast(25)
         cls.decimal_forecast = 2
         cls.decimal_forecast_dyn = 2
         cls.decimal_forecasterr = 3
-        cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=164+63,
-                                                 typ='levels', dynamic=True)
+        cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=164 + 63,
+                                                     typ='levels',
+                                                     dynamic=True)
 
         # precisions
         cls.decimal_arroots = 3
@@ -647,11 +701,8 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
         cls.decimal_hqic = 3
         cls.decimal_maroots = 3
         cls.decimal_t = 1
-        cls.decimal_fittedvalues = 2 # because of rounding when copying
+        cls.decimal_fittedvalues = 2  # because of rounding when copying
         cls.decimal_resid = 2
-        #cls.decimal_llf = 3
-        #cls.decimal_aic = 3
-        #cls.decimal_bic = 3
         cls.decimal_predict_levels = DECIMAL_2
 
 
@@ -659,26 +710,23 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
     def setup_class(cls):
         cpi = load_macrodata_pandas().data['cpi'].values
-        cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
-                                start_params = [.905322, -.692425, 1.07366,
-                                                0.172024])
+        cls.res1 = ARIMA(cpi, (1, 1, 2)).fit(disp=-1, method='css',
+                                             start_params=[.905322, -.692425,
+                                                           1.07366,
+                                                           0.172024])
         cls.res2 = results_arima.ARIMA112(method='css')
         cls.res2.fittedvalues = - cpi[1:-1] + cls.res2.linear
         # make sure endog names changes to D.cpi
         cls.decimal_llf = 3
         cls.decimal_aic = 3
         cls.decimal_bic = 3
-        #(cls.res1.forecast_res,
-        # cls.res1.forecast_err,
-        # conf_int)              = cls.res1.forecast(25)
-        #cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=226, typ='levels', dynamic=True)
-        #TODO: fix the indexing for the end here, I do not think this is right
+        # TODO: fix the indexing for the end here, I do not think this is right
         # if we're going to treat it like indexing
         # the forecast from 2005Q1 through 2009Q4 is indices
         # 184 through 227 not 226
         # note that the first one counts in the count so 164 + 64 is 65
         # predictions
-        #cls.res1.forecast_res_dyn = self.predict(start=164, end=164+63,
+        # cls.res1.forecast_res_dyn = self.predict(start=164, end=164+63,
         #                                         typ='levels', dynamic=True)
         # since we got from gretl do not have linear prediction in differences
         cls.decimal_arroots = 3
@@ -692,258 +740,250 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
         assert_almost_equal(self.res1.arfreq, [0.5000], 4)
         assert_almost_equal(self.res1.mafreq, [0.5000, 0.5000], 4)
 
-#class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
-#    @classmethod
-#    def setup_class(cls):
-#        cpi = load_macrodata_pandas().data['cpi'].values
-#        dates = pd.date_range('1959', periods=203, freq='Q')
-#        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
-#        cls.res2 = results_arima.ARIMA111()
-#        # make sure endog names changes to D.cpi
-#        cls.decimal_llf = 3
-#        cls.decimal_aic = 3
-#        cls.decimal_bic = 3
-#        (cls.res1.forecast_res,
-#         cls.res1.forecast_err,
-#         conf_int)              = cls.res1.forecast(25)
-
 
 def test_arima_predict_mle_dates():
     cpi = load_macrodata_pandas().data['cpi'].values
-    res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1)
+    res1 = ARIMA(cpi, (4, 1, 1), dates=cpi_dates, freq='Q').fit(disp=-1)
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_mle.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
 
-    with open(current_path + '/results/results_arima_forecasts_all_mle.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
 
     start, end = 2, 51
     fv = res1.predict('1959Q3', '1971Q4', typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end + 1])
 
     start, end = 202, 227
     fv = res1.predict('2009Q3', '2015Q4', typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
 
     start, end = '1960q2', '1971q4'
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[5:51+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[5:51 + 1], DECIMAL_4)
 
     start, end = '1965q1', '2015q4'
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[24:227+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[24:227 + 1], DECIMAL_4)
 
 
 def test_arma_predict_mle_dates():
     from statsmodels.datasets.sunspots import load_pandas
     sunspots = load_pandas().data['SUNACTIVITY'].values
-    mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
+    mod = ARMA(sunspots, (9, 0), dates=sun_dates, freq='A')
     mod.method = 'mle'
 
-    assert_raises(ValueError, mod._get_prediction_index, *('1701', '1751', True))
+    assert_raises(ValueError, mod._get_prediction_index, '1701', '1751', True)
 
     start, end = 2, 51
-    _, _, _, _ = mod._get_prediction_index('1702', '1751', False)
-    assert_equal(mod.data.predict_dates, sun_dates[start:end+1])
+    mod._get_prediction_index('1702', '1751', False)
+    assert_equal(mod.data.predict_dates, sun_dates[start:end + 1])
 
     start, end = 308, 333
-    _, _, _, _ = mod._get_prediction_index('2008', '2033', False)
+    mod._get_prediction_index('2008', '2033', False)
     assert_equal(mod.data.predict_dates, sun_predict_dates)
 
 
 def test_arima_predict_css_dates():
     cpi = load_macrodata_pandas().data['cpi'].values
-    res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1,
-            method='css', trend='nc')
+    res1 = ARIMA(cpi, (4, 1, 1), dates=cpi_dates, freq='Q').fit(disp=-1,
+                                                                method='css',
+                                                                trend='nc')
 
-    params = np.array([ 1.231272508473910,
+    params = np.array([1.231272508473910,
                        -0.282516097759915,
-                        0.170052755782440,
+                       0.170052755782440,
                        -0.118203728504945,
                        -0.938783134717947])
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_css.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
 
-    with open(current_path + '/results/results_arima_forecasts_all_css.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
 
     start, end = 5, 51
     fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end + 1])
 
     start, end = 202, 227
     fv = res1.model.predict(params, '2009Q3', '2015Q4', typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
     start, end = 5, 51
     fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels',
-                                                        dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+                            dynamic=True)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
 
     start, end = '1965q1', '2015q4'
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[24:227+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[24:227 + 1], DECIMAL_4)
 
 
 def test_arma_predict_css_dates():
     from statsmodels.datasets.sunspots import load_pandas
     sunspots = load_pandas().data['SUNACTIVITY'].values
-    mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
+    mod = ARMA(sunspots, (9, 0), dates=sun_dates, freq='A')
     mod.method = 'css'
-    assert_raises(ValueError, mod._get_prediction_index, *('1701', '1751', False))
+    assert_raises(ValueError, mod._get_prediction_index, '1701', '1751', False)
 
 
 def test_arima_predict_mle():
     cpi = load_macrodata_pandas().data['cpi'].values
-    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1)
+    res1 = ARIMA(cpi, (4, 1, 1)).fit(disp=-1)
     # fit the model so that we get correct endog length but use
-    with open(current_path + '/results/results_arima_forecasts_all_mle.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
-    fcdyn3 = arima_forecasts[:,3]
-    fcdyn4 = arima_forecasts[:,4]
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_mle.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
+    fcdyn3 = arima_forecasts[:, 3]
+    fcdyn4 = arima_forecasts[:, 4]
 
     # 0 indicates the first sample-observation below
     # ie., the index after the pre-sample, these are also differenced once
     # so the indices are moved back once from the cpi in levels
     # start < p, end <p 1959q2 - 1959q4
-    start, end = 1,3
+    start, end = 1, 3
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start < p, end 0 1959q3 - 1960q1
     start, end = 2, 4
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start < p, end >0 1959q3 - 1971q4
     start, end = 2, 51
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start < p, end nobs 1959q3 - 2009q3
     start, end = 2, 202
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start < p, end >nobs 1959q3 - 2015q4
     start, end = 2, 227
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 4, 51
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 4, 202
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
     start, end = 4, 227
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
-    #NOTE: raises
-    #start, end = 202, 202
-    #fv = res1.predict(start, end, typ='levels')
-    #assert_almost_equal(fv, [])
+    start, end = 202, 202
+    fv = res1.predict(start, end, typ='levels')
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_3)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_3)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_3)
     # start >nobs, end >nobs 2009q4 - 2015q4
-    #NOTE: this raises but should not, dynamic forecasts could start
-    #one period out
     start, end = 203, 227
     fv = res1.predict(start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.predict(start, end, typ='levels')
     assert_almost_equal(fv, fc[1:203], DECIMAL_4)
 
-    #### Dynamic #####
+    # Dynamic
 
     # start < p, end <p 1959q2 - 1959q4
-    #NOTE: should raise
-    #start, end = 1,3
-    #fv = res1.predict(start, end, dynamic=True, typ='levels')
-    #assert_almost_equal(fv, arima_forecasts[:,15])
-    # start < p, end 0 1959q3 - 1960q1
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        fv = res1.predict(start, end, dynamic=True, typ='levels')
 
-    #NOTE: below should raise an error
-    #start, end = 2, 4
-    #fv = res1.predict(start, end, dynamic=True, typ='levels')
-    #assert_almost_equal(fv, fcdyn[5:end+1], DECIMAL_4)
+    # start < p, end 0 1959q3 - 1960q1
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True, typ='levels')
+
     # start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.predict(start, end, dynamic=True, typ='levels')
-    #assert_almost_equal(fv, fcdyn[5:end+1], DECIMAL_4)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.predict(start, end, dynamic=True, typ='levels')
-    #assert_almost_equal(fv, fcdyn[5:end+1], DECIMAL_4)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.predict(start, end, dynamic=True, typ='levels')
-    #assert_almost_equal(fv, fcdyn[5:end+1], DECIMAL_4)
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True, typ='levels')
+
+    # start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True, typ='levels')
+
+    # start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True, typ='levels')
+
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
     start, end = 5, 227
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn3[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn3[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn3[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn3[start:end + 1], DECIMAL_4)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.predict(start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn4[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn4[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.predict(start, end, dynamic=True, typ='levels')
@@ -963,49 +1003,48 @@ def _check_end(model, given, end_expect, out_of_sample_expect):
 def test_arma_predict_indices():
     from statsmodels.datasets.sunspots import load_pandas
     sunspots = load_pandas().data['SUNACTIVITY'].values
-    model = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
+    model = ARMA(sunspots, (9, 0), dates=sun_dates, freq='A')
     model.method = 'mle'
 
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
-    assert_raises(ValueError, model._get_prediction_index, *(8, None, True))
-    assert_raises(ValueError, model._get_prediction_index, *('1700', None, True))
-    assert_raises(ValueError, model._get_prediction_index, *('1708', None, True))
+    with pytest.raises(ValueError):
+        model._get_prediction_index(0, None, True)
+    with pytest.raises(ValueError):
+        model._get_prediction_index(8, None, True)
+    with pytest.raises(ValueError):
+        model._get_prediction_index('1700', None, True)
+    with pytest.raises(ValueError):
+        model._get_prediction_index('1708', None, True)
 
     # raises - start out of sample
-    # TODO: remove these, start out of sample now allowed
-    # assert_raises(ValueError, model._get_prediction_index, *(311, None, True))
-    # assert_raises(ValueError, model._get_prediction_index, *(311, None, False))
-    # assert_raises(ValueError, model._get_prediction_index, *('2010', None, True))
-    # assert_raises(ValueError, model._get_prediction_index, *('2010', None, False))
 
     # works - in-sample
     # None
     start_test_cases = [
-                  # given, expected, dynamic
-                  (None, 9, True),
-                  # all start get moved back by k_diff
-                  (9, 9, True),
-                  (10, 10, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  (309, 309, True),
-                  (308, 308, True),
-                  (0, 0, False),
-                  (1, 1, False),
-                  (4, 4, False),
+        # given, expected, dynamic
+        (None, 9, True),
+        # all start get moved back by k_diff
+        (9, 9, True),
+        (10, 10, True),
+        # what about end of sample start - last value is first
+        # forecast
+        (309, 309, True),
+        (308, 308, True),
+        (0, 0, False),
+        (1, 1, False),
+        (4, 4, False),
 
-                  # all start get moved back by k_diff
-                  ('1709', 9, True),
-                  ('1710', 10, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  ('2008', 308, True),
-                  ('2009', 309, True),
-                  ('1700', 0, False),
-                  ('1708', 8, False),
-                  ('1709', 9, False),
-                  ]
+        # all start get moved back by k_diff
+        ('1709', 9, True),
+        ('1710', 10, True),
+        # what about end of sample start - last value is first
+        # forecast
+        ('2008', 308, True),
+        ('2009', 309, True),
+        ('1700', 0, False),
+        ('1708', 8, False),
+        ('1709', 9, False),
+    ]
 
     for case in start_test_cases:
         _check_start(*((model,) + case))
@@ -1028,64 +1067,63 @@ def test_arma_predict_indices():
                       ]
 
     for case in end_test_cases:
-        _check_end(*((model,)+case))
+        _check_end(*((model,) + case))
 
 
 def test_arima_predict_indices():
     cpi = load_macrodata_pandas().data['cpi'].values
-    model = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q')
+    model = ARIMA(cpi, (4, 1, 1), dates=cpi_dates, freq='Q')
     model.method = 'mle'
 
     # starting indices
 
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
-    assert_raises(ValueError, model._get_prediction_index, *(4, None, True))
-    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, True))
-    assert_raises(ValueError, model._get_prediction_index, *('1960Q1', None, True))
+    with pytest.raises(ValueError):
+        model._get_prediction_index(0, None, True)
+    with pytest.raises(ValueError):
+        model._get_prediction_index(4, None, True)
+    with pytest.raises(KeyError):
+        model._get_prediction_index('1959Q1', None, True)
+    with pytest.raises(ValueError):
+        model._get_prediction_index('1960Q1', None, True)
 
     # raises - index differenced away
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, False))
-    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, False))
+    with pytest.raises(ValueError):
+        model._get_prediction_index(0, None, False)
+    with pytest.raises(KeyError):
+        model._get_prediction_index('1959Q1', None, False)
 
     # raises - start out of sample
-    # TODO: start out of sample is now allowed; remove this code
-    # assert_raises(ValueError, model._get_prediction_index, *(204, None, True))
-    # assert_raises(ValueError, model._get_prediction_index, *(204, None, False))
-    # assert_raises(ValueError, model._get_prediction_index, *('2010Q1', None, True))
-    # assert_raises(ValueError, model._get_prediction_index, *('2010Q1', None, False))
 
     # works - in-sample
     # None
     start_test_cases = [
-                  # given, expected, dynamic
-                  (None, 4, True),
-                  # all start get moved back by k_diff
-                  (5, 4, True),
-                  (6, 5, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  (203, 202, True),
-                  (1, 0, False),
-                  (4, 3, False),
-                  (5, 4, False),
-                  # all start get moved back by k_diff
-                  ('1960Q2', 4, True),
-                  ('1960Q3', 5, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  ('2009Q4', 202, True),
-                  ('1959Q2', 0, False),
-                  ('1960Q1', 3, False),
-                  ('1960Q2', 4, False),
-                  ]
+        # given, expected, dynamic
+        (None, 4, True),
+        # all start get moved back by k_diff
+        (5, 4, True),
+        (6, 5, True),
+        # what about end of sample start - last value is first
+        # forecast
+        (203, 202, True),
+        (1, 0, False),
+        (4, 3, False),
+        (5, 4, False),
+        # all start get moved back by k_diff
+        ('1960Q2', 4, True),
+        ('1960Q3', 5, True),
+        # what about end of sample start - last value is first
+        # forecast
+        ('2009Q4', 202, True),
+        ('1959Q2', 0, False),
+        ('1960Q1', 3, False),
+        ('1960Q2', 4, False),
+    ]
 
     for case in start_test_cases:
         _check_start(*((model,) + case))
 
-    # check raises
-    #TODO: make sure dates are passing through unmolested
-    #assert_raises(ValueError, model._get_predict_end, ("2001-1-1",))
+    # TODO: make sure dates are passing through unmolested
 
     # the length of diff(cpi) is 202, so last index is 201
     end_test_cases = [(None, 201, 0),
@@ -1094,7 +1132,7 @@ def test_arima_predict_indices():
                       (203, 201, 1),
                       (204, 201, 2),
                       (51, 50, 0),
-                      (164+63, 201, 25),
+                      (164 + 63, 201, 25),
 
                       ('2009Q2', 200, 0),
                       ('2009Q3', 201, 0),
@@ -1105,44 +1143,47 @@ def test_arima_predict_indices():
                       ]
 
     for case in end_test_cases:
-        _check_end(*((model,)+case))
+        _check_end(*((model,) + case))
 
     # check higher k_diff
     # model.k_diff = 2
-    model = ARIMA(cpi, (4,2,1), dates=cpi_dates, freq='Q')
+    model = ARIMA(cpi, (4, 2, 1), dates=cpi_dates, freq='Q')
     model.method = 'mle'
 
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
-    assert_raises(ValueError, model._get_prediction_index, *(5, None, True))
-    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, True))
-    assert_raises(ValueError, model._get_prediction_index, *('1960Q1', None, True))
+    assert_raises(ValueError, model._get_prediction_index, 0, None, True)
+    assert_raises(ValueError, model._get_prediction_index, 5, None, True)
+    assert_raises(KeyError, model._get_prediction_index,
+                  '1959Q1', None, True)
+    assert_raises(ValueError, model._get_prediction_index,
+                  '1960Q1', None, True)
 
     # raises - index differenced away
-    assert_raises(ValueError, model._get_prediction_index, *(1, None, False))
-    assert_raises(KeyError, model._get_prediction_index, *('1959Q2', None, False))
+    assert_raises(ValueError, model._get_prediction_index, 1, None, False)
+    assert_raises(KeyError, model._get_prediction_index,
+                  '1959Q2', None, False)
 
     start_test_cases = [(None, 4, True),
-                  # all start get moved back by k_diff
-                  (6, 4, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  (203, 201, True),
-                  (2, 0, False),
-                  (4, 2, False),
-                  (5, 3, False),
-                  ('1960Q3', 4, True),
-                  # what about end of sample start - last value is first
-                  # forecast
-                  ('2009Q4', 201, True),
-                  ('2009Q4', 201, True),
-                  ('1959Q3', 0, False),
-                  ('1960Q1', 2, False),
-                  ('1960Q2', 3, False),
-                  ]
+                        # all start get moved back by k_diff
+                        (6, 4, True),
+                        # what about end of sample start - last value is first
+                        # forecast
+                        (203, 201, True),
+                        (2, 0, False),
+                        (4, 2, False),
+                        (5, 3, False),
+                        ('1960Q3', 4, True),
+                        # what about end of sample start - last value is first
+                        # forecast
+                        ('2009Q4', 201, True),
+                        ('2009Q4', 201, True),
+                        ('1959Q3', 0, False),
+                        ('1960Q1', 2, False),
+                        ('1960Q2', 3, False),
+                        ]
 
     for case in start_test_cases:
-        _check_start(*((model,)+case))
+        _check_start(*((model,) + case))
 
     end_test_cases = [(None, 200, 0),
                       (201, 199, 0),
@@ -1150,7 +1191,7 @@ def test_arima_predict_indices():
                       (203, 200, 1),
                       (204, 200, 2),
                       (51, 49, 0),
-                      (164+63, 200, 25),
+                      (164 + 63, 200, 25),
 
                       ('2009Q2', 199, 0),
                       ('2009Q3', 200, 0),
@@ -1161,154 +1202,164 @@ def test_arima_predict_indices():
                       ]
 
     for case in end_test_cases:
-        _check_end(*((model,)+case))
+        _check_end(*((model,) + case))
 
 
 def test_arima_predict_indices_css():
     cpi = load_macrodata_pandas().data['cpi'].values
-    #NOTE: Doing no-constant for now to kick the conditional exogenous
-    #issue 274 down the road
+    # NOTE: Doing no-constant for now to kick the conditional exogenous
+    # issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    model = ARIMA(cpi, (4,1,1))
+    model = ARIMA(cpi, (4, 1, 1))
     model.method = 'css'
 
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, False))
-    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
-    assert_raises(ValueError, model._get_prediction_index, *(2, None, False))
-    assert_raises(ValueError, model._get_prediction_index, *(2, None, True))
+    assert_raises(ValueError, model._get_prediction_index, 0, None, False)
+    assert_raises(ValueError, model._get_prediction_index, 0, None, True)
+    assert_raises(ValueError, model._get_prediction_index, 2, None, False)
+    assert_raises(ValueError, model._get_prediction_index, 2, None, True)
 
 
 def test_arima_predict_css():
     cpi = load_macrodata_pandas().data['cpi'].values
-    #NOTE: Doing no-constant for now to kick the conditional exogenous
-    #issue 274 down the road
+    # NOTE: Doing no-constant for now to kick the conditional exogenous
+    # issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, method="css",
-                            trend="nc")
+    res1 = ARIMA(cpi, (4, 1, 1)).fit(disp=-1, method="css",
+                                     trend="nc")
     # but use gretl parameters to predict to avoid precision problems
-    params = np.array([ 1.231272508473910,
+    params = np.array([1.231272508473910,
                        -0.282516097759915,
                        0.170052755782440,
-                      -0.118203728504945,
-                      -0.938783134717947])
+                       -0.118203728504945,
+                       -0.938783134717947])
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_css.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
+    fcdyn3 = arima_forecasts[:, 3]
+    fcdyn4 = arima_forecasts[:, 4]
 
-    with open(current_path + '/results/results_arima_forecasts_all_css.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
-    fcdyn3 = arima_forecasts[:,3]
-    fcdyn4 = arima_forecasts[:,4]
-
-    #NOTE: should raise
-    #start, end = 1,3
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end 0 1959q3 - 1960q1
-    #start, end = 2, 4
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.model.predict(params, start, end)
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end 0 1959q3 - 1960q1
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end >0 1959q3 - 1971q4
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
-    #TODO: why detoriating precision?
+    # TODO: why detoriating precision?
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end, typ='levels')
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end, typ='levels')
     assert_almost_equal(fv, fc[5:203], DECIMAL_4)
 
-    #### Dynamic #####
+    # Dynamic
 
-    #NOTE: should raise
     # start < p, end <p 1959q2 - 1959q4
-    #start, end = 1,3
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start < p, end 0 1959q3 - 1960q1
-    #start, end = 2, 4
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >0 1959q3 - 1971q4
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
     start, end = 5, 227
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn3[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn3[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
-    assert_almost_equal(fv, fcdyn4[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn4[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
@@ -1316,140 +1367,149 @@ def test_arima_predict_css():
 
 
 def test_arima_predict_css_diffs():
-
     cpi = load_macrodata_pandas().data['cpi'].values
-    #NOTE: Doing no-constant for now to kick the conditional exogenous
-    #issue 274 down the road
+    # NOTE: Doing no-constant for now to kick the conditional exogenous
+    # issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, method="css",
-                            trend="c")
+    res1 = ARIMA(cpi, (4, 1, 1)).fit(disp=-1, method="css",
+                                     trend="c")
     # but use gretl parameters to predict to avoid precision problems
     params = np.array([0.78349893861244,
-                      -0.533444105973324,
+                       -0.533444105973324,
                        0.321103691668809,
                        0.264012463189186,
                        0.107888256920655,
                        0.920132542916995])
     # we report mean, should we report constant?
     params[0] = params[0] / (1 - params[1:5].sum())
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_css_diff.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
+    fcdyn3 = arima_forecasts[:, 3]
+    fcdyn4 = arima_forecasts[:, 4]
 
-    with open(current_path + '/results/results_arima_forecasts_all_css_diff.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
-    fcdyn3 = arima_forecasts[:,3]
-    fcdyn4 = arima_forecasts[:,4]
-
-    #NOTE: should raise
-    #start, end = 1,3
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end 0 1959q3 - 1960q1
-    #start, end = 2, 4
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.model.predict(params, start, end)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.model.predict(params, start, end)
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end 0 1959q3 - 1960q1
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end >0 1959q3 - 1971q4
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
+    #  start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.model.predict(params, start, end)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
-    #TODO: why detoriating precision?
+    # TODO: why detoriating precision?
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end)
     assert_almost_equal(fv, fc[5:203], DECIMAL_4)
 
-    #### Dynamic #####
+    # Dynamic
 
-    #NOTE: should raise
     # start < p, end <p 1959q2 - 1959q4
-    #start, end = 1,3
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start < p, end 0 1959q3 - 1960q1
-    #start, end = 2, 4
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >0 1959q3 - 1971q4
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
     start, end = 5, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn3[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn3[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn4[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn4[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end, dynamic=True)
@@ -1457,137 +1517,142 @@ def test_arima_predict_css_diffs():
 
 
 def test_arima_predict_mle_diffs():
-
     cpi = load_macrodata_pandas().data['cpi'].values
-    #NOTE: Doing no-constant for now to kick the conditional exogenous
-    #issue 274 down the road
+    # NOTE: Doing no-constant for now to kick the conditional exogenous
+    # issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, trend="c")
+    res1 = ARIMA(cpi, (4, 1, 1)).fit(disp=-1, trend="c")
     # but use gretl parameters to predict to avoid precision problems
     params = np.array([0.926875951549299,
-        -0.555862621524846,
-        0.320865492764400,
-        0.252253019082800,
-        0.113624958031799,
-        0.939144026934634])
+                       -0.555862621524846,
+                       0.320865492764400,
+                       0.252253019082800,
+                       0.113624958031799,
+                       0.939144026934634])
+    file_path = os.path.join(current_path, 'results',
+                             'results_arima_forecasts_all_mle_diff.csv')
+    with open(file_path, "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",",
+                                        skip_header=1, dtype=float)
+    fc = arima_forecasts[:, 0]
+    fcdyn = arima_forecasts[:, 1]
+    fcdyn2 = arima_forecasts[:, 2]
+    fcdyn3 = arima_forecasts[:, 3]
+    fcdyn4 = arima_forecasts[:, 4]
 
-    with open(current_path + '/results/results_arima_forecasts_all_mle_diff.csv', "rb") as test_data:
-        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
-    fc = arima_forecasts[:,0]
-    fcdyn = arima_forecasts[:,1]
-    fcdyn2 = arima_forecasts[:,2]
-    fcdyn3 = arima_forecasts[:,3]
-    fcdyn4 = arima_forecasts[:,4]
-
-    #NOTE: should raise
-    start, end = 1,3
-    fv = res1.model.predict(params, start, end)
-    ## start < p, end 0 1959q3 - 1960q1
+    start, end = 1, 3
+    res1.model.predict(params, start, end)
+    #  start < p, end 0 1959q3 - 1960q1
     start, end = 2, 4
-    fv = res1.model.predict(params, start, end)
-    ## start < p, end >0 1959q3 - 1971q4
+    res1.model.predict(params, start, end)
+    #  start < p, end >0 1959q3 - 1971q4
     start, end = 2, 51
-    fv = res1.model.predict(params, start, end)
-    ## start < p, end nobs 1959q3 - 2009q3
+    res1.model.predict(params, start, end)
+    #  start < p, end nobs 1959q3 - 2009q3
     start, end = 2, 202
-    fv = res1.model.predict(params, start, end)
-    ## start < p, end >nobs 1959q3 - 2015q4
+    res1.model.predict(params, start, end)
+    #  start < p, end >nobs 1959q3 - 2015q4
     start, end = 2, 227
-    fv = res1.model.predict(params, start, end)
+    res1.model.predict(params, start, end)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
-    #TODO: why detoriating precision?
+    # TODO: why detoriating precision?
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end)
-    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fc[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end)
     assert_almost_equal(fv, fc[1:203], DECIMAL_4)
 
-    #### Dynamic #####
+    # Dynamic
 
-    #NOTE: should raise
+    # NOTE: should raise
     # start < p, end <p 1959q2 - 1959q4
-    #start, end = 1,3
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 1, 3
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start < p, end 0 1959q3 - 1960q1
-    #start, end = 2, 4
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >0 1959q3 - 1971q4
-    #start, end = 2, 51
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end nobs 1959q3 - 2009q3
-    #start, end = 2, 202
-    #fv = res1.predict(start, end, dynamic=True)
-    ## start < p, end >nobs 1959q3 - 2015q4
-    #start, end = 2, 227
-    #fv = res1.predict(start, end, dynamic=True)
+    start, end = 2, 4
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >0 1959q3 - 1971q4
+    start, end = 2, 51
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end nobs 1959q3 - 2009q3
+    start, end = 2, 202
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
+    #  start < p, end >nobs 1959q3 - 2015q4
+    start, end = 2, 227
+    with pytest.raises(ValueError, match='Start must be >= k_ar'):
+        res1.predict(start, end, dynamic=True)
     # start 0, end >0 1960q1 - 1971q4
     start, end = 5, 51
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end nobs 1960q1 - 2009q3
     start, end = 5, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start 0, end >nobs 1960q1 - 2015q4
     start, end = 5, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn[start:end + 1], DECIMAL_4)
     # start >p, end >0 1965q1 - 1971q4
     start, end = 24, 51
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end nobs 1965q1 - 2009q3
     start, end = 24, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start >p, end >nobs 1965q1 - 2015q4
     start, end = 24, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn2[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn2[start:end + 1], DECIMAL_4)
     # start nobs, end nobs 2009q3 - 2009q3
     start, end = 202, 202
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn3[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn3[start:end + 1], DECIMAL_4)
     # start nobs, end >nobs 2009q3 - 2015q4
     start, end = 202, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
     # start >nobs, end >nobs 2009q4 - 2015q4
     start, end = 203, 227
     fv = res1.model.predict(params, start, end, dynamic=True)
-    assert_almost_equal(fv, fcdyn4[start:end+1], DECIMAL_4)
+    assert_almost_equal(fv, fcdyn4[start:end + 1], DECIMAL_4)
     # defaults
     start, end = None, None
     fv = res1.model.predict(params, start, end, dynamic=True)
@@ -1597,10 +1662,11 @@ def test_arima_predict_mle_diffs():
 def test_arima_wrapper():
     cpi = load_macrodata_pandas().data['cpi']
     cpi.index = pd.Index(cpi_dates)
-    res = ARIMA(cpi, (4,1,1), freq='Q').fit(disp=-1)
-    assert_equal(res.params.index, pd.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
-                                    'ar.L3.D.cpi', 'ar.L4.D.cpi',
-                                    'ma.L1.D.cpi']))
+    res = ARIMA(cpi, (4, 1, 1), freq='Q').fit(disp=-1)
+    assert_equal(res.params.index,
+                 pd.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
+                           'ar.L3.D.cpi', 'ar.L4.D.cpi',
+                           'ma.L1.D.cpi']))
     assert_equal(res.model.endog_names, 'D.cpi')
 
 
@@ -1612,44 +1678,46 @@ def test_1dexog():
     exog = dta['m1'].values.squeeze()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod = ARMA(endog, (1,1), exog).fit(disp=-1)
+        mod = ARMA(endog, (1, 1), exog).fit(disp=-1)
         mod.predict(193, 203, exog[-10:])
 
         # check for dynamic is true and pandas Series  see #2589
         mod.predict(193, 202, exog[-10:], dynamic=True)
 
         dta.index = pd.Index(cpi_dates)
-        mod = ARMA(dta['realcons'], (1,1), dta['m1']).fit(disp=-1)
-        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:], dynamic=True)
+        mod = ARMA(dta['realcons'], (1, 1), dta['m1']).fit(disp=-1)
+        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:],
+                    dynamic=True)
 
-        mod = ARMA(dta['realcons'], (1,1), dta['m1']).fit(trend='nc', disp=-1)
-        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:], dynamic=True)
+        mod = ARMA(dta['realcons'], (1, 1), dta['m1']).fit(trend='nc', disp=-1)
+        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:],
+                    dynamic=True)
 
 
 def test_arima_predict_bug():
-    #predict_start_date was not getting set on start = None
+    # predict_start_date was not getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
     dta.index = pd.date_range(start='1700', end='2009', freq='A')[:309]
-    arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
+    arma_mod20 = ARMA(dta, (2, 0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
     # test prediction with time stamp, see #2587
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1])
-    assert_(predict.index.equals(dta.index[-20:]))
+    assert predict.index.equals(dta.index[-20:])
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
-    assert_(predict.index.equals(dta.index[-20:]))
+    assert predict.index.equals(dta.index[-20:])
     # partially out of sample
     predict_dates = pd.date_range(start='2000', end='2015', freq='A')
     predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
-    assert_(predict.index.equals(predict_dates))
-    #assert_(1 == 0)
+    assert predict.index.equals(predict_dates)
 
 
 def test_arima_predict_q2():
     # bug with q > 1 for arima predict
     inv = load_macrodata_pandas().data['realinv'].values
-    arima_mod = ARIMA(np.log(inv), (1,1,2)).fit(start_params=[0,0,0,0], disp=-1)
+    arima_mod = ARIMA(np.log(inv), (1, 1, 2)).fit(start_params=[0, 0, 0, 0],
+                                                  disp=-1)
     fc, stderr, conf_int = arima_mod.forecast(5)
     # values copy-pasted from gretl
     assert_almost_equal(fc,
@@ -1663,7 +1731,7 @@ def test_arima_predict_pandas_nofreq():
              "2010-01-08", "2010-01-11", "2010-01-12", "2010-01-11",
              "2010-01-12", "2010-01-13", "2010-01-17"]
     close = [626.75, 623.99, 608.26, 594.1, 602.02, 601.11, 590.48, 587.09,
-             589.85, 580.0,587.62]
+             589.85, 580.0, 587.62]
     data = pd.DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
 
     # TODO: fix this names bug for non-string names names
@@ -1673,7 +1741,7 @@ def test_arima_predict_pandas_nofreq():
     # first check that in-sample prediction works
     predict = arma.predict()
 
-    assert_(predict.index.equals(data.index))
+    assert predict.index.equals(data.index)
 
     # check that this raises an exception when date not on index
     assert_raises(KeyError, arma.predict, start="2010-1-9", end=10)
@@ -1684,50 +1752,50 @@ def test_arima_predict_pandas_nofreq():
     # raise because end not on index
     assert_raises(KeyError, arma.predict, start=3, end="2010-1-10")
 
-    predict = arma.predict(start="2010-1-7", end=10) # should be of length 10
-    assert_(len(predict) == 8)
-    assert_(predict.index.equals(data.index[3:10+1]))
+    predict = arma.predict(start="2010-1-7", end=10)  # should be of length 10
+    assert len(predict) == 8
+    assert predict.index.equals(data.index[3:10 + 1])
 
     with pytest.warns(ValueWarning, match="No supported index is available"):
         predict = arma.predict(start="2010-1-7", end=14)
 
-    assert_(predict.index.equals(pd.Index(lrange(3, 15))))
+    assert predict.index.equals(pd.Index(lrange(3, 15)))
 
     with pytest.warns(ValueWarning, match="No supported index is available"):
         predict = arma.predict(start=3, end=14)
 
-    assert_(predict.index.equals(pd.Index(lrange(3, 15))))
+    assert predict.index.equals(pd.Index(lrange(3, 15)))
 
     # end can be a date if it's in the sample and on the index
     # predict dates is just a slice of the dates index then
     predict = arma.predict(start="2010-1-6", end="2010-1-13")
-    assert_(predict.index.equals(data.index[2:10]))
+    assert predict.index.equals(data.index[2:10])
     predict = arma.predict(start=2, end="2010-1-13")
-    assert_(predict.index.equals(data.index[2:10]))
+    assert predict.index.equals(data.index[2:10])
 
 
 def test_arima_predict_exog():
     # check 625 and 626
-    #from statsmodels.tsa.arima_process import arma_generate_sample
-    #arparams = np.array([1, -.45, .25])
-    #maparams = np.array([1, .15])
-    #nobs = 100
-    #np.random.seed(123)
-    #y = arma_generate_sample(arparams, maparams, nobs, burnin=100)
+    # from statsmodels.tsa.arima_process import arma_generate_sample
+    # arparams = np.array([1, -.45, .25])
+    # maparams = np.array([1, .15])
+    # nobs = 100
+    # np.random.seed(123)
+    # y = arma_generate_sample(arparams, maparams, nobs, burnin=100)
 
-    ## make an exogenous trend
-    #X = np.array(lrange(nobs)) / 20.0
-    ## add a constant
-    #y += 2.5
+    #  make an exogenous trend
+    # X = np.array(lrange(nobs)) / 20.0
+    #  add a constant
+    # y += 2.5
 
     from pandas import read_csv
-    arima_forecasts = read_csv(current_path + "/results/"
-                            "results_arima_exog_forecasts_mle.csv")
+    file_name = "/results/results_arima_exog_forecasts_mle.csv"
+    arima_forecasts = read_csv(current_path + file_name)
     y = arima_forecasts["y"].dropna()
-    X = np.arange(len(y) + 25)/20.
+    X = np.arange(len(y) + 25) / 20.
     predict_expected = arima_forecasts["predict"]
-    arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
-                                                             disp=-1)
+    arma_res = ARMA(y.values, order=(2, 1), exog=X[:100]).fit(trend="c",
+                                                              disp=-1)
     # params from gretl
     params = np.array([2.786912485145725, -0.122650190196475,
                        0.533223846028938, -0.319344321763337,
@@ -1738,30 +1806,30 @@ def test_arima_predict_exog():
     assert_almost_equal(predict, predict_expected.values[:100], 5)
 
     # check 626
-    assert_(len(arma_res.model.exog_names) == 5)
+    assert len(arma_res.model.exog_names) == 5
 
     # exog for out-of-sample and in-sample dynamic
     predict = arma_res.model.predict(params, end=124, exog=X[100:])
     assert_almost_equal(predict, predict_expected.values, 6)
 
     # conditional sum of squares
-    #arima_forecasts = read_csv(current_path + "/results/"
+    # arima_forecasts = read_csv(current_path + "/results/"
     #                        "results_arima_exog_forecasts_css.csv")
-    #predict_expected = arima_forecasts["predict"].dropna()
-    #arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
+    # predict_expected = arima_forecasts["predict"].dropna()
+    # arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
     #                                                         method="css",
     #                                                         disp=-1)
 
-    #params = np.array([2.152350033809826, -0.103602399018814,
+    # params = np.array([2.152350033809826, -0.103602399018814,
     #                   0.566716580421188, -0.326208009247944,
     #                   0.102142932143421])
-    #predict = arma_res.model.predict(params)
-    ## in-sample
-    #assert_almost_equal(predict, predict_expected.values[:98], 6)
+    # predict = arma_res.model.predict(params)
+    #  in-sample
+    # assert_almost_equal(predict, predict_expected.values[:98], 6)
 
-    #predict = arma_res.model.predict(params, end=124, exog=X[100:])
-    ## exog for out-of-sample and in-sample dynamic
-    #assert_almost_equal(predict, predict_expected.values, 3)
+    # predict = arma_res.model.predict(params, end=124, exog=X[100:])
+    #  exog for out-of-sample and in-sample dynamic
+    # assert_almost_equal(predict, predict_expected.values, 3)
 
 
 @pytest.mark.smoke
@@ -1774,7 +1842,7 @@ def test_arima_no_diff():
     np.random.seed(12345)
     y = arma_generate_sample(ar, ma, 100)
     mod = ARIMA(y, (3, 0, 2))
-    assert_(type(mod) is ARMA)
+    assert type(mod) is ARMA
     res = mod.fit(disp=-1)
     # smoke test just to be sure
     res.predict()
@@ -1787,32 +1855,31 @@ def test_arima_predict_noma():
     ma = [1]
     np.random.seed(12345)
     data = arma_generate_sample(ar, ma, 100)
-    arma = ARMA(data, order=(0,1))
+    arma = ARMA(data, order=(0, 1))
     arma_res = arma.fit(disp=-1)
     arma_res.forecast(1)
 
 
 def test_arimax():
     dta = load_macrodata_pandas().data
-    dates = pd.date_range("1959", periods=len(dta), freq='Q')
     dta.index = cpi_dates
     dta = dta[["realdpi", "m1", "realgdp"]]
     y = dta.pop("realdpi")
 
     # 1 exog
-    #X = dta.iloc[1:]["m1"]
-    #res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
-    #params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
+    # X = dta.iloc[1:]["m1"]
+    # res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+    # params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
     #          0.165262136028113, -0.066667022903974]
-    #assert_almost_equal(res.params.values, params, 6)
+    # assert_almost_equal(res.params.values, params, 6)
 
     # 2 exog
     X = dta
     res = ARIMA(y, (2, 1, 1), X).fit(disp=False, solver="nm", maxiter=1000,
-                ftol=1e-12, xtol=1e-12)
+                                     ftol=1e-12, xtol=1e-12)
 
     # from gretl
-    #params = [13.113976653926638, -0.003792125069387,  0.004123504809217,
+    # params = [13.113976653926638, -0.003792125069387,  0.004123504809217,
     #          -0.199213760940898,  0.151563643588008, -0.033088661096699]
     # from stata using double
     stata_llf = -1076.108614859121
@@ -1840,18 +1907,18 @@ def test_arimax():
 
 def test_bad_start_params():
     endog = np.array([
-        820.69093,      781.0103028,    785.8786988,    767.64282267,
-        778.9837648,    824.6595702,    813.01877867,   751.65598567,
-        753.431091,     746.920813,     795.6201904,    772.65732833,
-        793.4486454,    868.8457766,    823.07226547,   783.09067747,
-        791.50723847,   770.93086347,   835.34157333,   810.64147947,
-        738.36071367,   776.49038513,   822.93272333,   815.26461227,
-        773.70552987,   777.3726522,    811.83444853,   840.95489133,
-        777.51031933,   745.90077307,   806.95113093,   805.77521973,
-        756.70927733,   749.89091773,  1694.2266924,   2398.4802244,
-        1434.6728516,   909.73940427,   929.01291907,   769.07561453,
-        801.1112548,    796.16163313,   817.2496376,    857.73046447,
-        838.849345,     761.92338873,   731.7842242,    770.4641844])
+        820.69093, 781.0103028, 785.8786988, 767.64282267,
+        778.9837648, 824.6595702, 813.01877867, 751.65598567,
+        753.431091, 746.920813, 795.6201904, 772.65732833,
+        793.4486454, 868.8457766, 823.07226547, 783.09067747,
+        791.50723847, 770.93086347, 835.34157333, 810.64147947,
+        738.36071367, 776.49038513, 822.93272333, 815.26461227,
+        773.70552987, 777.3726522, 811.83444853, 840.95489133,
+        777.51031933, 745.90077307, 806.95113093, 805.77521973,
+        756.70927733, 749.89091773, 1694.2266924, 2398.4802244,
+        1434.6728516, 909.73940427, 929.01291907, 769.07561453,
+        801.1112548, 796.16163313, 817.2496376, 857.73046447,
+        838.849345, 761.92338873, 731.7842242, 770.4641844])
 
     mod = ARMA(endog, (15, 0))
     with pytest.raises(ValueError, match="pass your own start_params"):
@@ -1889,7 +1956,7 @@ def test_arima_dataframe_integer_name():
     dr = pd.date_range("1990", periods=len(vals), freq='Q')
     ts = pd.Series(vals, index=dr)
     df = pd.DataFrame(ts)
-    mod = sm.tsa.ARIMA(df, (2, 0, 2))
+    sm.tsa.ARIMA(df, (2, 0, 2))
 
 
 def test_arima_exog_predict_1d():
@@ -1919,37 +1986,31 @@ def test_arima_1123():
     arparams = np.array([.75, -.25])
     maparams = np.array([.65, .35])
 
-    arparam = np.r_[1, -arparams]
-    maparam = np.r_[1, maparams]
-
     nobs = 20
-
-    dates = pd.date_range(start='1980', periods=nobs, freq='A')
-
     np.random.seed(12345)
     y = arma_generate_sample(arparams, maparams, nobs)
 
     X = np.random.randn(nobs)
-    y += 5*X
-    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    y += 5 * X
+    mod = ARMA(y[:-1], order=(1, 0), exog=X[:-1])
     res = mod.fit(trend='nc', disp=False)
     fc = res.forecast(exog=X[-1:])
     # results from gretl
     assert_almost_equal(fc[0], 2.200393, 6)
     assert_almost_equal(fc[1], 1.030743, 6)
-    assert_almost_equal(fc[2][0,0], 0.180175, 6)
-    assert_almost_equal(fc[2][0,1], 4.220611, 6)
+    assert_almost_equal(fc[2][0, 0], 0.180175, 6)
+    assert_almost_equal(fc[2][0, 1], 4.220611, 6)
 
-    mod = ARMA(y[:-1], order=(1,1), exog=X[:-1])
+    mod = ARMA(y[:-1], order=(1, 1), exog=X[:-1])
     res = mod.fit(trend='nc', disp=False)
     fc = res.forecast(exog=X[-1:])
     assert_almost_equal(fc[0], 2.765688, 6)
     assert_almost_equal(fc[1], 0.835048, 6)
-    assert_almost_equal(fc[2][0,0], 1.129023, 6)
-    assert_almost_equal(fc[2][0,1], 4.402353, 6)
+    assert_almost_equal(fc[2][0, 0], 1.129023, 6)
+    assert_almost_equal(fc[2][0, 1], 4.402353, 6)
 
     # make sure this works to. code looked fishy.
-    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    mod = ARMA(y[:-1], order=(1, 0), exog=X[:-1])
     res = mod.fit(trend='c', disp=False)
     fc = res.forecast(exog=X[-1:])
     assert_almost_equal(fc[0], 2.481219, 6)
@@ -1971,12 +2032,12 @@ def test_small_data():
     # and be clear, these are garbage parameters.
     # X-12 arima will estimate, gretl refuses to estimate likely a problem
     # in start params regression.
-    res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
+    mod.fit(trend="nc", disp=0, start_params=[.1, .1, .1, .1])
     mod = ARIMA(y, (1, 0, 2))
     import warnings
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
 
 
 class TestARMA00(object):
@@ -1996,7 +2057,8 @@ class TestARMA00(object):
 
     def test_predictions(self):
         predictions = self.arma_00_res.predict()
-        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions),
+                            predictions)
 
     def test_arroots(self):
         # regression test; older implementation of arroots returned None
@@ -2028,7 +2090,8 @@ class TestARMA00(object):
         arma = ARMA(self.y, order=(0, 0))
         fit = arma.fit(method='css', disp=-1)
         predictions = fit.predict()
-        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions),
+                            predictions)
 
     def test_arima(self):
         yi = np.cumsum(self.y)
@@ -2041,18 +2104,20 @@ class TestARMA00(object):
         y_lead = y[1:]
         y_lag = y[:-1]
         T = y_lag.shape[0]
-        X = np.hstack((np.ones((T,1)), y_lag[:,None]))
+        X = np.hstack((np.ones((T, 1)), y_lag[:, None]))
         ols_res = OLS(y_lead, X).fit()
-        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='c', disp=-1)
+        arma_res = ARMA(y_lead, order=(0, 0), exog=y_lag).fit(trend='c',
+                                                              disp=-1)
         assert_almost_equal(ols_res.params, arma_res.params)
 
     def test_arma_exog_no_constant(self):
         y = self.y
         y_lead = y[1:]
         y_lag = y[:-1]
-        X = y_lag[:,None]
+        X = y_lag[:, None]
         ols_res = OLS(y_lead, X).fit()
-        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='nc', disp=-1)
+        arma_res = ARMA(y_lead, order=(0, 0), exog=y_lag).fit(trend='nc',
+                                                              disp=-1)
         assert_almost_equal(ols_res.params, arma_res.params)
 
 
@@ -2064,7 +2129,7 @@ def test_arima_dates_startatend():
                                       periods=36, freq='M'))
     res = ARIMA(x, (1, 0, 0)).fit(disp=0)
     pred = res.predict(start=len(x), end=len(x))
-    assert_(pred.index[0] == x.index.shift(1)[-1])
+    assert pred.index[0] == x.index.shift(1)[-1]
     fc = res.forecast()[0]
     assert_almost_equal(pred.values[0], fc)
 
@@ -2084,33 +2149,34 @@ def test_plot_predict(close_figures):
     dta = load_pandas().data[['SUNACTIVITY']]
     dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
-    fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    res.plot_predict('1990', '2012', dynamic=True, plot_insample=True)
 
     res = ARIMA(dta, (3, 1, 0)).fit(disp=-1)
-    fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    res.plot_predict('1990', '2012', dynamic=True, plot_insample=True)
 
 
 def test_arima_diff2():
     dta = load_macrodata_pandas().data['cpi']
-    dates = pd.date_range("1959", periods=len(dta), freq='Q')
     dta.index = cpi_dates
     mod = ARIMA(dta, (3, 2, 1)).fit(disp=-1)
     fc, fcerr, conf_int = mod.forecast(10)
     # forecasts from gretl
-    conf_int_res = [ (216.139,  219.231),
-                     (216.472,  221.520),
-                     (217.064,  223.649),
-                     (217.586,  225.727),
-                     (218.119,  227.770),
-                     (218.703,  229.784),
-                     (219.306,  231.777),
-                     (219.924,  233.759),
-                     (220.559,  235.735),
-                     (221.206,  237.709)]
+    conf_int_res = [(216.139, 219.231),
+                    (216.472, 221.520),
+                    (217.064, 223.649),
+                    (217.586, 225.727),
+                    (218.119, 227.770),
+                    (218.703, 229.784),
+                    (219.306, 231.777),
+                    (219.924, 233.759),
+                    (220.559, 235.735),
+                    (221.206, 237.709)]
 
     fc_res = [217.685, 218.996, 220.356, 221.656, 222.945, 224.243, 225.541,
-          226.841, 228.147, 229.457]
-    fcerr_res = [0.7888, 1.2878, 1.6798, 2.0768,  2.4620, 2.8269, 3.1816,
+              226.841, 228.147, 229.457]
+    fcerr_res = [0.7888, 1.2878, 1.6798, 2.0768, 2.4620, 2.8269, 3.1816,
                  3.52950, 3.8715, 4.2099]
 
     assert_almost_equal(fc, fc_res, 3)
@@ -2120,8 +2186,8 @@ def test_arima_diff2():
     predicted = mod.predict('2008Q1', '2012Q1', typ='levels')
 
     predicted_res = [214.464, 215.478, 221.277, 217.453, 212.419, 213.530,
-                     215.087, 217.685 , 218.996 , 220.356 , 221.656 ,
-                     222.945 , 224.243 , 225.541 , 226.841 , 228.147 ,
+                     215.087, 217.685, 218.996, 220.356, 221.656,
+                     222.945, 224.243, 225.541, 226.841, 228.147,
                      229.457]
     assert_almost_equal(predicted, predicted_res, 3)
 
@@ -2189,7 +2255,6 @@ def test_arima_exog_predict():
     # test forecasting and dynamic prediction with exog against Stata
 
     dta = load_macrodata_pandas().data
-    dates = pd.date_range("1959", periods=len(dta), freq='Q')
     cpi_dates = period_range(start='1959Q1', end='2009Q3', freq='Q')
     dta.index = cpi_dates
 
@@ -2233,7 +2298,8 @@ def test_arima_exog_predict():
     ex_scale = 1000
     # ARIMA(1, 1, 1)
     ex = ex_scale * np.asarray(data_sample[['loggdp', 'logcons']].diff())
-    # The first obsevation is not (supposed to be) used, but I get a Lapack problem
+    # The first observation is not (supposed to be) used,
+    # but I get a Lapack problem
     # Intel MKL ERROR: Parameter 5 was incorrect on entry to DLASCL.
     ex[0] = 0
     mod111 = ARIMA(100 * np.asarray(data_sample['loginv']), (1, 1, 1),
@@ -2348,28 +2414,24 @@ def test_arima_fit_multiple_calls():
     # Make multiple calls to fit
     with pytest.warns(HessianInversionWarning, match="no bse or cov"):
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
-    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
+    assert_equal(mod.exog_names, ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
-    mod.exog = None  # FIXME: this should not be necessary
     with pytest.warns(HessianInversionWarning, match="no bse or cov"):
         res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
-    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
+    assert_equal(mod.exog_names, ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
     # ensure summary() works  # TODO: separate and pytest.mark.smoke
     res.summary()
+    res.summary2()
 
     # test multiple calls when there is only a constant term
     mod = ARIMA(y, (0, 0, 0))
     # Make multiple calls to fit
     mod.fit(disp=0, start_params=[np.mean(y)])
-    assert_equal(mod.exog_names,  ['const'])
+    assert_equal(mod.exog_names, ['const'])
 
-    mod.exog = None  # FIXME: this should not be necessary
-    res = mod.fit(disp=0, start_params=[np.mean(y)])
-    assert_equal(mod.exog_names,  ['const'])
-
-    # ensure summary() works  # TODO: separate and pytest.mark.smoke
-    res.summary()
+    with pytest.raises(RuntimeError):
+        mod.fit(disp=0, start_params=[np.mean(y)])
 
 
 def test_long_ar_start_params():
@@ -2384,14 +2446,31 @@ def test_long_ar_start_params():
 
     model = ARMA(y, order=(2, 2))
 
-    model.fit(method='css',start_ar_lags=10, disp=0)
+    model.fit(method='css', start_ar_lags=10, disp=0)
 
-    model.exog = None  # FIXME: should not be necessary
-    model.fit(method='css-mle',start_ar_lags=10, disp=0)
+    with pytest.raises(RuntimeError):
+        model.fit(method='css-mle', start_ar_lags=10, disp=0)
 
-    model.exog = None  # FIXME: should not be necessary
-    model.fit(method='mle',start_ar_lags=10, disp=0)
-    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
+    with pytest.raises(RuntimeError):
+        model.fit(method='mle', start_ar_lags=10, disp=0)
+
+    with pytest.raises(RuntimeError):
+        model.fit(ValueError, start_ar_lags=nobs + 5, disp=0)
+
+
+def test_start_params_too_large():
+    np.random.seed(12345)
+    arparams = np.array([1, -.75, .25])
+    maparams = np.array([1, .65, .35])
+
+    nobs = 30
+
+    np.random.seed(12345)
+    y = arma_generate_sample(arparams, maparams, nobs)
+
+    model = ARMA(y, order=(2, 2))
+    with pytest.raises(ValueError):
+        model.fit(start_ar_lags=nobs + 5, disp=0)
 
 
 def test_arma_pickle():
@@ -2494,7 +2573,7 @@ def test_constant_column_trend():
     #  silently drop a column and return an inconsistenct k_trend value.
 
     exog = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
-    endog =  np.array([-0.011866, 0.003380, 0.015357, 0.004451, -0.020889])
+    endog = np.array([-0.011866, 0.003380, 0.015357, 0.004451, -0.020889])
 
     model = ARIMA(endog=endog, order=(1, 1, 0), exog=exog)
 
@@ -2542,3 +2621,81 @@ def test_predict_wrong_exog_len(reset_randomstate):
     res = mod.fit(disp=-1)
     with pytest.warns(SpecificationWarning, match='of observations in exog'):
         res.predict(end=df.index[-1], exog=df.x.iloc[500:])
+
+
+def test_invalid_method(reset_randomstate):
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=1000)
+    mod = ARMA(x, (1, 1))
+    with pytest.raises(ValueError, match='Method unknown not understood'):
+        mod.fit(method='unknown')
+
+
+@pytest.mark.matplotlib
+def test_summary_plots_no_dates(reset_randomstate, close_figures):
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=1000)
+    res = ARMA(x, (1, 1)).fit()
+    res.plot_predict()
+    res.plot_predict(plot_insample=True)
+    assert isinstance(res.summary().as_text(), str)
+    assert isinstance(res.summary2().as_text(), str)
+
+
+def test_predict_exog_missing():
+    dta = load_macrodata_pandas().data
+    res = ARMA(dta['realcons'], (1, 1), dta['m1']).fit(disp=-1)
+    with pytest.raises(ValueError, match='You must provide exog for ARMAX'):
+        res.predict(start=203, end=210)
+
+
+def test_too_few_obs_starting_values(reset_randomstate):
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=5, burnin=100)
+    with pytest.raises(ValueError, match='Insufficient degrees of freedom'):
+        ARMA(x, (1, 6)).fit(disp=-1)
+
+
+def test_repeated_fit_error(reset_randomstate):
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    arma = ARMA(x, (1, 1))
+    arma.fit(disp=-1)
+    with pytest.raises(RuntimeError):
+        arma.fit(trend='nc')
+    with pytest.raises(RuntimeError):
+        arma.fit(method='css')
+
+
+def test_predict_no_fit():
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    arma = ARMA(x, (1, 1))
+    with pytest.raises(RuntimeError, match='Model must be fit'):
+        arma.predict([.1, .1])
+    arima = ARIMA(x, (1, 1, 1))
+    with pytest.raises(RuntimeError, match='Model must be fit'):
+        arima.predict([.1, .1])
+
+
+def test_arma_repeated_fit():
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    arma = ARMA(x, (1, 1))
+    res = arma.fit(trend='c', disp=-1)
+    repeat = arma.fit(trend='c', disp=-1)
+    rtol = 1e-5 if PLATFORM_WIN32 else 1e-7
+    assert_allclose(res.params, repeat.params, rtol=rtol)
+    assert isinstance(res.summary().as_text(), str)
+    assert isinstance(repeat.summary().as_text(), str)
+
+
+def test_arima_repeated_fit():
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    arma = ARIMA(x, (1, 1, 1))
+    res = arma.fit(trend='c', disp=-1)
+    repeat = arma.fit(trend='c', disp=-1)
+    assert_allclose(res.params, repeat.params)
+    assert isinstance(res.summary().as_text(), str)
+    assert isinstance(repeat.summary().as_text(), str)

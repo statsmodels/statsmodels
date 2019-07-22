@@ -33,7 +33,7 @@ def _right_squeeze(arr, stop_dim=0):
 
 
 def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
-               shape=None, order='C', contiguous=False):
+               shape=None, order='C', contiguous=False, optional=False):
     """
     Convert array-like to an array and check conditions
 
@@ -61,6 +61,8 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
         Order of the array
     contiguous : bool
         Ensure that the array's data is contiguous with order ``order``
+    optional : bool
+        Flag indicating whether None is allowed
 
     Examples
     --------
@@ -112,6 +114,8 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
     """
+    if optional and obj is None:
+        return None
     arr = np.asarray(obj, dtype=dtype, order=order)
     if maxdim is not None:
         if arr.ndim > maxdim:
