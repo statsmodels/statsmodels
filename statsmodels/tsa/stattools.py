@@ -1607,6 +1607,7 @@ def kpss(x, regression='c', lags=None, store=False):
     elif lags == 'auto':
         # autolag method of Hobijn et al. (1998)
         lags = _kpss_autolag(resids, nobs)
+        lags = min(lags, nobs - 1)
     else:
         lags = int(lags)
 
@@ -1672,5 +1673,5 @@ def _kpss_autolag(resids, nobs):
     s_hat = s1 / s0
     pwr = 1. / 3.
     gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
-    autolags = np.amin([nobs, int(gamma_hat * np.power(nobs, pwr))])
+    autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
