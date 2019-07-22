@@ -196,7 +196,7 @@ class GLM(base.LikelihoodModel):
      Gaussian      x     x   x     x      x       x   x     x      x
      inv Gaussian  x     x                        x
      binomial      x     x   x     x      x       x   x           x      x
-     Poisson      x     x                        x
+     Poisson       x     x                        x
      neg binomial  x     x                        x        x
      gamma         x     x                        x
      Tweedie       x     x                        x
