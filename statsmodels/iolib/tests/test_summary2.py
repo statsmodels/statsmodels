@@ -19,12 +19,14 @@ class TestSummaryLatex(object):
 \begin{center}
 \begin{tabular}{lcc}
 \hline
-      &   y I    &   y II    \\
+          &   y I    &   y II    \\
 \midrule
-const & 7.7500   & 12.4231   \\
-      & (1.1058) & (3.1872)  \\
-x1    & -0.7500  & -1.5769   \\
-      & (0.2368) & (0.6826)  \\
+const     & 7.7500   & 12.4231   \\
+          & (1.1058) & (3.1872)  \\
+x1        & -0.7500  & -1.5769   \\
+          & (0.2368) & (0.6826)  \\
+R-squared & 0.6930   & 0.5202    \\
+          & 0.7697   & 0.6401    \\
 \hline
 \end{tabular}
 \end{center}
@@ -43,16 +45,18 @@ x1    & -0.7500  & -1.5769   \\
     def test_summarycol_float_format(self):
         # Test for latex output of summary_col object
         desired = r"""
-=================
-       y I   y II
------------------
-const 7.7   12.4 
-      (1.1) (3.2)
-x1    -0.7  -1.6 
-      (0.2) (0.7)
-=================
-Standard errors
-in parentheses.
+=====================
+           y I   y II
+---------------------
+const     7.7   12.4 
+          (1.1) (3.2)
+x1        -0.7  -1.6 
+          (0.2) (0.7)
+R-squared 0.7   0.5  
+          0.8   0.6  
+=====================
+Standard errors in
+parentheses.
 """  # noqa:W291
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
