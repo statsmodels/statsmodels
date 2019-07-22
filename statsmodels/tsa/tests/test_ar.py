@@ -1,18 +1,17 @@
 """
 Test AR Model
 """
-import statsmodels.api as sm
-from statsmodels.tsa.ar_model import AR
-from statsmodels.tsa.arima_model import ARMA
-from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
-from statsmodels.tools.testing import assert_equal
-from .results import results_ar
-
-import pytest
 import numpy as np
 import numpy.testing as npt
+import pytest
+from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
 from pandas import Series, Index, date_range, period_range
 
+import statsmodels.api as sm
+from statsmodels.tools.testing import assert_equal
+from statsmodels.tsa.ar_model import AR
+from statsmodels.tsa.arima_model import ARMA
+from .results import results_ar
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -44,6 +43,10 @@ class CheckARMixin(object):
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
         assert type(res_unpickled) is type(self.res1)  # noqa: E721
+
+    @pytest.mark.smoke
+    def test_summary(self):
+        assert isinstance(self.res1.summary().as_text(), str)
 
 
 class TestAROLSConstant(CheckARMixin):
@@ -361,6 +364,22 @@ def test_constant_column_trend():
     # expected numbers are regression-test
     expected = np.array([0.44687422, 0.45608137, 0.47046381])
     assert_allclose(pred, expected)
+
+
+def test_summary_corner():
+    data = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
+    dates = period_range(start='1959Q1', periods=len(data), freq='Q')
+    data.index = dates
+    res = AR(data).fit(maxlag=4)
+    summ = res.summary().as_text()
+    assert 'AR(4)' in summ
+    assert 'L4.cpi' in summ
+    assert '03-31-1959' in summ
+    res = AR(data).fit(maxlag=0)
+    summ = res.summary().as_text()
+    assert 'const' in summ
+    assert 'AR(0)' in summ
+
 
 
 #TODO: likelihood for ARX model?
