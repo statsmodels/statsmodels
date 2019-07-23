@@ -173,8 +173,8 @@ class ProbPlot(object):
         if isinstance(dist, str):
             dist = getattr(stats, dist)
 
-        self.fit_params = dist.fit(data)
         if fit:
+            self.fit_params = dist.fit(data)
             self.loc = self.fit_params[-2]
             self.scale = self.fit_params[-1]
             if len(self.fit_params) > 2:
@@ -195,10 +195,12 @@ class ProbPlot(object):
                                 'is:\n{cmd}'.format(cmd=cmd))
             self.loc = loc
             self.scale = scale
+            self.fit_params = np.r_[distargs, loc, scale]
         else:
             self.dist = dist
             self.loc = loc
             self.scale = scale
+            self.fit_params = np.r_[loc, scale]
 
         # propertes
         self._cache = {}
