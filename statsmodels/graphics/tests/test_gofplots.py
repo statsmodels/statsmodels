@@ -102,6 +102,10 @@ class BaseProbplotMixin(object):
                              markeredgecolor='white',
                              alpha=0.5)
 
+    def test_fit_params(self):
+        assert self.prbplt.fit_params[-2] == self.prbplt.loc
+        assert self.prbplt.fit_params[-1] == self.prbplt.scale
+
 
 class TestProbPlotLongely(BaseProbplotMixin):
     def setup(self):
