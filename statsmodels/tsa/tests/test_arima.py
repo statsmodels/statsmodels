@@ -2503,3 +2503,17 @@ def test_constant_column_trend():
         model.fit(trend="c")
 
     # FIXME: calling model.fit(trend="nc") raises for orthogonal reasons
+
+
+def test_arima_d0_forecast(reset_randomstate):
+    arparams = np.array([1, -.75])
+    maparams = np.array([1, .65])
+    y = arma_generate_sample(arparams, maparams, 250)
+    mod = ARIMA(y, (1, 0, 1))
+    assert isinstance(mod, ARMA)
+    res = mod.fit(disp=-1)
+    pred = res.predict(start=200, end=300)
+    pred_typ = res.predict(start=200, end=300, typ='linear')
+    assert_allclose(pred, pred_typ)
+    pred_mod = mod.predict(res.params, start=200, end=300, typ='linear')
+    assert_allclose(pred, pred_mod)
