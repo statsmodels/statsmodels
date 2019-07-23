@@ -11,7 +11,7 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
-from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_LINUX32
 
 import numpy as np
 import pandas as pd
@@ -112,9 +112,14 @@ class CheckGenericMixin(object):
             tvals1 = res1.tvalues[keep_index_p]
         assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
 
-        with pytest.warns(RuntimeWarning, match="invalid value encountered"):
-            # passing NaN into scipy.stats functions
+        # See gh5993
+        if PLATFORM_LINUX32:
             pvals1 = res1.pvalues[keep_index_p]
+        else:
+            with pytest.warns(RuntimeWarning,
+                              match="invalid value encountered"):
+                # passing NaN into scipy.stats functions
+                pvals1 = res1.pvalues[keep_index_p]
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, 'resid'):
@@ -257,9 +262,14 @@ class CheckGenericMixin(object):
                 tvals1 = res1.tvalues[keep_index_p]
             assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
 
-            with pytest.warns(RuntimeWarning, match="invalid value"):
-                # passing NaNs into scipy.stats functions
+            # See gh5993
+            if PLATFORM_LINUX32:
                 pvals1 = res1.pvalues[keep_index_p]
+            else:
+                with pytest.warns(RuntimeWarning,
+                                  match="invalid value encountered"):
+                    # passing NaN into scipy.stats functions
+                    pvals1 = res1.pvalues[keep_index_p]
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):
