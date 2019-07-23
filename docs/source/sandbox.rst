@@ -34,12 +34,10 @@ Time Series analysis :mod:`tsa`
 
 In this part we develop models and functions that will be useful for time
 series analysis. Most of the models and function have been moved to
-:mod:`statsmodels.tsa`. Currently, GARCH models remain in development stage in
-`sandbox.tsa`.
+:mod:`statsmodels.tsa`.
 
 Moving Window Statistics
 """"""""""""""""""""""""
-
 
 Most moving window statistics, like rolling mean, moments (up to 4th order), min,
 max, mean, and variance, are covered by the functions for `Moving (rolling)

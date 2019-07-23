@@ -72,6 +72,8 @@ see notes_references.txt
 Created on Feb 6, 2010
 @author: "josef pktd"
 '''
+import warnings
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -86,6 +88,13 @@ from statsmodels.tsa.filters.filtertools import miso_lfilter
 from statsmodels.sandbox import tsa
 
 
+FUTURE_WARN = """
+{0} is deprecated and will be removed after 0.11. Please use the `arch`
+package:
+
+https://pypi.org/project/arch/
+https://github.com/bashtage/arch
+"""
 def sumofsq(x, axis=0):
     """Helper function to calculate sum of squares along first axis"""
     return np.sum(x**2, axis=axis)
@@ -310,6 +319,8 @@ class Garch0(TSMLEModel):
 
     '''
     def __init__(self, endog, exog=None):
+        warnings.warn(FUTURE_WARN.format(self.__class__.__name__),
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Garch0, self).__init__(endog, exog)
         #set default arma(1,1)
@@ -535,6 +546,8 @@ class Garch(TSMLEModel):
 
     '''
     def __init__(self, endog, exog=None):
+        warnings.warn(FUTURE_WARN.format(self.__class__.__name__),
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Garch, self).__init__(endog, exog)
         #set default arma(1,1)
@@ -674,6 +687,10 @@ class AR(LikelihoodModel):
     Fit methods that use super and broyden do not yet work.
     """
     def __init__(self, endog, exog=None, nlags=1):
+        warnings.warn('Deprecated and will be removed after 0.11. Use AR '
+                      'available in statsmodels.tsa.api',
+                      FutureWarning)
+
         if exog is None:    # extend to handle ADL(p,q) model? or subclass?
             exog = endog[:-nlags]
         endog = endog[nlags:]
@@ -833,6 +850,9 @@ class Arma(LikelihoodModel):
     """
 
     def __init__(self, endog, exog=None):
+        warnings.warn('Deprecated and will be removed after 0.11. Use ARMA '
+                      'available in statsmodels.tsa.api',
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Arma, self).__init__(endog, exog)
         #set default arma(1,1)

@@ -111,6 +111,8 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/statespace/ \
         statsmodels/tsa/tests/results/ \
         statsmodels/tsa/tests/test_stl.py \
+        statsmodels/tsa/x13.py \
+        statsmodels/tsa/tests/test_x13.py \
         statsmodels/__init__.py \
         statsmodels/conftest.py \
         examples/ \
