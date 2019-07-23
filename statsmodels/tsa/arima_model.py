@@ -698,9 +698,12 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def predict(self, params, start=None, end=None, exog=None, dynamic=False):
+    def predict(self, params, start=None, end=None, exog=None, dynamic=False,
+                **kwargs):
+        if kwargs and 'typ' not in kwargs:
+            raise TypeError('Unkown extra arguments')
         method = getattr(self, 'method', 'mle')  # do not assume fit
-        #params = np.asarray(params)
+        # params = np.asarray(params)
 
         # will return an index of a date
         start, end, out_of_sample, _ = (
@@ -1483,8 +1486,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False):
-        return self.model.predict(self.params, start, end, exog, dynamic)
+    def predict(self, start=None, end=None, exog=None, dynamic=False,
+                **kwargs):
+        return self.model.predict(self.params, start, end, exog, dynamic,
+                                  **kwargs)
     predict.__doc__ = _arma_results_predict
 
     def _forecast_error(self, steps):
