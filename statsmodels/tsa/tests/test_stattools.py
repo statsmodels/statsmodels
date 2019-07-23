@@ -476,7 +476,7 @@ class TestKPSS(SetupKPSS):
     def test_fail_nonvector_input(self, reset_randomstate):
         # should be fine
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, lags='legacy')
+            kpss(self.x, nlags='legacy')
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
@@ -484,13 +484,13 @@ class TestKPSS(SetupKPSS):
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'c', lags='legacy')
+            kpss(self.x, 'c', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'C', lags='legacy')
+            kpss(self.x, 'C', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'ct', lags='legacy')
+            kpss(self.x, 'ct', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'CT', lags='legacy')
+            kpss(self.x, 'CT', nlags='legacy')
 
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis",
                       lags='legacy')
@@ -525,22 +525,22 @@ class TestKPSS(SetupKPSS):
     def test_lags(self):
         # real GDP from macrodata data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, 'c', lags='auto')
+            res = kpss(self.x, 'c', nlags='auto')
         assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', lags='auto')
+        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', nlags='auto')
         assert_equal(res[2], 7)
         # volumes from nile data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(nile.load(True).data['volume'], 'c', lags='auto')
+            res = kpss(nile.load(True).data['volume'], 'c', nlags='auto')
         assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(randhie.load(True).data['lncoins'], 'ct', lags='auto')
+            res = kpss(randhie.load(True).data['lncoins'], 'ct', nlags='auto')
         assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(modechoice.load(True).data['invt'], 'ct', lags='auto')
+            res = kpss(modechoice.load(True).data['invt'], 'ct', nlags='auto')
         assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
@@ -551,10 +551,11 @@ class TestKPSS(SetupKPSS):
         msg = (r"lags \({}\) must be < number of observations \({}\)"
                .format(nobs, nobs))
         with pytest.raises(ValueError, match=msg):
-            kpss(self.x, 'c', lags=nobs)
+            kpss(self.x, 'c', nlags=nobs)
 
     def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
-        # Test that if *autolags* exceeds number of observations, we set suitable lags
+        # Test that if *autolags* exceeds number of observations, we set
+        # suitable lags
         # GH5925
         data_which_breaks_autolag = np.array(
             [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0,
@@ -572,18 +573,18 @@ class TestKPSS(SetupKPSS):
              1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,
              1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]).astype(float)
 
-        kpss(data_which_breaks_autolag, lags="auto")
+        kpss(data_which_breaks_autolag, nlags="auto")
 
     def test_legacy_lags(self):
         # Test legacy lags are the same
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, 'c', lags='legacy')
+            res = kpss(self.x, 'c', nlags='legacy')
         assert_equal(res[2], 15)
 
     def test_unknown_lags(self):
         # Test legacy lags are the same
         with pytest.raises(ValueError):
-            kpss(self.x, 'c', lags='unknown')
+            kpss(self.x, 'c', nlags='unknown')
 
     def test_deprecation(self):
         with pytest.warns(FutureWarning):

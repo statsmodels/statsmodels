@@ -2,6 +2,7 @@
 Statistical tools for time series analysis
 """
 from statsmodels.compat.python import iteritems, lrange, lzip
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
@@ -1493,7 +1494,8 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
-def kpss(x, regression='c', lags=None, store=False):
+@deprecate_kwarg('lags', 'nlags')
+def kpss(x, regression='c', nlags=None, store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1508,7 +1510,7 @@ def kpss(x, regression='c', lags=None, store=False):
         Indicates the null hypothesis for the KPSS test
         * 'c' : The data is stationary around a constant (default)
         * 'ct' : The data is stationary around a trend
-    lags : {None, str, int}, optional
+    nlags : {None, str, int}, optional
         Indicates the number of lags to be used. If None (default), lags is
         calculated using the legacy method. If 'auto', lags is calculated
         using the data-dependent method of Hobijn et al. (1998). See also
@@ -1591,8 +1593,8 @@ def kpss(x, regression='c', lags=None, store=False):
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
 
-    if lags is None:
-        lags = 'legacy'
+    if nlags is None:
+        nlags = 'legacy'
         msg = 'The behavior of using lags=None will change in the next ' \
               'release. Currently lags=None is the same as ' \
               'lags=\'legacy\', and so a sample-size lag length is used. ' \
@@ -1601,24 +1603,24 @@ def kpss(x, regression='c', lags=None, store=False):
               'selection method. To silence this warning, either use ' \
               '\'auto\' or \'legacy\''
         warn(msg, FutureWarning)
-    if lags == 'legacy':
-        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
-        lags = min(lags, nobs - 1)
-    elif lags == 'auto':
+    if nlags == 'legacy':
+        nlags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        nlags = min(nlags, nobs - 1)
+    elif nlags == 'auto':
         # autolag method of Hobijn et al. (1998)
-        lags = _kpss_autolag(resids, nobs)
-        lags = min(lags, nobs - 1)
+        nlags = _kpss_autolag(resids, nobs)
+        nlags = min(nlags, nobs - 1)
     else:
-        lags = int(lags)
+        nlags = int(nlags)
 
-    if lags >= nobs:
+    if nlags >= nobs:
         raise ValueError("lags ({}) must be < number of observations ({})"
-                         .format(lags, nobs))
+                         .format(nlags, nobs))
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
     eta = np.sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
-    s_hat = _sigma_est_kpss(resids, nobs, lags)
+    s_hat = _sigma_est_kpss(resids, nobs, nlags)
 
     kpss_stat = eta / s_hat
     p_value = np.interp(kpss_stat, crit, pvals)
@@ -1632,7 +1634,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
     if store:
         rstore = ResultsStore()
-        rstore.lags = lags
+        rstore.lags = nlags
         rstore.nobs = nobs
 
         stationary_type = "level" if hypo == 'c' else "trend"
@@ -1641,7 +1643,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
         return kpss_stat, p_value, crit_dict, rstore
     else:
-        return kpss_stat, p_value, lags, crit_dict
+        return kpss_stat, p_value, nlags, crit_dict
 
 
 def _sigma_est_kpss(resids, nobs, lags):
