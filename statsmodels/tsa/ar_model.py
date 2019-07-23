@@ -5,6 +5,8 @@ import numpy as np
 from numpy import dot, identity
 from numpy.linalg import inv, slogdet
 from scipy.stats import norm
+
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams)
@@ -784,6 +786,17 @@ class ARResults(tsbase.TimeSeriesModelResults):
         return np.roots(np.r_[1, -self.params[k:]]) ** -1
 
     @cache_readonly
+    def arfreq(self):
+        r"""
+        Returns the frequency of the AR roots.
+
+        This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
+        roots.
+        """
+        z = self.roots
+        return np.arctan2(z.imag, z.real) / (2 * np.pi)
+
+    @cache_readonly
     def fittedvalues(self):
         return self.model.predict(self.params)
 
@@ -796,6 +809,88 @@ class ARResults(tsbase.TimeSeriesModelResults):
     # Same docstring as AR.predict, but with "params" parameter removed
     preddoc = AR.predict.__doc__.split('\n')
     predict.__doc__ = '\n'.join(preddoc[:5] + preddoc[7:])
+
+    def summary(self, alpha=.05):
+        """Summarize the Model
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for the confidence intervals.
+
+        Returns
+        -------
+        smry : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        model = self.model
+        title = model.__class__.__name__ + ' Model Results'
+        method = model.method
+        # get sample
+        start = 0 if 'mle' in method else self.k_ar
+        if self.data.dates is not None:
+            dates = self.data.dates
+            sample = [dates[start].strftime('%m-%d-%Y')]
+            sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
+        else:
+            sample = str(start) + ' - ' + str(len(self.data.orig_endog))
+
+        k_ar = self.k_ar
+        order = '({0})'.format(k_ar)
+        dep_name = str(self.model.endog_names)
+        top_left = [('Dep. Variable:', dep_name),
+                    ('Model:', [model.__class__.__name__ + order]),
+                    ('Method:', [method]),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('Sample:', [sample[0]]),
+                    ('', [sample[1]])
+                    ]
+
+        top_right = [
+            ('No. Observations:', [str(len(self.model.endog))]),
+            ('Log Likelihood', ["%#5.3f" % self.llf]),
+            ('S.D. of innovations', ["%#5.3f" % self.sigma2 ** .5]),
+            ('AIC', ["%#5.3f" % self.aic]),
+            ('BIC', ["%#5.3f" % self.bic]),
+            ('HQIC', ["%#5.3f" % self.hqic])]
+
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             title=title)
+        smry.add_table_params(self, alpha=alpha, use_t=False)
+
+        # Make the roots table
+        from statsmodels.iolib.table import SimpleTable
+
+        if k_ar:
+            arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
+            stubs = arstubs
+            roots = self.roots
+            freq = self.arfreq
+        else:  # AR(0) model
+            stubs = []
+        if len(stubs):  # not AR(0)
+            modulus = np.abs(roots)
+            data = np.column_stack((roots.real, roots.imag, modulus, freq))
+            roots_table = SimpleTable([('%17.4f' % row[0],
+                                        '%+17.4fj' % row[1],
+                                        '%17.4f' % row[2],
+                                        '%17.4f' % row[3]) for row in data],
+                                      headers=['            Real',
+                                               '         Imaginary',
+                                               '         Modulus',
+                                               '        Frequency'],
+                                      title="Roots",
+                                      stubs=stubs)
+
+            smry.tables.append(roots_table)
+        return smry
 
 
 class ARResultsWrapper(wrap.ResultsWrapper):
