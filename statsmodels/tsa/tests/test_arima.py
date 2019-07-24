@@ -2692,7 +2692,7 @@ def test_arma_repeated_fit():
 
 def test_arima_repeated_fit():
     ar, ma = [1, -0.5], [1., 0.4]
-    x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    x = 2 + fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
     arma = ARIMA(x, (1, 1, 1))
     res = arma.fit(trend='c', disp=-1)
     repeat = arma.fit(trend='c', disp=-1)
