@@ -442,11 +442,25 @@ class TestGrangerCausality(object):
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
 
-        #R: lmtest:grangertest
+        # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
         gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
         assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                            decimal=7)
+
+    def test_grangercausality_single(self):
+        mdata = macrodata.load_pandas().data
+        mdata = mdata[['realgdp', 'realcons']].values
+        data = mdata.astype(float)
+        data = np.diff(np.log(data), axis=0)
+        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        assert 1 in gr
+        assert 1 not in gr2
+        assert_almost_equal(gr[2][0]['ssr_ftest'], gr2[2][0]['ssr_ftest'],
+                            decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr2[2][0]['ssr_ftest'],
                             decimal=7)
 
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
