@@ -102,6 +102,10 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/base/tests/test_datetools.py \
+        statsmodels/tsa/ar_model.py \
+        statsmodels/tsa/arima_model.py \
+        statsmodels/tsa/tests/test_ar.py \
+        statsmodels/tsa/tests/test_arima.py \
         statsmodels/tsa/filters/tests/ \
         statsmodels/tsa/innovations/ \
         statsmodels/tsa/kalmanf/ \
