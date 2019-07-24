@@ -1100,9 +1100,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
-    maxlag : integer
-        the Granger causality test results are calculated for all lags up to
-        maxlag
+    maxlag : integer, iterable[int]
+        If an integer, computes the test for all lags up to maxlag. If an
+        iterable, computes the tests only for the lags in maxlag.
     addconst : bool
         Include a constant in the model
     verbose : bool
@@ -1136,17 +1136,40 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     'ssr_chi2test', 'lrtest' are based on chi-square distribution
 
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.tsa.stattools import grangercausalitytests
+    >>> import numpy as np
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> data = data.data[['realgdp', 'realcons']].pct_change().dropna()
+
+    # All lags up to 4
+    >>> gc_res = grangercausalitytests(data, 4)
+
+    # Only lag 4
+    >>> gc_res = grangercausalitytests(data, [4])
+
     References
     ----------
     https://en.wikipedia.org/wiki/Granger_causality
     Greene: Econometric Analysis
 
     """
-    maxlag = int_like(maxlag, 'maxlag')
+    x = array_like(x, 'x', ndim=2)
     addconst = bool_like(addconst, 'addconst')
     verbose = bool_like(verbose, 'verbose')
-
-    x = array_like(x, 'x', ndim=2)
+    try:
+        lags = np.array([int(lag) for lag in maxlag])
+        maxlag = lags.max()
+        if lags.min() <= 0 or lags.size == 0:
+            raise ValueError('maxlag must be a non-empty list containing only '
+                             'positive integers')
+    except Exception:
+        maxlag = int_like(maxlag, 'maxlag')
+        if maxlag <= 0:
+            raise ValueError('maxlag must a a positive integer')
+        lags = np.arange(1, maxlag + 1)
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError("Insufficient observations. Maximum allowable "
@@ -1155,7 +1178,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     resli = {}
 
-    for mlg in range(1, maxlag + 1):
+    for mlg in lags:
         result = {}
         if verbose:
             print('\nGranger Causality')
@@ -1165,33 +1188,33 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # create lagmat of both time series
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
-        #add constant
+        # add constant
         if addconst:
             dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
             raise NotImplementedError('Not Implemented')
-            #dtaown = dta[:, 1:mxlg]
-            #dtajoint = dta[:, 1:]
+            # dtaown = dta[:, 1:mxlg]
+            # dtajoint = dta[:, 1:]
 
         # Run ols on both models without and with lags of second variable
         res2down = OLS(dta[:, 0], dtaown).fit()
         res2djoint = OLS(dta[:, 0], dtajoint).fit()
 
-        #print results
-        #for ssr based tests see:
-        #http://support.sas.com/rnd/app/examples/ets/granger/index.htm
-        #the other tests are made-up
+        # print results
+        # for ssr based tests see:
+        # http://support.sas.com/rnd/app/examples/ets/granger/index.htm
+        # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
         fgc1 = ((res2down.ssr - res2djoint.ssr) /
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
             print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (fgc1,
-                                    stats.f.sf(fgc1, mxlg,
-                                               res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg))
+                  ' df_num=%d' % (fgc1,
+                                  stats.f.sf(fgc1, mxlg,
+                                             res2djoint.df_resid),
+                                  res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
@@ -1200,14 +1223,14 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
             print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
+                  'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
-        #likelihood ratio test pvalue:
+        # likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
             print('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
-                   (lr, stats.chi2.sf(lr, mxlg), mxlg))
+                  (lr, stats.chi2.sf(lr, mxlg), mxlg))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -1217,8 +1240,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
-                                    ftres.df_num))
+                  ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
+                                  ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)
