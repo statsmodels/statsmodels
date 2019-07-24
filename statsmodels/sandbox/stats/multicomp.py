@@ -923,7 +923,7 @@ class MultiComparison(object):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = \
-                multipletests(res[:, pvalidx], alpha=0.05, method=method)
+                multipletests(res[:, pvalidx], alpha=alpha, method=method)
         #print(np.column_stack([res[:,0],res[:,1], reject, pvals_corrected])
 
         i1, i2 = self.pairindices
