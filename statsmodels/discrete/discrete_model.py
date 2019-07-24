@@ -2149,9 +2149,9 @@ class MNLogit(MultinomialModel):
     ----------
     endog : array_like
         `endog` is an 1-d vector of the endogenous response.  `endog` can
-        contain strings, ints, or floats.  Note that if it contains strings,
-        every distinct string will be a category.  No stripping of whitespace
-        is done.
+        contain strings, ints, or floats or may be a pandas Categorical Series.
+        Note that if it contains strings, every distinct string will be a
+        category.  No stripping of whitespace is done.
     exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
