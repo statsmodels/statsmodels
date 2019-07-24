@@ -1,24 +1,18 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
-from .filters.filtertools import convolution_filter
-from statsmodels.tools.validation import array_like, PandasWrapper
-from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tsa._stl import STL
 
+from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tsa.tsatools import freq_to_period
+from .filters.filtertools import convolution_filter
+
 __all__ = ['STL', 'seasonal_decompose', 'seasonal_mean', 'DecomposeResult']
-
-
-def seasonal_mean(x, freq):
-    """
-    Return means for each period in x. freq is an int that gives the
-    number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
-    in the mean.
-    """
-    return np.array([pd_nanmean(x[i::freq], axis=0) for i in range(freq)])
 
 
 def _extrapolate_trend(trend, npoints):
@@ -52,28 +46,41 @@ def _extrapolate_trend(trend, npoints):
     return trend
 
 
-def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True,
-                       extrapolate_trend=0):
+@deprecate_kwarg('freq', 'period')
+def seasonal_mean(x, period):
+    """
+    Return means for each period in x. period is an int that gives the
+    number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
+    in the mean.
+    """
+    return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
+
+
+@deprecate_kwarg('freq', 'period')
+def seasonal_decompose(x, model="additive", filt=None, period=None,
+                       two_sided=True, extrapolate_trend=0):
     """
     Seasonal decomposition using moving averages
 
     Parameters
     ----------
     x : array_like
-        Time series. If 2d, individual series are in columns.
+        Time series. If 2d, individual series are in columns. x must contain 2
+        complete cycles.
     model : str {"additive", "multiplicative"}
         Type of seasonal component. Abbreviations are accepted.
     filt : array_like
         The filter coefficients for filtering out the seasonal component.
-        The concrete moving average method used in filtering is determined by two_sided.
-    freq : int, optional
-        Frequency of the series. Must be used if x is not a pandas object.
-        Overrides default periodicity of x if x is a pandas
-        object with a timeseries index.
+        The concrete moving average method used in filtering is determined by
+        two_sided.
+    period : int, optional
+        Period of the series. Must be used if x is not a pandas object or if
+        the index of x does not have  a frequency. Overrides default
+        periodicity of x if x is a pandas object with a timeseries index.
     two_sided : bool
         The moving average method used in filtering.
-        If True (default), a centered moving average is computed using the filt.
-        If False, the filter coefficients are for past values only.
+        If True (default), a centered moving average is computed using the
+        filt. If False, the filter coefficients are for past values only.
     extrapolate_trend : int or 'freq', optional
         If set to > 0, the trend resulting from the convolution is
         linear least-squares extrapolated on both ends (or the single one
@@ -107,9 +114,9 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     statsmodels.tsa.filters.convolution_filter
     statsmodels.tsa.seasonal.STL
     """
-    pfreq = freq
+    pfreq = period
     pw = PandasWrapper(x)
-    if freq is None:
+    if period is None:
         pfreq = getattr(getattr(x, 'index', None), 'inferred_freq', None)
 
     x = array_like(x, 'x', maxdim=2)
@@ -122,26 +129,30 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
             raise ValueError("Multiplicative seasonality is not appropriate "
                              "for zero and negative values")
 
-    if freq is None:
+    if period is None:
         if pfreq is not None:
             pfreq = freq_to_period(pfreq)
-            freq = pfreq
+            period = pfreq
         else:
-            raise ValueError("You must specify a freq or x must be a "
-                             "pandas object with a timeseries index with "
+            raise ValueError("You must specify a period or x must be a "
+                             "pandas object with a DatetimeIndex with "
                              "a freq not set to None")
+    if x.shape[0] < 2 * pfreq:
+        raise ValueError('x must have 2 complete cycles requires {0} '
+                         'observations. x only has {1} '
+                         'observation(s)'.format(2 * pfreq, x.shape[0]))
 
     if filt is None:
-        if freq % 2 == 0:  # split weights at ends
-            filt = np.array([.5] + [1] * (freq - 1) + [.5]) / freq
+        if period % 2 == 0:  # split weights at ends
+            filt = np.array([.5] + [1] * (period - 1) + [.5]) / period
         else:
-            filt = np.repeat(1./freq, freq)
+            filt = np.repeat(1. / period, period)
 
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
     if extrapolate_trend == 'freq':
-        extrapolate_trend = freq - 1
+        extrapolate_trend = period - 1
 
     if extrapolate_trend > 0:
         trend = _extrapolate_trend(trend, extrapolate_trend + 1)
@@ -151,14 +162,14 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     else:
         detrended = x - trend
 
-    period_averages = seasonal_mean(detrended, freq)
+    period_averages = seasonal_mean(detrended, period)
 
     if model.startswith('m'):
         period_averages /= np.mean(period_averages, axis=0)
     else:
         period_averages -= np.mean(period_averages, axis=0)
 
-    seasonal = np.tile(period_averages.T, nobs // freq + 1).T[:nobs]
+    seasonal = np.tile(period_averages.T, nobs // period + 1).T[:nobs]
 
     if model.startswith('m'):
         resid = x / seasonal / trend
@@ -271,17 +282,3 @@ class DecomposeResult(object):
 
         fig.tight_layout()
         return fig
-
-
-if __name__ == "__main__":
-    x = np.array([-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
-                  530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
-                  232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184])
-    results = seasonal_decompose(x, freq=4)
-
-    from pandas import DataFrame, date_range
-    data = DataFrame(x, date_range(start='1/1/1951',
-                                   periods=len(x),
-                                   freq='Q'))
-
-    res = seasonal_decompose(data)
