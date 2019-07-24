@@ -1554,6 +1554,18 @@ def test_mnlogit_factor():
     assert_allclose(predicted_f, predicted, rtol=1e-10)
 
 
+def test_mnlogit_factor_categorical():
+    dta = sm.datasets.anes96.load_pandas()
+    dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
+    exog = sm.add_constant(dta.exog, prepend=True)
+    mod = sm.MNLogit(dta.endog, exog)
+    res = mod.fit(disp=0)
+    dta['endog'] = dta['endog'].astype('category')
+    mod = sm.MNLogit(dta.endog, exog)
+    res_cat = mod.fit(disp=0)
+    assert_allclose(res.params, res_cat.params)
+
+
 def test_formula_missing_exposure():
     # see 2083
     d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan],
