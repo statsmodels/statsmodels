@@ -7,6 +7,7 @@
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from scipy import optimize
 from scipy.stats import t, norm
 from scipy.signal import lfilter
@@ -27,6 +28,7 @@ from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.validation import array_like
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = r"""
@@ -119,15 +121,16 @@ _predict = """
             want out of sample prediction.
         exog : array_like, optional
             If the model is an ARMAX and out-of-sample forecasting is
-            requested, exog must be given. Note that you'll need to pass
-            `k_ar` additional lags for any exogenous variables. E.g., if you
-            fit an ARMAX(2, q) model and want to predict 5 steps, you need 7
-            observations to do this.
+            requested, exog must be given. exog must be aligned so that exog[0]
+            is used to produce the first out-of-sample forecast. The number of
+            observation in exog should match the number of out-of-sample
+            forecasts produced. If the length of exog does not match the number
+            of forecasts, a SpecificationWarning is produced.
         dynamic : bool, optional
             The `dynamic` keyword affects in-sample prediction. If dynamic
             is False, then the in-sample lagged values are used for
             prediction. If `dynamic` is True, then in-sample forecasts are
-            used in place of lagged dependent variables. The first forecasted
+            used in place of lagged dependent variables. The first forecast
             value is `start`.
         %(extra_params)s
 
@@ -231,6 +234,37 @@ def cumsum_n(x, n):
         x = np.cumsum(x)
 
     return x
+
+
+def _prediction_adjust_exog(exog, row_labels, dynamic, end):
+    """
+    Adjust exog if exog has dates that align with endog
+
+    Parameters
+    ----------
+    exog : {array_like, None}
+        The exog values
+    row_labels : {pd.DatetimeIndex, None}
+        Row labels from endog
+    dynamic : bool
+        Flag indicating whether dynamic forecasts are expected
+    end : int
+        Index of final in-sample observation
+    """
+    if exog is None:
+        return None
+
+    exog_start = 0
+    exog_index = getattr(exog, 'index', None)
+    exog_dates = isinstance(exog_index, pd.DatetimeIndex)
+    endog_dates = isinstance(row_labels, pd.DatetimeIndex)
+    date_adj = endog_dates and exog_dates and not dynamic
+    if date_adj and row_labels.isin(exog_index).all():
+        end_label = row_labels[end]
+        exog_start = exog.index.get_loc(end_label) + 1
+
+    exog = array_like(exog, 'exog', ndim=2)
+    return exog[exog_start:]
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
@@ -701,7 +735,7 @@ class ARMA(tsbase.TimeSeriesModel):
     def predict(self, params, start=None, end=None, exog=None, dynamic=False,
                 **kwargs):
         if kwargs and 'typ' not in kwargs:
-            raise TypeError('Unkown extra arguments')
+            raise TypeError('Unknown extra arguments')
         method = getattr(self, 'method', 'mle')  # do not assume fit
         # params = np.asarray(params)
 
@@ -716,12 +750,9 @@ class ARMA(tsbase.TimeSeriesModel):
         resid = self.geterrors(params)
         k_ar = self.k_ar
 
-        if exog is not None:
-            # Note: we ignore currently the index of exog if it is available
-            exog = array_like(exog, 'exog', ndim=2)
-            if self.k_exog == 1 and exog.ndim == 1:
-                exog = exog[:, None]
-
+        # Adjust exog if exog has dates that align with endog
+        row_labels = self.data.row_labels
+        exog = _prediction_adjust_exog(exog, row_labels, dynamic, end)
         if out_of_sample != 0 and self.k_exog > 0:
             # we need the last k_ar exog for the lag-polynomial
             if self.k_exog > 0 and k_ar > 0 and not dynamic:
@@ -753,7 +784,24 @@ class ARMA(tsbase.TimeSeriesModel):
                                                          self.k_ma,
                                                          self.k_trend,
                                                          self.k_exog, endog,
-                                                         exog, method=method)
+                                                         exog,
+                                                         method=method)
+            if (exog is not None and
+                    (exog.shape[0] - k_ar) != forecastvalues.shape[0]):
+
+                import warnings
+                msg = """
+The number of observations in exog does not match the number of out-of-sample
+observations.  This might indicate that exog is not correctly aligned. exog
+should be aligned so that the exog[0] is used for the first out-of-sample
+forecast, and exog[-1] is used for the last out-of-sample forecast.
+exog is not used for in-sample observations which are the fitted values.
+
+To silence this warning, ensure the number of observation in exog ({0})
+matches the number of out-of-sample forecasts ({1})'
+"""
+                msg = msg.format(exog.shape[0], forecastvalues.shape[0])
+                warnings.warn(msg, SpecificationWarning)
             predictedvalues = np.r_[predictedvalues, forecastvalues]
         return predictedvalues
     predict.__doc__ = _arma_predict
@@ -1519,7 +1567,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         exog : array
             If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
-            the constant.
+            the constant. The number of observation in exog must match the
+            value of steps.
         alpha : float
             The confidence intervals for the forecasts are (1 - alpha) %
 
@@ -1842,7 +1891,8 @@ class ARIMAResults(ARMAResults):
         exog : array
             If the model is an ARIMAX, you must provide out of sample
             values for the exogenous variables. This should not include
-            the constant.
+            the constant. The number of observation in exog must match the
+            value of steps.
         alpha : float
             The confidence intervals for the forecasts are (1 - alpha) %
 
@@ -1861,8 +1911,7 @@ class ARIMAResults(ARMAResults):
         If you would like prediction of differences in levels use `predict`.
         """
         if exog is not None:
-            if self.k_exog == 1 and exog.ndim == 1:
-                exog = exog[:, None]
+            exog = array_like(exog, 'exog', ndim=2)
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             if self.k_exog != exog.shape[1]:
@@ -1883,7 +1932,7 @@ class ARIMAResults(ARMAResults):
                                                self.model.endog,
                                                exog, method=self.model.method)
 
-        d = self.k_diff
+        d = self.model.k_diff
         endog = self.model.data.endog[-d:]
         forecast = unintegrate(forecast, unintegrate_levels(endog, d))[d:]
 

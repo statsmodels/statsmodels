@@ -17,7 +17,7 @@ from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tools.sm_exceptions import (
-    ValueWarning, HessianInversionWarning)
+    ValueWarning, HessianInversionWarning, SpecificationWarning)
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
@@ -2517,3 +2517,28 @@ def test_arima_d0_forecast(reset_randomstate):
     assert_allclose(pred, pred_typ)
     pred_mod = mod.predict(res.params, start=200, end=300, typ='linear')
     assert_allclose(pred, pred_mod)
+
+
+def test_predict_exog_adjust(reset_randomstate):
+    df = pd.DataFrame(np.random.standard_normal((1000, 2)),
+                      index=pd.date_range('31-12-2000', periods=1000),
+                      columns=['y', 'x'])
+    y = df.y.iloc[:750]
+    x = df.x.iloc[:750]
+    mod = ARMA(y, (2, 0), exog=x)
+    res = mod.fit(disp=-1)
+    pred_adj = res.predict(end=df.index[-1], exog=df.x)
+    pred = res.predict(end=df.index[-1], exog=df.x.iloc[750:])
+    assert_allclose(pred, pred_adj)
+
+
+def test_predict_wrong_exog_len(reset_randomstate):
+    df = pd.DataFrame(np.random.standard_normal((1000, 2)),
+                      index=pd.date_range('31-12-2000', periods=1000),
+                      columns=['y', 'x'])
+    y = df.y.iloc[:750]
+    x = df.x.iloc[:750]
+    mod = ARMA(y, (2, 0), exog=x)
+    res = mod.fit(disp=-1)
+    with pytest.warns(SpecificationWarning, match='of observations in exog'):
+        res.predict(end=df.index[-1], exog=df.x.iloc[500:])
