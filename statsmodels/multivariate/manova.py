@@ -52,8 +52,11 @@ class MANOVA(Model):
 
     References
     ----------
-    .. [*] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [*] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/
+       statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
+    _formula_max_endog = None
+
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError('There must be more than one dependent variable'

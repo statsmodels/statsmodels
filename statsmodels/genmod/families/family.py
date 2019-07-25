@@ -855,7 +855,11 @@ class Binomial(Family):
         '''
         # if not np.all(np.asarray(freq_weights) == 1):
         #     self.variance = V.Binomial(n=freq_weights)
-        if (endog.ndim > 1 and endog.shape[1] > 1):
+        if endog.ndim > 1 and endog.shape[1] > 2:
+            raise ValueError('endog has more than 2 columns. The Binomial '
+                             'link supports either a single response variable '
+                             'or a paired response variable.')
+        elif endog.ndim > 1 and endog.shape[1] > 1:
             y = endog[:, 0]
             # overwrite self.freq_weights for deviance below
             self.n = endog.sum(1)
