@@ -2690,9 +2690,11 @@ def test_arma_repeated_fit():
     assert isinstance(repeat.summary().as_text(), str)
 
 
-def test_arima_repeated_fit():
+def test_arima_repeated_fit(reset_randomstate):
     ar, ma = [1, -0.5], [1., 0.4]
-    x = 2 + fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    n = 1000
+    arma_fft = fa.ArmaFft(ar, ma, 40)
+    x = 4 * np.arange(n) + arma_fft.generate_sample(nsample=n, burnin=100)
     arma = ARIMA(x, (1, 1, 1))
     res = arma.fit(trend='c', disp=-1)
     repeat = arma.fit(trend='c', disp=-1)
