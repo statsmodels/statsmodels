@@ -1498,7 +1498,7 @@ class LikelihoodModelResults(Results):
                           DeprecationWarning)
 
         from patsy import DesignInfo
-        names = self.model.data.param_names
+        names = self.model.data.cov_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
         num_ttests = r_matrix.shape[0]
@@ -1508,7 +1508,8 @@ class LikelihoodModelResults(Results):
                 not hasattr(self, 'cov_params_default')):
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
-        if num_params != self.params.shape[0]:
+        params = self.params.ravel()
+        if num_params != params.shape[0]:
             raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
             q_matrix = np.zeros(num_ttests)
@@ -1524,10 +1525,7 @@ class LikelihoodModelResults(Results):
             # switch to use_t false if undefined
             use_t = (hasattr(self, 'use_t') and self.use_t)
 
-        _t = _sd = None
-
-        _effect = np.dot(r_matrix, self.params)
-        # nan_dot multiplies with the convention nan * 0 = 0
+        _effect = np.dot(r_matrix, params)
 
         # Perform the test
         if num_ttests > 1:
@@ -1718,7 +1716,8 @@ class LikelihoodModelResults(Results):
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
         from patsy import DesignInfo
-        names = self.model.data.param_names
+        names = self.model.data.cov_names
+        params = self.params.ravel()
         LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
 
@@ -1727,7 +1726,7 @@ class LikelihoodModelResults(Results):
             raise ValueError('need covariance of parameters for computing '
                              'F statistics')
 
-        cparams = np.dot(r_matrix, self.params[:, None])
+        cparams = np.dot(r_matrix, params[:, None])
         J = float(r_matrix.shape[0])  # number of restrictions
 
         if q_matrix is None:

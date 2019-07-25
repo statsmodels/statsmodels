@@ -782,7 +782,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
         assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[m])
-        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m], DECIMAL_3)
 
     @pytest.mark.skip("Skipped test_f_test for MNLogit")
     def test_f_test(self):
@@ -2390,3 +2390,23 @@ def test_cov_confint_pandas():
     assert_index_equal(ci.index, cov.index)
     assert_index_equal(cov.index, cov.columns)
     assert isinstance(ci.index, pd.MultiIndex)
+
+
+def test_t_test():
+    # GH669, check t_test works in multivariate model
+    data = sm.datasets.anes96.load(as_pandas=True)
+    exog = sm.add_constant(data.exog, prepend=False)
+    res1 = sm.MNLogit(data.endog, exog).fit(disp=0)
+    r = np.ones(res1.cov_params().shape[0])
+    t1 = res1.t_test(r)
+    f1 = res1.f_test(r)
+
+    data = sm.datasets.anes96.load(as_pandas=True)
+    exog = sm.add_constant(data.exog, prepend=False)
+    endog, exog = np.asarray(data.endog), np.asarray(exog)
+    res2 = sm.MNLogit(endog, exog).fit(disp=0)
+    t2 = res2.t_test(r)
+    f2 = res2.f_test(r)
+
+    assert_allclose(t1.effect, t2.effect)
+    assert_allclose(f1.statistic, f2.statistic)
