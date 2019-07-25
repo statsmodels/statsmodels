@@ -4,6 +4,7 @@
 #       This code does not allow this, but it adds consistency with other
 #       packages such as gretl and X12-ARIMA
 
+import copy
 from datetime import datetime
 
 import numpy as np
@@ -12,7 +13,7 @@ from numpy import dot, log, zeros, pi
 from numpy.linalg import inv
 from scipy import optimize
 from scipy.signal import lfilter
-from scipy.stats import t, norm
+from scipy.stats import norm
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, OLS
@@ -1008,7 +1009,7 @@ matches the number of out-of-sample forecasts ({1})'
         self.transparams = False  # so methods do not expect transf.
 
         normalized_cov_params = None  # TODO: fix this
-        armafit = ARMAResults(self, params, normalized_cov_params)
+        armafit = ARMAResults(copy.copy(self), params, normalized_cov_params)
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
         # Save core fit parameters for future checks
@@ -1494,9 +1495,9 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
             return np.sqrt(-1. / hess[0])
         return np.sqrt(np.diag(-inv(hess)))
 
-    def cov_params(self):  # add scale argument?
-        params = self.params
-        hess = self.model.hessian(params)
+    @cache_readonly
+    def cov_params_default(self):
+        hess = self.model.hessian(self.params)
         return -inv(hess)
 
     @cache_readonly
@@ -1531,12 +1532,6 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def resid(self):
         return self.model.geterrors(self.params)
-
-    @cache_readonly
-    def pvalues(self):
-        # TODO: same for conditional and unconditional?
-        df_resid = self.df_resid
-        return t.sf(np.abs(self.tvalues), df_resid) * 2
 
     def predict(self, start=None, end=None, exog=None, dynamic=False,
                 **kwargs):
