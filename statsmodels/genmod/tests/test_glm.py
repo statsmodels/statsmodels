@@ -381,40 +381,51 @@ class TestGlmBinomial(CheckModelResultsMixin):
         from .results.results_glm import Star98
         data = load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
-        cls.res1 = GLM(data.endog, data.exog, \
-        family=sm.families.Binomial()).fit()
-        #NOTE: if you want to replicate with RModel
-        #res2 = RModel(data.endog[:,0]/trials, data.exog, r.glm,
+        cls.res1 = GLM(data.endog, data.exog,
+                       family=sm.families.Binomial()).fit()
+        # NOTE: if you want to replicate with RModel
+        # res2 = RModel(data.endog[:,0]/trials, data.exog, r.glm,
         #        family=r.binomial, weights=trials)
 
         cls.res2 = Star98()
 
+    def test_endog_dtype(self):
+        from statsmodels.datasets.star98 import load
+        data = load(as_pandas=False)
+        data.exog = add_constant(data.exog, prepend=False)
+        endog = data.endog.astype(np.int)
+        res2 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
+        assert_allclose(res2.params, self.res1.params)
+        endog = data.endog.astype(np.double)
+        res3 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
+        assert_allclose(res3.params, self.res1.params)
 
 # FIXME: enable/xfail/skip or delete
-#TODO:
-#Non-Canonical Links for the Binomial family require the algorithm to be
-#slightly changed
-#class TestGlmBinomialLog(CheckModelResultsMixin):
+# TODO:
+# Non-Canonical Links for the Binomial family require the algorithm to be
+# slightly changed
+# class TestGlmBinomialLog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLogit(CheckModelResultsMixin):
+# class TestGlmBinomialLogit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialProbit(CheckModelResultsMixin):
+# class TestGlmBinomialProbit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialCloglog(CheckModelResultsMixin):
+# class TestGlmBinomialCloglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialPower(CheckModelResultsMixin):
+# class TestGlmBinomialPower(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLoglog(CheckModelResultsMixin):
+# class TestGlmBinomialLoglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLogc(CheckModelResultsMixin):
-#TODO: need include logc link
+# class TestGlmBinomialLogc(CheckModelResultsMixin):
+# TODO: need include logc link
 #    pass
+
 
 class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
     @classmethod
