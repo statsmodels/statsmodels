@@ -119,6 +119,7 @@ Table of Contents
    duration
    stats
    nonparametric
+   kernel_methods
    gmm
    contingency_tables
    imputation

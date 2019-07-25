@@ -155,7 +155,13 @@ exts = dict(
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
-                    'depends': ['statsmodels/src/capsule.h']})
+                    'depends': ['statsmodels/src/capsule.h']},
+    _cy_kernels={'source': 'statsmodels/kernel_methods/_cy_kernels.pyx',
+                 'include_dirs': ['statsmodels/src'],
+                 'depends': ['statsmodels/src/erf.h']},
+    _cy_fast_linbin={'source': 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},  # noqa: E501
+    _cy_grid_interpolation={'source': 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx'},  # noqa: E501
+)
 
 statespace_exts = [
     'statsmodels/tsa/statespace/_initialization.pyx.in',
