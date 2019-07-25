@@ -544,7 +544,9 @@ class ARMA(tsa_model.TimeSeriesModel):
                 coefs = OLS(endog[max(p_tmp + q, p):], X).fit().params
                 start_params[k:k + p + q] = coefs
             else:
-                start_params[k + p:k + p + q] = yule_walker(endog, order=q)[0]
+                ar_coeffs = yule_walker(endog, order=q)[0]
+                ar = np.r_[[1], -ar_coeffs.squeeze()]
+                start_params[k + p:k + p + q] = arma2ma(ar, [1], nobs=q+1)[1:]
         if q == 0 and p != 0:
             arcoefs = yule_walker(endog, order=p)[0]
             start_params[k:k + p] = arcoefs
