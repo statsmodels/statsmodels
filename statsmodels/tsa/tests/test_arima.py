@@ -17,7 +17,8 @@ import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import (
-    ValueWarning, HessianInversionWarning, SpecificationWarning)
+    ValueWarning, HessianInversionWarning, SpecificationWarning,
+    MissingDataError)
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -2523,13 +2524,13 @@ def test_endog_int():
     assert_allclose(res.params, resf.params, atol=1e-5)
     assert_allclose(res.bse, resf.bse, atol=1e-5)
 
-    res = ARMA(y, order=(2, 1)).fit(disp=0)
-    resf = ARMA(yf, order=(2, 1)).fit(disp=0)
+    res = ARMA(y, order=(2, 1)).fit(disp=-1)
+    resf = ARMA(yf, order=(2, 1)).fit(disp=-1)
     assert_allclose(res.params, resf.params, atol=1e-5)
     assert_allclose(res.bse, resf.bse, atol=1e-5)
 
-    res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=0)
-    resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
+    res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=-1)
+    resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=-1)
     assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
     assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)
 
@@ -2579,7 +2580,7 @@ def test_constant_column_trend():
 
     # Fitting with a constant and constant exog raises because of colinearity
     with pytest.raises(ValueError, match="x contains a constant"):
-        model.fit(trend="c")
+        model.fit(trend="c", disp=-1)
 
     # FIXME: calling model.fit(trend="nc") raises for orthogonal reasons
 
@@ -2635,7 +2636,7 @@ def test_invalid_method(reset_randomstate):
 def test_summary_plots_no_dates(reset_randomstate, close_figures):
     ar, ma = [1, -0.5], [1., 0.4]
     x = fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=1000)
-    res = ARMA(x, (1, 1)).fit()
+    res = ARMA(x, (1, 1)).fit(disp=-1)
     res.plot_predict()
     res.plot_predict(plot_insample=True)
     assert isinstance(res.summary().as_text(), str)
@@ -2698,7 +2699,8 @@ def test_arima_repeated_fit(reset_randomstate):
     arma = ARIMA(x, (1, 1, 1))
     res = arma.fit(trend='c', disp=-1)
     repeat = arma.fit(trend='c', disp=-1)
-    assert_allclose(res.params, repeat.params)
+    tol = 1e-4 if PLATFORM_WIN32 else 1e-6
+    assert_allclose(res.params, repeat.params, atol=tol, rtol=tol)
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(repeat.summary().as_text(), str)
 
@@ -2720,3 +2722,15 @@ def test_arma_ttest_ftest():
 
     f_test = res.f_test(r)
     assert_allclose(stat**2, f_test.statistic)
+
+
+def test_nan_exog_arima_d1():
+    # GH2746, verify raises on missing
+    df = pd.DataFrame(np.random.standard_normal((1000, 2)),
+                      index=pd.date_range('31-12-2000', periods=1000),
+                      columns=['y', 'x'])
+    y = df.y.iloc[:750]
+    x = df.x.iloc[:750]
+    x.iloc[0] = np.nan
+    with pytest.raises(MissingDataError):
+        ARIMA(y, (0, 1, 1), exog=x)
