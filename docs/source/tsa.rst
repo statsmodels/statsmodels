@@ -81,6 +81,7 @@ Descriptive Statistics and Tests
    stattools.periodogram
    stattools.adfuller
    stattools.kpss
+   stattools.zivot_andrews
    stattools.coint
    stattools.bds
    stattools.q_stat
