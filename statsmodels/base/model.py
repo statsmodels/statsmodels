@@ -64,6 +64,11 @@ class Model(object):
     """ % {'params_doc': _model_params_doc,
            'extra_params_doc': _missing_param_doc + _extra_param_doc}
 
+    # Maximum number of endogenous variables when using a formula
+    # Default is 1, which is more common. Override in models when needed
+    # Set to None to skip check
+    _formula_max_endog = 1
+
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
         hasconst = kwargs.pop('hasconst', None)
@@ -161,7 +166,13 @@ class Model(object):
         tmp = handle_formula_data(data, None, formula, depth=eval_env,
                                   missing=missing)
         ((endog, exog), missing_idx, design_info) = tmp
-
+        max_endog = cls._formula_max_endog
+        if (max_endog is not None and
+                endog.ndim > 1 and endog.shape[1] > max_endog):
+            raise ValueError('endog has evaluated to an array with multiple '
+                             'columns that has shape {0}. This occurs when '
+                             'the variable converted to endog is non-numeric'
+                             ' (e.g., bool or str).'.format(endog.shape))
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):

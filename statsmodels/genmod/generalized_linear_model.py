@@ -258,6 +258,8 @@ class GLM(base.LikelihoodModel):
     appropriate.
 
     """ % {'extra_params': base._missing_param_doc}
+    # Maximum number of endogenous variables when using a formula
+    _formula_max_endog = 2
 
     def __init__(self, endog, exog, family=None, offset=None,
                  exposure=None, freq_weights=None, var_weights=None,

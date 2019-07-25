@@ -6,6 +6,7 @@ import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose, assert_, assert_array_less)
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -399,6 +400,25 @@ class TestGlmBinomial(CheckModelResultsMixin):
         endog = data.endog.astype(np.double)
         res3 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
         assert_allclose(res3.params, self.res1.params)
+
+    def test_invalid_endog(self, reset_randomstate):
+        # GH2733 inspired check
+        endog = np.random.randint(0, 100, size=(1000, 3))
+        exog = np.random.standard_normal((1000, 2))
+        with pytest.raises(ValueError, match='endog has more than 2 columns'):
+            GLM(endog, exog, family=sm.families.Binomial())
+
+    def test_invalid_endog_formula(self, reset_randomstate):
+        # GH2733
+        n = 200
+        exog = np.random.normal(size=(n, 2))
+        endog = np.random.randint(0, 3, size=n).astype(str)
+        # formula interface
+        data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})
+        with pytest.raises(ValueError, match='array with multiple columns'):
+            sm.GLM.from_formula("y ~ x1 + x2", data,
+                                family=sm.families.Binomial())
+
 
 # FIXME: enable/xfail/skip or delete
 # TODO:
@@ -918,10 +938,9 @@ def test_loglike_no_opt():
 def test_formula_missing_exposure():
     # see 2083
     import statsmodels.formula.api as smf
-    import pandas as pd
 
     d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan],
-         'constant': [1] * 4, 'exposure' : np.random.uniform(size=4),
+         'constant': [1] * 4, 'exposure': np.random.uniform(size=4),
          'x': [1, 3, 2, 1.5]}
     df = pd.DataFrame(d)
 

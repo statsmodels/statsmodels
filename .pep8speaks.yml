@@ -1,0 +1,3 @@
+pycodestyle:
+    ignore:  # Errors and warnings to ignore
+        - W504  # line break after binary operator
