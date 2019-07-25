@@ -354,7 +354,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
     if lower:
         value = value.lower()
     if options is not None and value not in options:
-        extra_text = 'If not None,' if optional else ''
+        extra_text = 'If not None, ' if optional else ''
         options_text = "'" + '\', \''.join(options) + "'"
         msg = '{0}{1} must be one of: {2}'.format(extra_text,
                                                   name, options_text)
@@ -386,7 +386,7 @@ def dict_like(value, name, optional=False, strict=True):
         return None
     if (not isinstance(value, Mapping) or
             (strict and not(isinstance(value, dict)))):
-        extra_text = 'If not None,' if optional else ''
+        extra_text = 'If not None, ' if optional else ''
         strict_text = ' or dict_like (i.e., a Mapping)' if strict else ''
         msg = '{0}{1} must be a dict{2}'.format(extra_text, name, strict_text)
         raise TypeError(msg)
