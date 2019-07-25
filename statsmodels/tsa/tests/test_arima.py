@@ -2699,3 +2699,22 @@ def test_arima_repeated_fit():
     assert_allclose(res.params, repeat.params)
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(repeat.summary().as_text(), str)
+
+
+def test_arma_ttest_ftest():
+    # GH947
+    ar, ma = [1, -0.5], [1., 0.4]
+    x = 2 + fa.ArmaFft(ar, ma, 40).generate_sample(nsample=1000, burnin=100)
+    arma = ARMA(x, (1, 1))
+    res = arma.fit(disp=-1)
+    r = np.array([0, 1, 1])
+    t_test = res.t_test(r)
+    c = res.cov_params()
+    v = r @ c @ r
+    numerator = res.params @ r
+    denom = np.sqrt(v)
+    stat = numerator / denom
+    assert_allclose(stat, t_test.statistic)
+
+    f_test = res.f_test(r)
+    assert_allclose(stat**2, f_test.statistic)

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import copy
+
 import numpy as np
 from numpy.linalg import inv, slogdet
 from scipy.stats import norm
@@ -593,7 +595,7 @@ class AR(tsa_model.TimeSeriesModel):
 
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
-        arfit = ARResults(self, params, normalized_cov_params)
+        arfit = ARResults(copy.copy(self), params, normalized_cov_params)
         if method == 'mle' and full_output:
             arfit.mle_retvals = mlefit.mle_retvals
             arfit.mle_settings = mlefit.mle_settings
