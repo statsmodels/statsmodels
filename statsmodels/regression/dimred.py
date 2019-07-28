@@ -185,11 +185,17 @@ class SlicedInverseReg(_DimReductionRegression):
 
         Notes
         -----
-        If the covariates (rows of exog) are equally-spaced sequential
-        values, then setting the rows of `pen_mat` to [[1, -2, 1, ...],
-        [0, 1, -2, 1, ..], ...] will give smooth EDR coefficients.  This
-        is a form of "functional SIR" using the squared second derivative
-        as a penalty.
+        If each row of `exog` can be viewed as containing the values of a
+        function evaluated at equally-spaced locations, then setting the
+        rows of `pen_mat` to [[1, -2, 1, ...], [0, 1, -2, 1, ..], ...]
+        will give smooth EDR coefficients.  This is a form of "functional
+        SIR" using the squared second derivative as a penalty.
+
+        References
+        ----------
+        L. Ferre, A.F. Yao (2003).  Functional sliced inverse regression
+        analysis.  Statistics: a journal of theoretical and applied
+        statistics 37(6) 475-488.
         """
 
         if len(kwargs) > 0:
