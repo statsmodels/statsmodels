@@ -51,6 +51,8 @@ from .descriptivestats import Describe
 
 from .anova import anova_lm
 
+from .oaxaca import Oaxaca
+
 from . import moment_helpers
 from .correlation_tools import (
     corr_clipped, corr_nearest,

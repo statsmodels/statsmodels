@@ -494,3 +494,25 @@ to verify in an observational setting.
 
    Mediation
    MediationResults
+
+
+Oaxaca-Blinder Decomposition
+----------------------------
+
+This package attempts to port the functionality of the oaxaca command in STATA to Python. 
+The Oaxaca-Blinder, or Blinder-Oaxaca as some call it, decomposition attempts to explain 
+gaps in means of groups. It uses the linear models of two given regression equations to 
+show what is explained by regression coefficients and known data and what is unexplained 
+using the same data. There are two types of Oaxaca-Blinder decompositions, the two-fold 
+and the three-fold, both of which can and are used in Economics Literature to discuss 
+differences in groups. This method helps classify discrimination or unobserved effects.
+
+.. module:: statsmodels.stats.oaxaca
+   :synopsis: Oaxaca-Blinder Decomposition
+
+.. currentmodule:: statsmodels.stats.oaxaca
+
+.. autosummary::
+   :toctree: generated/
+
+   Oaxaca
