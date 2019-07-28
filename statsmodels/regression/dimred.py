@@ -55,7 +55,7 @@ class SlicedInverseReg(_DimReductionRegression):
         Parameters
         ----------
         slice_n : int, optional
-            Number of observations per slice
+            Target number of observations per slice
         """
 
         # Sample size per slice
@@ -110,7 +110,7 @@ class SlicedInverseReg(_DimReductionRegression):
         return v
 
     def _regularized_grad(self, A):
-        # The gradient of the objhective function for regularized SIR
+        # The gradient of the objective function for regularized SIR
 
         p = self.k_vars
         ndim = self.ndim
@@ -167,11 +167,11 @@ class SlicedInverseReg(_DimReductionRegression):
             The number of EDR directions to estimate
         pen_mat : array-like
             A 2d array such that the squared Frobenius norm of
-            dot(pen_mat, dirs) is added to the objective function,
-            where dirs is an array whose columns span the estimated
-            EDR space.
+            `dot(pen_mat, dirs)`` is added to the objective function,
+            where `dirs` is an orthogonal array whose columns span
+            the estimated EDR space.
         slice_n : int, optional
-            Number of observations per slice
+            Target number of observations per slice
         maxiter :int
             The maximum number of iterations for estimating the EDR
             space.
