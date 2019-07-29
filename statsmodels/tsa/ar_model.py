@@ -53,9 +53,9 @@ def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
 
 
 class AR(tsa_model.TimeSeriesModel):
-    __doc__ = tsa_model._tsa_doc % {"model": "Autoregressive AR(p) model",
+    __doc__ = tsa_model._tsa_doc % {"model": "Autoregressive AR(p) model.",
                                     "params": """endog : array_like
-        1-d endogenous response variable. The independent variable.""",
+        A 1-d endogenous response variable. The independent variable.""",
                                     "extra_params": base._missing_param_doc,
                                     "extra_sections": ""}
 
@@ -154,7 +154,7 @@ class AR(tsa_model.TimeSeriesModel):
 
     def predict(self, params, start=None, end=None, dynamic=False):
         """
-        Returns in-sample and out-of-sample prediction.
+        Construct in-sample and out-of-sample prediction.
 
         Parameters
         ----------
@@ -177,7 +177,8 @@ class AR(tsa_model.TimeSeriesModel):
 
         Returns
         -------
-        predicted values : array
+        array_like
+            An array containing the predicted values.
 
         Notes
         -----
@@ -307,17 +308,17 @@ class AR(tsa_model.TimeSeriesModel):
 
     def loglike(self, params):
         r"""
-        The loglikelihood of an AR(p) process
+        The loglikelihood of an AR(p) process.
 
         Parameters
         ----------
         params : array
-            The fitted parameters of the AR model
+            The fitted parameters of the AR model.
 
         Returns
         -------
-        llf : float
-            The loglikelihood evaluated at `params`
+        float
+            The loglikelihood evaluated at `params`.
 
         Notes
         -----
@@ -357,29 +358,40 @@ class AR(tsa_model.TimeSeriesModel):
 
     def score(self, params):
         """
-        Return the gradient of the loglikelihood at params.
+        Compute the gradient of the log-likelihood at params.
 
         Parameters
         ----------
         params : array_like
             The parameter values at which to evaluate the score function.
 
-        Notes
-        -----
-        Returns numerical gradient.
+        Returns
+        -------
+        ndarray
+            The gradient computed using numerical methods.
         """
         loglike = self.loglike
         return approx_fprime(params, loglike, epsilon=1e-8)
 
     def information(self, params):
         """
-        Not Implemented Yet
+        Not implemented.
         """
         return
 
     def hessian(self, params):
         """
-        Returns numerical hessian for now.
+        Compute the hessian using a numerical approximation.
+
+        Parameters
+        ----------
+        params : ndarray
+            The model parameters.
+
+        Returns
+        -------
+        ndarray
+            The hessian evaluated at params.
         """
         loglike = self.loglike
         return approx_hess(params, loglike)
@@ -484,9 +496,6 @@ class AR(tsa_model.TimeSeriesModel):
         trend : str {'c','nc'}
             Whether to include a constant or not. 'c' - include constant.
             'nc' - no constant.
-
-        The below can be specified if method is 'mle'
-
         transparams : bool, optional
             Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).
@@ -511,18 +520,29 @@ class AR(tsa_model.TimeSeriesModel):
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
-        kwargs
-            See Notes for keyword arguments that can be passed to fit.
+        **kwargs
+            See LikelihoodModel.fit for keyword arguments that can be passed
+            to fit.
 
-        References
-        ----------
-        Jones, R.H. 1980 "Maximum likelihood fitting of ARMA models to time
-            series with missing observations."  `Technometrics`.  22.3.
-            389-95.
+        Returns
+        -------
+        ARResults
+            Results instance.
 
         See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
+            Base fit class with further details about options.
+
+        Notes
+        -----
+        The parameters after `trend` are only used when method is 'mle'.
+
+        References
+        ----------
+        .. [*] Jones, R.H. 1980 "Maximum likelihood fitting of ARMA models to
+           time series with missing observations."  `Technometrics`.  22.3.
+           389-95.
         """
         start_params = array_like(start_params, 'start_params', ndim=1,
                                   optional=True)

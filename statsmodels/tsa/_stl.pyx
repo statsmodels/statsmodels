@@ -122,30 +122,35 @@ cdef class STL(object):
         Length of the trend smoother. Must be an odd integer. If not provided
         uses the smallest odd integer greater than 1.5 * period, following the
         suggestion in the original implementation.
-    low_pass: {int, None}, optional
+    low_pass : {int, None}, optional
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
-    seasonal_deg: int, optional
+    seasonal_deg : int, optional
         Degree of seasonal LOESS. 0 (constant) or 1 (constant and trend)
-    trend_deg: int, optional
+    trend_deg : int, optional
         Degree of trend LOESS. 0 (constant) or 1 (constant and trend)
-    low_pass_deg: int, optional
+    low_pass_deg : int, optional
         Degree of low pass LOESS. 0 (constant) or 1 (constant and trend)
-    robust: bool, optional
+    robust : bool, optional
         Flag indicating whether to use a weighted version that is robust to
         some forms of outliers
-    seasonal_jump: int, optional
+    seasonal_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
         than 1, the LOESS is used every seasonal_jump points and values between
         the two are linearly interpolated. Higher values reduce estimation time
-    trend_jump: int, optional
+    trend_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
         than 1, the LOESS is used every trend_jump points and values between
         the two are linearly interpolated. Higher values reduce estimation time
-    low_pass_jump: int, optional
+    low_pass_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
         than 1, the LOESS is used every low_pass_jump points and values between
         the two are linearly interpolated. Higher values reduce estimation time
+
+    See Also
+    --------
+    statsmodels.tsa.seasonal.DecomposeResult
+    statsmodels.tsa.seasonal.seasonal_decompose
 
     Notes
     -----
@@ -153,6 +158,12 @@ cdef class STL(object):
     contains a bug that appears in the determination of the median that is
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
+
+    References
+    ----------
+    .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
+        (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
+        Journal of Official Statistics, 6, 3-73.
 
     Examples
     --------
@@ -173,17 +184,6 @@ cdef class STL(object):
     >>> from statsmodels.tsa.seasonal import STL
     >>> res = STL(data).fit()
     >>> res.plot()
-
-    See Also
-    --------
-    statsmodels.tsa.seasonal.DecomposeResult
-    statsmodels.tsa.seasonal.seasonal_decompose
-
-    References
-    ----------
-    .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
-        (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
-        Journal of Official Statistics, 6, 3-73.
     """
     cdef object endog
     cdef Py_ssize_t nobs
@@ -253,14 +253,14 @@ cdef class STL(object):
 
     def fit(self, inner_iter=None, outer_iter=None):
         """
-        Estimate season, trend and residuals
+        Estimate season, trend and residuals components.
 
         Parameters
         ----------
-        inner_iter: {int, None} optional
+        inner_iter : {int, None}, optional
             Number of iterations to perform in the inner loop. If not provided
             uses 2 if ``robust`` is True, or 5 if not.
-        outer_iter: {int, None} optional
+        outer_iter : {int, None}, optional
             Number of iterations to perform in the outer loop. If not provided
             uses 15 if ``robust`` is True, or 0 if not.
 

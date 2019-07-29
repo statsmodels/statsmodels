@@ -93,6 +93,14 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
     results : DecomposeResult
         A object with seasonal, trend, and resid attributes.
 
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.cf_filter.xffilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
+    statsmodels.tsa.filters.convolution_filter
+    statsmodels.tsa.seasonal.STL
+
     Notes
     -----
     This is a naive decomposition. More sophisticated methods should
@@ -105,14 +113,6 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
     The seasonal component is first removed by applying a convolution
     filter to the data. The average of this smoothed series for each
     period is the returned seasonal component.
-
-    See Also
-    --------
-    statsmodels.tsa.filters.bk_filter.bkfilter
-    statsmodels.tsa.filters.cf_filter.xffilter
-    statsmodels.tsa.filters.hp_filter.hpfilter
-    statsmodels.tsa.filters.convolution_filter
-    statsmodels.tsa.seasonal.STL
     """
     pfreq = period
     pw = PandasWrapper(x)
@@ -185,6 +185,22 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
 
 
 class DecomposeResult(object):
+    """
+    Results class for seasonal decompositions
+
+    Parameters
+    ----------
+    observed : array_like
+        The data series that has been decomposed.
+    seasonal : array_like
+        The seasonal component of the data series.
+    trend : array_like
+        The trend component of the data series.
+    resid : array_like
+        The residual component of the data series.
+    weights : array_like, optional
+        The weights used to reduce outlier influence.
+    """
     def __init__(self, observed, seasonal, trend, resid, weights=None):
         self._seasonal = seasonal
         self._trend = trend
@@ -234,21 +250,21 @@ class DecomposeResult(object):
 
         Parameters
         ----------
-        observed: bool
+        observed : bool
             Include the observed series in the plot
-        seasonal: bool
+        seasonal : bool
             Include the seasonal component in the plot
-        trend: bool
+        trend : bool
             Include the trend component in the plot
-        resid: bool
+        resid : bool
             Include the residual in the plot
-        weights: bool
+        weights : bool
             Include the weights in the plot (if any)
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
-            The figure instance that containing the plot
+        matplotlib.figure.Figure
+            The figure instance that containing the plot.
         """
         from statsmodels.graphics.utils import _import_mpl
         from pandas.plotting import register_matplotlib_converters

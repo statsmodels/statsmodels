@@ -434,7 +434,7 @@ def _medcouple_1d(y):
 
 def medcouple(y, axis=0):
     """
-    Calculates the medcouple robust measure of skew.
+    Calculate the medcouple robust measure of skew.
 
     Parameters
     ----------

@@ -20,15 +20,14 @@ _tsa_doc = """
     Parameters
     ----------
     %(params)s
-    dates : array_like of datetime, optional
+    dates : array_like, optional
         An array-like object of datetime objects. If a pandas object is given
         for endog or exog, it is assumed to have a DateIndex.
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
     %(extra_params)s
-    %(extra_sections)s
-"""
+    %(extra_sections)s"""
 
 _model_doc = "Timeseries model base class"
 
