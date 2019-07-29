@@ -19,11 +19,10 @@ from statsmodels.formula import handle_formula_data
 from statsmodels.base.optimizer import Optimizer
 
 
-_model_params_doc = """
-    Parameters
+_model_params_doc = """Parameters
     ----------
     endog : array_like
-        1-d endogenous response variable. The dependent variable.
+        A 1-d endogenous response variable. The dependent variable.
     exog : array_like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
@@ -34,14 +33,16 @@ _missing_param_doc = """\
 missing : str
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised. Default is 'none.'"""
+        If 'raise', an error is raised. Default is 'none'."""
 _extra_param_doc = """
     hasconst : None or bool
         Indicates whether the RHS includes a user-supplied constant. If True,
         a constant is not checked for and k_constant is set to 1 and all
         result statistics are calculated as if a constant is present. If
         False, a constant is not checked for and k_constant is set to 0.
-"""
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface."""
 
 
 class Model(object):
@@ -117,19 +118,19 @@ class Model(object):
         Parameters
         ----------
         formula : str or generic Formula object
-            The formula specifying the model
+            The formula specifying the model.
         data : array_like
             The data for the model. See Notes.
         subset : array_like
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
-            `pandas.DataFrame`
+            `pandas.DataFrame`.
         drop_cols : array_like
             Columns to drop from the design matrix.  Cannot be used to
             drop terms involving categoricals.
-        args : extra arguments
-            These are passed to the model
-        kwargs : extra keyword arguments
+        *args
+            Additional positional argument that are passed to the model.
+        **kwargs
             These are passed to the model with one exception. The
             ``eval_env`` keyword is passed to patsy. It can be either a
             :class:`patsy:patsy.EvalEnvironment` object or an integer
@@ -139,7 +140,8 @@ class Model(object):
 
         Returns
         -------
-        model : Model instance
+        model
+            The model instance.
 
         Notes
         -----
@@ -198,12 +200,16 @@ class Model(object):
 
     @property
     def endog_names(self):
-        """Names of endogenous variables"""
+        """
+        Names of endogenous variables.
+        """
         return self.data.ynames
 
     @property
     def exog_names(self):
-        """Names of exogenous variables"""
+        """
+        Names of exogenous variables.
+        """
         return self.data.xnames
 
     def fit(self):
@@ -232,9 +238,11 @@ class LikelihoodModel(Model):
 
     def initialize(self):
         """
-        Initialize (possibly re-initialize) a Model instance. For
-        instance, the design matrix of a linear model may change
-        and some things must be recomputed.
+        Initialize (possibly re-initialize) a Model instance.
+
+        For example, if the the design matrix of a linear model changes then
+        initialized can be used to recompute values using the modified design
+        matrix.
         """
         pass
 
@@ -252,20 +260,45 @@ class LikelihoodModel(Model):
         Score vector of model.
 
         The gradient of logL with respect to each parameter.
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters to use when evaluating the Hessian.
+
+        Returns
+        -------
+        ndarray
+            The score vector evaluated at the parameters.
         """
         raise NotImplementedError
 
     def information(self, params):
         """
-        Fisher information matrix of model
+        Fisher information matrix of model.
 
-        Returns -Hessian of loglike evaluated at params.
+        Returns -1 * Hessian of the log-loglikelihood evaluated at params.
+
+        Parameters
+        ----------
+        params : ndarray
+            The model parameters.
         """
         raise NotImplementedError
 
     def hessian(self, params):
         """
-        The Hessian matrix of the model
+        The Hessian matrix of the model.
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters to use when evaluating the Hessian.
+
+        Returns
+        -------
+        ndarray
+            The hessian evaluated at the parameters.
         """
         raise NotImplementedError
 

@@ -203,6 +203,13 @@ results class of the other linear models.
    OLSResults
    PredictionResults
 
+.. currentmodule:: statsmodels.base.elastic_net
+
+.. autosummary::
+   :toctree: generated/
+
+    RegularizedResults
+
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::

@@ -176,6 +176,11 @@
             "text": "Exponential Smoothing",
             "target": "notebooks/generated/exponential_smoothing.html",
             "img": "../_static/images/exponential_smoothing.png"
+        },
+        {
+            "text": "Seasonal Decomposition",
+            "target": "notebooks/generated/stl_decomposition.html",
+            "img": "../_static/images/stl_decomposition.png"
         }
           ]
   },
