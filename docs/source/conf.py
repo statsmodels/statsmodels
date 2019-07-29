@@ -341,12 +341,16 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # numpydoc_show_class_members = False
 # numpydoc_show_inherited_class_members = True
 
+# Create xrefs
+numpydoc_xref_param_type = True
+
+# Example configuration for intersphinx: refer to the Python standard library.
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'pydagogue': ('https://matthew-brett.github.io/pydagogue/', None),
-    'patsy': ('https://patsy.readthedocs.io/en/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
 }
 
