@@ -1,5 +1,5 @@
 
-from ._version import get_versions
+from statsmodels._version import get_versions
 
 debug_warnings = False
 
