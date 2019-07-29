@@ -6,7 +6,7 @@
 import numpy as np
 from statsmodels.datasets.ccard.data import load, load_pandas
 from statsmodels.tools.tools import add_constant
-from statsmodels.stats.oaxaca import Oaxaca 
+from statsmodels.stats.oaxaca import Oaxaca
 
 df = load()
 pandas_df = load_pandas()

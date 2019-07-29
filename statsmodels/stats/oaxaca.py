@@ -173,7 +173,6 @@ class Oaxaca(object):
 
         Returns
         -------
-
         char_eff : float
             This is the effect due to the group differences in
             predictors
@@ -208,7 +207,6 @@ class Oaxaca(object):
 
         Returns
         -------
-
         unexplained : float
             This is the effect that cannot be explained by the data at hand.
             This does not mean it cannot be explained with more.
