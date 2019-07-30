@@ -16,7 +16,8 @@ what cannot by using OLS regression frameworks.
 
 "The original use by Oaxaca's was to explain the wage
 differential between two different groups of workers,
-but the method has since been applied to numerous other topics." (Wikipedia)
+but the method has since been applied to numerous other 
+topics." (Wikipedia)
 
 The model is designed to accept two endogenous response variables
 and two exogenous explanitory variables. They are then fit using
@@ -65,8 +66,8 @@ class Oaxaca(object):
         constant. If True, a constant is assumed. If False, a constant is added
         at the start. If nothing is supplied, then True is assumed.
     swap: bool, optional
-        Imitates the STATA Oaxaca command by allowing users to choose to swap groups.
-        Unlike STATA, this is assumed to be True instead of False
+        Imitates the STATA Oaxaca command by allowing users to choose to swap
+        groups. Unlike STATA, this is assumed to be True instead of False
     cov_type: string, optional
         See regression.linear_model.RegressionResults for a description of the
         available covariance estimators
@@ -75,7 +76,7 @@ class Oaxaca(object):
         required keywords for alternative covariance estimators
     suppress: bool, optional
         If True, it will suppress the print of the function. False is default.
-    
+
     Attributes
     ----------
     None
@@ -123,7 +124,7 @@ class Oaxaca(object):
     """
 
     def __init__(self, endog, exog, bifurcate, hasconst=True,
-            swap=True, cov_type='nonrobust', cov_kwds=None, suppress = False):
+                 swap=True, cov_type='nonrobust', cov_kwds=None, suppress=False):
         if str(type(exog)).find('pandas') != -1:
             bifurcate = exog.columns.get_loc(bifurcate)
             endog, exog = np.array(endog), np.array(exog)
@@ -139,8 +140,8 @@ class Oaxaca(object):
         exog_s = exog[np.where(exog[:, bifurcate] == bi[1])]
         endog_f = endog[np.where(endog[:, 0] == bi[0])]
         endog_s = endog[np.where(endog[:, 0] == bi[1])]
-        exog_f = np.delete(exog_f, bifurcate, axis=1)
-        exog_s = np.delete(exog_s, bifurcate, axis=1)
+        exog_f = np.delete(exog_f, bifurcate, axis = 1)
+        exog_s = np.delete(exog_s, bifurcate, axis = 1)
         endog_f = endog_f[:, 1]
         endog_s = endog_s[:, 1]
         endog = endog[:, 1]
@@ -157,9 +158,15 @@ class Oaxaca(object):
             exog_s = add_constant(exog_s, prepend=False)
             exog = add_constant(exog, prepend=False)
 
-        self._t_model = OLS(endog, exog).fit(cov_type=cov_type, cov_kwds=cov_kwds)
-        self._f_model = OLS(endog_f, exog_f).fit(cov_type=cov_type, cov_kwds=cov_kwds)
-        self._s_model = OLS(endog_s, exog_s).fit(cov_type=cov_type, cov_kwds=cov_kwds)
+        self._t_model = OLS(endog, exog).fit(
+                                            cov_type=cov_type,
+                                            cov_kwds=cov_kwds)
+        self._f_model = OLS(endog_f, exog_f).fit(
+                                                cov_type=cov_type,
+                                                cov_kwds=cov_kwds)
+        self._s_model = OLS(endog_s,exog_s).fit(
+                                                cov_type=cov_type,
+                                                cov_kwds=cov_kwds)
 
         self.exog_f_mean = np.mean(exog_f, axis=0)
         self.exog_s_mean = np.mean(exog_s, axis=0)
@@ -189,13 +196,20 @@ class Oaxaca(object):
             This is the gap in the mean differences of the two groups.
         """
 
-        self.char_eff = (self.exog_f_mean -self.exog_s_mean) @ self._s_model.params
-        self.coef_eff = (self.exog_s_mean) @ (self._f_model.params - self._s_model.params)
-        self.int_eff = (self.exog_f_mean - self.exog_s_mean) @ (self._f_model.params - self._s_model.params)
+        self.char_eff = ((self.exog_f_mean - self.exog_s_mean) 
+                        @ self._s_model.params)
+        self.coef_eff = ((self.exog_s_mean) 
+                        @ (self._f_model.params - self._s_model.params))
+        self.int_eff = ((self.exog_f_mean - self.exog_s_mean) 
+                        @ (self._f_model.params - self._s_model.params))
 
         if self.suppress is False:
             print("".join(["*" for x in range(0, 30)]))
-            print("Characteristic Effect: {:.5f}\nCoefficent Effect: {:.5f}\nInteraction Effect: {:.5f}\nGap: {:.5f}".format(self.char_eff, self.coef_eff, self.int_eff, self.gap))
+            print(
+                "Characteristic Effect: {:.5f}\n \
+                Coefficent Effect: {:.5f}\n \
+                Interaction Effect: {:.5f}\n \
+                Gap: {:.5f}".format(self.char_eff, self.coef_eff, self.int_eff, self.gap))
             print("".join(["*" for x in range(0, 30)]))
 
         return self.char_eff, self.coef_eff, self.int_eff, self.gap
@@ -219,12 +233,18 @@ class Oaxaca(object):
         gap: float
             This is the gap in the mean differences of the two groups.
         """
-        self.unexplained = (self.exog_f_mean @ (self._f_model.params - self.t_params)) + (self.exog_s_mean @ (self.t_params - self._s_model.params))
+        self.unexplained = ((self.exog_f_mean 
+                            @ (self._f_model.params - self.t_params))
+                            + (self.exog_s_mean 
+                            @ (self.t_params - self._s_model.params)))
         self.explained = (self.exog_f_mean - self.exog_s_mean) @ self.t_params
 
         if self.suppress is False:
             print("".join(["*" for x in range(0, 30)]))
-            print("Unexplained Effect: {:.5f}\nExplained Effect: {:.5f}\nGap: {:.5f}".format(self.unexplained, self.explained, self.gap))
+            print(
+                "Unexplained Effect: {:.5f}\n \
+                Explained Effect: {:.5f}\n \
+                Gap: {:.5f}".format(self.unexplained, self.explained, self.gap))
             print("".join(["*" for x in range(0, 30)]))
 
         return self.unexplained, self.explained, self.gap
