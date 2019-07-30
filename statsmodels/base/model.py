@@ -1982,7 +1982,7 @@ class LikelihoodModelResults(Results):
             Term names for categorical effects are created by patsy and
             correspond to the main part of the exog names.
         method : {str, list[str]}
-            The multiple testing p-value correction to applye. The default is
+            The multiple testing p-value correction to apply. The default is
             'hs'. See stats.multipletesting
         alpha : float
             The significance level for multiple testing reject decision.
