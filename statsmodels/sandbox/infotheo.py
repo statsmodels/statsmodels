@@ -96,7 +96,7 @@ def discretize(X, method="ef", nbins=None):
     ----------
     bins : int, optional
         Number of bins.  Default is floor(sqrt(N))
-    method : string
+    method : str
         "ef" is equal-frequency binning
         "ew" is equal-width binning
 

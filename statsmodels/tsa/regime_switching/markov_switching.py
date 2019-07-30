@@ -464,9 +464,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
     ----------
     endog : array_like
         The endogenous variable.
-    k_regimes : integer
+    k_regimes : int
         The number of regimes.
-    order : integer, optional
+    order : int, optional
         The order of the model describes the dependence of the likelihood on
         previous regimes. This depends on the model in question and should be
         set appropriately by subclasses.
@@ -679,12 +679,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        probabilities : string or array_like, optional
+        probabilities : str or array_like, optional
             Specifies the weighting probabilities used in constructing the
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
-        conditional: boolean or int, optional
+        conditional: bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
             predictions. If True or 1, returns predictions conditional on the
@@ -788,7 +788,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to perform filtering.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         cov_type : str, optional
             See `fit` for a description of covariance matrix types
@@ -796,7 +796,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_kwds : dict or None, optional
             See `fit` for a description of required keywords for alternative
             covariance estimators
-        return_raw : boolean,optional
+        return_raw : bool,optional
             Whether or not to return only the raw Hamilton filter output or a
             full results object. Default is to return a full results object.
         results_class : type, optional
@@ -880,7 +880,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to perform filtering.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         cov_type : str, optional
             See `fit` for a description of covariance matrix types
@@ -888,7 +888,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_kwds : dict or None, optional
             See `fit` for a description of required keywords for alternative
             covariance estimators
-        return_raw : boolean,optional
+        return_raw : bool,optional
             Whether or not to return only the raw Hamilton filter output or a
             full results object. Default is to return a full results object.
         results_class : type, optional
@@ -945,7 +945,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         """
         params = np.array(params, ndmin=1)
@@ -966,7 +966,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         """
         return np.sum(self.loglikeobs(params, transformed))
@@ -980,7 +980,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the score
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         """
         params = np.array(params, ndmin=1)
@@ -996,7 +996,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the score
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         """
         params = np.array(params, ndmin=1)
@@ -1013,7 +1013,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the Hessian
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         """
         params = np.array(params, ndmin=1)
@@ -1032,7 +1032,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             If None, the default is given by Model.start_params.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
         cov_type : str, optional
@@ -1060,16 +1060,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             basin-hopping solver supports.
         maxiter : int, optional
             The maximum number of iterations to perform.
-        full_output : boolean, optional
+        full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : boolean, optional
+        disp : bool, optional
             Set to True to print convergence messages.
         callback : callable callback(xk), optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        return_params : boolean, optional
+        return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
         em_iter : int, optional
@@ -1151,7 +1151,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             If None, the default is given by `start_params`.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
         cov_type : str, optional
@@ -1168,7 +1168,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Set to True to have all available output in the Results object's
             mle_retvals attribute. This includes all intermediate values for
             parameters and loglikelihood values
-        return_params : boolean, optional
+        return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
         **kwargs
@@ -1306,7 +1306,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         start_params : array, optional
             Starting parameter vector. If not given, class-level start
             parameters are used.
-        transformed : boolean, optional
+        transformed : bool, optional
             If `start_params` was provided, whether or not those parameters
             are already transformed. Default is True.
         em_iter : int, optional
@@ -1655,7 +1655,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : string
+    cov_type : str
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 
@@ -1934,12 +1934,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        probabilities : string or array_like, optional
+        probabilities : str or array_like, optional
             Specifies the weighting probabilities used in constructing the
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
-        conditional: boolean or int, optional
+        conditional: bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
             predictions. If True or 1, returns predictions conditional on the
@@ -1991,9 +1991,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title of the summary table.
-        model_name : string
+        model_name : str
             The name of the model used. Default is to use model class name.
-        display_params : boolean, optional
+        display_params : bool, optional
             Whether or not to display tables of estimated parameters. Default
             is True. Usually only used internally.
 

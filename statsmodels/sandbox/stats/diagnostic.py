@@ -673,14 +673,14 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
-    split : None or integer or float in intervall (0,1)
-        index at which sample is split.
-        If 0<split<1 then split is interpreted as fraction of the observations
-        in the first sample
-    retres : boolean
+    split : {None, int, float}
+        If an int, the index at which sample is split.
+        If a float 0<split<1 then split is interpreted as fraction of the
+        observations in the first sample
+    retres : bool
         if true, then an instance of a result class is returned,
         otherwise 2 numbers, fvalue and p-value, are returned
 
@@ -762,7 +762,7 @@ class HetGoldfeldQuandt(object):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
     split : None or integer or float in intervall (0,1)
@@ -777,7 +777,7 @@ class HetGoldfeldQuandt(object):
         split+drop, where split and drop are the indices (given by rounding if
         specified as fraction). The first sample is [0:split], the second
         sample is [split+drop:]
-    alternative : string, 'increasing', 'decreasing' or 'two-sided'
+    alternative : str, 'increasing', 'decreasing' or 'two-sided'
         default is increasing. This specifies the alternative for the p-value
         calculation.
 

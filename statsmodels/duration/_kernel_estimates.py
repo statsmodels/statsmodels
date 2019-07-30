@@ -21,7 +21,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
         A kernel function
     freq_weights : array_like
         Optional frequency weights
-    dimred : boolean
+    dimred : bool
         If True, proportional hazards regression models are used to
         reduce exog to two columns by predicting overall events and
         censoring in two separate models.  If False, exog is used

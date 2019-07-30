@@ -55,7 +55,7 @@ class PredictionResults(object):
         ----------
         value : array_like
             value under the null hypothesis
-        alternative : string
+        alternative : str
             'two-sided', 'larger', 'smaller'
 
         Returns

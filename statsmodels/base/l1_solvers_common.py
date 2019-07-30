@@ -18,20 +18,20 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
 
     Parameters
     ----------
-    params : np.ndarray
+    params : ndarray
         model parameters.  Not including the added variables x_added.
-    alpha : np.ndarray
+    alpha : ndarray
         regularization coefficients
     score : function
         Gradient of unregularized objective function
     qc_tol : float
         Tolerance to hold conditions (i) and (ii) to for QC check.
-    qc_verbose : Boolean
+    qc_verbose : bool
         If true, print out a full QC report upon failure
 
     Returns
     -------
-    passed : Boolean
+    passed : bool
         True if QC check passed
     qc_dict : Dictionary
         Keys are fprime, alpha, params, passed_array
@@ -101,16 +101,16 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
 
     Parameters
     ----------
-    params : np.ndarray
+    params : ndarray
         model parameters.  Not including added variables.
     k_params : Int
         Number of parameters
-    alpha : np.ndarray
+    alpha : ndarray
         regularization coefficients
     score : Function.
         score(params) should return a 1-d vector of derivatives of the
         unpenalized objective function.
-    passed : Boolean
+    passed : bool
         True if the QC check passed
     trim_mode : 'auto, 'size', or 'off'
         If not 'off', trim (set to zero) parameters that would have been zero
@@ -127,9 +127,9 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
 
     Returns
     -------
-    params : np.ndarray
+    params : ndarray
         Trimmed model parameters
-    trimmed : np.ndarray of Booleans
+    trimmed : ndarray of booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
     ## Trim the small params

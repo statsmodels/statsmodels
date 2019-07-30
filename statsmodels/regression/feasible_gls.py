@@ -158,7 +158,7 @@ class GLSHet(WLS):
 
         Parameters
         ----------
-        maxiter : integer, optional
+        maxiter : int, optional
             the number of iterations
 
         Notes

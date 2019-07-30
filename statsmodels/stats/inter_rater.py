@@ -198,7 +198,7 @@ def fleiss_kappa(table, method='fleiss'):
     ----------
     table : array_like, 2-D
         assumes subjects in rows, and categories in columns
-    method : string
+    method : str
         Method 'fleiss' returns Fleiss' kappa which uses the sample margin
         to define the chance outcome.
         Method 'randolph' or 'uniform' (only first 4 letters are needed)
@@ -282,7 +282,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for
-    wt : None or string
+    wt : {None, str}
         If wt and weights are None, then the simple kappa is computed.
         If wt is given, but weights is None, then the weights are set to
         be [0, 1, 2, ..., k].

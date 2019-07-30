@@ -54,13 +54,13 @@ class VARMAX(MLEModel):
         "unstructured" puts no restrictions on the matrix and "diagonal"
         requires it to be a diagonal matrix (uncorrelated errors). Default is
         "unstructured".
-    measurement_error : boolean, optional
+    measurement_error : bool, optional
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
     trend_offset : int, optional
@@ -89,13 +89,13 @@ class VARMAX(MLEModel):
         "unstructured" puts no restrictions on the matrix and "diagonal"
         requires it to be a diagonal matrix (uncorrelated errors). Default is
         "unstructured".
-    measurement_error : boolean, optional
+    measurement_error : bool, optional
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
 
@@ -833,7 +833,7 @@ class VARMAXResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).

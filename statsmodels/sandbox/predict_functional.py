@@ -30,7 +30,7 @@ _predict_functional_doc =\
     ----------
     result : statsmodels result object
         A results object for the fitted model.
-    focus_var : string
+    focus_var : str
         The name of the 'focus variable'.
     summaries : dict-like
         A map from names of non-focus variables to summary functions.
@@ -44,10 +44,10 @@ _predict_functional_doc =\
         A second set of fixed values used to define a contrast.
     alpha : float
         `1 - alpha` is the coverage probability.
-    ci_method : string
+    ci_method : str
         The method for constructing the confidence band, one of
         'pointwise', 'scheffe', and 'simultaneous'.
-    num_points : integer
+    num_points : int
         The number of equally-spaced quantile points where the
         prediction is made.
     exog : array_like

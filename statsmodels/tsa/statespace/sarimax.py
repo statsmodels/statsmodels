@@ -62,36 +62,36 @@ class SARIMAX(MLEModel):
         iterable defining the polynomial as in `numpy.poly1d`, where
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
         include a trend component.
-    measurement_error : boolean, optional
+    measurement_error : bool, optional
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
-    time_varying_regression : boolean, optional
+    time_varying_regression : bool, optional
         Used when an explanatory variables, `exog`, are provided provided
         to select whether or not coefficients on the exogenous regressors are
         allowed to vary over time. Default is False.
-    mle_regression : boolean, optional
+    mle_regression : bool, optional
         Whether or not to use estimate the regression coefficients for the
         exogenous variables as part of maximum likelihood estimation or through
         the Kalman filter (i.e. recursive least squares). If
         `time_varying_regression` is True, this must be set to False. Default
         is True.
-    simple_differencing : boolean, optional
+    simple_differencing : bool, optional
         Whether or not to use partially conditional maximum likelihood
         estimation. If True, differencing is performed prior to estimation,
         which discards the first :math:`s D + d` initial rows but results in a
         smaller state-space formulation. If False, the full SARIMAX model is
         put in state-space form so that all datapoints can be used in
         estimation. Default is False.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    hamilton_representation : boolean, optional
+    hamilton_representation : bool, optional
         Whether or not to use the Hamilton representation of an ARMA process
         (if True) or the Harvey representation (if False). Default is False.
-    concentrate_scale : boolean, optional
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters estimated
         by maximum likelihood by one, but standard errors will then not
@@ -107,35 +107,35 @@ class SARIMAX(MLEModel):
 
     Attributes
     ----------
-    measurement_error : boolean
+    measurement_error : bool
         Whether or not to assume the endogenous
         observations `endog` were measured with error.
-    state_error : boolean
+    state_error : bool
         Whether or not the transition equation has an error component.
-    mle_regression : boolean
+    mle_regression : bool
         Whether or not the regression coefficients for
         the exogenous variables were estimated via maximum
         likelihood estimation.
-    state_regression : boolean
+    state_regression : bool
         Whether or not the regression coefficients for
         the exogenous variables are included as elements
         of the state space and estimated via the Kalman
         filter.
-    time_varying_regression : boolean
+    time_varying_regression : bool
         Whether or not coefficients on the exogenous
         regressors are allowed to vary over time.
-    simple_differencing : boolean
+    simple_differencing : bool
         Whether or not to use partially conditional maximum likelihood
         estimation.
-    enforce_stationarity : boolean
+    enforce_stationarity : bool
         Whether or not to transform the AR parameters
         to enforce stationarity in the autoregressive
         component of the model.
-    enforce_invertibility : boolean
+    enforce_invertibility : bool
         Whether or not to transform the MA parameters
         to enforce invertibility in the moving average
         component of the model.
-    hamilton_representation : boolean
+    hamilton_representation : bool
         Whether or not to use the Hamilton representation of an ARMA process.
     trend : str{'n','c','t','ct'} or iterable
         Parameter controlling the deterministic
@@ -1441,7 +1441,7 @@ class SARIMAX(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
 
@@ -1846,7 +1846,7 @@ class SARIMAXResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -1854,7 +1854,7 @@ class SARIMAXResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
+        full_results : bool, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
             covariance matrices. Default is False.

@@ -55,7 +55,7 @@ class PCA(object):
         'nipals' uses the NIPALS algorithm and can be faster than SVD when
         ncomp is small and nvars is large. See notes about additional changes
         when using NIPALS.
-    missing : string
+    missing : str
         Method for missing data.  Choices are:
         'drop-row' - drop rows with missing values.
         'drop-col' - drop columns with missing values.
@@ -608,18 +608,18 @@ class PCA(object):
         ncomp : int, optional
             Number of components to use.  If omitted, all components
             initially computed are used.
-
-        Returns
-        -------
-        projection : array_like
-            The nobs by nvar array of the projection onto ncomp factors.
-        transform : bool
+        transform : bool, optional
             Flag indicating whether to return the projection in the original
             space of the data (True, default) or in the space of the
             standardized/demeaned data.
-        unweight : bool
+        unweight : bool, optional
             Flag indicating whether to undo the effects of the estimation
             weights.
+
+        Returns
+        -------
+        array_like
+            The nobs by nvar array of the projection onto ncomp factors.
 
         Notes
         -----

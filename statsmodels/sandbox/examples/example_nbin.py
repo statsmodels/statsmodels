@@ -112,14 +112,14 @@ class NBin(GenericLikelihoodModel):
         `exog` is an n x p array where n is the number of observations and p
         is the number of regressors including the intercept if one is
         included in the data.
-    ll_type: string
+    ll_type: str
         log-likelihood type
         `nb2`: Negative Binomial type-2 (most common)
         `nb1`: Negative Binomial type-1
         `nbp`: Negative Binomial type-P (Greene, 2008)
         `nbt`: Left-truncated Negative Binomial (type-2)
         `geom`: Geometric regression model
-    C: integer
+    C: int
         Cut-point for `nbt` model
     '''
     def __init__(self, endog, exog, ll_type='nb2', C=0, **kwds):

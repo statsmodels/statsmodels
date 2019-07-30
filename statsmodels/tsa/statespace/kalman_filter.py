@@ -58,7 +58,7 @@ class KalmanFilter(Representation):
 
     Parameters
     ----------
-    k_endog : array_like or integer
+    k_endog : {array_like, int}
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -412,7 +412,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        filter_method : integer, optional
+        filter_method : int, optional
             Bitmask value to set the filter method to. See notes for details.
         **kwargs
             Keyword arguments may be used to influence the filter method by
@@ -492,7 +492,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        inversion_method : integer, optional
+        inversion_method : int, optional
             Bitmask value to set the inversion method to. See notes for
             details.
         **kwargs
@@ -578,7 +578,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        stability_method : integer, optional
+        stability_method : int, optional
             Bitmask value to set the stability method to. See notes for
             details.
         **kwargs
@@ -636,7 +636,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        conserve_memory : integer, optional
+        conserve_memory : int, optional
             Bitmask value to set the memory conservation method to. See notes
             for details.
         **kwargs
@@ -724,7 +724,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        alternate_timing : integer, optional
+        alternate_timing : int, optional
             Whether or not to use the alternate timing convention. Default is
             unspecified.
         **kwargs
@@ -1162,11 +1162,11 @@ class KalmanFilter(Representation):
             and `k_posdef-1` where `k_posdef` is the same as in the state
             space model. Alternatively, a custom impulse vector may be
             provided; must be a column vector with shape `(k_posdef, 1)`.
-        orthogonalized : boolean, optional
+        orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
             is False.
-        cumulative : boolean, optional
+        cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
         **kwargs
@@ -1456,7 +1456,7 @@ class FilterResults(FrozenRepresentation):
         ----------
         model : Representation
             The model object from which to take the updated values.
-        only_options : boolean, optional
+        only_options : bool, optional
             If set to true, only the filter options are updated, and the state
             space representation is not updated. Default is False.
 

@@ -121,33 +121,33 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
 
     Parameters
     ----------
-    mode : String
+    mode : str
         either 'logit', 'mnlogit', or 'probit'
     base_alpha :  Float
         Size of regularization param (the param actually used will
         automatically scale with data size in this demo)
-    N :  Integer
+    N : int
         Number of data points to generate for fit
-    get_l1_slsqp_results : boolean,
+    get_l1_slsqp_results : bool,
         Do an l1 fit using slsqp.
-    get_l1_cvxopt_results : boolean
+    get_l1_cvxopt_results : bool
         Do an l1 fit using cvxopt
-    num_nonconst_covariates : Integer
+    num_nonconst_covariates : int
         Number of covariates that are not constant
         (a constant will be prepended)
-    noise_level : Float (non-negative)
+    noise_level : float (non-negative)
         Level of the noise relative to signal
-    cor_length : Float (non-negative)
+    cor_length : float (non-negative)
         Correlation length of the (Gaussian) independent variables
-    num_zero_params : Integer
+    num_zero_params : int
         Number of parameters equal to zero for every target in logistic
         regression examples.
-    num_targets : Integer
+    num_targets : int
         Number of choices for the endogenous response in multinomial logit
         example
-    print_summaries : Boolean
+    print_summaries : bool
         print the full fit summary.
-    save_arrays : Boolean
+    save_arrays : bool
         Save exog/endog/true_params to disk for future use.
     load_old_arrays
         Load exog/endog/true_params arrays from disk.

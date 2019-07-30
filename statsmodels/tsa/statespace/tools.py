@@ -500,9 +500,9 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
     unconstrained : list
         Arbitrary matrices. Should be a list of length `order`, where each
         element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -557,12 +557,12 @@ def _compute_coefficients_from_multivariate_pacf_python(
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -733,7 +733,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
     prefix : {'s','d','c','z'}, optional
@@ -875,9 +875,9 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     constrained : list
         The partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -981,10 +981,10 @@ def _compute_multivariate_acovf_from_coefficients(
     error_variance : array
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    maxlag : integer, optional
+    maxlag : int, optional
         The maximum autocovariance to compute. Default is `order`-1. Can be
         zero, in which case it returns the variance.
-    forward_autocovariances : boolean, optional
+    forward_autocovariances : bool, optional
         Whether or not to compute forward autocovariances
         :math:`E(y_t y_{t+j}')`. Default is False, so that backward
         autocovariances :math:`E(y_t y_{t-j}')` are returned.
@@ -1082,7 +1082,7 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
     endog : array_like
         Sample data on which to compute sample autocovariances. Shaped
         `nobs` x `k_endog`.
-    maxlag : integer
+    maxlag : int
         Maximum lag for which to calculate sample partial autocorrelations.
 
     Returns
@@ -1108,9 +1108,9 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     autocovariances : list
         Autocorrelations matrices. Should be a list of length `order` + 1,
         where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -1273,9 +1273,9 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     error_variance : array
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns

@@ -47,7 +47,7 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
         as argument
         default: np.random.randn
         TODO: change to size argument
-    burnin : integer
+    burnin : int
         Burn in observations at the generated and dropped from the beginning of
         the sample
 
@@ -428,7 +428,7 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
     n : int
         number of terms of the impulse_response function to include in the
         objective function for the approximation
-    mse : string, 'ar'
+    mse : str, 'ar'
         not used yet,
 
     Returns
@@ -843,7 +843,7 @@ class ArmaProcess(object):
 
         Returns
         -------
-        isstationary : boolean
+        isstationary : bool
              True if autoregressive roots are outside unit circle
         """
         if np.all(np.abs(self.arroots) > 1.0):
@@ -858,7 +858,7 @@ class ArmaProcess(object):
 
         Returns
         -------
-        isinvertible : boolean
+        isinvertible : bool
              True if moving average roots are outside unit circle
         """
         if np.all(np.abs(self.maroots) > 1):
@@ -872,7 +872,7 @@ class ArmaProcess(object):
 
         Parameters
         ----------
-        retnew : boolean
+        retnew : bool
             If False (default), then return the lag-polynomial as array.
             If True, then return a new instance with invertible MA-polynomial
 
@@ -880,7 +880,7 @@ class ArmaProcess(object):
         -------
         manew : array
            new invertible MA lag-polynomial, returned if retnew is false.
-        wasinvertible : boolean
+        wasinvertible : bool
            True if the MA lag-polynomial was already invertible, returned if
            retnew is false.
         armaprocess : new instance of class
@@ -921,7 +921,7 @@ class ArmaProcess(object):
             as argument
             default: np.random.randn
             TODO: change to size argument
-        burnin : integer (default: 0)
+        burnin : int (default: 0)
             to reduce the effect of initial conditions, burnin observations
             at the beginning of the sample are dropped
         axis : int

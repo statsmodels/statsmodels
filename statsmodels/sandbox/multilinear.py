@@ -53,18 +53,18 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
 
     Parameters
     ----------
-    model : string
+    model : str
         formula description of the model
     dataframe : pandas.dataframe
         dataframe where the model will be evaluated
-    column_list : list of strings, optional
+    column_list : list[str], optional
         Names of the columns to analyze with the model.
         If None (Default) it will perform the function on all the
         eligible columns (numerical type and not in the model definition)
     model_type : model class, optional
         The type of model to be used. The default is the linear model.
         Can be any linear model (OLS, WLS, GLS, etc..)
-    method: string, optional
+    method: str, optional
         the method used to perform the pvalue correction for multiple testing.
         default is the Benjamini/Hochberg, other available methods are:
 
@@ -237,12 +237,12 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     groups: dict of list
         the name of each category of variables under exam.
         each one is a list of the variables included
-    exact: boolean, optional
+    exact: bool, optional
         If True (default) use the fisher exact test, otherwise
         use the chi squared test for contingencies tables.
         For high number of elements in the array the fisher test can
         be significantly slower than the chi squared.
-    keep_all: boolean, optional
+    keep_all: bool, optional
         if False it will drop those groups where the fraction
         of positive is below the expected result. If True (default)
          it will keep all the significant results.

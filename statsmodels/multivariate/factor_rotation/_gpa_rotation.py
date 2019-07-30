@@ -52,9 +52,9 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         criterion :math:`\phi` to optimize and its derivative. Should have
          A, T, L as keyword arguments and mapping to a tuple containing a
         float and vector. Can be omitted if ff is provided.
-    max_tries : integer (default 501)
+    max_tries : int (default 501)
         maximum number of iterations
-    rotation_method : string
+    rotation_method : str
         should be one of {orthogonal, oblique}
     tol : float
         stop criterion, algorithm stops if Frobenius norm of gradient is
@@ -238,9 +238,9 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
         rotation matrix
     gamma : float (default 0)
         a parameter
-    rotation_method : string
+    rotation_method : str
         should be one of {orthogonal, oblique}
-    return_gradient : boolean (default True)
+    return_gradient : bool (default True)
         toggles return of gradient
     """
     if L is None:
@@ -303,7 +303,7 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
         rotation matrix
     gamma : float (default 0)
         a parameter
-    return_gradient : boolean (default True)
+    return_gradient : bool (default True)
         toggles return of gradient
     """
     assert 0 <= gamma <= 1, "Gamma should be between 0 and 1"
@@ -384,9 +384,9 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
         rotation matrix
     gamma : float (default 0)
         a parameter
-    rotation_method : string
+    rotation_method : str
         should be one of {orthogonal, oblique}
-    return_gradient : boolean (default True)
+    return_gradient : bool (default True)
         toggles return of gradient
     """
     assert 0 <= kappa <= 1, "Kappa should be between 0 and 1"
@@ -452,7 +452,7 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
         non rotated factors
     T : numpy matrix (default None)
         rotation matrix
-    rotation_method : string
+    rotation_method : str
         should be one of {orthogonal, oblique}
     """
     if L is None:
@@ -495,7 +495,7 @@ def ff_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
         non rotated factors
     T : numpy matrix (default None)
         rotation matrix
-    rotation_method : string
+    rotation_method : str
         should be one of {orthogonal, oblique}
     """
     if L is None:

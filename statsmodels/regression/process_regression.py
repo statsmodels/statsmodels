@@ -577,7 +577,7 @@ class ProcessMLE(base.LikelihoodModel):
         ----------
         start_params : array_like
             Optional starting values.
-        method : string or array of strings
+        method : str or array of str
             Method or sequence of methods for scipy optimize.
         maxiter : int
             The maximum number of iterations in the optimization.

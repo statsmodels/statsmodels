@@ -80,7 +80,7 @@ class Summary(object):
             Users are encouraged to format them before using add_dict.
         ncols: int
             Number of columns of the output table
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -128,13 +128,13 @@ class Summary(object):
         results : Model results instance
         alpha : float
             significance level for the confidence intervals (optional)
-        float_formatting: string
+        float_formatting: str
             Float formatting for summary of parameters (optional)
-        title : string
+        title : str
             Title of the summary table (optional)
-        xname : List of strings of length equal to the number of parameters
+        xname : list[str] of length equal to the number of parameters
             Names of the independent variables (optional)
-        yname : string
+        yname : str
             Name of the dependent variable (optional)
         '''
 
@@ -320,9 +320,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     res : results instance
         some required information is directly taken from the result
         instance
-    yname : string or None
+    yname : {str, None}
         optional name for the endogenous variable, default is "y"
-    xname : list of strings or None
+    xname : {list[str], None}
         optional names for the exogenous variables, default is "var_xx"
     alpha : float
         significance level for the confidence intervals

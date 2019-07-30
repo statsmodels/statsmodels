@@ -257,7 +257,7 @@ class IVRegressionResults(RegressionResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list of strings, optional
+        xname : list[str], optional
             Default is `var_##` for ## in p the number of regressors
         title : str, optional
             Title for the top table. If not None, then this replaces the
@@ -378,7 +378,7 @@ Type of GMM
 weight matrix
 ~~~~~~~~~~~~~
 
- - `weights_method` : string, defines method for robust
+ - `weights_method` : str, defines method for robust
    Options here are similar to :mod:`statsmodels.stats.robust_covariance`
    default is heteroscedasticity consistent, HC0
 
@@ -535,7 +535,7 @@ class GMM(Model):
 
         Parameters
         ----------
-        param_names : list of strings
+        param_names : list[str]
             param_names should have the same length as the number of params
         k_params : None or int
             If k_params is None, then the k_params attribute is used, unless
@@ -584,7 +584,7 @@ class GMM(Model):
             given then the method `start_weights` is used which depends on
             the subclass, for IV subclasses `inv_weights = z'z` where `z` are
             the instruments, otherwise an identity matrix is used.
-        weights_method : string, defines method for robust
+        weights_method : str, defines method for robust
             Options here are similar to :mod:`statsmodels.stats.robust_covariance`
             default is heteroscedasticity consistent, HC0
 
@@ -613,7 +613,7 @@ class GMM(Model):
               matrix assumes that we have optimal GMM with :math:`W = S^{-1}`.
               Default is True.
               TODO: do we want to have a different default after `onestep`?
-        optim_method : string, default is 'bfgs'
+        optim_method : str, default is 'bfgs'
             numerical optimization method. Currently not all optimizers that
             are available in LikelihoodModels are connected.
         optim_args : dict
@@ -943,7 +943,7 @@ class GMM(Model):
         moms : array
             moment conditions (nobs x nmoms) for all observations evaluated at
             a parameter value
-        weights_method : string 'cov'
+        weights_method : str 'cov'
             If method='cov' is cov then the matrix is calculated as simple
             covariance of the moment conditions.
             see fit method for available aoptions for the weight and covariance
@@ -1291,7 +1291,7 @@ class GMMResults(LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list of strings, optional
+        xname : list[str], optional
             Default is `var_##` for ## in p the number of regressors
         title : str, optional
             Title for the top table. If not None, then this replaces the

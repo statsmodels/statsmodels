@@ -200,7 +200,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        filter_method : integer, optional
+        filter_method : int, optional
             Bitmask value to set the filter method to. See notes for details.
         **kwargs
             Keyword arguments may be used to influence the filter method by
@@ -223,7 +223,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        inversion_method : integer, optional
+        inversion_method : int, optional
             Bitmask value to set the inversion method to. See notes for
             details.
         **kwargs
@@ -247,7 +247,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        stability_method : integer, optional
+        stability_method : int, optional
             Bitmask value to set the stability method to. See notes for
             details.
         **kwargs
@@ -271,7 +271,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        conserve_memory : integer, optional
+        conserve_memory : int, optional
             Bitmask value to set the memory conservation method to. See notes
             for details.
         **kwargs
@@ -294,7 +294,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        smoother_output : integer, optional
+        smoother_output : int, optional
             Bitmask value to set the smoother output to. See notes for details.
         **kwargs
             Keyword arguments may be used to influence the smoother output by
@@ -364,7 +364,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             If None, the default is given by Model.start_params.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
         cov_type : str, optional
@@ -388,11 +388,11 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             **opg, oim, approx, robust, robust_approx**
 
-            - 'approx_complex_step' : boolean, optional - If True, numerical
+            - 'approx_complex_step' : bool, optional - If True, numerical
               approximations are computed using complex-step methods. If False,
               numerical approximations are computed using finite difference
               methods. Default is True.
-            - 'approx_centered' : boolean, optional - If True, numerical
+            - 'approx_centered' : bool, optional - If True, numerical
               approximations computed using finite difference methods use a
               centered approximation. Default is False.
         method : str, optional
@@ -415,16 +415,16 @@ class MLEModel(tsbase.TimeSeriesModel):
             basin-hopping solver supports.
         maxiter : int, optional
             The maximum number of iterations to perform.
-        full_output : boolean, optional
+        full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : boolean, optional
+        disp : bool, optional
             Set to True to print convergence messages.
         callback : callable callback(xk), optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        return_params : boolean, optional
+        return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
         optim_score : {'harvey', 'approx'} or None, optional
@@ -545,9 +545,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
-        return_ssm : boolean,optional
+        return_ssm : bool,optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
@@ -591,9 +591,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
-        return_ssm : boolean,optional
+        return_ssm : bool,optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
@@ -638,7 +638,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         kwargs
             Additional keyword arguments to pass to the Kalman filter. See
@@ -689,7 +689,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
@@ -1396,7 +1396,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True.
 
@@ -1485,11 +1485,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
             provided; must be shaped `k_posdef x 1`.
-        orthogonalized : boolean, optional
+        orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
             is False.
-        cumulative : boolean, optional
+        cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
         **kwargs
@@ -1668,7 +1668,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        cov_type : string
+        cov_type : str
             the type of covariance matrix estimator to use. See Notes below
         kwargs : depends on cov_type
             Required or optional arguments for covariance calculation.
@@ -2082,7 +2082,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'jarquebera'} or None
+        method : {'jarquebera', None}
             The statistical test for normality. Must be 'jarquebera' for
             Jarque-Bera normality test. If None, an attempt is made to select
             an appropriate test.
@@ -2130,14 +2130,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'breakvar'} or None
+        method : {'breakvar', None}
             The statistical test for heteroskedasticity. Must be 'breakvar'
             for test of a break in the variance. If None, an attempt is
             made to select an appropriate test.
-        alternative : string, 'increasing', 'decreasing' or 'two-sided'
+        alternative : str, 'increasing', 'decreasing' or 'two-sided'
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
-        use_f : boolean, optional
+        use_f : bool, optional
             Whether or not to compare against the asymptotic distribution
             (chi-squared) or the approximate small-sample distribution (F).
             Default is True (i.e. default is to compare against an F
@@ -2284,7 +2284,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'ljungbox','boxpierece'} or None
+        method : {'ljungbox','boxpierece', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
@@ -2369,7 +2369,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -2451,7 +2451,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -2559,11 +2559,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
             provided; must be shaped `k_posdef x 1`.
-        orthogonalized : boolean, optional
+        orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
             is False.
-        cumulative : boolean, optional
+        cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
         **kwargs
@@ -2871,10 +2871,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        variable : integer, optional
+        variable : int, optional
             Index of the endogenous variable for which the diagnostic plots
             should be created. Default is 0.
-        lags : integer, optional
+        lags : int, optional
             Number of lags to include in the correlogram. Default is 10.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new
@@ -2967,7 +2967,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Significance level for the confidence intervals. Default is 0.05.
         start : int, optional
             Integer of the start observation. Default is 0.
-        model_name : string
+        model_name : str
             The name of the model used. Default is to use model class name.
 
         Returns

@@ -178,7 +178,7 @@ class TheilGLS(GLS):
         ----------
         pen_weight : float
             penalization factor for the restriction, default is 1.
-        cov_type : string, 'data-prior' or 'sandwich'
+        cov_type : str, 'data-prior' or 'sandwich'
             'data-prior' assumes that the stochastic restriction reflects a
             previous sample. The covariance matrix of the parameter estimate
             is in this case the same form as the one of GLS.
@@ -259,7 +259,7 @@ class TheilGLS(GLS):
 
         Parameters
         ----------
-        method : string
+        method : str
             the name of an attribute of the results class. Currently the following
             are available aic, aicc, bic, gc and gcv.
         start_params : float

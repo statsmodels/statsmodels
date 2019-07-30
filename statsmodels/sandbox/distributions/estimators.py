@@ -290,7 +290,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         starting values, needs to have correct length
     fixed : None
         not used yet
-    weightsoptimal : boolean
+    weightsoptimal : bool
         If true, then the optimal weighting matrix for GMM is used. If false,
         then the identity matrix is used
 

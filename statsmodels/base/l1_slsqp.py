@@ -43,7 +43,7 @@ def fit_l1_slsqp(
     qc_tol : float
         Print warning and do not allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
-    qc_verbose : Boolean
+    qc_verbose : bool
         If true, print out a full QC report upon failure
     acc : float (default 1e-6)
         Requested accuracy as used by slsqp

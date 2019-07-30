@@ -63,7 +63,7 @@ def cumulant_from_moments(momt, n):
         `momt[j]` contains `(j+1)`-th moment.
         These can be raw moments around zero, or central moments
         (in which case, `momt[0]` == 0).
-    n: integer
+    n: int
         which cumulant to calculate (must be >1)
 
     Returns

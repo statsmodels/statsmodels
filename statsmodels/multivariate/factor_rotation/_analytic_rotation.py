@@ -39,7 +39,7 @@ def target_rotation(A, H, full_rank=False):
         non rotated factors
     H : numpy matrix
         target matrix
-    full_rank : boolean (default FAlse)
+    full_rank : bool (default FAlse)
         if set to true full rank is assumed
 
     Returns
@@ -88,7 +88,7 @@ def procrustes(A, H):
         non rotated factors
     H : numpy matrix
         target matrix
-    full_rank : boolean (default False)
+    full_rank : bool (default False)
         if set to true full rank is assumed
 
     Returns

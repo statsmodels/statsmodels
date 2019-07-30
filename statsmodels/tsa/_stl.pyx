@@ -111,7 +111,7 @@ cdef class STL(object):
     ----------
     endog : array-like
         Data to be decomposed. Must be squeezable to 1-d.
-    period: {int, None}, optional
+    period : {int, None}, optional
         Periodicity of the sequence. If None and endog is a pandas Series or
         DataFrame, attempts to determine from endog. If endog is a ndarray,
         period must be provided.

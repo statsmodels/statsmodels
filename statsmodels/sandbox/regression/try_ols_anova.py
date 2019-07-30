@@ -108,7 +108,7 @@ def anovadict(res):
 def form2design(ss, data):
     '''convert string formula to data dictionary
 
-    ss : string
+    ss : str
      * I : add constant
      * varname : for simple varnames data is used as is
      * F:varname : create dummy variables for factor varname

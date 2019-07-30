@@ -76,7 +76,7 @@ def correlation_sum(indicators, embedding_dim):
     ----------
     indicators : 2d array
         matrix of distance threshold indicators
-    embedding_dim : integer
+    embedding_dim : int
         embedding dimension
 
     Returns
@@ -111,7 +111,7 @@ def correlation_sums(indicators, max_dim):
     ----------
     indicators : 2d array
         matrix of distance threshold indicators
-    max_dim : integer
+    max_dim : int
         maximum embedding dimension
 
     Returns
@@ -138,7 +138,7 @@ def _var(indicators, max_dim):
     ----------
     indicators : 2d array
         matrix of distance threshold indicators
-    max_dim : integer
+    max_dim : int
         maximum embedding dimension
 
     Returns
@@ -175,7 +175,7 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     ----------
     x : 1d array
         observations of time series for which bds statistics is calculated
-    max_dim : integer
+    max_dim : int
         maximum embedding dimension
     epsilon : scalar, optional
         the threshold distance to use in calculating the correlation sum

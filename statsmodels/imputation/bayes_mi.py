@@ -205,7 +205,7 @@ class MI(object):
     model_kwds_fn : function, optional
         A function taking an imputed dataset as input and returning
         a dictionary of model keyword arguments.
-    formula : string, optional
+    formula : str, optional
         If provided, the model is constructed using the `from_formula`
         class method, otherwise the `__init__` method is used.
     fit_args : list-like, optional

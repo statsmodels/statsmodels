@@ -434,15 +434,15 @@ class AnovaRM(object):
     Parameters
     ----------
     data : DataFrame
-    depvar : string
+    depvar : str
         The dependent variable in `data`
-    subject : string
+    subject : str
         Specify the subject id
-    within : a list of string(s)
+    within : list[str]
         The within-subject factors
-    between : a list of string(s)
+    between : list[str]
         The between-subject factors, this is not yet implemented
-    aggregate_func : None, 'mean', or function
+    aggregate_func : {None, 'mean', callable}
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will

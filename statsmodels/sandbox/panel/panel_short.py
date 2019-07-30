@@ -180,7 +180,7 @@ class ShortPanelGLS(GLS):
 
         Parameters
         ----------
-        maxiter : integer, optional
+        maxiter : int, optional
             the number of iterations
 
         Notes

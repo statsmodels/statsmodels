@@ -88,7 +88,7 @@ class ArmaFft(ArmaProcess):
             array that will be padded with zeros
         maxlag : int
             length of array after padding
-        atend : boolean
+        atend : bool
             If True (default), then the zeros are added to the end, otherwise
             to the front of the array
 

@@ -69,7 +69,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     Parameters
     ----------
-    cov_type : string
+    cov_type : str
         the type of robust sandwich estimator to use. see Notes below
     use_t : bool
         If true, then the t distribution is used for inference.

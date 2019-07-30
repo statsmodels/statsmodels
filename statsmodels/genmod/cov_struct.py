@@ -81,7 +81,7 @@ class CovStruct(object):
         endog_expval: array_like
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
-        index: integer
+        index: int
            The index of the cluster for which the covariance or
            correlation matrix will be returned
 
@@ -106,7 +106,7 @@ class CovStruct(object):
         expval: array_like
            The expected value of endog for each observed value in the
            group.
-        index: integer
+        index: int
            The group index.
         stdev : array_like
             The standard deviation of endog for each observation in
@@ -1208,7 +1208,7 @@ class Equivalence(CovStruct):
       equivalence classes are defined: one for the diagonal elements
       (corresponding to variances) and one for the off-diagonal
       elements (corresponding to covariances).
-    return_cov : boolean
+    return_cov : bool
       If True, `covariance_matrix` returns an estimate of the
       covariance matrix, otherwise returns an estimate of the
       correlation matrix.

@@ -300,7 +300,7 @@ class KStepAhead(object):
             number of steps ahead
         start : int
             initial size of data for fitting
-        kall : boolean
+        kall : bool
             if true. all values for up to k-step ahead are included in the test index.
             If false, then only the k-th step ahead value is returnd
 

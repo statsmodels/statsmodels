@@ -81,7 +81,7 @@ def plot_probs(freq, probs_predicted, label='predicted', upp_xlim=None,
         two arrays of probabilites, this can be any probabilities for
         the same events, default is designed for comparing predicted
         and observed probabilities
-    label : string or tuple
+    label : str or tuple
         If string, then it will be used as the label for probs_predicted and
         "freq" is used for the other probabilities.
         If label is a tuple of strings, then the first is they are used as

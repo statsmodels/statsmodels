@@ -19,12 +19,12 @@ def pca(data, keepdim=0, normalize=0, demean=True):
     ----------
     data : ndarray, 2d
         data with observations by rows and variables in columns
-    keepdim : integer
+    keepdim : int
         number of eigenvectors to keep
         if keepdim is zero, then all eigenvectors are included
-    normalize : boolean
+    normalize : bool
         if true, then eigenvectors are normalized by sqrt of eigenvalues
-    demean : boolean
+    demean : bool
         if true, then the column mean is subtracted from the data
 
     Returns
@@ -91,10 +91,10 @@ def pcasvd(data, keepdim=0, demean=True):
     ----------
     data : ndarray, 2d
         data with observations by rows and variables in columns
-    keepdim : integer
+    keepdim : int
         number of eigenvectors to keep
         if keepdim is zero, then all eigenvectors are included
-    demean : boolean
+    demean : bool
         if true, then the column mean is subtracted from the data
 
     Returns

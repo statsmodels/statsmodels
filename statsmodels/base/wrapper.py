@@ -51,19 +51,19 @@ class ResultsWrapper(object):
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
-        '''save a pickle of this instance
+        """
+        Save a pickle of this instance
 
         Parameters
         ----------
-        fname : string or filehandle
-            fname can be a string to a file path or filename, or a filehandle.
+        fname : {str, handle}
+            Either a filename or a valid file handle.
         remove_data : bool
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
             pickling. See the remove_data method.
             In some cases not all arrays will be set to None.
-
-        '''
+        """
         from statsmodels.iolib.smpickle import save_pickle
 
         if remove_data:

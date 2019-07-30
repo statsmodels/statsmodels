@@ -68,7 +68,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
         each column is a dependent variable
     exog : array_like
         each column is a independent variable
-    method : string
+    method : str
         'svd' - Singular value decomposition
         'pinv' - Moore-Penrose pseudoinverse
     tolerance : float, a small positive number
@@ -480,8 +480,8 @@ class MultivariateTestResults(object):
            results[key]['contrast_L'] contains the contrast_L matrix
            results[key]['transform_M'] contains the transform_M matrix
            results[key]['constant_C'] contains the constant_C matrix
-    endog_names : string
-    exog_names : string
+    endog_names : str
+    exog_names : str
     summary_frame : multiindex dataframe
         Returns results as a multiindex dataframe
     """

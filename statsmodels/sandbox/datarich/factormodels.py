@@ -129,7 +129,7 @@ class FactorModelUnivariate(object):
 
         Returns
         -------
-        sumstr : string
+        sumstr : str
             summary of the results for selecting the number of factors
 
         '''

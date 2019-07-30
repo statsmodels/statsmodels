@@ -40,11 +40,11 @@ def get_file_obj(fname, mode='r', encoding=None):
 
     Parameters
     ----------
-    fname: string or file-like object
+    fname : str or file-like object
         File to open / forward
-    mode: string
+    mode : str
         Argument passed to the 'open' or 'gzip.open' function
-    encoding: string
+    encoding : str
         For Python 3 only, specify the encoding of the file
 
     Returns

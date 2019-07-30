@@ -334,7 +334,7 @@ class DescrStatsW(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following
@@ -372,7 +372,7 @@ class DescrStatsW(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following
@@ -407,7 +407,7 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
 
               'two-sided': H1: mean not equal to value (default)
@@ -484,7 +484,7 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
 
               'two-sided': H1: mean not equal to value (default)
@@ -767,7 +767,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is
             assumed to be the same. If ``unequal``, then the variance of
             Welsh ttest will be used, and the degrees of freedom are those
@@ -863,13 +863,13 @@ class CompareMeans(object):
             first of the two independent samples, see notes for 2-D case
         x2 : array_like, 1-D or 2-D
             second of the two independent samples, see notes for 2-D case
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -917,13 +917,13 @@ class CompareMeans(object):
             first of the two independent samples, see notes for 2-D case
         x2 : array_like, 1-D or 2-D
             second of the two independent samples, see notes for 2-D case
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then the standard deviations of the samples may
             be different.
@@ -962,7 +962,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
@@ -971,7 +971,7 @@ class CompareMeans(object):
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1011,7 +1011,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
@@ -1020,7 +1020,7 @@ class CompareMeans(object):
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1057,7 +1057,7 @@ class CompareMeans(object):
         ----------
         low, upp : float
             equivalence interval low < m1 - m2 < upp
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1084,7 +1084,7 @@ class CompareMeans(object):
         ----------
         low, upp : float
             equivalence interval low < m1 - m2 < upp
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1131,14 +1131,14 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
         first of the two independent samples, see notes for 2-D case
     x2 : array_like, 1-D or 2-D
         second of the two independent samples, see notes for 2-D case
-    alternative : string
+    alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
            * 'two-sided' (default): H1: difference in means not equal to value
            * 'larger' :   H1: difference in means larger than value
            * 'smaller' :  H1: difference in means smaller than value
 
-    usevar : string, 'pooled' or 'unequal'
+    usevar : str, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
         of freedom is used
@@ -1190,7 +1190,7 @@ def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         second of the two independent samples, see notes for 2-D case
     low, upp : float
         equivalence interval low < m1 - m2 < upp
-    usevar : string, 'pooled' or 'unequal'
+    usevar : str, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
         of freedom is used
@@ -1320,14 +1320,14 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    alternative : string
+    alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
            'two-sided': H1: difference in means not equal to value (default)
            'larger' :   H1: difference in means larger than value
            'smaller' :  H1: difference in means smaller than value
 
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
@@ -1393,7 +1393,7 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
@@ -1454,7 +1454,7 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     x1 : array_like or None
         second sample for 2 independent samples test. If None, then a
         one-sample test is performed.
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         If `pooled`, then the standard deviation of the samples is assumed to be
         the same. Only `pooled` is currently implemented.
 

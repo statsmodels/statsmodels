@@ -45,7 +45,7 @@ _predict_docstring = """
         stratum).
     offset : array_like
         Offset values used to create the predicted values.
-    pred_type : string
+    pred_type : str
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
         'cumhaz' returns the cumulative hazard function.
@@ -278,12 +278,12 @@ class PHReg(model.LikelihoodModel):
     strata : array_like
         Stratum labels.  If None, all observations are taken to be
         in a single stratum.
-    ties : string
+    ties : str
         The method used to handle tied times, must be either 'breslow'
         or 'efron'.
     offset : array_like
         Array of offset values
-    missing : string
+    missing : str
         The method used to handle missing data
 
     Notes
@@ -370,10 +370,10 @@ class PHReg(model.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
-        ties : string
+        ties : str
             The method used to handle tied times, must be either 'breslow'
             or 'efron'.
-        missing : string
+        missing : str
             The method used to handle missing data
         args : extra arguments
             These are passed to the model

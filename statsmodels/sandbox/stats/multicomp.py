@@ -519,7 +519,7 @@ class GroupsStats(object):
         ----------
         x : array, 2d
             first column data, second column group labels
-        useranks : boolean
+        useranks : bool
             if true, then use ranks as data corresponding to the
             scipy.stats.rankdata definition (start at 1, ties get mean)
         uni, intlab : arrays (optional)
@@ -666,7 +666,7 @@ class TukeyHSDResults(object):
 
         Parameters
         ----------
-        comparison_name : string, optional
+        comparison_name : str, optional
             if provided, plot_intervals will color code all groups that are
             significantly different from the comparison_name red, and will
             color code insignificant groups gray. Otherwise, all intervals will
@@ -675,9 +675,9 @@ class TukeyHSDResults(object):
             An axis handle on which to attach the plot.
         figsize : tuple, optional
             tuple for the size of the figure generated
-        xlabel : string, optional
+        xlabel : str, optional
             Name to be displayed on x axis
-        ylabel : string, optional
+        ylabel : str, optional
             Name to be displayed on y axis
 
         Returns
@@ -789,7 +789,7 @@ class MultiComparison(object):
         independent data samples
     groups : array
         group labels corresponding to each data point
-    group_order : list of strings, optional
+    group_order : list[str], optional
         the desired order for the group mean results to be reported in. If
         not specified, results are reported in increasing order.
         If group_order does not contain all labels that are in groups, then
@@ -903,7 +903,7 @@ class MultiComparison(object):
             the return value on position pvalidx is the p-value.
         alpha : float
             familywise error rate
-        method : string
+        method : str
             This specifies the method for the p-value correction. Any method
             of multipletests is possible.
         pvalidx : int (default: 1)

@@ -160,7 +160,7 @@ class SimpleTable(list):
             sequence of K strings, one per header
         stubs : list (or tuple) of str
             sequence of R strings, one per stub
-        title : string
+        title : str
             title of the table
         datatypes : list of int
             indexes to `data_fmts`
@@ -224,9 +224,9 @@ class SimpleTable(list):
         if these were provided at initialization.
         Parameters
         ----------
-        headers : list of strings
+        headers : list[str]
             K strings, where K is number of columns
-        stubs : list of strings
+        stubs : list[str]
             R strings, where R is number of non-header rows
 
         :note: a header row does not receive a stub!

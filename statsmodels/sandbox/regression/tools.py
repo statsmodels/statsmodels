@@ -122,7 +122,7 @@ def tstd_lls(y, params, df):
         normally distributed random variable
     params: array, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
-    df : integer
+    df : int
         degrees of freedom of the t distribution
 
     Returns
@@ -169,7 +169,7 @@ def ts_lls(y, params, df):
         normally distributed random variable
     params: array, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
-    df : integer
+    df : int
         degrees of freedom of the t distribution
 
     Returns

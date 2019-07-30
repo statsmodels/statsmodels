@@ -163,7 +163,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     ----------
     cov : ndarray, (k,k)
         initial covariance matrix
-    method : string
+    method : str
         if "clipped", then the faster but less accurate ``corr_clipped`` is
         used.if "nearest", then ``corr_nearest`` is used
     threshold : float
@@ -239,7 +239,7 @@ def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
         The search direction
     obj_hist : array_like
         Objective function history (must contain at least one value)
-    M : positive integer
+    M : positive int
         Number of previous function points to consider (see references
         for details).
     sig1 : real
@@ -248,7 +248,7 @@ def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
         Tuning parameter, see references for details.
     gam : real
         Tuning parameter, see references for details.
-    maxiter : positive integer
+    maxiter : int
         The maximum number of iterations; returns Nones if convergence
         does not occur by this point
 
@@ -551,7 +551,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
         The target matrix (to which the nearest correlation matrix is
         sought).  Must be square, but need not be positive
         semidefinite.
-    rank : positive integer
+    rank : int
         The rank of the factor structure of the solution, i.e., the
         number of linearly independent columns of X.
     ctol : positive real
@@ -562,7 +562,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     lam_max : float
         Tuning parameter for spectral projected gradient optimization
         (largest allowed step in the search direction).
-    maxiter : integer
+    maxiter : int
         Maximum number of iterations in spectral projected gradient
         optimization.
 
@@ -699,7 +699,7 @@ def cov_nearest_factor_homog(cov, rank):
     cov : array_like
         The input array, must be square but need not be positive
         semidefinite
-    rank : positive integer
+    rank : int
         The rank of the fitted factor structure
 
     Returns

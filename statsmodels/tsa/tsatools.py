@@ -459,7 +459,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         exclude first dropex lags from other variables
         for all variables, except the first, lags from dropex to maxlagex are
         included
-    trim : string
+    trim : str
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides

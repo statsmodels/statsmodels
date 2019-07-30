@@ -20,7 +20,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     ----------
     endog : array_like
         The endogenous variable.
-    k_regimes : integer
+    k_regimes : int
         The number of regimes.
     trend : {'nc', 'c', 't', 'ct'}
         Whether or not to include a trend. To include an intercept, time trend,
@@ -28,7 +28,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         set `trend='nc'`. Default is an intercept.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
-    order : integer, optional
+    order : int, optional
         The order of the model describes the dependence of the likelihood on
         previous regimes. This depends on the model in question and should be
         set appropriately by subclasses.
@@ -37,19 +37,19 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
-    switching_trend : boolean or iterable, optional
+    switching_trend : bool or iterable, optional
         If a boolean, sets whether or not all trend coefficients are
         switching across regimes. If an iterable, should be of length equal
         to the number of trend variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_exog : boolean or iterable, optional
+    switching_exog : bool or iterable, optional
         If a boolean, sets whether or not all regression coefficients are
         switching across regimes. If an iterable, should be of length equal
         to the number of exogenous variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_variance : boolean, optional
+    switching_variance : bool, optional
         Whether or not there is regime-specific heteroskedasticity, i.e.
         whether or not the error term has a switching variance. Default is
         False.
@@ -427,7 +427,7 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : string
+    cov_type : str
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 

@@ -872,7 +872,7 @@ def ccovf(x, y, unbiased=True, demean=True):
     ----------
     x, y : arrays
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators is n-k, otherwise n
 
     Returns
@@ -912,7 +912,7 @@ def ccf(x, y, unbiased=True):
     ----------
     x, y : arrays
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators for autocovariance is n-k, otherwise n
 
     Returns
@@ -981,10 +981,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
     s : array_like
         If isacov is False, then this is the time series. If iasacov is true
         then this is interpreted as autocovariance starting with lag 0
-    nlags : integer
+    nlags : int
         largest lag to include in recursion or order of the autoregressive
         process
-    isacov : boolean
+    isacov : bool
         flag to indicate whether the first argument, s, contains the
         autocovariances or the data series.
 
@@ -1106,7 +1106,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
-    maxlag : integer, iterable[int]
+    maxlag : int, iterable[int]
         If an integer, computes the test for all lags up to maxlag. If an
         iterable, computes the tests only for the lags in maxlag.
     addconst : bool
@@ -1285,12 +1285,12 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         * 'ct' : constant and linear trend
         * also available quadratic trend 'ctt', and no constant 'nc'
 
-    method : string
+    method : str
         currently only 'aeg' for augmented Engle-Granger test is available.
         default might change.
     maxlag : None or int
         keyword for `adfuller`, largest or given number of lags
-    autolag : string
+    autolag : str
         keyword for `adfuller`, lag selection criterion.
 
         * if None, then maxlag lags are used without lag search

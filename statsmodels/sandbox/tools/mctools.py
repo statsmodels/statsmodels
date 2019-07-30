@@ -303,7 +303,7 @@ class StatTestMC(object):
             be used in the calculation
         distpdf : callable
             probability density function of reference distribution
-        bins : integer or array_like
+        bins : {int, array_like}
             used unchanged for matplotlibs hist call
         ax : TODO: not implemented yet
         kwds : None or tuple of dicts

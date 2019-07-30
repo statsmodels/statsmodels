@@ -540,7 +540,7 @@ class CovarianceReduction(_DimReductionRegression):
         The dependent variable, treated as group labels
     exog : array_like
         The independent variables.
-    dim : integer
+    dim : int
         The dimension of the subspace onto which the covariance
         matrices are projected.
 
@@ -656,7 +656,7 @@ class CovarianceReduction(_DimReductionRegression):
         start_params : array_like
             Starting value for the projection matrix. May be
             rectangular, or flattened.
-        maxiter : integer
+        maxiter : int
             The maximum number of gradient steps to take.
         gtol : float
             Convergence criterion for the gradient norm.

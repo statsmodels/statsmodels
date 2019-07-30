@@ -73,7 +73,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         uncorrected p-values.   Must be 1-dimensional.
     alpha : float
         FWER, family-wise error rate, e.g. 0.1
-    method : string
+    method : str
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
 
@@ -464,10 +464,10 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
         The assumed proportion of true null hypotheses
     null_pdf : function mapping reals to positive reals
         The density of null Z-scores; if None, use standard normal
-    deg : integer
+    deg : int
         The maximum exponent in the polynomial expansion of the
         density of non-null Z-scores
-    nbins : integer
+    nbins : int
         The number of bins for estimating the marginal density
         of Z-scores.
 
