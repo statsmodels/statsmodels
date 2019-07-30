@@ -82,6 +82,7 @@ The specific model classes are:
    NegativeBinomialP
    GeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.count_model
 .. module:: statsmodels.discrete.count_model
 
 .. autosummary::
@@ -91,6 +92,7 @@ The specific model classes are:
    ZeroInflatedNegativeBinomialP
    ZeroInflatedGeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.conditional_models
 .. module:: statsmodels.discrete.conditional_models
 
 .. autosummary::

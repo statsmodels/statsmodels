@@ -1,4 +1,10 @@
 # Script to text examples and build docs on travis
+echo '========================================================================'
+echo '=                        Checking Doc Strings                          ='
+echo '========================================================================'
+
+cd "$SRCDIR"
+python "$SRCDIR"/tools/validate_docstrings.py --errors=GL03,GL04,GL05,GL06,GL07,GL09,SS04,SS05,PR03,PR04,PR05,PR10,EX04,RT01,RT04,RT05,SA05
 
 # Change to doc directory
 cd "$SRCDIR"/docs

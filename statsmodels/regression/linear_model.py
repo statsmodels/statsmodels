@@ -962,7 +962,7 @@ class OLS(WLS):
 
     def hessian(self, params, scale=None):
         """
-        Evaluates the Hessian function at a given point.
+        Evaluate the Hessian function at a given point.
 
         Parameters
         ----------
@@ -1614,31 +1614,25 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def nobs(self):
-        """
-        Number of observations n.
-        """
+        """Number of observations n."""
         return float(self.model.wexog.shape[0])
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        The predicted values for the original (unwhitened) design.
-        """
+        """The predicted values for the original (unwhitened) design."""
         return self.model.predict(self.params, self.model.exog)
 
     @cache_readonly
     def wresid(self):
         """
-        The residuals of the transformed/whitened regressand and regressor(s).
+        The residuals of the transformed/whitened regressand and regressor(s)
         """
         return self.model.wendog - self.model.predict(
             self.params, self.model.wexog)
 
     @cache_readonly
     def resid(self):
-        """
-        The residuals of the model.
-        """
+        """The residuals of the model."""
         return self.model.endog - self.model.predict(
             self.params, self.model.exog)
 
@@ -1656,17 +1650,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def ssr(self):
-        """
-        Sum of squared (whitened) residuals.
-        """
+        """Sum of squared (whitened) residuals."""
         wresid = self.wresid
         return np.dot(wresid, wresid)
 
     @cache_readonly
     def centered_tss(self):
-        """
-        The total (weighted) sum of squares centered about the mean.
-        """
+        """The total (weighted) sum of squares centered about the mean."""
         model = self.model
         weights = getattr(model, 'weights', None)
         sigma = getattr(model, 'sigma', None)
@@ -1808,16 +1798,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def f_pvalue(self):
-        """
-        The p-value of the F-statistic.
-        """
+        """p-value of the F-statistic"""
         return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
 
     @cache_readonly
     def bse(self):
-        """
-        The standard errors of the parameter estimates.
-        """
+        """The standard errors of the parameter estimates."""
         return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
@@ -2761,7 +2747,6 @@ class OLSResults(RegressionResults):
     See Also
     --------
     RegressionResults
-
     """
 
     def get_influence(self):

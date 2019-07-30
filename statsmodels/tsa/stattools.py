@@ -631,30 +631,35 @@ def pacf_yw(x, nlags=40, method='unbiased'):
 
 def pacf_burg(x, nlags=None, demean=True):
     """
-    Burg's partial autocorrelation estimator
+    Burg's partial autocorrelation estimator.
 
     Parameters
     ----------
     x : array_like
-        Observations of time series for which pacf is calculated
+        Observations of time series for which pacf is calculated.
     nlags : int, optional
         Number of lags to compute the partial autocorrelations.  If omitted,
-        uses the smaller of 10(log10(nobs)) or nobs - 1
+        uses the smaller of 10(log10(nobs)) or nobs - 1.
     demean : bool, optional
+        Flag indicating to demen that data. Set to False if x has been
+        previously demeaned.
 
     Returns
     -------
     pacf : ndarray
-        Partial autocorrelations for lags 0, 1, ..., nlag
+        Partial autocorrelations for lags 0, 1, ..., nlag.
     sigma2 : ndarray
         Residual variance estimates where the value in position m is the
-        residual variance in an AR model that includes m lags
+        residual variance in an AR model that includes m lags.
 
     See Also
     --------
     statsmodels.tsa.stattools.pacf
+        Partial autocorrrelation estimation.
     statsmodels.tsa.stattools.pacf_yw
+         Partial autocorrrelation estimation using Yule-Walker.
     statsmodels.tsa.stattools.pacf_ols
+        Partial autocorrrelation estimation using OLS.
 
     References
     ----------

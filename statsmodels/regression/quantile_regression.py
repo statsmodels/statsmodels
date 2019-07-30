@@ -86,7 +86,8 @@ class QuantReg(RegressionModel):
 
     def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather',
             max_iter=1000, p_tol=1e-6, **kwargs):
-        '''Solve by Iterative Weighted Least Squares
+        """
+        Solve by Iterative Weighted Least Squares
 
         Parameters
         ----------
@@ -114,7 +115,7 @@ class QuantReg(RegressionModel):
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        '''
+        """
 
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
@@ -149,13 +150,13 @@ class QuantReg(RegressionModel):
 
         # Note the following does not work yet,
         # the iteration loop always starts with OLS as initial beta
-#        if start_params is not None:
-#            if len(start_params) != rank:
-#                raise ValueError('start_params has wrong length')
-#            beta = start_params
-#        else:
-#            # start with OLS
-#            beta = np.dot(np.linalg.pinv(exog), endog)
+        # if start_params is not None:
+        #    if len(start_params) != rank:
+        #       raise ValueError('start_params has wrong length')
+        #       beta = start_params
+        #    else:
+        #       # start with OLS
+        #       beta = np.dot(np.linalg.pinv(exog), endog)
 
         diff = 10
         cycle = False
