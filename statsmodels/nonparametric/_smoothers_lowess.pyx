@@ -304,7 +304,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
         The radius of the current neighborhood. The larger of
         distances between x[i] and its left-most or right-most
         neighbor.
-    use_resid_weights: boolean
+    use_resid_weights: bool
         If True, multiply the x-distance weights by the residual
         weights from the last iteration of regressions. Set to
         False on the first iteration (since there are no residuals
@@ -313,7 +313,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Returns
     -------
-    reg_ok: boolean
+    reg_ok: bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].
@@ -381,7 +381,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
         The index of the right-most point in the neighborhood
         of x[i]. Non-inclusive, s.t. the neighborhood is
         x[left_end] <= x < x[right_end].
-    reg_ok: boolean
+    reg_ok: bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].

@@ -249,7 +249,7 @@ class _BaseInfluenceMixin(object):
 
         Parameters
         ----------
-        y_var : string
+        y_var : str
             Name of attribute or shortcut for predefined attributes that will
             be plotted on the y-axis.
         threshold : None or float
@@ -257,12 +257,12 @@ class _BaseInfluenceMixin(object):
             Observations for which the absolute value of the y_var is larger
             than the threshold will be annotated. Set to a negative number to
             label all observations or to a large number to have no annotation.
-        title : string
+        title : str
             If provided, the title will replace the default "Index Plot" title.
         ax : matplolib axis instance
             The plot will be added to the `ax` if provided, otherwise a new
             figure is created.
-        idx : None or integer
+        idx : {None, int}
             Some attributes require an additional index to select the y-var.
             In dfbetas this refers to the column indes.
         kwds : optional keywords
@@ -920,7 +920,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Parameters
         ----------
-        attributes : list of strings
+        attributes : list[str]
            These are the names of the attributes of the auxiliary OLS results
            instance that are stored and returned.
 
@@ -1093,7 +1093,7 @@ def summary_table(res, alpha=0.05):
        table with results that can be printed
     data : ndarray
        calculated measures and statistics for the table
-    ss2 : list of strings
+    ss2 : list[str]
        column_names for table (Note: rows of table are observations)
     """
 

@@ -504,7 +504,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
-    labelizer : function (key) -> string, optional
+    labelizer : function (key) -> str, optional
         A function that generate the text to display at the center of
         each tile base on the key of that tile
     properties : function (key) -> dict, optional
@@ -523,9 +523,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         from the expected value under independence hypothesis, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
-    title: string, optional
+    title: str, optional
         The title of the axis
-    axes_label: boolean, optional
+    axes_label: bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
     label_rotation: float or list of float

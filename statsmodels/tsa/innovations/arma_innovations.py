@@ -22,7 +22,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         Moving average parameters.
     sigma2 : ndarray, optional
         The ARMA innovation variance. Default is 1.
-    normalize : boolean, optional
+    normalize : bool, optional
         Whether or not to normalize the returned innovations. Default is False.
     prefix : str, optional
         The BLAS prefix associated with the datatype. Default is to find the

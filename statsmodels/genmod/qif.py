@@ -338,7 +338,7 @@ class QIF(base.Model):
 
         Parameters
         ----------
-        maxiter : integer
+        maxiter : int
             Maximum number of iterations.
         start_params : array_like, optional
             Starting values

@@ -174,7 +174,7 @@ def dummy_1d(x, varname=None):
     ----------
     x : ndarray, 1d
         categorical variable, requires integers if varname is None
-    varname : string
+    varname : str
         name of the variable used in labels for category levels
 
     Returns
@@ -182,7 +182,7 @@ def dummy_1d(x, varname=None):
     dummy : ndarray, 2d
         array of dummy variables, one column for each level of the
         category (full set)
-    labels : list of strings
+    labels : list[str]
         labels for the columns, i.e. levels of each category
 
 

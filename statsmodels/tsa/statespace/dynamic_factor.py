@@ -51,11 +51,11 @@ class DynamicFactor(MLEModel):
     error_order : int, optional
         The order of the vector autoregression followed by the observation
         error component. Default is None, corresponding to white noise errors.
-    error_var : boolean, optional
+    error_var : bool, optional
         Whether or not to model the errors jointly via a vector autoregression,
         rather than as individual autoregressions. Has no effect unless
         `error_order` is set. Default is False.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
     **kwargs
@@ -79,11 +79,11 @@ class DynamicFactor(MLEModel):
     error_order : int
         The order of the vector autoregression followed by the observation
         error component.
-    error_var : boolean
+    error_var : bool
         Whether or not to model the errors jointly via a vector autoregression,
         rather than as individual autoregressions. Has no effect unless
         `error_order` is set.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
 
@@ -819,7 +819,7 @@ class DynamicFactor(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
 
@@ -1064,7 +1064,7 @@ class DynamicFactorResults(MLEResults):
 
         Parameters
         ----------
-        endog_labels : boolean, optional
+        endog_labels : bool, optional
             Whether or not to label the endogenous variables along the x-axis
             of the plots. Default is to include labels if there are 5 or fewer
             endogenous variables.
@@ -1144,7 +1144,7 @@ class DynamicFactorResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).

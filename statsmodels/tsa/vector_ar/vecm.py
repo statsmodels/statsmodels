@@ -100,7 +100,7 @@ def _linear_trend(nobs, k_ar, coint=False):
         Number of observations excluding the presample.
     k_ar : int
         Number of lags in levels.
-    coint : boolean, default: False
+    coint : bool, default: False
         If True (False), the returned array represents a linear trend inside
         (outside) the cointegration relation.
 
@@ -175,7 +175,7 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
         Number of observations including the presample.
     first_season : int, default: 0
         Season of the first observation.
-    seasons_centered : boolean, default: False
+    seasons_centered : bool, default: False
         If True, the seasonal dummy variables are demeaned such that they are
         orthogonal to an intercept term.
     exog : ndarray (nobs_tot x #det_terms) or None, default: None

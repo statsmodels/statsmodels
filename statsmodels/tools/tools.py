@@ -508,7 +508,7 @@ def nan_dot(A, B):
 
     Parameters
     ----------
-    A, B : np.ndarrays
+    A, B : ndarray
     """
     # Find out who should be nan due to nan * nonzero
     should_be_nan_1 = np.dot(np.isnan(A), (B != 0))

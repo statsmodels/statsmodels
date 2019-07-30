@@ -73,7 +73,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         ``hessian``.
     method :
         Only the coordinate descent algorithm is implemented.
-    maxiter : integer
+    maxiter : int
         The maximum number of iteration cycles (an iteration cycle
         involves running coordinate descent on all variables).
     alpha : scalar or array_like

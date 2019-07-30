@@ -28,7 +28,7 @@ _doc_zi_params = """
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    inflation : string, 'logit' or 'probit'
+    inflation : {'logit', 'probit'}
         The model for the zero inflation, either Logit (default) or Probit
     """
 
@@ -382,7 +382,7 @@ class GenericZeroInflated(CountModel):
             Log(exposure) is added to the linear prediction with coefficient
             equal to 1. If exposure is specified, then it will be logged by the method.
             The user does not need to log it first.
-        which : string, optional
+        which : str, optional
             Define values that will be predicted.
             'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob', 'prob-main'
             Default is 'mean'.

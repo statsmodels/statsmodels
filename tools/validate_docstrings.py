@@ -50,9 +50,18 @@ matplotlib.rc('figure', max_open_warning=10000)
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.insert(0, os.path.join(BASE_PATH))
-
+# TODO: Single-line ignore GL01, GL02
 # TODO: Complete import location list
 # TODO: Recurse through module to find classes
+# TODO: Separate data from code
+NO_RETURN_WHITELIST = {
+    'bse', 'aic', 'bic', 'params', 'tvalues', 'pvalues', 'fvalue',
+    'fittedvalues', 'mse_model', 'mse_resid', 'mse_total', 'ssr', 'nobs',
+    'rsquared_adj', 'rsquared', 'resid', 'prsquared', 'zvalues',
+    'uncentered_tss', 'llf', 'hqic', 'ess', 'centered_tss', 'wresid',
+    'f_pvalue', 'eigenvals', 'condition_number', 'scale', 'llr', 'llr_pvalue',
+    'llnull', 'resid_response', 'resid_pearson', 'resid_generalized',
+    'resid_dev', 'save'}
 MODULES = ('api',
            'tsa.api',
            'discrete.conditional_models',
@@ -90,7 +99,6 @@ RUN_DOCTESTS = False
 
 sys.path.insert(1, os.path.join(BASE_PATH, 'doc', 'sphinxext'))
 
-
 PRIVATE_CLASSES = []
 DIRECTIVES = ['versionadded', 'versionchanged', 'deprecated']
 ALLOWED_SECTIONS = [
@@ -109,68 +117,68 @@ ALLOWED_SECTIONS = [
 ]
 ERROR_MSGS = {
     'GL01': 'Docstring text (summary) should start in the line immediately '
-    'after the opening quotes (not in the same line, or leaving a '
-    'blank line in between)',
+            'after the opening quotes (not in the same line, or leaving a '
+            'blank line in between)',
     'GL02': 'Closing quotes should be placed in the line after the last text '
-    'in the docstring (do not close the quotes in the same line as '
-    'the text, or leave a blank line between the last text and the '
-    'quotes)',
+            'in the docstring (do not close the quotes in the same line as '
+            'the text, or leave a blank line between the last text and the '
+            'quotes)',
     'GL03': 'Double line break found; please use only one blank line to '
-    'separate sections or paragraphs, and do not leave blank lines '
-    'at the end of docstrings',
+            'separate sections or paragraphs, and do not leave blank lines '
+            'at the end of docstrings',
     'GL04': 'Private classes ({mentioned_private_classes}) should not be '
-    'mentioned in public docstrings',
+            'mentioned in public docstrings',
     'GL05': 'Tabs found at the start of line "{line_with_tabs}", please use '
-    'whitespace only',
+            'whitespace only',
     'GL06': 'Found unknown section "{section}". Allowed sections are: '
-    '{allowed_sections}',
+            '{allowed_sections}',
     'GL07': 'Sections are in the wrong order. '
             'Correct order is: {correct_sections}',
     'GL08': 'The object does not have a docstring',
     'GL09': 'Deprecation warning should precede extended summary',
     'SS01': 'No summary found (a short summary in a single line should be '
-    'present at the beginning of the docstring)',
+            'present at the beginning of the docstring)',
     'SS02': 'Summary does not start with a capital letter',
     'SS03': 'Summary does not end with a period',
     'SS04': 'Summary contains heading whitespaces',
     'SS05': 'Summary must start with infinitive verb, not third person '
-    '(e.g. use "Generate" instead of "Generates")',
+            '(e.g. use "Generate" instead of "Generates")',
     'SS06': 'Summary should fit in a single line',
     'ES01': 'No extended summary found',
     'PR01': 'Parameters {missing_params} not documented',
     'PR02': 'Unknown parameters {unknown_params}',
     'PR03': 'Wrong parameters order. Actual: {actual_params}. '
-    'Documented: {documented_params}',
+            'Documented: {documented_params}',
     'PR04': 'Parameter "{param_name}" has no type',
     'PR05': 'Parameter "{param_name}" type should not finish with "."',
     'PR06': 'Parameter "{param_name}" type should use "{right_type}" instead '
-    'of "{wrong_type}"',
+            'of "{wrong_type}"',
     'PR07': 'Parameter "{param_name}" has no description',
     'PR08': 'Parameter "{param_name}" description should start with a '
-    'capital letter',
+            'capital letter',
     'PR09': 'Parameter "{param_name}" description should finish with "."',
     'PR10': 'Parameter "{param_name}" requires a space before the colon '
-    'separating the parameter name and type',
+            'separating the parameter name and type',
     'RT01': 'No Returns section found',
     'RT02': 'The first line of the Returns section should contain only the '
-    'type, unless multiple values are being returned',
+            'type, unless multiple values are being returned',
     'RT03': 'Return value has no description',
     'RT04': 'Return value description should start with a capital letter',
     'RT05': 'Return value description should finish with "."',
     'YD01': 'No Yields section found',
     'SA01': 'See Also section not found',
     'SA02': 'Missing period at end of description for See Also '
-    '"{reference_name}" reference',
+            '"{reference_name}" reference',
     'SA03': 'Description should be capitalized for See Also '
-    '"{reference_name}" reference',
+            '"{reference_name}" reference',
     'SA04': 'Missing description for See Also "{reference_name}" reference',
     'SA05': '{reference_name} in `See Also` section does not need `pandas` '
-    'prefix, use {right_reference} instead.',
+            'prefix, use {right_reference} instead.',
     'EX01': 'No examples section found',
     'EX02': 'Examples do not pass tests:\n{doctest_log}',
     'EX03': 'flake8 error: {error_code} {error_message}{times_happening}',
     'EX04': 'Do not import {imported_library}, as it is imported '
-    'automatically for the examples (numpy as np, pandas as pd)',
+            'automatically for the examples (numpy as np, pandas as pd)',
 }
 
 
@@ -427,9 +435,9 @@ class Docstring(object):
         while not self.doc._doc.eof():
             content = self.doc._read_to_next_section()
             if (
-                len(content) > 1
-                and len(content[0]) == len(content[1])
-                and set(content[1]) == {'-'}
+                    len(content) > 1
+                    and len(content[0]) == len(content[1])
+                    and set(content[1]) == {'-'}
             ):
                 sections.append(content[0])
         return sections
@@ -463,7 +471,7 @@ class Docstring(object):
     def signature_parameters(self):
         if inspect.isclass(self.obj):
             if hasattr(self.obj, '_accessors') and (
-                self.name.split('.')[-1] in self.obj._accessors
+                    self.name.split('.')[-1] in self.obj._accessors
             ):
                 # accessor classes have a signature but don't want to show this
                 return tuple()
@@ -495,10 +503,10 @@ class Docstring(object):
         if extra:
             errs.append(error('PR02', unknown_params=pprint_thing(extra)))
         if (
-            not missing
-            and not extra
-            and signature_params != doc_params
-            and not (not signature_params and not doc_params)
+                not missing
+                and not extra
+                and signature_params != doc_params
+                and not (not signature_params and not doc_params)
         ):
             errs.append(
                 error('PR03', actual_params=signature_params,
@@ -587,6 +595,11 @@ class Docstring(object):
             return any(return_values)
         else:
             return False
+
+    @property
+    def no_return_whitelisted(self):
+        method = self.name.split('.')[-1]
+        return 'Results' in self.name and method in NO_RETURN_WHITELIST
 
     @property
     def first_line_ends_in_dot(self):
@@ -789,7 +802,7 @@ def get_validation_data(doc):
 
     if doc.is_function_or_method:
         if not doc.returns:
-            if doc.method_returns_something:
+            if doc.method_returns_something and not doc.no_return_whitelisted:
                 errs.append(error('RT01'))
         else:
             if len(doc.returns) == 1 and doc.returns[0].name:
@@ -818,6 +831,7 @@ def get_validation_data(doc):
                     errs.append(error('SA03', reference_name=rel_name))
             else:
                 errs.append(error('SA04', reference_name=rel_name))
+            # TODO: Change to statsmodels
             if rel_name.startswith('pandas.'):
                 errs.append(
                     error(
@@ -1050,34 +1064,34 @@ if __name__ == '__main__':
         default='default',
         choices=format_opts,
         help='format of the output when validating '
-        'multiple docstrings (ignored when validating one).'
-        'It can be {}'.format(str(format_opts)[1:-1]),
+             'multiple docstrings (ignored when validating one).'
+             'It can be {}'.format(str(format_opts)[1:-1]),
     )
     argparser.add_argument(
         '--prefix',
         default=None,
         help='pattern for the '
-        'docstring names, in order to decide which ones '
-        'will be validated. A prefix "pandas.Series.str."'
-        'will make the script validate all the docstrings'
-        'of methods starting by this pattern. It is '
-        'ignored if parameter function is provided',
+             'docstring names, in order to decide which ones '
+             'will be validated. A prefix "pandas.Series.str."'
+             'will make the script validate all the docstrings'
+             'of methods starting by this pattern. It is '
+             'ignored if parameter function is provided',
     )
     argparser.add_argument(
         '--errors',
         default=None,
         help='comma separated '
-        'list of error codes to validate. By default it '
-        'validates all errors (ignored when validating '
-        'a single docstring)',
+             'list of error codes to validate. By default it '
+             'validates all errors (ignored when validating '
+             'a single docstring)',
     )
     argparser.add_argument(
         '--ignore_deprecated',
         default=False,
         action='store_true',
         help='if this flag is set, '
-        'deprecated objects are ignored when validating '
-        'all docstrings',
+             'deprecated objects are ignored when validating '
+             'all docstrings',
     )
 
     args = argparser.parse_args()

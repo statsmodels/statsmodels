@@ -177,7 +177,7 @@ class OriginResults(RegressionResults):
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 
-        method : string
+        method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'

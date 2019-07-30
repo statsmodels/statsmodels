@@ -15,7 +15,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
     ncomp : int, optional
         Number of factors to include in the plot.  If None, will
         included the same as the number of maximum possible loadings
-    x_label : string
+    x_label : str
         label of x-axis
 
     Returns

@@ -40,7 +40,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         Observed values
     e : Iterable
         Expected values
-    lambd : float or string
+    lambd : {float, str}
         * float : exponent `a` for power discrepancy
         * 'loglikeratio': a = 0
         * 'freeman_tukey': a = -0.5
@@ -179,7 +179,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
     Parameters
     ----------
-    distname : string
+    distname : str
         name of distribution function
     arg : sequence
         parameters of distribution
@@ -252,11 +252,11 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     ----------
     rvs : array
         sample data
-    distname : string
+    distname : str
         name of distribution function
     arg : sequence
         parameters of distribution
-    nsupp : integer
+    nsupp : int
         number of bins. The algorithm tries to find bins with equal weights.
         depending on the distribution, the actual number of bins can be smaller.
 

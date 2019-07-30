@@ -82,7 +82,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     ----------
     x : array_like, 1d
         array of observations
-    cdf : string or callable
+    cdf : str or callable
         string: name of a distribution in scipy.stats
         callable: function to evaluate cdf
     alternative : 'two_sided' (default), 'less' or 'greater'
@@ -142,7 +142,7 @@ def get_lilliefors_table(dist='norm'):
 
     Parameters
     ----------
-    dist : string.
+    dist : str
         distribution being tested in set {'norm', 'exp'}.
 
     Returns

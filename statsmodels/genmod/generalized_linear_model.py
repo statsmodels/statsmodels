@@ -954,19 +954,19 @@ class GLM(base.LikelihoodModel):
             initial mean will be calculated as ``np.dot(exog, start_params)``.
         maxiter : int, optional
             Default is 100.
-        method : string
+        method : str
             Default is 'IRLS' for iteratively reweighted least squares.
             Otherwise gradient optimization is used.
         tol : float
             Convergence tolerance.  Default is 1e-8.
-        scale : string or float, optional
+        scale : str or float, optional
             `scale` can be 'X2', 'dev', or a float
             The default value is None, which uses `X2` for Gamma, Gaussian,
             and Inverse Gaussian.
             `X2` is Pearson's chi-square divided by `df_resid`.
             The default is 1 for the Binomial and Poisson families.
             `dev` is the deviance divided by df_resid
-        cov_type : string
+        cov_type : str
             The type of parameter estimate covariance matrix to compute.
         cov_kwds : dict-like
             Extra arguments for calculating the covariance of the parameter

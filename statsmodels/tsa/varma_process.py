@@ -347,7 +347,7 @@ class _Var(object):
 
         Parameters
         ----------
-        nlags : integer
+        nlags : int
             number of lags to include in regression, same for all variables
 
         Returns
@@ -545,7 +545,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isstationary : boolean
+        isstationary : bool
 
         *attaches*
 
@@ -574,7 +574,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isinvertible : boolean
+        isinvertible : bool
 
         *attaches*
 

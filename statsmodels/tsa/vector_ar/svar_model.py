@@ -222,7 +222,7 @@ class SVAR(tsbase.TimeSeriesModel):
                        trend='c', solver="nm", override=False):
         """
         lags : int
-        trend : string or None
+        trend : {str, None}
             As per above
         """
         k_trend = util.get_trendorder(trend)

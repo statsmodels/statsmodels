@@ -90,12 +90,12 @@ def stringify_var_names(var_list, delimiter=""):
 
     Parameters
     ----------
-    var_list : list of strings
+    var_list : list[str]
         Each list element is the name of a variable.
 
     Returns
     -------
-    result : string
+    result : str
         Concatenated variable names.
     """
     result = var_list[0]

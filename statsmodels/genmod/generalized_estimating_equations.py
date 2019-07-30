@@ -280,7 +280,7 @@ _gee_fit_doc = """
 
     Parameters
     ----------
-    maxiter : integer
+    maxiter : int
         The maximum number of iterations
     ctol : float
         The convergence criterion for stopping the Gauss-Seidel
@@ -288,14 +288,14 @@ _gee_fit_doc = """
     start_params : array_like
         A vector of starting values for the regression
         coefficients.  If None, a default is chosen.
-    params_niter : integer
+    params_niter : int
         The number of Gauss-Seidel updates of the mean structure
         parameters that take place prior to each update of the
         dependence structure.
-    first_dep_update : integer
+    first_dep_update : int
         No dependence structure updates occur before this
         iteration number.
-    cov_type : string
+    cov_type : str
         One of "robust", "naive", or "bias_reduced".
     ddof_scale : scalar or None
         The scale parameter is estimated as the sum of squared
@@ -344,7 +344,7 @@ _gee_results_doc = """
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
-    cov_type : string
+    cov_type : str
         string indicating whether a "robust", "naive" or "bias_reduced"
         covariance is used as default
     fit_history : dict
@@ -694,7 +694,7 @@ class GEE(base.Model):
 
         Optional arguments
         ------------------
-        dep_data : string or array_like
+        dep_data : str or array_like
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g. Nested) for
             details.  If `dep_data` is a string, it is interpreted as
@@ -1456,13 +1456,13 @@ class GEE(base.Model):
         scad_param : float
             Non-negative scalar determining the shape of the Scad
             penalty.
-        maxiter : integer
+        maxiter : int
             The maximum number of iterations.
-        ddof_scale : integer
+        ddof_scale : int
             Value to subtract from `nobs` when calculating the
             denominator degrees of freedom for t-statistics, defaults
             to the number of columns in `exog`.
-        update_assoc : integer
+        update_assoc : int
             The dependence parameters are updated every `update_assoc`
             iterations of the mean structure parameter updates.
         ctol : float
@@ -1808,7 +1808,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        cov_type : string
+        cov_type : str
             One of "robust", "naive", or "bias_reduced".  Determines
             the covariance used to compute standard errors.  Defaults
             to "robust".
@@ -2027,7 +2027,7 @@ class GEEResults(base.LikelihoodModelResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
              `cols` specifies which confidence intervals to return
-        cov_type : string
+        cov_type : str
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
              See `GEE` for details.
@@ -2238,7 +2238,7 @@ class GEEResults(base.LikelihoodModelResults):
             the time difference axis used to define bins for
             calculating local means.  If an array, the specific points
             that define the bins.
-        min_n : integer
+        min_n : int
             The minimum sample size in a bin for the mean residual
             product to be included on the plot.
         """
@@ -3027,7 +3027,7 @@ class _Multinomial(families.Family):
         """
         Parameters
         ----------
-        nlevels : integer
+        nlevels : int
             The number of distinct categories for the multinomial
             distribution.
         """

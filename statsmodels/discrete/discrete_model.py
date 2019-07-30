@@ -82,10 +82,10 @@ _discrete_results_docs = """
         Value of the loglikelihood
     %(extra_attr)s"""
 
-_l1_results_attr = """    nnz_params : Integer
+_l1_results_attr = """    nnz_params : int
         The number of nonzero parameters in the model.  Train with
         trim_params == True or else numerical error will distort this.
-    trimmed : Boolean array
+    trimmed : boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
 
 _get_start_params_null_docs = """
@@ -234,7 +234,7 @@ class DiscreteModel(base.LikelihoodModel):
             The default is an array of zeros.
         method : 'l1' or 'l1_cvxopt_cp'
             See notes for details.
-        maxiter : Integer or 'defined_by_method'
+        maxiter : {int, 'defined_by_method'}
             Maximum number of iterations to perform.
             If 'defined_by_method', then use method defaults (see notes).
         full_output : bool
@@ -266,7 +266,7 @@ class DiscreteModel(base.LikelihoodModel):
         qc_tol : float
             Print warning and do not allow auto trim when (ii) (above) is
             violated by this much.
-        qc_verbose : Boolean
+        qc_verbose : bool
             If true, print out a full QC report upon failure
 
         Notes
@@ -2498,7 +2498,7 @@ class NegativeBinomial(CountModel):
         Press.
     """ % {'params': base._model_params_doc,
            'extra_params':
-           """loglike_method : string
+           """loglike_method : str
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
@@ -2945,8 +2945,10 @@ class NegativeBinomial(CountModel):
 class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) model for count data
+
     %(params)s
     %(extra_params)s
+
     Attributes
     ----------
     endog : array
@@ -2958,7 +2960,7 @@ class NegativeBinomialP(CountModel):
         p=2 for NB-2. Default is p=1.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
-           """p: scalar
+           """p : scalar
         P denotes parameterizations for NB regression. p=1 for NB-1 and
         p=2 for NB-2. Default is p=2.
     offset : array_like
@@ -3633,21 +3635,21 @@ class DiscreteResults(base.LikelihoodModelResults):
         Parameters
         ----------
         yname : str, optional
-            Default is `y`
+            The name of the endog variable in the tables. The default is `y`.
         xname : list[str], optional
-            Names for the exogenous variables, default is "var_xx".
-            Must match the number of parameters in the model
+            The names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
-            default title
+            default title.
         alpha : float
-            significance level for the confidence intervals
+            The significance level for the confidence intervals.
 
         Returns
         -------
-        smry : Summary instance
-            this holds the summary tables and text, which can be printed or
-            converted to various output formats.
+        Summary
+            Class that holds the summary tables and text, which can be printed
+            or converted to various output formats.
 
         See Also
         --------
@@ -3703,23 +3705,23 @@ class DiscreteResults(base.LikelihoodModelResults):
         Parameters
         ----------
         yname : str
-            Name of the dependent variable (optional)
+            Name of the dependent variable (optional).
         xname : list[str], optional
             List of strings of length equal to the number of parameters
-            Names of the independent variables (optional)
+            Names of the independent variables (optional).
         title : str, optional
             Title for the top table. If not None, then this replaces the
-            default title
+            default title.
         alpha : float
-            significance level for the confidence intervals
+            The significance level for the confidence intervals.
         float_format : str
-            print format for floats in parameters summary
+            The print format for floats in parameters summary.
 
         Returns
         -------
-        smry : Summary instance
-            this holds the summary tables and text, which can be printed or
-            converted to various output formats.
+        Summary
+            Instance that contains the summary tables and text, which can be
+            printed or converted to various output formats.
 
         See Also
         --------

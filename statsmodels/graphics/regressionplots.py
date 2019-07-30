@@ -61,7 +61,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
 
     Returns
     -------
-    fig : matplotlib Figure instance
+    fig : Figure
         The figure that holds the instance.
     """
     y0 = ax.get_lines()[lines_idx]._y
@@ -94,7 +94,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -174,13 +174,13 @@ def plot_regress_exog(results, exog_idx, fig=None):
         result instance with resid, model.endog and model.exog as attributes
     exog_idx : int or str
         Name or index of regressor in exog matrix
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
     Returns
     -------
-    fig : matplotlib figure instance
+    fig : Figure
 
     Examples
     --------
@@ -299,13 +299,13 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
     Parameters
     ----------
-    endog : ndarray or string
+    endog : {ndarray, str}
        endogenous or response variable. If string is given, you can use a
        arbitrary translations as with a formula.
-    exog_i : ndarray or string
+    exog_i : {ndarray, str}
         exogenous, explanatory variable. If string is given, you can use a
         arbitrary translations as with a formula.
-    exog_others : ndarray or list of strings
+    exog_others : {ndarray, list[str]}
         other exogenous, explanatory variables. If a list of strings is given,
         each item is a term in formula. You can use a arbitrary translations
         as with a formula. The effect of these variables will be removed by
@@ -335,7 +335,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
     coords : list, optional
@@ -462,19 +462,20 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     ----------
     results : results instance
         A regression model results instance
-    exog_idx : None, list of ints, list of strings
+    exog_idx : {None, list[int], list[str]}
         (column) indices of the exog used in the plot, default is all.
-    grid : None or tuple of int (nrows, ncols)
+    grid : {None, tuple[int]}
         If grid is given, then it is used for the arrangement of the subplots.
-        If grid is None, then ncol is one, if there are only 2 subplots, and
-        the number of columns is two otherwise.
-    fig : Matplotlib figure instance, optional
+        The format of grid is  (nrows, ncols). If grid is None, then ncol is
+        one, if there are only 2 subplots, and the number of columns is two
+        otherwise.
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `fig` is None, the created figure.  Otherwise `fig` itself.
 
     Notes
@@ -564,7 +565,7 @@ def plot_ccpr(results, exog_idx, ax=None):
     ----------
     results : result instance
         A regression results instance.
-    exog_idx : int or string
+    exog_idx : {int, str}
         Exogenous, explanatory variable. If string is given, it should
         be the variable name that you want to use, and you can use arbitrary
         translations as with a formula.
@@ -574,7 +575,7 @@ def plot_ccpr(results, exog_idx, ax=None):
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -654,13 +655,13 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
         If grid is given, then it is used for the arrangement of the subplots.
         If grid is None, then ncol is one, if there are only 2 subplots, and
         the number of columns is two otherwise.
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -1187,10 +1188,10 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     results : regression results instance
         A fitted model including the focus exog and all other
         predictors of interest.
-    focus_exog : integer or string
+    focus_exog : {int, str}
         The column of results.model.exog or a variable name that is
         to be residualized against the other predictors.
-    resid_type : string
+    resid_type : str
         The type of residuals to use for the dependent variable.  If
         None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
     use_glm_weights : bool

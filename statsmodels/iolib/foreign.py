@@ -211,7 +211,7 @@ class StataReader(object):
     missing_values : bool
         If missing_values is True, parse missing_values and return a
         Missing Values object instead of None.
-    encoding : string, optional
+    encoding : str, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
 
@@ -311,7 +311,7 @@ class StataReader(object):
 
         Returns
         -------
-        out: string
+        out: str
         """
         return self._header['data_label']
 
@@ -950,7 +950,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     missing_flt : numeric
         The numeric value to replace missing values with. Will be used for
         any numeric value.
-    encoding : string, optional
+    encoding : str, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
     pandas : bool
@@ -1098,7 +1098,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
         ``o`` : signed octal
 
-        ``s`` : string of characters
+        ``s`` : str of characters
 
         ``u`` : unsigned decimal integer
 

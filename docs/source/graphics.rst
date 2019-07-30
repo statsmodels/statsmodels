@@ -10,6 +10,7 @@ Graphics
 Goodness of Fit Plots
 ---------------------
 
+.. currentmodule:: statsmodels.graphics.gofplots
 .. autosummary::
    :toctree: generated/
 

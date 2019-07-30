@@ -53,16 +53,16 @@ class UnobservedComponents(MLEModel):
     Parameters
     ----------
 
-    level : bool or string, optional
+    level : {bool, str}, optional
         Whether or not to include a level component. Default is False. Can also
         be a string specification of the level / trend component; see Notes
         for available model specification strings.
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal : int or None, optional
+    seasonal : {int, None}, optional
         The period of the seasonal component, if any. Default is None.
-    freq_seasonal: list of dicts or None, optional.
+    freq_seasonal: {list[dict], None}, optional.
         Whether (and how) to model seasonal component(s) with trig. functions.
         If specified, there is one dictionary for each frequency-domain
         seasonal component.  Each dictionary must have the key, value pair for
@@ -71,9 +71,9 @@ class UnobservedComponents(MLEModel):
         dictionaries, it defaults to the floor of period/2.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
-    autoregressive : int or None, optional
+    autoregressive : {int, None}, optional
         The order of the autoregressive component. Default is None.
-    exog : array_like or None, optional
+    exog : {array_like, None}, optional
         Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
@@ -83,7 +83,7 @@ class UnobservedComponents(MLEModel):
         Whether or not any trend component is stochastic. Default is False.
     stochastic_seasonal : bool, optional
         Whether or not any seasonal component is stochastic. Default is True.
-    stochastic_freq_seasonal: list of bools, optional
+    stochastic_freq_seasonal: list[bool], optional
         Whether or not each seasonal component(s) is (are) stochastic.  Default
         is True for each component.  The list should be of the same length as
         freq_seasonal.
@@ -1500,22 +1500,22 @@ class UnobservedComponentsResults(MLEResults):
             results are available otherwise 'filtered'.
         alpha : float, optional
             The confidence intervals for the components are (1 - alpha) %
-        level : boolean, optional
+        level : bool, optional
             Whether or not to plot the level component, if applicable.
             Default is True.
-        trend : boolean, optional
+        trend : bool, optional
             Whether or not to plot the trend component, if applicable.
             Default is True.
-        seasonal : boolean, optional
+        seasonal : bool, optional
             Whether or not to plot the seasonal component, if applicable.
             Default is True.
-        freq_seasonal: boolean, optional
+        freq_seasonal: bool, optional
             Whether or not to plot the frequency domain seasonal component(s),
             if applicable. Default is True.
-        cycle : boolean, optional
+        cycle : bool, optional
             Whether or not to plot the cyclical component, if applicable.
             Default is True.
-        autoregressive : boolean, optional
+        autoregressive : bool, optional
             Whether or not to plot the autoregressive state, if applicable.
             Default is True.
         fig : Matplotlib Figure instance, optional
@@ -1706,7 +1706,7 @@ class UnobservedComponentsResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -1714,7 +1714,7 @@ class UnobservedComponentsResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
+        full_results : bool, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
             covariance matrices. Default is False.

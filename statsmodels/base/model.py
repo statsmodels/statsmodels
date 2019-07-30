@@ -436,9 +436,9 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
             'basinhopping'
-                niter : integer
+                niter : int
                     The number of basin hopping iterations.
-                niter_success : integer
+                niter_success : int
                     Stop the run if the global minimum candidate remains the
                     same for this number of iterations.
                 T : float
@@ -449,7 +449,7 @@ class LikelihoodModel(Model):
                     value) between local minima.
                 stepsize : float
                     Initial step size for use in the random displacement.
-                interval : integer
+                interval : int
                     The interval for how often to update the `stepsize`.
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
@@ -1352,12 +1352,11 @@ class LikelihoodModelResults(Results):
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
                    other=None):
         """
-        Returns the variance/covariance matrix.
+        Compute the variance/covariance matrix.
 
-        The variance/covariance matrix can be of a linear contrast
-        of the estimates of params or all params multiplied by scale which
-        will usually be an estimate of sigma^2.  Scale is assumed to be
-        a scalar.
+        The variance/covariance matrix can be of a linear contrast of the
+        estimated parameters or all params multiplied by scale which will
+        usually be an estimate of sigma^2.  Scale is assumed to be a scalar.
 
         Parameters
         ----------
@@ -1368,13 +1367,17 @@ class LikelihoodModelResults(Results):
         scale : float, optional
             Can be specified or not.  Default is None, which means that
             the scale argument is taken from the model.
+        cov_p : ndarray, optional
+            The covariance of the parameters. If not provided, this value is
+            read from `self.normalized_cov_params` or
+            `self.cov_params_default`.
         other : array_like, optional
             Can be used when r_matrix is specified.
 
         Returns
         -------
-        cov : ndarray
-            covariance matrix of the parameter estimates or of linear
+        ndarray
+            The covariance matrix of the parameter estimates or of linear
             combination of parameter estimates. See Notes.
 
         Notes
@@ -1396,7 +1399,6 @@ class LikelihoodModelResults(Results):
         OR
 
         ``(scale) * (X.T X)^(-1)[column][:,column]`` if column is 1d
-
         """
         if (hasattr(self, 'mle_settings') and
                 self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
@@ -1444,11 +1446,13 @@ class LikelihoodModelResults(Results):
     # TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, cov_p=None, scale=None, use_t=None):
         """
-        Compute a t-test for a each linear hypothesis of the form Rb = q
+        Compute a t-test for a each linear hypothesis of the form Rb = q.
 
         Parameters
         ----------
-        r_matrix : array_like, str, tuple
+        r_matrix : {array_like, str, tuple}
+            One of:
+
             - array : If an array is given, a p x k 2d array or length k 1d
               array specifying the linear restrictions. It is assumed
               that the linear combination is equal to zero.
@@ -1456,28 +1460,34 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q). If q is given,
               can be either a scalar or a length p row vector.
+
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
 
             .. deprecated:: 0.10.0
 
-            An optional `scale` to use.  Default is the scale specified
-            by the model fit.
         use_t : bool, optional
-            If use_t is None, then the default of the model is used.
-            If use_t is True, then the p-values are based on the t
-            distribution.
-            If use_t is False, then the p-values are based on the normal
+            If use_t is None, then the default of the model is used. If use_t
+            is True, then the p-values are based on the t distribution. If
+            use_t is False, then the p-values are based on the normal
             distribution.
 
         Returns
         -------
-        res : ContrastResults instance
+        ContrastResults
             The results for the test are attributes of this results instance.
             The available results have the same elements as the parameter table
             in `summary()`.
+
+        See Also
+        --------
+        tvalues : individual t statistics
+        f_test : for F tests
+        patsy.DesignInfo.linear_constraint
 
         Examples
         --------
@@ -1528,12 +1538,6 @@ class LikelihoodModelResults(Results):
         c1            -2.0202      0.488     -8.231      0.000      -3.125      -0.915
         c2             1.0001      0.249      0.000      1.000       0.437       1.563
         ==============================================================================
-
-        See Also
-        --------
-        tvalues : individual t statistics
-        f_test : for F tests
-        patsy.DesignInfo.linear_constraint
         """
         if scale is not None:
             import warnings
@@ -1598,7 +1602,9 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array_like, str, or tuple
+        r_matrix : {array_like, str, tuple}
+            One of:
+
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed
               that the linear combination is equal to zero.
@@ -1606,22 +1612,40 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q), ``q`` can be
               either a scalar or a length k row vector.
+
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+            Default is 1.0 for no scaling.
 
             .. deprecated:: 0.10.0
 
-            Default is 1.0 for no scaling.
         invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
 
         Returns
         -------
-        res : ContrastResults instance
+        ContrastResults
             The results for the test are attributes of this results instance.
+
+        See Also
+        --------
+        statsmodels.stats.contrast.ContrastResults
+        wald_test
+        t_test
+        patsy.DesignInfo.linear_constraint
+
+        Notes
+        -----
+        The matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
 
         Examples
         --------
@@ -1666,23 +1690,6 @@ class LikelihoodModelResults(Results):
         >>> f_test = results.f_test(hypotheses)
         >>> print(f_test)
         <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
-
-        See Also
-        --------
-        statsmodels.stats.contrast.ContrastResults
-        wald_test
-        t_test
-        patsy.DesignInfo.linear_constraint
-
-        Notes
-        -----
-        The matrix `r_matrix` is assumed to be non-singular. More precisely,
-
-        r_matrix (pX pX.T) r_matrix.T
-
-        is assumed invertible. Here, pX is the generalized inverse of the
-        design matrix of the model. There can be problems in non-OLS models
-        where the rank of the covariance of the noise is not full.
         """
         if scale != 1.0:
             import warnings
@@ -1701,7 +1708,9 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array_like, str, or tuple
+        r_matrix : {array_like, str, tuple}
+            One of:
+
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed that the
               linear combination is equal to zero.
@@ -1709,14 +1718,15 @@ class LikelihoodModelResults(Results):
               See the examples.
             - tuple : A tuple of arrays in the form (R, q), ``q`` can be
               either a scalar or a length p row vector.
+
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
         scale : float, optional
+            Default is 1.0 for no scaling.
 
             .. deprecated:: 0.10.0
 
-            Default is 1.0 for no scaling.
         invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
@@ -1726,10 +1736,13 @@ class LikelihoodModelResults(Results):
             the F distribution is used if the model specifies that use_t is True.
             The test statistic is proportionally adjusted for the distribution
             by the number of constraints in the hypothesis.
+        df_constraints : int, optional
+            The number of constraints. If not provided the number of
+            constraints is determined from r_matrix.
 
         Returns
         -------
-        res : ContrastResults instance
+        ContrastResults
             The results for the test are attributes of this results instance.
 
         See Also
@@ -1825,25 +1838,25 @@ class LikelihoodModelResults(Results):
 
         This computes joined Wald tests for the hypothesis that all
         coefficients corresponding to a `term` are zero.
-
         `Terms` are defined by the underlying formula or by string matching.
 
         Parameters
         ----------
-        skip_single : boolean
+        skip_single : bool
             If true, then terms that consist only of a single column and,
             therefore, refers only to a single parameter is skipped.
             If false, then all terms are included.
         extra_constraints : ndarray
-            not tested yet
-        combine_terms : None or list of strings
+            Additional constraints to test. Note that this input has not been
+            tested.
+        combine_terms : {list[str], None}
             Each string in this list is matched to the name of the terms or
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
 
         Returns
         -------
-        test_result : result instance
+        WaldTestResults
             The result instance contains `table` which is a pandas DataFrame
             with the test results: test statistic, degrees of freedom and
             pvalues.
@@ -1956,31 +1969,30 @@ class LikelihoodModelResults(Results):
 
     def t_test_pairwise(self, term_name, method='hs', alpha=0.05,
                         factor_labels=None):
-        """perform pairwise t_test with multiple testing corrected p-values
+        """
+        Perform pairwise t_test with multiple testing corrected p-values
 
         This uses the formula design_info encoding contrast matrix and should
         work for all encodings of a main effect.
 
         Parameters
         ----------
-        result : result instance
-            The results of an estimated model with a categorical main effect.
         term_name : str
-            name of the term for which pairwise comparisons are computed.
+            The name of the term for which pairwise comparisons are computed.
             Term names for categorical effects are created by patsy and
             correspond to the main part of the exog names.
-        method : str or list of strings
-            multiple testing p-value correction, default is 'hs',
-            see stats.multipletesting
+        method : {str, list[str]}
+            The multiple testing p-value correction to applye. The default is
+            'hs'. See stats.multipletesting
         alpha : float
-            significance level for multiple testing reject decision.
-        factor_labels : None, list of str
+            The significance level for multiple testing reject decision.
+        factor_labels : {list[str], None}
             Labels for the factor levels used for pairwise labels. If not
             provided, then the labels from the formula design_info are used.
 
         Returns
         -------
-        results : instance of a simple Results class
+        MultiCompResult
             The results are stored as attributes, the main attributes are the
             following two. Other attributes are added for debugging purposes
             or as background information.
@@ -2018,25 +2030,19 @@ class LikelihoodModelResults(Results):
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
         """
-        Returns the confidence interval of the fitted parameters.
+        Construct confidence interval for the fitted parameters.
 
         Parameters
         ----------
         alpha : float, optional
             The significance level for the confidence interval.
-            ie., The default `alpha` = .05 returns a 95% confidence interval.
+            The default `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
-            `cols` specifies which confidence intervals to return
-        method : string
-            Not Implemented Yet
-            Method to estimate the confidence_interval.
-            "Default" : uses self.bse which is based on inverse Hessian for MLE
-            "hjjh" :
-            "jac" :
-            "boot-bse"
-            "boot_quant"
-            "profile"
-
+            Specifies which confidence intervals to return.
+        method : str
+            Method to estimate the confidence_interval. Only 'default' is
+            implemented. Future support is planned for
+            "hjjh", "jac", "boot-bse", "boot_quant" "profile".
 
         Returns
         -------
@@ -2044,6 +2050,12 @@ class LikelihoodModelResults(Results):
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
             lower, the second column contains all upper limits.
+
+        Notes
+        -----
+        The confidence interval is based on the standard normal distribution.
+        Models wish to use a different distribution should overwrite this
+        method.
 
         Examples
         --------
@@ -2060,16 +2072,9 @@ class LikelihoodModelResults(Results):
                [      -0.56251721,        0.460309  ],
                [     798.7875153 ,     2859.51541392]])
 
-
         >>> results.conf_int(cols=(2,3))
         array([[-0.1115811 ,  0.03994274],
                [-3.12506664, -0.91539297]])
-
-        Notes
-        -----
-        The confidence interval is based on the standard normal distribution.
-        Models wish to use a different distribution should overwrite this
-        method.
         """
         bse = self.bse
 
@@ -2092,12 +2097,12 @@ class LikelihoodModelResults(Results):
 
     def save(self, fname, remove_data=False):
         """
-        save a pickle of this instance
+        Save a pickle of this instance.
 
         Parameters
         ----------
-        fname : string or filehandle
-            fname can be a string to a file path or filename, or a filehandle.
+        fname : {str, handle}
+            Either string filename or a valid file handle.
         remove_data : bool
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
@@ -2120,16 +2125,17 @@ class LikelihoodModelResults(Results):
     @classmethod
     def load(cls, fname):
         """
-        load a pickle, (class method)
+        Load a pickled results instance.
 
         Parameters
         ----------
-        fname : string or filehandle
-            fname can be a string to a file path or filename, or a filehandle.
+        fname : {str, handle}
+            Either a string filename or a valid file handle.
 
         Returns
         -------
-        unpickled instance
+        Results
+            The unpickled results instance.
         """
 
         from statsmodels.iolib.smpickle import load_pickle

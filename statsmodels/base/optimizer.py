@@ -152,9 +152,9 @@ class Optimizer(object):
                 start_direc : ndarray
                     Initial direction set.
             'basinhopping'
-                niter : integer
+                niter : int
                     The number of basin hopping iterations.
-                niter_success : integer
+                niter_success : int
                     Stop the run if the global minimum candidate remains the
                     same for this number of iterations.
                 T : float
@@ -165,7 +165,7 @@ class Optimizer(object):
                     value) between local minima.
                 stepsize : float
                     Initial step size for use in the random displacement.
-                interval : integer
+                interval : int
                     The interval for how often to update the `stepsize`.
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer

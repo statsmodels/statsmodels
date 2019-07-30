@@ -37,7 +37,7 @@ class KalmanSmoother(KalmanFilter):
 
     Parameters
     ----------
-    k_endog : array_like or integer
+    k_endog : {array_like, int}
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -177,7 +177,7 @@ class KalmanSmoother(KalmanFilter):
 
         Parameters
         ----------
-        smoother_output : integer, optional
+        smoother_output : int, optional
             Bitmask value to set the smoother output to. See notes for details.
         **kwargs
             Keyword arguments may be used to influence the smoother output by
@@ -252,7 +252,7 @@ class KalmanSmoother(KalmanFilter):
 
         Parameters
         ----------
-        smooth_method : integer, optional
+        smooth_method : int, optional
             Bitmask value to set the filter method to. See notes for details.
         **kwargs
             Keyword arguments may be used to influence the filter method by
@@ -370,7 +370,7 @@ class KalmanSmoother(KalmanFilter):
         run_filter : bool, optional
             Whether or not to run the Kalman filter prior to smoothing. Default
             is True.
-        prefix : string
+        prefix : str
             The prefix of the datatype. Usually only used internally.
 
         Returns
@@ -553,7 +553,7 @@ class SmootherResults(FilterResults):
         ----------
         model : Representation
             The model object from which to take the updated values.
-        only_options : boolean, optional
+        only_options : bool, optional
             If set to true, only the smoother and filter options are updated,
             and the state space representation is not updated. Default is
             False.

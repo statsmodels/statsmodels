@@ -29,7 +29,7 @@ def acovf_fft(x, demean=True):
     ----------
     x : array_like
         timeseries, signal
-    demean : boolean
+    demean : bool
         If true, then demean time series
 
     Returns

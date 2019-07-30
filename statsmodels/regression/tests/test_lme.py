@@ -29,12 +29,12 @@ class R_Results(object):
 
     Parameters
     ----------
-    meth : string
+    meth : str
         Either "ml" or "reml".
-    irfs : string
+    irfs : str
         Either "irf", for independent random effects, or "drf" for
         dependent random effects.
-    ds_ix : integer
+    ds_ix : int
         The number of the data set
     """
 

@@ -151,7 +151,7 @@ def select_bandwidth(x, bw, kernel):
     ----------
     x : array_like
         Array for which to get the bandwidth
-    bw : string
+    bw : str
         name of bandwidth selection rule, currently supported are:
         %s
     kernel : not used yet

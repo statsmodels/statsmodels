@@ -100,14 +100,14 @@ _init_doc = r"""
         Prior standard deviation for fixed effects parameters.
     family : statsmodels.genmod.families instance
         The GLM family.
-    fep_names : list of strings
+    fep_names : list[str]
         The names of the fixed effects parameters (corresponding to
         columns of exog).  If None, default names are constructed.
-    vcp_names : list of strings
+    vcp_names : list[str]
         The names of the variance component parameters (corresponding
         to distinct labels in ident).  If None, default names are
         constructed.
-    vc_names : list of strings
+    vc_names : list[str]
         The names of the random effect realizations.
 
     Returns
@@ -415,7 +415,7 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        formula : string
+        formula : str
             Formula for the endog and fixed effects terms (use ~ to
             separate dependent and independent expressions).
         vc_formulas : dictionary
@@ -476,14 +476,13 @@ class _BayesMixedGLM(base.Model):
 
     def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
         """
-        Construct the Laplace approximation to the posterior
-        distribution.
+        Construct the Laplace approximation to the posterior distribution.
 
         Parameters
         ----------
-        method : string
+        method : str
             Optimization method for finding the posterior mode.
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize.
         scale_fe : bool
             If True, the columns of the fixed effects design matrix
@@ -703,9 +702,9 @@ class _VariationalBayesMixedGLM(object):
             Starting value for VB mean vector
         sd : array_like
             Starting value for VB standard deviation vector
-        fit_method : string
+        fit_method : str
             Algorithm for scipy.minimize
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize
         scale_fe : bool
             If true, the columns of the fixed effects design matrix

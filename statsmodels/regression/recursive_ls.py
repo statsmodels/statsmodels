@@ -221,7 +221,7 @@ class RecursiveLS(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
 
@@ -537,15 +537,15 @@ class RecursiveLSResults(MLEResults):
 
         Parameters
         ----------
-        variables : int or str or iterable of int or string, optional
+        variables : {int, str, list[int], list[str]}, optional
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
         alpha : float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.
@@ -688,7 +688,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float, optional
             The plotted significance bounds are alpha %.
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new
@@ -781,7 +781,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float, optional
             The plotted significance bounds are alpha %.
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new

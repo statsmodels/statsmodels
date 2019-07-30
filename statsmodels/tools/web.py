@@ -47,7 +47,7 @@ def webdoc(arg=None, stable=None):
 
     Parameters
     ----------
-    arg, optional : string or statsmodels function
+    arg, optional : str or statsmodels function
         Either a string to search the documentation or a function
     stable, optional : bool
         Flag indicating whether to use the stable documentation (True) or

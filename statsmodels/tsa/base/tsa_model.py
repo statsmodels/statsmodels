@@ -482,7 +482,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Returns
         -------
-        start : integer
+        start : int
             The index / observation location at which to begin prediction.
         end : int
             The index / observation location at which to end in-sample

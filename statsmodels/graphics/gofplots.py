@@ -39,7 +39,7 @@ class ProbPlot(object):
         Location parameter for dist
     scale : float
         Scale parameter for dist
-    fit : boolean
+    fit : bool
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed
@@ -434,7 +434,7 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-        exceed : boolean, optional
+        exceed : bool, optional
 
              - If False (default) the raw sample quantiles are plotted against
                the theoretical quantiles, show the probability that a sample
@@ -506,7 +506,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         for i in range(0,nobs+1)
     scale : float
         Scale parameter for dist
-    fit : boolean
+    fit : bool
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed

@@ -184,7 +184,7 @@ class Factor(Model):
             algorithms
         start : array_like
             Starting values, currently only used for ML estimation
-        opt_method : string
+        opt_method : str
             Optimization method for ML estimation
         opt : dict-like
             Keyword arguments passed to optimizer, only used for ML estimation
@@ -517,7 +517,7 @@ class FactorResults(object):
         Number of components (factors)
     nbs : int
         Number of observations
-    fa_method : string
+    fa_method : str
         The method used to obtain the decomposition, either 'pa' for
         'principal axes' or 'ml' for maximum likelihood.
     df : int
@@ -570,7 +570,7 @@ class FactorResults(object):
 
         Parameters
         ----------
-        method : string
+        method : str
             Rotation to be applied.  Allowed methods are varimax,
             quartimax, biquartimax, equamax, oblimin, parsimax,
             parsimony, biquartimin, promax.
@@ -793,14 +793,14 @@ class FactorResults(object):
             * 'strings' returns a DataFrame with string elements with optional sorting
                and suppressing small loading coefficients.
 
-        sort_ : boolean
+        sort_ : bool
             If True, then the rows of the DataFrame is sorted by contribution of each
             factor. applies if style is either 'display' or 'strings'
         threshold : float
             If the threshold is larger than zero, then loading coefficients are
             either colored white (if style is 'display') or replace by empty
             string (if style is 'strings').
-        highlight_max : boolean
+        highlight_max : bool
             This add a background color to the largest coefficient in each row.
         color_max : html color
             default is 'yellow'. color for background of row maximum

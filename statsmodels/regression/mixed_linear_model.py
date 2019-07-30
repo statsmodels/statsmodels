@@ -252,12 +252,12 @@ class MixedLMParams(object):
 
     Parameters
     ----------
-    k_fe : integer
+    k_fe : int
         The number of covariates with fixed effects.
-    k_re : integer
+    k_re : int
         The number of covariates with random coefficients (excluding
         variance components).
-    k_vc : integer
+    k_vc : int
         The number of variance components parameters.
 
     Notes
@@ -283,16 +283,16 @@ class MixedLMParams(object):
         ----------
         params : array_like
             The mode parameters packed into a single vector.
-        k_fe : integer
+        k_fe : int
             The number of covariates with fixed effects
-        k_re : integer
+        k_re : int
             The number of covariates with random effects (excluding
             variance components).
-        use_sqrt : boolean
+        use_sqrt : bool
             If True, the random effects covariance matrix is provided
             as its Cholesky factor, otherwise the lower triangle of
             the covariance matrix is stored.
-        has_fe : boolean
+        has_fe : bool
             If True, `params` contains fixed effects parameters.
             Otherwise, the fixed effects parameters are set to zero.
 
@@ -610,7 +610,7 @@ class MixedLM(base.LikelihoodModel):
         triangle of the square root of the random effects
         covariance matrix, otherwise it is carried out using the
         lower triangle of the random effects covariance matrix.
-    missing : string
+    missing : str
         The approach to missing data handling
 
     Notes
@@ -848,7 +848,7 @@ class MixedLM(base.LikelihoodModel):
             The formula specifying the model
         data : array_like
             The data for the model. See Notes.
-        re_formula : string
+        re_formula : str
             A one-sided formula defining the variance structure of the
             model.  The default gives a random intercept for each
             group.
@@ -862,7 +862,7 @@ class MixedLM(base.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
-        missing : string
+        missing : str
             Either 'none' or 'drop'
         args : extra arguments
             These are passed to the model
@@ -1095,7 +1095,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : string of Penalty object
+        method : str of Penalty object
             Method for regularization.  If a string, must be 'l1'.
         alpha : array_like
             Scalar or vector of penalty weights.  If a scalar, the
@@ -1110,7 +1110,7 @@ class MixedLM(base.LikelihoodModel):
             Convergence occurs when the sup norm difference
             between successive values of `fe_params` is less than
             `ptol`.
-        maxit : integer
+        maxit : int
             The maximum number of iterations.
         fit_kwargs : keywords
             Additional keyword arguments passed to fit.
@@ -1354,7 +1354,7 @@ class MixedLM(base.LikelihoodModel):
         ----------
         vcomp : array_like
             The variance parameters for the variance components.
-        group_ix : integer
+        group_ix : int
             The group index
 
         Returns an expanded version of vcomp, in which each variance
@@ -1410,7 +1410,7 @@ class MixedLM(base.LikelihoodModel):
             The parameter value.  If array-like, must be a packed
             parameter vector containing only the covariance
             parameters.
-        profile_fe : boolean
+        profile_fe : bool
             If True, replace the provided value of `fe_params` with
             the GLS estimates.
 
@@ -1516,9 +1516,9 @@ class MixedLM(base.LikelihoodModel):
         solver : function
             A function that given x returns V^{-1}x, where V
             is the group's marginal covariance matrix.
-        group_ix : integer
+        group_ix : int
             The group index
-        max_ix : integer or None
+        max_ix : {int, None}
             If not None, the generator ends when this index
             is reached.
         """
@@ -1597,7 +1597,7 @@ class MixedLM(base.LikelihoodModel):
             The parameter at which the score function is evaluated.
             If array-like, must contain the packed random effects
             parameters (cov_re and vcomp) without fe_params.
-        calc_fe : boolean
+        calc_fe : bool
             If True, calculate the score vector for the fixed effects
             parameters.  If False, this vector is not calculated, and
             a vector of zeros is returned in its place.
@@ -1750,7 +1750,7 @@ class MixedLM(base.LikelihoodModel):
         params : MixedLMParams or array_like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
-        calc_fe : boolean
+        calc_fe : bool
             If True, calculate the score vector for the fixed effects
             parameters.  If False, this vector is not calculated, and
             a vector of zeros is returned in its place.
@@ -2016,7 +2016,7 @@ class MixedLM(base.LikelihoodModel):
             on the results.
         cov_pen : CovariancePenalty object
             A penalty for the random effects covariance matrix
-        do_cg : boolean, defaults to True
+        do_cg : bool, defaults to True
             If False, the optimization is skipped and a results
             object at the given (or default) starting values is
             returned.
@@ -2033,7 +2033,7 @@ class MixedLM(base.LikelihoodModel):
             work).
         full_output : bool
             If true, attach iteration history to results
-        method : string
+        method : str
             Optimization method.  Can be a scipy.optimize method name,
             or a list of such names to be tried in sequence.
 
@@ -2549,9 +2549,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         ----------
         yname : str, optional
             Default is `y`
-        xname_fe : list of strings, optional
+        xname_fe : list[str], optional
             Fixed effects covariate names
-        xname_re : list of strings, optional
+        xname_re : list[str], optional
             Random effects covariate names
         title : str, optional
             Title for the top table. If not None, then this replaces
@@ -2689,21 +2689,21 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         Parameters
         ----------
-        re_ix : integer
+        re_ix : int
             If vtype is `re`, this value is the index of the variance
             parameter for which to construct a profile likelihood.  If
             `vtype` is 'vc' then `re_ix` is the name of the variance
             parameter to be profiled.
-        vtype : string
+        vtype : str
             Either 're' or 'vc', depending on whether the profile
             analysis is for a random effect or a variance component.
-        num_low : integer
+        num_low : int
             The number of points at which to calculate the likelihood
             below the MLE of the parameter of interest.
         dist_low : float
             The distance below the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.
-        num_high : integer
+        num_high : int
             The number of points at which to calculate the likelihood
             above the MLE of the parameter of interest.
         dist_high : float
