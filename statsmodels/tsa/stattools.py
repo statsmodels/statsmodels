@@ -641,7 +641,7 @@ def pacf_burg(x, nlags=None, demean=True):
         Number of lags to compute the partial autocorrelations.  If omitted,
         uses the smaller of 10(log10(nobs)) or nobs - 1.
     demean : bool, optional
-        Flag indicating to demen that data. Set to False if x has been
+        Flag indicating to demean that data. Set to False if x has been
         previously demeaned.
 
     Returns
@@ -655,11 +655,11 @@ def pacf_burg(x, nlags=None, demean=True):
     See Also
     --------
     statsmodels.tsa.stattools.pacf
-        Partial autocorrrelation estimation.
+        Partial autocorrelation estimation.
     statsmodels.tsa.stattools.pacf_yw
-         Partial autocorrrelation estimation using Yule-Walker.
+         Partial autocorrelation estimation using Yule-Walker.
     statsmodels.tsa.stattools.pacf_ols
-        Partial autocorrrelation estimation using OLS.
+        Partial autocorrelation estimation using OLS.
 
     References
     ----------
@@ -1925,7 +1925,7 @@ class ZivotAndrewsUnitRoot(object):
         then used for all subsequent break-period regressions. This results in
         significant run time reduction but also slightly more pessimistic test
         statistics than the original Zivot-Andrews method, although no attempt
-        has been made to characterize the size/power tradeoff.
+        has been made to characterize the size/power trade-off.
 
         References
         ----------

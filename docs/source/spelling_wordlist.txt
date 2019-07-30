@@ -2210,3 +2210,11 @@ prerotated
 uniq
 nparray
 olsresidual
+RegularizedResults
+nrows
+SPSS
+aq
+zivot
+andrews
+ynames
+useic
