@@ -74,8 +74,8 @@ class Oaxaca(object):
         See linear_model.RegressionResults.get_robustcov_results for a description
         required keywords for alternative covariance estimators
     suppress: bool, optional
-        If True, it will suppress the print of the function. False is default. 
-
+        If True, it will suppress the print of the function. False is default.
+    
     Attributes
     ----------
     None
