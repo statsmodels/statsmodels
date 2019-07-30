@@ -73,6 +73,8 @@ class Oaxaca(object):
     cov_kwdslist or None, optional
         See linear_model.RegressionResults.get_robustcov_results for a description
         required keywords for alternative covariance estimators
+    suppress: bool, optional
+        If True, it will suppress the print of the function. False is default. 
 
     Attributes
     ----------
@@ -121,11 +123,12 @@ class Oaxaca(object):
     """
 
     def __init__(self, endog, exog, bifurcate, hasconst=True,
-            swap=True, cov_type='nonrobust', cov_kwds=None):
+            swap=True, cov_type='nonrobust', cov_kwds=None, suppress = False):
         if str(type(exog)).find('pandas') != -1:
             bifurcate = exog.columns.get_loc(bifurcate)
             endog, exog = np.array(endog), np.array(exog)
 
+        self.suppress = suppress
         bi_col = exog[:, bifurcate]
         endog = np.column_stack((bi_col, endog))
         bi = np.unique(bi_col)
@@ -190,9 +193,10 @@ class Oaxaca(object):
         self.coef_eff = (self.exog_s_mean) @ (self._f_model.params - self._s_model.params)
         self.int_eff = (self.exog_f_mean - self.exog_s_mean) @ (self._f_model.params - self._s_model.params)
 
-        print("".join(["*" for x in range(0, 30)]))
-        print("Characteristic Effect: {:.5f}\nCoefficent Effect: {:.5f}\nInteraction Effect: {:.5f}\nGap: {:.5f}".format(self.char_eff, self.coef_eff, self.int_eff, self.gap))
-        print("".join(["*" for x in range(0, 30)]))
+        if self.suppress is False:
+            print("".join(["*" for x in range(0, 30)]))
+            print("Characteristic Effect: {:.5f}\nCoefficent Effect: {:.5f}\nInteraction Effect: {:.5f}\nGap: {:.5f}".format(self.char_eff, self.coef_eff, self.int_eff, self.gap))
+            print("".join(["*" for x in range(0, 30)]))
 
         return self.char_eff, self.coef_eff, self.int_eff, self.gap
 
@@ -218,8 +222,9 @@ class Oaxaca(object):
         self.unexplained = (self.exog_f_mean @ (self._f_model.params - self.t_params)) + (self.exog_s_mean @ (self.t_params - self._s_model.params))
         self.explained = (self.exog_f_mean - self.exog_s_mean) @ self.t_params
 
-        print("".join(["*" for x in range(0, 30)]))
-        print("Unexplained Effect: {:.5f}\nExplained Effect: {:.5f}\nGap: {:.5f}".format(self.unexplained, self.explained, self.gap))
-        print("".join(["*" for x in range(0, 30)]))
+        if self.suppress is False:
+            print("".join(["*" for x in range(0, 30)]))
+            print("Unexplained Effect: {:.5f}\nExplained Effect: {:.5f}\nGap: {:.5f}".format(self.unexplained, self.explained, self.gap))
+            print("".join(["*" for x in range(0, 30)]))
 
         return self.unexplained, self.explained, self.gap
