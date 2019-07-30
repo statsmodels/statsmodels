@@ -1765,7 +1765,7 @@ class RegressionResults(base.LikelihoodModelResults):
         F-statistic of the fully specified model.
 
         Calculated as the mean squared error of the model divided by the mean
-        squared error of the residuals if the nonrobust covairance is used.
+        squared error of the residuals if the nonrobust covariance is used.
         Otherwise computed using a Wald-like quadratic form that tests whether
         all coefficients (excluding the constant) are zero.
         """
