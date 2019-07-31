@@ -1430,7 +1430,31 @@ class SARIMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True, complex_step=False):
+    def _validate_can_fix_params(self, param_names):
+        super(SARIMAX, self)._validate_can_fix_params(param_names)
+        model_names = self.model_names
+
+        items = [
+            ('ar', 'autoregressive', self.enforce_stationarity,
+                '`enforce_stationarity=True`'),
+            ('seasonal_ar', 'seasonal autoregressive',
+                self.enforce_stationarity, '`enforce_stationarity=True`'),
+            ('ma', 'moving average', self.enforce_invertibility,
+                '`enforce_invertibility=True`'),
+            ('seasonal_ma', 'seasonal moving average',
+                self.enforce_invertibility, '`enforce_invertibility=True`')]
+
+        for name, title, condition, condition_desc in items:
+            names = set(model_names[name] or [])
+            fix_all = param_names.issuperset(names)
+            fix_any = len(param_names.intersection(names)) > 0
+            if condition and fix_any and not fix_all:
+                raise ValueError('Cannot fix individual %s parameters when'
+                                 ' %s. Must either fix all %s parameters or'
+                                 ' none.' % (title, condition_desc, title))
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
         """
         Update the parameters of the model
 
@@ -1450,8 +1474,8 @@ class SARIMAX(MLEModel):
         params : array_like
             Array of parameters.
         """
-        params = super(SARIMAX, self).update(params, transformed=transformed,
-                                             complex_step=False)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         params_trend = None
         params_exog = None

@@ -232,6 +232,11 @@
             "text": "Seasonality in Time Series Data",
             "target": "notebooks/generated/statespace_seasonal.html",
             "img": "../_static/images/statespace_seasonal.png"
+        },
+        {
+            "text": "Fixed / constrained parameters in state space models",
+            "target": "notebooks/generated/statespace_fixed_params.html",
+            "img": "../_static/images/statespace_fixed_params.png"
         }
       ]
   },

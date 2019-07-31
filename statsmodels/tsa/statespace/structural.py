@@ -1043,8 +1043,22 @@ class UnobservedComponents(MLEModel):
 
         return unconstrained
 
-    def update(self, params, **kwargs):
-        params = super(UnobservedComponents, self).update(params, **kwargs)
+    def _validate_can_fix_params(self, param_names):
+        super(UnobservedComponents, self)._validate_can_fix_params(param_names)
+
+        if 'ar_coeff' in self.parameters:
+            ar_names = ['ar.L%d' % (i+1) for i in range(self.ar_order)]
+            fix_all_ar = param_names.issuperset(ar_names)
+            fix_any_ar = len(param_names.intersection(ar_names)) > 0
+            if fix_any_ar and not fix_all_ar:
+                raise ValueError('Cannot fix individual autoregressive.'
+                                 ' parameters. Must either fix all'
+                                 ' autoregressive parameters or none.')
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         offset = 0
 
