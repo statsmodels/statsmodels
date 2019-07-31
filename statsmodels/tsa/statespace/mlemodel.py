@@ -367,6 +367,22 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     @contextlib.contextmanager
     def fix_params(self, params):
+        """
+        Fix parameters to specific values (context manager)
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary describing the fixed parameter values, of the form
+            `param_name: fixed_value`. See the `param_names` property for valid
+            parameter names.
+
+        Examples
+        --------
+        >>> mod = sm.tsa.SARIMAX(endog, order=(1, 0, 1))
+        >>> with mod.fix_params({'ar.L1': 0.5}):
+                res = mod.fit()
+        """
         k_params = len(self.param_names)
         # Initialization (this is done here rather than in the constructor
         # because param_names may not be available at that point)
@@ -585,6 +601,30 @@ class MLEModel(tsbase.TimeSeriesModel):
             return res
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+        """
+        Fit the model with some parameters subject to equality constraints.
+
+        Parameters
+        ----------
+        constraints : dict
+            Dictionary of constraints, of the form `param_name: fixed_value`.
+            See the `param_names` property for valid parameter names.
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            If None, the default is given by Model.start_params.
+        **fit_kwds : keyword arguments
+            fit_kwds are used in the optimization of the remaining parameters.
+
+        Returns
+        -------
+        results : Results instance
+
+        Examples
+        --------
+        >>> mod = sm.tsa.SARIMAX(endog, order=(1, 0, 1))
+        >>> res = mod.fit_constrained({'ar.L1': 0.5})
+
+        """
         with self.fix_params(constraints):
             res = self.fit(start_params, **fit_kwds)
         return res
