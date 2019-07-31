@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-'''
-STATA adds a constant no matter if you want to or not, so I cannot test 
-for having no intercept. This also would make no sense for Oaxaca.
-All of these stata_results are from using the oaxaca command in STATA.
-'''
+# STATA adds a constant no matter if you want to or not,
+# so I cannot test for having no intercept. This also would make
+# no sense for Oaxaca. All of these stata_results
+# are from using the oaxaca command in STATA.
 
 import numpy as np
 from statsmodels.datasets.ccard.data import load, load_pandas
@@ -146,8 +145,12 @@ class TestOaxacaNoSwapNoConstPassed(object):
 class TestOaxacaPandasNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(pandas_df.endog, pandas_df.exog, 'OWNRENT',
-                            hasconst=False, suppress=True)
+        cls.model = Oaxaca(
+            pandas_df.endog,
+            pandas_df.exog,
+            'OWNRENT',
+            hasconst=False,
+            suppress=True)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -168,7 +171,8 @@ class TestOaxacaPandasNoSwapNoConstPassed(object):
     @classmethod
     def setup_class(cls):
         cls.model = Oaxaca(pandas_df.endog, pandas_df.exog,
-                           'OWNRENT', hasconst=False, swap=False, suppress=True)
+                           'OWNRENT', hasconst=False,
+                           swap=False, suppress=True)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
