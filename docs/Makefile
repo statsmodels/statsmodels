@@ -47,14 +47,12 @@ html:
 	#$(TOOLSPATH)$(EXAMPLEBUILD)
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
-	@echo "Generating notebooks from examples/notebooks folder"
-	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing
+	@echo "Executing notebooks from examples/notebooks folder"
+	mkdir -p $(BUILDDIR)/source/examples/notebooks/generated
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing --execute-only
 	@echo "Running sphinx-build"
 	@echo @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
-	@echo "Copying rendered example notebooks"
-	mkdir -p $(BUILDDIR)/html/examples/notebooks/generated
-	cp source/examples/notebooks/generated/*html $(BUILDDIR)/html/examples/notebooks/generated
 	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
 	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
 	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static

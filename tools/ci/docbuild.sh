@@ -14,7 +14,7 @@ git clean -xdf
 echo '========================================================================'
 echo '=                        Building documentation                        ='
 echo '========================================================================'
-echo 'make html > doc_build.log 2>&1'
+echo 'make html 2>&1 | tee doc_build.log'
 make html 2>&1 | tee doc_build.log
 
 set +e
@@ -44,7 +44,10 @@ echo '========================================================================'
 echo '=                        Checking Spelling                             ='
 echo '========================================================================'
 echo 'make spelling > doc_spelling.log 2>&1'
-make spelling
+make spelling > /dev/null
+echo '========================================================================'
+echo '=                        Spelling Mistakes                             ='
+echo '========================================================================'
 if [ -f "build/spelling/output.txt" ]; then
   cat build/spelling/output.txt
 fi;
@@ -53,7 +56,7 @@ fi;
 # Deploy with doctr
 cd "$SRCDIR"
 if [[ -z "$TRAVIS_TAG" ]]; then
-  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io devel;
+  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io devel > /dev/null;
 else
   if [[ "$TRAVIS_TAG" != *"dev"* ]]; then  # do not push on dev tags
     doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";

@@ -42,6 +42,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               # One of mathjax or imgmath
+              'nbsphinx',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               # 'sphinx.ext.autosummary',
@@ -51,7 +52,7 @@ extensions = ['sphinx.ext.autodoc',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
               # numpydoc or sphinx.ext.napoleon, but not both
-              'numpydoc'
+              'numpydoc',
               ]
 
 try:
@@ -61,6 +62,9 @@ except ImportError as err:  # noqa: F841
 else:
     extensions.append('sphinxcontrib.spelling')
 
+# nbsphinx options
+nbsphinx_allow_errors = True
+# sphinxcontrib-spelling options
 spelling_word_list_filename = ['spelling_wordlist.txt', 'names_wordlist.txt']
 spelling_ignore_pypi_package_names = True
 
@@ -117,7 +121,7 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['*/autosummary/*.rst']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', '*/autosummary/*.rst']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -171,7 +175,7 @@ html_theme_path = ['../themes']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels_hybi_banner.png'
+html_logo = 'images/statsmodels_hybi_banner_v2.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

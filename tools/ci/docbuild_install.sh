@@ -10,5 +10,5 @@ sudo apt-get install graphviz libgfortran3 enchant -qq
 echo conda install --channel conda-forge sphinx jupyter nbconvert numpydoc==0.9.1 r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
 conda install --channel conda-forge sphinx jupyter nbconvert numpydoc==0.9.1 r-robustbase r-lme4 r-geepack libiconv rpy2 --yes --quiet
 # doctr and pdr
-echo pip install doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling
-pip install doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling
+echo pip install doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling nbsphinx
+pip install doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling nbsphinx

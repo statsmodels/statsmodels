@@ -170,14 +170,15 @@ Class Reference
 .. module:: statsmodels.tsa.vector_ar
    :synopsis: Vector autoregressions and related tools
 
-.. currentmodule:: statsmodels.tsa.vector_ar
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+
 
 .. autosummary::
    :toctree: generated/
 
-   var_model.VAR
-   var_model.VARProcess
-   var_model.VARResults
+   VAR
+   VARProcess
+   VARResults
 
 
 Post-estimation Analysis
@@ -186,13 +187,19 @@ Post-estimation Analysis
 Several process properties and additional results after
 estimation are available for vector autoregressive processes.
 
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
 .. autosummary::
    :toctree: generated/
 
-   var_model.LagOrderResults
-   hypothesis_test_results.HypothesisTestResults
-   hypothesis_test_results.NormalityTestResults
-   hypothesis_test_results.WhitenessTestResults
+   LagOrderResults
+
+.. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
+.. autosummary::
+   :toctree: generated/
+
+   HypothesisTestResults
+   NormalityTestResults
+   WhitenessTestResults
 
 
 Impulse Response Analysis
@@ -250,10 +257,11 @@ the long run effects as follows:
 Reference
 ~~~~~~~~~
 
+.. currentmodule:: statsmodels.tsa.vector_ar.irf
 .. autosummary::
    :toctree: generated/
 
-   irf.IRAnalysis
+   IRAnalysis
 
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
@@ -285,10 +293,11 @@ They can also be visualized through the returned :class:`FEVD` object:
 Reference
 ~~~~~~~~~
 
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
 .. autosummary::
    :toctree: generated/
 
-   var_model.FEVD
+   FEVD
 
 Statistical tests
 -----------------
@@ -336,13 +345,14 @@ method of :class:`VARResults`.
 Reference
 ~~~~~~~~~
 
+.. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
 .. autosummary::
    :toctree: generated/
 
-   hypothesis_test_results.HypothesisTestResults
-   hypothesis_test_results.CausalityTestResults
-   hypothesis_test_results.NormalityTestResults
-   hypothesis_test_results.WhitenessTestResults
+   HypothesisTestResults
+   CausalityTestResults
+   NormalityTestResults
+   WhitenessTestResults
 
 .. _vecm:
 
@@ -414,16 +424,17 @@ V     :math:`\neq 0`                   :math:`\neq 0`                       ``"c
 Reference
 ~~~~~~~~~
 
+.. currentmodule:: statsmodels.tsa.vector_ar.vecm
 .. autosummary::
    :toctree: generated/
 
-   vecm.VECM
-   vecm.coint_johansen
-   vecm.JohansenTestResult
-   vecm.select_order
-   vecm.select_coint_rank
-   vecm.VECMResults
-   vecm.CointRankResults
+   VECM
+   coint_johansen
+   JohansenTestResult
+   select_order
+   select_coint_rank
+   VECMResults
+   CointRankResults
 
 
 References
