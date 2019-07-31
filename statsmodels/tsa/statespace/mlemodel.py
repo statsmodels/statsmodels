@@ -392,13 +392,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         self._free_params_index = list(
             set(np.arange(k_params)).difference(self._fixed_params_index))
 
-        yield
-
-        # Reset the fixed parameters
-        self._has_fixed_params = cache_has_fixed_params
-        self._fixed_params = cache_fixed_params
-        self._fixed_params_index = cache_fixed_params_index
-        self._free_params_index = cache_free_params_index
+        try:
+            yield
+        finally:
+            # Reset the fixed parameters
+            self._has_fixed_params = cache_has_fixed_params
+            self._fixed_params = cache_fixed_params
+            self._fixed_params_index = cache_fixed_params_index
+            self._free_params_index = cache_free_params_index
 
     def fit(self, start_params=None, transformed=True, includes_fixed=False,
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
