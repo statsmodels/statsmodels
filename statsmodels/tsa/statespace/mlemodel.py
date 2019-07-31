@@ -387,9 +387,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters
         self._fixed_params.update(params)
         self._has_fixed_params = True
-        self._fixed_params_index = [self._params_index[key]
-                                    for key in params.keys()]
-        self._free_params_index = list(
+        self._fixed_params_index = sorted([self._params_index[key]
+                                           for key in params.keys()])
+        self._free_params_index = sorted(
             set(np.arange(k_params)).difference(self._fixed_params_index))
 
         try:
