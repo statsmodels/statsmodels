@@ -180,7 +180,7 @@ def _get_dataset_meta(dataname, package, cache):
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
     dataset_meta = index.loc[idx]
-    return dataset_meta["Title"].item()
+    return dataset_meta["Title"].iloc[0]
 
 
 def get_rdataset(dataname, package="datasets", cache=False):
