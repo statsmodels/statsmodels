@@ -384,12 +384,18 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Validate parameter names and values
         self._validate_can_fix_params(set(params.keys()))
 
-        # Set the new fixed parameters
+        # Set the new fixed parameters, keeping the order as given by
+        # param_names
         self._fixed_params.update(params)
+        self._fixed_params = OrderedDict([
+            (name, self._fixed_params[name]) for name in self.param_names
+            if name in self._fixed_params])
+
+        # Update associated values
         self._has_fixed_params = True
-        self._fixed_params_index = sorted([self._params_index[key]
-                                           for key in params.keys()])
-        self._free_params_index = sorted(
+        self._fixed_params_index = [self._params_index[key]
+                                    for key in params.keys()]
+        self._free_params_index = list(
             set(np.arange(k_params)).difference(self._fixed_params_index))
 
         try:
