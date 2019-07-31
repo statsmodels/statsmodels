@@ -410,7 +410,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Update associated values
         self._has_fixed_params = True
         self._fixed_params_index = [self._params_index[key]
-                                    for key in params.keys()]
+                                    for key in self._fixed_params.keys()]
         self._free_params_index = list(
             set(np.arange(k_params)).difference(self._fixed_params_index))
 
