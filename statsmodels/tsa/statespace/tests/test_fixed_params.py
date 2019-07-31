@@ -1,8 +1,6 @@
 """
 Tests for fixing the values of some parameters and estimating others
 
-Note: the univariate cases is well tested in test_sarimax.py
-
 Author: Chad Fulton
 License: Simplified-BSD
 """
