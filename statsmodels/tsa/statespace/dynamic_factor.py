@@ -812,8 +812,7 @@ class DynamicFactor(MLEModel):
         super(DynamicFactor, self)._validate_can_fix_params(param_names)
 
         ix = np.cumsum(list(self.parameters.values()))[:-1]
-        (loadings_names, exog_names, error_cov_names, factor_transition_names,
-         error_transition_names) = [
+        (_, _, _, factor_transition_names, error_transition_names) = [
             arr.tolist() for arr in np.array_split(self.param_names, ix)]
 
         if self.enforce_stationarity and self.factor_order > 0:

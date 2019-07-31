@@ -666,8 +666,7 @@ class VARMAX(MLEModel):
         super(VARMAX, self)._validate_can_fix_params(param_names)
 
         ix = np.cumsum(list(self.parameters.values()))[:-1]
-        (trend_names, ar_names, ma_names, regression_names, state_cov_names,
-         obs_cov_names) = [
+        (_, ar_names, ma_names, _, _, _) = [
             arr.tolist() for arr in np.array_split(self.param_names, ix)]
 
         if self.enforce_stationarity and self.k_ar > 0:
