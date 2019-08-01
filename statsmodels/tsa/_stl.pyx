@@ -253,6 +253,8 @@ cdef class STL(object):
 
     def fit(self, inner_iter=None, outer_iter=None):
         """
+        fit(inner_iter=None, outer_iter=None)
+
         Estimate season, trend and residuals components.
 
         Parameters

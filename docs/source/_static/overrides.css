@@ -146,3 +146,12 @@ div.sphinxsidebar #searchbox input[type="text"] {
 .dropdown-content a:hover {
     background-color: #4675f3 !important;
 }
+
+code {
+    font-family: "Roboto Mono", monospace;
+}
+
+
+div.footer {
+    background-color: #f8f8f8 !important;
+}
