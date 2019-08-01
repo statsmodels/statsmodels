@@ -50,6 +50,7 @@ We also encourage users to submit their own examples, tutorials or cool
    notebooks/generated/statespace_concentrated_scale
    notebooks/generated/statespace_cycles
    notebooks/generated/statespace_dfm_coincident
+   notebooks/generated/statespace_fixed_params
    notebooks/generated/statespace_forecasting
    notebooks/generated/statespace_local_linear_trend
    notebooks/generated/statespace_sarimax_internet
