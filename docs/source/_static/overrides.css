@@ -136,3 +136,13 @@ div.sphinxsidebar #searchbox input[type="text"] {
 .sphinxsidebarwrapper h3 a {
     color: #f8f8f8 !important;
 }
+
+/* Links inside the dropdown */
+.dropdown-content a {
+    color: #f8f8f8 !important;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content a:hover {
+    background-color: #4675f3 !important;
+}
