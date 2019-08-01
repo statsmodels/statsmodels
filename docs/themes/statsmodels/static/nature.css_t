@@ -97,7 +97,7 @@ div.body {
 
 /* -------------- Footer -------------- */
 div.footer {
-    background-color: ffffff;
+    background-color: #ffffff;
     color: #272A2D;
     width: 100%;
     padding: 13px 0;
@@ -131,7 +131,7 @@ div.sphinxsidebar h4{
 }
 div.sphinxsidebar p {
     /*color: #888;*/
-    color: #272A2D
+    color: #272A2D;
     padding: 5px 15px;
 }
 div.sphinxsidebar ul {
@@ -160,7 +160,7 @@ div.body h4,
 div.body h5,
 div.body h6 {
     font-family: "Georgia", "Times New Roman", serif;
-    font-weight: normal; }
+    font-weight: normal;
 }
 
 div.body h1{
