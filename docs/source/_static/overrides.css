@@ -7,6 +7,8 @@ body {
     font-family: 'Roboto', sans-serif !important;
     font-size: 0.8rem !important;
     background-color: #f8f8f8;
+    -webkit-font-feature-settings: "kern", "liga";
+    font-feature-settings: "kern", "liga";
 }
 
 div.documentwrapper {
@@ -25,7 +27,7 @@ div.body h6 {
 
 pre {
     font-family: 'Roboto Mono', monospace !important;
-    font-size: 1.0em !important;
+    font-size: 0.8rem !important;
     background-color: #f0f0f0 !important;
 }
 
@@ -53,11 +55,12 @@ div.sphinxsidebar h3, div.sphinxsidebar h4 {
     font-family: 'Roboto', sans-serif !important;
     margin: 0 -5px !important;
     padding: 5px 11px;
+    font-size: 1.0rem !important;
 }
 
 span.pre {
     font-family: 'Roboto Mono', monospace !important;
-    font-size: 0.8rem !important;
+    font-size: 0.65rem !important;
 }
 
 div.seealso {
@@ -116,4 +119,20 @@ div.sphinxsidebar {
 div.sphinxsidebar #searchbox input[type="text"] {
     width: 165px !important;
     margin: 0 5px !important;
+}
+
+.dropbtn {
+    background-color: #3050a6 !important;
+    color: #f8f8f8 !important;
+    font-size: 0.8rem !important;
+}
+
+
+.dropdown-content {
+    background-color: #3050a6 !important;
+    color: #f8f8f8 !important;
+}
+
+.sphinxsidebarwrapper h3 a {
+    color: #f8f8f8 !important;
 }

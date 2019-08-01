@@ -20,7 +20,7 @@
    {% endblock %}
    {% block attributes %}
    {% if attributes %}
-   .. rubric:: Attributes
+   .. rubric:: Properties
 
    .. autosummary::
       :toctree: generated/
