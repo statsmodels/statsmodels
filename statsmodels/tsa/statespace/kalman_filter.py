@@ -2055,62 +2055,16 @@ class FilterResults(FrozenRepresentation):
                 'loglikelihood_burn': self.loglikelihood_burn
             }
             model_kwargs.update(representation)
-            model = self.model.__class__(
-                endog, self.k_states, self.k_posdef, **model_kwargs
-            )
+            model = KalmanFilter(
+                endog, self.k_states, self.k_posdef, **model_kwargs)
             model.initialization = self.initialization
             model._initialize_filter()
             model._initialize_state()
 
-            results = self._predict(nstatic, ndynamic, nforecast, model)
+            results = model.filter()
 
         return PredictionResults(results, start, end, nstatic, ndynamic,
                                  nforecast)
-
-    def _predict(self, nstatic, ndynamic, nforecast, model):
-        # Note: this does not use self, and can either be a static method or
-        #       moved outside the class altogether.
-
-        # Get the underlying filter
-        kfilter = model._kalman_filter
-
-        # Save this (which shares memory with the memoryview on which the
-        # Kalman filter will be operating) so that we can replace actual data
-        # with predicted data during dynamic forecasting
-        endog = model._representations[model.prefix]['obs']
-
-        for t in range(kfilter.model.nobs):
-            # Run the Kalman filter for the first `nstatic` periods (for
-            # which dynamic computation will not be performed)
-            if t < nstatic:
-                next(kfilter)
-            # Perform dynamic prediction
-            elif t < nstatic + ndynamic:
-                design_t = 0 if model.design.shape[2] == 1 else t
-                obs_intercept_t = 0 if model.obs_intercept.shape[1] == 1 else t
-
-                # Unconditional value is the intercept (often zeros)
-                endog[:, t] = model.obs_intercept[:, obs_intercept_t]
-                # If t > 0, then we can condition the forecast on the state
-                if t > 0:
-                    # Predict endog[:, t] given `predicted_state` calculated in
-                    # previous iteration (i.e. t-1)
-                    endog[:, t] += np.dot(
-                        model.design[:, :, design_t],
-                        kfilter.predicted_state[:, t]
-                    )
-
-                # Advance Kalman filter
-                next(kfilter)
-            # Perform any (one-step-ahead) forecasting
-            else:
-                next(kfilter)
-
-        # Return the predicted state and predicted state covariance matrices
-        results = FilterResults(model)
-        results.update_representation(model)
-        results.update_filter(kfilter)
-        return results
 
 
 class PredictionResults(FilterResults):
