@@ -88,7 +88,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    kwargs
+    **kwargs
         The keyword arguments are passed to the plot command for the fitted
         values points.
 
@@ -330,7 +330,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     ret_coords : bool
         If True will return the coordinates of the points in the plot. You
         can use this to add your own annotations.
-    kwargs
+    **kwargs
         The keyword arguments passed to plot for the points.
 
     Returns
@@ -752,7 +752,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         is (intercept, slope)
     ax : axes, optional
         Matplotlib axes instance
-    kwargs
+    **kwargs
         Options passed to matplotlib.pyplot.plt
 
     Returns

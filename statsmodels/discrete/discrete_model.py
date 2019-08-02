@@ -224,6 +224,7 @@ class DiscreteModel(base.LikelihoodModel):
                         qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
+
         The regularization method AND the solver used is determined by the
         argument method.
 
@@ -245,7 +246,7 @@ class DiscreteModel(base.LikelihoodModel):
             Set to True to print convergence messages.
         fargs : tuple
             Extra arguments passed to the likelihood function, i.e.,
-            loglike(x,*args)
+            loglike(x,*args).
         callback : callable callback(xk)
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
@@ -253,21 +254,28 @@ class DiscreteModel(base.LikelihoodModel):
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
         alpha : non-negative scalar or numpy array (same size as parameters)
-            The weight multiplying the l1 penalty term
+            The weight multiplying the l1 penalty term.
         trim_mode : 'auto, 'size', or 'off'
             If not 'off', trim (set to zero) parameters that would have been
             zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
-            If 'size', trim params if they have very small absolute value
+            If 'size', trim params if they have very small absolute value.
         size_trim_tol : float or 'auto' (default = 'auto')
-            For use when trim_mode == 'size'
+            Tolerance used when trim_mode == 'size'.
         auto_trim_tol : float
-            For sue when trim_mode == 'auto'.  Use
+            Tolerance used when trim_mode == 'auto'.
         qc_tol : float
             Print warning and do not allow auto trim when (ii) (above) is
             violated by this much.
         qc_verbose : bool
-            If true, print out a full QC report upon failure
+            If true, print out a full QC report upon failure.
+        **kwargs
+            Additional keyword arguments used when fitting the model.
+
+        Returns
+        -------
+        Results
+            A results instance.
 
         Notes
         -----
@@ -289,7 +297,6 @@ class DiscreteModel(base.LikelihoodModel):
                 refinement : int
                     number of iterative refinement steps when solving KKT
                     equations (default: 1).
-
 
         Optimization methodology
 
@@ -3436,8 +3443,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         """
         return stats.distributions.chi2.sf(self.llr, self.df_model)
 
-    def set_null_options(self, llnull=None, attach_results=True, **kwds):
-        """set fit options for Null (constant-only) model
+    def set_null_options(self, llnull=None, attach_results=True, **kwargs):
+        """
+        Set the fit options for the Null (constant-only) model.
 
         This resets the cache for related attributes which is potentially
         fragile. This only sets the option, the null model is estimated
@@ -3445,7 +3453,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        llnull : None or float
+        llnull : {None, float}
             If llnull is not None, then the value will be directly assigned to
             the cached attribute "llnull".
         attach_results : bool
@@ -3453,14 +3461,13 @@ class DiscreteResults(base.LikelihoodModelResults):
             model should be attached. By default without calling this method,
             thenull model results are not attached and only the loglikelihood
             value llnull is stored.
-        kwds : keyword arguments
-            `kwds` are directly used as fit keyword arguments for the null
-            model, overriding any provided defaults.
+        **kwargs
+            Additional keyword arguments used as fit keyword arguments for the
+            null model. The override and model default values.
 
-        Returns
-        -------
-        no returns, modifies attributes of this instance
-
+        Notes
+        -----
+        Modifies attributes of this instance, and so has no return.
         """
         # reset cache, note we need to add here anything that depends on
         # llnullor the null model. If something is missing, then the attribute
@@ -3475,7 +3482,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         if llnull is not None:
             self._cache['llnull'] = llnull
         self._attach_nullmodel = attach_results
-        self._optim_kwds_null = kwds
+        self._optim_kwds_null = kwargs
 
     @cache_readonly
     def llnull(self):
@@ -3629,7 +3636,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
-        """Summarize the Regression Results
+        """
+        Summarize the Regression Results.
 
         Parameters
         ----------
@@ -3652,7 +3660,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary results
+        statsmodels.iolib.summary.Summary : Class that hold summary results.
         """
 
         top_left = [('Dep. Variable:', None),
@@ -3699,7 +3707,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
-        """Experimental function to summarize regression results
+        """
+        Experimental function to summarize regression results.
 
         Parameters
         ----------
@@ -3724,7 +3733,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary2.Summary : class to hold summary results
+        statsmodels.iolib.summary2.Summary : Class that holds summary results.
         """
         from statsmodels.iolib import summary2
         smry = summary2.Summary()

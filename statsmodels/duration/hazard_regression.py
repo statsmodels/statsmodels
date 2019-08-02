@@ -427,7 +427,10 @@ class PHReg(model.LikelihoodModel):
             dependent.  If present, the standard errors account for
             this dependence. Does not affect fitted values.
 
-        Returns a PHregResults instance.
+        Returns
+        -------
+        PHRegResults
+            Returns a results instance.
         """
 
         # TODO process for missing values
@@ -473,10 +476,13 @@ class PHReg(model.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        **kwargs
+            Additional keyword arguments used to fit the model.
 
         Returns
         -------
-        A results object.
+        PHRegResults
+            Returns a results instance.
 
         Notes
         -----

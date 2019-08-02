@@ -32,7 +32,7 @@ class Family(object):
 
     See Also
     --------
-    :ref:`links`
+    :ref:`links` : Further details on links.
     """
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
@@ -389,8 +389,8 @@ class Poisson(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
@@ -515,8 +515,8 @@ class Gaussian(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -659,8 +659,8 @@ class Gamma(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
@@ -793,8 +793,8 @@ class Binomial(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
@@ -1032,14 +1032,13 @@ class InverseGaussian(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
     The inverse Gaussian distribution is sometimes referred to in the
     literature as the Wald distribution.
-
     """
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
@@ -1170,8 +1169,8 @@ class NegativeBinomial(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
@@ -1360,8 +1359,8 @@ class Tweedie(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----

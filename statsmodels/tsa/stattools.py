@@ -128,7 +128,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
              store=False, regresults=False):
     """
-    Augmented Dickey-Fuller unit root test
+    Augmented Dickey-Fuller unit root test.
 
     The Augmented Dickey-Fuller test can be used to test for a unit root in a
     univariate process in the presence of serial correlation.
@@ -136,17 +136,20 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     Parameters
     ----------
     x : array_like, 1d
-        data series
+        The data series to test.
     maxlag : int
-        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
+        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}.
     regression : {'c','ct','ctt','nc'}
-        Constant and trend order to include in regression
+        Constant and trend order to include in regression.
 
         * 'c' : constant only (default)
         * 'ct' : constant and trend
         * 'ctt' : constant, and linear and quadratic trend
         * 'nc' : no constant, no trend
+
     autolag : {'AIC', 'BIC', 't-stat', None}
+        Method to use when automatically determining the lag.
+
         * if None, then maxlag lags are used
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
           to minimize the corresponding information criterion
@@ -155,28 +158,28 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
           using a 5%-sized test
     store : bool
         If True, then a result instance is returned additionally to
-        the adf statistic. Default is False
+        the adf statistic. Default is False.
     regresults : bool, optional
-        If True, the full regression results are returned. Default is False
+        If True, the full regression results are returned. Default is False.
 
     Returns
     -------
     adf : float
-        Test statistic
+        The test statistic.
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994, 2010)
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
     usedlag : int
-        Number of lags used
+        The number of lags used.
     nobs : int
-        Number of observations used for the ADF regression and calculation of
-        the critical values
+        The number of observations used for the ADF regression and calculation
+        of the critical values.
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels. Based on MacKinnon (2010)
+        levels. Based on MacKinnon (2010).
     icbest : float
         The maximized information criterion if autolag is not None.
     resstore : ResultStore, optional
-        A dummy class with results attached as attributes
+        A dummy class with results attached as attributes.
 
     Notes
     -----
@@ -191,10 +194,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     The autolag option and maxlag for it are described in Greene.
 
-    Examples
-    --------
-    See example notebook
-
     References
     ----------
     .. [*] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -208,6 +207,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
+
+    Examples
+    --------
+    See example notebook
     """
     x = array_like(x, 'x')
     maxlag = int_like(maxlag, 'maxlag', optional=True)

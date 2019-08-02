@@ -84,18 +84,6 @@ _fit_regularized_doc =\
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-        distributed : bool
-            If True, the model uses distributed methods for fitting,
-            will raise an error if True and partitions is None.
-        generator : function
-            The generator used to partition the model, allows for handling
-            of out of memory/parallel computing.
-        partitions : scalar
-            The number of partitions desired for the distributed
-            estimation.
-        threshold : scalar or array_like
-            The threshold below which coefficients are zeroed out,
-            only used for distributed estimation.
         **kwargs
             Additional keyword arguments that contain information used when
             constructing a model using the formula interface.
@@ -245,6 +233,7 @@ class RegressionModel(base.LikelihoodModel):
         self._df_resid = value
 
     def whiten(self, x):
+        """Must be overwritten by individual models."""
         raise NotImplementedError("Subclasses should implement.")
 
     def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
@@ -1625,7 +1614,7 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def wresid(self):
         """
-        The residuals of the transformed/whitened regressand and regressor(s)
+        The residuals of the transformed/whitened regressand and regressor(s).
         """
         return self.model.wendog - self.model.predict(
             self.params, self.model.wexog)
@@ -1804,7 +1793,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def f_pvalue(self):
-        """p-value of the F-statistic"""
+        """The p-value of the F-statistic."""
         return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
 
     @cache_readonly

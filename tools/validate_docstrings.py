@@ -78,7 +78,7 @@ MODULES = ('api',
            'stats.anova',
            'stats.mediation',
            'tsa.seasonal')
-
+ALLOW_SINGLE_LINE_DOCSTRINGS = True
 members = []
 for mod in MODULES:
     imp = importlib.import_module('statsmodels.' + mod)
@@ -420,6 +420,12 @@ class Docstring(object):
         return i
 
     @property
+    def single_line_docstring(self):
+        return (self.raw_doc and
+                '\n' not in self.raw_doc and
+                ALLOW_SINGLE_LINE_DOCSTRINGS)
+
+    @property
     def double_blank_lines(self):
         prev = True
         for row in self.raw_doc.split('\n'):
@@ -476,17 +482,26 @@ class Docstring(object):
                 # accessor classes have a signature but don't want to show this
                 return tuple()
         try:
-            sig = inspect.getfullargspec(self.obj)
+            sig = inspect.signature(self.obj)
         except (TypeError, ValueError):
             # Some objects, mainly in C extensions do not support introspection
             # of the signature
             return tuple()
-        params = sig.args
-        if sig.varargs:
-            params.append('*' + sig.varargs)
-        if sig.varkw:
-            params.append('**' + sig.varkw)
-        params = tuple(params)
+        params = list(sig.parameters.keys())
+        out_params = params[:]
+        kind = inspect.Parameter.VAR_POSITIONAL
+        varargs = [key for key in params if sig.parameters[key].kind == kind]
+        if varargs:
+            out_params = ['*' + param if param == varargs[0] else param
+                          for param in out_params]
+
+        kind = inspect.Parameter.VAR_KEYWORD
+        varkw = [key for key in params if sig.parameters[key].kind == kind]
+        if varkw:
+            out_params = ['**' + param if param == varkw[0] else param
+                          for param in out_params]
+
+        params = tuple(out_params)
         if params and params[0] in ('self', 'cls'):
             return params[1:]
         return params
@@ -714,9 +729,9 @@ def get_validation_data(doc):
         errs.append(error('GL08'))
         return errs, wrns, ''
 
-    if doc.start_blank_lines != 1:
+    if doc.start_blank_lines != 1 and not doc.single_line_docstring:
         errs.append(error('GL01'))
-    if doc.end_blank_lines != 1:
+    if doc.end_blank_lines != 1 and not doc.single_line_docstring:
         errs.append(error('GL02'))
     if doc.double_blank_lines:
         errs.append(error('GL03'))
@@ -748,7 +763,9 @@ def get_validation_data(doc):
     else:
         if not doc.summary[0].isupper():
             errs.append(error('SS02'))
-        if doc.summary[-1] != '.':
+        if (doc.summary[-1] != '.' and
+                not doc.single_line_docstring and
+                ALLOW_SINGLE_LINE_DOCSTRINGS):
             errs.append(error('SS03'))
         if doc.summary != doc.summary.lstrip():
             errs.append(error('SS04'))
