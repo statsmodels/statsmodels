@@ -367,9 +367,12 @@ div.searchformwrapper {
 
 span.pre {
     font-family: 'Roboto Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.8rem;
 }
 
+.classifier {
+    font-style: normal;
+}
 
 div.sphinxsidebar a {
 }
@@ -381,3 +384,4 @@ div.sphinxsidebar a {
 dt:target {
     background-color: #dbecfd;
 }
+
