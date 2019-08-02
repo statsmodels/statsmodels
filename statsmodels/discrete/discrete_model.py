@@ -25,7 +25,7 @@ from scipy.special import gammaln, digamma, polygamma, loggamma
 from scipy import stats, special
 from scipy.stats import nbinom
 
-from statsmodels.compat pandas import Appender
+from statsmodels.compat.pandas import Appender
 
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools

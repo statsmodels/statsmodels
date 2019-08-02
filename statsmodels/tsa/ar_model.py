@@ -826,7 +826,7 @@ class ARResults(tsa_model.TimeSeriesModelResults):
         return self.model.predict(self.params)
 
     # Same docstring as AR.predict, but with "params" parameter removed
-    @Appender('\n'.join(preddoc[:5] + preddoc[7:]))
+    @Appender('\n'.join(_preddoc[:5] + _preddoc[7:]))
     def predict(self, start=None, end=None, dynamic=False):
         """
         Returns in-sample and out-of-sample prediction.
