@@ -385,3 +385,14 @@ dt:target {
     background-color: #dbecfd;
 }
 
+div.body h1 span.pre {
+   font-size: 2.0rem;
+}
+
+div.body h2 span.pre {
+  font-size: 1.5rem;
+}
+
+div.body h3 span.pre {
+  font-size: 1.136rem;
+}
