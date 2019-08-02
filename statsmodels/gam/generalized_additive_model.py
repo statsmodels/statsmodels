@@ -468,7 +468,8 @@ wrap.populate_wrapper(GLMGamResultsWrapper, GLMGamResults)
 
 
 class GLMGam(PenalizedMixin, GLM):
-    """Model class for generalized additive models, GAM.
+    """
+    Model class for generalized additive models (GAM).
 
     This inherits from `GLM`.
 
@@ -479,25 +480,25 @@ class GLMGam(PenalizedMixin, GLM):
     Parameters
     ----------
     endog : array_like
+        The response variable.
     exog : array_like or None
         This explanatory variables are treated as linear. The model in this
         case is a partial linear model.
-    smoother : instance of additive smoother class such as Bsplines or
-        CyclicCubicSplines
-        This is a required keyword argument
+    smoother : instance of additive smoother class
+        Examples of smoother instances include Bsplines or CyclicCubicSplines.
     alpha : list of floats
-        penalization weights for smooth terms. The length of the list needs
+        Penalization weights for smooth terms. The length of the list needs
         to be the same as the number of smooth terms in the ``smoother``
     family : instance of GLM family
-        see GLM
+        See GLM.
     offset : None or array_like
-        see GLM
+        See GLM.
     exposure : None or array_like
-        see GLM
+        See GLM.
     missing : 'none'
-        missing value handling is not supported in this class
-    kwargs :
-        extra keywords are used in call to the super classes.
+        Missing value handling is not supported in this class.
+    **kwargs
+        Extra keywords are used in call to the super classes.
 
     Notes
     -----

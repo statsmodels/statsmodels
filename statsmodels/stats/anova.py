@@ -452,7 +452,7 @@ class AnovaRM(object):
 
     Returns
     -------
-    results: AnovaResults instance
+    results : AnovaResults instance
 
     Raises
     ------

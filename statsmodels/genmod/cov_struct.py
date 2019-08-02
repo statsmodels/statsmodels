@@ -679,7 +679,7 @@ class Autoregressive(CovStruct):
 
     Parameters
     ----------
-    dist_func: function from R^k x R^k to R^+, optional
+    dist_func : function from R^k x R^k to R^+, optional
         A function that computes the distance between the two
         observations based on their `time` values.
 

@@ -450,7 +450,7 @@ class LagOrderResults:
         The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
         ``"fpe"``. A corresponding value is a list of information criteria for
         various numbers of lags.
-    selected_orders: dict
+    selected_orders : dict
         The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
         ``"fpe"``. The corresponding value is an integer specifying the number
         of lags chosen according to a given criterion (key).

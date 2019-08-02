@@ -663,8 +663,11 @@ class DistributedResults(LikelihoodModelResults):
             The values for which we want to predict, unlike standard
             predict this is NOT optional since the data in self.model
             is fake.
-        args, kwargs :
-            Some models can take additional arguments or keywords, see the
+        *args :
+            Some models can take additional arguments. See the
+            predict method of the model for the details.
+        **kwargs :
+            Some models can take additional keywords arguments. See the
             predict method of the model for the details.
 
         Returns

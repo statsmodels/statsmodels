@@ -22,8 +22,9 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
 
     Parameters
     ----------
-    m1, m2: pandas Series or array_like
-    sd_limit : float, default 1.96
+    m1, m2 : array_like
+        Both inputs must be 1-d arrays.
+    sd_limit : float
         The limit of agreements expressed in terms of the standard deviation of
         the differences. If `md` is the mean of the differences, and `sd` is
         the standard deviation of those differences, then the limits of
@@ -35,16 +36,16 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
         of the differences.
         If sd_limit = 0, no limits will be plotted, and the ylimit of the plot
         defaults to 3 standard deviations on either side of the mean.
-    ax: matplotlib AxesSubplot instance, optional
+    ax : matplotlib AxesSubplot instance, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, the mean difference plot is drawn on the axis.
-    scatter_kwargs: keywords
+    scatter_kwargs : dict
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.scatter plotting method
-    mean_line_kwds: keywords
+    mean_line_kwds : dict
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.axhline plotting method
-    limit_lines_kwds: keywords
+    limit_lines_kwds : dict
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.axhline plotting method
 

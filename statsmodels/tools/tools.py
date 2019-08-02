@@ -327,7 +327,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
 
 def isestimable(C, D):
-    """ True if (Q, P) contrast `C` is estimable for (N, P) design `D`
+    """
+    True if (Q, P) contrast `C` is estimable for (N, P) design `D`
 
     From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
     the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
@@ -337,7 +338,7 @@ def isestimable(C, D):
     ----------
     C : (Q, P) array_like
         contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
-    D: (N, P) array_like
+    D : (N, P) array_like
         design matrix
 
     Returns

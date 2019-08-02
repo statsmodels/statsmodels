@@ -71,7 +71,7 @@ class Factor(Model):
         likelihood estimation.
     smc : True or False
         Whether or not to apply squared multiple correlations (method='pa')
-    endog_names: str
+    endog_names : str
         Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
     nobs : int

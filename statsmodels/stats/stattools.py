@@ -245,18 +245,18 @@ def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
 
     Parameters
     ----------
-    ab: iterable, optional
+    ab : iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db: iterable, optional
+    db : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
         used in the the standardization of the measure
 
     Returns
     -------
-    ekr: array, 4-element
+    ekr : array, 4-element
         Contains the expected values of the 4 robust kurtosis measures
 
     Notes
@@ -293,11 +293,11 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     axis : int or None, optional
         Axis along which the kurtosis are computed.  If `None`, the
         entire array is used.
-    ab: iterable, optional
+    a iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db: iterable, optional
+    db : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
         used in the the standardization of the measure

@@ -15,7 +15,7 @@ from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
 
 _hypotheses_doc = \
-"""hypotheses: A list of tuples
+"""hypotheses : list[tuple]
     Hypothesis `L*B*M = C` to be tested where B is the parameters in
     regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
 

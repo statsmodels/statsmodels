@@ -71,7 +71,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     model : model object
         A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
-    method :
+    method : {'coord_descent'}
         Only the coordinate descent algorithm is implemented.
     maxiter : int
         The maximum number of iteration cycles (an iteration cycle

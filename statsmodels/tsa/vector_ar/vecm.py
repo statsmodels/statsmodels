@@ -238,9 +238,9 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
     ----------
     endog : ndarray (neqs x nobs_tot)
         The whole sample including the presample.
-    exog: ndarray (nobs_tot x neqs) or None
+    exog : ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None
+    exog_coint : ndarray (nobs_tot x neqs) or None
         Deterministic terms inside the cointegration relation.
     diff_lags : int
         Number of lags in the VEC representation.
@@ -765,9 +765,9 @@ class VECM(tsbase.TimeSeriesModel):
     ----------
     endog : array_like (nobs_tot x neqs)
         2-d endogenous response variable.
-    exog: ndarray (nobs_tot x neqs) or None
+    exog : ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None
+    exog_coint : ndarray (nobs_tot x neqs) or None
         Deterministic terms inside the cointegration relation.
     dates : array_like of datetime, optional
         See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more

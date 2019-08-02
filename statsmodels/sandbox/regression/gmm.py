@@ -78,7 +78,7 @@ class IV2SLS(LikelihoodModel):
 
     Parameters
     ----------
-    endog: array
+    endog : array
        Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
     exog : array
        Explanatory variables, 1-dimensional or 2-dimensional array nobs by k

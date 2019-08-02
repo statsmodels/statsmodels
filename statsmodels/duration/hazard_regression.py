@@ -453,7 +453,6 @@ class PHReg(model.LikelihoodModel):
 
         return results
 
-
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
         r"""
@@ -461,7 +460,7 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        method :
+        method : {'elastic_net'}
             Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
@@ -474,7 +473,6 @@ class PHReg(model.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-
 
         Returns
         -------

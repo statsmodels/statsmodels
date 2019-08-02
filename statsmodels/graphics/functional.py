@@ -174,7 +174,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     threshold : float between 0 and 1, optional
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
-    bw: array_like or str, optional
+    bw : array_like or str, optional
         If an array, it is a fixed user-specified bandwidth. If `None`, set to
         `normal_reference`. If a string, should be one of:
 

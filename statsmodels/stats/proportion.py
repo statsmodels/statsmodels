@@ -386,13 +386,15 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
     return n
 
 def proportion_effectsize(prop1, prop2, method='normal'):
-    '''effect size for a test comparing two proportions
+    '''
+    Effect size for a test comparing two proportions
 
     for use in power function
 
     Parameters
     ----------
-    prop1, prop2: float or array_like
+    prop1, prop2 : float or array_like
+        The proportion value(s).
 
     Returns
     -------

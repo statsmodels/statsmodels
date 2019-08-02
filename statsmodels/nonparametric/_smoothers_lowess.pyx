@@ -38,23 +38,23 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
     Parameters
     ----------
-    endog: 1-D numpy array
+    endog : 1-D numpy array
         The y-values of the observed points
-    exog: 1-D numpy array
+    exog : 1-D numpy array
         The x-values of the observed points. exog has to be increasing.
-    frac: float
+    frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
-    it: int
+    it : int
         The number of residual-based reweightings
         to perform.
-    delta: float
+    delta : float
         Distance within which to use linear-interpolation
         instead of weighted regression.
 
     Returns
     -------
-    out: numpy array
+    out : numpy array
         A numpy array with two columns. The first column
         is the sorted x values and the second column the
         associated estimated y-values.
@@ -457,26 +457,26 @@ def update_indices(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Parameters
     ----------
-    x: 1-D numpy array
+    x : 1-D numpy array
         The vector of input x-values.
-    y_fit: 1-D numpy array
+    y_fit : 1-D numpy array
         The vector of fitted y-values
-    delta: float
+    delta : float
         Indicates the range of x values within which linear
         interpolation should be used to estimate y_fit instead
         of weighted regression.
-    i: indexing integer
+    i : indexing integer
         The index of the current point being fit.
-    n: indexing integer
+    n : indexing integer
         The length of the input vectors, x and y.
-    last_fit_i: indexing integer
+    last_fit_i : indexing integer
         The last point at which y_fit was calculated.
 
     Returns
     -------
-    i: indexing integer
+    i : indexing integer
         The next point at which to run a weighted regression.
-    last_fit_i: indexing integer
+    last_fit_i : indexing integer
         The updated last point at which y_fit was calculated
 
     Notes

@@ -313,7 +313,6 @@ class DiscreteModel(base.LikelihoodModel):
 
         (i) :math:`|\\partial_k L| = \\alpha_k`  and  :math:`\\beta_k \\neq 0`
         (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\beta_k = 0`
-
         """
         _validate_l1_method(method)
         # Set attributes based on method
@@ -1323,7 +1322,7 @@ class GeneralizedPoisson(CountModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' :
     """
-    p: scalar
+    p : scalar
         P denotes parameterizations for GP regression. p=1 for GP-1 and
         p=2 for GP-2. Default is p=1.
     offset : array_like
@@ -1842,7 +1841,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params: array_like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -1867,7 +1866,7 @@ class Logit(BinaryModel):
 
         Parameters
         ----------
-        params: array_like
+        params : array_like
             The parameters of the model
 
         Returns

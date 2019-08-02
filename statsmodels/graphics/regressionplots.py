@@ -953,7 +953,7 @@ def plot_leverage_resid2(results, alpha=.05, ax=None, **kwargs):
     return res
 
 plot_leverage_resid2.__doc__ = _plot_leverage_resid2_doc.format({
-    'extra_params_doc' : "results: object\n"
+    'extra_params_doc' : "results : object\n"
                          "    Results for a fitted regression model"})
 
 
@@ -985,7 +985,7 @@ def plot_added_variable(results, focus_exog, resid_type=None,
     return fig
 
 plot_added_variable.__doc__ = _plot_added_variable_doc % {
-    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
+    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
 def plot_partial_residuals(results, focus_exog, ax=None):
     # Docstring attached below
@@ -1012,7 +1012,7 @@ def plot_partial_residuals(results, focus_exog, ax=None):
     return fig
 
 plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
-    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
+    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
 def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
                ax=None):
@@ -1038,7 +1038,7 @@ def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
     return fig
 
 plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
-    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
+    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
 def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     """
