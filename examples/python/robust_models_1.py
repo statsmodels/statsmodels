@@ -123,7 +123,7 @@ x.mean()
 
 np.median(x)
 
-# * Analagously for the scale
+# * Analogously for the scale
 # * The standard deviation is not robust
 
 x.std()

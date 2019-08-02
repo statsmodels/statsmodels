@@ -74,7 +74,7 @@ fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
 # plots, otherwise known as added variable plots. <br />
 #
 # In a partial regression plot, to discern the relationship between the
-# response variable and the $k$-th variabe, we compute <br />
+# response variable and the $k$-th variable, we compute <br />
 # the residuals by regressing the response variable versus the independent
 # variables excluding $X_k$. We can denote this by <br />
 # $X_{\sim k}$. We then compute the residuals by regressing $X_k$ on
@@ -88,7 +88,7 @@ fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
 # individual data values on the estimation of a coefficient easily. If
 # obs_labels is True, then these points are annotated <br />
 # with their observation label. You can also see the violation of
-# underlying assumptions such as homooskedasticity and <br />
+# underlying assumptions such as homoskedasticity and <br />
 # linearity.
 
 fig, ax = plt.subplots(figsize=(12, 8))

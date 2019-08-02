@@ -353,6 +353,7 @@ numpydoc_xref_aliases = {
     'Figure': 'matplotlib.figure.Figure',
     'DataFrame': 'pandas.DataFrame',
     'Series': 'pandas.Series',
+    'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
 }
 
 # Example configuration for intersphinx: refer to the Python standard library.

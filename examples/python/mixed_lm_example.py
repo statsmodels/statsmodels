@@ -47,7 +47,7 @@ print(mdf.summary())
 
 # Note that in the Statsmodels summary of results, the fixed effects and
 # random effects parameter estimates are shown in a single table.  The
-# random effect for animal is labeled "Intercept RE" in the Statmodels
+# random effect for animal is labeled "Intercept RE" in the Statsmodels
 # output above.  In the LME4 output, this effect is the pig intercept under
 # the random effects section.
 #
@@ -92,7 +92,7 @@ print(mdf.summary())
 #
 # Here is the same model fit using LMER in R (note that here R is
 # reporting the REML criterion instead of the likelihood, where the REML
-# criterion is twice the log likeihood):
+# criterion is twice the log likelihood):
 
 # ## Sitka growth data
 #

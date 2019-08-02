@@ -492,7 +492,7 @@ backend.qt5 : PyQt5
                                    # HTML5 video tag.
 #animation.writer : ffmpeg         # MovieWriter 'backend' to use
 #animation.codec : mpeg4           # Codec to use for writing movie
-#animation.bitrate: -1             # Controls size/quality tradeoff for movie.
+#animation.bitrate: -1             # Controls size/quality trade-off for movie.
                                    # -1 implies let utility auto-determine
 #animation.frame_format: 'png'     # Controls frame format used by temp files
 #animation.ffmpeg_path: 'ffmpeg'   # Path to ffmpeg binary. Without full path

@@ -81,7 +81,7 @@ df_infl = infl.summary_frame()
 
 df_infl[:5]
 
-# Now plot the reiduals within the groups separately:
+# Now plot the residuals within the groups separately:
 
 resid = lm.resid
 plt.figure(figsize=(6, 6))
