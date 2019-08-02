@@ -2028,34 +2028,31 @@ class LikelihoodModelResults(Results):
                               factor_labels=factor_labels)
         return res
 
-    def conf_int(self, alpha=.05, cols=None, method='default'):
+    def conf_int(self, alpha=.05, cols=None):
         """
         Construct confidence interval for the fitted parameters.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for the confidence interval.
-            The default `alpha` = .05 returns a 95% confidence interval.
+            The significance level for the confidence interval. The default
+            `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
             Specifies which confidence intervals to return.
-        method : str
-            Method to estimate the confidence_interval. Only 'default' is
-            implemented. Future support is planned for
-            "hjjh", "jac", "boot-bse", "boot_quant" "profile".
 
         Returns
         -------
-        conf_int : array
+        array_like
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
             lower, the second column contains all upper limits.
 
         Notes
         -----
-        The confidence interval is based on the standard normal distribution.
-        Models wish to use a different distribution should overwrite this
-        method.
+        The confidence interval is based on the standard normal distribution
+        if self.use_t is False. If self.use_t is True, then uses a Student's t
+        with self.df_resid_inference (or self.df_resid if df_resid_inference is
+        not defined) degrees of freedom.
 
         Examples
         --------
@@ -2086,13 +2083,13 @@ class LikelihoodModelResults(Results):
             dist = stats.norm
             q = dist.ppf(1 - alpha / 2)
 
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
+        params = self.params
+        lower = params - q * bse
+        upper = params + q * bse
+        if cols is not None:
             cols = np.asarray(cols)
-            lower = self.params[cols] - q * bse[cols]
-            upper = self.params[cols] + q * bse[cols]
+            lower = lower[cols]
+            upper = upper[cols]
         return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):
@@ -2102,7 +2099,7 @@ class LikelihoodModelResults(Results):
         Parameters
         ----------
         fname : {str, handle}
-            Either string filename or a valid file handle.
+            A string filename or a file handle.
         remove_data : bool
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
@@ -2130,7 +2127,7 @@ class LikelihoodModelResults(Results):
         Parameters
         ----------
         fname : {str, handle}
-            Either a string filename or a valid file handle.
+            A string filename or a file handle.
 
         Returns
         -------

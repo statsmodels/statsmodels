@@ -1734,6 +1734,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         The explained sum of squares divided by the model degrees of freedom.
         """
+        if np.all(self.df_model == 0.0):
+            return np.full_like(self.ess, np.nan)
         return self.ess/self.df_model
 
     @cache_readonly
@@ -1744,6 +1746,8 @@ class RegressionResults(base.LikelihoodModelResults):
         The sum of squared residuals divided by the residual degrees of
         freedom.
         """
+        if np.all(self.df_resid == 0.0):
+            return np.full_like(self.ssr, np.nan)
         return self.ssr/self.df_resid
 
     @cache_readonly
@@ -1754,6 +1758,8 @@ class RegressionResults(base.LikelihoodModelResults):
         The uncentered total sum of squares divided by the number of
         observations.
         """
+        if np.all(self.df_resid + self.df_model == 0.0):
+            return np.full_like(self.centered_tss, np.nan)
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:

@@ -132,7 +132,7 @@ class ModelData(object):
 
             if self.k_constant == 1:
                 if self.exog[:, const_idx].mean() != 0:
-                    self.const_idx = const_idx
+                    self.const_idx = int(const_idx)
                 else:
                     # we only have a zero column and no other constant
                     check_implicit = True
@@ -144,7 +144,7 @@ class ModelData(object):
                     value = self.exog[:, idx].mean()
                     if value == 1:
                         self.k_constant = 1
-                        self.const_idx = idx
+                        self.const_idx = int(idx)
                         break
                     values.append(value)
                 else:
@@ -153,7 +153,7 @@ class ModelData(object):
                     if pos.any():
                         # take the first nonzero column
                         self.k_constant = 1
-                        self.const_idx = const_idx[pos.argmax()]
+                        self.const_idx = int(const_idx[pos.argmax()])
                     else:
                         # only zero columns
                         check_implicit = True

@@ -11,8 +11,11 @@ import numpy as np
 from scipy import stats
 
 
-# this is similar to ContrastResults after t_test, partially copied and adjusted
+# this is similar to ContrastResults after t_test, copied and adjusted
 class PredictionResults(object):
+    """
+    Results class for predictions
+    """
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
                  df=None, dist=None, row_labels=None):
