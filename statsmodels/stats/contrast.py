@@ -596,7 +596,7 @@ def _constraints_factor(encoding_matrix, comparison='pairwise', k_params=None,
 def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
                     factor_labels=None, ignore=False):
     """
-    Perform pairwise t_test with multiple testing corrected p-values
+    Perform pairwise t_test with multiple testing corrected p-values.
 
     This uses the formula design_info encoding contrast matrix and should
     work for all encodings of a main effect.

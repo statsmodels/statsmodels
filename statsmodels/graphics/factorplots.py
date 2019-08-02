@@ -53,7 +53,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         If given, must have length == number of levels in trace.
     markers : list, optional
         If given, must have length == number of levels in trace
-    kwargs
+    **kwargs
         These will be passed to the plot command used either plot or scatter.
         If you want to control the overall plotting options, use kwargs.
 

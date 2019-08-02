@@ -60,16 +60,16 @@ def seasonal_mean(x, period):
 def seasonal_decompose(x, model="additive", filt=None, period=None,
                        two_sided=True, extrapolate_trend=0):
     """
-    Seasonal decomposition using moving averages
+    Seasonal decomposition using moving averages.
 
     Parameters
     ----------
     x : array_like
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
-    model : str {"additive", "multiplicative"}
+    model : {"additive", "multiplicative"}, optional
         Type of seasonal component. Abbreviations are accepted.
-    filt : array_like
+    filt : array_like, optional
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by
         two_sided.
@@ -77,7 +77,7 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
         Period of the series. Must be used if x is not a pandas object or if
         the index of x does not have  a frequency. Overrides default
         periodicity of x if x is a pandas object with a timeseries index.
-    two_sided : bool
+    two_sided : bool, optional
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the
         filt. If False, the filter coefficients are for past values only.
@@ -90,7 +90,7 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
 
     Returns
     -------
-    results : DecomposeResult
+    DecomposeResult
         A object with seasonal, trend, and resid attributes.
 
     See Also

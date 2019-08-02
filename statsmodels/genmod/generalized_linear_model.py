@@ -1224,10 +1224,13 @@ class GLM(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        **kwargs
+            Additional keyword arguments used when fitting the model.
 
         Returns
         -------
-        An array, or a GLMResults object of the same type returned by `fit`.
+        GLMResults
+            An array or a GLMResults object, same type returned by `fit`.
 
         Notes
         -----

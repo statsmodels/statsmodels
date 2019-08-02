@@ -910,7 +910,7 @@ matches the number of out-of-sample forecasts ({1})'
             an AR process according to best BIC. If start_ar_lags is not None,
             fits an AR process with a lag length equal to start_ar_lags.
             See ARMA._fit_start_params_hr for more information.
-        kwargs
+        **kwargs
             See Notes for keyword arguments that can be passed to fit.
 
         Returns
@@ -1178,7 +1178,7 @@ class ARIMA(ARMA):
             an AR process according to best BIC. If start_ar_lags is not None,
             fits an AR process with a lag length equal to start_ar_lags.
             See ARMA._fit_start_params_hr for more information.
-        kwargs
+        **kwargs
             See Notes for keyword arguments that can be passed to fit.
 
         Returns

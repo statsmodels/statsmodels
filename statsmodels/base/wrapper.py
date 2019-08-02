@@ -52,7 +52,7 @@ class ResultsWrapper(object):
 
     def save(self, fname, remove_data=False):
         """
-        Save a pickle of this instance
+        Save a pickle of this instance.
 
         Parameters
         ----------
@@ -73,6 +73,19 @@ class ResultsWrapper(object):
 
     @classmethod
     def load(cls, fname):
+        """
+        Load a pickled results instance.
+
+        Parameters
+        ----------
+        fname : {str, handle}
+            A string filename or a file handle.
+
+        Returns
+        -------
+        Results
+            The unpickled results instance.
+        """
         from statsmodels.iolib.smpickle import load_pickle
         return load_pickle(fname)
 

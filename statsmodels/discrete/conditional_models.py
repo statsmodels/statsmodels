@@ -158,10 +158,13 @@ class _ConditionalModel(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        **kwargs
+            Additional keyword argument that are used when fitting the model.
 
         Returns
         -------
-        An array of parameter estimates.
+        Results
+            A results instance.
         """
 
         from statsmodels.base.elastic_net import fit_elasticnet

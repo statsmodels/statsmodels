@@ -1018,8 +1018,8 @@ class Results(object):
 
         Returns
         -------
-        prediction : ndarray, pandas.Series or pandas.DataFrame
-            See self.model.predict
+        prediction : {ndarray, Series, DataFrame}
+            See self.model.predict.
 
         Notes
         -----
@@ -1038,7 +1038,6 @@ class Results(object):
 
         Row indices as in pandas data frames are supported, and added to the
         returned prediction.
-
         """
         import pandas as pd
 
@@ -1263,21 +1262,19 @@ class LikelihoodModelResults(Results):
 
     # by default we use normal distribution
     # can be overwritten by instances or subclasses
-    use_t = False
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  **kwargs):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
-
+        self._use_t = False
         # robust covariance
         # We put cov_type in kwargs so subclasses can decide in fit whether to
         # use this generic implementation
         if 'use_t' in kwargs:
             use_t = kwargs['use_t']
-            if use_t is not None:
-                self.use_t = use_t
+            self.use_t = use_t if use_t is not None else False
         if 'cov_type' in kwargs:
             cov_type = kwargs.get('cov_type', 'nonrobust')
             cov_kwds = kwargs.get('cov_kwds', {})
@@ -1318,6 +1315,14 @@ class LikelihoodModelResults(Results):
             # TODO: we should not need use_t in get_robustcov_results
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
+    @property
+    def use_t(self):
+        """Flag indicating to use the Student's distribution in inference."""
+        return self._use_t
+
+    @use_t.setter
+    def use_t(self, value):
+        self._use_t = bool(value)
 
     @cached_value
     def llf(self):
@@ -1488,9 +1493,9 @@ class LikelihoodModelResults(Results):
 
         See Also
         --------
-        tvalues : individual t statistics
-        f_test : for F tests
-        patsy.DesignInfo.linear_constraint
+        tvalues : Individual t statistics for the estimated parameters.
+        f_test : Perform an F tests on model parameters.
+        patsy.DesignInfo.linear_constraint : Specify a linear constraint.
 
         Examples
         --------
@@ -1635,10 +1640,10 @@ class LikelihoodModelResults(Results):
 
         See Also
         --------
-        statsmodels.stats.contrast.ContrastResults
-        wald_test
-        t_test
-        patsy.DesignInfo.linear_constraint
+        t_test : Perform a single hypothesis test.
+        wald_test : Perform a Wald-test using a quadratic form.
+        statsmodels.stats.contrast.ContrastResults : Test results.
+        patsy.DesignInfo.linear_constraint : Specify a linear constraint.
 
         Notes
         -----
@@ -1750,10 +1755,10 @@ class LikelihoodModelResults(Results):
 
         See Also
         --------
-        statsmodels.stats.contrast.ContrastResults
-        f_test
-        t_test
-        patsy.DesignInfo.linear_constraint
+        f_test : Perform an F tests on model parameters.
+        t_test : Perform a single hypothesis test.
+        statsmodels.stats.contrast.ContrastResults : Test results.
+        patsy.DesignInfo.linear_constraint : Specify a linear constraint.
 
         Notes
         -----
@@ -1837,7 +1842,7 @@ class LikelihoodModelResults(Results):
     def wald_test_terms(self, skip_single=False, extra_constraints=None,
                         combine_terms=None):
         """
-        Compute a sequence of Wald tests for terms over multiple columns
+        Compute a sequence of Wald tests for terms over multiple columns.
 
         This computes joined Wald tests for the hypothesis that all
         coefficients corresponding to a `term` are zero.
@@ -1887,7 +1892,6 @@ class LikelihoodModelResults(Results):
         C(Weight):C(Duration)   0.216694     0.897315972824              2
         Duration               11.187849     0.010752286833              3
         Weight                 30.263368  4.32586407145e-06              4
-
         """
         # lazy import
         from collections import defaultdict
@@ -1973,7 +1977,7 @@ class LikelihoodModelResults(Results):
     def t_test_pairwise(self, term_name, method='hs', alpha=0.05,
                         factor_labels=None):
         """
-        Perform pairwise t_test with multiple testing corrected p-values
+        Perform pairwise t_test with multiple testing corrected p-values.
 
         This uses the formula design_info encoding contrast matrix and should
         work for all encodings of a main effect.
@@ -1986,7 +1990,7 @@ class LikelihoodModelResults(Results):
             correspond to the main part of the exog names.
         method : {str, list[str]}
             The multiple testing p-value correction to apply. The default is
-            'hs'. See stats.multipletesting
+            'hs'. See stats.multipletesting.
         alpha : float
             The significance level for multiple testing reject decision.
         factor_labels : {list[str], None}
@@ -2142,7 +2146,8 @@ class LikelihoodModelResults(Results):
         return load_pickle(fname)
 
     def remove_data(self):
-        """remove data arrays, all nobs arrays from result and model
+        """
+        Remove data arrays, all nobs arrays from result and model.
 
         This reduces the size of the instance, so it can be pickled with less
         memory. Currently tested for use with predict from an unpickled

@@ -110,7 +110,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     Returns
     -------
-    A results object.
+    Results
+        A results object.
 
     Notes
     -----

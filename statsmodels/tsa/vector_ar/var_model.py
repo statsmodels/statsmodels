@@ -1296,8 +1296,6 @@ class VARResults(VARProcess):
             not count the zero lag, which will be returned.
         linewidth : int
             The linewidth for the plots.
-        plot_kwargs : kwargs
-            Will be passed to `matplotlib.pyplot.axvlines`
 
         Returns
         -------

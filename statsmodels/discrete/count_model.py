@@ -100,7 +100,7 @@ class GenericZeroInflated(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model
+        Loglikelihood of Generic Zero Inflated model.
 
         Parameters
         ----------
@@ -118,13 +118,12 @@ class GenericZeroInflated(CountModel):
         .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
             \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
             where P - pdf of main model, L - loglike function of main model.
-
         """
         return np.sum(self.loglikeobs(params))
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model
+        Loglikelihood for observations of Generic Zero Inflated model.
 
         Parameters
         ----------
@@ -135,7 +134,7 @@ class GenericZeroInflated(CountModel):
         -------
         loglike : ndarray
             The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
+            at `params`. See Notes for definition.
 
         Notes
         --------
@@ -144,7 +143,6 @@ class GenericZeroInflated(CountModel):
             where P - pdf of main model, L - loglike function of main model.
 
         for observations :math:`i=1,...,n`
-
         """
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]

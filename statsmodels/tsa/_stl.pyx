@@ -101,11 +101,11 @@ def _is_pos_int(x, odd):
 
 cdef class STL(object):
     """
-    STL(y, period=None, seasonal=7, trend=None, low_pass=None, seasonal_deg=0,
-        trend_deg=0, low_pass_deg=0, robust=False, seasonal_jump=1,
-        trend_jump=1, low_pass_jump=1)
+    STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
+        seasonal_deg=0, trend_deg=0, low_pass_deg=0, robust=False,
+        seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
-    Season-Trend decomposition using LOESS
+    Season-Trend decomposition using LOESS.
 
     Parameters
     ----------
@@ -126,26 +126,29 @@ cdef class STL(object):
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
     seasonal_deg : int, optional
-        Degree of seasonal LOESS. 0 (constant) or 1 (constant and trend)
+        Degree of seasonal LOESS. 0 (constant) or 1 (constant and trend).
     trend_deg : int, optional
-        Degree of trend LOESS. 0 (constant) or 1 (constant and trend)
+        Degree of trend LOESS. 0 (constant) or 1 (constant and trend).
     low_pass_deg : int, optional
-        Degree of low pass LOESS. 0 (constant) or 1 (constant and trend)
+        Degree of low pass LOESS. 0 (constant) or 1 (constant and trend).
     robust : bool, optional
         Flag indicating whether to use a weighted version that is robust to
-        some forms of outliers
+        some forms of outliers.
     seasonal_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
-        than 1, the LOESS is used every seasonal_jump points and values between
-        the two are linearly interpolated. Higher values reduce estimation time
+        than 1, the LOESS is used every seasonal_jump points and linear
+        interpolation is between fitted points. Higher values reduce
+        estimation time.
     trend_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
         than 1, the LOESS is used every trend_jump points and values between
-        the two are linearly interpolated. Higher values reduce estimation time
+        the two are linearly interpolated. Higher values reduce estimation
+        time.
     low_pass_jump : int, optional
         Positive integer determining the linear interpolation step. If larger
         than 1, the LOESS is used every low_pass_jump points and values between
-        the two are linearly interpolated. Higher values reduce estimation time
+        the two are linearly interpolated. Higher values reduce estimation
+        time.
 
     See Also
     --------

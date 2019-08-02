@@ -731,7 +731,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # #### `start_params`
 #
 # `start_params` are used as initial values in the optimizer. Since we are
-# adding three new parameters, we need to pass those in. If we nad not done
+# adding three new parameters, we need to pass those in. If we had not done
 # this, the optimizer would use the default starting values, which would be
 # three elements short.
 #
