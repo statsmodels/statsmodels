@@ -65,7 +65,7 @@ legend.prop.set_size(20)
 # #### Explore the hypothesis that inflation and unemployment are counter-
 # cyclical.
 
-# The Baxter-King filter is intended to explictly deal with the periodicty
+# The Baxter-King filter is intended to explicitly deal with the periodicity
 # of the business cycle. By applying their band-pass filter to a series,
 # they produce a new series that does not contain fluctuations at higher or
 # lower than those of the business cycle. Specifically, the BK filter takes

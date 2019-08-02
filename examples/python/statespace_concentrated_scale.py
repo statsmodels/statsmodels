@@ -189,7 +189,7 @@ print(res_conc.summary())
 # results attribute `mle_retvals`. It turns out that two fewer iterations
 # were required in this case, since there was one fewer parameter to select.
 # Moreover, since the numerical maximization problem was easier, the
-# optimizer was able to find a value that made the gradiant for this
+# optimizer was able to find a value that made the gradient for this
 # parameter slightly closer to zero than it was above.
 
 print(res_conc.mle_retvals)

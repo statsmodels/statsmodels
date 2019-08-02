@@ -34,7 +34,7 @@ from statsmodels.formula.api import ols
 
 sm.formula.ols
 
-# Or you can use the following conventioin
+# Or you can use the following convention
 
 import statsmodels.formula.api as smf
 

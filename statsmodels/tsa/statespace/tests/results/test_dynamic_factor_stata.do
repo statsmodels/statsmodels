@@ -66,7 +66,7 @@ predict dyn_predict_dfm_exog2_1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_dfm_exog2_2, dynamic(tq(1961q1)) equation(dln_inc)
 predict dyn_predict_dfm_exog2_3, dynamic(tq(1961q1)) equation(dln_consump)
 
-// Dynamic factors, with general errors (VAR + unstructured), on de-meaned data
+// Dynamic factors, with general errors (VAR + unstructured), on demeaned data
 // (have to demean, otherwise get non-stationarity start params for the error
 // VAR)
 dfactor (dln_inv dln_inc dln_consump = , noconstant ar(1) arstructure(general) covstructure(unstructured))  (f = , ar(1)) if qtr<=tq(1978q4)

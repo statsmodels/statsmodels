@@ -22,7 +22,7 @@ import statsmodels.api as sm
 
 from statsmodels.graphics.api import qqplot
 
-# ## Sunpots Data
+# ## Subspots Data
 
 print(sm.datasets.sunspots.NOTE)
 

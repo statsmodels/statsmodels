@@ -259,14 +259,14 @@ pd.DataFrame(
 #
 # We saw above that likelihood and related statistics do not agree between
 # the aggregated and original, individual data. We illustrate in the
-# following that likelihood ratio test and difference in deviance aggree
+# following that likelihood ratio test and difference in deviance agree
 # across versions, however Pearson chi-squared does not.
 #
 # As before: This is not sufficiently clear yet and could change.
 #
 # As a test case we drop the `age` variable and compute the likelihood
 # ratio type statistics as difference between reduced or constrained and
-# full or unconstraint model.
+# full or unconstrained model.
 
 # #### original observations and frequency weights
 

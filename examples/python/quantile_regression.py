@@ -111,7 +111,7 @@ ax.set_ylabel(
 #
 # The dotted black lines form 95% point-wise confidence band around 10
 # quantile regression estimates (solid black line). The red lines represent
-# OLS regression results along with their 95% confindence interval.
+# OLS regression results along with their 95% confidence interval.
 #
 # In most cases, the quantile regression point estimates lie outside the
 # OLS confidence interval, which suggests that the effect of income on food

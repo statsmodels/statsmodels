@@ -134,7 +134,7 @@ print(res_hamilton.expected_durations)
 #
 # Since there is no autoregressive component, this model can be fit using
 # the `MarkovRegression` class. Since there is no mean effect, we specify
-# `trend='nc'`. There are hypotheized to be three regimes for the switching
+# `trend='nc'`. There are hypothesized to be three regimes for the switching
 # variances, so we specify `k_regimes=3` and `switching_variance=True` (by
 # default, the variance is assumed to be the same across regimes).
 

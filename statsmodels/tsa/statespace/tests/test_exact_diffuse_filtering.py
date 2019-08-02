@@ -970,7 +970,7 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
 @pytest.mark.xfail
 def test_irrelevant_state():
     # This test records a case in which exact diffuse initialization leads to
-    # numerical problems, becuase the existence of an irrelevant state
+    # numerical problems, because the existence of an irrelevant state
     # initialized as diffuse means that there is never a transition to the
     # usual Kalman filter.
     endog = macrodata.infl

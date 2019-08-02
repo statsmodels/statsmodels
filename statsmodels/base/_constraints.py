@@ -129,14 +129,14 @@ class TransformRestriction(object):
 
 
 def transform_params_constraint(params, Sinv, R, q):
-    """find the parameters that statisfy linear constraint from unconstraint
+    """find the parameters that statisfy linear constraint from unconstrained
 
     The linear constraint R params = q is imposed.
 
     Parameters
     ----------
     params : array_like
-        unconstraint parameters
+        unconstrained parameters
     Sinv : ndarray, 2d, symmetric
         covariance matrix of the parameter estimate
     R : ndarray, 2d

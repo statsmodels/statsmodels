@@ -103,7 +103,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     See Also
     --------
-    MLEResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
     statsmodels.tsa.statespace.kalman_filter.KalmanFilter
     statsmodels.tsa.statespace.representation.Representation
     """
@@ -528,7 +528,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
-        MLEResults
+        statsmodels.tsa.statespace.mlemodel.MLEResults
         """
         if start_params is None:
             start_params = self.start_params

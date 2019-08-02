@@ -88,7 +88,7 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the paramters for the regularized fit
+    An array of the parameters for the regularized fit
     """
 
     if fit_kwds is None:
