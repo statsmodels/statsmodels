@@ -123,9 +123,6 @@ class _cache_readonly(property):
                                cachename=self.cachename)
 
 
-cache_readonly = _cache_readonly()
-
-
 class cache_writable(_cache_readonly):
     """
     Decorator for CachedWritableAttribute
@@ -135,16 +132,22 @@ class cache_writable(_cache_readonly):
                                        cachename=self.cachename)
 
 
+# Use pandas since it works with docs correctly
+cache_readonly = PandasCacheReadonly
 # cached_value and cached_data behave identically to cache_readonly, but
 # are used by `remove_data` to
 #   a) identify array-like attributes to remove (cached_data)
 #   b) make sure certain values are evaluated before caching (cached_value)
-class cached_data(PandasCacheReadonly):
-    pass
+# TODO: Disabled since the subclasses break doc strings
+# class cached_data(PandasCacheReadonly):
+#     pass
 
+cached_data = PandasCacheReadonly
 
-class cached_value(PandasCacheReadonly):
-    pass
+# class cached_value(PandasCacheReadonly):
+#     pass
+
+cached_value = PandasCacheReadonly
 
 
 def nottest(fn):
