@@ -62,7 +62,7 @@ class UnobservedComponents(MLEModel):
         `level` must also be True.
     seasonal : {int, None}, optional
         The period of the seasonal component, if any. Default is None.
-    freq_seasonal: {list[dict], None}, optional.
+    freq_seasonal : {list[dict], None}, optional.
         Whether (and how) to model seasonal component(s) with trig. functions.
         If specified, there is one dictionary for each frequency-domain
         seasonal component.  Each dictionary must have the key, value pair for
@@ -83,7 +83,7 @@ class UnobservedComponents(MLEModel):
         Whether or not any trend component is stochastic. Default is False.
     stochastic_seasonal : bool, optional
         Whether or not any seasonal component is stochastic. Default is True.
-    stochastic_freq_seasonal: list[bool], optional
+    stochastic_freq_seasonal : list[bool], optional
         Whether or not each seasonal component(s) is (are) stochastic.  Default
         is True for each component.  The list should be of the same length as
         freq_seasonal.

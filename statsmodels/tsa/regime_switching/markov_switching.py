@@ -684,7 +684,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
-        conditional: bool or int, optional
+        conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
             predictions. If True or 1, returns predictions conditional on the
@@ -1939,7 +1939,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
-        conditional: bool or int, optional
+        conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
             predictions. If True or 1, returns predictions conditional on the

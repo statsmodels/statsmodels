@@ -164,26 +164,23 @@ class PandasWrapper(object):
         """
         Parameters
         ----------
-        :param obj:
-        :param columns:
-        :param append:
-        :param trim_start:
-        :param trim_end:
-        :return:
+        obj : {array_like}
+            The value to wrap like to a pandas Series or DataFrame.
+        columns : {str, list[str]}
+            Column names or series name, if obj is 1d.
+        append : str
+            String to append to the columns to create a new column name.
+        trim_start : int
+            The number of observations to drop from the start of the index, so
+            that the index applied is index[trim_start:].
+        trim_end : int
+            The number of observations to drop from the end of the index , so
+            that the index applied is index[:nobs - trim_end].
 
         Returns
         -------
-        wrapper : callable
-        Callable that has one required input and one optional:
-
-        * `obj`: array_like to wrap
-        * `columns`: (optional) Column names or series name, if obj is 1d
-        * `trim_start`: (optional, default 0) number of observations to drop
-          from the start of the index, so that the index applied is
-          index[trim_start:]
-        * `trim_start`: (optional, default 0) number of observations to drop
-          from the end of the index , so that the index applied is
-          index[:nobs - trim_end]
+        array_like
+            A pandas Series or DataFrame, depending on the shape of obj.
         """
         obj = np.asarray(obj)
         if not self._is_pandas:

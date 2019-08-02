@@ -503,7 +503,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
        Time series data
     unbiased : bool
        If True, then denominators for autocovariance are n-k, otherwise n
-    nlags: int, optional
+    nlags : int, optional
         Number of lags to return autocorrelation for.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation

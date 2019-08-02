@@ -163,8 +163,11 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
     weights : array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
-    args, kwargs :
-        Some models can take additional arguments or keywords, see the
+    *args :
+        Some models can take additional arguments. See the
+        predict method of the model for the details.
+    **kwargs :
+        Some models can take additional keyword arguments. See the
         predict method of the model for the details.
 
     Returns

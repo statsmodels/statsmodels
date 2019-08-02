@@ -2002,7 +2002,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params: array_like or MixedLMParams
+        start_params : array_like or MixedLMParams
             Starting values for the profile log-likelihood.  If not a
             `MixedLMParams` instance, this should be an array
             containing the packed parameters for the profile
@@ -2011,7 +2011,7 @@ class MixedLM(base.LikelihoodModel):
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        niter_sa :
+        niter_sa : int
             Currently this argument is ignored and has no effect
             on the results.
         cov_pen : CovariancePenalty object

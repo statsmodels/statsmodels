@@ -93,7 +93,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     Parameters
     ----------
-    indicator
+    indicator : array_like
         A low-frequency indicator series.  It is assumed that there are no
         pre-sample indicators.  Ie., the first indicators line up with
         the first benchmark.
@@ -104,14 +104,16 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         "aq" - Benchmarking an annual series to quarterly.
         "mq" - Benchmarking a quarterly series to monthly.
         "other" - Custom stride.  A kwarg, k, must be supplied.
-    kwargs :
+    **kwargs
+        Additional keyword argument. For example:
         k : int
             The number of high-frequency observations that sum to make an
             aggregate low-frequency observation. `k` is used with
             `freq` == "other".
     Returns
     -------
-    benchmarked series : array
+    transformed : array
+        The transformed series.
 
     Examples
     --------

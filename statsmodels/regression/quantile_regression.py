@@ -108,7 +108,7 @@ class QuantReg(RegressionModel):
             - gau: Gaussian
             - par: Parzene
 
-        bandwidth: str, Bandwidth selection method in kernel density
+        bandwidth : str, Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
 

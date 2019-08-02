@@ -488,7 +488,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         is used, it will take the keys as labels.  If a
         np.ndarray is provided, it will generate a simple
         numerical labels.
-    index: list, optional
+    index : list, optional
         Gives the preferred order for the category ordering. If not specified
         will default to the given order.  It does not support named indexes
         for hierarchical Series.  If a DataFrame is provided, it expects
@@ -517,18 +517,18 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         to indicate that it should use the default property for the tile.
         A dictionary of the properties for each key can be passed,
         and it will be internally converted to the correct function
-    statistic: bool, optional (default False)
+    statistic : bool, optional (default False)
         if true will use a crude statistical model to give colors to the plot.
         If the tile has a constraint that is more than 2 standard deviation
         from the expected value under independence hypothesis, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
-    title: str, optional
+    title : str, optional
         The title of the axis
-    axes_label: bool, optional
+    axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation: float or list of float
+    label_rotation : float or list of float
         the rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 

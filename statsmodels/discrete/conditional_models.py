@@ -145,7 +145,7 @@ class _ConditionalModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method :
+        method : {'elastic_net'}
             Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight

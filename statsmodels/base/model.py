@@ -1009,8 +1009,11 @@ class Results(object):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
-        args, kwargs :
-            Some models can take additional arguments or keywords, see the
+        *args
+            Additional arguments to pass to the model, see the
+            predict method of the model for the details.
+        **kwargs
+            Additional keywords arguments to pass to the model, see the
             predict method of the model for the details.
 
         Returns

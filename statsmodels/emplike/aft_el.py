@@ -422,7 +422,7 @@ class AFTResults(OptAFT):
         Returns
         -------
 
-        test_results: tuple
+        test_results : tuple
             The log-likelihood and p-pvalue of the test.
 
         Notes

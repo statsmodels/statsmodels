@@ -672,7 +672,7 @@ class ProcessMLE(base.LikelihoodModel):
         scale_data : Dataframe
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth_data: Dataframe
+        smooth_data : Dataframe
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
@@ -775,7 +775,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         scale : array_like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth: array_like
+        smooth : array_like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
