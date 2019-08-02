@@ -19,7 +19,9 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
 
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .mlemodel import (
+    MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
+    PredictionResultsWrapper)
 from .initialization import Initialization
 from .tools import (
     is_invertible, prepare_exog,
@@ -956,12 +958,36 @@ class VARMAXResults(MLEResults):
         if last_intercept is not None:
             self.filter_results.state_intercept[:, -1] = last_intercept
 
+            # Since we do not have the last predicted state / cov, we need at
+            # least one in-sample value. Here we override start, and then we
+            # need to patch the results (see below) so that we only return
+            # the requested predictions
+            if _start >= self.nobs:
+                start = self.nobs - 1
+
         res = super(VARMAXResults, self).get_prediction(
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
         if last_intercept is not None:
             self.filter_results.state_intercept[:, -1] = np.nan
+
+            # Here we correct for the additional in-sample value that we
+            # needed to add
+            if _start >= self.nobs:
+                # First, reset the start value in the results
+                prediction_results = res.prediction_results
+                prediction_results.start = _start - start
+                prediction_results.clear()
+
+                # Since the super(...).get_prediction call reset the
+                # prediction index to be too long, the dates used in the attach
+                # wrapper will be wrong. Here reset them to the correct values
+                self.model._get_prediction_index(_start, end, index,
+                                                 silent=True)
+
+                res = PredictionResultsWrapper(PredictionResults(
+                    self, prediction_results, row_labels=prediction_index))
 
         return res
 

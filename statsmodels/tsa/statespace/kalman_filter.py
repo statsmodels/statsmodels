@@ -13,6 +13,7 @@ from .representation import OptionWrapper, Representation, FrozenRepresentation
 from .tools import (validate_vector_shape, validate_matrix_shape,
                     reorder_missing_matrix, reorder_missing_vector)
 from . import tools
+from .initialization import Initialization
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 # Define constants
@@ -1866,16 +1867,16 @@ class FilterResults(FrozenRepresentation):
         Parameters
         ----------
         start : int, optional
-            Zero-indexed observation number at which to start forecasting,
-            i.e., the first forecast will be at start.
+            Zero-indexed observation number at which to start prediction, i.e.,
+            the first prediction will be at start.
         end : int, optional
-            Zero-indexed observation number at which to end forecasting, i.e.,
-            the last forecast will be at end.
+            Zero-indexed observation number at which to end prediction, i.e.,
+            the last prediction will be at end.
         dynamic : int, optional
             Offset relative to `start` at which to begin dynamic prediction.
             Prior to this observation, true endogenous values will be used for
             prediction; starting with this observation and continuing through
-            the end of prediction, forecasted endogenous values will be used
+            the end of prediction, predicted endogenous values will be used
             instead.
         **kwargs
             If the prediction range is outside of the sample range, any
@@ -1899,12 +1900,6 @@ class FilterResults(FrozenRepresentation):
         Out-of-sample prediction first applies the Kalman filter to missing
         data for the number of periods desired to obtain the predicted states.
         """
-        # Cannot predict if we do not have appropriate arrays
-        if self.memory_no_forecast or self.memory_no_predicted:
-            raise ValueError('Predict is not possible if memory conservation'
-                             ' has been used to avoid storing forecasts or'
-                             ' predicted values.')
-
         # Get the start and the end of the entire prediction range
         if start is None:
             start = 0
@@ -1967,7 +1962,19 @@ class FilterResults(FrozenRepresentation):
                 ndynamic = max(0, min(end, self.nobs) - dynamic)
 
         # Get the number of in-sample static predictions
-        nstatic = min(end, self.nobs) if dynamic is None else dynamic
+        if dynamic is None:
+            nstatic = min(end, self.nobs) - min(start, self.nobs)
+        else:
+            # (use max(., 0), since dynamic can be prior to start)
+            nstatic = max(dynamic - start, 0)
+
+        # Cannot do in-sample prediction if we do not have appropriate arrays
+        # (we can do out-of-sample forecasting, however)
+        insample = nstatic > 0 or ndynamic > 0
+        if insample and (self.memory_no_forecast or self.memory_no_predicted):
+            raise ValueError('In-sample prediction is not possible if memory'
+                             ' conservation has been used to avoid storing'
+                             ' forecasts or predicted values.')
 
         # Construct the design and observation intercept and covariance
         # matrices for start-npadded:end. If not time-varying in the original
@@ -2010,18 +2017,6 @@ class FilterResults(FrozenRepresentation):
                             raise ValueError(exception % name)
                         representation[name] = np.c_[representation[name], mat]
 
-        # Update the matrices from kwargs for dynamic prediction in the case
-        # that `end` is less than `nobs` and `dynamic` is less than `end`. In
-        # this case, any time-varying matrices in the default `representation`
-        # will be too long, causing an error to be thrown below in the
-        # KalmanFilter(...) construction call, because the endog has length
-        # nstatic + ndynamic + nforecast, whereas the time-varying matrices
-        # from `representation` have length nobs.
-        if ndynamic > 0 and end < self.nobs:
-            for name, shape in self.shapes.items():
-                if not name == 'obs' and representation[name].shape[-1] > 1:
-                    representation[name] = representation[name][..., :end]
-
         # Construct the predicted state and covariance matrix for each time
         # period depending on whether that time period corresponds to
         # one-step-ahead prediction, dynamic prediction, or out-of-sample
@@ -2031,11 +2026,33 @@ class FilterResults(FrozenRepresentation):
         # Kalman filter output
         if ndynamic == 0 and nforecast == 0:
             results = self
+        # If we have dynamic prediction or forecasting, then we need to
+        # re-apply the Kalman filter
         else:
+            # Figure out the period for which we need to run the Kalman filter
+            if dynamic is not None:
+                kf_start = min(start, dynamic, self.nobs)
+            else:
+                kf_start = min(start, self.nobs)
+            kf_end = end
+
+            # Make start, end consistent with the results that we're generating
+            start = max(start - kf_start, 0)
+            end = kf_end - kf_start
+
+            # Subset time-varying system matrices to the appropriate time range
+            for name, shape in self.shapes.items():
+                if not name == 'obs' and representation[name].shape[-1] > 1:
+                    representation[name] = (
+                        representation[name][..., kf_start:kf_end])
+
             # Construct the new endogenous array.
             endog = np.empty((self.k_endog, ndynamic + nforecast))
             endog.fill(np.nan)
-            endog = np.asfortranarray(np.c_[self.endog[:, :nstatic], endog])
+            if nstatic > 0:
+                endog = np.c_[self.endog[:, kf_start:kf_start + nstatic],
+                              endog]
+            endog = np.asfortranarray(endog)
 
             # Do not propagate through FILTER_CONCENTRATED, because we want
             # to perform prediction based on the estimated values, and one of
@@ -2044,22 +2061,43 @@ class FilterResults(FrozenRepresentation):
             # estimate already)
             filter_method = self.filter_method & ~FILTER_CONCENTRATED
 
+            # We must at least store forecasts and predictions
+            conserve_memory = (self.conserve_memory & ~MEMORY_NO_FORECAST
+                               & ~MEMORY_NO_PREDICTED)
+
             # Setup the new statespace representation
             model_kwargs = {
                 'filter_method': filter_method,
                 'inversion_method': self.inversion_method,
                 'stability_method': self.stability_method,
-                'conserve_memory': self.conserve_memory,
+                'conserve_memory': conserve_memory,
                 'filter_timing': self.filter_timing,
                 'tolerance': self.tolerance,
                 'loglikelihood_burn': self.loglikelihood_burn
             }
             model_kwargs.update(representation)
-            model = KalmanFilter(
-                endog, self.k_states, self.k_posdef, **model_kwargs)
-            model.initialization = self.initialization
-            model._initialize_filter()
-            model._initialize_state()
+            model = KalmanFilter(self.k_endog, self.k_states, self.k_posdef,
+                                 nobs=endog.shape[1], **model_kwargs)
+            model.bind(endog)
+
+            # The only valid case in which we have not stored predicted values
+            # is pure out-of-sample forecasting, in which case we want to start
+            # with the last predicted value
+            if self.memory_no_predicted:
+                constant = self.predicted_state[..., -1]
+                stationary_cov = self.predicted_state_cov[..., -1]
+            # Otherwise initialize with the predicted state / cov from the
+            # existing results, at index kf_start (note that the time
+            # dimension of predicted_state and predicted_state_cov is
+            # self.nobs + 1; so e.g. in the case of pure forecasting we should
+            # be using the very last predicted state and predicted state cov
+            # elements, and kf_start will equal self.nobs which is correct)
+            else:
+                constant = self.predicted_state[..., kf_start]
+                stationary_cov = self.predicted_state_cov[..., kf_start]
+            model.initialization = Initialization(
+                self.k_states, 'known', constant=constant,
+                stationary_cov=stationary_cov)
 
             results = model.filter()
 
@@ -2174,6 +2212,14 @@ class PredictionResults(FilterResults):
         self.nstatic = nstatic
         self.ndynamic = ndynamic
         self.nforecast = nforecast
+
+    def clear(self):
+        attributes = (['endog'] + self.representation_attributes
+                      + self.filter_attributes)
+        for attr in attributes:
+            _attr = '_' + attr
+            if hasattr(self, _attr):
+                delattr(self, _attr)
 
     def __getattr__(self, attr):
         """
