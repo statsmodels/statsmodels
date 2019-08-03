@@ -2,9 +2,7 @@
 from distutils.version import LooseVersion
 
 import pandas
-from pandas.util._decorators import (
-  cache_readonly, deprecate_kwarg, Appender, Substitution
-)
+from pandas.util._decorators import deprecate_kwarg, Appender, Substitution
 
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
            'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
