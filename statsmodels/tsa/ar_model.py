@@ -646,27 +646,6 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     Attributes
     ----------
-
-    aic : float
-        Akaike Information Criterion using Lutkephol's definition.
-        :math:`log(sigma) + 2*(1 + k_ar + k_trend)/nobs`
-    bic : float
-        Bayes Information Criterion
-        :math:`\\log(\\sigma) + (1 + k_ar + k_trend)*\\log(nobs)/nobs`
-    bse : array
-        The standard errors of the estimated parameters. If `method` is 'cmle',
-        then the standard errors that are returned are the OLS standard errors
-        of the coefficients. If the `method` is 'mle' then they are computed
-        using the numerical Hessian.
-    fittedvalues : array
-        The in-sample predicted values of the fitted AR model. The `k_ar`
-        initial values are computed via the Kalman Filter if the model is
-        fit by `mle`.
-    fpe : float
-        Final prediction error using Lütkepohl's definition
-        ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
-    hqic : float
-        Hannan-Quinn Information Criterion.
     k_ar : float
         Lag length. Sometimes used as `p` in the docs.
     k_trend : float
@@ -681,17 +660,6 @@ class ARResults(tsa_model.TimeSeriesModelResults):
         The number of total observations in `endog`. Sometimes `n` in the docs.
     params : array
         The fitted parameters of the model.
-    pvalues : array
-        The p values associated with the standard errors.
-    resid : array
-        The residuals of the model. If the model is fit by 'mle' then the
-        pre-sample residuals are calculated using fittedvalues from the Kalman
-        Filter.
-    roots : array
-        The roots of the AR process are the solution to
-        (1 - arparams[0]*z - arparams[1]*z**2 -...- arparams[p-1]*z**k_ar) = 0
-        Stability requires that the roots in modulus lie outside the unit
-        circle.
     scale : float
         Same as sigma2
     sigma2 : float
@@ -699,8 +667,6 @@ class ARResults(tsa_model.TimeSeriesModelResults):
     trendorder : int
         The polynomial order of the trend. 'nc' = None, 'c' or 't' = 0,
         'ct' = 1, etc.
-    tvalues : array
-        The t-values associated with `params`.
     """
 
     _cache = {}  # for scale setter
@@ -740,6 +706,13 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def bse(self):  # allow user to specify?
+        """
+        The standard errors of the estimated parameters.
+
+        If `method` is 'cmle', then the standard errors that are returned are
+        the OLS standard errors of the coefficients. If the `method` is 'mle'
+        then they are computed using the numerical Hessian.
+        """
         if self.model.method == "cmle":  # uses different scale/sigma def.
             resid = self.resid
             ssr = np.dot(resid, resid)
@@ -751,10 +724,16 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def pvalues(self):
+        """The p values associated with the standard errors."""
         return norm.sf(np.abs(self.tvalues)) * 2
 
     @cache_readonly
     def aic(self):
+        """
+        Akaike Information Criterion using Lutkephol's definition.
+
+        :math:`log(sigma) + 2*(1 + k_ar + k_trend)/nobs`
+        """
         # TODO: this is based on loglike with dropped constant terms ?
         # Lutkepohl
         # return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
@@ -766,6 +745,7 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def hqic(self):
+        """Hannan-Quinn Information Criterion."""
         nobs = self.nobs
         # Lutkepohl
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
@@ -779,6 +759,11 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def fpe(self):
+        """
+        Final prediction error using Lütkepohl's definition.
+
+        ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
+        """
         nobs = self.nobs
         df_model = self.df_model
         # Lutkepohl
@@ -786,6 +771,11 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def bic(self):
+        """
+         Bayes Information Criterion
+
+        :math:`\\log(\\sigma) + (1 + k_ar + k_trend)*\\log(nobs)/nobs`
+        """
         nobs = self.nobs
         # Lutkepohl
         # return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
@@ -797,6 +787,12 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def resid(self):
+        """
+        The residuals of the model.
+
+        If the model is fit by 'mle' then the pre-sample residuals are
+        calculated using fittedvalues from the Kalman Filter.
+        """
         # NOTE: uses fittedvalues because it calculate presample values for mle
         model = self.model
         endog = model.endog.squeeze()
@@ -807,6 +803,14 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def roots(self):
+        """
+        The roots of the AR process.
+
+        The roots are the solution to
+        (1 - arparams[0]*z - arparams[1]*z**2 -...- arparams[p-1]*z**k_ar) = 0.
+        Stability requires that the roots in modulus lie outside the unit
+        circle.
+        """
         k = self.k_trend
         return np.roots(np.r_[1, -self.params[k:]]) ** -1
 
@@ -823,41 +827,18 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def fittedvalues(self):
+        """
+        The in-sample predicted values of the fitted AR model.
+
+        The `k_ar` initial values are computed via the Kalman Filter if the
+        model is fit by `mle`.
+        """
         return self.model.predict(self.params)
 
     # Same docstring as AR.predict, but with "params" parameter removed
+    # TODO: Should have an official docstring cleaner to remove parameters
     @Appender('\n'.join(_preddoc[:5] + _preddoc[7:]))
     def predict(self, start=None, end=None, dynamic=False):
-        """
-        Returns in-sample and out-of-sample prediction.
-
-        Parameters
-        ----------
-        start : int, str, or datetime
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
-        end : int, str, or datetime
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
-        dynamic : bool
-            The `dynamic` keyword affects in-sample prediction. If dynamic
-            is False, then the in-sample lagged values are used for
-            prediction. If `dynamic` is True, then in-sample forecasts are
-            used in place of lagged dependent variables. The first forecasted
-            value is `start`.
-
-        Returns
-        -------
-        predicted values : array
-
-        Notes
-        -----
-        The linear Gaussian Kalman filter is used to return pre-sample fitted
-        values. The exact initial Kalman Filter is used. See Durbin and Koopman
-        in the references for more information.
-        """
         params = self.params
         predictedvalues = self.model.predict(params, start, end, dynamic)
         return predictedvalues

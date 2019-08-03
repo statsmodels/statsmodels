@@ -46,6 +46,7 @@ We also encourage users to submit their own examples, tutorials or cool
    notebooks/generated/regression_plots
    notebooks/generated/robust_models_0
    notebooks/generated/robust_models_1
+   notebooks/generated/rolling_ls
    notebooks/generated/statespace_arma_0
    notebooks/generated/statespace_concentrated_scale
    notebooks/generated/statespace_cycles
