@@ -2251,3 +2251,11 @@ importances
 datetimes
 comovements
 Bsplines
+RollingRegressionResults
+RollingOLS
+RollingWLS
+bool
+statawriter
+Nonparameteric
+exceedance
+separatevar

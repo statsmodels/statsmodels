@@ -24,6 +24,11 @@
           "img": "../_static/images/recursive_ls.png"
         },
         {
+          "text": "Rolling Least Squares",
+          "target": "notebooks/generated/rolling_ls.html",
+          "img": "../_static/images/rolling_ls.png"
+        },
+        {
           "text": "Regression Diagnostics",
           "target": "notebooks/generated/regression_diagnostics.html",
           "img": "../_static/images/regression_diagnostics.png"
