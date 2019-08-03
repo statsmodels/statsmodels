@@ -15,6 +15,7 @@ from scipy import optimize
 from scipy.signal import lfilter
 from scipy.stats import norm
 
+from statsmodels.compat.pandas import Appender
 import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, OLS
 from statsmodels.tools.decorators import cache_readonly
@@ -726,6 +727,7 @@ class ARMA(tsa_model.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
+    @Appender(_arma_predict)
     def predict(self, params, start=None, end=None, exog=None, dynamic=False,
                 **kwargs):
         if kwargs and 'typ' not in kwargs:
@@ -798,8 +800,6 @@ matches the number of out-of-sample forecasts ({1})'
                 warnings.warn(msg, SpecificationWarning)
             predictedvalues = np.r_[predictedvalues, forecastvalues]
         return predictedvalues
-
-    predict.__doc__ = _arma_predict
 
     def loglike(self, params, set_sigma2=True):
         """
@@ -1213,6 +1213,7 @@ class ARIMA(ARMA):
 
         return ARIMAResultsWrapper(arima_fit)
 
+    @Appender(_arima_predict)
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         if not (hasattr(self, 'k_ar') and hasattr(self, 'k_trend')):
@@ -1315,8 +1316,6 @@ class ARIMA(ARMA):
 
         else:  # pragma : no cover
             raise ValueError("typ %s not understood" % typ)
-
-    predict.__doc__ = _arima_predict
 
 
 class ARMAResults(tsa_model.TimeSeriesModelResults):
@@ -1533,12 +1532,11 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
     def resid(self):
         return self.model.geterrors(self.params)
 
+    @Appender(_arma_results_predict)
     def predict(self, start=None, end=None, exog=None, dynamic=False,
                 **kwargs):
         return self.model.predict(self.params, start, end, exog, dynamic,
                                   **kwargs)
-
-    predict.__doc__ = _arma_results_predict
 
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
@@ -1807,6 +1805,7 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
 
         return smry
 
+    @Appender(_plot_predict)
     def plot_predict(self, start=None, end=None, exog=None, dynamic=False,
                      alpha=.05, plot_insample=True, ax=None):
         from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
@@ -1846,8 +1845,6 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
 
         return fig
 
-    plot_predict.__doc__ = _plot_predict
-
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
@@ -1862,11 +1859,10 @@ wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)  # noqa:E305
 
 
 class ARIMAResults(ARMAResults):
+    @Appender(_arima_results_predict)
     def predict(self, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         return self.model.predict(self.params, start, end, exog, typ, dynamic)
-
-    predict.__doc__ = _arima_results_predict
 
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
@@ -1943,6 +1939,7 @@ class ARIMAResults(ARMAResults):
         conf_int = self._forecast_conf_int(forecast, fcerr, alpha)
         return forecast, fcerr, conf_int
 
+    @Appender(_arima_plot_predict)
     def plot_predict(self, start=None, end=None, exog=None, dynamic=False,
                      alpha=.05, plot_insample=True, ax=None):
         from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
@@ -1986,8 +1983,6 @@ class ARIMAResults(ARMAResults):
         ax.legend(loc='best')
 
         return fig
-
-    plot_predict.__doc__ = _arima_plot_predict
 
 
 class ARIMAResultsWrapper(ARMAResultsWrapper):

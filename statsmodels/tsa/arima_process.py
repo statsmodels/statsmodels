@@ -20,6 +20,7 @@ License: BSD
 import numpy as np
 from scipy import signal, optimize, linalg
 
+from statsmodels.compat.pandas import Appender
 from statsmodels.tools.validation import array_like
 
 __all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
@@ -784,47 +785,40 @@ class ArmaProcess(object):
         return 'ArmaProcess\nAR: {0}\nMA: {1}'.format(self.ar.tolist(),
                                                       self.ma.tolist())
 
+    @Appender(arma_acovf.__doc__)
     def acovf(self, nobs=None):
         nobs = nobs or self.nobs
         return arma_acovf(self.ar, self.ma, nobs=nobs)
 
-    acovf.__doc__ = arma_acovf.__doc__
-
+    @Appender(arma_acf.__doc__)
     def acf(self, lags=None):
         lags = lags or self.nobs
         return arma_acf(self.ar, self.ma, lags=lags)
 
-    acf.__doc__ = arma_acf.__doc__
-
+    @Appender(arma_pacf.__doc__)
     def pacf(self, lags=None):
         lags = lags or self.nobs
         return arma_pacf(self.ar, self.ma, lags=lags)
 
-    pacf.__doc__ = arma_pacf.__doc__
-
+    @Appender(arma_periodogram.__doc__)
     def periodogram(self, nobs=None):
         nobs = nobs or self.nobs
         return arma_periodogram(self.ar, self.ma, worN=nobs)
 
-    periodogram.__doc__ = arma_periodogram.__doc__
-
+    @Appender(arma_impulse_response.__doc__)
     def impulse_response(self, leads=None):
         leads = leads or self.nobs
         return arma_impulse_response(self.ar, self.ma, leads=leads)
 
-    impulse_response.__doc__ = arma_impulse_response.__doc__
-
+    @Appender(_arma_docs['ma'])
     def arma2ma(self, lags=None):
         lags = lags or self.lags
         return arma2ma(self.ar, self.ma, lags=lags)
 
-    arma2ma.__doc__ = _arma_docs['ma']
-
+    @Appender(_arma_docs['ar'])
     def arma2ar(self, lags=None):
         lags = lags or self.lags
         return arma2ar(self.ar, self.ma, lags=lags)
-
-    arma2ar.__doc__ = _arma_docs['ar']
 
     @property
     def arroots(self):

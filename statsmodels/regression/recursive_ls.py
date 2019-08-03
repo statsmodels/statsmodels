@@ -8,6 +8,8 @@ License: Simplified-BSD
 import numpy as np
 import pandas as pd
 
+from statsmodels.compat.pandas import Appender
+
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
@@ -498,6 +500,7 @@ class RecursiveLSResults(MLEResults):
         else:
             return self.uncentered_tss / (self.df_resid + self.df_model)
 
+    @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        index=None, **kwargs):
         # Note: need to override this, because we currently do not support
@@ -525,9 +528,9 @@ class RecursiveLSResults(MLEResults):
             start, end + out_of_sample + 1, dynamic, **kwargs)
 
         # Return a new mlemodel.PredictionResults object
-        return PredictionResultsWrapper(PredictionResults(
-            self, prediction_results, row_labels=prediction_index))
-    get_prediction.__doc__ = MLEResults.get_prediction.__doc__
+        res_obj = PredictionResults(self, prediction_results,
+                                    row_labels=prediction_index)
+        return PredictionResultsWrapper(res_obj)
 
     def plot_recursive_coefficient(self, variables=0, alpha=0.05,
                                    legend_loc='upper left', fig=None,

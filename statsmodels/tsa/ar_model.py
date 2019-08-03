@@ -5,6 +5,7 @@ import numpy as np
 from numpy.linalg import inv, slogdet
 from scipy.stats import norm
 
+from statsmodels.compat.pandas import Appender
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary
@@ -625,6 +626,9 @@ class AR(tsa_model.TimeSeriesModel):
         return ARResultsWrapper(arfit)
 
 
+_preddoc = (AR.predict.__doc__ or "").split('\n')
+
+
 class ARResults(tsa_model.TimeSeriesModelResults):
     """
     Class to hold results from fitting an AR model.
@@ -821,6 +825,8 @@ class ARResults(tsa_model.TimeSeriesModelResults):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
+    # Same docstring as AR.predict, but with "params" parameter removed
+    @Appender('\n'.join(_preddoc[:5] + _preddoc[7:]))
     def predict(self, start=None, end=None, dynamic=False):
         """
         Returns in-sample and out-of-sample prediction.
@@ -856,10 +862,6 @@ class ARResults(tsa_model.TimeSeriesModelResults):
         predictedvalues = self.model.predict(params, start, end, dynamic)
         return predictedvalues
         # TODO: consider returning forecast errors and confidence intervals?
-
-    # Same docstring as AR.predict, but with "params" parameter removed
-    preddoc = AR.predict.__doc__.split('\n')
-    predict.__doc__ = '\n'.join(preddoc[:5] + preddoc[7:])
 
     def summary(self, alpha=.05):
         """Summarize the Model

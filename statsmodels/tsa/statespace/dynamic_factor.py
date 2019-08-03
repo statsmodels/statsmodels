@@ -25,6 +25,7 @@ from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ValueWarning
 import statsmodels.base.wrapper as wrap
+from statsmodels.compat.pandas import Appender
 
 
 class DynamicFactor(MLEModel):
@@ -1254,6 +1255,7 @@ class DynamicFactorResults(MLEResults):
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
         spec = self.specification
@@ -1388,7 +1390,6 @@ class DynamicFactorResults(MLEResults):
                 summary.tables.append(table)
 
         return summary
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class DynamicFactorResultsWrapper(MLEResultsWrapper):

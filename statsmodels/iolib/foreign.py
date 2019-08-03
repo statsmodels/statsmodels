@@ -179,23 +179,48 @@ class _StataVariable(object):
         self._data = variable_data
 
     def __int__(self):
+        """the variable's index within an observation"""
         return self.index
 
     def __str__(self):
+        """the name of the variable"""
         return self.name
-    index = property(lambda self: self._data[0], doc='the variable\'s index \
-within an observation')
-    type = property(lambda self: self._data[1], doc='the data type of \
-variable\n\nPossible types are:\n{1..244:string, b:byte, h:int, l:long, \
-f:float, d:double)')
-    name = property(lambda self: self._data[2], doc='the name of the variable')
-    format = property(lambda self: self._data[4], doc='the variable\'s Stata \
-format')
-    value_format = property(lambda self: self._data[5], doc='the variable\'s \
-value format')
-    label = property(lambda self: self._data[6], doc='the variable\'s label')
-    __int__.__doc__ = index.__doc__
-    __str__.__doc__ = name.__doc__
+
+    @property
+    def index(self):
+        """the variable's index within an observation"""
+        return self._data[0]
+
+    @property
+    def type(self):
+        """
+        The data type of variable
+
+        Possible types are:
+        {1..244:string, b:byte, h:int, l:long, f:float, d:double)
+        """
+        return self._data[1]
+
+    @property
+    def name(self):
+        """the name of the variable"""
+        return self._data[2]
+
+    @property
+    def format(self):
+        """the variable's Stata format"""
+        return self._data[4]
+
+    @property
+    def value_format(self):
+        """the variable's value format"""
+        return self._data[5]
+
+    @property
+    def label(self):
+        """The variable's label"""
+        return self._data[6]
+
 
 class StataReader(object):
     """

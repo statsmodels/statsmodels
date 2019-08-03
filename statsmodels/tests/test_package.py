@@ -17,3 +17,13 @@ def test_lazy_imports():
     p.wait()
     rc = p.returncode
     assert rc == 0
+
+
+def test_docstring_optimization_compat():
+    # GH#5235 check that importing with stripped docstrings doesn't raise
+    p = subprocess.Popen('python -OO -c "import statsmodels.api as sm"',
+                         shell=True,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out = p.communicate()
+    rc = p.returncode
+    assert rc == 0, out

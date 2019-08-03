@@ -11,6 +11,7 @@ from collections import defaultdict
 import numpy as np
 
 from statsmodels.compat.python import lzip
+from statsmodels.compat.pandas import Appender
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
@@ -198,6 +199,7 @@ class _BaseInfluenceMixin(object):
     """common methods between OLSInfluence and MLE/GLMInfluence
     """
 
+    @Appender(_plot_influence_doc.format({'extra_params_doc': ""}))
     def plot_influence(self, external=None, alpha=.05, criterion="cooks",
                        size=48, plot_alpha=.75, ax=None, **kwargs):
 
@@ -209,9 +211,6 @@ class _BaseInfluenceMixin(object):
                               criterion=criterion, size=size,
                               plot_alpha=plot_alpha, ax=ax, **kwargs)
         return res
-
-    plot_influence.__doc__ = _plot_influence_doc.format({
-        'extra_params_doc': ""})
 
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,
                     **kwds):

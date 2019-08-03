@@ -6,6 +6,7 @@ author: Yichuan Liu
 """
 import numpy as np
 
+from statsmodels.compat.pandas import Substitution
 from statsmodels.base.model import Model
 from .multivariate_ols import MultivariateTestResults
 from .multivariate_ols import _multivariate_ols_fit
@@ -69,7 +70,34 @@ class MANOVA(Model):
         raise NotImplementedError('fit is not needed to use MANOVA. Call'
                                   'mv_test directly on a MANOVA instance.')
 
+    @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None):
+        """
+        Linear hypotheses testing
+
+        Parameters
+        ----------
+        %(hypotheses_doc)s
+
+        Returns
+        -------
+        results: MultivariateTestResults
+
+        Notes
+        -----
+        Testing the linear hypotheses
+
+            L * params * M = 0
+
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params
+
+        If the model is not specified using the formula interfact, then the
+        hypotheses test each included exogenous variable, one at a time. In
+        most applications with categorical variables, the ``from_formula``
+        interface should be preferred when specifying a model since it
+        provides knowledge about the model when specifying the hypotheses.
+        """
         if hypotheses is None:
             if (hasattr(self, 'data') and self.data is not None and
                         hasattr(self.data, 'design_info')):
@@ -91,30 +119,3 @@ class MANOVA(Model):
 
         return MultivariateTestResults(results, self.endog_names,
                                        self.exog_names)
-    mv_test.__doc__ = (
-"""
-Linear hypotheses testing
-
-Parameters
-----------
-""" + _hypotheses_doc + """
-
-Returns
--------
-results: MultivariateTestResults
-
-Notes
------
-Testing the linear hypotheses
-
-    L * params * M = 0
-
-where `params` is the regression coefficient matrix for the
-linear model y = x * params
-
-If the model is not specified using the formula interfact, then the hypotheses
-test each included exogenous variable, one at a time. In most applications
-with categorical variables, the ``from_formula`` interface should be preferred
-when specifying a model since it provides knowledge about the model when
-specifying the hypotheses.
-""")

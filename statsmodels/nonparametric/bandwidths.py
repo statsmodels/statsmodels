@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.stats import scoreatpercentile as sap
+
+from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
 def _select_sigma(X):
@@ -141,6 +143,7 @@ bandwidth_funcs = {
 }
 
 
+@Substitution(", ".join(sorted(bandwidth_funcs.keys())))
 def select_bandwidth(x, bw, kernel):
     """
     Selects bandwidth for a selection rule bw
@@ -170,6 +173,3 @@ def select_bandwidth(x, bw, kernel):
     return bandwidth_funcs[bw](x, kernel)
 #    else:
 #        raise ValueError("Only Gaussian Kernels are currently supported")
-
-# Interpolate docstring to plugin supported bandwidths
-select_bandwidth.__doc__ %=  (", ".join(sorted(bandwidth_funcs.keys())),)

@@ -937,8 +937,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         """
         Fit the model using maximum likelihood.
 
-        The rest of the docstring is from
-        statsmodels.LikelihoodModel.fit
+        See LikelihoodModel.fit for more information.
         """
         if start_params is None:
             if hasattr(self, 'start_params'):
@@ -966,7 +965,6 @@ class GenericLikelihoodModel(LikelihoodModel):
                 warnings.warn('more exog_names than parameters', ValueWarning)
 
         return genericmlefit
-    # fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
 class Results(object):

@@ -10,6 +10,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from statsmodels.compat.pandas import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
                                              SpecificationWarning)
@@ -1796,6 +1797,7 @@ class UnobservedComponentsResults(MLEResults):
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
         # Create the model name
 
@@ -1836,7 +1838,6 @@ class UnobservedComponentsResults(MLEResults):
             alpha=alpha, start=start, title='Unobserved Components Results',
             model_name=model_name
         )
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class UnobservedComponentsResultsWrapper(MLEResultsWrapper):

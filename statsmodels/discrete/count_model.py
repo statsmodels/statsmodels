@@ -17,6 +17,7 @@ from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.compat.pandas import Appender
 
 
 _doc_zi_params = """
@@ -162,6 +163,7 @@ class GenericZeroInflated(CountModel):
 
         return llf
 
+    @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -190,8 +192,7 @@ class GenericZeroInflated(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
+    @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -224,8 +225,6 @@ class GenericZeroInflated(CountModel):
 
         discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score_obs(self, params):
         """
