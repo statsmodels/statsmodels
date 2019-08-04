@@ -64,6 +64,9 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/tests/test_processreg.py \
         statsmodels/regression/tests/test_quantile_regression.py \
         statsmodels/regression/tests/test_tools.py \
+        statsmodels/regression/tests/results/ \
+        statsmodels/robust/norms.py \
+        statsmodels/robust/scale.py \
         statsmodels/resampling/ \
         statsmodels/robust/tests/ \
         statsmodels/sandbox/distributions/tests/test_gof_new.py \
