@@ -3,7 +3,7 @@
 
 
 % This is a collection of scripts used to generate C-H comparisons
-% for qsturng. As you can probably guess, my R's skills aren't all that good.
+% for qsturng. As you can probably guess, my R's skills are not all that good.
 
 setwd('D:\\USERS\\roger\\programming\\python\\development\\qsturng')
 

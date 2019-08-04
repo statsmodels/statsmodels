@@ -1,10 +1,3 @@
-import pandas as pd
-import patsy
-import numpy as np
-import warnings
-
-from statsmodels.tools.sm_exceptions import ValueWarning
-
 """
 A predict-like function that constructs means and pointwise or
 simultaneous confidence bands for the function f(x) = E[Y | X*=x,
@@ -13,6 +6,13 @@ non-focus variables.  This is especially useful when conducting a
 functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
+import pandas as pd
+import patsy
+import numpy as np
+import warnings
+
+from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.compat.pandas import Appender
 
 _predict_functional_doc =\
     """
@@ -30,7 +30,7 @@ _predict_functional_doc =\
     ----------
     result : statsmodels result object
         A results object for the fitted model.
-    focus_var : string
+    focus_var : str
         The name of the 'focus variable'.
     summaries : dict-like
         A map from names of non-focus variables to summary functions.
@@ -44,10 +44,10 @@ _predict_functional_doc =\
         A second set of fixed values used to define a contrast.
     alpha : float
         `1 - alpha` is the coverage probability.
-    ci_method : string
+    ci_method : str
         The method for constructing the confidence band, one of
         'pointwise', 'scheffe', and 'simultaneous'.
-    num_points : integer
+    num_points : int
         The number of equally-spaced quantile points where the
         prediction is made.
     exog : array_like
@@ -283,14 +283,15 @@ def _check_args(values, summaries, values2, summaries2):
     return values, summaries, values2, summaries2
 
 
+@Appender(_predict_functional_doc)
 def predict_functional(result, focus_var, summaries=None, values=None,
                        summaries2=None, values2=None, alpha=0.05,
                        ci_method="pointwise", linear=True, num_points=10,
                        exog=None, exog2=None, **kwargs):
-    # docstring attached below
 
     if ci_method not in ("pointwise", "scheffe", "simultaneous"):
-        raise ValueError('confidence band method must be one of `pointwise`, `scheffe`, and `simultaneous`.')
+        raise ValueError('confidence band method must be one of '
+                         '`pointwise`, `scheffe`, and `simultaneous`.')
 
     contrast = (values2 is not None) or (summaries2 is not None)
 
@@ -378,7 +379,6 @@ def predict_functional(result, focus_var, summaries=None, values=None,
 
     return pred, cb, fvals
 
-predict_functional.__doc__ = _predict_functional_doc
 
 def _glm_basic_scr(result, exog, alpha):
     """

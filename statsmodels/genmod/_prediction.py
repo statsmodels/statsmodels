@@ -55,7 +55,7 @@ class PredictionResults(object):
         ----------
         value : array_like
             value under the null hypothesis
-        alternative : string
+        alternative : str
             'two-sided', 'larger', 'smaller'
 
         Returns
@@ -134,8 +134,8 @@ class PredictionResults(object):
         to_include['mean_ci_upper'] = ci_mean[:, 1]
 
         self.table = to_include
-        #OrderedDict doesn't work to preserve sequence
-        # pandas dict doesn't handle 2d_array
+        #OrderedDict does not work to preserve sequence
+        # pandas dict does not handle 2d_array
         #data = np.column_stack(list(to_include.values()))
         #names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,
@@ -163,8 +163,11 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
     weights : array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
-    args, kwargs :
-        Some models can take additional arguments or keywords, see the
+    *args :
+        Some models can take additional arguments. See the
+        predict method of the model for the details.
+    **kwargs :
+        Some models can take additional keyword arguments. See the
         predict method of the model for the details.
 
     Returns

@@ -45,7 +45,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         arguments to `plot` when plotting interval lines.  Useful
         keyword arguments are "color", "linestyle", "solid_capstyle",
         and "linewidth".
-    split_names : string
+    split_names : str
         If not None, this is used to split the values of `lines` into
         substrings that are drawn in the left and right margins,
         respectively.  If None, the values of `lines` are drawn in the
@@ -56,7 +56,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     line_order : array_like
         The line labels in the order in which they appear in the
         dotplot.
-    stacked : boolean
+    stacked : bool
         If True, when multiple points or intervals are drawn on the
         same line, they are offset from each other.
     styles_order : array_like
@@ -64,12 +64,12 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         on a given line are drawn from top to bottom (if horizontal
         is True) or from left to right (if horiontal is False).  If
         None (default), the order is lexical.
-    striped : boolean
+    striped : bool
         If True, every other line is enclosed in a shaded box.
-    horizontal : boolean
+    horizontal : bool
         If True (default), the lines are drawn horizontally, otherwise
         they are drawn vertically.
-    show_names : string
+    show_names : str
         Determines whether labels (names) are shown in the left and/or
         right margins (top/bottom margins if `horizontal` is True).
         If `both`, labels are drawn in both margins, if 'left', labels

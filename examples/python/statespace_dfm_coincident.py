@@ -10,7 +10,7 @@
 # # Dynamic factors and coincident indices
 #
 # Factor models generally try to find a small number of unobserved
-# "factors" that influence a subtantial portion of the variation in a larger
+# "factors" that influence a substantial portion of the variation in a larger
 # number of observed variables, and they are related to dimension-reduction
 # techniques such as principal components analysis. Dynamic factor models
 # explicitly model the transition dynamics of the unobserved factors, and so
@@ -150,7 +150,7 @@ dta['std_emp'] = (
 # ## Model specification
 #
 # The specific dynamic factor model in this application has 1 unobserved
-# factor which is assumed to follow an AR(2) proces. The innovations
+# factor which is assumed to follow an AR(2) process. The innovations
 # $\varepsilon_t$ are assumed to be independent (so that $\Sigma$ is a
 # diagonal matrix) and the error term associated with each equation,
 # $u_{i,t}$ is assumed to follow an independent AR(2) process.
@@ -185,13 +185,13 @@ dta['std_emp'] = (
 # Once the model is created, the parameters can be estimated via maximum
 # likelihood; this is done using the `fit()` method.
 #
-# **Note**: recall that we have de-meaned and standardized the data; this
+# **Note**: recall that we have demeaned and standardized the data; this
 # will be important in interpreting the results that follow.
 #
 # **Aside**: in their empirical example, Kim and Nelson (1999) actually
 # consider a slightly different model in which the employment variable is
 # allowed to also depend on lagged values of the factor - this model does
-# not fit into the built-in `DynamicFactor` class, but can be accomodated by
+# not fit into the built-in `DynamicFactor` class, but can be accommodated by
 # using a subclass to implement the required new parameters and restrictions
 # - see Appendix A, below.
 
@@ -200,7 +200,7 @@ dta['std_emp'] = (
 # Multivariate models can have a relatively large number of parameters,
 # and it may be difficult to escape from local minima to find the maximized
 # likelihood. In an attempt to mitigate this problem, I perform an initial
-# maximization step (from the model-defined starting paramters) using the
+# maximization step (from the model-defined starting parameters) using the
 # modified Powell method available in Scipy (see the minimize documentation
 # for more information). The resulting parameters are then used as starting
 # parameters in the standard LBFGS optimization method.
@@ -301,7 +301,7 @@ res.plot_coefficients_of_determination(figsize=(8, 2))
 # It is constructed below. For readers interested in an explanation of the
 # construction, see Kim and Nelson (1999) or Stock and Watson (1991).
 #
-# In essense, what is done is to reconstruct the mean of the (differenced)
+# In essence, what is done is to reconstruct the mean of the (differenced)
 # factor. We will compare it to the coincident index on published by the
 # Federal Reserve Bank of Philadelphia (USPHCI on FRED).
 
@@ -695,8 +695,8 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         unconstrained = super(ExtendedDFM,
                               self).untransform_params(constrained[:-3])
 
-        # Redo the factor AR unconstraint, since we only want an AR(2),
-        # and the previous unconstraint was for an AR(4)
+        # Redo the factor AR unconstrained, since we only want an AR(2),
+        # and the previous unconstrained was for an AR(4)
         ar_params = constrained[self._params_factor_ar]
         unconstrained[self._params_factor_ar] = (
             tools.unconstrain_stationary_univariate(ar_params))
@@ -731,7 +731,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # #### `start_params`
 #
 # `start_params` are used as initial values in the optimizer. Since we are
-# adding three new parameters, we need to pass those in. If we hadn't done
+# adding three new parameters, we need to pass those in. If we had not done
 # this, the optimizer would use the default starting values, which would be
 # three elements short.
 #
@@ -744,7 +744,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # #### `transform_params` and `untransform_params`
 #
 # The optimizer selects possibly parameter values in an unconstrained way.
-# That's not usually desired (since variances can't be negative, for
+# That's not usually desired (since variances cannot be negative, for
 # example), and `transform_params` is used to transform the unconstrained
 # values used by the optimizer to constrained values appropriate to the
 # model. Variances terms are typically squared (to force them to be
@@ -755,7 +755,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # parameters appropriate to the optimizer before we can begin the
 # optimization routine).
 #
-# Even though we don't need to transform or untransform our new parameters
+# Even though we do not need to transform or untransform our new parameters
 # (the loadings can in theory take on any values), we still need to modify
 # this function for two reasons:
 #
@@ -784,7 +784,7 @@ extended_res = extended_mod.fit(
 print(extended_res.summary(separate_params=False))
 
 # Although this model increases the likelihood, it is not preferred by the
-# AIC and BIC mesaures which penalize the additional three parameters.
+# AIC and BIC measures which penalize the additional three parameters.
 #
 # Furthermore, the qualitative results are unchanged, as we can see from
 # the updated $R^2$ chart and the new coincident index, both of which are

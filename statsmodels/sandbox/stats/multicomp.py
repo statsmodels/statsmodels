@@ -7,7 +7,7 @@ Notes:
  - one example taken from lecture notes looks ok
  - needs cases with non-monotonic inequality for test to see difference between
    one-step, step-up and step-down procedures
- - FDR doesn't look really better then Bonferoni in the MC examples that I tried
+ - FDR does not look really better then Bonferoni in the MC examples that I tried
 update:
  - now tested against R, stats and multtest,
    I have all of their methods for p-value correction
@@ -15,7 +15,7 @@ update:
  - now, since I have p-values correction, some of the original tests (rej/norej)
    implementation is not really needed anymore. I think I keep it for reference.
    Test procedure for Hommel in development session log
- - I haven't updated other functions and classes in here.
+ - I have not updated other functions and classes in here.
    - multtest has some good helper function according to docs
  - still need to update references, the real papers
  - fdr with estimated true hypothesis still missing
@@ -49,7 +49,7 @@ S. Paul Wright, Adjusted P-Values for Simultaneous Inference, Biometrics
 for multicomparison
 
 new book "multiple comparison in R"
-Hsu is a good reference but I don't have it.
+Hsu is a good reference but I do not have it.
 
 
 Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
@@ -379,7 +379,7 @@ def rejectionline(n, alpha=0.5):
 
 
 
-#I don't remember what I changed or why 2 versions,
+#I do not remember what I changed or why 2 versions,
 #this follows german diss ???  with rline
 #this might be useful if the null hypothesis is not "all effects are zero"
 #rename to _bak and working again on fdrcorrection0
@@ -519,7 +519,7 @@ class GroupsStats(object):
         ----------
         x : array, 2d
             first column data, second column group labels
-        useranks : boolean
+        useranks : bool
             if true, then use ranks as data corresponding to the
             scipy.stats.rankdata definition (start at 1, ties get mean)
         uni, intlab : arrays (optional)
@@ -661,12 +661,12 @@ class TukeyHSDResults(object):
                           xlabel=None, ylabel=None):
         """Plot a universal confidence interval of each group mean
 
-        Visiualize significant differences in a plot with one confidence
+        Visualize significant differences in a plot with one confidence
         interval per group instead of all pairwise confidence intervals.
 
         Parameters
         ----------
-        comparison_name : string, optional
+        comparison_name : str, optional
             if provided, plot_intervals will color code all groups that are
             significantly different from the comparison_name red, and will
             color code insignificant groups gray. Otherwise, all intervals will
@@ -675,9 +675,9 @@ class TukeyHSDResults(object):
             An axis handle on which to attach the plot.
         figsize : tuple, optional
             tuple for the size of the figure generated
-        xlabel : string, optional
+        xlabel : str, optional
             Name to be displayed on x axis
-        ylabel : string, optional
+        ylabel : str, optional
             Name to be displayed on y axis
 
         Returns
@@ -789,7 +789,7 @@ class MultiComparison(object):
         independent data samples
     groups : array
         group labels corresponding to each data point
-    group_order : list of strings, optional
+    group_order : list[str], optional
         the desired order for the group mean results to be reported in. If
         not specified, results are reported in increasing order.
         If group_order does not contain all labels that are in groups, then
@@ -903,7 +903,7 @@ class MultiComparison(object):
             the return value on position pvalidx is the p-value.
         alpha : float
             familywise error rate
-        method : string
+        method : str
             This specifies the method for the p-value correction. Any method
             of multipletests is possible.
         pvalidx : int (default: 1)
@@ -923,7 +923,7 @@ class MultiComparison(object):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = \
-                multipletests(res[:, pvalidx], alpha=0.05, method=method)
+                multipletests(res[:, pvalidx], alpha=alpha, method=method)
         #print(np.column_stack([res[:,0],res[:,1], reject, pvals_corrected])
 
         i1, i2 = self.pairindices
@@ -1536,7 +1536,7 @@ class StepDown(object):
 
     One change to make it more flexible, is to separate out the decision on a subset,
     also because the F-based tests, FREGW in SPSS, take information from all elements of
-    a set and not just pairwise comparisons. I haven't looked at the details of
+    a set and not just pairwise comparisons. I have not looked at the details of
     the F-based tests such as Sheffe yet. It looks like running an F-test on equality
     of means in each subset. This would also outsource how pairwise conditions are
     combined, any larger or max. This would also imply that the distance matrix cannot
@@ -1574,7 +1574,7 @@ class StepDown(object):
         self.distance_matrix = dres[0]
 
     def iter_subsets(self, indices):
-        """Iteratre substeps"""
+        """Iterate substeps"""
         for ii in range(len(indices)):
             idxsub = copy.copy(indices)
             idxsub.pop(ii)
@@ -1708,7 +1708,7 @@ def set_partition(ssli):
     '''extract a partition from a list of tuples
 
     this should be correctly called select largest disjoint sets.
-    Begun and Gabriel 1981 don't seem to be bothered by sets of accepted
+    Begun and Gabriel 1981 do not seem to be bothered by sets of accepted
     hypothesis with joint elements,
     e.g. maximal_accepted_sets = { {1,2,3}, {2,3,4} }
 
@@ -1716,7 +1716,7 @@ def set_partition(ssli):
     It tries to find the partition with the largest sets. That is, sets are
     included after being sorted by length.
 
-    If the list doesn't include the singletons, then it will be only a
+    If the list does not include the singletons, then it will be only a
     partial partition. Missing items are singletons (I think).
 
     Examples
@@ -1763,7 +1763,7 @@ def set_remove_subs(ssli):
     [(1, 1, 1, 2, 3), (0, 1)]
 
     '''
-    #TODO: maybe convert all tuples to sets immediately, but I don't need the extra efficiency
+    #TODO: maybe convert all tuples to sets immediately, but I do not need the extra efficiency
     part = []
     for s in sorted(list(set(ssli)), key=lambda x: len(set(x)))[::-1]:
         #print(s,

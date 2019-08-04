@@ -101,7 +101,7 @@ class AffineDiffusion(Diffusion):
         pass
 
     def sim(self, nobs=100, T=1, dt=None, nrepl=1):
-        # this doesn't look correct if drift or sig depend on x
+        # this does not look correct if drift or sig depend on x
         # see arithmetic BM
         W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dx =  self._drift() + self._sig() * W
@@ -179,7 +179,7 @@ class ExactDiffusion(AffineDiffusion):
         expddt = np.exp(-self.lambd * ddt)
         normrvs = np.random.normal(size=(nrepl,nobs))
         #do I need lfilter here AR(1) ? if mean reverting lag-coeff<1
-        #lfilter doesn't handle 2d arrays, it does?
+        #lfilter does not handle 2d arrays, it does?
         inc = self._exactconst(expddt) + self._exactstd(expddt) * normrvs
         return signal.lfilter([1.], [1.,-expddt], inc)
 
@@ -293,7 +293,7 @@ class OUprocess(AffineDiffusion):
         expnt = np.exp(-self.lambd * t)
         expddt = np.exp(-self.lambd * ddt)
         normrvs = np.random.normal(size=(nrepl,nobs))
-        #do I need lfilter here AR(1) ? lfilter doesn't handle 2d arrays, it does?
+        #do I need lfilter here AR(1) ? lfilter does not handle 2d arrays, it does?
         from scipy import signal
         #xzero * expnt
         inc = ( self.mu * (1-expddt) +

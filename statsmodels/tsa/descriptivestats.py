@@ -46,7 +46,7 @@ class TsaDescriptive(object):
         return stt.pacf(self.data, nlags=nlags)
 
     def periodogram(self):
-        #doesn't return frequesncies
+        #does not return frequesncies
         return stt.periodogram(self.data)
 
     # copied from fftarma.py

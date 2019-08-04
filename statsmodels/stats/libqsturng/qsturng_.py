@@ -48,7 +48,7 @@ __version__ = '0.2.3'
 # r values for combinations of p and v. In total there are 206
 # estimates over p-values of .5, .75, .9, .95, .975, .99, .995,
 # and .999, and over v (degrees of freedom) of (1) - 20, 24, 30, 40,
-# 60, 120, and inf. combinations with p < .95 don't have coefficients
+# 60, 120, and inf. combinations with p < .95 do not have coefficients
 # for v = 1. Hence the parentheses. These coefficients allow us to
 # form f-hat. f-hat with the inverse t transform of tinv(p,v) yields
 # a fairly accurate estimate of the studentized range distribution
@@ -391,7 +391,7 @@ def _isfloat(x):
 
 def _phi( p ):
     # this function is faster than using scipy.stats.norm.isf(p)
-    # but the permissity of the license isn't explicitly listed.
+    # but the permissity of the license is not explicitly listed.
     # using scipy.stats.norm.isf(p) is an acceptable alternative
 
     """

@@ -2,7 +2,7 @@
 
 np_new_unique
 -------------
-Optionally provides the count of the number of occurences of each
+Optionally provides the count of the number of occurrences of each
 unique element.
 
 Copied from Numpy source, under license:

@@ -628,7 +628,7 @@ cdef class {{prefix}}Statespace(object):
         # functions as two-dimensional, column-major arrays.
         #
         # In the case that all data is missing (e.g. this is what happens in
-        # forecasting), we actually set don't change the dimension, but we set
+        # forecasting), we actually set do not change the dimension, but we set
         # the design matrix to the zeros array.
         if self._nmissing == self.k_endog:
             self._select_missing_entire_obs(t)
@@ -718,7 +718,7 @@ cdef class {{prefix}}Statespace(object):
 
         # Perform the LDL decomposition, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
-            # Make sure we don't have an observation intercept
+            # Make sure we do not have an observation intercept
             if not np.sum(self.obs_intercept) == 0 or self.obs_intercept.shape[2] > 1:
                 raise RuntimeError('The univariate method with non-diagonal observation covariance matrix'
                                    ' does not currently support an observation intercept.')
@@ -833,7 +833,7 @@ cdef class {{prefix}}Statespace(object):
             for i in range(k_states):
                 self.collapse_obs_cov[i,i] = 1
 
-            # Make sure we don't have an observation intercept
+            # Make sure we do not have an observation intercept
             if not np.sum(self.obs_intercept) == 0 or self.obs_intercept.shape[2] > 1:
                 raise RuntimeError('The observation collapse transformation'
                                    ' does not currently support an observation'

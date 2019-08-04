@@ -13,7 +13,7 @@
 
 TODO:
 * Where is Transf_gen for general monotonic transformation ? found and added it
-* write some docstrings, some parts I don't remember
+* write some docstrings, some parts I do not remember
 * add Box-Cox transformation, parameterized ?
 
 
@@ -1025,7 +1025,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
 
     '''
     n = len(lower)
-    #don't know if converting to array is necessary,
+    #do not know if converting to array is necessary,
     #but it makes ndim check possible
     lower = np.array(lower)
     upper = np.array(upper)

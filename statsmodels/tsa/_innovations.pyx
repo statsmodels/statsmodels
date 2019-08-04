@@ -10,15 +10,15 @@ def innovations_algo(acov, nobs=None, rtol=None):
     """
     innovations_algo(acov, nobs=None, rtol=None)
 
-    Innovations algorithm to convert autocovariances to MA parameters
+    Innovations algorithm to convert autocovariances to MA parameters.
 
     Parameters
     ----------
     acov : array_like
-        Array containing autocovariances including lag 0
+        Array containing autocovariances including lag 0.
     nobs : int, optional
         Number of periods to run the algorithm.  If not provided, nobs is
-        equal to the length of acovf
+        equal to the length of acovf.
     rtol : float, optional
         Tolerance used to check for convergence. Default value is 0 which will
         never prematurely end the algorithm. Checks after 10 iterations and
@@ -36,6 +36,15 @@ def innovations_algo(acov, nobs=None, rtol=None):
     sigma2 : ndarray
         The prediction error variance (nobs,).
 
+    See Also
+    --------
+    innovations_filter : Filter a series using the innovations algorithm.
+
+    References
+    ----------
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -44,15 +53,6 @@ def innovations_algo(acov, nobs=None, rtol=None):
     >>> acov = sm.tsa.acovf(rgdpg)
     >>> nobs = activity.shape[0]
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
-
-    See Also
-    --------
-    innovations_filter
-
-    References
-    ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
-        and forecasting. Springer.
     """
     cdef double[::1] v, _acov
     cdef double[:, ::1] theta
@@ -101,7 +101,7 @@ def innovations_filter(endog, theta):
     """
     innovations_filter(endog, theta)
 
-    Filter observations using the innovations algorithm
+    Filter observations using the innovations algorithm.
 
     Parameters
     ----------
@@ -113,8 +113,17 @@ def innovations_filter(endog, theta):
 
     Returns
     -------
-    resid : ndarray
-        Array of filtered innovations
+    ndarray
+        Array of filtered innovations.
+
+    See Also
+    --------
+    innovations_algo : Convert autocovariances to MA parameters.
+
+    References
+    ----------
+    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+        and forecasting. Springer.
 
     Examples
     --------
@@ -125,15 +134,6 @@ def innovations_filter(endog, theta):
     >>> nobs = activity.shape[0]
     >>> theta, sigma2  = innovations_algo(acov[:4], nobs=nobs)
     >>> resid = innovations_filter(rgdpg, theta)
-
-    See Also
-    --------
-    innovations_algo
-
-    References
-    ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
-        and forecasting. Springer.
     """
     cdef Py_ssize_t i, j, k, n_theta, nobs
     cdef double[::1] _endog, u

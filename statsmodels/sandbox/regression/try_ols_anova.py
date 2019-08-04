@@ -94,7 +94,7 @@ def anovadict(res):
     not checked for completeness
     '''
     ad = {}
-    ad.update(res.__dict__)  #dict doesn't work with cached attributes
+    ad.update(res.__dict__)  #dict does not work with cached attributes
     anova_attr = ['df_model', 'df_resid', 'ess', 'ssr','uncentered_tss',
                  'mse_model', 'mse_resid', 'mse_total', 'fvalue', 'f_pvalue',
                   'rsquared']
@@ -108,7 +108,7 @@ def anovadict(res):
 def form2design(ss, data):
     '''convert string formula to data dictionary
 
-    ss : string
+    ss : str
      * I : add constant
      * varname : for simple varnames data is used as is
      * F:varname : create dummy variables for factor varname
@@ -139,7 +139,7 @@ def form2design(ss, data):
     Notes
     -----
 
-    with sorted dict, separate name list wouldn't be necessary
+    with sorted dict, separate name list would not be necessary
     '''
     vars = {}
     names = []
@@ -168,7 +168,7 @@ def form2design(ss, data):
 
 def dropname(ss, li):
     '''drop names from a list of strings,
-    names to drop are in space delimeted list
+    names to drop are in space delimited list
     does not change original list
     '''
     newli = li[:]
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     m = dta.mask.view(bool)
     droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
     # get complete data as plain structured array
-    # maybe doesn't work with masked arrays
+    # maybe does not work with masked arrays
     dta_use_b1 = dta[~droprows,:].data
     print(dta_use_b1.shape)
     print(dta_use_b1.dtype)

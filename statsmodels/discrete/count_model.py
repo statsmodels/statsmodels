@@ -17,6 +17,7 @@ from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.compat.pandas import Appender
 
 
 _doc_zi_params = """
@@ -28,7 +29,7 @@ _doc_zi_params = """
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    inflation : string, 'logit' or 'probit'
+    inflation : {'logit', 'probit'}
         The model for the zero inflation, either Logit (default) or Probit
     """
 
@@ -100,7 +101,7 @@ class GenericZeroInflated(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model
+        Loglikelihood of Generic Zero Inflated model.
 
         Parameters
         ----------
@@ -118,13 +119,12 @@ class GenericZeroInflated(CountModel):
         .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
             \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
             where P - pdf of main model, L - loglike function of main model.
-
         """
         return np.sum(self.loglikeobs(params))
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model
+        Loglikelihood for observations of Generic Zero Inflated model.
 
         Parameters
         ----------
@@ -135,7 +135,7 @@ class GenericZeroInflated(CountModel):
         -------
         loglike : ndarray
             The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
+            at `params`. See Notes for definition.
 
         Notes
         --------
@@ -144,7 +144,6 @@ class GenericZeroInflated(CountModel):
             where P - pdf of main model, L - loglike function of main model.
 
         for observations :math:`i=1,...,n`
-
         """
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
@@ -164,6 +163,7 @@ class GenericZeroInflated(CountModel):
 
         return llf
 
+    @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -192,8 +192,7 @@ class GenericZeroInflated(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
+    @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -226,8 +225,6 @@ class GenericZeroInflated(CountModel):
 
         discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score_obs(self, params):
         """
@@ -382,7 +379,7 @@ class GenericZeroInflated(CountModel):
             Log(exposure) is added to the linear prediction with coefficient
             equal to 1. If exposure is specified, then it will be logged by the method.
             The user does not need to log it first.
-        which : string, optional
+        which : str, optional
             Define values that will be predicted.
             'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob', 'prob-main'
             Default is 'mean'.
@@ -779,7 +776,7 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Genaralized Negative Binomial",
+        "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
         "extra_attr": ""}
 
     @cache_readonly

@@ -498,7 +498,7 @@ class DescStatUV(_OptFuncts):
             Mean value to be tested
 
         return_weights : bool
-            If return_weights is True the funtion returns
+            If return_weights is True the function returns
             the weights of the observations under the null hypothesis.
             Default is False
 
@@ -538,7 +538,7 @@ class DescStatUV(_OptFuncts):
             Lagrange (see Owen pg 22) and then determine the weights.
 
             'nested brent' uses brents method to find the confidence
-            intervals but must maximize the likelihhod ratio on every
+            intervals but must maximize the likelihood ratio on every
             iteration.
 
             gamma is generally much faster.  If the optimizations does not
@@ -565,7 +565,7 @@ class DescStatUV(_OptFuncts):
 
             When using 'gamma', amount to decrease (increase) the
             minimum (maximum) by to start the search for gamma.
-            If fucntion returns f(a) and f(b) must have differnt signs,
+            If function returns f(a) and f(b) must have different signs,
             consider lowering epsilon.
 
         Returns
@@ -602,7 +602,7 @@ class DescStatUV(_OptFuncts):
 
     def test_var(self, sig2_0, return_weights=False):
         """
-        Returns  -2 x log-likelihoog ratio and the p-value for the
+        Returns  -2 x log-likelihood ratio and the p-value for the
         hypothesized variance
 
         Parameters
@@ -1119,7 +1119,7 @@ class DescStatMV(_OptFuncts):
             Default is  99% confidence limit assuming normality.
 
         lower_bound : float
-            Minimum value the lower condidence limit can be.
+            Minimum value the lower confidence limit can be.
             Default is 99% confidence limit assuming normality.
 
         Returns

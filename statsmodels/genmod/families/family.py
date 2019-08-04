@@ -32,7 +32,7 @@ class Family(object):
 
     See Also
     --------
-    :ref:`links`
+    :ref:`links` : Further details on links.
     """
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
@@ -389,8 +389,8 @@ class Poisson(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
@@ -479,7 +479,7 @@ class Poisson(Family):
         Returns
         -------
         resid_anscombe : array
-            The Anscome residuals for the Poisson family defined below
+            The Anscombe residuals for the Poisson family defined below
 
         Notes
         -----
@@ -515,8 +515,8 @@ class Gaussian(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -659,8 +659,8 @@ class Gamma(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
@@ -793,8 +793,8 @@ class Binomial(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
@@ -855,7 +855,11 @@ class Binomial(Family):
         '''
         # if not np.all(np.asarray(freq_weights) == 1):
         #     self.variance = V.Binomial(n=freq_weights)
-        if (endog.ndim > 1 and endog.shape[1] > 1):
+        if endog.ndim > 1 and endog.shape[1] > 2:
+            raise ValueError('endog has more than 2 columns. The Binomial '
+                             'link supports either a single response variable '
+                             'or a paired response variable.')
+        elif endog.ndim > 1 and endog.shape[1] > 1:
             y = endog[:, 0]
             # overwrite self.freq_weights for deviance below
             self.n = endog.sum(1)
@@ -1028,14 +1032,13 @@ class InverseGaussian(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
-    The inverse Guassian distribution is sometimes referred to in the
+    The inverse Gaussian distribution is sometimes referred to in the
     literature as the Wald distribution.
-
     """
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
@@ -1166,8 +1169,8 @@ class NegativeBinomial(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
@@ -1356,12 +1359,12 @@ class Tweedie(Family):
 
     See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
-    Logliklihood function not implemented because of the complexity of
+    Loglikelihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.

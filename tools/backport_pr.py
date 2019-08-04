@@ -163,7 +163,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         branch = sys.argv[1]
         already = already_backported(branch)
-        # NOTE: change this to the label you've used for marking a backport
+        # NOTE: change this to the label you have used for marking a backport
         should = should_backport(milestone="0.5.1")
         print("The following PRs should be backported:")
         to_backport = []

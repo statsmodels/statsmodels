@@ -17,7 +17,7 @@ Notes
 - testfailure with Gamma, no other families tested
 - there is still an indeterminacy in the split up of the constant across
   components (smoothers) and alpha, sum, i.e. constant, looks good.
-  - role of offset, that I haven't tried to figure out yet
+  - role of offset, that I have not tried to figure out yet
 
 Refactoring
 -----------
@@ -39,7 +39,7 @@ benchmark against the parametric GLM results.
 # TODO: check/catalogue required interface of a smoother
 # TODO: replace default smoother by corresponding function to initialize
 #       other smoothers
-# TODO: fix iteration, don't define class with iterator methods, use looping;
+# TODO: fix iteration, do not define class with iterator methods, use looping;
 #       add maximum iteration and other optional stop criteria
 # fixed some of the dimension problems in PolySmoother,
 #       now graph for example looks good
@@ -110,7 +110,7 @@ class Results(object):
     def __init__(self, Y, alpha, exog, smoothers, family, offset):
         self.nobs, self.k_vars = exog.shape  #assumes exog is 2d
         #weird: If I put the previous line after the definition of self.mu,
-        #    then the attributed don't get added
+        #    then the attributed do not get added
         self.Y = Y
         self.alpha = alpha
         self.smoothers = smoothers
@@ -141,7 +141,7 @@ class Results(object):
         #TODO: transpose in smoothed and sum over axis=1
 
         #BUG: there is some inconsistent orientation somewhere
-        #temporary hack, won't work for 1d
+        #temporary hack, will not work for 1d
         #print dir(self)
         #print 'self.nobs, self.k_vars', self.nobs, self.k_vars
         exog_smoothed = self.smoothed(exog)
@@ -162,9 +162,9 @@ class Results(object):
         '''
         #bug: with exog in predict I get a shape error
         #print 'smoothed', exog.shape, self.smoothers[0].predict(exog).shape
-        #there was a mistake exog didn't have column index i
+        #there was a mistake exog did not have column index i
         return np.array([self.smoothers[i].predict(exog[:,i]) + self.offset[i]
-        #shouldn't be a mistake because exog[:,i] is attached to smoother, but
+        #should not be a mistake because exog[:,i] is attached to smoother, but
         #it is for different exog
         #return np.array([self.smoothers[i].predict() + self.offset[i]
                          for i in range(exog.shape[1])]).T
@@ -221,7 +221,7 @@ class AdditiveModel(object):
         '''internal calculation for one fit iteration
 
         BUG: I think this does not improve, what is supposed to improve
-            offset doesn't seem to be used, neither an old alpha
+            offset does not seem to be used, neither an old alpha
             The smoothers keep coef/params from previous iteration
         '''
         _results = self.results
@@ -331,7 +331,7 @@ class AdditiveModel(object):
 class Model(GLM, AdditiveModel):
 #class Model(AdditiveModel):
     #TODO: what does GLM do? Is it actually used ?
-    #only used in __init__, dropping it doesn't change results
+    #only used in __init__, dropping it does not change results
     #but where gets family attached now? - weird, it's Gaussian in this case now
     #also where is the link defined?
     #AdditiveModel overwrites family and sets it to Gaussian - corrected
@@ -375,7 +375,7 @@ class Model(GLM, AdditiveModel):
         m = AdditiveModel(self.exog, smoothers=self.smoothers,
                           weights=self.weights, family=self.family)
 
-        #TODO: I don't know what the next two lines do, Z, Y ? which is endog?
+        #TODO: I do not know what the next two lines do, Z, Y ? which is endog?
         #Y is original endog, Z is endog for the next step in the iterative solver
 
         _results = m.fit(Z)

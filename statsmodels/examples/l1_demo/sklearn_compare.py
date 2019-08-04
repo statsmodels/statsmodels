@@ -14,7 +14,7 @@ Computes a regularzation path with both packages.  The coefficient values in
 
 The results "prove" that the regularization paths are the same.  Note that
     finding the reparameterization is non-trivial since the coefficient paths
-    are NOT monotonic.  As a result, the paths don't match up perfectly.
+    are NOT monotonic.  As a result, the paths do not match up perfectly.
 """
 from statsmodels.compat.python import lrange
 from sklearn import linear_model

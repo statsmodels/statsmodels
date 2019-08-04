@@ -41,9 +41,9 @@ def fit_l1_slsqp(
     auto_trim_tol : float
         For sue when trim_mode == 'auto'.  Use
     qc_tol : float
-        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        Print warning and do not allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
-    qc_verbose : Boolean
+    qc_verbose : bool
         If true, print out a full QC report upon failure
     acc : float (default 1e-6)
         Requested accuracy as used by slsqp
@@ -94,7 +94,7 @@ def fit_l1_slsqp(
         auto_trim_tol)
 
     ### Pack up return values for statsmodels optimizers
-    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML.
+    # TODO These retvals are returned as mle_retvals...but the fit was not ML.
     # This could be confusing someday.
     if full_output:
         x_full, fx, its, imode, smode = results

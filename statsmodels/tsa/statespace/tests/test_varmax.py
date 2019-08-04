@@ -30,7 +30,7 @@ varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
 class CheckVARMAX(object):
     """
     Test Vector Autoregression against Stata's `dfactor` code (Stata's
-    `var` function uses OLS and not state space / MLE, so we can't get
+    `var` function uses OLS and not state space / MLE, so we cannot get
     equivalent log-likelihoods)
     """
 
@@ -324,7 +324,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         cls.results2 = cls.model.smooth(params)
 
     def test_mle(self):
-        # With the additional measurment error parameters, this wouldn't be
+        # With the additional measurment error parameters, this would not be
         # a meaningful test
         pass
 
@@ -692,7 +692,7 @@ class TestVARMA(CheckFREDManufacturing):
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
-        # in some params) whereas Stata's is restricted, the MLE test isn't
+        # in some params) whereas Stata's is restricted, the MLE test is not
         # meaninful
         pass
 
@@ -791,7 +791,7 @@ class TestVMA1(CheckFREDManufacturing):
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
-        # in some params) whereas Stata's is restricted, the MLE test isn't
+        # in some params) whereas Stata's is restricted, the MLE test is not
         # meaninful
         pass
 

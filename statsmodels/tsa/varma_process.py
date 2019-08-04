@@ -5,7 +5,7 @@ Created on Mon Jan 11 11:04:23 2010
 Author: josef-pktd
 License: BSD
 
-This is a new version, I didn't look at the old version again, but similar
+This is a new version, I did not look at the old version again, but similar
 ideas.
 
 not copied/cleaned yet:
@@ -37,8 +37,8 @@ from statsmodels.tsa.tsatools import lagmat
 def varfilter(x, a):
     '''apply an autoregressive filter to a series x
 
-    Warning: I just found out that convolve doesn't work as I
-       thought, this likely doesn't work correctly for
+    Warning: I just found out that convolve does not work as I
+       thought, this likely does not work correctly for
        nvars>3
 
 
@@ -347,7 +347,7 @@ class _Var(object):
 
         Parameters
         ----------
-        nlags : integer
+        nlags : int
             number of lags to include in regression, same for all variables
 
         Returns
@@ -545,7 +545,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isstationary : boolean
+        isstationary : bool
 
         *attaches*
 
@@ -574,7 +574,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isinvertible : boolean
+        isinvertible : bool
 
         *attaches*
 

@@ -12,10 +12,10 @@ Notes
 -----
 
 TODO: TestGAMGamma: has test failure (GLM looks good),
-        adding log-link didn't help
-        resolved: gamma doesn't fail anymore after tightening the
+        adding log-link did not help
+        resolved: gamma does not fail anymore after tightening the
                   convergence criterium (rtol=1e-6)
-TODO: TestGAMNegativeBinomial: rvs generation doesn't work,
+TODO: TestGAMNegativeBinomial: rvs generation does not work,
         nbinom needs 2 parameters
 TODO: TestGAMGaussianLogLink: test failure,
         but maybe precision issue, not completely off
@@ -198,7 +198,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
         res1.params = np.array([const] + slopes)
 
     def test_fitted(self):
-        # We have to override the base class because this case doesn't fail,
+        # We have to override the base class because this case does not fail,
         #  while all others in this module do (as of 2019-05-22)
         super(TestAdditiveModel, self).test_fitted()
 
@@ -219,7 +219,7 @@ class BaseGAM(BaseAM, CheckGAM):
         cls.mu_true = mu_true = f.link.inverse(y_true)
 
         np.random.seed(8765993)
-        # Discrete distributions don't take `scale`.
+        # Discrete distributions do not take `scale`.
         try:
             y_obs = cls.rvs(mu_true, scale=scale, size=nobs)
         except TypeError:
@@ -314,7 +314,7 @@ class TestGAMGamma(BaseGAM):
                           "to _parse_args_rvs",
                    strict=True, raises=TypeError)
 class TestGAMNegativeBinomial(BaseGAM):
-    # TODO: rvs generation doesn't work, nbinom needs 2 parameters
+    # TODO: rvs generation does not work, nbinom needs 2 parameters
 
     @classmethod
     def setup_class(cls):

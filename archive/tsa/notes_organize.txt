@@ -110,7 +110,7 @@ scikits.statsmodels.sandbox.regression.mle
 ------------------------------------------
 
 one refactoring bug fixed, because arima.ARIMA needs data, use class method instead
-runs without exception, but I didn't look at any results
+runs without exception, but I did not look at any results
 "main" has quite a lot
 
 AR  :      Notes
@@ -145,7 +145,7 @@ script files
 sandbox/tsa/try_arma_more.py
 ----------------------------
 
-imports scikits.talkbox which is not compiled against my current numpy and doesn't
+imports scikits.talkbox which is not compiled against my current numpy and does not
 run
 contains
 arma_periodogram : theoretical periodogram
@@ -209,7 +209,7 @@ not clear parameterization
       A(L)y_t = A(L)x_t + B(L)e_t
 
 - ARMAX  A(L)(y_t - A^{-1}(L) C(L) x_t) = B(L)e_t
-  this doesn't look useful, unless we cutoff A^{-1}(L)
+  this does not look useful, unless we cutoff A^{-1}(L)
 
 problem: signal.lfilter can only handle ARMAX residuals model (I think)
 deterministic trend have ARMAX-simple model, e.g. in unit root tests

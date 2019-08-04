@@ -382,7 +382,7 @@ class TestPHReg(object):
                 model = PHReg(time, exog, status=status, ties='breslow')
                 sm_result = model.fit_regularized(alpha=s)
 
-                # The agreement isn't very high, the issue may be on
+                # The agreement is not very high, the issue may be on
                 # the R side.  See below for further checks.
                 assert_allclose(sm_result.params, params, rtol=0.3)
 

@@ -81,6 +81,7 @@ Descriptive Statistics and Tests
    stattools.periodogram
    stattools.adfuller
    stattools.kpss
+   stattools.zivot_andrews
    stattools.coint
    stattools.bds
    stattools.q_stat
@@ -99,8 +100,8 @@ Estimation
 The following are the main estimation classes, which can be accessed through
 statsmodels.tsa.api and their result classes
 
-Univariate Autogressive Processes (AR)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Univariate Autoregressive Processes (AR)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
 
@@ -111,8 +112,8 @@ Univariate Autogressive Processes (AR)
    ar_model.ARResults
 
 
-Autogressive Moving-Average Processes (ARMA) and Kalman Filter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
 
@@ -182,12 +183,12 @@ process for given lag-polynomials.
    arima_process.lpol_fima
    arima_process.lpol_sdiff
 
-.. currentmodule:: statsmodels
+.. currentmodule:: statsmodels.sandbox.tsa.fftarma
 
 .. autosummary::
    :toctree: generated/
 
-   sandbox.tsa.fftarma.ArmaFft
+   ArmaFft
 
 .. currentmodule:: statsmodels.tsa
 
@@ -203,56 +204,86 @@ See the :ref:`vector_ar documentation. <var>`.
 Regime switching models
 """""""""""""""""""""""
 
+.. currentmodule:: statsmodels.tsa.regime_switching.markov_regression
 .. autosummary::
    :toctree: generated/
 
-   regime_switching.markov_regression.MarkovRegression
-   regime_switching.markov_autoregression.MarkovAutoregression
+   MarkovRegression
+
+.. currentmodule:: statsmodels.tsa.regime_switching.markov_autoregression
+.. autosummary::
+   :toctree: generated/
+
+   MarkovAutoregression
 
 
 Time Series Filters
 """""""""""""""""""
 
+.. currentmodule:: statsmodels.tsa.filters.bk_filter
 .. autosummary::
    :toctree: generated/
 
-   filters.bk_filter.bkfilter
-   filters.hp_filter.hpfilter
-   filters.cf_filter.cffilter
-   filters.filtertools.convolution_filter
-   filters.filtertools.recursive_filter
-   filters.filtertools.miso_lfilter
-   filters.filtertools.fftconvolve3
-   filters.filtertools.fftconvolveinv
-   seasonal.seasonal_decompose
-   seasonal.STL
-   seasonal.DecomposeResult
+   bkfilter
+
+.. currentmodule:: statsmodels.tsa.filters.hp_filter
+.. autosummary::
+   :toctree: generated/
+
+   hpfilter
+
+.. currentmodule:: statsmodels.tsa.filters.cf_filter
+.. autosummary::
+   :toctree: generated/
+
+   cffilter
+
+.. currentmodule:: statsmodels.tsa.filters.filtertools
+.. autosummary::
+   :toctree: generated/
+
+   convolution_filter
+   recursive_filter
+   miso_lfilter
+   fftconvolve3
+   fftconvolveinv
+
+
+.. currentmodule:: statsmodels.tsa.seasonal
+.. autosummary::
+   :toctree: generated/
+
+   seasonal_decompose
+   STL
+   DecomposeResult
 
 TSA Tools
 """""""""
 
-.. currentmodule:: statsmodels.tsa
+.. currentmodule:: statsmodels.tsa.tsatools
 
 .. autosummary::
    :toctree: generated/
 
-   tsatools.add_trend
-   tsatools.detrend
-   tsatools.lagmat
-   tsatools.lagmat2ds
+   add_trend
+   detrend
+   lagmat
+   lagmat2ds
 
 VARMA Process
 """""""""""""
 
+.. currentmodule:: statsmodels.tsa.varma_process
 .. autosummary::
    :toctree: generated/
 
-   varma_process.VarmaPoly
+   VarmaPoly
 
 Interpolation
 """""""""""""
 
+.. currentmodule:: statsmodels.tsa.interp.denton
 .. autosummary::
    :toctree: generated/
 
-   interp.denton.dentonm
+   dentonm

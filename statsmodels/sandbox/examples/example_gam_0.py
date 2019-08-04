@@ -50,7 +50,7 @@ z = f1(x1) + f2(x2)
 z -= np.median(z)
 print('z.std()', z.std())
 #z = standardize(z) + 0.2
-# with standardize I get better values, but I don't know what the true params are
+# with standardize I get better values, but I do not know what the true params are
 print(z.mean(), z.min(), z.max())
 
 #y += z  #noise

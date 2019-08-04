@@ -51,7 +51,7 @@ exog = sm.add_constant(
 # `RLS` model computes the regression parameters recursively, so there are
 # as many estimates as there are datapoints, the summary table only presents
 # the regression parameters estimated on the entire sample; except for small
-# effects from initialization of the recursiions, these estimates are
+# effects from initialization of the recursions, these estimates are
 # equivalent to OLS estimates.
 
 mod = sm.RecursiveLS(endog, exog)
@@ -143,12 +143,12 @@ print(res.summary())
 res.plot_recursive_coefficient(
     1, alpha=None)
 
-# The CUSUM plot now shows subtantial deviation at the 5% level,
+# The CUSUM plot now shows substantial deviation at the 5% level,
 # suggesting a rejection of the null hypothesis of parameter stability.
 
 res.plot_cusum()
 
-# Similarly, the CUSUM of squares shows subtantial deviation at the 5%
+# Similarly, the CUSUM of squares shows substantial deviation at the 5%
 # level, also suggesting a rejection of the null hypothesis of parameter
 # stability.
 

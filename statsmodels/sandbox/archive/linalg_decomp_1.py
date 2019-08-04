@@ -178,7 +178,7 @@ class CholArray(PlainMatrixArray):
 
     def yt_minv_y(self, y):
         '''xSigmainvx
-        doesn't use stored cholesky yet
+        does not use stored cholesky yet
         '''
         return np.dot(x,linalg.cho_solve(linalg.cho_factor(self.m),x))
         #same as

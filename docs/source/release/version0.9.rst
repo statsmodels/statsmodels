@@ -245,7 +245,7 @@ Improved time series index support
 
 Handling of indexes for time series models has been overhauled (#3272) to
 take advantage of recent improvements in Pandas and to shift to Pandas much of
-the special case handling (espcially for date indexes) that had previously been
+the special case handling (especially for date indexes) that had previously been
 done in Statsmodels. Benefits include more consistent behavior, a reduced
 number of bugs from corner cases, and a reduction in the maintenance burden.
 

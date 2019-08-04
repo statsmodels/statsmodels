@@ -5,9 +5,9 @@ Multiple Tests and Multiple Comparisons
 Introduction
 ------------
 
-generic multiple testing procedures, p-value corrections and fdr don't use
+generic multiple testing procedures, p-value corrections and fdr do not use
 any additional information, only information contained in p-values.
-I don't know if there are any underlying assumption, except that the raw
+I do not know if there are any underlying assumption, except that the raw
 pvalues are uniformly on [0,1] distributed under the null hypothesis.
 
 fdr for microarray or fmri can use special structure

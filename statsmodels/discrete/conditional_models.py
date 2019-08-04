@@ -145,7 +145,7 @@ class _ConditionalModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method :
+        method : {'elastic_net'}
             Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
@@ -158,10 +158,13 @@ class _ConditionalModel(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        **kwargs
+            Additional keyword argument that are used when fitting the model.
 
         Returns
         -------
-        An array of parameter estimates.
+        Results
+            A results instance.
         """
 
         from statsmodels.base.elastic_net import fit_elasticnet
@@ -550,7 +553,7 @@ class ConditionalMNLogit(_ConditionalModel):
             c = self.k_cat - 1
             start_params = np.random.normal(size=q * c)
 
-        # Don't call super(...).fit because it can't handle the 2d-params.
+        # Do not call super(...).fit because it cannot handle the 2d-params.
         rslt = base.LikelihoodModel.fit(
             self,
             start_params=start_params,
@@ -564,7 +567,7 @@ class ConditionalMNLogit(_ConditionalModel):
         rslt = MultinomialResults(self, rslt)
 
         # Not clear what the null likelihood should be, there is no intercept
-        # so the null model isn't clearly defined.  This is needed for summary
+        # so the null model is not clearly defined.  This is needed for summary
         # to work.
         rslt.set_null_options(llnull=np.nan)
 

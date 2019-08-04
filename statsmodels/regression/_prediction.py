@@ -11,8 +11,11 @@ import numpy as np
 from scipy import stats
 
 
-# this is similar to ContrastResults after t_test, partially copied and adjusted
+# this is similar to ContrastResults after t_test, copied and adjusted
 class PredictionResults(object):
+    """
+    Results class for predictions
+    """
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
                  df=None, dist=None, row_labels=None):
@@ -83,8 +86,8 @@ class PredictionResults(object):
         to_include['obs_ci_upper'] = ci_obs[:, 1]
 
         self.table = to_include
-        #OrderedDict doesn't work to preserve sequence
-        # pandas dict doesn't handle 2d_array
+        #OrderedDict does not work to preserve sequence
+        # pandas dict does not handle 2d_array
         #data = np.column_stack(list(to_include.values()))
         #names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,
@@ -95,7 +98,7 @@ class PredictionResults(object):
 def get_prediction(self, exog=None, transform=True, weights=None,
                    row_labels=None, pred_kwds=None):
     """
-    compute prediction results
+    Compute prediction results.
 
     Parameters
     ----------
@@ -111,13 +114,16 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     weights : array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
-    args, kwargs :
-        Some models can take additional arguments or keywords, see the
-        predict method of the model for the details.
+    row_labels : list
+        A list of row labels to use.  If not provided, read `exog` is
+        available.
+    **kwargs
+        Some models can take additional keyword arguments, see the predict
+        method of the model for the details.
 
     Returns
     -------
-    prediction_results : linear_model.PredictionResults
+    linear_model.PredictionResults
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.

@@ -12,7 +12,7 @@ using a development install of statsmodels::
     python setup.py develop
 
 This will compile the C code and add statsmodels to your activate python
-environment by creating links from your python environemnt's libraries
+environment by creating links from your python environment's libraries
 to the statsmodels source code. Therefore, changes to pure python code will
 be immediately available to the user without a re-install.
 

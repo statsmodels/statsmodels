@@ -74,7 +74,7 @@ TODO
   (? check transformation) to sample frequencies and zeros for slope
   coefficient as starting values for (non-nested) MNL
 * associated test statistics
-  - (I don't think I will fight with the gradient or hessian of the log-like.)
+  - (I do not think I will fight with the gradient or hessian of the log-like.)
   - basic MLE statistics can be generic
   - tests specific to the model (?)
 * nice printouts since I'm currently collecting a lot of information in the tree
@@ -353,7 +353,7 @@ class RU2NMNL(object):
                 if DEBUG:
                     print(b)
                 bv = self.calc_prob(b, name)
-                bv = np.exp(bv/tau)  #this shouldn't be here, when adding branch data
+                bv = np.exp(bv/tau)  #this should not be here, when adding branch data
                 branchvalue.append(bv)
                 branchsum = branchsum + bv
             self.branchvalues[name] = branchvalue #keep track what was returned

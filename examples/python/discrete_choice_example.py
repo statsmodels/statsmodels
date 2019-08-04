@@ -199,7 +199,7 @@ ax.axis('tight')
 ax.plot([0.0, 1.0], [0.0, 0.0], 'k-')
 
 # #### Histogram of standardized deviance residuals with Kernel Density
-# Estimate overlayed
+# Estimate overlaid
 
 # The definition of the deviance residuals depends on the family. For the
 # Binomial distribution this is

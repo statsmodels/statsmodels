@@ -9,7 +9,7 @@ Created on Sat May 28 15:38:23 2011
 
 TODO:
 * renaming,
-    - after adding t distribution, cov doesn't make sense for Sigma    DONE
+    - after adding t distribution, cov does not make sense for Sigma    DONE
     - should mean also be renamed to mu, if there will be distributions
       with mean != mu
 * not sure about corner cases
@@ -167,7 +167,7 @@ def expect_mc(dist, func=lambda x: 1, size=50000):
 
     Notes
     -----
-    this doesn't batch
+    this does not batch
 
     Returns
     -------
@@ -231,7 +231,7 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
 
     Notes
     -----
-    this doesn't batch
+    this does not batch
 
     Returns
     -------
@@ -470,7 +470,7 @@ class MVElliptical(object):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
 
@@ -519,7 +519,7 @@ class MVElliptical(object):
 
         Notes
         -----
-        This only does rescaling, it doesn't subtract the mean, use standardize
+        This only does rescaling, it does not subtract the mean, use standardize
         for this instead
 
         See Also
@@ -739,7 +739,7 @@ class MVNormal0(object):
 
         Notes
         -----
-        This only does rescaling, it doesn't subtract the mean, use standardize
+        This only does rescaling, it does not subtract the mean, use standardize
         for this instead
 
         See Also
@@ -811,7 +811,7 @@ class MVNormal0(object):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
         x = np.asarray(x)
@@ -875,7 +875,7 @@ class MVNormal(MVElliptical):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
         x = np.asarray(x)
@@ -1111,7 +1111,7 @@ class MVT(MVElliptical):
         #std_sigma = np.sqrt(np.diag(self.sigma))
         upper = (x - self.mean)/self.std_sigma
         return mvstdtprob(lower, upper, self.corr, self.df, **kwds)
-        #mvstdtcdf doesn't exist yet
+        #mvstdtcdf does not exist yet
         #return mvstdtcdf(lower, x, self.corr, df, **kwds)
 
     @property

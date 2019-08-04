@@ -200,23 +200,23 @@ class RLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        conv : string
+        conv : str
             Indicates the convergence criteria.
             Available options are "coefs" (the coefficients), "weights" (the
             weights in the iteration), "sresid" (the standardized residuals),
             and "dev" (the un-normalized log-likelihood for the M
             estimator).  The default is "dev".
-        cov : string, optional
+        cov : str, optional
             'H1', 'H2', or 'H3'
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        init : string
+        init : str
             Specifies method for the initial estimates of the parameters.
             Default is None, which means that the least squares estimate
             is used.  Currently it is the only available choice.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
-        scale_est : string or HuberScale()
+        scale_est : str or HuberScale()
             'mad' or HuberScale()
             Indicates the estimate to use for scaling the weights in the IRLS.
             The default is 'mad' (median absolute deviation.  Other options are
@@ -391,7 +391,7 @@ class RLMResults(base.LikelihoodModelResults):
         argument to fit.
     weights : array
         The reported weights are determined by passing the scaled residuals
-        from the last weighted least squares fit in the IRLS algortihm.
+        from the last weighted least squares fit in the IRLS algorithm.
 
     See Also
     --------

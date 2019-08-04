@@ -100,14 +100,14 @@ _init_doc = r"""
         Prior standard deviation for fixed effects parameters.
     family : statsmodels.genmod.families instance
         The GLM family.
-    fep_names : list of strings
+    fep_names : list[str]
         The names of the fixed effects parameters (corresponding to
         columns of exog).  If None, default names are constructed.
-    vcp_names : list of strings
+    vcp_names : list[str]
         The names of the variance component parameters (corresponding
         to distinct labels in ident).  If None, default names are
         constructed.
-    vc_names : list of strings
+    vc_names : list[str]
         The names of the random effect realizations.
 
     Returns
@@ -415,13 +415,13 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        formula : string
+        formula : str
             Formula for the endog and fixed effects terms (use ~ to
             separate dependent and independent expressions).
         vc_formulas : dictionary
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
-            prameter.  If using categorical (factor) variables to
+            parameter.  If using categorical (factor) variables to
             produce variance components, note that generally `0 + ...`
             should be used so that an intercept is not included.
         data : data frame
@@ -476,14 +476,13 @@ class _BayesMixedGLM(base.Model):
 
     def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
         """
-        Construct the Laplace approximation to the posterior
-        distribution.
+        Construct the Laplace approximation to the posterior distribution.
 
         Parameters
         ----------
-        method : string
+        method : str
             Optimization method for finding the posterior mode.
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize.
         scale_fe : bool
             If True, the columns of the fixed effects design matrix
@@ -604,7 +603,7 @@ class _VariationalBayesMixedGLM(object):
             The contribution of the model to the ELBO function can be
             expressed as y_i*lp_i + Eh_i(z), where y_i and lp_i are
             the response and linear predictor for observation i, and z
-            is a standard normal rangom variable.  This formulation
+            is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
         """
@@ -703,9 +702,9 @@ class _VariationalBayesMixedGLM(object):
             Starting value for VB mean vector
         sd : array_like
             Starting value for VB standard deviation vector
-        fit_method : string
+        fit_method : str
             Algorithm for scipy.minimize
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize
         scale_fe : bool
             If true, the columns of the fixed effects design matrix
@@ -767,12 +766,12 @@ class _VariationalBayesMixedGLM(object):
             # caller)
             s = np.log(sd)
 
-        # Don't allow the variance parameter starting mean values to
+        # Do not allow the variance parameter starting mean values to
         # be too small.
         i1, i2 = self.k_fep, self.k_fep + self.k_vcp
         m[i1:i2] = np.where(m[i1:i2] < -1, -1, m[i1:i2])
 
-        # Don't allow the posterior standard deviation starting values
+        # Do not allow the posterior standard deviation starting values
         # to be too small.
         s = np.where(s < -1, -1, s)
 

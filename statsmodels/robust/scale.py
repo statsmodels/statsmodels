@@ -28,7 +28,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
         The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),
         which is approximately .6745.
     axis : int, optional
-        The defaul is 0. Can also be None.
+        The default is 0. Can also be None.
     center : callable or float
         If a callable is provided, such as the default `np.median` then it
         is expected to be called center(a). The axis argument will be applied

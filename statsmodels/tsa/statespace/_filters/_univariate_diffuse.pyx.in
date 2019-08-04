@@ -266,7 +266,7 @@ cdef void {{prefix}}predicted_diffuse_state_cov({{prefix}}KalmanFilter kfilter, 
         {{cython_type}} beta = 0.0
 
     # Need special handling for the completely missing case, since the
-    # conventional Kalman filter routines are used in this case and they don't
+    # conventional Kalman filter routines are used in this case and they do not
     # copy over the predicted diffuse state cov
     if model._nmissing == model.k_endog:
         blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_diffuse_state_cov, &inc,

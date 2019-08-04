@@ -10,7 +10,7 @@
 # # Seasonality in time series data
 #
 # Consider the problem of modeling time series data with multiple seasonal
-# components with different perioidicities.  Let us take the time series
+# components with different periodicities.  Let us take the time series
 # $y_t$ and decompose it explicitly to have a level component and two
 # seasonal components.
 #
@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 # 300 periods and two seasonal terms parameterized in the frequency domain
 # having periods 10 and 100, respectively, and 3 and 2 number of harmonics,
 # respectively.  Further, the variances of their stochastic parts are 4 and
-# 9, respecively.
+# 9, respectively.
 
 
 # First we'll simulate the synthetic data
@@ -115,7 +115,7 @@ plt.show()
 # The next method is an unobserved components model, where the trend is
 # modeled as a fixed intercept and the seasonal components are modeled using
 # trigonometric functions with primary periodicities of 10 and 100,
-# respectively, and number of harmonics 3 and 2, respecively.  Note that
+# respectively, and number of harmonics 3 and 2, respectively.  Note that
 # this is the correct, generating model. The process for the time series can
 # be written as:
 #
@@ -175,7 +175,7 @@ model.ssm.transition[:, :, 0]
 # The second method is an unobserved components model, where the trend is
 # modeled as a fixed intercept and the seasonal components are modeled using
 # 10 constants summing to 0 and trigonometric functions with a primary
-# periodicities of 100 with 2 harmonics total.  Note that this isn't the
+# periodicities of 100 with 2 harmonics total.  Note that this is not the
 # generating model, as it presupposes that there are more state errors for
 # the shorter seasonal component than in reality. The process for the time
 # series can be written as:
@@ -224,7 +224,7 @@ plt.show()
 # The third method is an unobserved components model with a fixed
 # intercept and one seasonal component, which is modeled using trigonometric
 # functions with primary periodicity 100 and 50 harmonics. Note that this
-# isn't the generating model, as it presupposes that there are more
+# is not the generating model, as it presupposes that there are more
 # harmonics then in reality.  Because the variances are tied together, we
 # are not able to drive the estimated covariance of the non-existent
 # harmonics to 0.  What is lazy about this model specification is that we
@@ -296,7 +296,7 @@ print("fixed intercept estimated as {0:.3f}".format(
 res_lt.plot_components()
 plt.show()
 
-# The seasonal component itself looks good--it is the primary singal.  The
+# The seasonal component itself looks good--it is the primary signal.  The
 # estimated variance of the seasonal term is very high ($>10^5$), leading to
 # a lot of uncertainty in our one-step-ahead predictions and slow
 # responsiveness to new data, as evidenced by large errors in one-step ahead
@@ -407,5 +407,5 @@ plt.show()
 # specifiable harmonics can be a useful tool for time series modeling.
 # Finally, we can represent seasonal components with fewer total states in
 # this way, allowing for the user to attempt to make the bias-variance
-# tradeoff themselves instead of being forced to choose "lazy" models, which
+# trade-off themselves instead of being forced to choose "lazy" models, which
 # use a large number of states and incur additional variance as a result.

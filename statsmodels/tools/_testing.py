@@ -133,7 +133,7 @@ def check_ftest_pvalues(results):
     summ = str(res.summary())
     assert_(string_use_t in summ)
 
-    # try except for models that don't have summary2
+    # try except for models that do not have summary2
     try:
         summ2 = str(res.summary2())
     except AttributeError:

@@ -71,9 +71,9 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     model : model object
         A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
-    method :
+    method : {'coord_descent'}
         Only the coordinate descent algorithm is implemented.
-    maxiter : integer
+    maxiter : int
         The maximum number of iteration cycles (an iteration cycle
         involves running coordinate descent on all variables).
     alpha : scalar or array_like
@@ -110,7 +110,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     Returns
     -------
-    A results object.
+    Results
+        A results object.
 
     Notes
     -----
@@ -151,7 +152,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     params_zero = np.zeros(len(params), dtype=bool)
 
     init_args = model._get_init_kwds()
-    # we don't need a copy of init_args because get_init_kwds provides new dict
+    # we do not need a copy of init_args b/c get_init_kwds provides new dict
     init_args['hasconst'] = False
     model_offset = init_args.pop('offset', None)
     if 'exposure' in init_args and init_args['exposure'] is not None:
@@ -171,7 +172,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         for k in range(k_exog):
 
             # Under the active set method, if a parameter becomes
-            # zero we don't try to change it again.
+            # zero we do not try to change it again.
             # TODO : give the user the option to switch this off
             if params_zero[k]:
                 continue
@@ -350,12 +351,24 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
 
 class RegularizedResults(Results):
+    """
+    Results for models estimated using regularization
 
+    Parameters
+    ----------
+    model : Model
+        The model instance used to estimate the parameters.
+    params : ndarray
+        The estimated (regularized) parameters.
+    """
     def __init__(self, model, params):
         super(RegularizedResults, self).__init__(model, params)
 
     @cache_readonly
     def fittedvalues(self):
+        """
+        The predicted values from the model at the estimated parameters.
+        """
         return self.model.predict(self.params)
 
 

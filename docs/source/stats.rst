@@ -213,7 +213,7 @@ correction based on fdr in `fdrcorrection`.
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in developement
+to one way ANOVA, but still in development
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons

@@ -469,7 +469,7 @@ class SmoothingSpline(BSpline):
         else:
             bt = self.basis(x)
 
-        if pen == 0.: # can't use cholesky for singular matrices
+        if pen == 0.: # cannot use cholesky for singular matrices
             banded = False
 
         if x.shape != y.shape:

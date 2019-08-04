@@ -71,8 +71,8 @@ class Factor(Model):
         likelihood estimation.
     smc : True or False
         Whether or not to apply squared multiple correlations (method='pa')
-    endog_names: str
-        Names of endogeous variables.  If specified, it will be used
+    endog_names : str
+        Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
     nobs : int
         The number of observations, not used if endog is present. Needs to
@@ -180,11 +180,11 @@ class Factor(Model):
         maxiter : int
             Maximum number of iterations for iterative estimation algorithms
         tol : float
-            Stopping critera (error tolerance) for iterative estimation
+            Stopping criteria (error tolerance) for iterative estimation
             algorithms
         start : array_like
             Starting values, currently only used for ML estimation
-        opt_method : string
+        opt_method : str
             Optimization method for ML estimation
         opt : dict-like
             Keyword arguments passed to optimizer, only used for ML estimation
@@ -382,7 +382,7 @@ class Factor(Model):
         dl += 2*luz
         dl -= 2*np.dot(lud, luz)
 
-        # Can't use _pack because we are working with the square root
+        # Cannot use _pack because we are working with the square root
         # uniquenesses directly.
         return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
@@ -509,7 +509,7 @@ class FactorResults(object):
         Each column is the loading vector for one factor
     loadings_no_rot : ndarray
         Unrotated loadings, not available under maximum likelihood
-        analyis.
+        analysis.
     eigenvalues : ndarray
         The eigenvalues for a factor analysis obtained using
         principal components; not available under ML estimation.
@@ -517,7 +517,7 @@ class FactorResults(object):
         Number of components (factors)
     nbs : int
         Number of observations
-    fa_method : string
+    fa_method : str
         The method used to obtain the decomposition, either 'pa' for
         'principal axes' or 'ml' for maximum likelihood.
     df : int
@@ -570,7 +570,7 @@ class FactorResults(object):
 
         Parameters
         ----------
-        method : string
+        method : str
             Rotation to be applied.  Allowed methods are varimax,
             quartimax, biquartimax, equamax, oblimin, parsimax,
             parsimony, biquartimin, promax.
@@ -791,16 +791,16 @@ class FactorResults(object):
                applied
             * 'display' add sorting and styling as defined by other keywords
             * 'strings' returns a DataFrame with string elements with optional sorting
-               and surpressing small loading coefficients.
+               and suppressing small loading coefficients.
 
-        sort_ : boolean
+        sort_ : bool
             If True, then the rows of the DataFrame is sorted by contribution of each
             factor. applies if style is either 'display' or 'strings'
         threshold : float
             If the threshold is larger than zero, then loading coefficients are
             either colored white (if style is 'display') or replace by empty
             string (if style is 'strings').
-        highlight_max : boolean
+        highlight_max : bool
             This add a background color to the largest coefficient in each row.
         color_max : html color
             default is 'yellow'. color for background of row maximum

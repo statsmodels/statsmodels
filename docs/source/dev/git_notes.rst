@@ -157,7 +157,7 @@ change history by::
     git log --oneline --graph
 
 It pays to take care of things locally before you push them to github. So when
-in doubt, don't push.  Also see the advice on keeping your history clean in
+in doubt, do not push.  Also see the advice on keeping your history clean in
 :ref:`merge-vs-rebase`.
 
 .. _pull-requests:
@@ -193,7 +193,7 @@ One last thing to note. If there has been a lot of work in upstream/master
 since you started your patch, you might want to rebase. However, you can
 probably get away with not rebasing if these changes are unrelated to the work
 you have done in the `shiny-new-feature` branch. If you can avoid it, then
-don't rebase. If you have to, try to do it once and when you are at the end of
+do not rebase. If you have to, try to do it once and when you are at the end of
 your changes. Read on for some notes on :ref:`merge-vs-rebase`.
 
 Advanced Topics
@@ -221,7 +221,7 @@ the warnings
 Namely, **always make a new branch before doing a rebase**. This is good
 general advice for working with git. I would also add **never use rebase on
 work that has already been published**. If another developer is using your
-work, don't rebase!!
+work, do not rebase!!
 
 As for merging, **never merge from trunk into your feature branch**. You will,
 however, want to check that your work will merge cleanly into trunk. This will
@@ -253,7 +253,7 @@ however. To delete the branch on github, do::
 .. Squashing with Rebase
 .. ^^^^^^^^^^^^^^^^^^^^^
 
-.. You've made a bunch of incremental commits, but you think they might be better off together as one
+.. You have made a bunch of incremental commits, but you think they might be better off together as one
 .. commit. You can do this with an interactive rebase. As usual, **only do this when you have local
 .. commits. Do not edit the history of changes that have been pushed.**
 

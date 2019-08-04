@@ -348,7 +348,7 @@ class HoltWintersResults(Results):
             end = self.model._index[-1] + steps * freq
             return self.model.predict(self.params, start=start, end=end)
         except (AttributeError, ValueError):
-            # May occur when the index doesn't have a freq
+            # May occur when the index does not have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
 
     def summary(self):
@@ -581,15 +581,15 @@ class ExponentialSmoothing(TimeSeriesModel):
             that the average residual is equal to zero.
         use_basinhopping : bool, optional
             Using Basin Hopping optimizer to find optimal values
-        start_params: array, optional
+        start_params : array, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data
-        initial_level: float, optional
+        initial_level : float, optional
             Value to use when initializing the fitted level.
-        initial_slope: float, optional
+        initial_slope : float, optional
             Value to use when initializing the fitted slope.
-        use_brute: bool, optional
+        use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
 
@@ -1030,13 +1030,13 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             the value is set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood
-        start_params: array, optional
+        start_params : array, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data
-        initial_level: float, optional
+        initial_level : float, optional
             Value to use when initializing the fitted level.
-        use_brute: bool, optional
+        use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
 
@@ -1117,15 +1117,15 @@ class Holt(ExponentialSmoothing):
             set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood
-        start_params: array, optional
+        start_params : array, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data
-        initial_level: float, optional
+        initial_level : float, optional
             Value to use when initializing the fitted level.
-        initial_slope: float, optional
+        initial_slope : float, optional
             Value to use when initializing the fitted slope.
-        use_brute: bool, optional
+        use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
 

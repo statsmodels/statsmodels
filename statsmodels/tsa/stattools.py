@@ -2,6 +2,7 @@
 Statistical tools for time series analysis
 """
 from statsmodels.compat.python import iteritems, lrange, lzip
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
@@ -26,7 +27,8 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
            'adfuller', 'kpss', 'bds', 'pacf_burg', 'innovations_algo',
-           'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin']
+           'innovations_filter', 'levinson_durbin_pacf', 'levinson_durbin',
+           'zivot_andrews']
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
@@ -126,7 +128,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
              store=False, regresults=False):
     """
-    Augmented Dickey-Fuller unit root test
+    Augmented Dickey-Fuller unit root test.
 
     The Augmented Dickey-Fuller test can be used to test for a unit root in a
     univariate process in the presence of serial correlation.
@@ -134,17 +136,20 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     Parameters
     ----------
     x : array_like, 1d
-        data series
+        The data series to test.
     maxlag : int
-        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
+        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}.
     regression : {'c','ct','ctt','nc'}
-        Constant and trend order to include in regression
+        Constant and trend order to include in regression.
 
         * 'c' : constant only (default)
         * 'ct' : constant and trend
         * 'ctt' : constant, and linear and quadratic trend
         * 'nc' : no constant, no trend
+
     autolag : {'AIC', 'BIC', 't-stat', None}
+        Method to use when automatically determining the lag.
+
         * if None, then maxlag lags are used
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
           to minimize the corresponding information criterion
@@ -153,28 +158,28 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
           using a 5%-sized test
     store : bool
         If True, then a result instance is returned additionally to
-        the adf statistic. Default is False
+        the adf statistic. Default is False.
     regresults : bool, optional
-        If True, the full regression results are returned. Default is False
+        If True, the full regression results are returned. Default is False.
 
     Returns
     -------
     adf : float
-        Test statistic
+        The test statistic.
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994, 2010)
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
     usedlag : int
-        Number of lags used
+        The number of lags used.
     nobs : int
-        Number of observations used for the ADF regression and calculation of
-        the critical values
+        The number of observations used for the ADF regression and calculation
+        of the critical values.
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels. Based on MacKinnon (2010)
+        levels. Based on MacKinnon (2010).
     icbest : float
         The maximized information criterion if autolag is not None.
     resstore : ResultStore, optional
-        A dummy class with results attached as attributes
+        A dummy class with results attached as attributes.
 
     Notes
     -----
@@ -189,10 +194,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     The autolag option and maxlag for it are described in Greene.
 
-    Examples
-    --------
-    See example notebook
-
     References
     ----------
     .. [*] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -206,6 +207,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
+
+    Examples
+    --------
+    See example notebook
     """
     x = array_like(x, 'x')
     maxlag = int_like(maxlag, 'maxlag', optional=True)
@@ -501,7 +506,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
        Time series data
     unbiased : bool
        If True, then denominators for autocovariance are n-k, otherwise n
-    nlags: int, optional
+    nlags : int, optional
         Number of lags to return autocorrelation for.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
@@ -559,13 +564,15 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
 
     if fft is None:
         import warnings
-        msg = 'fft=True will become the default in a future version of ' \
-              'statsmodels. To suppress this warning, explicitly set ' \
-              'fft=False.'
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(
+            'fft=True will become the default in a future version of '
+            'statsmodels. To suppress this warning, explicitly set '
+            'fft=False.',
+            FutureWarning
+        )
         fft = False
     x = array_like(x, 'x')
-    nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
+    nobs = len(x)  # TODO: should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
     acf = avf[:nlags + 1] / avf[0]
     if not (qstat or alpha):
@@ -627,30 +634,35 @@ def pacf_yw(x, nlags=40, method='unbiased'):
 
 def pacf_burg(x, nlags=None, demean=True):
     """
-    Burg's partial autocorrelation estimator
+    Burg's partial autocorrelation estimator.
 
     Parameters
     ----------
     x : array_like
-        Observations of time series for which pacf is calculated
+        Observations of time series for which pacf is calculated.
     nlags : int, optional
         Number of lags to compute the partial autocorrelations.  If omitted,
-        uses the smaller of 10(log10(nobs)) or nobs - 1
+        uses the smaller of 10(log10(nobs)) or nobs - 1.
     demean : bool, optional
+        Flag indicating to demean that data. Set to False if x has been
+        previously demeaned.
 
     Returns
     -------
     pacf : ndarray
-        Partial autocorrelations for lags 0, 1, ..., nlag
+        Partial autocorrelations for lags 0, 1, ..., nlag.
     sigma2 : ndarray
         Residual variance estimates where the value in position m is the
-        residual variance in an AR model that includes m lags
+        residual variance in an AR model that includes m lags.
 
     See Also
     --------
     statsmodels.tsa.stattools.pacf
+        Partial autocorrelation estimation.
     statsmodels.tsa.stattools.pacf_yw
+         Partial autocorrelation estimation using Yule-Walker.
     statsmodels.tsa.stattools.pacf_ols
+        Partial autocorrelation estimation using OLS.
 
     References
     ----------
@@ -863,7 +875,7 @@ def ccovf(x, y, unbiased=True, demean=True):
     ----------
     x, y : arrays
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators is n-k, otherwise n
 
     Returns
@@ -903,7 +915,7 @@ def ccf(x, y, unbiased=True):
     ----------
     x, y : arrays
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators for autocovariance is n-k, otherwise n
 
     Returns
@@ -917,7 +929,7 @@ def ccf(x, y, unbiased=True):
     series it is recommended to use fft convolution instead.
 
     If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimtor.
+    but the autocorrelation is not an unbiased estimator.
 
     '''
     x = array_like(x, 'x')
@@ -955,8 +967,6 @@ def periodogram(x):
     warnings.warn('periodogram is deprecated and will be removed after 0.11. '
                   'Use scipy.signal.periodogram instead.', FutureWarning)
     x = array_like(x, 'x')
-    # if kernel == "bartlett":
-    #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
     pergr = 1. / len(x) * np.abs(np.fft.fft(x)) ** 2
     pergr[0] = 0.  # what are the implications of this?
@@ -974,10 +984,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
     s : array_like
         If isacov is False, then this is the time series. If iasacov is true
         then this is interpreted as autocovariance starting with lag 0
-    nlags : integer
+    nlags : int
         largest lag to include in recursion or order of the autoregressive
         process
-    isacov : boolean
+    isacov : bool
         flag to indicate whether the first argument, s, contains the
         autocovariances or the data series.
 
@@ -1052,7 +1062,7 @@ def levinson_durbin_pacf(pacf, nlags=None):
         AR coefficients computed from the partial autocorrelations
     acf : ndarray
         acf computed from the partial autocorrelations. Array returned contains
-        the autocorelations corresponding to lags 0, 1, ..., p
+        the autocorrelations corresponding to lags 0, 1, ..., p
 
     References
     ----------
@@ -1099,9 +1109,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
-    maxlag : integer
-        the Granger causality test results are calculated for all lags up to
-        maxlag
+    maxlag : int, iterable[int]
+        If an integer, computes the test for all lags up to maxlag. If an
+        iterable, computes the tests only for the lags in maxlag.
     addconst : bool
         Include a constant in the model
     verbose : bool
@@ -1112,7 +1122,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     results : dictionary
         all test results, dictionary keys are the number of lags. For each
         lag the values are a tuple, with the first element a dictionary with
-        teststatistic, pvalues, degrees of freedom, the second element are
+        test statistic, pvalues, degrees of freedom, the second element are
         the OLS estimation results for the restricted model, the unrestricted
         model and the restriction (contrast) matrix for the parameter f_test.
 
@@ -1135,17 +1145,40 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     'ssr_chi2test', 'lrtest' are based on chi-square distribution
 
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.tsa.stattools import grangercausalitytests
+    >>> import numpy as np
+    >>> data = sm.datasets.macrodata.load_pandas()
+    >>> data = data.data[['realgdp', 'realcons']].pct_change().dropna()
+
+    # All lags up to 4
+    >>> gc_res = grangercausalitytests(data, 4)
+
+    # Only lag 4
+    >>> gc_res = grangercausalitytests(data, [4])
+
     References
     ----------
     https://en.wikipedia.org/wiki/Granger_causality
     Greene: Econometric Analysis
 
     """
-    maxlag = int_like(maxlag, 'maxlag')
+    x = array_like(x, 'x', ndim=2)
     addconst = bool_like(addconst, 'addconst')
     verbose = bool_like(verbose, 'verbose')
-
-    x = array_like(x, 'x', ndim=2)
+    try:
+        lags = np.array([int(lag) for lag in maxlag])
+        maxlag = lags.max()
+        if lags.min() <= 0 or lags.size == 0:
+            raise ValueError('maxlag must be a non-empty list containing only '
+                             'positive integers')
+    except Exception:
+        maxlag = int_like(maxlag, 'maxlag')
+        if maxlag <= 0:
+            raise ValueError('maxlag must a a positive integer')
+        lags = np.arange(1, maxlag + 1)
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError("Insufficient observations. Maximum allowable "
@@ -1154,7 +1187,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     resli = {}
 
-    for mlg in range(1, maxlag + 1):
+    for mlg in lags:
         result = {}
         if verbose:
             print('\nGranger Causality')
@@ -1164,33 +1197,33 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # create lagmat of both time series
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
-        #add constant
+        # add constant
         if addconst:
             dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
             raise NotImplementedError('Not Implemented')
-            #dtaown = dta[:, 1:mxlg]
-            #dtajoint = dta[:, 1:]
+            # dtaown = dta[:, 1:mxlg]
+            # dtajoint = dta[:, 1:]
 
         # Run ols on both models without and with lags of second variable
         res2down = OLS(dta[:, 0], dtaown).fit()
         res2djoint = OLS(dta[:, 0], dtajoint).fit()
 
-        #print results
-        #for ssr based tests see:
-        #http://support.sas.com/rnd/app/examples/ets/granger/index.htm
-        #the other tests are made-up
+        # print results
+        # for ssr based tests see:
+        # http://support.sas.com/rnd/app/examples/ets/granger/index.htm
+        # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
         fgc1 = ((res2down.ssr - res2djoint.ssr) /
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
             print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (fgc1,
-                                    stats.f.sf(fgc1, mxlg,
-                                               res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg))
+                  ' df_num=%d' % (fgc1,
+                                  stats.f.sf(fgc1, mxlg,
+                                             res2djoint.df_resid),
+                                  res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
@@ -1199,14 +1232,14 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
             print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
+                  'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
-        #likelihood ratio test pvalue:
+        # likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
             print('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
-                   (lr, stats.chi2.sf(lr, mxlg), mxlg))
+                  (lr, stats.chi2.sf(lr, mxlg), mxlg))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -1216,8 +1249,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
-                                    ftres.df_num))
+                  ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
+                                  ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)
@@ -1255,12 +1288,12 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         * 'ct' : constant and linear trend
         * also available quadratic trend 'ctt', and no constant 'nc'
 
-    method : string
+    method : str
         currently only 'aeg' for augmented Engle-Granger test is available.
         default might change.
     maxlag : None or int
         keyword for `adfuller`, largest or given number of lags
-    autolag : string
+    autolag : str
         keyword for `adfuller`, lag selection criterion.
 
         * if None, then maxlag lags are used without lag search
@@ -1350,7 +1383,7 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         crit = [np.nan] * 3  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
-        #  nobs - 1, the -1 is to match egranger in Stata, I don't know why.
+        #  nobs - 1, the -1 is to match egranger in Stata, I do not know why.
         #  TODO: check nobs or df = nobs - k
 
     pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
@@ -1367,7 +1400,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
         return
 
     except ValueError as error:
-        if start_params is not None:  # don't recurse again
+        if start_params is not None:  # do not recurse again
             # user supplied start_params only get one chance
             return
         # try a little harder, should be handled in fit really
@@ -1493,7 +1526,8 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
-def kpss(x, regression='c', lags=None, store=False):
+@deprecate_kwarg('lags', 'nlags')
+def kpss(x, regression='c', nlags=None, store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1508,7 +1542,7 @@ def kpss(x, regression='c', lags=None, store=False):
         Indicates the null hypothesis for the KPSS test
         * 'c' : The data is stationary around a constant (default)
         * 'ct' : The data is stationary around a trend
-    lags : {None, str, int}, optional
+    nlags : {None, str, int}, optional
         Indicates the number of lags to be used. If None (default), lags is
         calculated using the legacy method. If 'auto', lags is calculated
         using the data-dependent method of Hobijn et al. (1998). See also
@@ -1591,8 +1625,8 @@ def kpss(x, regression='c', lags=None, store=False):
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
 
-    if lags is None:
-        lags = 'legacy'
+    if nlags is None:
+        nlags = 'legacy'
         msg = 'The behavior of using lags=None will change in the next ' \
               'release. Currently lags=None is the same as ' \
               'lags=\'legacy\', and so a sample-size lag length is used. ' \
@@ -1601,23 +1635,24 @@ def kpss(x, regression='c', lags=None, store=False):
               'selection method. To silence this warning, either use ' \
               '\'auto\' or \'legacy\''
         warn(msg, FutureWarning)
-    if lags == 'legacy':
-        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
-        lags = min(lags, nobs - 1)
-    elif lags == 'auto':
+    if nlags == 'legacy':
+        nlags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        nlags = min(nlags, nobs - 1)
+    elif nlags == 'auto':
         # autolag method of Hobijn et al. (1998)
-        lags = _kpss_autolag(resids, nobs)
+        nlags = _kpss_autolag(resids, nobs)
+        nlags = min(nlags, nobs - 1)
     else:
-        lags = int(lags)
+        nlags = int(nlags)
 
-    if lags >= nobs:
+    if nlags >= nobs:
         raise ValueError("lags ({}) must be < number of observations ({})"
-                         .format(lags, nobs))
+                         .format(nlags, nobs))
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
     eta = np.sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
-    s_hat = _sigma_est_kpss(resids, nobs, lags)
+    s_hat = _sigma_est_kpss(resids, nobs, nlags)
 
     kpss_stat = eta / s_hat
     p_value = np.interp(kpss_stat, crit, pvals)
@@ -1631,7 +1666,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
     if store:
         rstore = ResultsStore()
-        rstore.lags = lags
+        rstore.lags = nlags
         rstore.nobs = nobs
 
         stationary_type = "level" if hypo == 'c' else "trend"
@@ -1640,7 +1675,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
         return kpss_stat, p_value, crit_dict, rstore
     else:
-        return kpss_stat, p_value, lags, crit_dict
+        return kpss_stat, p_value, nlags, crit_dict
 
 
 def _sigma_est_kpss(resids, nobs, lags):
@@ -1672,5 +1707,308 @@ def _kpss_autolag(resids, nobs):
     s_hat = s1 / s0
     pwr = 1. / 3.
     gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
-    autolags = np.amin([nobs, int(gamma_hat * np.power(nobs, pwr))])
+    autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
+
+
+class ZivotAndrewsUnitRoot(object):
+    """
+    Class wrapper for Zivot-Andrews structural-break unit-root test
+    """
+    def __init__(self):
+        """
+        Critical values for the three different models specified for the
+        Zivot-Andrews unit-root test.
+
+        Notes
+        -----
+        The p-values are generated through Monte Carlo simulation using
+        100,000 replications and 2000 data points.
+        """
+        self._za_critical_values = {}
+        # constant-only model
+        self._c = (
+            (0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
+            (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
+            (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
+            (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
+            (5.000, -4.81067), (7.500, -4.67636), (10.000, -4.56618),
+            (12.500, -4.48130), (15.000, -4.40507), (17.500, -4.33947),
+            (20.000, -4.28155), (22.500, -4.22683), (25.000, -4.17830),
+            (27.500, -4.13101), (30.000, -4.08586), (32.500, -4.04455),
+            (35.000, -4.00380), (37.500, -3.96144), (40.000, -3.92078),
+            (42.500, -3.88178), (45.000, -3.84503), (47.500, -3.80549),
+            (50.000, -3.77031), (52.500, -3.73209), (55.000, -3.69600),
+            (57.500, -3.65985), (60.000, -3.62126), (65.000, -3.54580),
+            (70.000, -3.46848), (75.000, -3.38533), (80.000, -3.29112),
+            (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
+            (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
+            (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932)
+        )
+        self._za_critical_values['c'] = np.asarray(self._c)
+        # trend-only model
+        self._t = (
+            (0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
+            (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
+            (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
+            (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
+            (5.000, -4.40580), (7.500, -4.25214), (10.000, -4.13678),
+            (12.500, -4.03765), (15.000, -3.95185), (17.500, -3.87945),
+            (20.000, -3.81295), (22.500, -3.75273), (25.000, -3.69836),
+            (27.500, -3.64785), (30.000, -3.59819), (32.500, -3.55146),
+            (35.000, -3.50522), (37.500, -3.45987), (40.000, -3.41672),
+            (42.500, -3.37465), (45.000, -3.33394), (47.500, -3.29393),
+            (50.000, -3.25316), (52.500, -3.21244), (55.000, -3.17124),
+            (57.500, -3.13211), (60.000, -3.09204), (65.000, -3.01135),
+            (70.000, -2.92897), (75.000, -2.83614), (80.000, -2.73893),
+            (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
+            (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
+            (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466)
+        )
+        self._za_critical_values['t'] = np.asarray(self._t)
+        # constant + trend model
+        self._ct = (
+            (0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
+            (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
+            (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
+            (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
+            (5.000, -5.07332), (7.500, -4.93003), (10.000, -4.82668),
+            (12.500, -4.73711), (15.000, -4.66020), (17.500, -4.58970),
+            (20.000, -4.52855), (22.500, -4.47100), (25.000, -4.42011),
+            (27.500, -4.37387), (30.000, -4.32705), (32.500, -4.28126),
+            (35.000, -4.23793), (37.500, -4.19822), (40.000, -4.15800),
+            (42.500, -4.11946), (45.000, -4.08064), (47.500, -4.04286),
+            (50.000, -4.00489), (52.500, -3.96837), (55.000, -3.93200),
+            (57.500, -3.89496), (60.000, -3.85577), (65.000, -3.77795),
+            (70.000, -3.69794), (75.000, -3.61852), (80.000, -3.52485),
+            (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
+            (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
+            (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767)
+        )
+        self._za_critical_values['ct'] = np.asarray(self._ct)
+
+    def _za_crit(self, stat, model='c'):
+        """
+        Linear interpolation for Zivot-Andrews p-values and critical values
+
+        Parameters
+        ----------
+        stat : float
+            The ZA test statistic
+        model : {'c','t','ct'}
+            The model used when computing the ZA statistic. 'c' is default.
+
+        Returns
+        -------
+        pvalue : float
+            The interpolated p-value
+        cvdict : dict
+            Critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+
+        Notes
+        -----
+        The p-values are linear interpolated from the quantiles of the
+        simulated ZA test statistic distribution
+        """
+        table = self._za_critical_values[model]
+        pcnts = table[:, 0]
+        stats = table[:, 1]
+        # ZA cv table contains quantiles multiplied by 100
+        pvalue = np.interp(stat, stats, pcnts) / 100.0
+        cv = [1.0, 5.0, 10.0]
+        crit_value = np.interp(cv, pcnts, stats)
+        cvdict = {"1%": crit_value[0], "5%": crit_value[1],
+                  "10%": crit_value[2]}
+        return pvalue, cvdict
+
+    def _quick_ols(self, endog, exog):
+        """
+        Minimal implementation of LS estimator for internal use
+        """
+        xpxi = np.linalg.inv(exog.T.dot(exog))
+        xpy = exog.T.dot(endog)
+        nobs, k_exog = exog.shape
+        b = xpxi.dot(xpy)
+        e = endog - exog.dot(b)
+        sigma2 = e.T.dot(e) / (nobs - k_exog)
+        return b / np.sqrt(np.diag(sigma2 * xpxi))
+
+    def _format_regression_data(self, series, nobs, const, trend, cols, lags):
+        """
+        Create the endog/exog data for the auxiliary regressions
+        from the original (standardized) series under test.
+        """
+        # first-diff y and standardize for numerical stability
+        endog = np.diff(series, axis=0)
+        endog /= np.sqrt(endog.T.dot(endog))
+        series /= np.sqrt(series.T.dot(series))
+        # reserve exog space
+        exog = np.zeros((endog[lags:].shape[0], cols + lags))
+        exog[:, 0] = const
+        # lagged y and dy
+        exog[:, cols - 1] = series[lags:(nobs - 1)]
+        exog[:, cols:] = lagmat(
+            endog, lags, trim='none')[lags:exog.shape[0] + lags]
+        return endog, exog
+
+    def _update_regression_exog(self, exog, regression, period, nobs, const,
+                                trend, cols, lags):
+        """
+        Update the exog array for the next regression.
+        """
+        cutoff = (period - (lags + 1))
+        if regression != 't':
+            exog[:cutoff, 1] = 0
+            exog[cutoff:, 1] = const
+            exog[:, 2] = trend[(lags + 2):(nobs + 1)]
+            if regression == 'ct':
+                exog[:cutoff, 3] = 0
+                exog[cutoff:, 3] = trend[1:(nobs - period + 1)]
+        else:
+            exog[:, 1] = trend[(lags + 2):(nobs + 1)]
+            exog[:(cutoff-1), 2] = 0
+            exog[(cutoff-1):, 2] = trend[0:(nobs - period + 1)]
+        return exog
+
+    def run(self, x, trim=0.15, maxlag=None, regression='c', autolag='AIC'):
+        """
+        Zivot-Andrews structural-break unit-root test
+
+        The Zivot-Andrews test tests for a unit root in a univariate process
+        in the presence of serial correlation and a single structural break.
+
+        Parameters
+        ----------
+        x : array_like
+            data series
+        trim : float
+            percentage of series at begin/end to exclude from break-period
+            calculation in range [0, 0.333] (default=0.15)
+        maxlag : int
+            maximum lag which is included in test, default=12*(nobs/100)^{1/4}
+            (Schwert, 1989)
+        regression : {'c','t','ct'}
+            Constant and trend order to include in regression
+            * 'c' : constant only (default)
+            * 't' : trend only
+            * 'ct' : constant and trend
+        autolag : {'AIC', 'BIC', 't-stat', None}
+            * if None, then maxlag lags are used
+            * if 'AIC' (default) or 'BIC', then the number of lags is chosen
+              to minimize the corresponding information criterion
+            * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
+              lag until the t-statistic on the last lag length is significant
+              using a 5%-sized test
+
+        Returns
+        -------
+        zastat : float
+            test statistic
+        pvalue : float
+            based on MC-derived critical values
+        cvdict : dict
+            critical values for the test statistic at the 1%, 5%, and 10%
+            levels
+        bpidx : int
+            index of x corresponding to endogenously calculated break period
+            with values in the range [0..nobs-1]
+        baselag : int
+            number of lags used for period regressions
+
+        Notes
+        -----
+        H0 = unit root with a single structural break
+
+        Algorithm follows Baum (2004/2015) approximation to original
+        Zivot-Andrews method. Rather than performing an autolag regression at
+        each candidate break period (as per the original paper), a single
+        autolag regression is run up-front on the base model (constant + trend
+        with no dummies) to determine the best lag length. This lag length is
+        then used for all subsequent break-period regressions. This results in
+        significant run time reduction but also slightly more pessimistic test
+        statistics than the original Zivot-Andrews method, although no attempt
+        has been made to characterize the size/power trade-off.
+
+        References
+        ----------
+        .. [*] Baum, C.F. (2004). ZANDREWS: Stata module to calculate
+           Zivot-Andrews unit root test in presence of structural break,"
+           Statistical Software Components S437301, Boston College Department
+           of Economics, revised 2015.
+
+        .. [*] Schwert, G.W. (1989). Tests for unit roots: A Monte Carlo
+           investigation. Journal of Business & Economic Statistics, 7:
+           147-159.
+
+        .. [*] Zivot, E., and Andrews, D.W.K. (1992). Further evidence on the
+           great crash, the oil-price shock, and the unit-root hypothesis.
+           Journal of Business & Economic Studies, 10: 251-270.
+        """
+        x = array_like(x, 'x')
+        trim = float_like(trim, 'trim')
+        maxlag = int_like(maxlag, 'maxlag', optional=True)
+        regression = string_like(regression, 'regression',
+                                 options=('c', 't', 'ct'))
+        autolag = string_like(autolag, 'autolag',
+                              options=('AIC', 'BIC', 't-stat'), optional=True)
+        if trim < 0 or trim > (1. / 3.):
+            raise ValueError('trim value must be a float in range [0, 1/3)')
+        nobs = x.shape[0]
+        if autolag:
+            adf_res = adfuller(x, maxlag=maxlag, regression='ct',
+                               autolag=autolag)
+            baselags = adf_res[2]
+        elif maxlag:
+            baselags = maxlag
+        else:
+            baselags = int(12. * np.power(nobs / 100., 1 / 4.))
+        trimcnt = int(nobs * trim)
+        start_period = trimcnt
+        end_period = nobs - trimcnt
+        if regression == 'ct':
+            basecols = 5
+        else:
+            basecols = 4
+        # normalize constant and trend terms for stability
+        c_const = 1 / np.sqrt(nobs)
+        t_const = np.arange(1.0, nobs + 2)
+        t_const *= np.sqrt(3) / nobs ** (3 / 2)
+        # format the auxiliary regression data
+        endog, exog = self._format_regression_data(
+            x, nobs, c_const, t_const, basecols, baselags)
+        # iterate through the time periods
+        stats = np.full(end_period + 1, np.inf)
+        for bp in range(start_period + 1, end_period + 1):
+            # update intercept dummy / trend / trend dummy
+            exog = self._update_regression_exog(exog, regression, bp, nobs,
+                                                c_const, t_const, basecols,
+                                                baselags)
+            # check exog rank on first iteration
+            if bp == start_period + 1:
+                o = OLS(endog[baselags:], exog, hasconst=1).fit()
+                if o.df_model < exog.shape[1] - 1:
+                    raise ValueError(
+                        'ZA: auxiliary exog matrix is not full rank.\n'
+                        '  cols (exc intercept) = {}  rank = {}'.format(
+                            exog.shape[1] - 1, o.df_model))
+                stats[bp] = o.tvalues[basecols - 1]
+            else:
+                stats[bp] = self._quick_ols(endog[baselags:],
+                                            exog)[basecols - 1]
+        # return best seen
+        zastat = np.min(stats)
+        bpidx = np.argmin(stats) - 1
+        crit = self._za_crit(zastat, regression)
+        pval = crit[0]
+        cvdict = crit[1]
+        return zastat, pval, cvdict, baselags, bpidx
+
+    def __call__(self, x, trim=0.15, maxlag=None, regression='c',
+                 autolag='AIC'):
+        return self.run(x, trim=trim, maxlag=maxlag, regression=regression,
+                        autolag=autolag)
+
+
+zivot_andrews = ZivotAndrewsUnitRoot()
+zivot_andrews.__doc__ = zivot_andrews.run.__doc__

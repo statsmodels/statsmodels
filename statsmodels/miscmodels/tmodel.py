@@ -26,7 +26,7 @@ License: BSD
 TODO
 ----
 * add starting values based on OLS
-* bugs: store_params doesn't seem to be defined, I think this was a module
+* bugs: store_params does not seem to be defined, I think this was a module
         global for debugging - commented out
 * parameter restriction: check whether version with some fixed parameters works
 

@@ -40,7 +40,7 @@ print(res.params, probit_res.params)
 #datal = sm.datasets.longley.load(as_pandas=False)
 datal = sm.datasets.ccard.load(as_pandas=False)
 datal.exog = sm.add_constant(datal.exog, prepend=False)
-# Instance of GenericLikelihood model doesn't work directly, because loglike
+# Instance of GenericLikelihood model does not work directly, because loglike
 # cannot get access to data in self.endog, self.exog
 
 nobs = 5000
@@ -114,7 +114,7 @@ bse = np.sqrt(np.diag(np.linalg.inv(res_norm3.model.hessian(res_norm3.params))))
 res_norm3.model.score(res_norm3.params)
 
 #fprime in fit option cannot be overwritten, set to None, when score is defined
-# exception is fixed, but I don't think score was supposed to be called
+# exception is fixed, but I do not think score was supposed to be called
 
 res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
                          maxiter=500, retall=0)

@@ -85,7 +85,7 @@ if __name__ == '__main__':
     raise ValueError('start_upp needs to be positive')
     -499.999996336
     '''
-    ''' this doesn't work
+    ''' this does not work
     >>> print(brentq_expanding(func, args=(-500,), start_upp=-1000)
     raise ValueError('start_upp needs to be positive')
     OverflowError: (34, 'Result too large')

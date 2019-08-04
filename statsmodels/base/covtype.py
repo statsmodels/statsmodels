@@ -69,7 +69,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     Parameters
     ----------
-    cov_type : string
+    cov_type : str
         the type of robust sandwich estimator to use. see Notes below
     use_t : bool
         If true, then the t distribution is used for inference.
@@ -119,9 +119,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         - `groups` array_like, integer (required) :
               index of clusters or groups
         - `use_correction` bool (optional) :
-              If True the sandwich covariance is calulated with a small
+              If True the sandwich covariance is calculated with a small
               sample correction.
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               If True (default), then the degrees of freedom for the
@@ -143,7 +143,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               currently available kernels are ['bartlett', 'uniform'],
               default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
               If `use_correction = 'cluster'` (default), then the same
               small sample correction as in the case of 'covtype='cluster''
@@ -169,7 +169,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               currently available kernels are ['bartlett', 'uniform'],
               default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               adjustment to df_resid, see cov_type 'cluster' above
@@ -201,7 +201,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if use_self:
         res = self
     else:
-        # this doesn't work for most models, use raw instance instead from fit
+        # this does not work for most models, use raw instance instead from fit
         res = self.__class__(self.model, self.params,
                    normalized_cov_params=self.normalized_cov_params,
                    scale=self.scale)
@@ -218,7 +218,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         df_correction = kwds.get('df_correction', None)
         # TODO: check also use_correction, do I need all combinations?
         if df_correction is not False: # i.e. in [None, True]:
-            # user didn't explicitely set it to False
+            # user did not explicitely set it to False
             adjust_df = True
 
     res.cov_kwds['adjust_df'] = adjust_df
@@ -235,7 +235,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
         res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
         if res.cov_params_default is None:
-            # results classes that don't have cov_HCx attribute
+            # results classes that do not have cov_HCx attribute
             res.cov_params_default = sw.cov_white_simple(self,
                                                          use_correction=False)
     elif cov_type.lower() == 'hac':

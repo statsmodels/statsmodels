@@ -58,7 +58,7 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
         x = x[:, 0]
     assert x.ndim == 1
     # XX FIXME: when points fall outside of the boundaries, splev and R seem
-    # to handle them differently. I don't know why yet. So until we understand
+    # to handle them differently. I do not know why yet. So until we understand
     # this and decide what to do with it, I'm going to play it safe and
     # disallow such points.
     if np.min(x) < np.min(knots) or np.max(x) > np.max(knots):
@@ -68,11 +68,11 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     # Thanks to Charles Harris for explaining splev. It's not well
     # documented, but basically it computes an arbitrary b-spline basis
     # given knots and degree on some specificed points (or derivatives
-    # thereof, but we don't use that functionality), and then returns some
+    # thereof, but we do not use that functionality), and then returns some
     # linear combination of these basis functions. To get out the basis
     # functions themselves, we use linear combinations like [1, 0, 0], [0,
     # 1, 0], [0, 0, 1].
-    # NB: This probably makes it rather inefficient (though I haven't checked
+    # NB: This probably makes it rather inefficient (though I have not checked
     # to be sure -- maybe the fortran code actually skips computing the basis
     # function for coefficients that are zero).
     # Note: the order of a spline is the same as its degree + 1.
@@ -410,18 +410,18 @@ class UnivariateBSplines(UnivariateGamSmoother):
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
         a constant or several components are included in the model.
-    constraints : None, string or array
+    constraints : {None, str, array}
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    variable_name : None or str
+    variable_name : {None, str}
         The name for the underlying explanatory variable, x, used in for
         creating the column and parameter names for the basis functions.
-    covder2_kwds : None or dict
+    covder2_kwds : {None, dict}
         options for computing the penalty matrix from the second derivative
         of the spline.
-    knot_kwds : None or list of dict
+    knot_kwds : {None, list[dict]}
         option for the knot selection.
         By default knots are selected in the same way as in patsy, however the
         number of knots is independent of keeping or removing the constant.
@@ -625,7 +625,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
         a constant or several components are included in the model.
-    constraints : None, string or array
+    constraints : {None, str, array}
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
@@ -844,12 +844,12 @@ class BSplines(AdditiveGamSmoother):
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
         a constant or several components are included in the model.
-    constraints : None, string or array
+    constraints : {None, str, array}
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    variable_names : None or list of strings
+    variable_names : {list[str], None}
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
@@ -973,10 +973,10 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         explanatory variables in columns.
     df :  int
         numer of basis functions or degrees of freedom
-    constraints : None, string or array
+    constraints : {None, str, array}
         Constraints are used to transform the basis functions to satisfy
         those constraints.
-    variable_names : None or list of strings
+    variable_names : {list[str], None}
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.

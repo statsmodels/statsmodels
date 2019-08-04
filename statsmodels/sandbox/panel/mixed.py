@@ -233,7 +233,7 @@ class OneWayMixed(object):
 
     convergence criteria for iteration
     Currently convergence in the iterative solver is reached if either the loglikelihood
-    *or* the fixed effects parameter don't change above tolerance.
+    *or* the fixed effects parameter do not change above tolerance.
 
     In some examples, the fixed effects parameters converged to 1e-5 within 150 iterations
     while the log likelihood did not converge within 2000 iterations. This might be
@@ -402,7 +402,7 @@ class OneWayMixed(object):
         Return log-likelihood, REML by default.
 
         """
-        #I don't know what the difference between REML and ML is here.
+        #I do not know what the difference between REML and ML is here.
         logL = 0.
 
         for unit in self.units:
@@ -502,7 +502,7 @@ class OneWayMixedResults(LikelihoodModelResults):
         self.params = model.params
 
 
-    #need to overwrite this because we don't have a standard
+    #need to overwrite this because we do not have a standard
     #model.loglike yet
     #TODO: what todo about REML loglike, logL is not normalized
     @cache_readonly

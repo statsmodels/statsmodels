@@ -41,8 +41,8 @@ class RegressionFDR(object):
     regeffects : RegressionEffects instance
         An instance of a RegressionEffects class that can compute
         effect sizes for the regression coefficients.
-    method : string
-        The approach used to asssess and control FDR, currently
+    method : str
+        The approach used to assess and control FDR, currently
         must be 'knockoff'.
 
     Returns

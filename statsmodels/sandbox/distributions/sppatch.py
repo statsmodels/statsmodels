@@ -17,7 +17,7 @@ from scipy import stats, optimize, integrate
 
 ########## patching scipy
 
-#vonmises doesn't define finite bounds, because it is intended for circular
+#vonmises does not define finite bounds, because it is intended for circular
 #support which does not define a proper pdf on the real line
 
 stats.distributions.vonmises.a = -np.pi
@@ -310,7 +310,7 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
         lb, ub : numbers
            lower and upper bound for integration, default is set to the support
            of the distribution
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the integral is corrected by the conditional probability
            of the integration interval. The return value is the expectation
            of the function, conditional on being in the given interval.
@@ -359,7 +359,7 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
         lb, ub : numbers
            lower and upper bound for integration, default is set using
            quantiles of the distribution, see Notes
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the integral is corrected by the conditional probability
            of the integration interval. The return value is the expectation
            of the function, conditional on being in the given interval.
@@ -442,7 +442,7 @@ def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
         lb, ub : numbers
            lower and upper bound for integration, default is set to the support
            of the distribution, lb and ub are inclusive (ul<=k<=ub)
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the expectation is corrected by the conditional
            probability of the integration interval. The return value is the
            expectation of the function, conditional on being in the given
@@ -557,7 +557,7 @@ def distfitbootstrap(sample, distr, nrepl=100):
     sample : array
         original sample data for bootstrap
     distr : distribution instance with fit_fr method
-    nrepl : integer
+    nrepl : int
         number of bootstrap replications
 
     Returns
@@ -585,7 +585,7 @@ def distfitmc(sample, distr, nrepl=100, distkwds={}):
     sample : array
         original sample data, in Monte Carlo only used to get nobs,
     distr : distribution instance with fit_fr method
-    nrepl : integer
+    nrepl : int
         number of Monte Carlo replications
 
     Returns
@@ -674,7 +674,7 @@ if __name__ == '__main__':
             print('\nnobs:', nobs)
             print('true parameter')
             print('1.23, loc=0, scale=1')
-            print('unconstraint')
+            print('unconstrained')
             print(stats.vonmises.fit(x))
             print(stats.vonmises.fit_fr(x, frozen=[np.nan, np.nan, np.nan]))
             print('with fixed loc and scale')
@@ -689,7 +689,7 @@ if __name__ == '__main__':
             print('\nnobs:', nobs)
             print('true parameter')
             print('%f, loc=%f, scale=%f' % (arg, loc, scale))
-            print('unconstraint')
+            print('unconstrained')
             print(distr.fit(x))
             print(distr.fit_fr(x, frozen=[np.nan, np.nan, np.nan]))
             print('with fixed loc and scale')

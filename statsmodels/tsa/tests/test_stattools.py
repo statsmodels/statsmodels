@@ -24,7 +24,7 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
                                        innovations_algo, innovations_filter,
-                                       periodogram)
+                                       periodogram, zivot_andrews)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -33,6 +33,8 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
+
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture('module')
@@ -88,7 +90,7 @@ class TestADFConstantTrend(CheckADF):
         cls.critvalues = [-4.007, -3.437, -3.137]
 
 
-# FIXME: don't leave commented-out
+# FIXME: do not leave commented-out
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
@@ -158,12 +160,8 @@ class CheckCorrGram(object):
     """
     data = macrodata.load_pandas()
     x = data.data['realgdp']
-    filename = os.path.dirname(os.path.abspath(__file__))+\
-            "/results/results_corrgram.csv"
+    filename = os.path.join(CURR_DIR, 'results', 'results_corrgram.csv')
     results = pd.read_csv(filename, delimiter=',')
-
-    #not needed: add 1. for lag zero
-    #self.results['acvar'] = np.concatenate(([1.], self.results['acvar']))
 
 
 class TestACF(CheckCorrGram):
@@ -192,7 +190,7 @@ class TestACF(CheckCorrGram):
     # FIXME: enable/xfail/skip or delete
     #def pvalue(self):
     #    pass
-    # NOTE: shouldn't need testing if Q stat is correct
+    # NOTE: should not need testing if Q stat is correct
 
 
 class TestACF_FFT(CheckCorrGram):
@@ -315,7 +313,7 @@ class CheckCoint(object):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
 
 
-# this doesn't produce the old results anymore
+# this does not produce the old results anymore
 class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
@@ -442,11 +440,25 @@ class TestGrangerCausality(object):
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
 
-        #R: lmtest:grangertest
+        # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
         gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
         assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                            decimal=7)
+
+    def test_grangercausality_single(self):
+        mdata = macrodata.load_pandas().data
+        mdata = mdata[['realgdp', 'realcons']].values
+        data = mdata.astype(float)
+        data = np.diff(np.log(data), axis=0)
+        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        assert 1 in gr
+        assert 1 not in gr2
+        assert_almost_equal(gr[2][0]['ssr_ftest'], gr2[2][0]['ssr_ftest'],
+                            decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr2[2][0]['ssr_ftest'],
                             decimal=7)
 
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
@@ -476,7 +488,7 @@ class TestKPSS(SetupKPSS):
     def test_fail_nonvector_input(self, reset_randomstate):
         # should be fine
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, lags='legacy')
+            kpss(self.x, nlags='legacy')
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
@@ -484,13 +496,13 @@ class TestKPSS(SetupKPSS):
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'c', lags='legacy')
+            kpss(self.x, 'c', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'C', lags='legacy')
+            kpss(self.x, 'C', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'ct', lags='legacy')
+            kpss(self.x, 'ct', nlags='legacy')
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, 'CT', lags='legacy')
+            kpss(self.x, 'CT', nlags='legacy')
 
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis",
                       lags='legacy')
@@ -525,22 +537,22 @@ class TestKPSS(SetupKPSS):
     def test_lags(self):
         # real GDP from macrodata data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, 'c', lags='auto')
+            res = kpss(self.x, 'c', nlags='auto')
         assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', lags='auto')
+        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', nlags='auto')
         assert_equal(res[2], 7)
         # volumes from nile data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(nile.load(True).data['volume'], 'c', lags='auto')
+            res = kpss(nile.load(True).data['volume'], 'c', nlags='auto')
         assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(randhie.load(True).data['lncoins'], 'ct', lags='auto')
+            res = kpss(randhie.load(True).data['lncoins'], 'ct', nlags='auto')
         assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(modechoice.load(True).data['invt'], 'ct', lags='auto')
+            res = kpss(modechoice.load(True).data['invt'], 'ct', nlags='auto')
         assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
@@ -551,18 +563,40 @@ class TestKPSS(SetupKPSS):
         msg = (r"lags \({}\) must be < number of observations \({}\)"
                .format(nobs, nobs))
         with pytest.raises(ValueError, match=msg):
-            kpss(self.x, 'c', lags=nobs)
+            kpss(self.x, 'c', nlags=nobs)
+
+    def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
+        # Test that if *autolags* exceeds number of observations, we set
+        # suitable lags
+        # GH5925
+        data_which_breaks_autolag = np.array(
+            [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0,
+             0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+             0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+             1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1,
+             0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0,
+             0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+             0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+             1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]).astype(float)
+
+        kpss(data_which_breaks_autolag, nlags="auto")
 
     def test_legacy_lags(self):
         # Test legacy lags are the same
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, 'c', lags='legacy')
+            res = kpss(self.x, 'c', nlags='legacy')
         assert_equal(res[2], 15)
 
     def test_unknown_lags(self):
         # Test legacy lags are the same
         with pytest.raises(ValueError):
-            kpss(self.x, 'c', lags='unknown')
+            kpss(self.x, 'c', nlags='unknown')
 
     def test_deprecation(self):
         with pytest.warns(FutureWarning):
@@ -917,3 +951,67 @@ def test_adfuller_maxlag_too_large(reset_randomstate):
 def test_periodogram_future_warning(reset_randomstate):
     with pytest.warns(FutureWarning):
         periodogram(np.random.standard_normal(100))
+
+
+class SetupZivotAndrews(object):
+    # test directory
+    cur_dir = CURR_DIR
+    run_dir = os.path.join(cur_dir, 'results')
+    # use same file for testing failure modes
+    fail_file = os.path.join(run_dir, 'rgnp.csv')
+    fail_mdl = np.asarray(pd.read_csv(fail_file))
+
+
+class TestZivotAndrews(SetupZivotAndrews):
+
+    # failure mode tests
+    def test_fail_regression_type(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, regression='x')
+
+    def test_fail_trim_value(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, trim=0.5)
+
+    def test_fail_array_shape(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(np.random.rand(50, 2))
+
+    def test_fail_autolag_type(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, autolag='None')
+
+    # following tests compare results to R package urca.ur.za (1.13-0)
+    def test_rgnp_case(self):
+        res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c',
+                            autolag=None)
+        assert_allclose([res[0], res[1], res[4]],
+                        [-5.57615, 0.00312, 20], rtol=1e-3)
+
+    def test_gnpdef_case(self):
+        mdlfile = os.path.join(self.run_dir, 'gnpdef.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-4.12155, 0.28024, 5, 40], rtol=1e-3)
+
+    def test_stkprc_case(self):
+        mdlfile = os.path.join(self.run_dir, 'stkprc.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='ct', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-5.60689, 0.00894, 1, 65], rtol=1e-3)
+
+    def test_rgnpq_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rgnpq.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=12, regression='t', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.02761, 0.63993, 12, 102], rtol=1e-3)
+
+    def test_rand10000_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rand10000.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.48223, 0.69111, 25, 7071], rtol=1e-3)

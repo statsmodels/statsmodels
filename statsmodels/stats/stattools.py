@@ -3,7 +3,7 @@ Statistical tests to be used in conjunction with the models
 
 Notes
 -----
-These functions haven't been formally tested.
+These functions have not been formally tested.
 """
 
 from scipy import stats
@@ -245,18 +245,18 @@ def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
 
     Parameters
     ----------
-    ab: iterable, optional
+    ab : iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db: iterable, optional
+    db : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
         used in the the standardization of the measure
 
     Returns
     -------
-    ekr: array, 4-element
+    ekr : array, 4-element
         Contains the expected values of the 4 robust kurtosis measures
 
     Notes
@@ -291,13 +291,13 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     ----------
     y : array_like
     axis : int or None, optional
-        Axis along which the kurtoses are computed.  If `None`, the
+        Axis along which the kurtosis are computed.  If `None`, the
         entire array is used.
-    ab: iterable, optional
+    a iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db: iterable, optional
+    db : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
         used in the the standardization of the measure
@@ -312,7 +312,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     kr2 : ndarray
           Kurtosis estimator based on octiles.
     kr3 : ndarray
-          Kurtosis estimators based on exceedence expectations.
+          Kurtosis estimators based on exceedance expectations.
     kr4 : ndarray
           Kurtosis measure based on the spread between high and low quantiles.
 
@@ -434,7 +434,7 @@ def _medcouple_1d(y):
 
 def medcouple(y, axis=0):
     """
-    Calculates the medcouple robust measure of skew.
+    Calculate the medcouple robust measure of skew.
 
     Parameters
     ----------

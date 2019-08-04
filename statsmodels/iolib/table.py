@@ -160,7 +160,7 @@ class SimpleTable(list):
             sequence of K strings, one per header
         stubs : list (or tuple) of str
             sequence of R strings, one per stub
-        title : string
+        title : str
             title of the table
         datatypes : list of int
             indexes to `data_fmts`
@@ -224,9 +224,9 @@ class SimpleTable(list):
         if these were provided at initialization.
         Parameters
         ----------
-        headers : list of strings
+        headers : list[str]
             K strings, where K is number of columns
-        stubs : list of strings
+        stubs : list[str]
             R strings, where R is number of non-header rows
 
         :note: a header row does not receive a stub!
@@ -368,7 +368,7 @@ class SimpleTable(list):
         fmt = self._get_fmt('txt', **fmt_dict)
         # get rows formatted as strings
         formatted_rows = [row.as_string('text', **fmt) for row in self]
-        rowlen = len(formatted_rows[-1])  # don't use header row
+        rowlen = len(formatted_rows[-1])  # do not use header row
 
         # place decoration above the table body, if desired
         table_dec_above = fmt.get('table_dec_above', '=')
@@ -618,7 +618,7 @@ class Row(list):
             elif output_format == 'latex':
                 result = row_as_string + "\n" + dec_below
             else:
-                raise ValueError("I can't decorate a %s header." %
+                raise ValueError("I cannot decorate a %s header." %
                                  output_format)
         return result
 

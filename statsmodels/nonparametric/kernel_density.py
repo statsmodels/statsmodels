@@ -49,12 +49,12 @@ class KDEMultivariate(GenericKDE):
 
     Parameters
     ----------
-    data: list of ndarrays or 2-D ndarray
+    data : list of ndarrays or 2-D ndarray
         The training data for the Kernel Density Estimation, used to determine
         the bandwidth(s).  If a 2-D array, should be of shape
         (num_observations, num_variables).  If a list, each list element is a
         separate observation.
-    var_type: str
+    var_type : str
         The type of the variables:
 
             - c : continuous
@@ -63,7 +63,7 @@ class KDEMultivariate(GenericKDE):
 
         The string should contain a type specifier for each variable, so for
         example ``var_type='ccuo'``.
-    bw: array_like or str, optional
+    bw : array_like or str, optional
         If an array, it is a fixed user-specified bandwidth.  If a string,
         should be one of:
 
@@ -71,12 +71,12 @@ class KDEMultivariate(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults: EstimatorSettings instance, optional
+    defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
 
     Attributes
     ----------
-    bw: array_like
+    bw : array_like
         The bandwidth parameters.
 
     See Also
@@ -131,9 +131,9 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw: array_like
+        bw : array_like
             The value for the bandwidth parameter(s).
-        func: callable, optional
+        func : callable, optional
             Function to transform the likelihood values (before summing); for
             the log likelihood, use ``func=np.log``.  Default is ``f(x) = x``.
 
@@ -165,12 +165,12 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        data_predict: array_like, optional
+        data_predict : array_like, optional
             Points to evaluate at.  If unspecified, the training data is used.
 
         Returns
         -------
-        pdf_est: array_like
+        pdf_est : array_like
             Probability density function evaluated at `data_predict`.
 
         Notes
@@ -201,12 +201,12 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        data_predict: array_like, optional
+        data_predict : array_like, optional
             Points to evaluate at.  If unspecified, the training data is used.
 
         Returns
         -------
-        cdf_est: array_like
+        cdf_est : array_like
             The estimate of the cdf.
 
         Notes
@@ -249,12 +249,12 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw: array_like
+        bw : array_like
             The bandwidth parameter(s).
 
         Returns
         -------
-        CV: float
+        CV : float
             The cross-validation objective function.
 
         Notes
@@ -349,14 +349,14 @@ class KDEMultivariateConditional(GenericKDE):
 
     Parameters
     ----------
-    endog: list of ndarrays or 2-D ndarray
+    endog : list of ndarrays or 2-D ndarray
         The training data for the dependent variables, used to determine
         the bandwidth(s).  If a 2-D array, should be of shape
         (num_observations, num_variables).  If a list, each list element is a
         separate observation.
-    exog: list of ndarrays or 2-D ndarray
+    exog : list of ndarrays or 2-D ndarray
         The training data for the independent variable; same shape as `endog`.
-    dep_type: str
+    dep_type : str
         The type of the dependent variables:
 
             c : Continuous
@@ -365,9 +365,9 @@ class KDEMultivariateConditional(GenericKDE):
 
         The string should contain a type specifier for each variable, so for
         example ``dep_type='ccuo'``.
-    indep_type: str
-        The type of the independent variables; specifed like `dep_type`.
-    bw: array_like or str, optional
+    indep_type : str
+        The type of the independent variables; specified like `dep_type`.
+    bw : array_like or str, optional
         If an array, it is a fixed user-specified bandwidth.  If a string,
         should be one of:
 
@@ -375,12 +375,12 @@ class KDEMultivariateConditional(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults: Instance of class EstimatorSettings
+    defaults : Instance of class EstimatorSettings
         The default values for the efficient bandwidth estimation
 
     Attributes
     ----------
-    bw: array_like
+    bw : array_like
         The bandwidth parameters
 
     See Also
@@ -445,15 +445,15 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw: array_like
+        bw : array_like
             The bandwidth parameter(s).
-        func: callable, optional
+        func : callable, optional
             Function to transform the likelihood values (before summing); for
             the log likelihood, use ``func=np.log``.  Default is ``f(x) = x``.
 
         Returns
         -------
-        L: float
+        L : float
             The value of the leave-one-out function for the data.
 
         Notes
@@ -482,15 +482,15 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        endog_predict: array_like, optional
+        endog_predict : array_like, optional
             Evaluation data for the dependent variables.  If unspecified, the
             training data is used.
-        exog_predict: array_like, optional
+        exog_predict : array_like, optional
             Evaluation data for the independent variables.
 
         Returns
         -------
-        pdf: array_like
+        pdf : array_like
             The value of the probability density at `endog_predict` and `exog_predict`.
 
         Notes
@@ -534,16 +534,16 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        endog_predict: array_like, optional
+        endog_predict : array_like, optional
             The evaluation dependent variables at which the cdf is estimated.
             If not specified the training dependent variables are used.
-        exog_predict: array_like, optional
+        exog_predict : array_like, optional
             The evaluation independent variables at which the cdf is estimated.
             If not specified the training independent variables are used.
 
         Returns
         -------
-        cdf_est: array_like
+        cdf_est : array_like
             The estimate of the cdf.
 
         Notes
@@ -606,12 +606,12 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw: array_like
+        bw : array_like
             The bandwidth parameter(s).
 
         Returns
         -------
-        CV: float
+        CV : float
             The cross-validation objective function.
 
         Notes

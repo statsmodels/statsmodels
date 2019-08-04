@@ -28,7 +28,7 @@ except IOError:
 #    #does currently not cache file
 
 y = srs['api00']
-#older numpy don't reorder
+#older numpy do not reorder
 #x = srs[['growth', 'emer', 'yr_rnd']].view(float).reshape(len(y), -1)
 #force sequence
 x = np.column_stack([srs[ii] for ii in ['growth', 'emer', 'yr_rnd']])

@@ -518,7 +518,7 @@ class TestHamiltonAR4(MarkovAutoregression):
                         hamilton_ar4_smoothed, atol=1e-5)
 
     def test_bse(self):
-        # Can't compare middle element of bse because we estimate sigma^2
+        # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-6)
@@ -574,7 +574,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
         assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
 
     def test_bse(self):
-        # Can't compare middle element of bse because we estimate sigma^2
+        # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-7)

@@ -24,6 +24,11 @@
           "img": "../_static/images/recursive_ls.png"
         },
         {
+          "text": "Rolling Least Squares",
+          "target": "notebooks/generated/rolling_ls.html",
+          "img": "../_static/images/rolling_ls.png"
+        },
+        {
           "text": "Regression Diagnostics",
           "target": "notebooks/generated/regression_diagnostics.html",
           "img": "../_static/images/regression_diagnostics.png"
@@ -176,6 +181,11 @@
             "text": "Exponential Smoothing",
             "target": "notebooks/generated/exponential_smoothing.html",
             "img": "../_static/images/exponential_smoothing.png"
+        },
+        {
+            "text": "Seasonal Decomposition",
+            "target": "notebooks/generated/stl_decomposition.html",
+            "img": "../_static/images/stl_decomposition.png"
         }
           ]
   },
@@ -227,6 +237,11 @@
             "text": "Seasonality in Time Series Data",
             "target": "notebooks/generated/statespace_seasonal.html",
             "img": "../_static/images/statespace_seasonal.png"
+        },
+        {
+            "text": "Fixed / constrained parameters in state space models",
+            "target": "notebooks/generated/statespace_fixed_params.html",
+            "img": "../_static/images/statespace_fixed_params.png"
         }
       ]
   },

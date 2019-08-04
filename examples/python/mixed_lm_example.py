@@ -47,7 +47,7 @@ print(mdf.summary())
 
 # Note that in the Statsmodels summary of results, the fixed effects and
 # random effects parameter estimates are shown in a single table.  The
-# random effect for animal is labeled "Intercept RE" in the Statmodels
+# random effect for animal is labeled "Intercept RE" in the Statsmodels
 # output above.  In the LME4 output, this effect is the pig intercept under
 # the random effects section.
 #
@@ -92,7 +92,7 @@ print(mdf.summary())
 #
 # Here is the same model fit using LMER in R (note that here R is
 # reporting the REML criterion instead of the likelihood, where the REML
-# criterion is twice the log likeihood):
+# criterion is twice the log likelihood):
 
 # ## Sitka growth data
 #
@@ -132,7 +132,7 @@ md = sm.MixedLM(endog, exog, data["tree"], exog_re)
 mdf = md.fit()
 print(mdf.summary())
 
-# We can further explore the random effects struture by constructing plots
+# We can further explore the random effects structure by constructing plots
 # of the profile likelihoods. We start with the random intercept, generating
 # a plot of the profile likelihood from 0.1 units below to 0.1 units above
 # the MLE. Since each optimization inside the profile likelihood generates a

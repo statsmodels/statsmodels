@@ -6,7 +6,7 @@ Comments:
 ---------
 scikits.statsmodels.tsa.arma_mle.Arma.fit((2,0,2))
 niter=100
-didn't use seed
+did not use seed
 some strange inf in median bias percent and
 positive error fraction equal to 1
 

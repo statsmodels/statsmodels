@@ -4,7 +4,7 @@ These examples are mainly for developers.
 
 # example 1: OLS using LM
 # example 2: GLM with binomial family
-    The second results isn't exactly correct since it assumes that each
+    The second results is not exactly correct since it assumes that each
     obvervation has the same number of trials see datasets/longley for an R script
     with the correct syntax.
 

@@ -108,7 +108,7 @@ function jc = c_sjt(n,p)
 % ------------------------------------------------------------
 % USAGE:  jc = c_sjt(n,p)
 % where:    n = dimension of the VAR system
-%               NOTE: routine doesn't work for n > 12
+%               NOTE: routine does not work for n > 12
 %           p = order of time polynomial in the null-hypothesis
 %                 p = -1, no deterministic part
 %                 p =  0, for constant term

@@ -29,10 +29,16 @@ env:
     - # Doctr deploy key for statsmodels/statsmodels.github.io
     - secure: "AzwB23FWdilHKVcEJnj57AsoY5yKTWT8cQKzsH2ih9i08wIXvZXP/Ui8XRDygV9tDKfqGVltC7HpBBDE3C4ngeMlis4uuKWlkp0O1757YQe+OdDnimuDZhrh3ILEk7xW3ab5YizjLeyv3iiBW7cNS5z8W3Yu8HeJPkr6Ck30gAA="
     - SM_CYTHON_COVERAGE=false # Run takes > 1 hour and so not feasible
+    - PYTEST_OPTIONS=--skip-slow  # skip slow on travis since tested on azure
 
 matrix:
   fast_finish: true
   include:
+    # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
+    - python: 3.7
+      env:
+        - PYTHON=3.7
+        - DOCBUILD=true
     # Python 3.7 + fixed pandas
     - python: 3.7
       env:
@@ -40,11 +46,7 @@ matrix:
         - PANDAS=0.24
         - LINT=true
         - COVERAGE=true
-    # Documentation build (on Python 3.7 + cutting edge packages)
-    - python: 3.7
-      env:
-        - PYTHON=3.7
-        - DOCBUILD=true
+        - PYTEST_OPTIONS=
     # Python 3.6 + legacy blas + older pandas
     - python: 3.6
       env:
@@ -54,6 +56,7 @@ matrix:
         - SCIPY=1.1
         - BLAS="nomkl blas=*=openblas"
         - COVERAGE=true
+        - PYTEST_OPTIONS=
     # Python 3.5 + oldest packages
     - python: 3.5
       env:
@@ -133,8 +136,8 @@ script:
     else
         export XDIST_OPTS=""
     fi
-  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS}
-  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS}
+  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
+  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
   - ./lint.sh
 
 after_success:

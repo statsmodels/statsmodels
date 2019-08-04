@@ -23,6 +23,7 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 from statsmodels.compat.python import lzip
+from statsmodels.compat.pandas import Appender
 
 import numpy as np
 from scipy import stats
@@ -231,7 +232,7 @@ _gee_init_doc = """
       Gaussian     |   x    x                        x
       inv Gaussian |   x    x                        x
       binomial     |   x    x    x     x       x     x    x           x      x
-      Poission     |   x    x                        x
+      Poisson     |   x    x                        x
       neg binomial |   x    x                        x          x
       gamma        |   x    x                        x
 
@@ -246,7 +247,7 @@ _gee_init_doc = """
     other packages.  The "naive" estimator gives smaller standard
     errors, but is only correct if the working correlation structure
     is correctly specified.  The "bias reduced" estimator of Mancl and
-    DeRouen (Biometrics, 2001) reduces the downard bias of the robust
+    DeRouen (Biometrics, 2001) reduces the downward bias of the robust
     estimator.
 
     The robust covariance provided here follows Liang and Zeger (1986)
@@ -280,7 +281,7 @@ _gee_fit_doc = """
 
     Parameters
     ----------
-    maxiter : integer
+    maxiter : int
         The maximum number of iterations
     ctol : float
         The convergence criterion for stopping the Gauss-Seidel
@@ -288,14 +289,14 @@ _gee_fit_doc = """
     start_params : array_like
         A vector of starting values for the regression
         coefficients.  If None, a default is chosen.
-    params_niter : integer
+    params_niter : int
         The number of Gauss-Seidel updates of the mean structure
         parameters that take place prior to each update of the
         dependence structure.
-    first_dep_update : integer
+    first_dep_update : int
         No dependence structure updates occur before this
         iteration number.
-    cov_type : string
+    cov_type : str
         One of "robust", "naive", or "bias_reduced".
     ddof_scale : scalar or None
         The scale parameter is estimated as the sum of squared
@@ -344,7 +345,7 @@ _gee_results_doc = """
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
-    cov_type : string
+    cov_type : str
         string indicating whether a "robust", "naive" or "bias_reduced"
         covariance is used as default
     fit_history : dict
@@ -694,7 +695,7 @@ class GEE(base.Model):
 
         Optional arguments
         ------------------
-        dep_data : string or array_like
+        dep_data : str or array_like
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g. Nested) for
             details.  If `dep_data` is a string, it is interpreted as
@@ -1203,7 +1204,7 @@ class GEE(base.Model):
             exog = self.exog
 
             if not isinstance(self.family.link, families.links.Log):
-                # Don't need to worry about exposure
+                # Do not need to worry about exposure
                 if offset is None:
                     if self._offset_exposure is not None:
                         _offset = self._offset_exposure.copy()
@@ -1248,10 +1249,10 @@ class GEE(base.Model):
         result = model.fit()
         return result.params
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust', ddof_scale=None, scaling_factor=1.):
-        # Docstring attached below
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
@@ -1299,7 +1300,7 @@ class GEE(base.Model):
             self._fit_history['dep_params'].append(
                 self.cov_struct.dep_params)
 
-            # Don't exit until the association parameters have been
+            # Do not exit until the association parameters have been
             # updated at least once.
             if (del_params < ctol and
                     (num_assoc_updates > 0 or self.update_dep is False)):
@@ -1359,7 +1360,7 @@ class GEE(base.Model):
                         cov_robust_bc=bc_cov)
 
         # The superclass constructor will multiply the covariance
-        # matrix argument bcov by scale, which we don't want, so we
+        # matrix argument bcov by scale, which we do not want, so we
         # divide bcov by the scale parameter here
         results = GEEResults(self, mean_params, bcov / scale, scale,
                              cov_type=cov_type, use_t=False,
@@ -1386,8 +1387,6 @@ class GEE(base.Model):
                           "maxiter"]
 
         return GEEResultsWrapper(results)
-
-    fit.__doc__ = _gee_fit_doc
 
     def _update_regularized(self, params, pen_wt, scad_param, eps):
 
@@ -1456,13 +1455,13 @@ class GEE(base.Model):
         scad_param : float
             Non-negative scalar determining the shape of the Scad
             penalty.
-        maxiter : integer
+        maxiter : int
             The maximum number of iterations.
-        ddof_scale : integer
+        ddof_scale : int
             Value to subtract from `nobs` when calculating the
             denominator degrees of freedom for t-statistics, defaults
             to the number of columns in `exog`.
-        update_assoc : integer
+        update_assoc : int
             The dependence parameters are updated every `update_assoc`
             iterations of the mean structure parameter updates.
         ctol : float
@@ -1774,7 +1773,7 @@ class GEEResults(base.LikelihoodModelResults):
         attr_kwds = kwds.pop('attr_kwds', {})
         self.__dict__.update(attr_kwds)
 
-        # we don't do this if the cov_type has already been set
+        # we do not do this if the cov_type has already been set
         # subclasses can set it through attr_kwds
         if not (hasattr(self, 'cov_type') and
                 hasattr(self, 'cov_params_default')):
@@ -1808,7 +1807,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        cov_type : string
+        cov_type : str
             One of "robust", "naive", or "bias_reduced".  Determines
             the covariance used to compute standard errors.  Defaults
             to "robust".
@@ -1977,10 +1976,10 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
 
+    @Appender(_plot_added_variable_doc % {'extra_params_doc': ''})
     def plot_added_variable(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_added_variable
 
@@ -1991,30 +1990,21 @@ class GEEResults(base.LikelihoodModelResults):
 
         return fig
 
-    plot_added_variable.__doc__ = _plot_added_variable_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(_plot_partial_residuals_doc % {'extra_params_doc': ''})
     def plot_partial_residuals(self, focus_exog, ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_partial_residuals
 
         return plot_partial_residuals(self, focus_exog, ax=ax)
 
-    plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(_plot_ceres_residuals_doc % {'extra_params_doc': ''})
     def plot_ceres_residuals(self, focus_exog, frac=0.66, cond_means=None,
                              ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_ceres_residuals
 
         return plot_ceres_residuals(self, focus_exog, frac,
                                     cond_means=cond_means, ax=ax)
-
-    plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
-        'extra_params_doc': ''}
 
     def conf_int(self, alpha=.05, cols=None, cov_type=None):
         """
@@ -2027,7 +2017,7 @@ class GEEResults(base.LikelihoodModelResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
              `cols` specifies which confidence intervals to return
-        cov_type : string
+        cov_type : str
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
              See `GEE` for details.
@@ -2036,7 +2026,7 @@ class GEEResults(base.LikelihoodModelResults):
         -----
         The confidence interval is based on the Gaussian distribution.
         """
-        # super doesn't allow to specify cov_type and method is not
+        # super does not allow to specify cov_type and method is not
         # implemented,
         # FIXME: remove this method here
         if cov_type is None:
@@ -2180,8 +2170,8 @@ class GEEResults(base.LikelihoodModelResults):
               are returned.  This is the default.
             - 'eyex' - estimate elasticities of variables in `exog` --
               d(lny)/d(lnx)
-            - 'dyex' - estimate semielasticity -- dy/d(lnx)
-            - 'eydx' - estimate semeilasticity -- d(lny)/dx
+            - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
+            - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
@@ -2238,7 +2228,7 @@ class GEEResults(base.LikelihoodModelResults):
             the time difference axis used to define bins for
             calculating local means.  If an array, the specific points
             that define the bins.
-        min_n : integer
+        min_n : int
             The minimum sample size in a bin for the mean residual
             product to be included on the plot.
         """
@@ -2462,6 +2452,7 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
@@ -2480,10 +2471,9 @@ class OrdinalGEE(GEE):
                                      attr_kwds=res_kwds)
         # for k in rslt._props:
         #    setattr(ord_rslt, k, getattr(rslt, k))
+        # TODO: document or delete
 
         return OrdinalGEEResultsWrapper(ord_rslt)
-
-    fit.__doc__ = _gee_fit_doc
 
 
 class OrdinalGEEResults(GEEResults):
@@ -2496,7 +2486,7 @@ class OrdinalGEEResults(GEEResults):
     def plot_distribution(self, ax=None, exog_values=None):
         """
         Plot the fitted probabilities of endog in an ordinal model,
-        for specifed values of the predictors.
+        for specified values of the predictors.
 
         Parameters
         ----------
@@ -2844,6 +2834,7 @@ class NominalGEE(GEE):
 
         return dmat
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
@@ -2864,12 +2855,11 @@ class NominalGEE(GEE):
                                      rslt.scale,
                                      cov_type=cov_type,
                                      attr_kwds=res_kwds)
+        # TODO: document or delete
         # for k in rslt._props:
         #    setattr(nom_rslt, k, getattr(rslt, k))
 
         return NominalGEEResultsWrapper(nom_rslt)
-
-    fit.__doc__ = _gee_fit_doc
 
 
 class NominalGEEResults(GEEResults):
@@ -2882,7 +2872,7 @@ class NominalGEEResults(GEEResults):
     def plot_distribution(self, ax=None, exog_values=None):
         """
         Plot the fitted probabilities of endog in an nominal model,
-        for specifed values of the predictors.
+        for specified values of the predictors.
 
         Parameters
         ----------
@@ -3027,7 +3017,7 @@ class _Multinomial(families.Family):
         """
         Parameters
         ----------
-        nlevels : integer
+        nlevels : int
             The number of distinct categories for the multinomial
             distribution.
         """
@@ -3250,7 +3240,7 @@ class GEEMargins(object):
                 model._derivative_exog, dummy_idx, count_idx,
                 method, 1)
 
-            # don't care about at constant
+            # do not care about at constant
             self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
             self.margeff_se = margeff_se[effects_idx]
             self.margeff = effects[effects_idx]

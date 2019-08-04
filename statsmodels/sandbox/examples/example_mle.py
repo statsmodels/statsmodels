@@ -49,7 +49,7 @@ print('MLE')
 #resfmin2 = optimize.fmin(f, mod.results.params*0.9, maxfun=5000, maxiter=5000, xtol=1e-10, ftol= 1e-10)
 resfmin2 = optimize.fmin(f, np.ones(7), maxfun=5000, maxiter=5000, xtol=1e-10, ftol= 1e-10)
 print(resfmin2)
-# there isn't a unique solution?  Is this due to the multicollinearity? Improved with use of analytically
+# there is not a unique solution?  Is this due to the multicollinearity? Improved with use of analytically
 # defined score function?
 
 #check X'X matrix

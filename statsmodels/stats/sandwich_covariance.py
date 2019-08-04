@@ -64,7 +64,7 @@ West or similar are on the covariance matrix of the moment conditions
 
 quasi-MLE: MLE with mis-specified model where parameter estimates are
 fine (consistent ?) but cov_params needs to be adjusted similar or
-same as in sandwiches. (I didn't go through any details yet.)
+same as in sandwiches. (I did not go through any details yet.)
 
 TODO
 ----
@@ -246,7 +246,7 @@ def _get_sandwich_arrays(results, cov_type=''):
 
         # experimental support for freq_weights
         if hasattr(results.model, 'freq_weights') and not cov_type == 'clu':
-            # we don't want to square the weights in the covariance calculations
+            # we do not want to square the weights in the covariance calculations
             # assumes that freq_weights are incorporated in score_obs or equivalent
             # assumes xu/score_obs is 2D
             # temporary asarray

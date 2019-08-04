@@ -155,7 +155,7 @@ def corr_clipped(corr, threshold=1e-15):
 def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
     """
-    Find the nearest covariance matrix that is postive (semi-) definite
+    Find the nearest covariance matrix that is positive (semi-) definite
 
     This leaves the diagonal, i.e. the variance, unchanged
 
@@ -163,7 +163,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     ----------
     cov : ndarray, (k,k)
         initial covariance matrix
-    method : string
+    method : str
         if "clipped", then the faster but less accurate ``corr_clipped`` is
         used.if "nearest", then ``corr_nearest`` is used
     threshold : float
@@ -239,7 +239,7 @@ def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
         The search direction
     obj_hist : array_like
         Objective function history (must contain at least one value)
-    M : positive integer
+    M : positive int
         Number of previous function points to consider (see references
         for details).
     sig1 : real
@@ -248,7 +248,7 @@ def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
         Tuning parameter, see references for details.
     gam : real
         Tuning parameter, see references for details.
-    maxiter : positive integer
+    maxiter : int
         The maximum number of iterations; returns Nones if convergence
         does not occur by this point
 
@@ -335,7 +335,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     Notes
     -----
     This can be an effective heuristic algorithm for problems where no
-    gauranteed algorithm for computing a global minimizer is known.
+    guaranteed algorithm for computing a global minimizer is known.
 
     There are a number of tuning parameters, but these generally
     should not be changed except for `maxiter` (positive integer) and
@@ -551,7 +551,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
         The target matrix (to which the nearest correlation matrix is
         sought).  Must be square, but need not be positive
         semidefinite.
-    rank : positive integer
+    rank : int
         The rank of the factor structure of the solution, i.e., the
         number of linearly independent columns of X.
     ctol : positive real
@@ -562,7 +562,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     lam_max : float
         Tuning parameter for spectral projected gradient optimization
         (largest allowed step in the search direction).
-    maxiter : integer
+    maxiter : int
         Maximum number of iterations in spectral projected gradient
         optimization.
 
@@ -587,7 +587,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     population correlation matrix.  The factor structure allows these
     tasks to be done without constructing any n x n matrices.
 
-    This is a non-convex problem with no known gauranteed globally
+    This is a non-convex problem with no known guaranteed globally
     convergent algorithm for computing the solution.  Borsdof, Higham
     and Raydan (2010) compared several methods for this problem and
     found the spectral projected gradient (SPG) method (used here) to
@@ -699,7 +699,7 @@ def cov_nearest_factor_homog(cov, rank):
     cov : array_like
         The input array, must be square but need not be positive
         semidefinite
-    rank : positive integer
+    rank : int
         The rank of the fitted factor structure
 
     Returns
@@ -721,7 +721,7 @@ def cov_nearest_factor_homog(cov, rank):
     that does not require repeated eigen-decompositions.
 
     If the input matrix is sparse, then cov - k*I is also sparse, so
-    the eigen-decomposition can be done effciciently using sparse
+    the eigen-decomposition can be done efficiently using sparse
     routines.
 
     The one-dimensional search for the optimal value of k is not
@@ -959,7 +959,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         An instance of MultivariateKernel, defaults to
         GaussianMultivariateKernel.
     bw : array_like or scalar
-        A bandwidth vector, or bandwith multiplier.  If a 1d array, it
+        A bandwidth vector, or bandwidth multiplier.  If a 1d array, it
         contains kernel bandwidths for each component of the process, and
         must have length equal to the number of columns of exog.  If a scalar,
         bw is a bandwidth multiplier used to adjust the default bandwidth; if

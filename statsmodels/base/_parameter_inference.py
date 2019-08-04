@@ -229,7 +229,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
         # cov_score_test_inv = cov_lm_robust(score, r_matrix, hinv,
         #                                   cov_score, cov_params=None)
     elif cov_type.upper() == 'V':
-        # TODO: this doesn't work, V in fit_constrained results is singular
+        # TODO: this does not work, V in fit_constrained results is singular
         # we need cov_params without the zeros in it
         hinv = -np.linalg.inv(hessian)
         cov_score = nobs * np.cov(score_obs.T)

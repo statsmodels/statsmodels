@@ -50,7 +50,7 @@ class MacrodataResults(object):
         self.llf = 1962.572126661708
 
         self.chi2_1 = 75.44775165699033
-        # don't know how they calculate this;  it's not -2 * (ll1 - ll0)
+        # do not know how they calculate this;  it's not -2 * (ll1 - ll0)
 
         self.chi2_2 = 33.19878716815366
         self.chi2_3 = 83.90568280242312

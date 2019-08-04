@@ -362,7 +362,7 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
     alpha : float in (0, 1)
         significance level, default 0.05,
         coverage of the two-sided interval is (approximately) ``1 - alpha``
-    method : string in ['normal']
+    method : str in ['normal']
         method to use for confidence interval,
         currently only normal approximation
 
@@ -386,13 +386,15 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
     return n
 
 def proportion_effectsize(prop1, prop2, method='normal'):
-    '''effect size for a test comparing two proportions
+    '''
+    Effect size for a test comparing two proportions
 
     for use in power function
 
     Parameters
     ----------
-    prop1, prop2: float or array_like
+    prop1, prop2 : float or array_like
+        The proportion value(s).
 
     Returns
     -------
@@ -493,9 +495,9 @@ def binom_tost(count, nobs, low, upp):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : integer
+    nobs : int
         the number of trials or observations.
     low, upp : floats
         lower and upper limit of equivalence region
@@ -526,7 +528,7 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     ----------
     low, upp : floats
         lower and upper limit of equivalence region
-    nobs : integer
+    nobs : int
         the number of trials or observations.
 
     Returns
@@ -548,7 +550,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided')
     ----------
     value : float
         proportion under the Null hypothesis
-    nobs : integer
+    nobs : int
         the number of trials or observations.
 
 
@@ -583,14 +585,14 @@ def binom_test(count, nobs, prop=0.5, alternative='two-sided'):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : integer
+    nobs : int
         the number of trials or observations.
     prop : float, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    alternative : string in ['two-sided', 'smaller', 'larger']
+    alternative : str in ['two-sided', 'smaller', 'larger']
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -642,8 +644,8 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
         proportion under the alternative
     alpha : float in (0,1)
         significance level of the test
-    dist : string in ['norm', 'binom']
-        This defines the distribution to evalute the power of the test. The
+    dist : str in ['norm', 'binom']
+        This defines the distribution to evaluate the power of the test. The
         critical values of the TOST test are always based on the normal
         approximation, but the distribution for the power can be either the
         normal (default) or the binomial (exact) distribution.
@@ -721,9 +723,9 @@ def _table_proportion(count, nobs):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : integer
+    nobs : int
         the number of trials or observations.
 
     Returns
@@ -749,11 +751,11 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
-    nobs : integer or array_like
+    nobs : {int, array_like}
         the number of trials or observations, with the same length as
         count.
     value : float, array_like or None, optional
@@ -762,7 +764,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
         null hypothesis is that prop[0] - prop[1] = value, where prop is the
         proportion in the two samples. If not provided value = 0 and the null
         is prop[0] = prop[1]
-    alternative : string in ['two-sided', 'smaller', 'larger']
+    alternative : str in ['two-sided', 'smaller', 'larger']
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
         ``prop < value`` and larger means ``prop > value``. In the two sample
@@ -850,16 +852,16 @@ def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
-    nobs : integer
+    nobs : int
         the number of trials or observations, with the same length as
         count.
     low, upp : float
         equivalence interval low < prop1 - prop2 < upp
-    prop_var : string or float in (0, 1)
+    prop_var : str or float in (0, 1)
         prop_var determines which proportion is used for the calculation
         of the standard deviation of the proportion estimate
         The available options for string are 'sample' (default), 'null' and
@@ -900,11 +902,11 @@ def proportions_chisquare(count, nobs, value=None):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
-    nobs : integer
+    nobs : int
         the number of trials or observations, with the same length as
         count.
     value : None or float or array_like
@@ -961,14 +963,14 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : integer
+    nobs : int
         the number of trials or observations.
     prop : float, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    multitest_method : string
+    multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
@@ -1002,19 +1004,19 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
 
     Parameters
     ----------
-    count : integer or array_like
+    count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : integer
+    nobs : int
         the number of trials or observations.
     prop : float, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    multitest_method : string
+    multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
         The default is Holm-Sidak 'hs'.
-    alternative : string in ['two-sided', 'smaller', 'larger']
+    alternative : str in ['two-sided', 'smaller', 'larger']
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 

@@ -82,7 +82,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     ----------
     x : array_like, 1d
         array of observations
-    cdf : string or callable
+    cdf : str or callable
         string: name of a distribution in scipy.stats
         callable: function to evaluate cdf
     alternative : 'two_sided' (default), 'less' or 'greater'
@@ -142,7 +142,7 @@ def get_lilliefors_table(dist='norm'):
 
     Parameters
     ----------
-    dist : string.
+    dist : str
         distribution being tested in set {'norm', 'exp'}.
 
     Returns
@@ -198,7 +198,7 @@ def pval_lf(d_max, n):
     Notes
     -----
     This is mainly a helper function where the calling code should dispatch
-    on bound violations. Therefore it doesn't check whether the pvalue is in
+    on bound violations. Therefore it does not check whether the pvalue is in
     the valid range.
 
     Precision for the pvalues is around 2 to 3 decimals. This approximation is

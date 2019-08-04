@@ -152,9 +152,9 @@ class Optimizer(object):
                 start_direc : ndarray
                     Initial direction set.
             'basinhopping'
-                niter : integer
+                niter : int
                     The number of basin hopping iterations.
-                niter_success : integer
+                niter_success : int
                     Stop the run if the global minimum candidate remains the
                     same for this number of iterations.
                 T : float
@@ -165,7 +165,7 @@ class Optimizer(object):
                     value) between local minima.
                 stepsize : float
                     Initial step size for use in the random displacement.
-                interval : integer
+                interval : int
                     The interval for how often to update the `stepsize`.
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
@@ -241,7 +241,7 @@ class Optimizer(object):
         raise NotImplementedError
 
     def _fit_regularized(self, params):
-        # TODO: code won't necessarily be general here. 3 options.
+        # TODO: code will not necessarily be general here. 3 options.
         # 1) setup for scipy.optimize.fmin_sqlsqp
         # 2) setup for cvxopt
         # 3) setup for openopt
@@ -592,7 +592,7 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
     minimizer_kwargs['args'] = fargs
     minimizer_kwargs['jac'] = score
     method = minimizer_kwargs.get('method', None)
-    if method and method != 'L-BFGS-B': # l_bfgs_b doesn't take a hessian
+    if method and method != 'L-BFGS-B': # l_bfgs_b does not take a hessian
         minimizer_kwargs['hess'] = hess
 
     retvals = optimize.basinhopping(f, start_params,

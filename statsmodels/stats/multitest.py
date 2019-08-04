@@ -73,7 +73,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         uncorrected p-values.   Must be 1-dimensional.
     alpha : float
         FWER, family-wise error rate, e.g. 0.1
-    method : string
+    method : str
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
 
@@ -384,7 +384,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     linear step-up procedure (fdrcorrection0 with method='indep') corrected
     for the estimated fraction of true hypotheses.
     This means that the rejection decision can be obtained with
-    ``pval_corrected <= alpha``, where ``alpha`` is the origianal significance
+    ``pval_corrected <= alpha``, where ``alpha`` is the original significance
     level.
     (Note: This has changed from earlier versions (<0.5.0) of statsmodels.)
 
@@ -431,7 +431,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
             break
         elif ri < ri_old:
             # prevent cycles and endless loops
-            raise RuntimeError(" oops - shouldn't be here")
+            raise RuntimeError(" oops - should not be here")
         ri_old = ri
 
     # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
@@ -464,10 +464,10 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
         The assumed proportion of true null hypotheses
     null_pdf : function mapping reals to positive reals
         The density of null Z-scores; if None, use standard normal
-    deg : integer
+    deg : int
         The maximum exponent in the polynomial expansion of the
         density of non-null Z-scores
-    nbins : integer
+    nbins : int
         The number of bins for estimating the marginal density
         of Z-scores.
 
@@ -673,7 +673,7 @@ class NullDistribution(object):
     # The fitted null density function
     def pdf(self, zscores):
         """
-        Evaluates the fitted emirical null Z-score density.
+        Evaluates the fitted empirical null Z-score density.
 
         Parameters
         ----------

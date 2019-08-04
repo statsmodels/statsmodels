@@ -4,7 +4,7 @@
 Sandbox
 =======
 
-This sandbox contains code that is for various resons not ready to be
+This sandbox contains code that is for various reasons not ready to be
 included in statsmodels proper. It contains modules from the old stats.models
 code that have not been tested, verified and updated to the new statsmodels
 structure: cox survival model, mixed effects model with repeated measures,
@@ -34,12 +34,10 @@ Time Series analysis :mod:`tsa`
 
 In this part we develop models and functions that will be useful for time
 series analysis. Most of the models and function have been moved to
-:mod:`statsmodels.tsa`. Currently, GARCH models remain in development stage in
-`sandbox.tsa`.
+:mod:`statsmodels.tsa`.
 
 Moving Window Statistics
 """"""""""""""""""""""""
-
 
 Most moving window statistics, like rolling mean, moments (up to 4th order), min,
 max, mean, and variance, are covered by the functions for `Moving (rolling)

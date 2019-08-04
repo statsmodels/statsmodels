@@ -12,7 +12,6 @@ graft statsmodels/datasets
 graft statsmodels/sandbox/regression/data
 graft statsmodels/sandbox/tests
 graft statsmodels/sandbox/tsa/examples
-graft statsmodels/tsa/vector_ar/data
 recursive-include docs/source *
 exclude docs/source/generated/*
 recursive-include docs/sphinxext *

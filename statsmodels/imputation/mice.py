@@ -154,8 +154,8 @@ class MICEData(object):
     Parameters
     ----------
     data : Pandas data frame
-        The data set, whch is copied internally.
-    perturbation_method : string
+        The data set, which is copied internally.
+    perturbation_method : str
         The default perturbation method
     k_pmm : int
         The number of nearest neighbors to use during predictive mean
@@ -172,7 +172,7 @@ class MICEData(object):
     separate files with filename pattern `dataXX.csv`.  The variables
     other than `x1` are imputed using linear models fit with OLS, with
     mean structures containing main effects of all other variables in
-    `data`.  The variable named `x1` has a condtional mean structure
+    `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     %(_mice_data_example_1)s
 
@@ -211,7 +211,7 @@ class MICEData(object):
         self.predict_kwds = {}
 
         # Assign the same perturbation method for all variables.
-        # Can be overriden when calling 'set_imputer'.
+        # Can be overridden when calling 'set_imputer'.
         self.perturbation_method = defaultdict(lambda:
                                                perturbation_method)
 
@@ -312,9 +312,9 @@ class MICEData(object):
 
         Parameters
         ----------
-        endog_name : string
+        endog_name : str
             Name of the variable to be imputed.
-        formula : string
+        formula : str
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
             formula should only include an expression for the mean
@@ -331,7 +331,7 @@ class MICEData(object):
         k_pmm : int
             Determines number of neighboring observations from which
             to randomly sample when using predictive mean matching.
-        perturbation_method : string
+        perturbation_method : str
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
@@ -339,7 +339,7 @@ class MICEData(object):
             If regularized[name]=True, `fit_regularized` rather than
             `fit` is called when fitting imputation models for this
             variable.  When regularized[name]=True for any variable,
-            pertrurbation_method must be set to boot.
+            perturbation_method must be set to boot.
 
         Notes
         -----
@@ -387,7 +387,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        col : string
+        col : str
             Name of variable to be filled in.
         vals : array
             Array of imputed values to use for filling-in missing values.
@@ -426,7 +426,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
            The variable for which the split data is returned.
 
         Returns
@@ -499,7 +499,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
            The variable for which the fitting data is returned.
 
         Returns
@@ -543,17 +543,17 @@ class MICEData(object):
         ----------
         ax : matplotlib axes
             Axes on which to draw the plot.
-        row_order : string
+        row_order : str
             The method for ordering the rows.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        column_order : string
+        column_order : str
             The method for ordering the columns.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        hide_complete_rows : boolean
+        hide_complete_rows : bool
             If True, rows with no missing values are not drawn.
-        hide_complete_columns : boolean
+        hide_complete_columns : bool
             If True, columns with no missing values are not drawn.
-        color_row_patterns : boolean
+        color_row_patterns : bool
             If True, color the unique row patterns, otherwise use grey
             and white as colors.
 
@@ -646,15 +646,15 @@ class MICEData(object):
 
         Parameters
         ----------
-        col1_name : string
+        col1_name : str
             The variable to be plotted on the horizontal axis.
-        col2_name : string
+        col2_name : str
             The variable to be plotted on the vertical axis.
         lowess_args : dictionary
             A dictionary of dictionaries, keys are 'ii', 'io', 'oi'
             and 'oo', where 'o' denotes 'observed' and 'i' denotes
             imputed.  See Notes for details.
-        lowess_min_n : integer
+        lowess_min_n : int
             Minimum sample size to plot a lowess fit
         jitter : float or tuple
             Standard deviation for jittering points in the plot.
@@ -753,13 +753,13 @@ class MICEData(object):
 
         Parameters
         ----------
-        col_name : string
+        col_name : str
             The variable to be plotted on the horizontal axis.
         lowess_args : dict-like
             Keyword arguments passed to lowess fit.  A dictionary of
             dictionaries, keys are 'o' and 'i' denoting 'observed' and
             'imputed', respectively.
-        lowess_min_n : integer
+        lowess_min_n : int
             Minimum sample size to plot a lowess fit
         jitter : float or tuple
             Standard deviation for jittering points in the plot.
@@ -848,7 +848,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        col_name : string
+        col_name : str
             The name of the variable to be plotted.
         ax : matplotlib axes
             An axes on which to draw the histograms.  If not provided,
@@ -1001,7 +1001,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
             The name of the variable to be updated.
         """
 
@@ -1117,7 +1117,7 @@ class MICE(object):
 
     Parameters
     ----------
-    model_formula : string
+    model_formula : str
         The model formula to be fit to the imputed data sets.  This
         formula is for the 'analysis model'.
     model_class : statsmodels model

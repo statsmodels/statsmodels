@@ -39,8 +39,8 @@ takes this keyword. You can find more information in the docstring of
 
 .. _build-faq:
 
-Why won't statsmodels build?
-----------------------------
+Why will not statsmodels build?
+-------------------------------
 
 Remember that to build, you must have:
 
@@ -75,8 +75,8 @@ get involved. We accept Pull Requests on our GitHub page for bugfixes and
 topics germane to statistics and statistical modeling. In addition, usability
 and quality of life enhancements are greatly appreciated as well.
 
-What if my question isn't answered here?
-----------------------------------------
+What if my question is not answered here?
+-----------------------------------------
 
 You may find answers for questions that have not yet been added here on GitHub
 under the `FAQ issues tag <https://github.com/statsmodels/statsmodels/labels/FAQ>`_.

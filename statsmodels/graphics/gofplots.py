@@ -39,7 +39,7 @@ class ProbPlot(object):
         Location parameter for dist
     scale : float
         Scale parameter for dist
-    fit : boolean
+    fit : bool
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed
@@ -173,8 +173,8 @@ class ProbPlot(object):
         if isinstance(dist, str):
             dist = getattr(stats, dist)
 
-        self.fit_params = dist.fit(data)
         if fit:
+            self.fit_params = dist.fit(data)
             self.loc = self.fit_params[-2]
             self.scale = self.fit_params[-1]
             if len(self.fit_params) > 2:
@@ -195,10 +195,12 @@ class ProbPlot(object):
                                 'is:\n{cmd}'.format(cmd=cmd))
             self.loc = loc
             self.scale = scale
+            self.fit_params = np.r_[distargs, loc, scale]
         else:
             self.dist = dist
             self.loc = loc
             self.scale = scale
+            self.fit_params = np.r_[loc, scale]
 
         # propertes
         self._cache = {}
@@ -247,15 +249,15 @@ class ProbPlot(object):
                ax=None, **plotkwargs):
         """
         P-P plot of the percentiles (probabilities) of x versus the
-        probabilities (percetiles) of a distribution.
+        probabilities (percentiles) of a distribution.
 
         Parameters
         ----------
         xlabel : str or None, optional
-            User-provided lables for the x-axis. If None (default),
+            User-provided labels for the x-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         ylabel : str or None, optional
-            User-provided lables for the y-axis. If None (default),
+            User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
@@ -332,7 +334,7 @@ class ProbPlot(object):
         Parameters
         ----------
         xlabel, ylabel : str or None, optional
-            User-provided lables for the x-axis and y-axis. If None (default),
+            User-provided labels for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
@@ -411,7 +413,7 @@ class ProbPlot(object):
                  exceed=False, ax=None, **plotkwargs):
         """
         Probability plot of the unscaled quantiles of x versus the
-        probabilities of a distibution (not to be confused with a P-P plot).
+        probabilities of a distribution (not to be confused with a P-P plot).
 
         The x-axis is scaled linearly with the quantiles, but the probabilities
         are used to label the axis.
@@ -419,7 +421,7 @@ class ProbPlot(object):
         Parameters
         ----------
         xlabel, ylabel : str or None, optional
-            User-provided lables for the x-axis and y-axis. If None (default),
+            User-provided labels for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
@@ -432,7 +434,7 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-        exceed : boolean, optional
+        exceed : bool, optional
 
              - If False (default) the raw sample quantiles are plotted against
                the theoretical quantiles, show the probability that a sample
@@ -504,7 +506,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         for i in range(0,nobs+1)
     scale : float
         Scale parameter for dist
-    fit : boolean
+    fit : bool
         If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed
@@ -694,7 +696,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
 
     Examples
     --------
-    Import the food expenditure dataset.  Plot annual food expendeture on x-axis
+    Import the food expenditure dataset.  Plot annual food expenditure on x-axis
     and household income on y-axis.  Use qqline to add regression line into the
     plot.
 
@@ -728,7 +730,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         raise ValueError("If line is not 45, x and y cannot be None.")
     elif line == 'r':
         # could use ax.lines[0].get_xdata(), get_ydata(),
-        # but don't know axes are 'clean'
+        # but do not know axes are 'clean'
         y = OLS(y, add_constant(x)).fit().fittedvalues
         ax.plot(x,y,fmt)
     elif line == 's':

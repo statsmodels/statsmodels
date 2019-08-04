@@ -11,6 +11,7 @@ from collections import defaultdict
 import numpy as np
 
 from statsmodels.compat.python import lzip
+from statsmodels.compat.pandas import Appender
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
@@ -178,7 +179,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     See Also
     --------
-    xxx : class for regression diagnostics  TODO: doesn't exist yet
+    xxx : class for regression diagnostics  TODO: does not exist yet
 
     References
     ----------
@@ -198,6 +199,7 @@ class _BaseInfluenceMixin(object):
     """common methods between OLSInfluence and MLE/GLMInfluence
     """
 
+    @Appender(_plot_influence_doc.format({'extra_params_doc': ""}))
     def plot_influence(self, external=None, alpha=.05, criterion="cooks",
                        size=48, plot_alpha=.75, ax=None, **kwargs):
 
@@ -209,9 +211,6 @@ class _BaseInfluenceMixin(object):
                               criterion=criterion, size=size,
                               plot_alpha=plot_alpha, ax=ax, **kwargs)
         return res
-
-    plot_influence.__doc__ = _plot_influence_doc.format({
-        'extra_params_doc': ""})
 
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,
                     **kwds):
@@ -249,7 +248,7 @@ class _BaseInfluenceMixin(object):
 
         Parameters
         ----------
-        y_var : string
+        y_var : str
             Name of attribute or shortcut for predefined attributes that will
             be plotted on the y-axis.
         threshold : None or float
@@ -257,12 +256,12 @@ class _BaseInfluenceMixin(object):
             Observations for which the absolute value of the y_var is larger
             than the threshold will be annotated. Set to a negative number to
             label all observations or to a large number to have no annotation.
-        title : string
+        title : str
             If provided, the title will replace the default "Index Plot" title.
         ax : matplolib axis instance
             The plot will be added to the `ax` if provided, otherwise a new
             figure is created.
-        idx : None or integer
+        idx : {None, int}
             Some attributes require an additional index to select the y-var.
             In dfbetas this refers to the column indes.
         kwds : optional keywords
@@ -543,7 +542,7 @@ class MLEInfluence(_BaseInfluenceMixin):
             hat_diag=self.hat_matrix_diag,
             dffits_internal=self.d_fittedvalues_scaled),
             index=row_labels)
-        # NOTE: if we don't give columns, order of above will be arbitrary
+        # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
 
@@ -570,7 +569,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     is not too large. One possible approach for LOOO measures would be to
     identify possible problem observations with the _internal measures, and
     then run the leave-one-observation-out only with observations that are
-    possible outliers. (However, this is not yet available in an automized way.)
+    possible outliers. (However, this is not yet available in an automated way.)
 
     This should be extended to general least squares.
 
@@ -829,7 +828,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         requires leave one out loop for observations
 
         """
-        # don't use inplace division / because then we change original
+        # do not use inplace division / because then we change original
         cov_ratio = (self.det_cov_params_not_obsi
                      / np.linalg.det(self.results.cov_params()))
         return cov_ratio
@@ -920,7 +919,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Parameters
         ----------
-        attributes : list of strings
+        attributes : list[str]
            These are the names of the attributes of the auxiliary OLS results
            instance that are stored and returned.
 
@@ -1016,7 +1015,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             dffits=self.dffits[0],
         ),
             index=row_labels)
-        # NOTE: if we don't give columns, order of above will be arbitrary
+        # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
 
@@ -1093,7 +1092,7 @@ def summary_table(res, alpha=0.05):
        table with results that can be printed
     data : ndarray
        calculated measures and statistics for the table
-    ss2 : list of strings
+    ss2 : list[str]
        column_names for table (Note: rows of table are observations)
     """
 

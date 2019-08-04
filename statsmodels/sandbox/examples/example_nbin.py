@@ -40,7 +40,7 @@ def _ll_nbp(y, X, beta, alph, Q):
 
     References:
 
-    Greene, W. 2008. "Functional forms for the negtive binomial model
+    Greene, W. 2008. "Functional forms for the negative binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
 
@@ -112,14 +112,14 @@ class NBin(GenericLikelihoodModel):
         `exog` is an n x p array where n is the number of observations and p
         is the number of regressors including the intercept if one is
         included in the data.
-    ll_type: string
+    ll_type: str
         log-likelihood type
         `nb2`: Negative Binomial type-2 (most common)
         `nb1`: Negative Binomial type-1
         `nbp`: Negative Binomial type-P (Greene, 2008)
         `nbt`: Left-truncated Negative Binomial (type-2)
         `geom`: Geometric regression model
-    C: integer
+    C: int
         Cut-point for `nbt` model
     '''
     def __init__(self, endog, exog, ll_type='nb2', C=0, **kwds):

@@ -26,14 +26,14 @@ here = os.path.dirname(__file__)
 pkgdir = os.path.split(here)[0]
 EXAMPLE_DIR = os.path.abspath(os.path.join(pkgdir, "examples"))
 SOURCE_DIR = os.path.join(EXAMPLE_DIR, "notebooks")
-EXECUTED_DIR = os.path.join(EXAMPLE_DIR, "executed")
-DST_DIR = os.path.abspath(os.path.join(pkgdir,
-                                       "docs", "source", "examples",
+DOC_SRC_DIR = os.path.join(pkgdir, "docs", "source")
+DST_DIR = os.path.abspath(os.path.join(DOC_SRC_DIR, "examples",
                                        "notebooks", "generated"))
+EXECUTED_DIR = DST_DIR
 
 error_message = """
 ******************************************************************************
-ERROR: Error occured when running {notebook}
+ERROR: Error occurred when running {notebook}
 {exception}
 {message}
 ******************************************************************************
@@ -103,7 +103,8 @@ def find_notebooks(directory=None):
 
 
 def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
-           report_error=True, error_fail=False, skip_existing=False):
+           report_error=True, error_fail=False, skip_existing=False,
+           execute_only=False):
     from traitlets.traitlets import TraitError
     import jupyter_client
 
@@ -129,6 +130,9 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
             if error_fail:
                 raise
 
+    if execute_only:
+        return dst
+
     dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
     print("Converting %s to %s" % (nb, dst))
     try:
@@ -144,7 +148,7 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
 
 def do(fp=None, directory=None, to='html', execute=True, timeout=1000,
        kernel_name='', parallel=False, report_errors=True, error_fail=False,
-       skip_existing=False):
+       skip_existing=False, execute_only=False):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
@@ -156,7 +160,7 @@ def do(fp=None, directory=None, to='html', execute=True, timeout=1000,
     func = partial(do_one, to=to,
                    execute=execute, timeout=timeout, kernel_name=kernel_name,
                    report_error=report_errors, error_fail=error_fail,
-                   skip_existing=skip_existing)
+                   skip_existing=skip_existing, execute_only=execute_only)
 
     if parallel and has_futures:
         with futures.ProcessPoolExecutor() as pool:
@@ -193,6 +197,9 @@ parser.add_argument("--kernel_name", type=str, default=None,
 parser.add_argument("--skip-execution", dest='skip_execution',
                     action='store_true',
                     help="Skip execution notebooks before converting")
+parser.add_argument("--execute-only", dest='execute_only',
+                    action='store_true',
+                    help="Execute notebooks but do not convert to html")
 parser.add_argument('--parallel', dest='parallel', action='store_true',
                     help='Execute notebooks in parallel')
 parser.add_argument('--report-errors', dest='report_errors',
@@ -221,7 +228,8 @@ def main():
        parallel=args.parallel,
        report_errors=args.report_errors,
        error_fail=args.error_fail,
-       skip_existing=args.skip_existing)
+       skip_existing=args.skip_existing,
+       execute_only=args.execute_only)
 
 
 if __name__ == '__main__':

@@ -1176,7 +1176,7 @@ class InvGauss(object):
     #    eta = np.dot(X, params)
     #    mu = 1/np.sqrt(eta)
     #    sigma = .5
-    #   This isn't correct.  Errors need to be normally distributed
+    #   This is not correct.  Errors need to be normally distributed
     #   But Y needs to be Inverse Gaussian, so we could build it up
     #   by throwing out data?
     #   Refs:

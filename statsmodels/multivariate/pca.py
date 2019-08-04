@@ -17,59 +17,59 @@ def _norm(x):
 
 class PCA(object):
     """
-    Principal Component Analysis
+    Perform Principal Component Analysis (PCA).
 
     Parameters
     ----------
     data : array_like
-        Variables in columns, observations in rows
+        Variables in columns, observations in rows.
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
-        smaller of the number of rows or columns in data
-    standardize: bool, optional
+        smaller of the number of rows or columns in data.
+    standardize : bool, optional
         Flag indicating to use standardized data with mean 0 and unit
         variance.  standardized being True implies demean.  Using standardized
         data is equivalent to computing principal components from the
-        correlation matrix of data
+        correlation matrix of data.
     demean : bool, optional
         Flag indicating whether to demean data before computing principal
         components.  demean is ignored if standardize is True. Demeaning data
         but not standardizing is equivalent to computing principal components
-        from the covariance matrix of data
+        from the covariance matrix of data.
     normalize : bool , optional
         Indicates whether th normalize the factors to have unit inner product.
         If False, the loadings will have unit inner product.
-    weights : array, optional
-        Series weights to use after transforming data according to standardize
-        or demean when computing the principal components.
     gls : bool, optional
         Flag indicating to implement a two-step GLS estimator where
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components.  Setting gls to True requires
-        ncomp to be less then the min of the number of rows or columns
+        ncomp to be less then the min of the number of rows or columns.
+    weights : array, optional
+        Series weights to use after transforming data according to standardize
+        or demean when computing the principal components.
     method : str, optional
         Sets the linear algebra routine used to compute eigenvectors
         'svd' uses a singular value decomposition (default).
         'eig' uses an eigenvalue decomposition of a quadratic form
         'nipals' uses the NIPALS algorithm and can be faster than SVD when
         ncomp is small and nvars is large. See notes about additional changes
-        when using NIPALS
-    tol : float, optional
-        Tolerance to use when checking for convergence when using NIPALS
-    max_iter : int, optional
-        Maximum iterations when using NIPALS
-    missing : string
-        Method for missing data.  Choices are
-        'drop-row' - drop rows with missing values
-        'drop-col' - drop columns with missing values
-        'drop-min' - drop either rows or columns, choosing by data retention
+        when using NIPALS.
+    missing : str
+        Method for missing data.  Choices are:
+        'drop-row' - drop rows with missing values.
+        'drop-col' - drop columns with missing values.
+        'drop-min' - drop either rows or columns, choosing by data retention.
         'fill-em' - use EM algorithm to fill missing value.  ncomp should be
-        set to the number of factors required
+        set to the number of factors required.
+    tol : float, optional
+        Tolerance to use when checking for convergence when using NIPALS.
+    max_iter : int, optional
+        Maximum iterations when using NIPALS.
     tol_em : float
-        Tolerance to use when checking for convergence of the EM algorithm
+        Tolerance to use when checking for convergence of the EM algorithm.
     max_em_iter : int
-        Maximum iterations for the EM algorithm
+        Maximum iterations for the EM algorithm.
 
     Attributes
     ----------
@@ -108,29 +108,6 @@ class PCA(object):
         Array of indices indicating columns used in the PCA
     rows : array
         Array of indices indicating rows used in the PCA
-
-    Examples
-    --------
-    Basic PCA using the correlation matrix of the data
-
-    >>> import numpy as np
-    >>> from statsmodels.multivariate.pca import PCA
-    >>> x = np.random.randn(100)[:, None]
-    >>> x = x + np.random.randn(100, 100)
-    >>> pc = PCA(x)
-
-    Note that the principal components are computed using a SVD and so the
-    correlation matrix is never constructed, unless method='eig'.
-
-    PCA using the covariance matrix of the data
-
-    >>> pc = PCA(x, standardize=False)
-
-    Limiting the number of factors returned to 1 computed using NIPALS
-
-    >>> pc = PCA(x, ncomp=1, method='nipals')
-    >>> pc.factors.shape
-    (100, 1)
 
     Notes
     -----
@@ -176,14 +153,39 @@ class PCA(object):
 
     where the number of factors is less than the rank of X
 
+    References
+    ----------
     .. [*] J. Bai and S. Ng, "Determining the number of factors in approximate
        factor models," Econometrica, vol. 70, number 1, pp. 191-221, 2002
+
+    Examples
+    --------
+    Basic PCA using the correlation matrix of the data
+
+    >>> import numpy as np
+    >>> from statsmodels.multivariate.pca import PCA
+    >>> x = np.random.randn(100)[:, None]
+    >>> x = x + np.random.randn(100, 100)
+    >>> pc = PCA(x)
+
+    Note that the principal components are computed using a SVD and so the
+    correlation matrix is never constructed, unless method='eig'.
+
+    PCA using the covariance matrix of the data
+
+    >>> pc = PCA(x, standardize=False)
+
+    Limiting the number of factors returned to 1 computed using NIPALS
+
+    >>> pc = PCA(x, ncomp=1, method='nipals')
+    >>> pc.factors.shape
+    (100, 1)
     """
 
     def __init__(self, data, ncomp=None, standardize=True, demean=True,
                  normalize=True, gls=False, weights=None, method='svd',
                  missing=None, tol=5e-8, max_iter=1000, tol_em=5e-8,
-                 max_em_iter=100, ):
+                 max_em_iter=100):
         self._index = None
         self._columns = []
         if isinstance(data, pd.DataFrame):
@@ -599,25 +601,25 @@ class PCA(object):
 
     def project(self, ncomp=None, transform=True, unweight=True):
         """
-        Project series onto a specific number of factors
+        Project series onto a specific number of factors.
 
         Parameters
         ----------
         ncomp : int, optional
             Number of components to use.  If omitted, all components
             initially computed are used.
+        transform : bool, optional
+            Flag indicating whether to return the projection in the original
+            space of the data (True, default) or in the space of the
+            standardized/demeaned data.
+        unweight : bool, optional
+            Flag indicating whether to undo the effects of the estimation
+            weights.
 
         Returns
         -------
-        projection : array
-            nobs by nvar array of the projection onto ncomp factors
-        transform : bool
-            Flag indicating whether to return the projection in the original
-            space of the data (True, default) or in the space of the
-            standardized/demeaned data
-        unweight : bool
-            Flag indicating whether to undo the effects of the estimation
-            weights
+        array_like
+            The nobs by nvar array of the projection onto ncomp factors.
 
         Notes
         -----
@@ -705,8 +707,8 @@ class PCA(object):
 
         Returns
         -------
-        fig : figure
-            Handle to the figure
+        matplotlib.figure.Figure
+            The handle to the figure.
         """
         import statsmodels.graphics.utils as gutils
 
@@ -746,21 +748,21 @@ class PCA(object):
 
     def plot_rsquare(self, ncomp=None, ax=None):
         """
-        Box plots of the individual series R-square against the number of PCs
+        Box plots of the individual series R-square against the number of PCs.
 
         Parameters
         ----------
         ncomp : int, optional
             Number of components ot include in the plot.  If None, will
-            plot the minimum of 10 or the number of computed components
+            plot the minimum of 10 or the number of computed components.
         ax : Matplotlib axes instance, optional
             An axes on which to draw the graph.  If omitted, new a figure
-            is created
+            is created.
 
         Returns
         -------
-        fig : figure
-            Handle to the figure
+        matplotlib.figure.Figure
+            The handle to the figure.
         """
         import statsmodels.graphics.utils as gutils
 
@@ -783,7 +785,7 @@ class PCA(object):
 def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
         gls=False, weights=None, method='svd'):
     """
-    Principal Component Analysis
+    Perform Principal Component Analysis (PCA).
 
     Parameters
     ----------
@@ -792,7 +794,7 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
         smaller to the number of rows or columns of data.
-    standardize: bool, optional
+    standardize : bool, optional
         Flag indicating to use standardized data with mean 0 and unit
         variance.  standardized being True implies demean.
     demean : bool, optional
@@ -801,14 +803,14 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
     normalize : bool , optional
         Indicates whether th normalize the factors to have unit inner
         product.  If False, the loadings will have unit inner product.
-    weights : array, optional
-        Series weights to use after transforming data according to standardize
-        or demean when computing the principal components.
     gls : bool, optional
         Flag indicating to implement a two-step GLS estimator where
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components
+    weights : array, optional
+        Series weights to use after transforming data according to standardize
+        or demean when computing the principal components.
     method : str, optional
         Determines the linear algebra routine uses.  'eig', the default,
         uses an eigenvalue decomposition. 'svd' uses a singular value
@@ -816,26 +818,26 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
 
     Returns
     -------
-    factors : array or DataFrame
-        nobs by ncomp array of of principal components (also known as scores)
-    loadings : array or DataFrame
-        ncomp by nvar array of  principal component loadings for constructing
-        the factors
-    projection : array or DataFrame
-        nobs by var array containing the projection of the data onto the ncomp
-        estimated factors
-    rsquare : array or Series
-        ncomp array where the element in the ith position is the R-square
+    factors : {ndarray, DataFrame}
+        Array (nobs, ncomp)of of principal components (also known as scores).
+    loadings : {ndarray, DataFrame}
+        Array (ncomp, nvar) of  principal component loadings for constructing
+        the factors.
+    projection : {ndarray, DataFrame}
+        Array (nobs, nvar) containing the projection of the data onto the ncomp
+        estimated factors.
+    rsquare : {ndarray, Series}
+        Array (ncomp,) where the element in the ith position is the R-square
         of including the fist i principal components.  The values are
         calculated on the transformed data, not the original data.
-    ic : array or DataFrame
-        ncomp by 3 array containing the Bai and Ng (2003) Information
+    ic : {ndarray, DataFrame}
+        Array (ncomp, 3) containing the Bai and Ng (2003) Information
         criteria.  Each column is a different criteria, and each row
         represents the number of included factors.
-    eigenvals : array or Series
-        nvar array of eigenvalues
-    eigenvecs : array or DataFrame
-        nvar by nvar array of eigenvectors
+    eigenvals : {ndarray, Series}
+        Array of eigenvalues (nvar,).
+    eigenvecs : {ndarray, DataFrame}
+        Array of eigenvectors. (nvar, nvar).
 
     Notes
     -----

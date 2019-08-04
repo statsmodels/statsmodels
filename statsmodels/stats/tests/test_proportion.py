@@ -440,7 +440,7 @@ def test_power_binom_tost():
     power = smprop.power_binom_tost(0.4, 0.6, nobs, p_alt=0.5, alpha=0.05)
     res_power = np.array([ 0.,  0.,  0.,  0.0889,  0.2356,  0.3517,  0.4457,
                            0.6154,  0.6674,  0.7708])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
 def test_power_ztost_prop():
@@ -456,7 +456,7 @@ def test_power_ztost_prop():
 
         res_power = np.array([ 0., 0., 0., 0.0889, 0.2356, 0.4770, 0.5530,
             0.6154,  0.7365,  0.7708])
-        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
         assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
         # with critval_continuity correction
@@ -467,7 +467,7 @@ def test_power_ztost_prop():
 
         res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
                               0.6154, 0.6674, 0.7708])
-        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
         assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
         power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
@@ -477,7 +477,7 @@ def test_power_ztost_prop():
 
         res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
                               0.6154, 0.6674, 0.7112])
-        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
         assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
 def test_ztost():
@@ -508,7 +508,7 @@ def test_power_ztost_prop_norm():
 
     res_power = np.array([0., 0., 0., 0.11450013, 0.27752006, 0.41495922,
                           0.52944621, 0.62382638, 0.70092914, 0.76341806])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
@@ -521,7 +521,7 @@ def test_power_ztost_prop_norm():
     res_power = np.array([0., 0., 0.02667562, 0.20189793, 0.35099606,
                           0.47608598, 0.57981118, 0.66496683, 0.73427591,
                           0.79026127])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
@@ -533,7 +533,7 @@ def test_power_ztost_prop_norm():
 
     res_power = np.array([0., 0., 0., 0.08902071, 0.23582284, 0.35192313,
                           0.55312718, 0.61549537, 0.66743625, 0.77066806])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
@@ -545,7 +545,7 @@ def test_power_ztost_prop_norm():
 
     res_power = np.array([0., 0., 0., 0.08902071, 0.23582284, 0.35192313,
                           0.44588687, 0.61549537, 0.66743625, 0.71115563])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
     # regression test for normal distribution
@@ -557,7 +557,7 @@ def test_power_ztost_prop_norm():
 
     res_power = np.array([0., 0., 0., 0., 0.15851942, 0.41611758,
                           0.5010377, 0.5708047, 0.70328247, 0.74210096])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
 

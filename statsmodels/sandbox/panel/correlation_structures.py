@@ -152,7 +152,7 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     ----------
     acov : array_like, 1d
         auto-covariance
-    order : integer, optional
+    order : int, optional
         The order of the autoregressive process.  Default is 1.
     inv : bool
         If inv is True the inverse of R is also returned.  Default is False.

@@ -23,7 +23,7 @@ class SimulationSmoother(KalmanSmoother):
 
     Parameters
     ----------
-    k_endog : array_like or integer
+    k_endog : {array_like, int}
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -82,21 +82,21 @@ class SimulationSmoother(KalmanSmoother):
 
         Parameters
         ----------
-        simulation_output : integer, optional
+        simulation_output : int, optional
             Simulation output bitmask. If this is specified, it is simply
             returned and the other arguments are ignored.
-        simulate_state : boolean, optional
+        simulate_state : bool, optional
             Whether or not to include the state in the simulation output.
-        simulate_disturbance : boolean, optional
+        simulate_disturbance : bool, optional
             Whether or not to include the state and observation disturbances
             in the simulation output.
-        simulate_all : boolean, optional
+        simulate_all : bool, optional
             Whether or not to include all simulation output.
         \*\*kwargs
             Additional keyword arguments. Present so that calls to this method
             can use \*\*kwargs without clearing out additional arguments.
         """
-        # If we don't explicitly have simulation_output, try to get it from
+        # If we do not explicitly have simulation_output, try to get it from
         # kwargs
         if simulation_output is None:
             simulation_output = 0
@@ -111,7 +111,7 @@ class SimulationSmoother(KalmanSmoother):
             # Handle case of no information in kwargs
             if simulation_output == 0:
 
-                # If some arguments were passed, but we still don't have any
+                # If some arguments were passed, but we still do not have any
                 # simulation output, raise an exception
                 argument_set = not all([
                     simulate_state is None, simulate_disturbance is None,
@@ -204,7 +204,7 @@ class SimulationSmoother(KalmanSmoother):
             Default results class to use to save output of simulation
             smoothing. Default is `SimulationSmoothResults`. If specified,
             class must extend from `SimulationSmoothResults`.
-        prefix : string
+        prefix : str
             The prefix of the datatype. Usually only used internally.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
@@ -283,14 +283,14 @@ class SimulationSmoothResults(object):
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    simulation_output : integer
+    simulation_output : int
         Bitmask controlling simulation output.
-    simulate_state : boolean
+    simulate_state : bool
         Flag for if the state is included in simulation output.
-    simulate_disturbance : boolean
+    simulate_disturbance : bool
         Flag for if the state and observation disturbances are included in
         simulation output.
-    simulate_all : boolean
+    simulate_all : bool
         Flag for if simulation output should include everything.
     generated_measurement_disturbance : array
         Measurement disturbance variates used to genereate the observation
@@ -530,7 +530,7 @@ class SimulationSmoothResults(object):
 
         Parameters
         ----------
-        simulation_output : integer, optional
+        simulation_output : int, optional
             Bitmask controlling simulation output. Default is to use the
             simulation output defined in object initialization.
         disturbance_variates : array_likes, optional

@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import pytest
 from numpy.testing import assert_equal
 
-from statsmodels.tools.decorators import (
-    cache_readonly, CacheWriteWarning, deprecated_alias)
+from statsmodels.tools.decorators import (cache_readonly, deprecated_alias)
 
 
 def test_cache_readonly():
@@ -28,7 +26,7 @@ def test_cache_readonly():
     assert_equal(ex.__dict__, dict(a=0, _cache=dict(b=1,)))
     # assert_equal(ex.__dict__, dict(a=0, b=1, _cache=dict(b=1)))
 
-    with pytest.warns(CacheWriteWarning):
+    with pytest.raises(AttributeError):
         ex.b = -1
 
     assert_equal(ex._cache, dict(b=1,))

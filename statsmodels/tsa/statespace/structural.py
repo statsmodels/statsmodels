@@ -10,6 +10,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from statsmodels.compat.pandas import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
                                              SpecificationWarning)
@@ -53,16 +54,16 @@ class UnobservedComponents(MLEModel):
     Parameters
     ----------
 
-    level : bool or string, optional
+    level : {bool, str}, optional
         Whether or not to include a level component. Default is False. Can also
         be a string specification of the level / trend component; see Notes
         for available model specification strings.
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal : int or None, optional
+    seasonal : {int, None}, optional
         The period of the seasonal component, if any. Default is None.
-    freq_seasonal: list of dicts or None, optional.
+    freq_seasonal : {list[dict], None}, optional.
         Whether (and how) to model seasonal component(s) with trig. functions.
         If specified, there is one dictionary for each frequency-domain
         seasonal component.  Each dictionary must have the key, value pair for
@@ -71,9 +72,9 @@ class UnobservedComponents(MLEModel):
         dictionaries, it defaults to the floor of period/2.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
-    autoregressive : int or None, optional
+    autoregressive : {int, None}, optional
         The order of the autoregressive component. Default is None.
-    exog : array_like or None, optional
+    exog : {array_like, None}, optional
         Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
@@ -83,7 +84,7 @@ class UnobservedComponents(MLEModel):
         Whether or not any trend component is stochastic. Default is False.
     stochastic_seasonal : bool, optional
         Whether or not any seasonal component is stochastic. Default is True.
-    stochastic_freq_seasonal: list of bools, optional
+    stochastic_freq_seasonal : list[bool], optional
         Whether or not each seasonal component(s) is (are) stochastic.  Default
         is True for each component.  The list should be of the same length as
         freq_seasonal.
@@ -513,7 +514,7 @@ class UnobservedComponents(MLEModel):
             self.trend * self.stochastic_trend * 0x10
         )
 
-        # Create the trend specification, if it wasn't given
+        # Create the trend specification, if it was not given
         if self.trend_specification is None:
             # trend specification may be none, e.g. if the model is only
             # a stochastic cycle, etc.
@@ -549,8 +550,8 @@ class UnobservedComponents(MLEModel):
             self.autoregressive
         )
 
-        # The ar states are initialized as stationary, so they don't need to be
-        # burned.
+        # The ar states are initialized as stationary, so they do not need to
+        # be burned.
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         k_states
                                         - self.ar_order)
@@ -873,8 +874,8 @@ class UnobservedComponents(MLEModel):
         # Cyclical
         if self.cycle:
             _start_params['cycle_var'] = var_resid
-            # Clip this to make sure it is postive and strictly stationary
-            # (i.e. don't want negative or 1)
+            # Clip this to make sure it is positive and strictly stationary
+            # (i.e. do not want negative or 1)
             _start_params['cycle_damp'] = np.clip(
                 np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
             )
@@ -1043,8 +1044,22 @@ class UnobservedComponents(MLEModel):
 
         return unconstrained
 
-    def update(self, params, **kwargs):
-        params = super(UnobservedComponents, self).update(params, **kwargs)
+    def _validate_can_fix_params(self, param_names):
+        super(UnobservedComponents, self)._validate_can_fix_params(param_names)
+
+        if 'ar_coeff' in self.parameters:
+            ar_names = ['ar.L%d' % (i+1) for i in range(self.ar_order)]
+            fix_all_ar = param_names.issuperset(ar_names)
+            fix_any_ar = len(param_names.intersection(ar_names)) > 0
+            if fix_any_ar and not fix_all_ar:
+                raise ValueError('Cannot fix individual autoregressive.'
+                                 ' parameters. Must either fix all'
+                                 ' autoregressive parameters or none.')
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         offset = 0
 
@@ -1500,22 +1515,22 @@ class UnobservedComponentsResults(MLEResults):
             results are available otherwise 'filtered'.
         alpha : float, optional
             The confidence intervals for the components are (1 - alpha) %
-        level : boolean, optional
+        level : bool, optional
             Whether or not to plot the level component, if applicable.
             Default is True.
-        trend : boolean, optional
+        trend : bool, optional
             Whether or not to plot the trend component, if applicable.
             Default is True.
-        seasonal : boolean, optional
+        seasonal : bool, optional
             Whether or not to plot the seasonal component, if applicable.
             Default is True.
-        freq_seasonal: boolean, optional
+        freq_seasonal: bool, optional
             Whether or not to plot the frequency domain seasonal component(s),
             if applicable. Default is True.
-        cycle : boolean, optional
+        cycle : bool, optional
             Whether or not to plot the cyclical component, if applicable.
             Default is True.
-        autoregressive : boolean, optional
+        autoregressive : bool, optional
             Whether or not to plot the autoregressive state, if applicable.
             Default is True.
         fig : Matplotlib Figure instance, optional
@@ -1540,7 +1555,7 @@ class UnobservedComponentsResults(MLEResults):
         6. Autoregressive
 
         Specific subplots will be removed if the component is not present in
-        the estimated model or if the corresponding keywork argument is set to
+        the estimated model or if the corresponding keyword argument is set to
         False.
 
         All plots contain (1 - `alpha`) %  confidence intervals.
@@ -1706,7 +1721,7 @@ class UnobservedComponentsResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -1714,7 +1729,7 @@ class UnobservedComponentsResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
+        full_results : bool, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
             covariance matrices. Default is False.
@@ -1782,6 +1797,7 @@ class UnobservedComponentsResults(MLEResults):
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
         # Create the model name
 
@@ -1822,7 +1838,6 @@ class UnobservedComponentsResults(MLEResults):
             alpha=alpha, start=start, title='Unobserved Components Results',
             model_name=model_name
         )
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class UnobservedComponentsResultsWrapper(MLEResultsWrapper):

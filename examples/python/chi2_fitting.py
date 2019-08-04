@@ -87,7 +87,7 @@ data.head()
 #
 # And you have to use the option `cov_type='fixed scale'` to tell
 # `statsmodels` that you really have measurement errors with an absolute
-# scale. If you don't, `statsmodels` will treat the weights as relative
+# scale. If you do not, `statsmodels` will treat the weights as relative
 # weights between the data points and internally re-scale them so that the
 # best-fit model will have `chi**2 / ndf = 1`.
 
@@ -122,7 +122,7 @@ print('b = {0:10.3f} +- {1:10.3f}'.format(popt[1], perr[1]))
 
 # You can also use `scipy.optimize.minimize` and write your own cost
 # function.
-# This doesn't give you the parameter errors though ... you'd have
+# This does not give you the parameter errors though ... you'd have
 # to estimate the HESSE matrix separately ...
 from scipy.optimize import minimize
 

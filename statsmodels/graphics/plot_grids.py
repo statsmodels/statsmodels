@@ -114,7 +114,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         for j in range(i):
             #print i,j, i*(nvars-1)+j+1
             ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1)
-##                                 #sharey=ax_last) #sharey doesn't allow empty ticks?
+##                                 #sharey=ax_last) #sharey does not allow empty ticks?
 ##            if j == 0:
 ##                print 'new ax_last', j
 ##                ax_last = ax

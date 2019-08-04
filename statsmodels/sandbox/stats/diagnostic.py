@@ -137,7 +137,6 @@ class CompareCox(object):
 
 
 compare_cox = CompareCox()
-compare_cox.__doc__ = CompareCox.__doc__
 
 
 class CompareJ(object):
@@ -155,7 +154,7 @@ class CompareJ(object):
     From description in Greene, section 8.3.3
 
     produces correct results for Example 8.3, Greene - not checked yet
-    #currently an exception, but I don't have clean reload in python session
+    #currently an exception, but I do not have clean reload in python session
 
     check what results should be attached
 
@@ -220,7 +219,6 @@ class CompareJ(object):
 
 
 compare_j = CompareJ()
-compare_j.__doc__ = CompareJ.__doc__
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
@@ -302,7 +300,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
 
-    This is a generic Lagrange Multiplier test for autocorrelation. I don't
+    This is a generic Lagrange Multiplier test for autocorrelation. I do not
     have a reference for it, but it returns Engle's ARCH test if x is the
     squared residual array. A variation on it with additional exogenous
     variables is the Breusch-Godfrey autocorrelation test.
@@ -439,7 +437,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
 
     Notes
     -----
-    verified agains R:FinTS::ArchTest
+    verified against R:FinTS::ArchTest
 
     '''
 
@@ -573,7 +571,7 @@ def het_breuschpagan(resid, exog_het):
     Assumes x contains constant (for counting dof and calculation of R^2).
     In the general description of LM test, Greene mentions that this test
     exaggerates the significance of results in small or moderately large
-    samples. In this case the F-statistic is preferrable.
+    samples. In this case the F-statistic is preferable.
 
     *Verification*
 
@@ -614,7 +612,7 @@ def het_white(resid, exog, retres=False):
         residuals, square of it is used as endogenous variable
     exog : array_like
         possible explanatory variables for variance, squares and interaction
-        terms are included in the auxilliary regression.
+        terms are included in the auxiliary regression.
     resstore : instance (optional)
         a class instance that holds intermediate results. Only returned if
         store=True
@@ -673,14 +671,14 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
-    split : None or integer or float in intervall (0,1)
-        index at which sample is split.
-        If 0<split<1 then split is interpreted as fraction of the observations
-        in the first sample
-    retres : boolean
+    split : {None, int, float}
+        If an int, the index at which sample is split.
+        If a float 0<split<1 then split is interpreted as fraction of the
+        observations in the first sample
+    retres : bool
         if true, then an instance of a result class is returned,
         otherwise 2 numbers, fvalue and p-value, are returned
 
@@ -762,7 +760,7 @@ class HetGoldfeldQuandt(object):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
     split : None or integer or float in intervall (0,1)
@@ -777,7 +775,7 @@ class HetGoldfeldQuandt(object):
         split+drop, where split and drop are the indices (given by rounding if
         specified as fraction). The first sample is [0:split], the second
         sample is [split+drop:]
-    alternative : string, 'increasing', 'decreasing' or 'two-sided'
+    alternative : str, 'increasing', 'decreasing' or 'two-sided'
         default is increasing. This specifies the alternative for the p-value
         calculation.
 
@@ -876,8 +874,9 @@ class HetGoldfeldQuandt(object):
         return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
                         alternative=alternative)
 
+
 het_goldfeldquandt = HetGoldfeldQuandt()
-het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
+
 
 def linear_harvey_collier(res):
     '''Harvey Collier test for linearity
@@ -949,7 +948,7 @@ def linear_lm(resid, exog, func=None):
     '''Lagrange multiplier test for linearity against functional alternative
 
     limitations: Assumes currently that the first column is integer.
-    Currently it doesn't check whether the transformed variables contain NaNs,
+    Currently it does not check whether the transformed variables contain NaNs,
     for example log of negative number.
 
     Parameters
@@ -974,7 +973,7 @@ def linear_lm(resid, exog, func=None):
     Notes
     -----
     written to match Gretl's linearity test.
-    The test runs an auxilliary regression of the residuals on the combined
+    The test runs an auxiliary regression of the residuals on the combined
     original and transformed regressors.
     The Null hypothesis is that the linear specification is correct.
 
@@ -1393,11 +1392,11 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     Notes
     -----
-    tested agains R:strucchange
+    tested against R:strucchange
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
-    Is this really necessary? I don't see how it can affect the test statistic
+    Is this really necessary? I do not see how it can affect the test statistic
     under the null. It does make a difference under the alternative.
     Also, the asymptotic distribution of test statistic depends on this.
 
@@ -1406,7 +1405,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     References
     ----------
-    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
 
     '''
@@ -1437,7 +1436,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 #
 #    References
 #    ----------
-#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
 #    Econometrica 60, no. 2 (March 1992): 271-285.
 #
 #    '''

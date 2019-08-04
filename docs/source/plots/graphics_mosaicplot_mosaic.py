@@ -25,7 +25,7 @@ data = pd.Series(rand(8), index=index)
 mosaic(data, title='hierarchical index series')
 plt.show()
 
-# The third accepted data structureis the np array, for which a very simple
+# The third accepted data structure is the np array, for which a very simple
 # index will be created.
 rand = np.random.random
 data = 1+rand((2, 2))

@@ -150,7 +150,7 @@ font.monospace       : Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, 
                             # type1cm, textcomp. Adobe Postscript (PSSNFS) font packages
                             # may also be loaded, depending on your font settings
 
-#text.dvipnghack : None      # some versions of dvipng don't handle alpha
+#text.dvipnghack : None      # some versions of dvipng do not handle alpha
                              # channel properly.  Use True to correct
                              # and flush ~/.matplotlib/tex.cache
                              # before testing and False to force
@@ -359,7 +359,7 @@ figure.subplot.hspace  : 0.5    # the amount of height reserved for white space 
 
 # Event keys to interact with figures/plots via keyboard.
 # Customize these settings according to your needs.
-# Leave the field(s) empty if you don't need a key-map. (i.e., fullscreen : '')
+# Leave the field(s) empty if you do not need a key-map. (i.e., fullscreen : '')
 
 keymap.fullscreen : f               # toggling
 keymap.home : h, r, home            # home or reset mnemonic

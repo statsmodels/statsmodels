@@ -196,7 +196,7 @@ def test_var_ctt():
 
     # VAR(2), constant, trend, and trend**2, no exog
     # Note that this is comparing against trend as exog in the R package,
-    # since it doesn't have a built-in option for trend**2
+    # since it does not have a built-in option for trend**2
     results = results_var_R.res_ctt_as_exog1
     mod = varmax.VARMAX(endog, order=(2, 0), trend='ctt',
                         loglikelihood_burn=2)

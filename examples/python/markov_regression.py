@@ -185,7 +185,7 @@ fig.tight_layout()
 
 # ### Switching variances
 #
-# We can also accomodate switching variances. In particular, we consider
+# We can also accommodate switching variances. In particular, we consider
 # the model
 #
 # $$

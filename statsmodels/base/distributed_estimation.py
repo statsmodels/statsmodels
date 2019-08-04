@@ -88,7 +88,7 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the paramters for the regularized fit
+    An array of the parameters for the regularized fit
     """
 
     if fit_kwds is None:
@@ -329,7 +329,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
                           init_kwds_e={}):
     """handles the model fitting for each machine. NOTE: this
     is primarily handled outside of DistributedModel because
-    joblib can't handle class methods.
+    joblib cannot handle class methods.
 
     Parameters
     ----------
@@ -663,8 +663,11 @@ class DistributedResults(LikelihoodModelResults):
             The values for which we want to predict, unlike standard
             predict this is NOT optional since the data in self.model
             is fake.
-        args, kwargs :
-            Some models can take additional arguments or keywords, see the
+        *args :
+            Some models can take additional arguments. See the
+            predict method of the model for the details.
+        **kwargs :
+            Some models can take additional keywords arguments. See the
             predict method of the model for the details.
 
         Returns

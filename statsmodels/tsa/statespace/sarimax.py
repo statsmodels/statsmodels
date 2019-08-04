@@ -8,6 +8,8 @@ from warnings import warn
 
 import numpy as np
 
+from statsmodels.compat.pandas import Appender
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.decorators import cache_readonly
@@ -62,36 +64,36 @@ class SARIMAX(MLEModel):
         iterable defining the polynomial as in `numpy.poly1d`, where
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
         include a trend component.
-    measurement_error : boolean, optional
+    measurement_error : bool, optional
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
-    time_varying_regression : boolean, optional
+    time_varying_regression : bool, optional
         Used when an explanatory variables, `exog`, are provided provided
         to select whether or not coefficients on the exogenous regressors are
         allowed to vary over time. Default is False.
-    mle_regression : boolean, optional
+    mle_regression : bool, optional
         Whether or not to use estimate the regression coefficients for the
         exogenous variables as part of maximum likelihood estimation or through
         the Kalman filter (i.e. recursive least squares). If
         `time_varying_regression` is True, this must be set to False. Default
         is True.
-    simple_differencing : boolean, optional
+    simple_differencing : bool, optional
         Whether or not to use partially conditional maximum likelihood
         estimation. If True, differencing is performed prior to estimation,
         which discards the first :math:`s D + d` initial rows but results in a
         smaller state-space formulation. If False, the full SARIMAX model is
         put in state-space form so that all datapoints can be used in
         estimation. Default is False.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    hamilton_representation : boolean, optional
+    hamilton_representation : bool, optional
         Whether or not to use the Hamilton representation of an ARMA process
         (if True) or the Harvey representation (if False). Default is False.
-    concentrate_scale : boolean, optional
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters estimated
         by maximum likelihood by one, but standard errors will then not
@@ -107,35 +109,35 @@ class SARIMAX(MLEModel):
 
     Attributes
     ----------
-    measurement_error : boolean
+    measurement_error : bool
         Whether or not to assume the endogenous
         observations `endog` were measured with error.
-    state_error : boolean
+    state_error : bool
         Whether or not the transition equation has an error component.
-    mle_regression : boolean
+    mle_regression : bool
         Whether or not the regression coefficients for
         the exogenous variables were estimated via maximum
         likelihood estimation.
-    state_regression : boolean
+    state_regression : bool
         Whether or not the regression coefficients for
         the exogenous variables are included as elements
         of the state space and estimated via the Kalman
         filter.
-    time_varying_regression : boolean
+    time_varying_regression : bool
         Whether or not coefficients on the exogenous
         regressors are allowed to vary over time.
-    simple_differencing : boolean
+    simple_differencing : bool
         Whether or not to use partially conditional maximum likelihood
         estimation.
-    enforce_stationarity : boolean
+    enforce_stationarity : bool
         Whether or not to transform the AR parameters
         to enforce stationarity in the autoregressive
         component of the model.
-    enforce_invertibility : boolean
+    enforce_invertibility : bool
         Whether or not to transform the MA parameters
         to enforce invertibility in the moving average
         component of the model.
-    hamilton_representation : boolean
+    hamilton_representation : bool
         Whether or not to use the Hamilton representation of an ARMA process.
     trend : str{'n','c','t','ct'} or iterable
         Parameter controlling the deterministic
@@ -173,7 +175,7 @@ class SARIMAX(MLEModel):
     k_ar_params : int
         Number of autoregressive parameters to be estimated.
     k_diff : int
-        Order of intergration.
+        Order of integration.
     k_ma : int
         Highest moving average order in the model, zero-indexed.
     k_ma_params : int
@@ -185,7 +187,7 @@ class SARIMAX(MLEModel):
     k_seasonal_ar_params : int
         Number of seasonal autoregressive parameters to be estimated.
     k_seasonal_diff : int
-        Order of seasonal intergration.
+        Order of seasonal integration.
     k_seasonal_ma : int
         Highest seasonal moving average order in the model, zero-indexed.
     k_seasonal_ma_params : int
@@ -254,7 +256,7 @@ class SARIMAX(MLEModel):
     estimation.
 
     In this implementation of differenced models, the Hamilton representation
-    is not able to accomodate differencing in the state vector, so
+    is not able to accommodate differencing in the state vector, so
     `simple_differencing` (which performs differencing prior to estimation so
     that the first d + sD observations are lost) must be used.
 
@@ -608,7 +610,7 @@ class SARIMAX(MLEModel):
 
         # Save the indices corresponding to the reduced form lag polynomial
         # parameters in the transition and selection matrices so that they
-        # don't have to be recalculated for each update()
+        # do not have to be recalculated for each update()
         start_row = self._k_states_diff
         end_row = start_row + self.k_ar + self.k_seasonal_ar
         col = self._k_states_diff
@@ -659,7 +661,7 @@ class SARIMAX(MLEModel):
             init.set((self._k_states_diff + self._k_order,
                       self._k_states_diff + self._k_order + self.k_exog),
                      'approximate_diffuse')
-        # If we're not enforcing a stationarity, then we can't initialize a
+        # If we're not enforcing a stationarity, then we cannot initialize a
         # stationary component
         else:
             init.set(None, 'approximate_diffuse')
@@ -1430,7 +1432,31 @@ class SARIMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True, complex_step=False):
+    def _validate_can_fix_params(self, param_names):
+        super(SARIMAX, self)._validate_can_fix_params(param_names)
+        model_names = self.model_names
+
+        items = [
+            ('ar', 'autoregressive', self.enforce_stationarity,
+                '`enforce_stationarity=True`'),
+            ('seasonal_ar', 'seasonal autoregressive',
+                self.enforce_stationarity, '`enforce_stationarity=True`'),
+            ('ma', 'moving average', self.enforce_invertibility,
+                '`enforce_invertibility=True`'),
+            ('seasonal_ma', 'seasonal moving average',
+                self.enforce_invertibility, '`enforce_invertibility=True`')]
+
+        for name, title, condition, condition_desc in items:
+            names = set(model_names[name] or [])
+            fix_all = param_names.issuperset(names)
+            fix_any = len(param_names.intersection(names)) > 0
+            if condition and fix_any and not fix_all:
+                raise ValueError('Cannot fix individual %s parameters when'
+                                 ' %s. Must either fix all %s parameters or'
+                                 ' none.' % (title, condition_desc, title))
+
+    def update(self, params, transformed=True, includes_fixed=False,
+               complex_step=False):
         """
         Update the parameters of the model
 
@@ -1441,7 +1467,7 @@ class SARIMAX(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
 
@@ -1450,8 +1476,8 @@ class SARIMAX(MLEModel):
         params : array_like
             Array of parameters.
         """
-        params = super(SARIMAX, self).update(params, transformed=transformed,
-                                             complex_step=False)
+        params = self.handle_params(params, transformed=transformed,
+                                    includes_fixed=includes_fixed)
 
         params_trend = None
         params_exog = None
@@ -1846,7 +1872,7 @@ class SARIMAXResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : boolean, int, str, or datetime, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -1854,7 +1880,7 @@ class SARIMAXResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
+        full_results : bool, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
             covariance matrices. Default is False.
@@ -1918,6 +1944,7 @@ class SARIMAXResults(MLEResults):
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
         # Create the model name
 
@@ -1977,7 +2004,6 @@ class SARIMAXResults(MLEResults):
         return super(SARIMAXResults, self).summary(
             alpha=alpha, start=start, model_name=model_name
         )
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class SARIMAXResultsWrapper(MLEResultsWrapper):

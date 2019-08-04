@@ -104,7 +104,7 @@ Main Features
 
 * Miscellaneous models
 * Sandbox: statsmodels contains a sandbox folder with code in various stages of
-  developement and testing which is not considered "production ready".  This covers
+  development and testing which is not considered "production ready".  This covers
   among others
 
   - Generalized method of moments (GMM) estimators

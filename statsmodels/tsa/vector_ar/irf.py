@@ -100,9 +100,9 @@ class BaseIRAnalysis(object):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        impulse : string or int
+        impulse : {str, int}
             variable providing the impulse
-        response : string or int
+        response : {str, int}
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
@@ -113,7 +113,7 @@ class BaseIRAnalysis(object):
 
         plot_stderr: bool, default True
             Plot standard impulse response error bands
-        stderr_type: string
+        stderr_type: str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
@@ -183,9 +183,9 @@ class BaseIRAnalysis(object):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        impulse : string or int
+        impulse : {str, int}
             variable providing the impulse
-        response : string or int
+        response : {str, int}
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
@@ -196,7 +196,7 @@ class BaseIRAnalysis(object):
 
         plot_stderr: bool, default True
             Plot standard impulse response error bands
-        stderr_type: string
+        stderr_type: str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
@@ -589,7 +589,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Parameters
         ----------
-        orth : boolean
+        orth : bool
 
         Notes
         -----

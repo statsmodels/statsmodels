@@ -100,7 +100,7 @@ def _linear_trend(nobs, k_ar, coint=False):
         Number of observations excluding the presample.
     k_ar : int
         Number of lags in levels.
-    coint : boolean, default: False
+    coint : bool, default: False
         If True (False), the returned array represents a linear trend inside
         (outside) the cointegration relation.
 
@@ -175,7 +175,7 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
         Number of observations including the presample.
     first_season : int, default: 0
         Season of the first observation.
-    seasons_centered : boolean, default: False
+    seasons_centered : bool, default: False
         If True, the seasonal dummy variables are demeaned such that they are
         orthogonal to an intercept term.
     exog : ndarray (nobs_tot x #det_terms) or None, default: None
@@ -188,7 +188,7 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
     Returns
     -------
     exog : ndarray or None
-        None, if the function's arguments don't contain deterministic terms.
+        None, if the function's arguments do not contain deterministic terms.
         Otherwise, an ndarray representing these deterministic terms.
     """
     exogs = []
@@ -238,9 +238,9 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
     ----------
     endog : ndarray (neqs x nobs_tot)
         The whole sample including the presample.
-    exog: ndarray (nobs_tot x neqs) or None
+    exog : ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None
+    exog_coint : ndarray (nobs_tot x neqs) or None
         Deterministic terms inside the cointegration relation.
     diff_lags : int
         Number of lags in the VEC representation.
@@ -765,9 +765,9 @@ class VECM(tsbase.TimeSeriesModel):
     ----------
     endog : array_like (nobs_tot x neqs)
         2-d endogenous response variable.
-    exog: ndarray (nobs_tot x neqs) or None
+    exog : ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None
+    exog_coint : ndarray (nobs_tot x neqs) or None
         Deterministic terms inside the cointegration relation.
     dates : array_like of datetime, optional
         See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
@@ -793,7 +793,7 @@ class VECM(tsbase.TimeSeriesModel):
         Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
         linear trend with intercept). When using a constant term you have to
         choose whether you want to restrict it to the cointegration relation
-        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Don't use
+        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
         when using a linear term. See the Notes-section for more information.
     seasons : int, default: 0
@@ -1084,13 +1084,13 @@ class VECMResults(object):
     first_season : int, default: 0
         Season of the first observation.
     delta_y_1_T : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     y_lag1 : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     delta_x : ndarray or `None`, default: `None`
-        Auxilliary array for internal computations. It will be calculated if
+        Auxiliary array for internal computations. It will be calculated if
         not given as parameter.
     model : :class:`VECM`
         An instance of the :class:`VECM`-class.
@@ -1658,7 +1658,7 @@ class VECMResults(object):
                              "argument!")
         if self.exog is None and exog_fc is not None:
             raise ValueError("This VECMResult-instance's exog attribute is "
-                             "None. Please don't pass a non-None value as the "
+                             "None. Please do not pass a non-None value as the "
                              "method's exog_fc-argument.")
         if exog_fc is not None and exog_fc.shape[0] < steps:
             raise ValueError("The argument exog_fc must have at least steps "
@@ -1670,7 +1670,7 @@ class VECMResults(object):
                              "exog_coint_fc argument!")
         if self.exog_coint is None and exog_coint_fc is not None:
             raise ValueError("This VECMResult-instance's exog_coint attribute "
-                             "is None. Please don't pass a non-None value as "
+                             "is None. Please do not pass a non-None value as "
                              "the method's exog_coint_fc-argument.")
         if exog_coint_fc is not None and exog_coint_fc.shape[0] < steps - 1:
             raise ValueError("The argument exog_coint_fc must have at least "

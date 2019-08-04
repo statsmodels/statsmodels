@@ -33,7 +33,7 @@ def _right_squeeze(arr, stop_dim=0):
 
 
 def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
-               shape=None, order='C', contiguous=False):
+               shape=None, order='C', contiguous=False, optional=False):
     """
     Convert array-like to an array and check conditions
 
@@ -61,6 +61,8 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
         Order of the array
     contiguous : bool
         Ensure that the array's data is contiguous with order ``order``
+    optional : bool
+        Flag indicating whether None is allowed
 
     Examples
     --------
@@ -112,6 +114,8 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
     """
+    if optional and obj is None:
+        return None
     arr = np.asarray(obj, dtype=dtype, order=order)
     if maxdim is not None:
         if arr.ndim > maxdim:
@@ -160,26 +164,23 @@ class PandasWrapper(object):
         """
         Parameters
         ----------
-        :param obj:
-        :param columns:
-        :param append:
-        :param trim_start:
-        :param trim_end:
-        :return:
+        obj : {array_like}
+            The value to wrap like to a pandas Series or DataFrame.
+        columns : {str, list[str]}
+            Column names or series name, if obj is 1d.
+        append : str
+            String to append to the columns to create a new column name.
+        trim_start : int
+            The number of observations to drop from the start of the index, so
+            that the index applied is index[trim_start:].
+        trim_end : int
+            The number of observations to drop from the end of the index , so
+            that the index applied is index[:nobs - trim_end].
 
         Returns
         -------
-        wrapper : callable
-        Callable that has one required input and one optional:
-
-        * `obj`: array_like to wrap
-        * `columns`: (optional) Column names or series name, if obj is 1d
-        * `trim_start`: (optional, default 0) number of observations to drop
-          from the start of the index, so that the index applied is
-          index[trim_start:]
-        * `trim_start`: (optional, default 0) number of observations to drop
-          from the end of the index , so that the index applied is
-          index[:nobs - trim_end]
+        array_like
+            A pandas Series or DataFrame, depending on the shape of obj.
         """
         obj = np.asarray(obj)
         if not self._is_pandas:
@@ -350,7 +351,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
     if lower:
         value = value.lower()
     if options is not None and value not in options:
-        extra_text = 'If not None,' if optional else ''
+        extra_text = 'If not None, ' if optional else ''
         options_text = "'" + '\', \''.join(options) + "'"
         msg = '{0}{1} must be one of: {2}'.format(extra_text,
                                                   name, options_text)
@@ -382,7 +383,7 @@ def dict_like(value, name, optional=False, strict=True):
         return None
     if (not isinstance(value, Mapping) or
             (strict and not(isinstance(value, dict)))):
-        extra_text = 'If not None,' if optional else ''
+        extra_text = 'If not None, ' if optional else ''
         strict_text = ' or dict_like (i.e., a Mapping)' if strict else ''
         msg = '{0}{1} must be a dict{2}'.format(extra_text, name, strict_text)
         raise TypeError(msg)

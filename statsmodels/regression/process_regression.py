@@ -577,7 +577,7 @@ class ProcessMLE(base.LikelihoodModel):
         ----------
         start_params : array_like
             Optional starting values.
-        method : string or array of strings
+        method : str or array of str
             Method or sequence of methods for scipy optimize.
         maxiter : int
             The maximum number of iterations in the optimization.
@@ -672,7 +672,7 @@ class ProcessMLE(base.LikelihoodModel):
         scale_data : Dataframe
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth_data: Dataframe
+        smooth_data : Dataframe
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
@@ -775,7 +775,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         scale : array_like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth: array_like
+        smooth : array_like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 

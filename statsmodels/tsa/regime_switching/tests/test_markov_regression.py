@@ -815,7 +815,7 @@ class TestFedFundsConst(MarkovRegression):
         assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
 
     def test_bse(self):
-        # Can't compare last element of bse because we estimate sigma^2 rather
+        # Cannot compare last element of bse because we estimate sigma^2 rather
         # than sigma^2
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-7)
@@ -948,7 +948,7 @@ class TestFedFundsConstShort(MarkovRegression):
         nobs = 4
         initial_probabilities = np.ones(k_regimes) / k_regimes
 
-        # We don't actually transition between the 3 regimes.
+        # We do not actually transition between the 3 regimes.
         regime_transition = np.eye(k_regimes)[:, :, np.newaxis]
 
         # Regime i correponds to a sequence of iid draws from discrete
@@ -973,7 +973,7 @@ class TestFedFundsConstShort(MarkovRegression):
         nobs = 8
         initial_probabilities = np.ones(k_regimes) / k_regimes
 
-        # We don't actually transition between the 3 regimes except from
+        # We do not actually transition between the 3 regimes except from
         # t=3 to t=4 where we reset to regimes 1 and 2 being equally
         # likely.
         regime_transition = np.zeros((k_regimes, k_regimes, nobs))
@@ -1048,7 +1048,7 @@ class TestFedFundsConstL1(MarkovRegression):
             true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
 
     def test_bse(self):
-        # Can't compare last element of bse because we estimate sigma^2 rather
+        # Cannot compare last element of bse because we estimate sigma^2 rather
         # than sigma^2
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-6)
@@ -1110,7 +1110,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
         assert_allclose(actual, self.true['predict_smoothed'], atol=1e-5)
 
     def test_bse(self):
-        # Can't compare last element of bse because we estimate sigma^2 rather
+        # Cannot compare last element of bse because we estimate sigma^2 rather
         # than sigma^2
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-7)
@@ -1165,7 +1165,7 @@ class TestAreturnsConstL1Variance(MarkovRegression):
         super(TestAreturnsConstL1Variance, self).test_fit(**kwargs)
 
     def test_bse(self):
-        # Can't compare last two element of bse because we estimate sigma^2
+        # Cannot compare last two element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:-2], self.true['bse_oim'][:-2], atol=1e-7)

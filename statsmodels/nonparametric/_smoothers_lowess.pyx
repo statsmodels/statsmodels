@@ -38,23 +38,23 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
     Parameters
     ----------
-    endog: 1-D numpy array
+    endog : 1-D numpy array
         The y-values of the observed points
-    exog: 1-D numpy array
+    exog : 1-D numpy array
         The x-values of the observed points. exog has to be increasing.
-    frac: float
+    frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
-    it: int
+    it : int
         The number of residual-based reweightings
         to perform.
-    delta: float
+    delta : float
         Distance within which to use linear-interpolation
         instead of weighted regression.
 
     Returns
     -------
-    out: numpy array
+    out : numpy array
         A numpy array with two columns. The first column
         is the sorted x values and the second column the
         associated estimated y-values.
@@ -198,7 +198,7 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
             if last_fit_i >= n-1:
                 break
 
-        # Calculate residual weights, but don't bother on the last iteration.
+        # Calculate residual weights, but do not bother on the last iteration.
         if robiter < it - 1:
             resid_weights = calculate_residual_weights(y, y_fit)
 
@@ -304,7 +304,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
         The radius of the current neighborhood. The larger of
         distances between x[i] and its left-most or right-most
         neighbor.
-    use_resid_weights: boolean
+    use_resid_weights: bool
         If True, multiply the x-distance weights by the residual
         weights from the last iteration of regressions. Set to
         False on the first iteration (since there are no residuals
@@ -313,7 +313,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Returns
     -------
-    reg_ok: boolean
+    reg_ok: bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].
@@ -381,7 +381,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
         The index of the right-most point in the neighborhood
         of x[i]. Non-inclusive, s.t. the neighborhood is
         x[left_end] <= x < x[right_end].
-    reg_ok: boolean
+    reg_ok: bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].
@@ -457,26 +457,26 @@ def update_indices(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Parameters
     ----------
-    x: 1-D numpy array
+    x : 1-D numpy array
         The vector of input x-values.
-    y_fit: 1-D numpy array
+    y_fit : 1-D numpy array
         The vector of fitted y-values
-    delta: float
+    delta : float
         Indicates the range of x values within which linear
         interpolation should be used to estimate y_fit instead
         of weighted regression.
-    i: indexing integer
+    i : indexing integer
         The index of the current point being fit.
-    n: indexing integer
+    n : indexing integer
         The length of the input vectors, x and y.
-    last_fit_i: indexing integer
+    last_fit_i : indexing integer
         The last point at which y_fit was calculated.
 
     Returns
     -------
-    i: indexing integer
+    i : indexing integer
         The next point at which to run a weighted regression.
-    last_fit_i: indexing integer
+    last_fit_i : indexing integer
         The updated last point at which y_fit was calculated
 
     Notes

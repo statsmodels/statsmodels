@@ -74,7 +74,7 @@ class CheckWeight(object):
             # Binomial ll and deviance are different for 1d vs. counts...
             return None
         if isinstance(self, TestGlmGaussianWLS):
-            # This won't work right now either
+            # This will not work right now either
             return None
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
@@ -87,7 +87,7 @@ class CheckWeight(object):
                              TestTweedieRepeatedvsAverage,
                              TestBinomial0RepeatedvsAverage,
                              TestBinomial0RepeatedvsDuplicated)):
-            # This won't match as different number of records
+            # This will not match as different number of records
             return None
         res1 = self.res1
         res2 = self.res2
@@ -101,7 +101,7 @@ class CheckWeight(object):
         assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
-        # Stata doesn't use var_weights in anscombe residuals, it seems.
+        # Stata does not use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
@@ -371,7 +371,7 @@ class TestGlmGaussianAwNr(CheckWeight):
         # SM uses (essentially) stat's loglike formula... first term is
         # (endog - mu) ** 2 / scale
         adj_sm = -1 / 2 * ((model.endog - res1.mu) ** 2).sum() / scale
-        # R has these 2 terms that stata/sm don't
+        # R has these 2 terms that stata/sm do not
         adj_r = -model.wnobs / 2 + np.sum(np.log(model.var_weights)) / 2
         llf_adj = llf - adj_sm + adj_r
         assert_allclose(llf_adj, res2.ll, atol=1e-6, rtol=1e-7)
@@ -450,10 +450,10 @@ def test_wtd_gradient_irls():
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
                 elif family_class == fam.Binomial and link == lnk.cloglog:
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif family_class == fam.Binomial and link == lnk.log:
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Poisson, lnk.identity):
                     lin_pred = 20 + exog.sum(1)
@@ -462,27 +462,27 @@ def test_wtd_gradient_irls():
                 elif (family_class, link) == (fam.Poisson, lnk.sqrt):
                     lin_pred = -2 + exog.sum(1)
                 elif (family_class, link) == (fam.Gamma, lnk.log):
-                    # Can't get gradient to converge with var_weights here
+                    # Cannot get gradient to converge with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gamma, lnk.identity):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gamma, lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gaussian, lnk.log):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = -1 + exog.sum(1)
                     continue
                 elif (family_class, link) == (fam.InverseGaussian,
                                               lnk.identity):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = 20 + 5*exog.sum(1)
                     lin_pred = np.clip(lin_pred, 1e-4, np.inf)
                     continue
@@ -505,7 +505,7 @@ def test_wtd_gradient_irls():
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (fam.NegativeBinomial,
                                               lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = 1 + exog.sum(1) / 5
                     continue
 

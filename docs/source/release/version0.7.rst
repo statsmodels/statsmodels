@@ -131,7 +131,7 @@ new state space functionality. It can be used very similarly to the existing
 `ARIMA` model, but works on a wider range of specifications, including:
 
 * Additive and multiplicative seasonal effects
-* Flexible trend specications
+* Flexible trend specification
 * Regression with SARIMA errors
 * Regression with time-varying coefficients
 * Measurement error in the endogenous variables

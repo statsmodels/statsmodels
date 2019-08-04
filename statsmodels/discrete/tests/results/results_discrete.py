@@ -684,8 +684,8 @@ class Spector(object):
         # mata
         # V = st_matrix("e(margeff_V)")
         # se = diagonal(cholesky(diag(V)))
-        # last SE taken from margins with i.psi, don't know how they
-        # don't know why margeff is different, but trust official results
+        # last SE taken from margins with i.psi, do not know how they
+        # do not know why margeff is different, but trust official results
         obj.margeff_count_dummy_dydxoverall_se = [.1094379569, .0177869773,
                                                   .1420034]
 
@@ -788,7 +788,7 @@ class Spector(object):
             -.3575735, .447951, -.7988633, -1.939208, .6021435,
             1.196623, .9407793, -.8927477, .59048, .3128364,
             -1.246147, 2.045071]
-        # Stata doesn't have it, but I think it's just oversight
+        # Stata does not have it, but I think it's just oversight
         obj.resid_pearson = None
         # generalized residuals from gretl
         obj.resid_generalized = [
@@ -1000,7 +1000,7 @@ class RandHIE(object):
             # From R, this is alpha/bse(alpha)
             59.2190796881069
 
-            # taken from Stata even though they don't report it
+            # taken from Stata even though they do not report it
             # lnalpha/bse(lnalpha)
             # 77.968995
         ]

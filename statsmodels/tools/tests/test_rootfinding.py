@@ -54,12 +54,12 @@ def test_brentq_expanding():
             assert_allclose(res, a, rtol=1e-5)
 
     # wrong sign for start bounds
-    # doesn't raise yet during development TODO: activate this
+    # does not raise yet during development TODO: activate this
     # it kind of works in some cases, but not correctly or in a useful way
     #assert_raises(ValueError, brentq_expanding, func, args=(-500,), start_upp=-1000)
     #assert_raises(ValueError, brentq_expanding, func, args=(500,), start_low=1000)
 
-    # low upp given, but doesn't bound root, leave brentq exception
+    # low upp given, but does not bound root, leave brentq exception
     # ValueError: f(a) and f(b) must have different signs
     assert_raises(ValueError, brentq_expanding, funcn, args=(-50000,), low= -40000, upp=-10000)
 
@@ -71,7 +71,7 @@ def test_brentq_expanding():
     # RuntimeError: Failed to converge after 3 iterations.
     assert_raises(RuntimeError, brentq_expanding, func, args=(-50000,), maxiter_bq=3)
 
-    # cannot determin whether increasing, all 4 low trial points return nan
+    # cannot determine whether increasing, all 4 low trial points return nan
     assert_raises(ValueError, brentq_expanding, func_nan, args=(-20, 0.6))
 
     # test for full_output

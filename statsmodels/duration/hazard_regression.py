@@ -15,9 +15,11 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 import numpy as np
+
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.compat.pandas import Appender
 
 
 _predict_docstring = """
@@ -45,7 +47,7 @@ _predict_docstring = """
         stratum).
     offset : array_like
         Offset values used to create the predicted values.
-    pred_type : string
+    pred_type : str
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
         'cumhaz' returns the cumulative hazard function.
@@ -270,7 +272,7 @@ class PHReg(model.LikelihoodModel):
         The covariates or exogeneous variables
     status : array_like
         The censoring status values; status=1 indicates that an
-        event occured (e.g. failure or death), status=0 indicates
+        event occurred (e.g. failure or death), status=0 indicates
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
     entry : array_like
@@ -278,12 +280,12 @@ class PHReg(model.LikelihoodModel):
     strata : array_like
         Stratum labels.  If None, all observations are taken to be
         in a single stratum.
-    ties : string
+    ties : str
         The method used to handle tied times, must be either 'breslow'
         or 'efron'.
     offset : array_like
         Array of offset values
-    missing : string
+    missing : str
         The method used to handle missing data
 
     Notes
@@ -356,7 +358,7 @@ class PHReg(model.LikelihoodModel):
             The data for the model. See Notes.
         status : array_like
             The censoring status values; status=1 indicates that an
-            event occured (e.g. failure or death), status=0 indicates
+            event occurred (e.g. failure or death), status=0 indicates
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
         entry : array_like
@@ -370,10 +372,10 @@ class PHReg(model.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
-        ties : string
+        ties : str
             The method used to handle tied times, must be either 'breslow'
             or 'efron'.
-        missing : string
+        missing : str
             The method used to handle missing data
         args : extra arguments
             These are passed to the model
@@ -427,7 +429,10 @@ class PHReg(model.LikelihoodModel):
             dependent.  If present, the standard errors account for
             this dependence. Does not affect fitted values.
 
-        Returns a PHregResults instance.
+        Returns
+        -------
+        PHRegResults
+            Returns a results instance.
         """
 
         # TODO process for missing values
@@ -453,7 +458,6 @@ class PHReg(model.LikelihoodModel):
 
         return results
 
-
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
         r"""
@@ -461,7 +465,7 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        method :
+        method : {'elastic_net'}
             Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
@@ -474,11 +478,13 @@ class PHReg(model.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-
+        **kwargs
+            Additional keyword arguments used to fit the model.
 
         Returns
         -------
-        A results object.
+        PHRegResults
+            Returns a results instance.
 
         Notes
         -----
@@ -1173,9 +1179,11 @@ class PHReg(model.LikelihoodModel):
 
         return cumhaz_f
 
+    @Appender(_predict_docstring % {
+        'params_doc': _predict_params_doc,
+        'cov_params_doc': _predict_cov_params_docstring})
     def predict(self, params, exog=None, cov_params=None, endog=None,
                 strata=None, offset=None, pred_type="lhr"):
-        # docstring attached below
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
@@ -1187,7 +1195,7 @@ class PHReg(model.LikelihoodModel):
             standard_errors = None
         ret_val = bunch()
 
-        # Don't do anything with offset here because we want to allow
+        # Do not do anything with offset here because we want to allow
         # different offsets to be specified even if exog is the model
         # exog.
         exog_provided = True
@@ -1202,7 +1210,7 @@ class PHReg(model.LikelihoodModel):
         elif self.offset is not None and not exog_provided:
             lhr += self.offset
 
-        # Handle lhr and hr prediction first, since they don't make
+        # Handle lhr and hr prediction first, since they do not make
         # use of the hazard function.
 
         if pred_type == "lhr":
@@ -1251,9 +1259,6 @@ class PHReg(model.LikelihoodModel):
             ret_val.predicted_values = np.exp(-cumhaz)
 
         return ret_val
-
-    predict.__doc__ = _predict_docstring % {'params_doc': _predict_params_doc,
-                                            'cov_params_doc': _predict_cov_params_docstring}
 
     def get_distribution(self, params):
         """
@@ -1408,16 +1413,14 @@ class PHRegResults(base.LikelihoodModelResults):
         -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
-        failure times wihtin a stratum.
+        failure times within a stratum.
         """
 
         return self.model.get_distribution(self.params)
 
-
+    @Appender(_predict_docstring % {'params_doc': '', 'cov_params_doc': ''})
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr"):
-        # docstring attached below
-
         return super(PHRegResults, self).predict(exog=exog,
                                                  transform=transform,
                                                  cov_params=self.cov_params(),
@@ -1425,9 +1428,6 @@ class PHRegResults(base.LikelihoodModelResults):
                                                  strata=strata,
                                                  offset=offset,
                                                  pred_type=pred_type)
-
-    predict.__doc__ = _predict_docstring % {'params_doc': '',
-                                            'cov_params_doc': ''}
 
     def _group_stats(self, groups):
         """

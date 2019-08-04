@@ -97,7 +97,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     cdef np.npy_intp dim[2]
     cdef {{cython_type}} [::1,:] apI, capI, u, v
     cdef int [::1,:] ipiv
-    # Dummy selection function, won't actually be referenced since we don't
+    # Dummy selection function, will not actually be referenced since we do not
     # need to order the eigenvalues in the ?gees call.
     cdef:
         int sdim
@@ -370,7 +370,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
     if not transform_variance:
         initial_variance = np.asfortranarray(error_variance.copy())
         # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
+        # do not lead to zero-matrices due to roundoff error, which would case
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised

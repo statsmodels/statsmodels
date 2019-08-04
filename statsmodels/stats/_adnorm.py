@@ -23,7 +23,7 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
         Currently only for 1d data x, except in case dist='norm'
     params : tuple
         optional distribution parameters if fit is False
-    axis : integer
+    axis : int
         If dist is 'norm' or fit is False, then data can be an n-dimensional
         and axis specifies the axis of a variable
 

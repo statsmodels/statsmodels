@@ -35,7 +35,7 @@ For a pull request to be accepted, you must meet the below requirements. This gr
 Linting
 ~~~~~~~
 
-Due to the way we have the CI builds set up, the linter won't do anything unless the environmental variable $LINT is set to a truthy value.
+Due to the way we have the CI builds set up, the linter will not do anything unless the environmental variable $LINT is set to a truthy value.
 
 - On MacOS/Linux
 
@@ -46,7 +46,7 @@ Due to the way we have the CI builds set up, the linter won't do anything unless
 How to Submit a Pull Request
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-So you want to submit a patch to `statsmodels` but aren't too familiar with github? Here are the steps you need to take.
+So you want to submit a patch to `statsmodels` but are not too familiar with github? Here are the steps you need to take.
 
 1. `Fork <https://help.github.com/articles/fork-a-repo>`_ the `statsmodels repository <https://github.com/statsmodels/statsmodels>`_ on Github.
 2. `Create a new feature branch <https://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging>`_. Each branch must be self-contained, with a single new feature or bugfix.

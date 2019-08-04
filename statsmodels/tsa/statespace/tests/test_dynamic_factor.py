@@ -99,7 +99,7 @@ class CheckDynamicFactor(object):
 
     def test_no_enforce(self):
         return
-        # Test that nothing goes wrong when we don't enforce stationarity
+        # Test that nothing goes wrong when we do not enforce stationarity
         params = self.model.untransform_params(self.true['params'])
         params[self.model._params_transition] = (
             self.true['params'][self.model._params_transition])
@@ -183,24 +183,24 @@ class TestDynamicFactor2(CheckDynamicFactor):
             true, k_factors=2, factor_order=1)
 
     def test_mle(self):
-        # Stata's MLE on this model doesn't converge, so no reason to check
+        # Stata's MLE on this model does not converge, so no reason to check
         pass
 
     def test_bse(self):
-        # Stata's MLE on this model doesn't converge, and four of their
-        # params don't even have bse (possibly they are still at starting
+        # Stata's MLE on this model does not converge, and four of their
+        # params do not even have bse (possibly they are still at starting
         # values?), so no reason to check this
         pass
 
     def test_aic(self):
         # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
-        # model didn't coverge, 4 of the parameters aren't fully estimated
+        # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the AIC is off
         pass
 
     def test_bic(self):
         # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
-        # model didn't coverge, 4 of the parameters aren't fully estimated
+        # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the BIC is off
         pass
 

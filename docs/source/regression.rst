@@ -37,6 +37,7 @@ Detailed examples can be found here:
 * `WLS <examples/notebooks/generated/wls.html>`__
 * `GLS <examples/notebooks/generated/gls.html>`__
 * `Recursive LS <examples/notebooks/generated/recursive_ls.html>`__
+* `Rolling LS <examples/notebooks/generated/rolling_ls.html>`__
 
 Technical Documentation
 -----------------------
@@ -57,7 +58,8 @@ All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
 specific methods and attributes.
 
-GLS is the superclass of the other regression classes except for RecursiveLS.
+GLS is the superclass of the other regression classes except for RecursiveLS,
+RollingWLS and RollingOLS.
 
 .. Class hierachy: TODO
 
@@ -163,6 +165,17 @@ Model Classes
 
    RecursiveLS
 
+.. module:: statsmodels.regression.rolling
+   :synopsis: Rolling (moving) least squares
+
+.. currentmodule:: statsmodels.regression.rolling
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingWLS
+   RollingOLS
+
 .. module:: statsmodels.regression.process_regression
    :synopsis: Process regression
 
@@ -203,6 +216,13 @@ results class of the other linear models.
    OLSResults
    PredictionResults
 
+.. currentmodule:: statsmodels.base.elastic_net
+
+.. autosummary::
+   :toctree: generated/
+
+    RegularizedResults
+
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::
@@ -216,6 +236,13 @@ results class of the other linear models.
    :toctree: generated/
 
    RecursiveLSResults
+
+.. currentmodule:: statsmodels.regression.rolling
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingRegressionResults
 
 .. currentmodule:: statsmodels.regression.process_regression
 

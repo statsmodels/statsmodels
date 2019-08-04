@@ -6,7 +6,7 @@ _plot_added_variable_doc = """\
     %(extra_params_doc)sfocus_exog : int or string
         The column index of exog, or a variable name, indicating the
         variable whose role in the regression is to be assessed.
-    resid_type : string
+    resid_type : str
         The type of residuals to use for the dependent variable.  If
         None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
     use_glm_weights : bool
@@ -28,7 +28,7 @@ _plot_added_variable_doc = """\
 
 _plot_partial_residuals_doc = """\
     Create a partial residual, or 'component plus residual' plot for a
-    fited regression model.
+    fitted regression model.
 
     Parameters
     ----------

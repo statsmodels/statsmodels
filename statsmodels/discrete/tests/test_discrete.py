@@ -704,7 +704,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
-        alpha[-1] = 0  # don't penalize alpha
+        alpha[-1] = 0  # do not penalize alpha
 
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
         cls.res_reg = mod_reg.fit_regularized(
@@ -782,7 +782,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
         assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[m])
-        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m], DECIMAL_3)
 
     @pytest.mark.skip("Skipped test_f_test for MNLogit")
     def test_f_test(self):
@@ -1367,7 +1367,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
         # the rows should add up for pred table
         assert_array_equal(self.res1.pred_table().sum(0), np.bincount(pred))
 
-        # note this is just a regression test, gretl doesn't have a prediction
+        # note this is just a regression test, gretl does not have a prediction
         # table
         pred = [[ 126.,   41.,    2.,    0.,    0.,   12.,   19.],
                 [  77.,   73.,    3.,    0.,    0.,   15.,   12.],
@@ -1460,7 +1460,7 @@ def test_poisson_predict():
 
 
 def test_poisson_newton():
-    #GH: 24, Newton doesn't work well sometimes
+    #GH: 24, Newton does not work well sometimes
     nobs = 10000
     np.random.seed(987689)
     x = np.random.randn(nobs, 3)
@@ -1552,6 +1552,18 @@ def test_mnlogit_factor():
     assert_allclose(params_f, params, rtol=1e-10)
     predicted_f = res2.predict(dta.exog.iloc[:5, :])
     assert_allclose(predicted_f, predicted, rtol=1e-10)
+
+
+def test_mnlogit_factor_categorical():
+    dta = sm.datasets.anes96.load_pandas()
+    dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
+    exog = sm.add_constant(dta.exog, prepend=True)
+    mod = sm.MNLogit(dta.endog, exog)
+    res = mod.fit(disp=0)
+    dta['endog'] = dta['endog'].astype('category')
+    mod = sm.MNLogit(dta.endog, exog)
+    res_cat = mod.fit(disp=0)
+    assert_allclose(res.params, res_cat.params)
 
 
 def test_formula_missing_exposure():
@@ -1752,7 +1764,7 @@ class TestGeneralizedPoisson_p1(object):
     def test_fit_regularized(self):
         model = self.res1.model
 
-        # don't penalize constant and dispersion parameter
+        # do not penalize constant and dispersion parameter
         alpha = np.ones(len(self.res1.params))
         alpha[-2:] = 0
         # the first prints currently a warning, irrelevant here
@@ -2064,7 +2076,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
-        alpha[-1] = 0  # don't penalize alpha
+        alpha[-1] = 0  # do not penalize alpha
 
         mod_reg = sm.NegativeBinomialP(rand_data.endog, rand_exog)
         cls.res_reg = mod_reg.fit_regularized(
@@ -2143,7 +2155,7 @@ class CheckNull(object):
 
         res_null1 = self.res_null
         assert_allclose(llf0, res_null1.llf, rtol=1e-6)
-        # Note default convergence tolerance doesn't get lower rtol
+        # Note default convergence tolerance does not get lower rtol
         # from different starting values (using bfgs)
         assert_allclose(res_null0.params, res_null1.params, rtol=5e-5)
 
@@ -2351,7 +2363,7 @@ def test_unchanging_degrees_of_freedom():
     # If res2.df_model == res1.df_model, then this test is invalid.
 
     res3 = model.fit(start_params=params, disp=0)
-    # Test that the call to `fit_regularized` didn't
+    # Test that the call to `fit_regularized` did not
     # modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
@@ -2378,3 +2390,23 @@ def test_cov_confint_pandas():
     assert_index_equal(ci.index, cov.index)
     assert_index_equal(cov.index, cov.columns)
     assert isinstance(ci.index, pd.MultiIndex)
+
+
+def test_t_test():
+    # GH669, check t_test works in multivariate model
+    data = sm.datasets.anes96.load(as_pandas=True)
+    exog = sm.add_constant(data.exog, prepend=False)
+    res1 = sm.MNLogit(data.endog, exog).fit(disp=0)
+    r = np.ones(res1.cov_params().shape[0])
+    t1 = res1.t_test(r)
+    f1 = res1.f_test(r)
+
+    data = sm.datasets.anes96.load(as_pandas=True)
+    exog = sm.add_constant(data.exog, prepend=False)
+    endog, exog = np.asarray(data.endog), np.asarray(exog)
+    res2 = sm.MNLogit(endog, exog).fit(disp=0)
+    t2 = res2.t_test(r)
+    f2 = res2.f_test(r)
+
+    assert_allclose(t1.effect, t2.effect)
+    assert_allclose(f1.statistic, f2.statistic)

@@ -1,0 +1,9 @@
+scanner:
+    diff_only: True
+    linter: flake8
+
+flake8:
+    max-line-length: 79
+    ignore:  # Errors and warnings to ignore
+        - W503
+        - W504

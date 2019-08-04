@@ -24,7 +24,7 @@
 # an autoregressive process on which also the money supply is assumed to be
 # an explanatory variable.
 #
-# Second, we demonstrate postestimation capabilitites to replicate
+# Second, we demonstrate postestimation capabilities to replicate
 # http://www.stata.com/manuals13/tsarimapostestimation.pdf. The model from
 # example 4 is used to demonstrate:
 #
@@ -187,7 +187,7 @@ fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 # stationary, it would be 0).
 #
 # For the AR specification and MA specification components, there are two
-# possiblities. The first is to specify the **maximum degree** of the
+# possibilities. The first is to specify the **maximum degree** of the
 # corresponding lag polynomial, in which case the component is an integer.
 # For example, if we wanted to specify an ARIMA(1,1,4) process, we would
 # use:
@@ -215,11 +215,11 @@ fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 # polynomial, it implies that all polynomial terms up to that degree are
 # included. Notice that this is *not* the model we want to use, because it
 # would include terms for $\epsilon_{t-2}$ and $\epsilon_{t-3}$, which we
-# don't want here.
+# do not want here.
 #
 # What we want is a polynomial that has terms for the 1st and 4th degrees,
 # but leaves out the 2nd and 3rd terms. To do that, we need to provide a
-# tuple for the specifiation parameter, where the tuple describes **the lag
+# tuple for the specification parameter, where the tuple describes **the lag
 # polynomial itself**. In particular, here we would want to use:
 #
 # ```python
@@ -251,7 +251,7 @@ print(res.summary())
 # way, meaning that we added a term allowing the process to depend on the
 # 4th MA lag. It may be instead that we want to model a seasonal effect in a
 # multiplicative way. We often write the model then as an ARIMA $(p,d,q)
-# \times (P,D,Q)_s$, where the lowercast letters indicate the specification
+# \times (P,D,Q)_s$, where the lowercase letters indicate the specification
 # for the non-seasonal component, and the uppercase letters indicate the
 # specification for the seasonal component; $s$ is the periodicity of the
 # seasons (e.g. it is often 4 for quarterly data or 12 for monthly data).
@@ -358,7 +358,7 @@ print(res.summary())
 # Notice that here we used an additional argument
 # `simple_differencing=True`. This controls how the order of integration is
 # handled in ARIMA models. If `simple_differencing=True`, then the time
-# series provided as `endog` is literatlly differenced and an ARMA model is
+# series provided as `endog` is literally differenced and an ARMA model is
 # fit to the resulting new time series. This implies that a number of
 # initial periods are lost to the differencing process, however it may be
 # necessary either to compare results to other packages (e.g. Stata's

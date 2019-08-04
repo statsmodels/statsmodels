@@ -90,7 +90,7 @@ class Link(object):
         Notes
         -----
         This reference implementation gives the correct result but is
-        inefficient, so it can be overriden in subclasses.
+        inefficient, so it can be overridden in subclasses.
         """
         return 1 / self.deriv(self.inverse(z))
 
@@ -112,7 +112,7 @@ class Link(object):
         Notes
         -----
         This reference implementation gives the correct result but is
-        inefficient, so it can be overriden in subclasses.
+        inefficient, so it can be overridden in subclasses.
         """
         iz = self.inverse(z)
         return -self.deriv2(iz) / self.deriv(iz)**3

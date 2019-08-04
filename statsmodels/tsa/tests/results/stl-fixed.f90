@@ -185,7 +185,7 @@ subroutine rwts(y, n, fit, rw)
     do i = 1, n
         rw(i) = abs(y(i) - fit(i))
     end do
-    ! TODO: psort doesn't work correctly, reorder mid
+    ! TODO: psort does not work correctly, reorder mid
     mid(2) = n / 2 + 1
     mid(1) = n - mid(2) + 1
     call psort(rw, n, mid, 2)

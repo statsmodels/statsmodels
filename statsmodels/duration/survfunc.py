@@ -43,7 +43,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     else:
         n = np.cumsum(n[::-1])[::-1]
 
-    # Only retain times where an event occured.
+    # Only retain times where an event occurred.
     if compress:
         ii = np.flatnonzero(d > 0)
         d = d[ii]
@@ -174,9 +174,9 @@ class CumIncidenceRight(object):
     time : array_like
         An array of times (censoring times or event times)
     status : array_like
-        If status >= 1 indicates which event occured at time t.  If
+        If status >= 1 indicates which event occurred at time t.  If
         status = 0, the subject was censored at time t.
-    title : string
+    title : str
         Optional title used for plots and summary output.
     freq_weights : array_like
         Optional frequency weights
@@ -186,7 +186,7 @@ class CumIncidenceRight(object):
     bw_factor : float
         Band-width multiplier for kernel-based estimation.  Only
         used if exog is provided.
-    dimred : boolean
+    dimred : bool
         If True, proportional hazards regression models are used to
         reduce exog to two columns by predicting overall events and
         censoring in two separate models.  If False, exog is used
@@ -277,12 +277,12 @@ class SurvfuncRight(object):
         Status at the event time, status==1 is the 'event'
         (e.g. death, failure), meaning that the event
         occurs at the given value in `time`; status==0
-        indicates that censoring has occured, meaning that
+        indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
     entry : array_like, optional An array of entry times for handling
         left truncation (the subject is not in the risk set on or
         before the entry time)
-    title : string
+    title : str
         Optional title used for plots and summary output.
     freq_weights : array_like
         Optional frequency weights
@@ -381,7 +381,7 @@ class SurvfuncRight(object):
         >>> li[0].set_color('purple')
         >>> li[1].set_color('purple')
 
-        Don't show the censoring points:
+        Do not show the censoring points:
 
         >>> fig = sf.plot()
         >>> ax = fig.get_axes()[0]
@@ -424,7 +424,7 @@ class SurvfuncRight(object):
         alpha : float
             The confidence interval has nominal coverage probability
             1 - `alpha`.
-        method : string
+        method : str
             Function to use for g-transformation, must be ...
 
         Returns
@@ -488,7 +488,7 @@ class SurvfuncRight(object):
         """
         Return a summary of the estimated survival function.
 
-        The summary is a datafram containing the unique event times,
+        The summary is a dataframe containing the unique event times,
         estimated survival function values, and related quantities.
         """
 
@@ -511,11 +511,11 @@ class SurvfuncRight(object):
             `1 - alpha` is the desired simultaneous coverage
             probability for the confidence region.  Currently alpha
             must be set to 0.05, giving 95% simultaneous intervals.
-        method : string
+        method : str
             The method used to produce the simultaneous confidence
             band.  Only the Hall-Wellner (hw) method is currently
             implemented.
-        transform : string
+        transform : str
             The used to produce the interval (note that the returned
             interval is on the survival probability scale regardless
             of which transform is used).  Only `log` and `arcsin` are
@@ -574,11 +574,11 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         The event or censoring times.
     status : array_like
         The censoring status variable, status=1 indicates that the
-        event occured, status=0 indicates that the observation was
+        event occurred, status=0 indicates that the observation was
         censored.
     group : array_like
         Indicators of the two groups
-    weight_type : string
+    weight_type : str
         The following weight types are implemented:
             None (default) : logrank test
             fh : Fleming-Harrington, weights by S^(fh_p),

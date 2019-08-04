@@ -6,7 +6,7 @@ idea for general version
 subclass defines geterrors(parameters) besides loglike,...
 and covariance matrix of parameter estimates (e.g. from hessian
 or outerproduct of jacobian)
-update: I don't really need geterrors directly, but get_h the conditional
+update: I do not really need geterrors directly, but get_h the conditional
     variance process
 
 new version Garch0 looks ok, time to clean up and test
@@ -16,7 +16,7 @@ in some cases: "Warning: Maximum number of function evaluations has been exceede
 Notes
 -----
 
-idea: cache intermediate design matrix for geterrors so it doesn't need
+idea: cache intermediate design matrix for geterrors so it does not need
     to be build at each function call
 
 superclass or result class calculates result statistic based
@@ -72,6 +72,8 @@ see notes_references.txt
 Created on Feb 6, 2010
 @author: "josef pktd"
 '''
+import warnings
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -86,6 +88,13 @@ from statsmodels.tsa.filters.filtertools import miso_lfilter
 from statsmodels.sandbox import tsa
 
 
+FUTURE_WARN = """
+{0} is deprecated and will be removed after 0.11. Please use the `arch`
+package:
+
+https://pypi.org/project/arch/
+https://github.com/bashtage/arch
+"""
 def sumofsq(x, axis=0):
     """Helper function to calculate sum of squares along first axis"""
     return np.sum(x**2, axis=axis)
@@ -310,6 +319,8 @@ class Garch0(TSMLEModel):
 
     '''
     def __init__(self, endog, exog=None):
+        warnings.warn(FUTURE_WARN.format(self.__class__.__name__),
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Garch0, self).__init__(endog, exog)
         #set default arma(1,1)
@@ -342,7 +353,7 @@ class Garch0(TSMLEModel):
         icetax = self._icetax  #read ic-eta-x, initial condition
 
         #TODO: where does my go with lfilter ?????????????
-        #      shouldn't matter except for interpretation
+        #      should not matter except for interpretation
 
         nobs = etax.shape[0]
 
@@ -390,7 +401,7 @@ class Garch0(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(h)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #no choice of axis
 
@@ -459,7 +470,7 @@ class GarchX(TSMLEModel):
         icetax = self._icetax  #read ic-eta-x, initial condition
 
         #TODO: where does my go with lfilter ?????????????
-        #      shouldn't matter except for interpretation
+        #      should not matter except for interpretation
 
         nobs = self.nobs
 
@@ -516,7 +527,7 @@ class GarchX(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(h)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #no choice of axis
 
@@ -535,6 +546,8 @@ class Garch(TSMLEModel):
 
     '''
     def __init__(self, endog, exog=None):
+        warnings.warn(FUTURE_WARN.format(self.__class__.__name__),
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Garch, self).__init__(endog, exog)
         #set default arma(1,1)
@@ -613,7 +626,7 @@ class Garch(TSMLEModel):
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(errorsest)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
         axis=0 #not used
 #        muy = errorsest.mean()
@@ -674,6 +687,10 @@ class AR(LikelihoodModel):
     Fit methods that use super and broyden do not yet work.
     """
     def __init__(self, endog, exog=None, nlags=1):
+        warnings.warn('Deprecated and will be removed after 0.11. Use AR '
+                      'available in statsmodels.tsa.api',
+                      FutureWarning)
+
         if exog is None:    # extend to handle ADL(p,q) model? or subclass?
             exog = endog[:-nlags]
         endog = endog[nlags:]
@@ -833,6 +850,9 @@ class Arma(LikelihoodModel):
     """
 
     def __init__(self, endog, exog=None):
+        warnings.warn('Deprecated and will be removed after 0.11. Use ARMA '
+                      'available in statsmodels.tsa.api',
+                      FutureWarning)
         #need to override p,q (nar,nma) correctly
         super(Arma, self).__init__(endog, exog)
         #set default arma(1,1)
@@ -870,7 +890,7 @@ class Arma(LikelihoodModel):
         sigma2 = np.maximum(params[-1]**2, 1e-6)
         axis = 0
         nobs = len(errorsest)
-        #this doesn't help for exploding paths
+        #this does not help for exploding paths
         #errorsest[np.isnan(errorsest)] = 100
 #        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
 #                          + np.sum((errorsest**2)/sigma2, axis)
@@ -1485,7 +1505,7 @@ if __name__ == '__main__':
     #armodel.fit(method='tnc')
     #powell should be the most robust, see Hamilton 5.7
     armodel.fit(method='powell', penalty=True)
-    # The below don't work yet
+    # The below do not work yet
     #armodel.fit(method='newton', penalty=True)
     #armodel.fit(method='broyden', penalty=True)
     print("Unconditional MLE for AR(1) y_t = .9*y_t-1 +.01 * err")

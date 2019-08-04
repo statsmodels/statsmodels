@@ -58,14 +58,14 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     """
     Parameters
     ----------
-    yname : string
+    yname : str
             optional, Default is `Y`
-    xname : list of strings
+    xname : list[str]
             optional, Default is `X.#` for # in p the number of regressors
     Confidance interval : (0,1) not implimented
-    title : string
+    title : str
             optional, Defualt is 'Generalized linear model'
-    returns : string
+    returns : str
               'text', 'table', 'csv', 'latex', 'html'
 
     Returns
@@ -292,7 +292,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('No. Observations:', lambda: [d_or_f(results.nobs)]),
           ('Df Model:', lambda: [d_or_f(results.df_model)]),
           ('Df Residuals:', lambda: [d_or_f(results.df_resid)]),
-          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception
+          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # does not exist for RLM - exception
     ])
 
     if title is None:
@@ -347,7 +347,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
             # fill up with blank lines to same length, just to keep it symmetric
             gen_left += [(' ', ' ')] * (len(gen_right) - len(gen_left))
 
-        # padding in SimpleTable doesn't work like I want
+        # padding in SimpleTable does not work like I want
         #force extra spacing and exact string length in right table
         gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
         gen_stubs_right, gen_data_right = zip_longest(*gen_right) #transpose row col
@@ -386,9 +386,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     res : results instance
         some required information is directly taken from the result
         instance
-    yname : string or None
+    yname : {str, None}
         optional name for the endogenous variable, default is "y"
-    xname : list of strings or None
+    xname : {list[str], None}
         optional names for the exogenous variables, default is "var_xx"
     alpha : float
         significance level for the confidence intervals
@@ -411,7 +411,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     if isinstance(results, tuple):
         # for multivariate endog
-        # TODO: check whether I don't want to refactor this
+        # TODO: check whether I do not want to refactor this
         #we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
@@ -467,9 +467,9 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
     res : results instance
         some required information is directly taken from the result
         instance
-    yname : string or None
+    yname : {str, None}
         optional name for the endogenous variable, default is "y"
-    xname : list of strings or None
+    xname : {list[str], None}
         optional names for the exogenous variables, default is "var_xx"
     alpha : float
         significance level for the confidence intervals
@@ -492,7 +492,7 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
 
     if isinstance(results, tuple):
         # for multivariate endog
-        # TODO: check whether I don't want to refactor this
+        # TODO: check whether I do not want to refactor this
         #we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
@@ -528,11 +528,11 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     ----------
     result : result instance
         the result instance with params and attributes in extras
-    extras : list of strings
+    extras : list[str]
         additional attributes to add below a parameter row, e.g. bse or tvalues
-    endog_names : None or list of strings
+    endog_names : {list[str], None}
         names for rows of the parameter array (multivariate endog)
-    exog_names : None or list of strings
+    exog_names : {list[str], None}
         names for columns of the parameter array (exog)
     alpha : float
         level for confidence intervals, default 0.95
@@ -587,9 +587,9 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
     ----------
     result : result instance
         the result instance with params, bse, tvalues and conf_int
-    endog_names : None or list of strings
+    endog_names : {list[str], None}
         names for rows of the parameter array (multivariate endog)
-    exog_names : None or list of strings
+    exog_names : {list[str], None}
         names for columns of the parameter array (exog)
     alpha : float
         level for confidence intervals, default 0.95
@@ -625,7 +625,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
             raise ValueError('endog_names has wrong length')
         n_equ = 1
 
-    #VAR doesn't have conf_int
+    #VAR does not have conf_int
     #params = res.params.T # this is a convention for multi-eq models
 
     # check that we have the right length of names
@@ -794,9 +794,9 @@ class Summary(object):
         res : results instance
             some required information is directly taken from the result
             instance
-        yname : string or None
+        yname : {str, None}
             optional name for the endogenous variable, default is "y"
-        xname : list of strings or None
+        xname : {list[str], None}
             optional names for the exogenous variables, default is "var_xx"
         alpha : float
             significance level for the confidence intervals
@@ -836,7 +836,7 @@ class Summary(object):
 
         Returns
         -------
-        txt : string
+        txt : str
             summary tables and extra text as one string
 
         '''
@@ -850,7 +850,7 @@ class Summary(object):
 
         Returns
         -------
-        latex : string
+        latex : str
             summary tables and extra text as string of Latex
 
         Notes
@@ -870,7 +870,7 @@ class Summary(object):
 
         Returns
         -------
-        csv : string
+        csv : str
             concatenated summary tables in comma delimited format
 
         '''
@@ -884,7 +884,7 @@ class Summary(object):
 
         Returns
         -------
-        html : string
+        html : str
             concatenated summary tables in HTML format
 
         '''

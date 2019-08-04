@@ -10,6 +10,7 @@ import numpy as np
 from scipy.linalg import solve_sylvester
 import pandas as pd
 
+from statsmodels.compat.pandas import Appender
 from statsmodels.tools.data import _is_using_pandas
 from scipy.linalg.blas import find_best_blas_type
 from . import (_initialization, _representation, _kalman_filter,
@@ -116,7 +117,7 @@ def companion_matrix(polynomial):
         which to form the companion matrix. Polynomial coefficients are in
         order of increasing degree, and may be either scalars (as in an AR(p)
         model) or coefficient matrices (as in a VAR(p) model). If an integer,
-        it is interpereted as the size of a companion matrix of a scalar
+        it is interpreted as the size of a companion matrix of a scalar
         polynomial, where the polynomial coefficients are initialized to zeros.
         If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
         value 1 to indicate an identity matrix (doing so will improve the speed
@@ -191,9 +192,9 @@ def companion_matrix(polynomial):
 
         if isinstance(polynomial, list) or isinstance(polynomial, tuple):
             try:
-                # Note: can't use polynomial[0] because of the special behavior
-                # associated with matrix polynomials and the constant 1, see
-                # below.
+                # Note: cannot use polynomial[0] because of the special
+                # behavior associated with matrix polynomials and the constant
+                # 1, see below.
                 m = len(polynomial[1])
             except TypeError:
                 m = 1
@@ -500,9 +501,9 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
     unconstrained : list
         Arbitrary matrices. Should be a list of length `order`, where each
         element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -557,12 +558,12 @@ def _compute_coefficients_from_multivariate_pacf_python(
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -593,7 +594,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
     if not transform_variance:
         initial_variance = error_variance
         # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
+        # do not lead to zero-matrices due to roundoff error, which would case
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
@@ -733,7 +734,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
     prefix : {'s','d','c','z'}, optional
@@ -813,6 +814,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
     return constrained, var
 
 
+@Appender(constrain_stationary_multivariate_python.__doc__)
 def constrain_stationary_multivariate(unconstrained, variance,
                                       transform_variance=False,
                                       prefix=None):
@@ -861,10 +863,6 @@ def constrain_stationary_multivariate(unconstrained, variance,
     return constrained, variance
 
 
-constrain_stationary_multivariate.__doc__ = (
-    constrain_stationary_multivariate_python.__doc__)
-
-
 def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     """
     Transform matrices with singular values less than one to arbitrary
@@ -875,9 +873,9 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     constrained : list
         The partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -981,10 +979,10 @@ def _compute_multivariate_acovf_from_coefficients(
     error_variance : array
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    maxlag : integer, optional
+    maxlag : int, optional
         The maximum autocovariance to compute. Default is `order`-1. Can be
         zero, in which case it returns the variance.
-    forward_autocovariances : boolean, optional
+    forward_autocovariances : bool, optional
         Whether or not to compute forward autocovariances
         :math:`E(y_t y_{t+j}')`. Default is False, so that backward
         autocovariances :math:`E(y_t y_{t-j}')` are returned.
@@ -1082,7 +1080,7 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
     endog : array_like
         Sample data on which to compute sample autocovariances. Shaped
         `nobs` x `k_endog`.
-    maxlag : integer
+    maxlag : int
         Maximum lag for which to calculate sample partial autocorrelations.
 
     Returns
@@ -1108,9 +1106,9 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     autocovariances : list
         Autocorrelations matrices. Should be a list of length `order` + 1,
         where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -1273,9 +1271,9 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     error_variance : array
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -1426,7 +1424,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
         raise ValueError('Invalid dimensions for %s matrix: requires %d'
                          ' columns, got %d' % (name, ncols, shape[1]))
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
         raise ValueError('Invalid dimensions for %s matrix: time-varying'
                          ' matrices cannot be given unless `nobs` is specified'
@@ -1473,7 +1471,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
         raise ValueError('Invalid dimensions for %s vector: requires %d'
                          ' rows, got %d' % (name, nrows, shape[0]))
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
         raise ValueError('Invalid dimensions for %s vector: time-varying'
                          ' vectors cannot be given unless `nobs` is specified'
@@ -1614,8 +1612,8 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     if not inplace:
         B = np.copy(B, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
             raise ValueError()
@@ -1660,8 +1658,8 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     if not inplace:
         b = np.copy(b, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
             raise ValueError()
@@ -1717,8 +1715,8 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     if not inplace:
         B = np.copy(B, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
             raise ValueError()
@@ -1763,8 +1761,8 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     if not inplace:
         b = np.copy(b, order='F')
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
             raise ValueError()

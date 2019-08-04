@@ -215,7 +215,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             else:
                 last_names.pop(last_names.index(col))
 
-        if first_names: # only do this if x isn't "empty"
+        if first_names: # only do this if x is not "empty"
             # Workaround to avoid NumPy FutureWarning
             _x = recarray_select(x, first_names)
             first_arr = nprf.append_fields(_x[lags:], tmp_names, ndlags.T,
@@ -459,7 +459,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         exclude first dropex lags from other variables
         for all variables, except the first, lags from dropex to maxlagex are
         included
-    trim : string
+    trim : str
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides

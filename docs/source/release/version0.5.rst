@@ -91,7 +91,7 @@ New and Improved Graphics
 
 * **Mosaic Plot**: Create a mosaic plot from a contingency table. This allows you to visualize multivariate categorical data in a rigorous and informative way. Available with :func:`sm.graphics.mosaic <mosaicplot.mosaic>`.
 
-* **Interaction Plot**: Interaction plots now handle categorical factors as well as other improviments. :func:`sm.graphics.interaction_plot <factorplots.interaction_plot>`.
+* **Interaction Plot**: Interaction plots now handle categorical factors as well as other improvements. :func:`sm.graphics.interaction_plot <factorplots.interaction_plot>`.
 
 * **Regression Plots**: The regression plots have been refactored and improved. They can now handle pandas objects and regression results instances appropriately. See :func:`sm.graphics.plot_fit <regressionplots.plot_fit>`, :func:`sm.graphics.plot_regress_exog <regressionplots.plot_regress_exog>`, :func:`sm.graphics.plot_partregress <regressionplots.plot_partregress>`, :func:`sm.graphics.plot_ccpr   <regressionplots.plot_ccpr>`, :func:`sm.graphics.abline_plot <regressionplots.abline_plot>`, :func:`sm.graphics.influence_plot <regressionplots.influence_plot>`, and :func:`sm.graphics.plot_leverage_resid2 <regressionplots.plot_leverage_resid2>`.
 
@@ -100,7 +100,7 @@ New and Improved Graphics
 Power and Sample Size Calculations
 ----------------------------------
 
-The power module (``statsmodel.stats.power``) currently implements power and sample size calculations for the t-tests (:class:`sm.stats.TTestPower <TTestPower>`, :class:`sm.stats.TTestIndPower <TTestIndPower>`), normal based test (:class:`sm.stats.NormIndPower <NormIndPower>`), F-tests (:class:`sm.stats.FTestPower <FTestPower>`, `:class:sm.stats.FTestAnovaPower <FTestAnovaPower>`) and Chisquare goodness of fit (:class:`sm.stats.GofChisquarePower <GofChisquarePower>`) test. The implementation is class based, but the module also provides three shortcut functions, :func:`sm.stats.tt_solve_power <tt_solve_power>`, :func:`sm.stats.tt_ind_solve_power <tt_ind_solve_power>` and :func:`sm.stats.zt_ind_solve_power <zt_ind_solve_power>` to solve for any one of the parameters of the power equations. See this `blog post <http://jpktd.blogspot.fr/2013/03/statistical-power-in-statsmodels.html>`_ for a more in-depth description of the additions.
+The power module (``statsmodels.stats.power``) currently implements power and sample size calculations for the t-tests (:class:`sm.stats.TTestPower <TTestPower>`, :class:`sm.stats.TTestIndPower <TTestIndPower>`), normal based test (:class:`sm.stats.NormIndPower <NormIndPower>`), F-tests (:class:`sm.stats.FTestPower <FTestPower>`, `:class:sm.stats.FTestAnovaPower <FTestAnovaPower>`) and Chisquare goodness of fit (:class:`sm.stats.GofChisquarePower <GofChisquarePower>`) test. The implementation is class based, but the module also provides three shortcut functions, :func:`sm.stats.tt_solve_power <tt_solve_power>`, :func:`sm.stats.tt_ind_solve_power <tt_ind_solve_power>` and :func:`sm.stats.zt_ind_solve_power <zt_ind_solve_power>` to solve for any one of the parameters of the power equations. See this `blog post <http://jpktd.blogspot.fr/2013/03/statistical-power-in-statsmodels.html>`_ for a more in-depth description of the additions.
 
 
 Other important new features
@@ -182,7 +182,7 @@ Development summary and credits
 
 The previous version (statsmodels 0.4.3) was released on July 2, 2012. Since then we have closed a total of 380 issues, 172 pull requests and 208 regular issues. The :ref:`detailed list<issues_list_05>` can be viewed.
 
-This release is a result of the work of the following 38 authors who contributed total of 2032 commits. If for any reason, we've failed to list your name in the below, please contact us:
+This release is a result of the work of the following 38 authors who contributed total of 2032 commits. If for any reason, we have failed to list your name in the below, please contact us:
 
 * Ana Martinez Pardo <anamartinezpardo-at-gmail.com>
 * anov <novikova.go.zoom-at-gmail.com>
@@ -251,7 +251,7 @@ Pull Requests (172):
 * :ghpull:`1009`: MAINT: Add .mailmap file.
 * :ghpull:`817`: Add 3 new unit tests for arima_process
 * :ghpull:`1001`: BUG include_package_data for install closes #907
-* :ghpull:`1005`: GITHUB: Contributing guidlines
+* :ghpull:`1005`: GITHUB: Contributing guidelines
 * :ghpull:`1007`: Cleanup docs for release
 * :ghpull:`1003`: BUG: Workaround for bug in sphinx 1.1.3. See #1002.
 * :ghpull:`1004`: DOC: Update maintainer notes with branching instructions.
@@ -277,7 +277,7 @@ Pull Requests (172):
 * :ghpull:`949`: BUG fix lowess sort when nans closes #946
 * :ghpull:`932`: ENH: support basinhopping solver in LikelihoodModel.fit()
 * :ghpull:`927`: DOC: clearer minimal example
-* :ghpull:`919`: Ols summary crash
+* :ghpull:`919`: OLS summary crash
 * :ghpull:`918`: Fixes10 emplike lowess
 * :ghpull:`909`: Bugs in GLM pvalues, more tests, pylint
 * :ghpull:`906`: ENH: No fmax with Windows SDK so define inline.
@@ -428,7 +428,7 @@ Issues (208):
 * :ghissue:`533`: py3 compatibility ``pandas.read_csv(urlopen(...))``
 * :ghissue:`662`: doc: install instruction: explicit about removing scikits.statsmodels
 * :ghissue:`910`: test failure Ubuntu TestARMLEConstant.test_dynamic_predict
-* :ghissue:`80`: t_model: f_test, t_test don't work
+* :ghissue:`80`: t_model: f_test, t_test do not work
 * :ghissue:`432`: GenericLikelihoodModel change default for score and hessian
 * :ghissue:`454`: BUG/ENH: HuberScale instance is not used, allow user defined scale estimator
 * :ghissue:`98`: check connection or connect summary to variable names in wrappers
@@ -438,14 +438,14 @@ Issues (208):
 * :ghissue:`1011`: power ttest endless loop possible
 * :ghissue:`907`: BLD data_files for stats.libqsturng
 * :ghissue:`328`: consider moving example scripts into IPython notebooks
-* :ghissue:`1002`: Docs won't build with Sphinx 1.1.3
+* :ghissue:`1002`: Docs will not build with Sphinx 1.1.3
 * :ghissue:`69`: Make methods like compare_ftest work with wrappers
 * :ghissue:`503`: summary_old in RegressionResults
 * :ghissue:`991`: TST precision of normal_power
 * :ghissue:`945`: Installing statsmodels from github?
 * :ghissue:`964`: Prefer to_offset not get_offset in tsa stuff
 * :ghissue:`983`: bug: pandas 0.8.1 incompatibility
-* :ghissue:`899`: build_ext inplace doesn't cythonize
+* :ghissue:`899`: build_ext inplace does not cythonize
 * :ghissue:`923`: location of initialization code
 * :ghissue:`980`: auto lag selection in  S_hac_simple
 * :ghissue:`968`: genericMLE Ubuntu test failure
@@ -479,7 +479,7 @@ Issues (208):
 * :ghissue:`630`: problems in regression plots
 * :ghissue:`885`: Caching behavior for KDEUnivariate icdf
 * :ghissue:`869`: sm.tsa.ARMA(..., order=(p,q)) gives "__init__() got an unexpected keyword argument 'order'" error
-* :ghissue:`783`: statsmodels\distributions\mixture_rvs.py    no unit tests
+* :ghissue:`783`: statsmodels.distributions.mixture_rvs.py    no unit tests
 * :ghissue:`824`: Multicomparison w/Pandas Series
 * :ghissue:`789`: presentation of multiple comparison results
 * :ghissue:`764`: BUG: multipletests incorrect reject for Holm-Sidak
@@ -526,9 +526,9 @@ Issues (208):
 * :ghissue:`549`: Ship released patsy source in statsmodels
 * :ghissue:`588`: patsy is a hard dependency?
 * :ghissue:`716`: Tests missing for functions if pandas is used
-* :ghissue:`715`: statmodels regression plots not working with pandas datatypes
+* :ghissue:`715`: statsmodels regression plots not working with pandas datatypes
 * :ghissue:`450`: BUG: full_output in optimizers Likelihood model
-* :ghissue:`709`: DOCstrings linear models don't have missing params
+* :ghissue:`709`: DOCstrings linear models do not have missing params
 * :ghissue:`370`: BUG weightstats has wrong cov
 * :ghissue:`694`: DiscreteMargins duplicate method
 * :ghissue:`702`: bug, pylint stats.anova
@@ -548,7 +548,7 @@ Issues (208):
 * :ghissue:`679`: Test Baxter King band-pass filter fails with scipy 0.12 beta1
 * :ghissue:`552`: influence outliers breaks when regressing on constant
 * :ghissue:`639`: test folders not on python path
-* :ghissue:`565`: omni_normtest doesn't propagate the axis argument
+* :ghissue:`565`: omni_normtest does not propagate the axis argument
 * :ghissue:`563`: error in doc generation for AR.fit
 * :ghissue:`109`: TestProbitCG failure on Ubuntu
 * :ghissue:`661`: from scipy import comb fails on the latest scipy 0.11.0
@@ -574,12 +574,12 @@ Issues (208):
 * :ghissue:`542`: Regression plots fail when Series objects passed to sm.OLS
 * :ghissue:`239`: release 0.4.x
 * :ghissue:`530`: l1 docs issues
-* :ghissue:`539`: test for statwriter (failure)
+* :ghissue:`539`: test for statawriter (failure)
 * :ghissue:`490`: Travis CI on PRs
 * :ghissue:`252`: doc: distributions.rst refers to sandbox only
 * :ghissue:`85`: release 0.4
 * :ghissue:`65`: MLE fit of AR model has no tests
-* :ghissue:`522`: ``test`` doesn't propagate arguments to nose
+* :ghissue:`522`: ``test`` does not propagate arguments to nose
 * :ghissue:`517`: missing array conversion or shape in linear model
 * :ghissue:`523`: test failure with ubuntu decimals too large
 * :ghissue:`520`: web site documentation, source not updated
@@ -593,7 +593,7 @@ Issues (208):
 * :ghissue:`495`: ENH: add footer SimpleTable
 * :ghissue:`402`: model._data -> model.data?
 * :ghissue:`477`: VAR NaN Bug
-* :ghissue:`421`: Enhancment: Handle Missing Data
+* :ghissue:`421`: Enhancement: Handle Missing Data
 * :ghissue:`489`: Expose model._data as model.data
 * :ghissue:`315`: tsa models assume pandas object indices are dates
 * :ghissue:`440`: arima predict is broken for steps > q and q != 1
@@ -616,7 +616,7 @@ Issues (208):
 * :ghissue:`399`: discrete errors due to incorrect in-place operation
 * :ghissue:`389`: VAR test_normality is broken with KeyError
 * :ghissue:`388`: Add tsaplots to graphics.api as graphics.tsa
-* :ghissue:`387`: predict date wasn't getting set with start = None
+* :ghissue:`387`: predict date was not getting set with start = None
 * :ghissue:`386`: p-values not returned from acf
 * :ghissue:`385`: Allow AR.select_order to work without model being fit
 * :ghissue:`383`: Move mixture_rvs out of sandbox.

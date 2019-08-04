@@ -69,7 +69,7 @@ def drop_missing(Y, X=None, axis=1):
 
 
 # TODO: needs to better preserve dtype and be more flexible
-# ie., if you still have a string variable in your array you don't
+# ie., if you still have a string variable in your array you do not
 # want to cast it to float
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):
@@ -327,7 +327,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
 
 def isestimable(C, D):
-    """ True if (Q, P) contrast `C` is estimable for (N, P) design `D`
+    """
+    True if (Q, P) contrast `C` is estimable for (N, P) design `D`
 
     From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
     the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
@@ -337,7 +338,7 @@ def isestimable(C, D):
     ----------
     C : (Q, P) array_like
         contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
-    D: (N, P) array_like
+    D : (N, P) array_like
         design matrix
 
     Returns
@@ -508,7 +509,7 @@ def nan_dot(A, B):
 
     Parameters
     ----------
-    A, B : np.ndarrays
+    A, B : ndarray
     """
     # Find out who should be nan due to nan * nonzero
     should_be_nan_1 = np.dot(np.isnan(A), (B != 0))

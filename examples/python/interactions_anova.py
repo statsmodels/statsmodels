@@ -81,7 +81,7 @@ df_infl = infl.summary_frame()
 
 df_infl[:5]
 
-# Now plot the reiduals within the groups separately:
+# Now plot the residuals within the groups separately:
 
 resid = lm.resid
 plt.figure(figsize=(6, 6))
@@ -238,7 +238,7 @@ interaction_plot(
 
 try:
     jobtest_table = pd.read_table('jobtest.table')
-except:  # don't have data already
+except:  # do not have data already
     url = 'http://stats191.stanford.edu/data/jobtest.table'
     jobtest_table = pd.read_table(url)
 
@@ -432,7 +432,7 @@ print(
 #
 #  Types I and II are equivalent under a balanced design.
 #
-#  Don't use Type III with non-orthogonal contrast - ie., Treatment
+#  Do not use Type III with non-orthogonal contrast - ie., Treatment
 
 sum_lm = ols(
     'np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)', data=kt).fit()

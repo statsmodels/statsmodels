@@ -30,7 +30,7 @@ import statsmodels.api as sm
 # *contrasts* for a categorical variable with `k` levels is a set of `k-1`
 # functionally independent linear combinations of the factor level means
 # that are also independent of the sum of the dummy variables. The dummy
-# coding isn't wrong *per se*. It captures all of the coefficients, but it
+# coding is not wrong *per se*. It captures all of the coefficients, but it
 # complicates matters when the model assumes independence of the
 # coefficients such as in ANOVA. Linear regression models do not assume
 # independence of the coefficients and thus dummy coding is often the only
@@ -80,7 +80,7 @@ sm.categorical(hsb2.race.values)
 
 # This is a bit of a trick, as the `race` category conveniently maps to
 # zero-based indices. If it does not, this conversion happens under the
-# hood, so this won't work in general but nonetheless is a useful exercise
+# hood, so this will not work in general but nonetheless is a useful exercise
 # to fix ideas. The below illustrates the output using the three contrasts
 # above
 
@@ -96,7 +96,7 @@ print(res.summary())
 
 # Like Treatment Coding, Simple Coding compares each level to a fixed
 # reference level. However, with simple coding, the intercept is the grand
-# mean of all the levels of the factors. Patsy doesn't have the Simple
+# mean of all the levels of the factors. Patsy does not have the Simple
 # contrast included, but you can easily define your own contrasts. To do so,
 # write a class that contains a code_with_intercept and a
 # code_without_intercept method that returns a patsy.contrast.ContrastMatrix

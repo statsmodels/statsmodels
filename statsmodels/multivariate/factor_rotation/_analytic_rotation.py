@@ -39,7 +39,7 @@ def target_rotation(A, H, full_rank=False):
         non rotated factors
     H : numpy matrix
         target matrix
-    full_rank : boolean (default FAlse)
+    full_rank : bool (default FAlse)
         if set to true full rank is assumed
 
     Returns
@@ -54,7 +54,7 @@ def target_rotation(A, H, full_rank=False):
     [2] Schonemann (1966) - A generalized solution of the orthogonal
     procrustes problem
 
-    [3] Gower, Dijksterhuis (2004) - Procustes problems
+    [3] Gower, Dijksterhuis (2004) - Procrustes problems
     """
     ATH = A.T.dot(H)
     if full_rank or np.linalg.matrix_rank(ATH) == A.shape[1]:
@@ -88,7 +88,7 @@ def procrustes(A, H):
         non rotated factors
     H : numpy matrix
         target matrix
-    full_rank : boolean (default False)
+    full_rank : bool (default False)
         if set to true full rank is assumed
 
     Returns
@@ -97,7 +97,7 @@ def procrustes(A, H):
 
     References
     ----------
-    [1] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [1] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     return np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H)
@@ -112,7 +112,7 @@ def promax(A, k=2):
 
     Promax rotation is performed in the following steps:
 
-    * Deterine varimax rotated patterns :math:`V`.
+    * Determine varimax rotated patterns :math:`V`.
 
     * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}`
 
@@ -136,7 +136,7 @@ def promax(A, k=2):
     [1] Browne (2001) - An overview of analytic rotation in exploratory
     factor analysis
 
-    [2] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [2] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     assert k > 0

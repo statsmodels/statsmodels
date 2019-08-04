@@ -10,10 +10,13 @@ class RobustNorm(object):
     Lays out the methods expected of the robust norms to be used
     by statsmodels.RLM.
 
-    Parameters
-    ----------
-    None :
-        Some subclasses have optional tuning constants.
+    See Also
+    --------
+    statsmodels.rlm
+
+    Notes
+    -----
+    Currently only M-estimators are available.
 
     References
     ----------
@@ -24,14 +27,6 @@ class RobustNorm(object):
 
     R Venables, B Ripley. 'Modern Applied Statistics in S'
         Springer, New York, 2002.
-
-    See Also
-    --------
-    statsmodels.rlm
-
-    Notes
-    -----
-    Currently only M-estimators are available.
     """
 
     def rho(self, z):
@@ -66,7 +61,7 @@ class RobustNorm(object):
 
     def psi_deriv(self, z):
         """
-        Deriative of psi.  Used to obtain robust covariance matrix.
+        Derivative of psi.  Used to obtain robust covariance matrix.
 
         See statsmodels.rlm for more information.
 

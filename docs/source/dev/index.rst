@@ -60,7 +60,7 @@ greatly helps the job of maintaining and releasing the software a shared effort.
 How to Submit a Pull Request
 ----------------------------
 
-So you want to submit a patch to `statsmodels` but aren't too familiar with
+So you want to submit a patch to `statsmodels` but are not too familiar with
 github? Here are the steps you need to take.
 
 1. `Fork <https://help.github.com/articles/fork-a-repo/>`_ the

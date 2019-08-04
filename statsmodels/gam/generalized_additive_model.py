@@ -357,7 +357,7 @@ class GLMGamResults(GLMResults):
             ax.plot(x, y_est + 1.96 * se, '-', c='blue')
             ax.plot(x, y_est - 1.96 * se, '-', c='blue')
         if cpr:
-            # TODO: resid_response doesn't make sense with nonlinear link
+            # TODO: resid_response does not make sense with nonlinear link
             # use resid_working ?
             cpr_ = y_est + self.resid_working
             ax.plot(x, cpr_, '.', lw=2)
@@ -468,7 +468,8 @@ wrap.populate_wrapper(GLMGamResultsWrapper, GLMGamResults)
 
 
 class GLMGam(PenalizedMixin, GLM):
-    """Model class for generalized additive models, GAM.
+    """
+    Model class for generalized additive models (GAM).
 
     This inherits from `GLM`.
 
@@ -479,25 +480,25 @@ class GLMGam(PenalizedMixin, GLM):
     Parameters
     ----------
     endog : array_like
+        The response variable.
     exog : array_like or None
         This explanatory variables are treated as linear. The model in this
         case is a partial linear model.
-    smoother : instance of additive smoother class such as Bsplines or
-        CyclicCubicSplines
-        This is a required keyword argument
+    smoother : instance of additive smoother class
+        Examples of smoother instances include Bsplines or CyclicCubicSplines.
     alpha : list of floats
-        penalization weights for smooth terms. The length of the list needs
+        Penalization weights for smooth terms. The length of the list needs
         to be the same as the number of smooth terms in the ``smoother``
     family : instance of GLM family
-        see GLM
+        See GLM.
     offset : None or array_like
-        see GLM
+        See GLM.
     exposure : None or array_like
-        see GLM
+        See GLM.
     missing : 'none'
-        missing value handling is not supported in this class
-    kwargs :
-        extra keywords are used in call to the super classes.
+        Missing value handling is not supported in this class.
+    **kwargs
+        Extra keywords are used in call to the super classes.
 
     Notes
     -----
@@ -729,7 +730,7 @@ class GLMGam(PenalizedMixin, GLM):
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
-            # We don't need to update scale in GLM/LEF models
+            # We do not need to update scale in GLM/LEF models
             # We might need it in dispersion models.
             # self.scale = self.estimate_scale(mu)
             history = self._update_history(wls_results, mu, history)
@@ -968,7 +969,7 @@ def penalized_wls(endog, exog, penalty_matrix, weights):
     results : Results instance of WLS
     """
     y, x, s = endog, exog, penalty_matrix
-    # TODO: I don't understand why I need 2 * s
+    # TODO: I do not understand why I need 2 * s
     aug_y, aug_x, aug_weights = make_augmented_matrix(y, x, 2 * s, weights)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
     # TODO: use MinimalWLS during iterations, less overhead

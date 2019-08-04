@@ -34,7 +34,7 @@ class ScreeningResults(object):
     idx_excl
         idx of excluded exog based on combined [exog_keep, exog] array. This is
         the complement of idx_nonzero
-    converged : boolean
+    converged : bool
         True if the iteration has converged and stopped before maxiter has been
         reached. False if maxiter has been reached.
     iterations : int
@@ -52,7 +52,7 @@ class ScreeningResults(object):
         Two-dimensional array with batch index in the first column and variable
         index withing batch in the second column. They can be used jointly as
         index for the data in the exog_iterator.
-    exog_final_names : list of strings
+    exog_final_names : list[str]
         'var<bidx>_<idx>' where `bidx` is the batch index and `idx` is the
         index of the selected column withing batch `bidx`.
     history_batches : dict of lists
@@ -267,7 +267,7 @@ class VariableScreening(object):
         keep = np.ones(k_keep, np.bool_)
         idx_excl = np.arange(k_keep, k_vars)
         mod_pen = model_class(endog, x0, **self.init_kwds)
-        # don't penalize initial estimate
+        # do not penalize initial estimate
         mod_pen.pen_weight = 0
         res_pen = mod_pen.fit(**fit_kwds)
         start_params = res_pen.params

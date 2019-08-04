@@ -68,7 +68,7 @@ class PenalizedMixin(object):
 
     def loglike(self, params, pen_weight=None, **kwds):
         """
-        Log-likelihodo of model at params
+        Log-likelihood of model at params
         """
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -177,7 +177,7 @@ class PenalizedMixin(object):
         ----------
         method : None or str
             Method specifies the scipy optimizer as in nonlinear MLE models.
-        trim : Boolean or float
+        trim : {bool, float}
             Default is False or None, which uses no trimming.
             If trim is True or a float, then small parameters are set to zero.
             If True, then a default threshold is used. If trim is a float, then

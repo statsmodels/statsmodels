@@ -77,7 +77,7 @@ class TestAnovaLM(object):
     @classmethod
     def setup_class(cls):
         # kidney data taken from JT's course
-        # don't know the license
+        # do not know the license
         cls.data = kidney_table
         cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
                         data=cls.data).fit()
@@ -100,7 +100,7 @@ class TestAnovaLMNoconstant(object):
     @classmethod
     def setup_class(cls):
         # kidney data taken from JT's course
-        # don't know the license
+        # do not know the license
         cls.data = kidney_table
         cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight) - 1',
                         data=cls.data).fit()
@@ -270,7 +270,7 @@ class TestAnova2Noconstant(TestAnovaLM):
 
 
 class TestAnova2HC0(TestAnovaLM):
-    #NOTE: R doesn't return SSq with robust covariance. Why?
+    #NOTE: R does not return SSq with robust covariance. Why?
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
     def test_results(self):
@@ -407,7 +407,7 @@ class TestAnova3(TestAnovaLM):
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
 class TestAnova3HC0(TestAnovaLM):
-    #NOTE: R doesn't return SSq with robust covariance. Why?
+    #NOTE: R does not return SSq with robust covariance. Why?
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
     def test_results(self):

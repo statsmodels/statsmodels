@@ -113,7 +113,7 @@ Unknown Change Point
 :py:func:`recursive_olsresiduals <statsmodels.stats.diagnostic.recursive_olsresiduals>`
   Calculate recursive ols with residuals and cusum test statistic. This is
   currently mainly helper function for recursive residual based tests.
-  However, since it uses recursive updating and doesn't estimate separate
+  However, since it uses recursive updating and does not estimate separate
   problems it should be also quite efficient as expanding OLS function.
 
 missing
@@ -122,7 +122,7 @@ missing
   - test on recursive parameter estimates, which are there?
 
 
-Mutlicollinearity Tests
+Multicollinearity Tests
 --------------------------------
 
 conditionnum (statsmodels.stattools)

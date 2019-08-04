@@ -42,6 +42,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               # One of mathjax or imgmath
+              'nbsphinx',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               # 'sphinx.ext.autosummary',
@@ -51,8 +52,21 @@ extensions = ['sphinx.ext.autodoc',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
               # numpydoc or sphinx.ext.napoleon, but not both
-              'numpydoc'
+              'numpydoc',
               ]
+
+try:
+    import sphinxcontrib.spelling  # noqa: F401
+except ImportError as err:  # noqa: F841
+    pass
+else:
+    extensions.append('sphinxcontrib.spelling')
+
+# nbsphinx options
+nbsphinx_allow_errors = True
+# sphinxcontrib-spelling options
+spelling_word_list_filename = ['spelling_wordlist.txt', 'names_wordlist.txt']
+spelling_ignore_pypi_package_names = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -107,7 +121,7 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['*/autosummary/*.rst']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', '*/autosummary/*.rst']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -138,7 +152,7 @@ pygments_style = 'sphinx'
 # html_theme = 'default'
 
 if 'htmlhelp' in sys.argv:
-    # html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
+    # html_theme = 'statsmodels_htmlhelp'  #does not look nice yet
     html_theme = 'default'
     print('################# using statsmodels_htmlhelp ############')
 else:
@@ -161,7 +175,7 @@ html_theme_path = ['../themes']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels_hybi_banner.png'
+html_logo = 'images/statsmodels_hybi_banner_v2.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -331,12 +345,25 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # numpydoc_show_class_members = False
 # numpydoc_show_inherited_class_members = True
 
+# Create xrefs
+numpydoc_use_autodoc_signature = True
+numpydoc_xref_param_type = True
+numpydoc_class_members_toctree = False
+numpydoc_xref_aliases = {
+    'Figure': 'matplotlib.figure.Figure',
+    'DataFrame': 'pandas.DataFrame',
+    'Series': 'pandas.Series',
+    'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
+}
+
+# Example configuration for intersphinx: refer to the Python standard library.
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'python': ('https://docs.python.org/3/', None),
     'pydagogue': ('https://matthew-brett.github.io/pydagogue/', None),
-    'patsy': ('https://patsy.readthedocs.io/en/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
 }
 

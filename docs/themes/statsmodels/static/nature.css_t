@@ -16,14 +16,31 @@ background-color: #dbe0ea; (For banner and sidebar headers)
 
 @import url("basic.css");
 
+html {
+    font-size: 125%;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.8rem;
+    background-color: #f8f8f8;
+    color: #272A2D;
+    margin: 0 80px;
+    padding: 0;
+    min-width: 640px;
+    -webkit-font-feature-settings: "kern", "liga";
+    font-feature-settings: "kern", "liga";
+}
+
 /* ---------------- Header ---------------- */
 
 div.header {
-    background-color: #dbe0ea;
-    color: #272A2D;
+    background-color: #3050a6;
+    color: #f8f8f8;
 }
+
 div.headerwrap {
-    background-color: #dbe0ea;
+    background-color: #3050a6;
     min-width: 1030px;
     min-height: 85px;
     margin-left: auto;
@@ -45,40 +62,31 @@ div.navbar li {
     padding: 0px 15px
 }
 div.related {
-    background-color: #dbe0ea;
+    background-color: #3050a6;
+    color: #EAEDF0;
+    border-top: 0;
     line-height: 32px;
-    color: #272A2D;
     font-size: 100%;
-    border-top: 1px solid white;
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid #f8f8f8;
     min-width: 1030px;
 }
+
 div.related a {
-    color: #272A2D;
-    font-weight: normal;
+    font-weight: bold;
+    color: #f8f8f8;
     text-decoration: none
 }
 
 /* ----------- Page layout --------- */
 
-body {
-    font-family: Arial, sans-serif;
-    font-size: 100%;
-    /*background-color: #ffffff;*/
-    color: #272A2D;
-    margin: 0 80px;
-    padding: 0;
-    min-width: 640px;
-}
-
 div.documentwrapper {
-    background-color: #ffffff;
+    background-color: #f8f8f8;
     float: left;
     width: 100%;
 }
 
 div.bodywrapper {
-    margin: 0 0 0 230px;
+    margin: 0 230px 0 0;
 }
 
 hr {
@@ -87,17 +95,19 @@ hr {
 
 div.document {
     min-width: 1030px;
+    max-width: 1280px;
 }
 
 div.body {
     min-width: 740px;
+    max-width: 1000px;
     padding: 0 30px 30px 30px;
     /*font-size: 0.9em;*/
 }
 
 /* -------------- Footer -------------- */
 div.footer {
-    background-color: ffffff;
+    background-color: #f8f8f8;
     color: #272A2D;
     width: 100%;
     padding: 13px 0;
@@ -107,9 +117,8 @@ div.footer {
 
 /* -------------- Sidebar -------------- */
 div.sphinxsidebar {
-    /*background-color: #dbe0ea;*/
-    /*background-color: #ffffff;*/
-    font-size: 0.85em;
+    font-size: 0.8rem;
+    float: right;
     line-height: 1.5em;
     word-wrap: break-word;
 }
@@ -118,20 +127,20 @@ div.sphinxsidebarwrapper{
 }
 div.sphinxsidebar h3,
 div.sphinxsidebar h4 {
-    font-family: Arial, sans-serif;
-    color: #272A2D;
-    font-size: 1.2em;
+    font-family: 'Roboto', sans-serif;
+    margin: 0 -5px;
+    padding: 5px 11px;
+    font-size: 1.0rem;
+    color: #f8f8f8;
+    background-color: #3050a6;
     font-weight: normal;
-    margin: 0;
-    padding: 5px 10px;
-    background-color: #dbe0ea;
 }
 div.sphinxsidebar h4{
     font-size: 1.1em;
 }
 div.sphinxsidebar p {
     /*color: #888;*/
-    color: #272A2D
+    color: #272A2D;
     padding: 5px 15px;
 }
 div.sphinxsidebar ul {
@@ -145,7 +154,12 @@ div.sphinxsidebar input {
     font-size: 1em;
 }
 div.sphinxsidebar a{
-    text-decoration: none
+    text-decoration: none;
+    color: #3050a6;
+}
+
+div.sphinxsidebar a:hover {
+    text-decoration: underline;
 }
 
 div.sphinxsidebar input[type=text]{
@@ -159,8 +173,8 @@ div.body h3,
 div.body h4,
 div.body h5,
 div.body h6 {
-    font-family: "Georgia", "Times New Roman", serif;
-    font-weight: normal; }
+    font-family: 'Roboto', sans-serif;
+    font-weight: normal;
 }
 
 div.body h1{
@@ -181,7 +195,8 @@ div.body h5 { font-size: 100%}
 div.body h6 { font-size: 100%}
 
 div.body a{
-    text-decoration: none
+    text-decoration: none;
+    color: #3050a6;
 }
 div.body a:hover{
     text-decoration: underline
@@ -215,8 +230,8 @@ div.note {
 }
 
 div.seealso {
-    background-color: #ffc;
-    border: 1px solid #ff6;
+    background-color: #d6e9fd;
+    border: 0;
 }
 
 div.topic {
@@ -237,16 +252,20 @@ p.admonition-title:after {
 }
 
 pre {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+    background-color: #f0f0f0;
     padding: 10px;
-    /*background-color: White;*/
-    background-color: #fafafa;
     color: #222;
     line-height: 1.2em;
     border: 1px solid #C6C9CB;
-    font-size: 1.1em;
     margin: 1.5em 0 1.5em 0;
     -webkit-box-shadow: 1px 1px 1px #d8d8d8;
     -moz-box-shadow: 1px 1px 1px #d8d8d8;
+}
+
+code {
+    font-family: "Roboto Mono", monospace;
 }
 
 .pre {
@@ -295,7 +314,8 @@ div.output_area pre {
 }
 
 div.sphinxsidebar #searchbox input[type="text"] {
-    width: auto;
+    width: 165px;
+    margin: 0 5px;
 }
 
 div.searchformwrapper {
@@ -304,9 +324,10 @@ div.searchformwrapper {
 
 /* Dropdown Button */
 .dropbtn {
-    background-color: #dbe0ea;
+    background-color: #3050a6;
+    color: #f8f8f8;
+    font-size: 0.8rem;
     padding: 16px;
-    font-size: 16px;
     border: none;
 }
 
@@ -318,9 +339,10 @@ div.searchformwrapper {
 
 /* Dropdown Content (Hidden by Default) */
 .dropdown-content {
+    background-color: #3050a6;
+    color: #f8f8f8;
     display: none;
     position: absolute;
-    background-color: #ecf1fb;
     min-width: 120px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     z-index: 1;
@@ -328,17 +350,49 @@ div.searchformwrapper {
 
 /* Links inside the dropdown */
 .dropdown-content a {
-    color: black;
+    color: #f8f8f8;
     padding: 12px 16px;
     text-decoration: none;
     display: block;
 }
 
 /* Change color of dropdown links on hover */
-.dropdown-content a:hover {background-color: #ddd;}
+.dropdown-content a:hover {background-color: #4675f3;}
 
 /* Show the dropdown menu on hover */
 .dropdown:hover .dropdown-content {display: block;}
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
-.dropdown:hover .dropbtn {background-color: #ecf1fb;}
+.dropdown:hover .dropbtn {background-color: #4675f3;}
+
+span.pre {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.classifier {
+    font-style: normal;
+}
+
+div.sphinxsidebar a {
+}
+
+.sphinxsidebarwrapper h3 a {
+    color: #f8f8f8;
+}
+
+dt:target {
+    background-color: #dbecfd;
+}
+
+div.body h1 span.pre {
+   font-size: 2.0rem;
+}
+
+div.body h2 span.pre {
+  font-size: 1.5rem;
+}
+
+div.body h3 span.pre {
+  font-size: 1.136rem;
+}

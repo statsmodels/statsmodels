@@ -523,7 +523,7 @@ class TestDiagnosticG(object):
         bh = smsdia.breaks_hansen(self.res)
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
                             decimal=13)
-        #TODO: breaks_hansen doesn't return pvalues
+        #TODO: breaks_hansen does not return pvalues
 
 
     def test_recursive_residuals(self):
@@ -791,7 +791,7 @@ def test_influence_wrapped():
     gs_l_realgdp = 400 * np.log(d['realgdp']).diff().dropna()
     lint = d['realint'][:-1]
 
-    # re-index these because they won't conform to lint
+    # re-index these because they will not conform to lint
     gs_l_realgdp.index = lint.index
     gs_l_realinv.index = lint.index
 

@@ -34,14 +34,14 @@ class Mediation(object):
         Regression model for the mediator variable.  Predictor
         variables include the treatment/exposure and any other
         variables of interest.
-    exposure : string or (int, int) tuple
+    exposure : str or (int, int) tuple
         The name or column position of the treatment/exposure
         variable.  If positions are given, the first integer is the
         column position of the exposure variable in the outcome model
         and the second integer is the position of the exposure variable
         in the mediator model.  If a string is given, it must be the name
         of the exposure variable in both regression models.
-    mediator : string or int
+    mediator : {str, int}
         The name or column position of the mediator variable in the
         outcome regression model.  If None, infer the name from the
         mediator model formula (if present).
@@ -262,9 +262,9 @@ class Mediation(object):
 
         Parameters
         ----------
-        method : string
+        method : str
             Either 'parametric' or 'bootstrap'.
-        n_rep : integer
+        n_rep : int
             The number of simulation replications.
 
         Returns a MediationResults object.

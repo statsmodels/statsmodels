@@ -351,7 +351,7 @@ class TestGMMStOnestep(CheckGMM):
         # TODO: next two produce the same as before (looks like)
         bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
                                             #weights=res1.weights))))
-        # TODO: doesn't look different
+        # TODO: does not look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
         #nobs = instrument.shape[0]
         #w0inv = np.dot(instrument.T, instrument) / nobs
@@ -429,13 +429,13 @@ class TestGMMStOneiter(CheckGMM):
         # TODO: next two produce the same as before (looks like)
         bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
                                             weights=res1.weights))))
-        # TODO: doesn't look different
+        # TODO: does not look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
         bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
                                                 #use_weights=True #weights=w
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
-        #This doesn't replicate Stata oneway either
+        #This does not replicate Stata oneway either
         nobs = instrument.shape[0]
         w0inv = np.dot(instrument.T, instrument) / nobs
         q = self.res1.model.gmmobjective(self.res1.params, w)#self.res1.weights)
@@ -655,7 +655,7 @@ class TestGMMSt2(object):
 
         # TODO: resolve this
         # try bse from previous step, is closer to Stata
-        # guess: Stata ivreg2 doesn't calc for bse update after final iteration
+        # guess: Stata ivreg2 does not calc for bse update after final iteration
         # need better test case, bse difference is close to numerical optimization precision
         assert_allclose(self.res3.bse, res2.bse, rtol=5e-05, atol=0)
         assert_allclose(self.res3.bse, res2.bse, rtol=0, atol=5e-06)
