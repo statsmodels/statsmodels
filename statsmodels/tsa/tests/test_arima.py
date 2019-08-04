@@ -2734,3 +2734,10 @@ def test_nan_exog_arima_d1():
     x.iloc[0] = np.nan
     with pytest.raises(MissingDataError):
         ARIMA(y, (0, 1, 1), exog=x)
+
+
+def test_arma_exog_const_trend_nc(reset_randomstate):
+    y = np.random.randn(1000)
+    x = np.ones((1000, 1))
+    res = ARMA(y, (2, 1), exog=x).fit(trend='nc')
+    assert res.params.shape[0] == 4

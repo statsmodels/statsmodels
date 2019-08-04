@@ -21,7 +21,7 @@ from statsmodels.regression.linear_model import yule_walker, OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, string_like
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
@@ -422,12 +422,7 @@ def _make_arma_exog(endog, exog, trend):
         exog = np.ones((len(endog), 1))
     elif exog is not None and trend == 'c':  # constant plus exogenous
         exog = add_trend(exog, trend='c', prepend=True, has_constant='raise')
-    elif exog is not None and trend == 'nc':
-        # make sure it's not holding constant from last run
-        if exog.var() == 0:
-            exog = None
-        k_trend = 0
-    if trend == 'nc':
+    elif trend == 'nc':
         k_trend = 0
     return k_trend, exog
 
@@ -931,6 +926,7 @@ matches the number of out-of-sample forecasts ({1})'
         r, order = 'F')
 
         """
+        trend = string_like(trend, 'trend', options=('nc', 'c'))
         if self._fit_params is not None:
             fp = (trend, method)
             if self._fit_params != fp:
