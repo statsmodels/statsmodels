@@ -2279,3 +2279,10 @@ phreg
 xfunc
 webdoc
 pytest
+AutoReg
+AutoRegResults
+oos
+OrdinalGEE
+sse
+mae
+cvxopt

@@ -106,7 +106,10 @@ Univariate Autoregressive Processes (AR)
    :toctree: generated/
 
    ar_model.AR
+   ar_model.AutoReg
    ar_model.ARResults
+   ar_model.AutoRegResults
+   ar_model.ar_select_order
 
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter

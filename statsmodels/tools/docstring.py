@@ -632,25 +632,23 @@ class Docstring(object):
             return
         if isinstance(parameters, str):
             parameters = [parameters]
-        final = []
-        ds_params = [param.name for param in self._ds['Parameters']]
-        missing = set(parameters).difference(ds_params)
+        ds_params = {param.name: param for param in self._ds['Parameters']}
+        missing = set(parameters).difference(ds_params.keys())
         if missing:
             raise ValueError('{0} were not found in the '
                              'docstring'.format(','.join(missing)))
-        for param in parameters:
-            for ds_param in self._ds['Parameters']:
-                if ds_param.name == param:
-                    final.append(ds_param)
+        final = [ds_params[param] for param in parameters]
         ds = copy.deepcopy(self._ds)
         for key in ds:
             if key != 'Parameters':
                 ds[key] = [] if key != 'index' else {}
             else:
                 ds[key] = final
-        out = '\n'.join(str(ds).split('\n')[3:])
+        out = str(ds).strip()
         if indent:
             out = textwrap.indent(out, ' ' * indent)
+
+        out = '\n'.join(out.split('\n')[2:])
         return out
 
     def __str__(self):

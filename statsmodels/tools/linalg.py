@@ -2,7 +2,9 @@
 Linear Algebra solvers and other helpers
 """
 import numpy as np
-from scipy.linalg import pinv, pinv2, lstsq  # noqa:F401
+
+__all__ = ["logdet_symm", "stationary_solve", "transf_constraints",
+           "matrix_sqrt"]
 
 
 def logdet_symm(m, check_symm=False):

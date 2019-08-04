@@ -318,7 +318,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
 
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
-    '''Lagrange Multiplier tests for autocorrelation
+    """
+    Lagrange Multiplier tests for autocorrelation
 
     This is a generic Lagrange Multiplier test for autocorrelation. I do not
     have a reference for it, but it returns Engle's ARCH test if x is the
@@ -356,8 +357,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     het_arch
     acorr_breusch_godfrey
     acorr_ljung_box
-
-    '''
+    """
 
     if regresults:
         store = True
@@ -419,9 +419,11 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     else:
         return lm, lmpval, fval, fpval
 
+
 def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
              ddof=0):
-    '''Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
+    """
+    Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
 
     Parameters
     ----------
@@ -437,8 +439,9 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
         Not Implemented Yet
         If the residuals are from a regression, or ARMA estimation, then there
         are recommendations to correct the degrees of freedom by the number
-        of parameters that have been estimated, for example ddof=p+a for an
-        ARMA(p,q) (need reference, based on discussion on R finance mailinglist)
+        of parameters that have been estimated, for example ddof=p+q for an
+        ARMA(p,q) (need reference, based on discussion on R finance
+        mailinglist)
 
     Returns
     -------
@@ -458,9 +461,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
     Notes
     -----
     verified against R:FinTS::ArchTest
-
-    '''
-
+    """
     return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=store,
                     regresults=regresults)
 
