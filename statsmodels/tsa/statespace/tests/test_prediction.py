@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tsa.statespace import sarimax
-from numpy.testing import assert_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_raises, assert_allclose, assert_
 
 
 def test_predict_dates():
@@ -69,9 +69,9 @@ def test_memory_no_predicted():
 
     # Make sure we really didn't store all of the values in res2
     assert_equal(res1.predicted_state.shape, (1, 5))
-    assert_equal(res2.predicted_state.shape, (1, 3))
+    assert_(res2.predicted_state is None)
     assert_equal(res1.predicted_state_cov.shape, (1, 1, 5))
-    assert_equal(res2.predicted_state_cov.shape, (1, 1, 3))
+    assert_(res2.predicted_state_cov is None)
 
     # Check that we can't do in-sample prediction
     assert_raises(ValueError, res2.predict)

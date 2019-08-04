@@ -29,7 +29,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 
 from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
-from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
+from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
 from .initialization import Initialization
 from .tools import prepare_exog, concat
 
@@ -425,10 +425,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             self._free_params_index = cache_free_params_index
 
     def fit(self, start_params=None, transformed=True, includes_fixed=False,
-            cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
+            cov_type=None, cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
             optim_score=None, optim_complex_step=None, optim_hessian=None,
-            flags=None, **kwargs):
+            flags=None, low_memory=False, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -456,6 +456,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             - 'robust_approx' is the same as 'robust' except that the
               intermediate calculations use the 'approx' method.
             - 'none' for no covariance matrix calculation.
+
+            Default is 'opg' unless memory conservation is used to avoid
+            computing the loglikelihood values for each observation, in which
+            case the default is 'oim'.
         cov_kwds : dict or None, optional
             A dictionary of arguments affecting covariance matrix computation.
 
@@ -518,6 +522,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             matrix formula from Harvey (1989), and 'approx' uses numerical
             approximation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
+        low_memory : bool, optional
+            If set to True, techniques are applied to substantially reduce
+            memory usage. If used, some features of the results object will
+            not be available (including smoothed results and in-sample
+            prediction), although out-of-sample forecasting is possible.
+            Default is False.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -591,13 +601,27 @@ class MLEModel(tsbase.TimeSeriesModel):
                                       includes_fixed=False)
         # Otherwise construct the results class if desired
         else:
-            res = self.smooth(mlefit.params, transformed=False,
-                              includes_fixed=False, cov_type=cov_type,
-                              cov_kwds=cov_kwds)
+            # Handle memory conservation option
+            if low_memory:
+                conserve_memory = self.ssm.conserve_memory
+                self.ssm.set_conserve_memory(MEMORY_CONSERVE)
+
+            # Perform filtering / smoothing
+            if (self.ssm.memory_no_predicted or self.ssm.memory_no_gain
+                    or self.ssm.memory_no_smoothing):
+                func = self.filter
+            else:
+                func = self.smooth
+            res = func(mlefit.params, transformed=False, includes_fixed=False,
+                       cov_type=cov_type, cov_kwds=cov_kwds)
 
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
+
+            # Reset memory conservation
+            if low_memory:
+                self.ssm.set_conserve_memory(conserve_memory)
 
             return res
 
@@ -656,7 +680,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def filter(self, params, transformed=True, includes_fixed=False,
                complex_step=False, cov_type=None, cov_kwds=None,
                return_ssm=False, results_class=None,
-               results_wrapper_class=None, **kwargs):
+               results_wrapper_class=None, low_memory=False, **kwargs):
         """
         Kalman filtering
 
@@ -676,6 +700,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
+        low_memory : bool, optional
+            If set to True, techniques are applied to substantially reduce
+            memory usage. If used, some features of the results object will
+            not be available (including in-sample prediction), although
+            out-of-sample forecasting is possible. Default is False.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -690,6 +719,10 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
+        # Handle memory conservation
+        if low_memory:
+            kwargs['conserve_memory'] = MEMORY_CONSERVE
 
         # Get the state space output
         result = self.ssm.filter(complex_step=complex_step, **kwargs)
@@ -1721,7 +1754,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-    def __init__(self, model, params, results, cov_type='opg', cov_kwds=None,
+    def __init__(self, model, params, results, cov_type=None, cov_kwds=None,
                  **kwargs):
         self.data = model.data
         scale = results.scale
@@ -1784,6 +1817,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Setup covariance matrix notes dictionary
         if not hasattr(self, 'cov_kwds'):
             self.cov_kwds = {}
+        if cov_type is None:
+            cov_type = 'approx' if results.memory_no_likelihood else 'opg'
         self.cov_type = cov_type
 
         # Setup the cache
@@ -1824,6 +1859,24 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             'smoothed_state_disturbance_cov']
         for name in extra_arrays:
             setattr(self, name, getattr(self.filter_results, name, None))
+
+        # Remove too-short results when memory conservation was used
+        if model.ssm.memory_no_forecast:
+            self.forecasts = None
+            self.forecasts_error = None
+            self.forecasts_error_cov = None
+        if model.ssm.memory_no_predicted:
+            self.predicted_state = None
+            self.predicted_state_cov = None
+        if model.ssm.memory_no_filtered:
+            self.filtered_state = None
+            self.filtered_state_cov = None
+        if model.ssm.memory_no_gain:
+            pass
+        if model.ssm.memory_no_smoothing:
+            pass
+        if model.ssm.memory_no_std_forecast:
+            self.standardized_forecasts_error = None
 
         # Handle removing data
         self._data_attr_model = getattr(self, '_data_attr_model', [])
@@ -2220,7 +2273,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
         fittedvalues = self.forecasts
-        if fittedvalues.shape[0] == 1:
+        if fittedvalues is None:
+            pass
+        elif fittedvalues.shape[0] == 1:
             fittedvalues = fittedvalues[0, :]
         else:
             fittedvalues = fittedvalues.T
@@ -2247,7 +2302,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.llf_obs[self.filter_results.loglikelihood_burn:].sum()
+        return self.filter_results.llf
 
     @cache_readonly
     def loglikelihood_burn(self):
@@ -2265,7 +2320,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         distribution.
         """
         pvalues = np.zeros_like(self.zvalues) * np.nan
-        mask = self._free_params_index
+        mask = np.ones_like(pvalues, dtype=bool)
+        mask[self._free_params_index] = True
+        mask &= ~np.isnan(self.zvalues)
         pvalues[mask] = norm.sf(np.abs(self.zvalues[mask])) * 2
         return pvalues
 
@@ -2278,7 +2335,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
         resid = self.forecasts_error
-        if resid.shape[0] == 1:
+        if resid is None:
+            pass
+        elif resid.shape[0] == 1:
             resid = resid[0, :]
         else:
             resid = resid.T
@@ -2321,6 +2380,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = 'jarquebera'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
 
         if method == 'jarquebera':
             from statsmodels.stats.stattools import jarque_bera
@@ -2419,6 +2482,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = 'breakvar'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
 
         if method == 'breakvar':
             # Store some values
@@ -2538,6 +2605,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = 'ljungbox'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
 
         if method == 'ljungbox' or method == 'boxpierce':
             from statsmodels.stats.diagnostic import acorr_ljungbox

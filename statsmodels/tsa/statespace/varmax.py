@@ -778,7 +778,7 @@ class VARMAXResults(MLEResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    def __init__(self, model, params, filter_results, cov_type='opg',
+    def __init__(self, model, params, filter_results, cov_type=None,
                  cov_kwds=None, **kwargs):
         super(VARMAXResults, self).__init__(model, params, filter_results,
                                             cov_type, cov_kwds, **kwargs)

@@ -838,8 +838,11 @@ class KalmanFilter(Representation):
         This function by default does not compute variables required for
         smoothing.
         """
+        # Handle memory conservation
         if conserve_memory is None:
             conserve_memory = self.conserve_memory | MEMORY_NO_SMOOTHING
+        conserve_memory_cache = self.conserve_memory
+        self.set_conserve_memory(conserve_memory)
 
         # Run the filter
         kfilter = self._filter(
@@ -850,6 +853,9 @@ class KalmanFilter(Representation):
         results = self.results_class(self)
         results.update_representation(self)
         results.update_filter(kfilter)
+
+        # Resent memory conservation
+        self.set_conserve_memory(conserve_memory_cache)
 
         return results
 
@@ -868,14 +874,13 @@ class KalmanFilter(Representation):
         loglike : float
             The joint loglikelihood.
         """
-        if self.memory_no_likelihood:
-            raise RuntimeError('Cannot compute loglikelihood if'
-                               ' MEMORY_NO_LIKELIHOOD option is selected.')
-        kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
         kfilter = self._filter(**kwargs)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
-        loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
+        if not self.memory_no_likelihood:
+            loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
+        else:
+            loglike = np.sum(kfilter.loglikelihood)
 
         # Need to modify the computed log-likelihood to incorporate the
         # MLE scale.
@@ -889,7 +894,10 @@ class KalmanFilter(Representation):
             # associated with a singular forecast error covariance matrix
             nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
 
-            scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
+            if not self.memory_no_likelihood:
+                scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
+            else:
+                scale = kfilter.scale[0] / nobs_k_endog
 
             loglike += -0.5 * nobs_k_endog
 
@@ -1430,7 +1438,7 @@ class FilterResults(FrozenRepresentation):
         'filtered_state_cov', 'predicted_state', 'predicted_state_cov',
         'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
         'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
-        'forecasts_error', 'forecasts_error_cov', 'llf_obs',
+        'forecasts_error', 'forecasts_error_cov', 'llf', 'llf_obs',
         'collapsed_forecasts', 'collapsed_forecasts_error',
         'collapsed_forecasts_error_cov', 'scale'
     ]
@@ -1552,8 +1560,9 @@ class FilterResults(FrozenRepresentation):
                 kalman_filter.tmp4, self.missing, reorder_cols=True,
                 reorder_rows=True, prefix=self.prefix))
         else:
-            self._kalman_gain = np.array(
-                kalman_filter.kalman_gain, copy=True)
+            if not self.memory_no_gain:
+                self._kalman_gain = np.array(
+                    kalman_filter.kalman_gain, copy=True)
             self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
             self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
             self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
@@ -1570,6 +1579,8 @@ class FilterResults(FrozenRepresentation):
         self.forecasts_error_cov = np.array(
             kalman_filter.forecast_error_cov, copy=True
         )
+        # Note: below we will set self.llf, and in the memory_no_likelihood
+        # case we will replace self.llf_obs = None at that time.
         self.llf_obs = np.array(kalman_filter.loglikelihood, copy=True)
 
         # Diffuse objects
@@ -1623,10 +1634,12 @@ class FilterResults(FrozenRepresentation):
             )
             # Recreate the original arrays (which should be from the original
             # dataset) in the appropriate dimension
-            self.forecasts = np.zeros((self.k_endog, self.nobs))
-            self.forecasts_error = np.zeros((self.k_endog, self.nobs))
+            dtype = self.collapsed_forecasts.dtype
+            self.forecasts = np.zeros((self.k_endog, self.nobs), dtype=dtype)
+            self.forecasts_error = np.zeros((self.k_endog, self.nobs),
+                                            dtype=dtype)
             self.forecasts_error_cov = (
-                np.zeros((self.k_endog, self.k_endog, self.nobs))
+                np.zeros((self.k_endog, self.k_endog, self.nobs), dtype=dtype)
             )
 
         # Fill in missing values in the forecast, forecast error, and
@@ -1714,14 +1727,16 @@ class FilterResults(FrozenRepresentation):
             nobs_k_endog -= kalman_filter.nobs_kendog_univariate_singular
 
             scale_obs = np.array(kalman_filter.scale, copy=True)
-            self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
+            if not self.memory_no_likelihood:
+                self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
+            else:
+                self.scale = scale_obs[0] / nobs_k_endog
 
             # Need to modify this for diffuse initialization, since for
             # diffuse periods we only need to add in the scale value if the
             # diffuse forecast error covariance matrix element was singular
             nsingular = 0
             if kalman_filter.nobs_diffuse > 0:
-                d = kalman_filter.nobs_diffuse
                 Finf = kalman_filter.forecast_error_diffuse_cov
                 singular = (np.diagonal(Finf).real <=
                             kalman_filter.tolerance_diffuse)
@@ -1729,9 +1744,14 @@ class FilterResults(FrozenRepresentation):
 
             # Adjust the loglikelihood obs (see `KalmanFilter.loglikeobs` for
             # defaults on the adjustment)
-            self.llf_obs += -0.5 * (
-                (self.k_endog - nmissing - nsingular) * np.log(self.scale) +
-                scale_obs / self.scale)
+            if not self.memory_no_likelihood:
+                self.llf_obs += -0.5 * (
+                    (self.k_endog - nmissing - nsingular) * np.log(self.scale)
+                    + scale_obs / self.scale)
+            else:
+                self.llf_obs[0] += -0.5 * (np.sum(
+                    (self.k_endog - nmissing - nsingular) * np.log(self.scale))
+                    + scale_obs / self.scale)
 
             # Scale the filter output
             self.obs_cov = self.obs_cov * self.scale
@@ -1764,6 +1784,13 @@ class FilterResults(FrozenRepresentation):
         elif self.model._scale is not None:
             self.filter_concentrated = True
             self.scale = self.model._scale
+
+        # Now, save self.llf, and handle the memory_no_likelihood case
+        if not self.memory_no_likelihood:
+            self.llf = np.sum(self.llf_obs[self.loglikelihood_burn:])
+        else:
+            self.llf = self.llf_obs[0]
+            self.llf_obs = None
 
     @property
     def kalman_gain(self):
@@ -1838,7 +1865,8 @@ class FilterResults(FrozenRepresentation):
         use a linear solver to recover :math:`v_t^s`. Since :math:`L_t` is
         lower triangular, we can use a triangular solver (?TRTRS).
         """
-        if self._standardized_forecasts_error is None:
+        if (self._standardized_forecasts_error is None
+                and not self.memory_no_forecast):
             if self.k_endog == 1:
                 self._standardized_forecasts_error = (
                     self.forecasts_error /
@@ -1853,10 +1881,15 @@ class FilterResults(FrozenRepresentation):
                     if self.nmissing[t] < self.k_endog:
                         mask = ~self.missing[:, t].astype(bool)
                         F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
-                        upper, _ = linalg.cho_factor(F[:, :, 0])
-                        self._standardized_forecasts_error[mask, t] = (
-                            linalg.solve_triangular(
-                                upper, self.forecasts_error[mask, t], trans=1))
+                        try:
+                            upper, _ = linalg.cho_factor(F[:, :, 0])
+                            self._standardized_forecasts_error[mask, t] = (
+                                linalg.solve_triangular(
+                                    upper, self.forecasts_error[mask, t],
+                                    trans=1))
+                        except linalg.LinAlgError:
+                            self._standardized_forecasts_error[mask, t] = (
+                                np.nan)
 
         return self._standardized_forecasts_error
 

@@ -263,7 +263,7 @@ class TestClark1987ConserveAll(Clark1987):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.llf_obs[0], self.true['loglike'], 5
+            self.results.llf, self.true['loglike'], 5
         )
 
     def test_filtered_state(self):
@@ -497,7 +497,7 @@ class TestClark1989ConserveAll(Clark1989):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.llf_obs[0], self.true['loglike'], 2
+            self.results.llf, self.true['loglike'], 2
         )
 
     def test_filtered_state(self):
@@ -861,7 +861,6 @@ def test_loglike():
 
     # Test that self.memory_no_likelihood = True raises an error
     mod.memory_no_likelihood = True
-    assert_raises(RuntimeError, mod.loglike)
     assert_raises(RuntimeError, mod.loglikeobs)
 
 
