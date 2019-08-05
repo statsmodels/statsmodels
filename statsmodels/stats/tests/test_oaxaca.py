@@ -19,7 +19,7 @@ pd_endog, pd_exog = pandas_df.endog, add_constant(
 class TestOaxaca(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(endog, exog, 3, suppress=True)
+        cls.model = OaxacaBlinder(endog, exog, 3)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -39,7 +39,7 @@ class TestOaxaca(object):
 class TestOaxacaNoSwap(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(endog, exog, 3, swap=False, suppress=True)
+        cls.model = OaxacaBlinder(endog, exog, 3, swap=False)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -59,7 +59,7 @@ class TestOaxacaNoSwap(object):
 class TestOaxacaPandas(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pd_endog, pd_exog, 'OWNRENT', suppress=True)
+        cls.model = OaxacaBlinder(pd_endog, pd_exog, 'OWNRENT')
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -83,8 +83,7 @@ class TestOaxacaPandasNoSwap(object):
             pd_endog,
             pd_exog,
             'OWNRENT',
-            swap=False,
-            suppress=True)
+            swap=False)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -107,8 +106,7 @@ class TestOaxacaNoConstPassed(object):
         cls.model = OaxacaBlinder(
                                 df.endog,
                                 df.exog, 3,
-                                hasconst=False,
-                                suppress=True)
+                                hasconst=False)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
