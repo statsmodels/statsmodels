@@ -131,8 +131,7 @@ class TestOaxacaNoSwapNoConstPassed(object):
                                 df.exog,
                                 3,
                                 hasconst=False,
-                                swap=False,
-                                suppress=True)
+                                swap=False)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -156,8 +155,7 @@ class TestOaxacaPandasNoConstPassed(object):
             pandas_df.endog,
             pandas_df.exog,
             'OWNRENT',
-            hasconst=False,
-            suppress=True)
+            hasconst=False)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -182,8 +180,7 @@ class TestOaxacaPandasNoSwapNoConstPassed(object):
                                 pandas_df.exog,
                                 'OWNRENT',
                                 hasconst=False,
-                                swap=False,
-                                suppress=True)
+                                swap=False)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
