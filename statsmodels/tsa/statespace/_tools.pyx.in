@@ -21,7 +21,16 @@ cimport scipy.linalg.cython_lapack as lapack
 
 cdef FORTRAN = 1
 
+ctypedef fused sm_type_t:
+    np.float64_t
+    np.float32_t
+    np.complex64_t
+    np.complex128_t
+
+
+# ------------------------------------------------------------------------
 # Array shape validation
+
 cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, nobs=None):
     if not shape[0] == nrows:
         raise ValueError('Invalid shape for %s matrix: requires %d rows,'
@@ -33,6 +42,7 @@ cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, no
         raise ValueError('Invalid time-varying dimension for %s matrix:'
                          ' requires 1 or %d, got %d' % (name, nobs, shape[2]))
 
+
 cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs = None):
     if not shape[0] == nrows:
         raise ValueError('Invalid shape for %s vector: requires %d rows,'
@@ -40,6 +50,73 @@ cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs = None):
     if nobs is not None and not shape[1] in [1, nobs]:
         raise ValueError('Invalid time-varying dimension for %s vector:'
                          ' requires 1 or %d got %d' % (name, nobs, shape[1]))
+
+
+# ------------------------------------------------------------------------
+# Blas Wrapping
+
+cdef inline copy(int size, sm_type_t* src_arr, sm_type_t* target,
+                 int incx=1, int incy=1):
+    """
+    Parameters
+    ----------
+    size : int
+        number of elements in vectors `src_arr` and `target`
+    src_arr : sm_type_t*
+        Pointer to Array that we are copying _from_
+    target : sm_type_t*
+        Pointer to Array that we are copying _to_
+    incx : int, default 1
+        Specifies the increment for the elements of `src_arr`
+    incy : int, default 1
+        Specifies the increment for the elements of `target`
+
+    References
+    ----------
+    https://software.intel.com/en-us/mkl-developer-reference-c-cblas-copy
+    """
+    if sm_type_t is np.float32_t:
+        blas.scopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.float64_t:
+        blas.dcopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex64_t:
+        blas.ccopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex128_t:
+        blas.zcopy(&size, src_arr, &incx, target, &incy)
+
+
+cdef inline swap(int size, sm_type_t* src_arr, sm_type_t* target,
+                 int incx=1, int incy=1):
+    """
+    Parameters
+    ----------
+    size : int
+        number of elements in vectors `src_arr` and `target`
+    src_arr : sm_type_t*
+        Pointer to first of two arrays being swapped
+    target : sm_type_t*
+        Pointer to second of two arrays being swapped
+    incx : int, default 1
+        Specifies the increment for the elements of `src_arr`
+    incy : int, default 1
+        Specifies the increment for the elements of `target`
+
+    References
+    ----------
+    https://software.intel.com/en-us/mkl-developer-reference-c-cblas-swap
+    """
+
+    if sm_type_t is np.float32_t:
+        blas.sswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.float64_t:
+        blas.dswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex64_t:
+        blas.cswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex128_t:
+        blas.zswap(&size, src_arr, &incx, target, &incy)
+
+
+# ------------------------------------------------------------------------
 
 {{py:
 
@@ -136,13 +213,13 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     # Get apI = a + I (stored in apI)
     # = (a + eye)
     # For: c = 2*np.dot(np.dot(inv(a + eye), q), aHI_inv)
-    blas.{{prefix}}copy(&n2, a, &inc, &apI[0,0], &inc)
+    copy(n2, a, &apI[0, 0])
     # (for loop below adds the identity)
 
     # Get conj(a) + I (stored in capI)
     # a^H + I -> capI
     # For: aHI_inv = inv(aH + eye)
-    blas.{{prefix}}copy(&n2, a, &inc, &capI[0,0], &inc)
+    copy(n2, a, &capI[0, 0])
     # (for loop below adds the identity)
 
     # Get conj(a) - I (stored in a)
@@ -262,7 +339,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
         raise np.linalg.LinAlgError('Schur decomposition solver error.')
 
     # Get v (so that in the complex step case we can take the conjugate)
-    blas.{{prefix}}copy(&n2, &u[0,0], &inc, &v[0,0], &inc)
+    copy(n2, &u[0, 0], &v[0, 0])
     # If complex step, take the conjugate
     {{if combined_prefix == 'z'}}
     if complex_step:
@@ -286,7 +363,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     # DTRYSL Solve op(A)*X + X*op(B) = scale*C which is here:
     # r*X + X*r = scale*q
     # results overwrite q
-    blas.{{prefix}}copy(&n2, a, &inc, &apI[0,0], &inc)
+    copy(n2, a, &apI[0, 0])
     {{if combined_prefix == 'z'}}
     if complex_step:
         for i in range(n):
@@ -329,7 +406,6 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
     """
     # Constants
     cdef:
-        int inc = 1
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
@@ -397,14 +473,14 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
     dim2[0] = k_endog; dim2[1] = k_endog_order1;
     autocovariances = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-    blas.{{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_variance[0,0], &inc)   # \Sigma_s
-    blas.{{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &backward_variance[0,0], &inc)  # \Sigma_s^*,  s = 0, ..., p
-    blas.{{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &autocovariances[0,0], &inc)  # \Gamma_s
+    copy(k_endog2, &error_variance[0, 0], &forward_variance[0, 0])   # \Sigma_s
+    copy(k_endog2, &error_variance[0, 0], &backward_variance[0, 0])  # \Sigma_s^*,  s = 0, ..., p
+    copy(k_endog2, &error_variance[0, 0], &autocovariances[0, 0])  # \Gamma_s
 
     # error_variance_factor = linalg.cholesky(error_variance, lower=True)
-    blas.{{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_factors[0,0], &inc)
+    copy(k_endog2, &error_variance[0, 0], &forward_factors[0,0])
     lapack.{{prefix}}potrf("L", &k_endog, &forward_factors[0,0], &k_endog, &info)
-    blas.{{prefix}}copy(&k_endog2, &forward_factors[0,0], &inc, &backward_factors[0,0], &inc)
+    copy(k_endog2, &forward_factors[0, 0], &backward_factors[0, 0])
 
     # We fill in the entries as follows:
     # [1,1]
@@ -438,7 +514,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         #         lower=True, trans='T').T
         # )
         for k in range(k_endog):
-            blas.{{prefix}}copy(&k_endog, &partial_autocorrelations[k,s*k_endog], &k_endog, &tmp[0, k], &inc)
+            copy(k_endog, &partial_autocorrelations[k, s*k_endog], &tmp[0, k], k_endog)
         lapack.{{prefix}}trtrs("L", "T", "N", &k_endog, &k_endog, &backward_factors[0,0], &k_endog,
                                                            &tmp[0, 0], &k_endog, &info)
         # {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
@@ -449,7 +525,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
           &alpha, &forward_factors[0,0], &k_endog,
                   &tmp[0, 0], &k_endog)
         for k in range(k_endog):
-            blas.{{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &forwards[s*k_endog2 + k*k_endog], &inc)
+            copy(k_endog, &tmp[k, 0], &forwards[s*k_endog2 + k*k_endog], k_endog)
 
         # P' L^{-1} = x
         # x L = P'
@@ -460,7 +536,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         #         forward_factors, partial_autocorrelations[:, s*k_endog:(s+1)*k_endog],
         #         lower=True, trans='T').T
         # )
-        blas.{{prefix}}copy(&k_endog2, &partial_autocorrelations[0, s*k_endog], &inc, &tmp[0, 0], &inc)
+        copy(k_endog2, &partial_autocorrelations[0, s*k_endog], &tmp[0, 0])
         lapack.{{prefix}}trtrs("L", "T", "N", &k_endog, &k_endog, &forward_factors[0, 0], &k_endog,
                                                            &tmp[0, 0], &k_endog, &info)
         # {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
@@ -471,7 +547,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
           &alpha, &backward_factors[0,0], &k_endog,
                   &tmp[0, 0], &k_endog)
         for k in range(k_endog):
-            blas.{{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &backwards[s*k_endog2 + k*k_endog], &inc)
+            copy(k_endog, &tmp[k, 0], &backwards[s*k_endog2 + k*k_endog], k_endog)
 
         # Update the variance
         # Note: if s >= 1, this will be further updated in the for loop
@@ -484,7 +560,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
                   &forwards[s * k_endog2], &k_endog,
           &beta, &tmp[0, 0], &k_endog)
         # autocovariances[:, (s+1)*k_endog:(s+2)*k_endog] = tmp.copy().T
-        blas.{{prefix}}copy(&k_endog2, &tmp[0, 0], &inc, &autocovariances[0, (s+1)*k_endog], &inc)
+        copy(k_endog2, &tmp[0, 0], &autocovariances[0, (s+1)*k_endog])
 
         # Create the remaining k = 1, ..., s matrices,
         # only has an effect if s >= 1
@@ -496,7 +572,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
             #         prev_backwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
             #     )
             # )
-            blas.{{prefix}}copy(&k_endog2, &prev_forwards[k * k_endog2], &inc, &forwards[k * k_endog2], &inc)
+            copy(k_endog2, &prev_forwards[k * k_endog2], &forwards[k * k_endog2])
             blas.{{prefix}}gemm("N", "N", &k_endog, &k_endog, &k_endog,
               &gamma, &forwards[s * k_endog2], &k_endog,
                       &prev_backwards[(s - k - 1) * k_endog2], &k_endog,
@@ -509,7 +585,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
             #         prev_forwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
             #     )
             # )
-            blas.{{prefix}}copy(&k_endog2, &prev_backwards[k * k_endog2], &inc, &backwards[k * k_endog2], &inc)
+            copy(k_endog2, &prev_backwards[k * k_endog2], &backwards[k * k_endog2])
             blas.{{prefix}}gemm("N", "N", &k_endog, &k_endog, &k_endog,
               &gamma, &backwards[s * k_endog2], &k_endog,
                       &prev_forwards[(s - k - 1) * k_endog2], &k_endog,
@@ -556,9 +632,9 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         # Cholesky factors
         # forward_factors = linalg.cholesky(forward_variance, lower=True)
         # backward_factors =  linalg.cholesky(backward_variance, lower=True)
-        blas.{{prefix}}copy(&k_endog2, &forward_variance[0,0], &inc, &forward_factors[0,0], &inc)
+        copy(k_endog2, &forward_variance[0, 0], &forward_factors[0, 0])
         lapack.{{prefix}}potrf("L", &k_endog, &forward_factors[0,0], &k_endog, &info)
-        blas.{{prefix}}copy(&k_endog2, &backward_variance[0,0], &inc, &backward_factors[0,0], &inc)
+        copy(k_endog2, &backward_variance[0, 0], &backward_factors[0, 0])
         lapack.{{prefix}}potrf("L", &k_endog, &backward_factors[0,0], &k_endog, &info)
 
 
@@ -582,7 +658,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         lapack.{{prefix}}potrf("U", &k_endog, &initial_variance[0,0], &k_endog, &info)
         # transformed_variance_factor = np.linalg.cholesky(variance)
         # M'
-        blas.{{prefix}}copy(&k_endog2, &forward_variance[0,0], &inc, &tmp[0,0], &inc)
+        copy(k_endog2, &forward_variance[0, 0], &tmp[0, 0])
         lapack.{{prefix}}potrf("U", &k_endog, &tmp[0,0], &k_endog, &info)
         # {{prefix}}potri("L", &k_endog, &tmp[0,0], &k_endog, &info)
 
@@ -614,18 +690,18 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
             # (TF)' = T' x'
 
             # Get TF
-            blas.{{prefix}}copy(&k_endog2, &forwards[s * k_endog2], &inc, &tmp2[0,0], &inc)
+            copy(k_endog2, &forwards[s * k_endog2], &tmp2[0, 0])
             blas.{{prefix}}trmm("L", "U", "T", "N", &k_endog, &k_endog,
               &alpha, &initial_variance[0, 0], &k_endog,
                       &tmp2[0, 0], &k_endog)
             for k in range(k_endog):
-                blas.{{prefix}}copy(&k_endog, &tmp2[k,0], &k_endog, &tmp[0, k], &inc)
+                copy(k_endog, &tmp2[k, 0], &tmp[0, k], k_endog)
             # Get x'
             lapack.{{prefix}}trtrs("U", "N", "N", &k_endog, &k_endog, &initial_variance[0,0], &k_endog,
                                                                &tmp[0, 0], &k_endog, &info)
             # Get x
             for k in range(k_endog):
-                blas.{{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &forwards[s * k_endog2 + k*k_endog], &inc)
+                copy(k_endog, &tmp[k, 0], &forwards[s * k_endog2 + k*k_endog], k_endog)
 
 
     if order % 2 == 0:
@@ -643,7 +719,6 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
     """
     # Constants
     cdef:
-        int inc = 1
         {{cython_type}} alpha = 1.0
         int k_endog2 = k_endog**2
         int info, i
@@ -662,14 +737,14 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
 
     eye = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}))
     for i in range(order):
-        blas.{{prefix}}copy(&k_endog2, &eye[0, 0], &inc, &tmp[0, 0], &inc)
+        copy(k_endog2, &eye[0, 0], &tmp[0, 0])
         blas.{{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
           &alpha, &unconstrained[0, i*k_endog], &k_endog,
                   &unconstrained[0, i*k_endog], &k_endog,
           &alpha, &tmp[0, 0], &k_endog)
         lapack.{{prefix}}potrf("L", &k_endog, &tmp[0, 0], &k_endog, &info)
 
-        blas.{{prefix}}copy(&k_endog2, &unconstrained[0, i*k_endog], &inc, &constrained[0, i*k_endog], &inc)
+        copy(k_endog2, &unconstrained[0, i*k_endog], &constrained[0, i*k_endog])
         # constrained.append(linalg.solve_triangular(B, A, lower=lower))
         lapack.{{prefix}}trtrs("L", "N", "N", &k_endog, &k_endog, &tmp[0, 0], &k_endog,
                                                            &constrained[0, i*k_endog], &k_endog, &info)
@@ -768,7 +843,7 @@ cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int
     k = nobs-1
     for i in range(n-1,-1,-1):
         if not missing[i]:
-            blas.{{prefix}}swap(&m, &a[i], &n, &a[k], &n)
+            swap(m, &a[i], &a[k], n, n)
             k = k - 1
 
 
@@ -779,7 +854,7 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs, inc = 1
+    cdef int i, k, nobs
 
     nobs = m
     # Construct the non-missing index
@@ -790,8 +865,9 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
     k = nobs-1
     for i in range(m-1,-1,-1):
         if not missing[i]:
-            blas.{{prefix}}swap(&n, &a[i*n], &inc, &a[k*n], &inc)
+            swap(n, &a[i*n], &a[k*n])
             k = k - 1
+
 
 cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *:
     cdef int n, m, T, t
@@ -857,7 +933,7 @@ cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} 
     missing is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs, inc = 1
+    cdef int i, j, nobs
 
     nobs = n
     # Construct the non-missing index
@@ -866,7 +942,7 @@ cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&nobs, &a[i*n], &inc, &b[i*n], &inc)
+        copy(nobs, &a[i*n], &b[i*n])
 
 
 cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
@@ -886,7 +962,7 @@ cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+        copy(m, &a[i], &b[i], n, n)
 
 
 cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
@@ -897,7 +973,7 @@ cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, 
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs, inc = 1
+    cdef int i, j, nobs
 
     nobs = m
     # Construct the non-missing index
@@ -906,7 +982,7 @@ cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+        copy(n, &a[i*n], &b[i*n])
 
 
 cpdef int {{prefix}}copy_missing_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] missing, int missing_rows, int missing_cols, int diagonal) except *:
@@ -982,8 +1058,6 @@ cdef int _{{prefix}}copy_index_submatrix({{cython_type}} * a, {{cython_type}} * 
     index is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs, inc = 1
-
     _{{prefix}}copy_index_rows(a, b, index, n, n)
     _{{prefix}}copy_index_cols(a, b, index, n, n)
 
@@ -996,12 +1070,12 @@ cdef int _{{prefix}}copy_index_rows({{cython_type}} * a, {{cython_type}} * b, in
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i
 
     # Perform replacement
     for i in range(n):
         if index[i]:
-            blas.{{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+            copy(m, &a[i], &b[i], n, n)
 
 
 cdef int _{{prefix}}copy_index_cols({{cython_type}} * a, {{cython_type}} * b, int * index, int n, int m):
@@ -1012,12 +1086,12 @@ cdef int _{{prefix}}copy_index_cols({{cython_type}} * a, {{cython_type}} * b, in
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs, inc = 1
+    cdef int i, j, k, nobs
 
     # Perform replacement
     for i in range(m):
         if index[i]:
-            blas.{{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+            copy(n, &a[i*n], &b[i*n])
 
 
 cpdef int {{prefix}}copy_index_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] index, int index_rows, int index_cols, int diagonal) except *:
@@ -1080,22 +1154,22 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
     # (i.e k_posdof == 0)
     if k_posdef > 0:
 
-        # #### Calculate selected state covariance matrix  
+        # #### Calculate selected state covariance matrix 
         # $Q_t^* = R_t Q_t R_t'$
         # 
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
         # matrix (see e.g. Durbin and Koopman p. 43)
 
-        # `tmp0` array used here, dimension $(m \times r)$  
+        # `tmp0` array used here, dimension $(m \times r)$ 
 
-        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $\\#_0 = 1.0 * R_t Q_t$ 
         # $(m \times r) = (m \times r) (r \times r)$
         blas.{{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
               &alpha, selection, &k_states_total,
                       cov, &k_posdef,
               &beta, tmp, &k_states)
-        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $Q_t^* = 1.0 * \\#_0 R_t'$ 
         # $(m \times m) = (m \times r) (m \times r)'$
         blas.{{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
               &alpha, tmp, &k_states,
