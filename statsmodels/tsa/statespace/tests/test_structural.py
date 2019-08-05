@@ -557,8 +557,8 @@ def test_append_results():
 
     assert_equal(res1.specification, res3.specification)
 
-    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
-                 'cov_params_default']:
+    assert_allclose(res3.cov_params_default, res2.cov_params_default)
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn']:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
 
     for attr in [
@@ -632,8 +632,8 @@ def test_apply_results():
 
     assert_equal(res1.specification, res3.specification)
 
-    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn',
-                 'cov_params_default']:
+    assert_allclose(res3.cov_params_default, res2.cov_params_default)
+    for attr in ['nobs', 'llf', 'llf_obs', 'loglikelihood_burn']:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
 
     for attr in [
