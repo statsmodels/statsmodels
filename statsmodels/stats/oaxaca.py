@@ -4,12 +4,17 @@
 """
 Author: Austin Adams
 
-This Class implements Oaxaca-Blinder Decomposition:
+This class implements Oaxaca-Blinder Decomposition. It returns
+a OaxacaResults Class:
 
+OaxacaBlinder:
 Two-Fold/Pooled (two_fold)
 Three-Fold (three_fold)
 
-A Oaxaca-Blinder is a statistical method that is used to explain
+OaxacaResults:
+Table Summary (summary)
+
+Oaxaca-Blinder is a statistical method that is used to explain
 the differences between two mean values. The idea is to show
 from two mean values what can be explained by the data and
 what cannot by using OLS regression frameworks.
@@ -42,9 +47,10 @@ Estimates," The Journal of Human Resources, 1973.
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 import numpy as np
+from textwrap import dedent
 
 
-class Oaxaca(object):
+class OaxacaBlinder(object):
     """
     Class to perform Oaxaca-Blinder Decomposition.
 
@@ -74,8 +80,6 @@ class Oaxaca(object):
     cov_kwdslist or None, optional
         See linear_model.RegressionResults.get_robustcov_results for a
         description required keywords for alternative covariance estimators
-    suppress: bool, optional
-        If True, it will suppress the print of the function. False is default.
 
     Attributes
     ----------
@@ -84,14 +88,18 @@ class Oaxaca(object):
     Methods
     --------
     three_fold()
-        Returns the three-fold decomposition of Oaxaca-Blinder
+        Returns the three-fold decomposition of Oaxaca-Blinder Results
+        instance
     two_fold()
         Returns the two-fold decomposition of the Oaxaca-Blinder
+        Results instance
 
     Notes
     -----
     Please check if your data includes at constant. This will still run, but
     will return incorrect values if set incorrectly.
+
+    Be aware that Python indexes starting at zero.
 
     You can access the models by using their code and the . syntax.
     _t_model for the total model, _f_model for the first model,
@@ -101,36 +109,33 @@ class Oaxaca(object):
     --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> import Oaxaca
     >>> data = sm.datasets.ccards.load()
 
     '3' is the column of which we want to explain or which indicates
     the two groups. In this case, it is if you rent.
 
-    >>> model = Oaxaca(df.endog, df.exog, 3, hasconst = False)
-    >>> model.two_fold()
-        ******************************
+    >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
+    >>> model.two_fold().summary()
+        Oaxaca-Blinder Two-fold Effects
+
         Unexplained Effect: 27.94091
         Explained Effect: 130.80954
         Gap: 158.75044
-        ******************************
-    >>> model.three_fold()
-        ******************************
+    >>> model.three_fold().summary()
+        Oaxaca-Blinder Three-fold Effects
+
         Characteristic Effect: 321.74824
         Coefficent Effect: 75.45371
         Interaction Effect: -238.45151
         Gap: 158.75044
-        ******************************
     """
 
     def __init__(self, endog, exog, bifurcate, hasconst=True,
-                 swap=True, cov_type='nonrobust', cov_kwds=None,
-                 suppress=False):
+                 swap=True, cov_type='nonrobust', cov_kwds=None):
         if str(type(exog)).find('pandas') != -1:
             bifurcate = exog.columns.get_loc(bifurcate)
             endog, exog = np.array(endog), np.array(exog)
 
-        self.suppress = suppress
         bi_col = exog[:, bifurcate]
         endog = np.column_stack((bi_col, endog))
         bi = np.unique(bi_col)
@@ -177,24 +182,9 @@ class Oaxaca(object):
         """
         Calculates the three-fold Oaxaca Blinder Decompositions
 
-        Parameters
-        ----------
-
-        None
-
         Returns
         -------
-        char_eff : float
-            This is the effect due to the group differences in
-            predictors
-        coef_eff: float
-            This is the effect due to differences of the coefficients
-            of the two groups
-        int_eff: float
-            This is the effect due to differences in both effects
-            existing at the same time between the two groups.
-        gap: float
-            This is the gap in the mean differences of the two groups.
+        A OaxacaResults class instance fitted for three-fold decomposition.
         """
 
         self.char_eff = (
@@ -205,36 +195,17 @@ class Oaxaca(object):
         self.int_eff = ((self.exog_f_mean - self.exog_s_mean)
                         @ (self._f_model.params - self._s_model.params))
 
-        if self.suppress is False:
-            print("".join(["*" for x in range(0, 30)]))
-            print(
-                "Characteristic Effect: {:.5f}\n\
-                Coefficent Effect: {:.5f}\n\
-                Interaction Effect: {:.5f}\n\
-                Gap: {:.5f}".format(self.char_eff, self.coef_eff,
-                                    self.int_eff, self.gap))
-            print("".join(["*" for x in range(0, 30)]))
-
-        return self.char_eff, self.coef_eff, self.int_eff, self.gap
+        return OaxacaResults(
+                            (self.char_eff, self.coef_eff,
+                                self.int_eff, self.gap), 3)
 
     def two_fold(self):
         """
         Calculates the two-fold or pooled Oaxaca Blinder Decompositions
 
-        Parameters
-        ----------
-
-        None
-
         Returns
         -------
-        unexplained : float
-            This is the effect that cannot be explained by the data at hand.
-            This does not mean it cannot be explained with more.
-        explained: float
-            This is the effect that can be explained using the data.
-        gap: float
-            This is the gap in the mean differences of the two groups.
+        A OaxacaResults class instance fitted for two-fold decomposition.
         """
         self.unexplained = ((self.exog_f_mean
                             @ (self._f_model.params - self.t_params))
@@ -242,13 +213,86 @@ class Oaxaca(object):
                             @ (self.t_params - self._s_model.params)))
         self.explained = (self.exog_f_mean - self.exog_s_mean) @ self.t_params
 
-        if self.suppress is False:
-            print("".join(["*" for x in range(0, 30)]))
-            print(
-                "Unexplained Effect: {:.5f}\n\
-                Explained Effect: {:.5f}\n\
-                Gap: {:.5f}".format(self.unexplained, self.explained,
-                                    self.gap))
-            print("".join(["*" for x in range(0, 30)]))
+        return OaxacaResults((self.unexplained, self.explained, self.gap), 2)
 
-        return self.unexplained, self.explained, self.gap
+
+class OaxacaResults:
+    """
+    This class summarizes the fit of the OaxacaBlinder model.
+
+    Use .summary() to get a table of the fitted values or
+    use .params to recieve a list of the values
+
+    If a two-fold model was fitted, this will return
+    unexplained effect, explained effect, and the
+    mean gap. The list will be of the following order
+    and type.
+
+    unexplained : float
+        This is the effect that cannot be explained by the data at hand.
+        This does not mean it cannot be explained with more.
+    explained: float
+        This is the effect that can be explained using the data.
+    gap: float
+        This is the gap in the mean differences of the two groups.
+
+    If a three-fold model was fitted, this will
+    return characteristic effect, coefficient effect
+    interaction effect, and the mean gap. The list will
+    be of the following order and type.
+
+    characteristic effect : float
+        This is the effect due to the group differences in
+        predictors
+    coefficient effect: float
+        This is the effect due to differences of the coefficients
+        of the two groups
+    interaction effect: float
+        This is the effect due to differences in both effects
+        existing at the same time between the two groups.
+    gap: float
+        This is the gap in the mean differences of the two groups.
+
+    Attributes
+    ---------
+    params
+        A list of all values for the fitted model in the above order
+
+    Methods
+    ----------
+    summary
+        Prints a summary table of the fitted model
+    """
+    def __init__(self, results, model_type):
+        self.params = results
+        self.model_type = model_type
+
+    def summary(self):
+        """
+        Print a summary table with the Oaxaca-Blinder effects
+        based on the fitted model
+
+        Returns
+        -------
+        None
+        """
+        if self.model_type == 2:
+            print(dedent('''\
+            Oaxaca-Blinder Two-fold Effects
+
+            Unexplained Effect: {:.5f}
+            Explained Effect: {:.5f}
+            Gap: {:.5f}'''.format(
+                                self.params[0], self.params[1],
+                                self.params[2])))
+
+        if self.model_type == 3:
+            print(dedent('''\
+            Oaxaca-Blinder Three-fold Effects
+
+            Characteristic Effect: {:.5f}
+            Coefficent Effect: {:.5f}
+            Interaction Effect: {:.5f}
+            Gap: {:.5f}'''.format(
+                            self.params[0], self.params[1],
+                            self.params[2], self.params[3])))

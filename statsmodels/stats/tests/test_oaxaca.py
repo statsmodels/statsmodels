@@ -7,7 +7,7 @@
 import numpy as np
 from statsmodels.datasets.ccard.data import load, load_pandas
 from statsmodels.tools.tools import add_constant
-from statsmodels.stats.oaxaca import Oaxaca
+from statsmodels.stats.oaxaca import OaxacaBlinder
 
 df = load()
 pandas_df = load_pandas()
@@ -19,13 +19,13 @@ pd_endog, pd_exog = pandas_df.endog, add_constant(
 class TestOaxaca(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(endog, exog, 3, suppress=True)
+        cls.model = OaxacaBlinder(endog, exog, 3, suppress=True)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
         stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -39,13 +39,13 @@ class TestOaxaca(object):
 class TestOaxacaNoSwap(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(endog, exog, 3, swap=False, suppress=True)
+        cls.model = OaxacaBlinder(endog, exog, 3, swap=False, suppress=True)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
         stata_results_pooled = np.array([-158.7504, -130.8095, -27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -59,13 +59,13 @@ class TestOaxacaNoSwap(object):
 class TestOaxacaPandas(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(pd_endog, pd_exog, 'OWNRENT', suppress=True)
+        cls.model = OaxacaBlinder(pd_endog, pd_exog, 'OWNRENT', suppress=True)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
         stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -79,7 +79,7 @@ class TestOaxacaPandas(object):
 class TestOaxacaPandasNoSwap(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(
+        cls.model = OaxacaBlinder(
             pd_endog,
             pd_exog,
             'OWNRENT',
@@ -89,8 +89,8 @@ class TestOaxacaPandasNoSwap(object):
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
         stata_results_pooled = np.array([-158.7504, -130.8095, -27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -104,13 +104,17 @@ class TestOaxacaPandasNoSwap(object):
 class TestOaxacaNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(df.endog, df.exog, 3, hasconst=False, suppress=True)
+        cls.model = OaxacaBlinder(
+                                df.endog,
+                                df.exog, 3,
+                                hasconst=False,
+                                suppress=True)
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
         stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -124,14 +128,19 @@ class TestOaxacaNoConstPassed(object):
 class TestOaxacaNoSwapNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(df.endog, df.exog,
-                           3, hasconst=False, swap=False, suppress=True)
+        cls.model = OaxacaBlinder(
+                                df.endog,
+                                df.exog,
+                                3,
+                                hasconst=False,
+                                swap=False,
+                                suppress=True)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
         stata_results_pooled = np.array([-158.7504, -130.8095, -27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -145,7 +154,7 @@ class TestOaxacaNoSwapNoConstPassed(object):
 class TestOaxacaPandasNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(
+        cls.model = OaxacaBlinder(
             pandas_df.endog,
             pandas_df.exog,
             'OWNRENT',
@@ -155,8 +164,8 @@ class TestOaxacaPandasNoConstPassed(object):
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
         stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
@@ -170,15 +179,19 @@ class TestOaxacaPandasNoConstPassed(object):
 class TestOaxacaPandasNoSwapNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = Oaxaca(pandas_df.endog, pandas_df.exog,
-                           'OWNRENT', hasconst=False,
-                           swap=False, suppress=True)
+        cls.model = OaxacaBlinder(
+                                pandas_df.endog,
+                                pandas_df.exog,
+                                'OWNRENT',
+                                hasconst=False,
+                                swap=False,
+                                suppress=True)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
         stata_results_pooled = np.array([-158.7504, -130.8095, -27.94091])
-        char, coef, inter, gap = self.model.three_fold()
-        unexp, exp, gap = self.model.two_fold()
+        char, coef, inter, gap = self.model.three_fold().params
+        unexp, exp, gap = self.model.two_fold().params
         np.testing.assert_almost_equal(gap, stata_results[0], 3)
         np.testing.assert_almost_equal(char, stata_results[1], 3)
         np.testing.assert_almost_equal(coef, stata_results[2], 3)
