@@ -486,7 +486,23 @@ class Docstring(object):
         except (TypeError, ValueError):
             # Some objects, mainly in C extensions do not support introspection
             # of the signature
-            return tuple()
+            try:
+                from numpydoc.docscrape import FunctionDoc
+                doc = FunctionDoc(self.obj)
+                if 'Signature' in doc:
+                    sig = doc['Signature'].split('(')[-1].split(')')[0]
+                    sig = sig.split(',')
+                    params = []
+                    for param in sig:
+                        if param.strip() in ('*', '/'):
+                            continue
+                        param = param.split('=')[0]
+                        params.append(param)
+                    return tuple([param.name for param in doc['Parameters']])
+            except Exception as exc:
+                print('!! numpydoc failed  on {0}!!'.format(str(self.obj)))
+                print(exc)
+                return tuple()
         params = list(sig.parameters.keys())
         out_params = params[:]
         kind = inspect.Parameter.VAR_POSITIONAL

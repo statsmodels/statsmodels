@@ -81,29 +81,14 @@ class OaxacaBlinder(object):
         See linear_model.RegressionResults.get_robustcov_results for a
         description required keywords for alternative covariance estimators
 
-    Attributes
-    ----------
-    None
-
-    Methods
-    --------
-    three_fold()
-        Returns the three-fold decomposition of Oaxaca-Blinder Results
-        instance
-    two_fold()
-        Returns the two-fold decomposition of the Oaxaca-Blinder
-        Results instance
-
     Notes
     -----
     Please check if your data includes at constant. This will still run, but
     will return incorrect values if set incorrectly.
 
-    Be aware that Python indexes starting at zero.
-
-    You can access the models by using their code and the . syntax.
-    _t_model for the total model, _f_model for the first model,
-    _s_model for the second model.
+    You can access the models by using their code as an attribute, e.g.,
+    _t_model for the total model, _f_model for the first model, _s_model for
+    the second model.
 
     Examples
     --------
@@ -116,18 +101,18 @@ class OaxacaBlinder(object):
 
     >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
     >>> model.two_fold().summary()
-        Oaxaca-Blinder Two-fold Effects
+    Oaxaca-Blinder Two-fold Effects
 
-        Unexplained Effect: 27.94091
-        Explained Effect: 130.80954
-        Gap: 158.75044
+    Unexplained Effect: 27.94091
+    Explained Effect: 130.80954
+    Gap: 158.75044
     >>> model.three_fold().summary()
-        Oaxaca-Blinder Three-fold Effects
+    Oaxaca-Blinder Three-fold Effects
 
-        Characteristic Effect: 321.74824
-        Coefficient Effect: 75.45371
-        Interaction Effect: -238.45151
-        Gap: 158.75044
+    Characteristic Effect: 321.74824
+    Coefficient Effect: 75.45371
+    Interaction Effect: -238.45151
+    Gap: 158.75044
     """
 
     def __init__(self, endog, exog, bifurcate, hasconst=True,
@@ -184,7 +169,8 @@ class OaxacaBlinder(object):
 
         Returns
         -------
-        A OaxacaResults class instance fitted for three-fold decomposition.
+        OaxacaResults
+            A results container for the three-fold decomposition.
         """
 
         self.char_eff = (
@@ -205,7 +191,8 @@ class OaxacaBlinder(object):
 
         Returns
         -------
-        A OaxacaResults class instance fitted for two-fold decomposition.
+        OaxacaResults
+            A results container for the two-fold decomposition.
         """
         self.unexplained = ((self.exog_f_mean
                             @ (self._f_model.params - self.t_params))
@@ -254,14 +241,9 @@ class OaxacaResults:
         This is the gap in the mean differences of the two groups.
 
     Attributes
-    ---------
-    params
-        A list of all values for the fitted model in the above order
-
-    Methods
     ----------
-    summary
-        Prints a summary table of the fitted model
+    params
+        A list of all values for the fitted models.
     """
     def __init__(self, results, model_type):
         self.params = results
@@ -270,29 +252,24 @@ class OaxacaResults:
     def summary(self):
         """
         Print a summary table with the Oaxaca-Blinder effects
-        based on the fitted model
-
-        Returns
-        -------
-        None
         """
         if self.model_type == 2:
-            print(dedent('''\
+            print(dedent("""\
             Oaxaca-Blinder Two-fold Effects
 
             Unexplained Effect: {:.5f}
             Explained Effect: {:.5f}
-            Gap: {:.5f}'''.format(
+            Gap: {:.5f}""".format(
                                 self.params[0], self.params[1],
                                 self.params[2])))
 
         if self.model_type == 3:
-            print(dedent('''\
+            print(dedent("""\
             Oaxaca-Blinder Three-fold Effects
 
             Characteristic Effect: {:.5f}
             Coefficient Effect: {:.5f}
             Interaction Effect: {:.5f}
-            Gap: {:.5f}'''.format(
+            Gap: {:.5f}""".format(
                             self.params[0], self.params[1],
                             self.params[2], self.params[3])))

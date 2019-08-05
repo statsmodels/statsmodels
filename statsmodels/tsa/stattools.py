@@ -500,7 +500,7 @@ def q_stat(x, nobs, type=None):
 def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
         missing='none'):
     """
-    Calcualte the autocorrelation function.
+    Calculate the autocorrelation function.
 
     Parameters
     ----------
@@ -973,7 +973,7 @@ def periodogram(x):
     Returns
     -------
     ndarray
-        The periodgram defined as 1./len(x) * np.abs(np.fft.fft(x))**2.
+        The periodogram defined as 1./len(x) * np.abs(np.fft.fft(x))**2.
 
     References
     ----------

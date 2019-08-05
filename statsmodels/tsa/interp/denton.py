@@ -101,15 +101,18 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         The higher frequency benchmark.  A 1d or 2d data series in columns.
         If 2d, then M series are assumed.
     freq : str {"aq","qm", "other"}
-        "aq" - Benchmarking an annual series to quarterly.
-        "mq" - Benchmarking a quarterly series to monthly.
-        "other" - Custom stride.  A kwarg, k, must be supplied.
+        The frequency to use in the conversion.
+
+        * "aq" - Benchmarking an annual series to quarterly.
+        * "mq" - Benchmarking a quarterly series to monthly.
+        * "other" - Custom stride.  A kwarg, k, must be supplied.
     **kwargs
         Additional keyword argument. For example:
-        k : int
-            The number of high-frequency observations that sum to make an
-            aggregate low-frequency observation. `k` is used with
-            `freq` == "other".
+
+        * k, an int, the number of high-frequency observations that sum to make
+          an aggregate low-frequency observation. `k` is used with
+          `freq` == "other".
+
     Returns
     -------
     transformed : array

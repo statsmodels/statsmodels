@@ -73,6 +73,7 @@ Rolling %(model)s regression
 See Also
 --------
 statsmodels.regression.linear_model.%(model)s
+    %(model)s estimation and parameter testing.
 
 Notes
 -----
