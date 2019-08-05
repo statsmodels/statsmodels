@@ -253,7 +253,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Make sure the appropriate output has been stored in the filter
         if self.kfilter.conserve_memory & MEMORY_NO_PREDICTED:
-            raise ValueError('Cannot perform smoothing without all prediced states')
+            raise ValueError('Cannot perform smoothing without all predicted states')
 
         if self.kfilter.conserve_memory & MEMORY_NO_GAIN:
             raise ValueError('Cannot perform smoothing without all Kalman gains')
