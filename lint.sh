@@ -87,6 +87,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/multicomp.py \
         statsmodels/stats/regularized_covariance.py \
         statsmodels/stats/stattools.py \
+        statsmodels/stats/oaxaca.py \
         statsmodels/stats/tests/results/ \
         statsmodels/stats/tests/test_anova_rm.py \
         statsmodels/stats/tests/test_correlation.py \
@@ -97,6 +98,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_multi.py \
         statsmodels/stats/tests/test_qsturng.py \
         statsmodels/stats/tests/test_regularized_covariance.py \
+        statsmodels/stats/tests/test_oaxaca.py \
         statsmodels/tests/ \
         statsmodels/tools/decorators.py \
         statsmodels/tools/linalg.py \
