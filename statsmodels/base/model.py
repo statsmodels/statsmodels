@@ -277,7 +277,7 @@ class LikelihoodModel(Model):
         """
         Fisher information matrix of model.
 
-        Returns -1 * Hessian of the log-loglikelihood evaluated at params.
+        Returns -1 * Hessian of the log-likelihood evaluated at params.
 
         Parameters
         ----------

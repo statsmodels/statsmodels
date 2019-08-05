@@ -142,20 +142,20 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     regression : {'c','ct','ctt','nc'}
         Constant and trend order to include in regression.
 
-        * 'c' : constant only (default)
-        * 'ct' : constant and trend
-        * 'ctt' : constant, and linear and quadratic trend
-        * 'nc' : no constant, no trend
+        * 'c' : constant only (default).
+        * 'ct' : constant and trend.
+        * 'ctt' : constant, and linear and quadratic trend.
+        * 'nc' : no constant, no trend.
 
     autolag : {'AIC', 'BIC', 't-stat', None}
         Method to use when automatically determining the lag.
 
-        * if None, then maxlag lags are used
+        * if None, then maxlag lags are used.
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-          to minimize the corresponding information criterion
+          to minimize the corresponding information criterion.
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant
-          using a 5%-sized test
+          using a 5%-sized test.
     store : bool
         If True, then a result instance is returned additionally to
         the adf statistic. Default is False.
@@ -196,15 +196,15 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     References
     ----------
-    .. [*] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
-    .. [*] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
+    .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    .. [*] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+    .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
         unit-root and cointegration tests.  `Journal of Business and Economic
         Statistics` 12, 167-76.
 
-    .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+    .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
 
@@ -323,16 +323,16 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
 def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
     """
-    Autocovariance for 1D
+    Estimate autocovariances.
 
     Parameters
     ----------
-    x : array
+    x : array_like
         Time series data. Must be 1d.
     unbiased : bool
-        If True, then denominators is n-k, otherwise n
+        If True, then denominators is n-k, otherwise n.
     demean : bool
-        If True, then subtract the mean x from each element of x
+        If True, then subtract the mean x from each element of x.
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
@@ -348,12 +348,12 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
 
     Returns
     -------
-    acovf : array
-        autocovariance function
+    ndarray
+        The estimated autocovariances.
 
     References
     -----------
-    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
@@ -460,24 +460,26 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
 
 def q_stat(x, nobs, type=None):
     """
-    Return's Ljung-Box Q Statistic
+    Compute Ljung-Box Q Statistic.
 
+    Parameters
+    ----------
     x : array_like
         Array of autocorrelation coefficients.  Can be obtained from acf.
-    nobs : int
+    nobs : int, optional
         Number of observations in the entire sample (ie., not just the length
         of the autocorrelation function results.
 
     Returns
     -------
-    q-stat : array
-        Ljung-Box Q-statistic for autocorrelation parameters
-    p-value : array
-        P-value of the Q statistic
+    q-stat : ndarray
+        Ljung-Box Q-statistic for autocorrelation parameters.
+    p-value : ndarray
+        P-value of the Q statistic.
 
     Notes
     -----
-    Written to be used with acf.
+    Designed to be used with acf.
     """
     x = array_like(x, 'x')
     nobs = int_like(nobs, 'nobs')
@@ -498,14 +500,14 @@ def q_stat(x, nobs, type=None):
 def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
         missing='none'):
     """
-    Autocorrelation function for 1d arrays.
+    Calcualte the autocorrelation function.
 
     Parameters
     ----------
-    x : array
-       Time series data
+    x : array_like
+       The time series data.
     unbiased : bool
-       If True, then denominators for autocovariance are n-k, otherwise n
+       If True, then denominators for autocovariance are n-k, otherwise n.
     nlags : int, optional
         Number of lags to return autocorrelation for.
     qstat : bool, optional
@@ -517,20 +519,20 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett\'s formula.
+        Bartlett's formula.
     missing : str, optional
         A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
         are to be treated.
 
     Returns
     -------
-    acf : array
-        autocorrelation function
-    confint : array, optional
+    acf : ndarray
+        The autocorrelation function.
+    confint : ndarray, optional
         Confidence intervals for the ACF. Returned if alpha is not None.
-    qstat : array, optional
+    qstat : ndarray, optional
         The Ljung-Box Q-Statistic.  Returned if q_stat is True.
-    pvalues : array, optional
+    pvalues : ndarray, optional
         The p-values associated with the Q-statistics.  Returned if q_stat is
         True.
 
@@ -549,10 +551,9 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
 
     References
     ----------
-    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
-
     """
     unbiased = bool_like(unbiased, 'unbiased')
     nlags = int_like(nlags, 'nlags')
@@ -595,33 +596,37 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
 
 
 def pacf_yw(x, nlags=40, method='unbiased'):
-    '''Partial autocorrelation estimated with non-recursive yule_walker
+    """
+    Partial autocorrelation estimated with non-recursive yule_walker.
 
     Parameters
     ----------
-    x : 1d array
-        observations of time series for which pacf is calculated
-    nlags : int
-        largest lag for which pacf is returned
-    method : 'unbiased' (default) or 'mle'
-        method for the autocovariance calculations in yule walker
+    x : array_like
+        The observations of time series for which pacf is calculated.
+    nlags : int, optional
+        The largest lag for which pacf is returned.
+    method : {'unbiased', 'mle'}
+        The method for the autocovariance calculations in yule walker.
 
     Returns
     -------
-    pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
+    ndarray
+        The partial autocorrelations, maxlag+1 elements.
 
     See Also
     --------
     statsmodels.tsa.stattools.pacf
-    statsmodels.tsa.stattools.pacf_burg
+        Partial autocorrelation estimation.
     statsmodels.tsa.stattools.pacf_ols
+        Partial autocorrelation estimation using OLS.
+    statsmodels.tsa.stattools.pacf_burg
+        Partial autocorrelation estimation using Burg's method.
 
     Notes
     -----
     This solves yule_walker for each desired lag and contains
     currently duplicate calculations.
-    '''
+    """
     x = array_like(x, 'x')
     nlags = int_like(nlags, 'nlags')
     method = string_like(method, 'method', options=('unbiased', 'mle'))
@@ -634,7 +639,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
 
 def pacf_burg(x, nlags=None, demean=True):
     """
-    Burg's partial autocorrelation estimator.
+    Calculate Burg's partial autocorrelation estimator.
 
     Parameters
     ----------
@@ -666,7 +671,7 @@ def pacf_burg(x, nlags=None, demean=True):
 
     References
     ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+    .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
     x = array_like(x, 'x')
@@ -700,12 +705,12 @@ def pacf_burg(x, nlags=None, demean=True):
 
 def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
     """
-    Calculate partial autocorrelations via OLS
+    Calculate partial autocorrelations via OLS.
 
     Parameters
     ----------
-    x : 1d array
-        observations of time series for which pacf is calculated
+    x : array_like
+        Observations of time series for which pacf is calculated.
     nlags : int
         Number of lags for which pacf is returned.  Lag 0 is not returned.
     efficient : bool, optional
@@ -713,13 +718,22 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
         each partial autocorrelation. If not, uses the same number of
         observations to compute all pacf values.
     unbiased : bool, optional
-        Adjust each partial autocorrelation by n / (n - lag)
+        Adjust each partial autocorrelation by n / (n - lag).
 
     Returns
     -------
-    pacf : 1d array
-        partial autocorrelations, (maxlag,) array corresponding to lags
-        0, 1, ..., maxlag
+    ndarray
+        The partial autocorrelations, (maxlag,) array corresponding to lags
+        0, 1, ..., maxlag.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation estimation.
+    statsmodels.tsa.stattools.pacf_yw
+         Partial autocorrelation estimation using Yule-Walker.
+    statsmodels.tsa.stattools.pacf_burg
+        Partial autocorrelation estimation using Burg's method.
 
     Notes
     -----
@@ -736,12 +750,6 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
 
     OLS estimation of the pacf does not guarantee that all pacf values are
     between -1 and 1.
-
-    See Also
-    --------
-    statsmodels.tsa.stattools.pacf
-    statsmodels.tsa.stattools.pacf_yw
-    statsmodels.tsa.stattools.pacf_burg
 
     References
     ----------
@@ -779,48 +787,55 @@ def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     """
-    Partial autocorrelation estimated
+    Partial autocorrelation estimate.
 
     Parameters
     ----------
-    x : 1d array
-        observations of time series for which pacf is calculated
-    nlags : int
-        largest lag for which the pacf is returned
-    method : str
-        specifies which method for the calculations to use:
+    x : array_like
+        Observations of time series for which pacf is calculated.
+    nlags : int, optional
+        The largest lag for which the pacf is returned.
+    method : str, optional
+        Specifies which method for the calculations to use.
 
         - 'yw' or 'ywunbiased' : Yule-Walker with bias correction in
           denominator for acovf. Default.
-        - 'ywm' or 'ywmle' : Yule-Walker without bias correction
-        - 'ols' : regression of time series on lags of it and on constant
+        - 'ywm' or 'ywmle' : Yule-Walker without bias correction.
+        - 'ols' : regression of time series on lags of it and on constant.
         - 'ols-inefficient' : regression of time series on lags using a single
-          common sample to estimate all pacf coefficients
+          common sample to estimate all pacf coefficients.
         - 'ols-unbiased' : regression of time series on lags with a bias
-          adjustment
-        - 'ld' or 'ldunbiased' : Levinson-Durbin recursion with bias correction
+          adjustment.
+        - 'ld' or 'ldunbiased' : Levinson-Durbin recursion with bias
+          correction.
         - 'ldb' or 'ldbiased' : Levinson-Durbin recursion without bias
-          correction
+          correction.
 
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        1/sqrt(len(x))
+        1/sqrt(len(x)).
 
     Returns
     -------
-    pacf : 1d array
-        partial autocorrelations, nlags elements, including lag zero
-    confint : array, optional
+    pacf : ndarray
+        Partial autocorrelations, nlags elements, including lag zero.
+    confint : ndarray, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
     See Also
     --------
     statsmodels.tsa.stattools.acf
+        Estimate the autocorrelation function.
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation estimation.
     statsmodels.tsa.stattools.pacf_yw
-    statsmodels.tsa.stattools.pacf_burg
+         Partial autocorrelation estimation using Yule-Walker.
     statsmodels.tsa.stattools.pacf_ols
+        Partial autocorrelation estimation using OLS.
+    statsmodels.tsa.stattools.pacf_burg
+        Partial autocorrelation estimation using Burg's method.
 
     Notes
     -----
@@ -869,25 +884,28 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
 
 
 def ccovf(x, y, unbiased=True, demean=True):
-    ''' crosscovariance for 1D
+    """
+    Calculate the crosscovariance between two series.
 
     Parameters
     ----------
-    x, y : arrays
-       time series data
-    unbiased : bool
-       if True, then denominators is n-k, otherwise n
+    x, y : array_like
+       The time series data to use in the calculation.
+    unbiased : bool, optional
+       If True, then denominators for autocovariance is n-k, otherwise n.
+    demean : bool, optional
+        Flag indicating whether to demean x and y.
 
     Returns
     -------
-    ccovf : array
-        autocovariance function
+    ndarray
+        The estimated crosscovariance function.
 
     Notes
     -----
     This uses np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
-    '''
+    """
     x = array_like(x, 'x')
     y = array_like(y, 'y')
     unbiased = bool_like(unbiased, 'unbiased')
@@ -909,19 +927,20 @@ def ccovf(x, y, unbiased=True, demean=True):
 
 
 def ccf(x, y, unbiased=True):
-    '''cross-correlation function for 1d
+    """
+    The cross-correlation function.
 
     Parameters
     ----------
-    x, y : arrays
-       time series data
+    x, y : array_like
+       The time series data to use in the calculation.
     unbiased : bool
-       if True, then denominators for autocovariance is n-k, otherwise n
+       If True, then denominators for autocovariance is n-k, otherwise n.
 
     Returns
     -------
-    ccf : array
-        cross-correlation function of x and y
+    ndarray
+        The cross-correlation function of x and y.
 
     Notes
     -----
@@ -930,8 +949,7 @@ def ccf(x, y, unbiased=True):
 
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimator.
-
-    '''
+    """
     x = array_like(x, 'x')
     y = array_like(y, 'y')
     unbiased = bool_like(unbiased, 'unbiased')
@@ -942,7 +960,7 @@ def ccf(x, y, unbiased=True):
 
 def periodogram(x):
     """
-    Returns the periodogram for the natural frequency of X
+    Compute the periodogram for the natural frequency of x.
 
     .. deprecated::
        Use scipy.signal.periodogram instead
@@ -954,12 +972,12 @@ def periodogram(x):
 
     Returns
     -------
-    pgram : array
-        1./len(x) * np.abs(np.fft.fft(x))**2
+    ndarray
+        The periodgram defined as 1./len(x) * np.abs(np.fft.fft(x))**2.
 
     References
     ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+    .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
     # TODO: Remove after 0.11
@@ -977,33 +995,34 @@ def periodogram(x):
 # TODO: check what to return, for testing and trying out returns everything
 def levinson_durbin(s, nlags=10, isacov=False):
     """
-    Levinson-Durbin recursion for autoregressive processes
+    Levinson-Durbin recursion for autoregressive processes.
 
     Parameters
     ----------
     s : array_like
         If isacov is False, then this is the time series. If iasacov is true
-        then this is interpreted as autocovariance starting with lag 0
-    nlags : int
-        largest lag to include in recursion or order of the autoregressive
-        process
-    isacov : bool
-        flag to indicate whether the first argument, s, contains the
+        then this is interpreted as autocovariance starting with lag 0.
+    nlags : int, optional
+        The largest lag to include in recursion or order of the autoregressive
+        process.
+    isacov : bool, optional
+        Flag indicating whether the first argument, s, contains the
         autocovariances or the data series.
 
     Returns
     -------
     sigma_v : float
-        estimate of the error variance ?
+        The estimate of the error variance.
     arcoefs : ndarray
-        estimate of the autoregressive coefficients for a model including nlags
+        The estimate of the autoregressive coefficients for a model including
+        nlags.
     pacf : ndarray
-        partial autocorrelation function
+        The partial autocorrelation function.
     sigma : ndarray
-        entire sigma array from intermediate result, last value is sigma_v
+        The entire sigma array from intermediate result, last value is sigma_v.
     phi : ndarray
-        entire phi array from intermediate result, last column contains
-        autoregressive coefficients for AR(nlags)
+        The entire phi array from intermediate result, last column contains
+        autoregressive coefficients for AR(nlags).
 
     Notes
     -----
@@ -1046,27 +1065,27 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
 def levinson_durbin_pacf(pacf, nlags=None):
     """
-    Levinson-Durbin algorithm that returns the acf and ar coefficients
+    Levinson-Durbin algorithm that returns the acf and ar coefficients.
 
     Parameters
     ----------
     pacf : array_like
-        Partial autocorrelation array for lags 0, 1, ... p
+        Partial autocorrelation array for lags 0, 1, ... p.
     nlags : int, optional
         Number of lags in the AR model.  If omitted, returns coefficients from
-        an AR(p) and the first p autocorrelations
+        an AR(p) and the first p autocorrelations.
 
     Returns
     -------
     arcoefs : ndarray
-        AR coefficients computed from the partial autocorrelations
+        AR coefficients computed from the partial autocorrelations.
     acf : ndarray
-        acf computed from the partial autocorrelations. Array returned contains
-        the autocorrelations corresponding to lags 0, 1, ..., p
+        The acf computed from the partial autocorrelations. Array returned
+        contains the autocorrelations corresponding to lags 0, 1, ..., p.
 
     References
     ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
+    .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
     pacf = array_like(pacf, 'pacf')
@@ -1098,29 +1117,29 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
-    """four tests for granger non causality of 2 timeseries
+    """
+    Four tests for granger non causality of 2 time series.
 
-    all four tests give similar results
-    `params_ftest` and `ssr_ftest` are equivalent based on F test which is
-    identical to lmtest:grangertest in R
+    All four tests give similar results. `params_ftest` and `ssr_ftest` are
+    equivalent based on F test which is identical to lmtest:grangertest in R.
 
     Parameters
     ----------
-    x : array, 2d
-        data for test whether the time series in the second column Granger
-        causes the time series in the first column
-    maxlag : int, iterable[int]
+    x : array_like
+        The data for test whether the time series in the second column Granger
+        causes the time series in the first column.
+    maxlag : {int, Iterable[int]}
         If an integer, computes the test for all lags up to maxlag. If an
         iterable, computes the tests only for the lags in maxlag.
     addconst : bool
-        Include a constant in the model
+        Include a constant in the model.
     verbose : bool
-        print results if true
+        Print results.
 
     Returns
     -------
-    results : dictionary
-        all test results, dictionary keys are the number of lags. For each
+    dict
+        All test results, dictionary keys are the number of lags. For each
         lag the values are a tuple, with the first element a dictionary with
         test statistic, pvalues, degrees of freedom, the second element are
         the OLS estimation results for the restricted model, the unrestricted
@@ -1145,6 +1164,12 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     'ssr_chi2test', 'lrtest' are based on chi-square distribution
 
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Granger_causality
+
+    .. [2] Greene: Econometric Analysis
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -1158,12 +1183,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     # Only lag 4
     >>> gc_res = grangercausalitytests(data, [4])
-
-    References
-    ----------
-    https://en.wikipedia.org/wiki/Granger_causality
-    Greene: Econometric Analysis
-
     """
     x = array_like(x, 'x', ndim=2)
     addconst = bool_like(addconst, 'addconst')
@@ -1262,7 +1281,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
 def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
           return_results=None):
-    """Test for no-cointegration of a univariate equation
+    """
+    Test for no-cointegration of a univariate equation.
 
     The null hypothesis is no cointegration. Variables in y0 and y1 are
     assumed to be integrated of order 1, I(1).
@@ -1277,44 +1297,42 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
     Parameters
     ----------
-    y0 : array_like, 1d
-        first element in cointegrating vector
+    y0 : array_like
+        The first element in cointegrated system. Must be 1-d.
     y1 : array_like
-        remaining elements in cointegrating vector
+        The remaining elements in cointegrated system.
     trend : str {'c', 'ct'}
-        trend term included in regression for cointegrating equation
+        The trend term included in regression for cointegrating equation.
 
-        * 'c' : constant
-        * 'ct' : constant and linear trend
-        * also available quadratic trend 'ctt', and no constant 'nc'
+        * 'c' : constant.
+        * 'ct' : constant and linear trend.
+        * also available quadratic trend 'ctt', and no constant 'nc'.
 
-    method : str
-        currently only 'aeg' for augmented Engle-Granger test is available.
-        default might change.
+    method : {'aeg'}
+        Only 'aeg' (augmented Engle-Granger) is available.
     maxlag : None or int
-        keyword for `adfuller`, largest or given number of lags
+        Argument for `adfuller`, largest or given number of lags.
     autolag : str
-        keyword for `adfuller`, lag selection criterion.
+        Argument for `adfuller`, lag selection criterion.
 
-        * if None, then maxlag lags are used without lag search
-        * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-          to minimize the corresponding information criterion
+        * If None, then maxlag lags are used without lag search.
+        * If 'AIC' (default) or 'BIC', then the number of lags is chosen
+          to minimize the corresponding information criterion.
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant
-          using a 5%-sized test
-
+          using a 5%-sized test.
     return_results : bool
-        for future compatibility, currently only tuple available.
+        For future compatibility, currently only tuple available.
         If True, then a results instance is returned. Otherwise, a tuple
-        with the test outcome is returned.
-        Set `return_results=False` to avoid future changes in return.
+        with the test outcome is returned. Set `return_results=False` to
+        avoid future changes in return.
 
     Returns
     -------
     coint_t : float
-        t-statistic of unit-root test on residuals
+        The t-statistic of unit-root test on residuals.
     pvalue : float
-        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994)
+        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994).
     crit_value : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels based on regression curve. This depends on the number of
@@ -1336,17 +1354,17 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
     the t-statistic will be set to -inf and the pvalue to zero.
 
     TODO: We could handle gaps in data by dropping rows with nans in the
-    auxiliary regressions. Not implemented yet, currently assumes no nans
+    Auxiliary regressions. Not implemented yet, currently assumes no nans
     and no gaps in time series.
 
     References
     ----------
-    MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions for
-        Unit-Root and Cointegration Tests." Journal of Business & Economics
-        Statistics, 12.2, 167-76.
-    MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
-        Queen's University, Dept of Economics Working Papers 1227.
-        http://ideas.repec.org/p/qed/wpaper/1227.html
+    .. [1] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
+       for Unit-Root and Cointegration Tests." Journal of Business & Economics
+       Statistics, 12.2, 167-76.
+    .. [2] MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
+       Queen's University, Dept of Economics Working Papers 1227.
+       http://ideas.repec.org/p/qed/wpaper/1227.html
     """
     y0 = array_like(y0, 'y0')
     y1 = array_like(y1, 'y1', ndim=2)
@@ -1419,12 +1437,12 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
 def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
                          model_kw=None, fit_kw=None):
     """
-    Returns information criteria for many ARMA models
+    Compute information criteria for many ARMA models.
 
     Parameters
     ----------
     y : array_like
-        Time-series data
+        Array of time-series data.
     max_ar : int
         Maximum number of AR lags to use. Default 4.
     max_ma : int
@@ -1435,16 +1453,26 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     trend : str
         The trend to use when fitting the ARMA models.
     model_kw : dict
-        Keyword arguments to be passed to the ``ARMA`` model
+        Keyword arguments to be passed to the ``ARMA`` model.
     fit_kw : dict
         Keyword arguments to be passed to ``ARMA.fit``.
 
     Returns
     -------
-    obj : Results object
-        Each ic is an attribute with a DataFrame for the results. The AR order
-        used is the row index. The ma order used is the column index. The
-        minimum orders are available as ``ic_min_order``.
+    Bunch
+        Dict-like object with attribute access. Each ic is an attribute with a
+        DataFrame for the results. The AR order used is the row index. The ma
+        order used is the column index. The minimum orders are available as
+        ``ic_min_order``.
+
+    Notes
+    -----
+    This method can be used to tentatively identify the order of an ARMA
+    process, provided that the time series is stationary and invertible. This
+    function computes the full exact MLE estimate of each model and can be,
+    therefore a little slow. An implementation using approximate estimates
+    will be provided in the future. In the meantime, consider passing
+    {method : 'css'} to fit_kw.
 
     Examples
     --------
@@ -1463,15 +1491,6 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     >>> res = sm.tsa.arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
     >>> res.aic_min_order
     >>> res.bic_min_order
-
-    Notes
-    -----
-    This method can be used to tentatively identify the order of an ARMA
-    process, provided that the time series is stationary and invertible. This
-    function computes the full exact MLE estimate of each model and can be,
-    therefore a little slow. An implementation using approximate estimates
-    will be provided in the future. In the meantime, consider passing
-    {method : 'css'} to fit_kw.
     """
     max_ar = int_like(max_ar, 'max_ar')
     max_ma = int_like(max_ma, 'max_ma')
@@ -1537,11 +1556,12 @@ def kpss(x, regression='c', nlags=None, store=False):
     Parameters
     ----------
     x : array_like, 1d
-        Data series
+        The data series to test.
     regression : str{'c', 'ct'}
-        Indicates the null hypothesis for the KPSS test
-        * 'c' : The data is stationary around a constant (default)
-        * 'ct' : The data is stationary around a trend
+        The null hypothesis for the KPSS test.
+
+        * 'c' : The data is stationary around a constant (default).
+        * 'ct' : The data is stationary around a trend.
     nlags : {None, str, int}, optional
         Indicates the number of lags to be used. If None (default), lags is
         calculated using the legacy method. If 'auto', lags is calculated
@@ -1556,7 +1576,7 @@ def kpss(x, regression='c', nlags=None, store=False):
     Returns
     -------
     kpss_stat : float
-        The KPSS test statistic
+        The KPSS test statistic.
     p_value : float
         The p-value of the test. The p-value is interpolated from
         Table 1 in Kwiatkowski et al. (1992), and a boundary point
@@ -1564,12 +1584,12 @@ def kpss(x, regression='c', nlags=None, store=False):
         critical values, that is, if the p-value is outside the
         interval (0.01, 0.1).
     lags : int
-        The truncation lag parameter
+        The truncation lag parameter.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
     resstore : (optional) instance of ResultStore
-        An instance of a dummy class with results attached as attributes
+        An instance of a dummy class with results attached as attributes.
 
     Notes
     -----
@@ -1584,21 +1604,22 @@ def kpss(x, regression='c', nlags=None, store=False):
 
     References
     ----------
-    Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation consistent
-    covariance matrix estimation. Econometrica, 59: 817-858.
+    .. [1] Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation
+       consistent covariance matrix estimation. Econometrica, 59: 817-858.
 
-    Hobijn, B., Frances, B.H., & Ooms, M. (2004). Generalizations of the
-    KPSS-test for stationarity. Statistica Neerlandica, 52: 483-502.
+    .. [2] Hobijn, B., Frances, B.H., & Ooms, M. (2004). Generalizations of the
+       KPSS-test for stationarity. Statistica Neerlandica, 52: 483-502.
 
-    Kwiatkowski, D., Phillips, P.C.B., Schmidt, P., & Shin, Y. (1992). Testing
-    the null hypothesis of stationarity against the alternative of a unit root.
-    Journal of Econometrics, 54: 159-178.
+    .. [3] Kwiatkowski, D., Phillips, P.C.B., Schmidt, P., & Shin, Y. (1992).
+       Testing the null hypothesis of stationarity against the alternative of a
+       unit root. Journal of Econometrics, 54: 159-178.
 
-    Newey, W.K., & West, K.D. (1994). Automatic lag selection in covariance
-    matrix estimation. Review of Economic Studies, 61: 631-653.
+    .. [4] Newey, W.K., & West, K.D. (1994). Automatic lag selection in
+       covariance matrix estimation. Review of Economic Studies, 61: 631-653.
 
-    Schwert, G. W. (1989). Tests for unit roots: A Monte Carlo investigation.
-    Journal of Business and Economic Statistics, 7 (2): 147-159.
+    .. [5] Schwert, G. W. (1989). Tests for unit roots: A Monte Carlo
+       investigation. Journal of Business and Economic Statistics, 7 (2):
+       147-159.
     """
     from warnings import warn
 
@@ -1873,7 +1894,7 @@ class ZivotAndrewsUnitRoot(object):
 
     def run(self, x, trim=0.15, maxlag=None, regression='c', autolag='AIC'):
         """
-        Zivot-Andrews structural-break unit-root test
+        Zivot-Andrews structural-break unit-root test.
 
         The Zivot-Andrews test tests for a unit root in a univariate process
         in the presence of serial correlation and a single structural break.
@@ -1881,40 +1902,43 @@ class ZivotAndrewsUnitRoot(object):
         Parameters
         ----------
         x : array_like
-            data series
+            The data series to test.
         trim : float
-            percentage of series at begin/end to exclude from break-period
-            calculation in range [0, 0.333] (default=0.15)
+            The percentage of series at begin/end to exclude from break-period
+            calculation in range [0, 0.333] (default=0.15).
         maxlag : int
-            maximum lag which is included in test, default=12*(nobs/100)^{1/4}
-            (Schwert, 1989)
+            The maximum lag which is included in test, default is
+            12*(nobs/100)^{1/4} (Schwert, 1989).
         regression : {'c','t','ct'}
-            Constant and trend order to include in regression
-            * 'c' : constant only (default)
-            * 't' : trend only
-            * 'ct' : constant and trend
+            Constant and trend order to include in regression.
+
+            * 'c' : constant only (default).
+            * 't' : trend only.
+            * 'ct' : constant and trend.
         autolag : {'AIC', 'BIC', 't-stat', None}
-            * if None, then maxlag lags are used
+            The method to select the lag length when using automatic selection.
+
+            * if None, then maxlag lags are used,
             * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-              to minimize the corresponding information criterion
+              to minimize the corresponding information criterion,
             * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
               lag until the t-statistic on the last lag length is significant
-              using a 5%-sized test
+              using a 5%-sized test.
 
         Returns
         -------
         zastat : float
-            test statistic
+            The test statistic.
         pvalue : float
-            based on MC-derived critical values
+            The pvalue based on MC-derived critical values.
         cvdict : dict
-            critical values for the test statistic at the 1%, 5%, and 10%
-            levels
+            The critical values for the test statistic at the 1%, 5%, and 10%
+            levels.
         bpidx : int
-            index of x corresponding to endogenously calculated break period
-            with values in the range [0..nobs-1]
+            The index of x corresponding to endogenously calculated break period
+            with values in the range [0..nobs-1].
         baselag : int
-            number of lags used for period regressions
+            The number of lags used for period regressions.
 
         Notes
         -----
@@ -1932,16 +1956,16 @@ class ZivotAndrewsUnitRoot(object):
 
         References
         ----------
-        .. [*] Baum, C.F. (2004). ZANDREWS: Stata module to calculate
+        .. [1] Baum, C.F. (2004). ZANDREWS: Stata module to calculate
            Zivot-Andrews unit root test in presence of structural break,"
            Statistical Software Components S437301, Boston College Department
            of Economics, revised 2015.
 
-        .. [*] Schwert, G.W. (1989). Tests for unit roots: A Monte Carlo
+        .. [2] Schwert, G.W. (1989). Tests for unit roots: A Monte Carlo
            investigation. Journal of Business & Economic Statistics, 7:
            147-159.
 
-        .. [*] Zivot, E., and Andrews, D.W.K. (1992). Further evidence on the
+        .. [3] Zivot, E., and Andrews, D.W.K. (1992). Further evidence on the
            great crash, the oil-price shock, and the unit-root hypothesis.
            Journal of Business & Economic Studies, 10: 251-270.
         """
