@@ -896,6 +896,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             simulation_output=simulation_output, **kwargs)
 
     def _forecasts_error_partial_derivatives(self, params, transformed=True,
+                                             includes_fixed=False,
                                              approx_complex_step=None,
                                              approx_centered=False,
                                              res=None, **kwargs):
@@ -918,6 +919,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Get values at the params themselves
         if res is None:
             self.update(params, transformed=transformed,
+                        includes_fixed=includes_fixed,
                         complex_step=approx_complex_step)
             res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
@@ -938,6 +940,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             for i, ih in enumerate(increments):
                 self.update(params + ih, transformed=transformed,
+                            includes_fixed=includes_fixed,
                             complex_step=True)
                 _res = self.ssm.filter(complex_step=True, **kwargs)
 
@@ -1052,7 +1055,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
-                params, transformed=transformed,
+                params, transformed=transformed, includes_fixed=includes_fixed,
                 approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, res=res, **kwargs))
 
@@ -2014,8 +2017,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_approx(self, approx_complex_step=True,
                            approx_centered=False):
         evaluated_hessian = self.nobs_effective * self.model.hessian(
-            params=self.params, transformed=True, method='approx',
-            approx_complex_step=approx_complex_step,
+            params=self.params, transformed=True, includes_fixed=True,
+            method='approx', approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
         # TODO: Case with "not approx_complex_step" is not hit in
         # tests as of 2017-05-19
@@ -2045,7 +2048,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_oim(self, approx_complex_step=True, approx_centered=False):
         evaluated_hessian = self.nobs_effective * self.model.hessian(
             self.params, hessian_method='oim', transformed=True,
-            approx_complex_step=approx_complex_step,
+            includes_fixed=True, approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
         if len(self.fixed_params) > 0:
@@ -2113,7 +2116,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         evaluated_hessian = self.nobs_effective * self.model.hessian(
             self.params, hessian_method='oim', transformed=True,
-            approx_complex_step=approx_complex_step,
+            includes_fixed=True, approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
         if len(self.fixed_params) > 0:
@@ -2151,8 +2154,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                        approx_centered=approx_centered)
 
         evaluated_hessian = self.nobs_effective * self.model.hessian(
-            self.params, transformed=True, method='approx',
-            approx_complex_step=approx_complex_step)
+            self.params, transformed=True, includes_fixed=True,
+            method='approx', approx_complex_step=approx_complex_step)
         # TODO: Case with "not approx_complex_step" is not
         # hit in tests as of 2017-05-19
 
