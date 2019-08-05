@@ -498,6 +498,11 @@ def test_sarimax_nonconsecutive():
 
     check_results(res1, res2, check_lutkepohl=True)
 
+    # Check that results methods work within the context
+    with mod2.fix_params({'ar.L2': 0, 'ar.L3': 0}):
+        res3 = mod2.filter(res2.params, includes_fixed=True)
+        check_results(res1, res3, check_lutkepohl=True)
+
 
 def test_structural():
     # Many of the forms of UnobservedComponents are just special cases of the
