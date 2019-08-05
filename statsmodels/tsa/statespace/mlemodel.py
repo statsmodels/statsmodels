@@ -2885,6 +2885,44 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                 **kwargs)
         return irfs
 
+    def _apply(self, mod, refit=False, fit_kwargs=None, **kwargs):
+        if fit_kwargs is None:
+            fit_kwargs = {}
+
+        if refit:
+            fit_kwargs.setdefault('start_params', self.params)
+            if self._has_fixed_params:
+                fit_kwargs.setdefault('includes_fixed', True)
+                res = mod.fit_constrained(self._fixed_params, **fit_kwargs)
+            else:
+                res = mod.fit(**fit_kwargs)
+        else:
+            if 'cov_type' in fit_kwargs:
+                raise ValueError('Cannot specify covariance type in'
+                                 ' `fit_kwargs` unless refitting'
+                                 ' parameters (not available in extend).')
+            if 'cov_kwds' in fit_kwargs:
+                raise ValueError('Cannot specify covariance keyword arguments'
+                                 ' in `fit_kwargs` unless refitting'
+                                 ' parameters (not available in extend).')
+
+            fit_kwargs['cov_type'] = 'custom'
+            fit_kwargs['cov_kwds'] = {
+                'custom_cov_type': self.cov_type,
+                'custom_cov_params': self.cov_params_default,
+                'custom_description': ('Parameters and standard errors'
+                                       ' were estimated using a different'
+                                       ' dataset and were then applied to this'
+                                       ' dataset. %s'
+                                       % self.cov_kwds['description'])}
+
+            if self.smoother_results is not None:
+                res = mod.smooth(self.params, **fit_kwargs)
+            else:
+                res = mod.filter(self.params, **fit_kwargs)
+
+        return res
+
     def append(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
         """
         Recreate the results object with new data appended to the original data
@@ -2903,6 +2941,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Whether to re-fit the parameters, based on the combined dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
+            `smooth`.
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -2975,23 +3016,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             new_exog = None
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
 
-        if refit:
-            if fit_kwargs is None:
-                fit_kwargs = {}
-            fit_kwargs.setdefault('start_params', self.params)
-            if self._has_fixed_params:
-                fit_kwargs.setdefault('includes_fixed', True)
-                res = mod.fit_constrained(self._fixed_params, **fit_kwargs)
-            else:
-                res = mod.fit(**fit_kwargs)
-        elif self.smoother_results is not None:
-            res = mod.smooth(self.params)
-        else:
-            res = mod.filter(self.params)
         return res
 
-    def extend(self, endog, exog=None, **kwargs):
+    def extend(self, endog, exog=None, fit_kwargs=None, **kwargs):
         """
         Recreate the results object for new data that extends the original data
 
@@ -3005,6 +3034,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             New observations from the modeled time-series process.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to `filter` or `smooth`.
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -3069,11 +3100,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod.ssm.initialization = Initialization(
             mod.k_states, 'known', constant=self.predicted_state[..., -1],
             stationary_cov=self.predicted_state_cov[..., -1])
-
-        if self.smoother_results is not None:
-            res = mod.smooth(self.params)
-        else:
-            res = mod.filter(self.params)
+        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs, **kwargs)
 
         return res
 
@@ -3096,6 +3123,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Whether to re-fit the parameters, using the new dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
+            `smooth`.
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -3154,20 +3184,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         mod = self.model.clone(endog, exog=exog, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
 
-        if refit:
-            if fit_kwargs is None:
-                fit_kwargs = {}
-            fit_kwargs.setdefault('start_params', self.params)
-            if self._has_fixed_params:
-                fit_kwargs.setdefault('includes_fixed', True)
-                res = mod.fit_constrained(self._fixed_params, **fit_kwargs)
-            else:
-                res = mod.fit(**fit_kwargs)
-        elif self.smoother_results is not None:
-            res = mod.smooth(self.params)
-        else:
-            res = mod.filter(self.params)
         return res
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):

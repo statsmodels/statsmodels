@@ -1016,3 +1016,26 @@ def test_lutkepohl_information_criteria():
     bic = res.info_criteria('bic') - 6 * np.log(res.nobs_effective)
     assert_allclose(aic, true['estat_aic'])
     assert_allclose(bic, true['estat_bic'])
+
+
+def test_append_extend_apply_invalid():
+    # Test for invalid options to append, extend, and apply
+    niledata = nile.data.load_pandas().data['volume']
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+
+    endog1 = niledata.iloc[:20]
+    endog2 = niledata.iloc[20:40]
+
+    mod = sarimax.SARIMAX(endog1, order=(1, 0, 0), concentrate_scale=True)
+    res1 = mod.smooth([0.5])
+
+    assert_raises(ValueError, res1.append, endog2,
+                  fit_kwargs={'cov_type': 'approx'})
+    assert_raises(ValueError, res1.extend, endog2,
+                  fit_kwargs={'cov_type': 'approx'})
+    assert_raises(ValueError, res1.apply, endog2,
+                  fit_kwargs={'cov_type': 'approx'})
+
+    assert_raises(ValueError, res1.append, endog2, fit_kwargs={'cov_kwds': {}})
+    assert_raises(ValueError, res1.extend, endog2, fit_kwargs={'cov_kwds': {}})
+    assert_raises(ValueError, res1.apply, endog2, fit_kwargs={'cov_kwds': {}})
