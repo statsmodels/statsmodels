@@ -169,26 +169,26 @@ def _var(indicators, max_dim):
 
 def bds(x, max_dim=2, epsilon=None, distance=1.5):
     """
-    Calculate the BDS test statistic for independence of a time series
+    Calculate the BDS test statistic for independence of a time series.
 
     Parameters
     ----------
-    x : 1d array
-        observations of time series for which bds statistics is calculated
+    x : ndarray
+        Observations of time series for which bds statistics is calculated.
     max_dim : int
-        maximum embedding dimension
-    epsilon : scalar, optional
-        the threshold distance to use in calculating the correlation sum
-    distance : scalar, optional
-        if epsilon is omitted, specifies the distance multiplier to use when
-        computing it
+        The maximum embedding dimension.
+    epsilon : {float, None}, optional
+        The threshold distance to use in calculating the correlation sum.
+    distance : float, optional
+        Specifies the distance multiplier to use when computing the test
+        statistic if epsilon is omitted.
 
     Returns
     -------
     bds_stat : float
-        The BDS statistic
+        The BDS statistic.
     pvalue : float
-        The p-values associated with the BDS statistic
+        The p-values associated with the BDS statistic.
 
     Notes
     -----
@@ -204,7 +204,6 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     Implementation conditions on the first m-1 initial values, which are
     required to calculate the m-histories:
     x_t^m = (x_t, x_{t-1}, ... x_{t-(m-1)})
-
     """
     x = array_like(x, 'x', ndim=1)
     nobs_full = len(x)

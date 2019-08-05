@@ -125,7 +125,7 @@ class OaxacaBlinder(object):
         Oaxaca-Blinder Three-fold Effects
 
         Characteristic Effect: 321.74824
-        Coefficent Effect: 75.45371
+        Coefficient Effect: 75.45371
         Interaction Effect: -238.45151
         Gap: 158.75044
     """
@@ -221,7 +221,7 @@ class OaxacaResults:
     This class summarizes the fit of the OaxacaBlinder model.
 
     Use .summary() to get a table of the fitted values or
-    use .params to recieve a list of the values
+    use .params to receive a list of the values
 
     If a two-fold model was fitted, this will return
     unexplained effect, explained effect, and the
@@ -291,7 +291,7 @@ class OaxacaResults:
             Oaxaca-Blinder Three-fold Effects
 
             Characteristic Effect: {:.5f}
-            Coefficent Effect: {:.5f}
+            Coefficient Effect: {:.5f}
             Interaction Effect: {:.5f}
             Gap: {:.5f}'''.format(
                             self.params[0], self.params[1],
