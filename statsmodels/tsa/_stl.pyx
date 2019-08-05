@@ -271,8 +271,8 @@ cdef class STL(object):
 
         Returns
         -------
-        results : DecomposeResult
-            Estimation results
+        DecomposeResult
+            Estimation results.
         """
         cdef Py_ssize_t i
 

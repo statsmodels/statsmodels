@@ -1,7 +1,8 @@
-import inspect
-import functools
-
 from statsmodels.compat.python import iteritems
+
+import functools
+import inspect
+from textwrap import dedent
 
 
 class ResultsWrapper(object):
@@ -43,11 +44,11 @@ class ResultsWrapper(object):
         return obj
 
     def __getstate__(self):
-        #print 'pickling wrapper', self.__dict__
+        # print 'pickling wrapper', self.__dict__
         return self.__dict__
 
     def __setstate__(self, dict_):
-        #print 'unpickling wrapper', dict_
+        # print 'unpickling wrapper', dict_
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
@@ -111,7 +112,8 @@ def make_wrapper(func, how):
     sig = inspect.signature(func)
     formatted = str(sig)
 
-    wrapper.__doc__ = "%s%s\n%s" % (func.__name__, formatted, wrapper.__doc__)
+    doc = dedent(wrapper.__doc__) if wrapper.__doc__ else ''
+    wrapper.__doc__ = "\n%s%s\n%s" % (func.__name__, formatted, doc)
 
     return wrapper
 

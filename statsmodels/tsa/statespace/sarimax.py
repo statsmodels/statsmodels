@@ -435,7 +435,7 @@ class SARIMAX(MLEModel):
         self.mle_regression = (
             self.mle_regression and exog is not None and self.k_exog > 0
         )
-        # State regression is regression with coefficients estiamted within
+        # State regression is regression with coefficients estimated within
         # the state vector
         self.state_regression = (
             not self.mle_regression and exog is not None and self.k_exog > 0

@@ -252,6 +252,15 @@ class LikelihoodModel(Model):
     def loglike(self, params):
         """
         Log-likelihood of model.
+
+        Parameters
+        ----------
+        params : ndarray
+            The model parameters used to compute the log-likelihood.
+
+        Notes
+        -----
+        Must be overridden by subclasses.
         """
         raise NotImplementedError
 
@@ -983,9 +992,18 @@ class Results(object):
         self.initialize(model, params, **kwd)
         self._data_attr = []
 
-    def initialize(self, model, params, **kwd):
+    def initialize(self, model, params, **kwargs):
         """
         Initialize (possibly re-initialize) a Results instance.
+
+        Parameters
+        ----------
+        model : Model
+            The model instance.
+        params : ndarray
+            The model parameters.
+        **kwargs
+            Any additional keyword arguments required to initialize the model.
         """
         self.params = params
         self.model = model
@@ -1016,7 +1034,7 @@ class Results(object):
 
         Returns
         -------
-        prediction : {ndarray, Series, DataFrame}
+        array_like
             See self.model.predict.
 
         Notes

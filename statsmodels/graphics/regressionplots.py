@@ -739,27 +739,29 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                 model_results=None, ax=None, **kwargs):
     """
-    Plots a line given an intercept and slope.
+    Plot a line given an intercept and slope.
 
+    Parameters
+    ----------
     intercept : float
-        The intercept of the line
+        The intercept of the line.
     slope : float
-        The slope of the line
+        The slope of the line.
     horiz : float or array_like
-        Data for horizontal lines on the y-axis
+        Data for horizontal lines on the y-axis.
     vert : array_like
-        Data for verterical lines on the x-axis
+        Data for verterical lines on the x-axis.
     model_results : statsmodels results instance
         Any object that has a two-value `params` attribute. Assumed that it
-        is (intercept, slope)
+        is (intercept, slope).
     ax : axes, optional
-        Matplotlib axes instance
+        Matplotlib axes instance.
     **kwargs
-        Options passed to matplotlib.pyplot.plt
+        Options passed to matplotlib.pyplot.plt.
 
     Returns
     -------
-    fig : Figure
+    Figure
         The figure given by `ax.figure` or a new instance.
 
     Examples
@@ -779,7 +781,6 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_abline.py
-
     """
     if ax is not None:  # get axis limits first thing, do not change these
         x = ax.get_xlim()

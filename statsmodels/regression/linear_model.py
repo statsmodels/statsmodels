@@ -187,6 +187,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
+        """Initialize model components."""
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -234,8 +235,15 @@ class RegressionModel(base.LikelihoodModel):
         self._df_resid = value
 
     def whiten(self, x):
-        """Must be overwritten by individual models."""
-        raise NotImplementedError("Subclasses should implement.")
+        """
+        Whiten method that must be overwritten by individual models.
+
+        Parameters
+        ----------
+        x : array_like
+            Data to be whitened.
+        """
+        raise NotImplementedError("Subclasses must implement.")
 
     def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
             use_t=None, **kwargs):
@@ -1462,23 +1470,34 @@ class RegressionResults(base.LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
 
+    Parameters
+    ----------
+    model : RegressionModel
+        The regression model instance.
+    params : ndarray
+        The estimated parameters.
+    normalized_cov_params : ndarray
+        The normalized covariance parameters.
+    scale : float
+        The estimated scale of the residuals.
+    cov_type : str
+        The covariance estimator used in the results.
+    cov_kwds : dict
+        Additional keywords used in the covariance specification.
+    use_t : bool
+        Flag indicating to use the Student's t in inference.
+    **kwargs
+        Additional keyword arguments used to initialize the results.
+
     Attributes
     ----------
     pinv_wexog
-        See specific model class docstring
-    cov_HC0
-        Heteroscedasticity robust covariance matrix. See HC0_se below.
-    cov_HC1
-        Heteroscedasticity robust covariance matrix. See HC1_se below.
-    cov_HC2
-        Heteroscedasticity robust covariance matrix. See HC2_se below.
-    cov_HC3
-        Heteroscedasticity robust covariance matrix. See HC3_se below.
+        See model class docstring for implementation details.
     cov_type
-        Parameter covariance estimator used for standard errors and t-stats
+        Parameter covariance estimator used for standard errors and t-stats.
     df_model
         Model degrees of freedom. The number of regressors `p`. Does not
-        include the constant if one is present
+        include the constant if one is present.
     df_resid
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
         `n - p` if a constant is not included.
@@ -1487,49 +1506,13 @@ class RegressionResults(base.LikelihoodModelResults):
         errors. Is only available after `HC#_se` or `cov_HC#` is called.
         See HC#_se for more information.
     history
-        Estimation history for iterative estimators
-    HC0_se
-        White's (1980) heteroskedasticity robust standard errors.
-        Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
-        where e_i = resid[i]
-        HC0_se is a cached property.
-        When HC0_se or cov_HC0 is called the RegressionResults instance will
-        then have another attribute `het_scale`, which is in this case is just
-        resid**2.
-    HC1_se
-        MacKinnon and White's (1985) alternative heteroskedasticity robust
-        standard errors.
-        Defined as sqrt(diag(n/(n-p)*HC_0)
-        HC1_see is a cached property.
-        When HC1_se or cov_HC1 is called the RegressionResults instance will
-        then have another attribute `het_scale`, which is in this case is
-        n/(n-p)*resid**2.
-    HC2_se
-        MacKinnon and White's (1985) alternative heteroskedasticity robust
-        standard errors.
-        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
-        where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC2_see is a cached property.
-        When HC2_se or cov_HC2 is called the RegressionResults instance will
-        then have another attribute `het_scale`, which is in this case is
-        resid^(2)/(1-h_ii).
-    HC3_se
-        MacKinnon and White's (1985) alternative heteroskedasticity robust
-        standard errors.
-        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
-        where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC3_see is a cached property.
-        When HC3_se or cov_HC3 is called the RegressionResults instance will
-        then have another attribute `het_scale`, which is in this case is
-        resid^(2)/(1-h_ii)^(2).
+        Estimation history for iterative estimators.
     model
         A pointer to the model instance that called fit() or results.
     params
         The linear coefficients that minimize the least squares
         criterion.  This is usually called Beta for the classical
         linear model.
-    resid_pearson
-        `wresid` normalized to have unit variance.
     """
 
     _cache = {}  # needs to be a class attribute for scale setter?
@@ -1578,8 +1561,8 @@ class RegressionResults(base.LikelihoodModelResults):
         Parameters
         ----------
         alpha : float, optional
-            The `alpha` level for the confidence interval.
-            ie., The default `alpha` = .05 returns a 95% confidence interval.
+            The `alpha` level for the confidence interval. The default
+            `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
             Columns to included in returned confidence intervals.
 
@@ -1848,9 +1831,8 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def cov_HC0(self):
         """
-        See RegressionResults for definition.
+        Heteroscedasticity robust covariance matrix. See HC0_se.
         """
-
         self.het_scale = self.wresid**2
         cov_HC0 = self._HCCM(self.het_scale)
         return cov_HC0
@@ -1858,9 +1840,8 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def cov_HC1(self):
         """
-        See RegressionResults for definition.
+        Heteroscedasticity robust covariance matrix. See HC1_se.
         """
-
         self.het_scale = self.nobs/(self.df_resid)*(self.wresid**2)
         cov_HC1 = self._HCCM(self.het_scale)
         return cov_HC1
@@ -1868,9 +1849,8 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def cov_HC2(self):
         """
-        See RegressionResults for definition.
+        Heteroscedasticity robust covariance matrix. See HC2_se.
         """
-
         # probably could be optimized
         h = np.diag(chain_dot(self.model.wexog,
                               self.normalized_cov_params,
@@ -1882,7 +1862,7 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def cov_HC3(self):
         """
-        See RegressionResults for definition.
+        Heteroscedasticity robust covariance matrix. See HC3_se.
         """
         h = np.diag(chain_dot(
             self.model.wexog, self.normalized_cov_params, self.model.wexog.T))
@@ -1893,28 +1873,63 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def HC0_se(self):
         """
-        See RegressionResults for definition.
+        White's (1980) heteroskedasticity robust standard errors.
+
+        Notes
+        -----
+        Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
+        where e_i = resid[i].
+
+        When HC0_se or cov_HC0 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is just
+        resid**2.
         """
         return np.sqrt(np.diag(self.cov_HC0))
 
     @cache_readonly
     def HC1_se(self):
         """
-        See RegressionResults for definition.
+        MacKinnon and White's (1985) heteroskedasticity robust standard errors.
+
+        Notes
+        -----
+        Defined as sqrt(diag(n/(n-p)*HC_0).
+
+        When HC1_se or cov_HC1 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        n/(n-p)*resid**2.
         """
         return np.sqrt(np.diag(self.cov_HC1))
 
     @cache_readonly
     def HC2_se(self):
         """
-        See RegressionResults for definition.
+        MacKinnon and White's (1985) heteroskedasticity robust standard errors.
+
+        Notes
+        -----
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T
+
+        When HC2_se or cov_HC2 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii).
         """
         return np.sqrt(np.diag(self.cov_HC2))
 
     @cache_readonly
     def HC3_se(self):
         """
-        See RegressionResults for definition.
+        MacKinnon and White's (1985) heteroskedasticity robust standard errors.
+
+        Notes
+        -----
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T.
+
+        When HC3_se or cov_HC3 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii)^(2).
         """
         return np.sqrt(np.diag(self.cov_HC3))
 
@@ -1926,7 +1941,8 @@ class RegressionResults(base.LikelihoodModelResults):
         Returns
         -------
         array_like
-            An array wresid standardized by the sqrt of the scale.
+            The array `wresid` normalized by the sqrt of the scale to have
+            unit variance.
         """
 
         if not hasattr(self, 'resid'):
@@ -2725,6 +2741,32 @@ class OLSResults(RegressionResults):
     """
     Results class for for an OLS model.
 
+    Parameters
+    ----------
+    model : RegressionModel
+        The regression model instance.
+    params : ndarray
+        The estimated parameters.
+    normalized_cov_params : ndarray
+        The normalized covariance parameters.
+    scale : float
+        The estimated scale of the residuals.
+    cov_type : str
+        The covariance estimator used in the results.
+    cov_kwds : dict
+        Additional keywords used in the covariance specification.
+    use_t : bool
+        Flag indicating to use the Student's t in inference.
+    **kwargs
+        Additional keyword arguments used to initialize the results.
+
+    See Also
+    --------
+    RegressionResults
+        Results store for WLS and GLW models.
+
+    Notes
+    -----
     Most of the methods and attributes are inherited from RegressionResults.
     The special methods that are only available for OLS are:
 
@@ -2732,10 +2774,6 @@ class OLSResults(RegressionResults):
     - outlier_test
     - el_test
     - conf_int_el
-
-    See Also
-    --------
-    RegressionResults
     """
 
     def get_influence(self):

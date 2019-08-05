@@ -14,7 +14,23 @@ from scipy import stats
 # this is similar to ContrastResults after t_test, copied and adjusted
 class PredictionResults(object):
     """
-    Results class for predictions
+    Results class for predictions.
+
+    Parameters
+    ----------
+    predicted_mean : ndarray
+        The array containing the prediction means.
+    var_pred_mean : ndarray
+        The array of the variance of the prediction means.
+    var_resid : ndarray
+        The array of residual variances.
+    df : int
+        The degree of freedom used if dist is 't'.
+    dist : {'norm', 't', object}
+        Either a string for the normal or t distribution or another object
+        that exposes a `ppf` method.
+    row_labels : list[str]
+        Row labels used in summary frame.
     """
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
@@ -61,7 +77,6 @@ class PredictionResults(object):
         ci : ndarray, (k_constraints, 2)
             The array has the lower and the upper limit of the confidence
             interval in the columns.
-
         """
 
         se = self.se_obs if obs else self.se_mean
@@ -75,7 +90,7 @@ class PredictionResults(object):
         # TODO: finish and cleanup
         import pandas as pd
         from collections import OrderedDict
-        ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        ci_obs = self.conf_int(alpha=alpha, obs=True)  # need to split
         ci_mean = self.conf_int(alpha=alpha, obs=False)
         to_include = OrderedDict()
         to_include['mean'] = self.predicted_mean
@@ -86,10 +101,10 @@ class PredictionResults(object):
         to_include['obs_ci_upper'] = ci_obs[:, 1]
 
         self.table = to_include
-        #OrderedDict does not work to preserve sequence
+        # OrderedDict does not work to preserve sequence
         # pandas dict does not handle 2d_array
-        #data = np.column_stack(list(to_include.values()))
-        #names = ....
+        # data = np.column_stack(list(to_include.values()))
+        # names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,
                            columns=to_include.keys())
         return res
@@ -157,10 +172,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     if weights is not None:
         weights = np.asarray(weights)
         if (weights.size > 1 and
-           (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
+                (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
             raise ValueError('weights has wrong shape')
-
-    ### end
 
     if pred_kwds is None:
         pred_kwds = {}
