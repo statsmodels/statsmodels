@@ -71,6 +71,7 @@ class AR(tsa_model.TimeSeriesModel):
         self._fit_params = None
 
     def initialize(self):
+        """Initialization of the model (no-op)."""
         pass
 
     def _transparams(self, params):
@@ -377,6 +378,11 @@ class AR(tsa_model.TimeSeriesModel):
     def information(self, params):
         """
         Not implemented.
+
+        Parameters
+        ----------
+        params : ndarray
+            The model parameters.
         """
         return
 
@@ -419,17 +425,23 @@ class AR(tsa_model.TimeSeriesModel):
         ----------
         maxlag : int
             The highest lag length tried. See `AR.fit`.
-        ic : str {'aic','bic','hqic','t-stat'}
+        ic : {'aic','bic','hqic','t-stat'}
             Criterion used for selecting the optimal lag length.
             See `AR.fit`.
-        trend : str {'c','nc'}
+        trend : {'c','nc'}
             Whether to include a constant or not. 'c' - include constant.
             'nc' - no constant.
+        method : {'cmle', 'mle'}, optional
+            The method to use in estimation.
+
+            * 'cmle' - Conditional maximum likelihood using OLS
+            * 'mle' - Unconditional (exact) maximum likelihood.  See `solver`
+              and the Notes.
 
         Returns
         -------
-        bestlag : int
-            Best lag according to IC.
+        int
+            Best lag according to the information criteria.
         """
         endog = self.endog
 
@@ -479,24 +491,30 @@ class AR(tsa_model.TimeSeriesModel):
             If `ic` is None, then maxlag is the lag length used in fit.  If
             `ic` is specified then maxlag is the highest lag order used to
             select the correct lag order.  If maxlag is None, the default is
-            round(12*(nobs/100.)**(1/4.))
-        method : str {'cmle', 'mle'}, optional
-            cmle - Conditional maximum likelihood using OLS
-            mle - Unconditional (exact) maximum likelihood.  See `solver`
-            and the Notes.
-        ic : str {'aic','bic','hic','t-stat'}
+            round(12*(nobs/100.)**(1/4.)).
+        method : {'cmle', 'mle'}, optional
+            The method to use in estimation.
+
+            * 'cmle' - Conditional maximum likelihood using OLS
+            * 'mle' - Unconditional (exact) maximum likelihood.  See `solver`
+              and the Notes.
+        ic : {'aic','bic','hic','t-stat'}
             Criterion used for selecting the optimal lag length.
-            aic - Akaike Information Criterion
-            bic - Bayes Information Criterion
-            t-stat - Based on last lag
-            hqic - Hannan-Quinn Information Criterion
+
+            * 'aic' - Akaike Information Criterion
+            * 'bic' - Bayes Information Criterion
+            * 't-stat' - Based on last lag
+            * 'hqic' - Hannan-Quinn Information Criterion
+
             If any of the information criteria are selected, the lag length
             which results in the lowest value is selected.  If t-stat, the
             model starts with maxlag and drops a lag until the highest lag
             has a t-stat that is significant at the 95 % level.
-        trend : str {'c','nc'}
-            Whether to include a constant or not. 'c' - include constant.
-            'nc' - no constant.
+        trend : {'c','nc'}
+            Whether to include a constant or not.
+
+            * 'c' - include constant.
+            * 'nc' - no constant.
         transparams : bool, optional
             Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).
@@ -510,8 +528,6 @@ class AR(tsa_model.TimeSeriesModel):
             and 'powell'.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
-        tol : float
-            The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
             If True, all output from solver will be available in
             the Results object's mle_retvals attribute.  Output is dependent
@@ -640,7 +656,8 @@ class ARResults(tsa_model.TimeSeriesModelResults):
     params : array
         The fitted parameters from the AR Model.
     normalized_cov_params : array
-        inv(dot(X.T,X)) where X is the lagged values.
+        The array inv(dot(x.T,x)) where x contains the regressors in the
+        model.
     scale : float, optional
         An estimate of the scale of the model.
 

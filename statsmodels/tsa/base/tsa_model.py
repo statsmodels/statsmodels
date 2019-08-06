@@ -601,7 +601,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         self.data.xnames = vals
 
     # overwrite with writable property for (V)AR models
-    exog_names = property(_get_exog_names, _set_exog_names)
+    exog_names = property(_get_exog_names, _set_exog_names, None,
+                          'The names of the exogenous variables.')
 
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
