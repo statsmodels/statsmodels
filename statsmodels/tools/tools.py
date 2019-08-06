@@ -357,8 +357,9 @@ def isestimable(c, d):
     >>> isestimable([1, -1, 0], d)
     True
     """
-    c = array_like(c, 'c', ndim=2)
-    d = array_like(d, ndim=2)
+    c = array_like(c, 'c', maxdim=2)
+    d = array_like(d, 'd', ndim=2)
+    c = c[None, :] if c.ndim == 1 else c
     if c.shape[1] != d.shape[1]:
         raise ValueError('Contrast should have %d columns' % d.shape[1])
     new = np.vstack([c, d])
