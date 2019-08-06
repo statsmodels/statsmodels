@@ -15,12 +15,13 @@ from statsmodels.tools.validation import array_like, PandasWrapper
 # NOTE: uses a loop, could probably be sped-up for very large datasets
 def cffilter(x, low=6, high=32, drift=True):
     """
-    Christiano Fitzgerald asymmetric, random walk filter
+    Christiano Fitzgerald asymmetric, random walk filter.
 
     Parameters
     ----------
     x : array_like
-        1 or 2d array to filter. If 2d, variables are assumed to be in columns.
+        The 1 or 2d array to filter. If 2d, variables are assumed to be in
+        columns.
     low : float
         Minimum period of oscillations. Features below low periodicity are
         filtered out. Default is 6 for quarterly data, giving a 1.5 year
@@ -31,19 +32,28 @@ def cffilter(x, low=6, high=32, drift=True):
         periodicity.
     drift : bool
         Whether or not to remove a trend from the data. The trend is estimated
-        as np.arange(nobs)*(x[-1] - x[0])/(len(x)-1)
+        as np.arange(nobs)*(x[-1] - x[0])/(len(x)-1).
 
     Returns
     -------
-    cycle : array
-        The features of `x` between periodicities given by low and high
-    trend : array
+    cycle : array_like
+        The features of x between the periodicities low and high.
+    trend : array_like
         The trend in the data with the cycles removed.
+
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+        Baxter-King filter.
+    statsmodels.tsa.filters.bk_filter.hpfilter
+        Hodrick-Prescott filter.
+    statsmodels.tsa.seasonal.seasonal_decompose
+        Decompose a time series using moving averages.
+    statsmodels.tsa.seasonal.STL
+        Season-Trend decomposition using LOESS.
 
     Examples
     --------
-    >>> import statsmodels.api as sm
-    >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
@@ -56,13 +66,6 @@ def cffilter(x, low=6, high=32, drift=True):
     >>> plt.show()
 
     .. plot:: plots/cff_plot.py
-
-    See Also
-    --------
-    statsmodels.tsa.filters.bk_filter.bkfilter
-    statsmodels.tsa.filters.hp_filter.hpfilter
-    statsmodels.tsa.seasonal.seasonal_decompose
-
     """
     #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.

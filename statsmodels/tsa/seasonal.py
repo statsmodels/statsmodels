@@ -96,10 +96,15 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
     See Also
     --------
     statsmodels.tsa.filters.bk_filter.bkfilter
-    statsmodels.tsa.filters.cf_filter.xffilter
+        Baxter-King filter.
+    statsmodels.tsa.filters.cf_filter.cffilter
+        Christiano-Fitzgerald asymmetric, random walk filter.
     statsmodels.tsa.filters.hp_filter.hpfilter
+        Hodrick-Prescott filter.
     statsmodels.tsa.filters.convolution_filter
+        Linear filtering via convolution.
     statsmodels.tsa.seasonal.STL
+        Season-Trend decomposition using LOESS.
 
     Notes
     -----

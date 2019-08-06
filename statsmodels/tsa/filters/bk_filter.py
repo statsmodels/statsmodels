@@ -7,7 +7,7 @@ from statsmodels.tools.validation import array_like, PandasWrapper
 
 def bkfilter(x, low=6, high=32, K=12):
     """
-    Baxter-King bandpass filter
+    Filter a time series using the Baxter-King bandpass filter.
 
     Parameters
     ----------
@@ -26,14 +26,19 @@ def bkfilter(x, low=6, high=32, K=12):
 
     Returns
     -------
-    c : array
-        Cyclical component of x
+    ndarray
+        The cyclical component of x.
 
-    References
-    ---------- ::
-    Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
-        Band-Pass Filters for Economic Time Series." *Review of Economics and
-        Statistics*, 1999, 81(4), 575-593.
+    See Also
+    --------
+    statsmodels.tsa.filters.cf_filter.cffilter
+        The Christiano Fitzgerald asymmetric, random walk filter.
+    statsmodels.tsa.filters.bk_filter.hpfilter
+        Hodrick-Prescott filter.
+    statsmodels.tsa.seasonal.seasonal_decompose
+        Decompose a time series using moving averages.
+    statsmodels.tsa.seasonal.STL
+        Season-Trend decomposition using LOESS.
 
     Notes
     -----
@@ -47,6 +52,12 @@ def bkfilter(x, low=6, high=32, K=12):
     and theta is a normalizing constant ::
 
       theta = -sum(b)/(2K+1)
+
+    References
+    ----------
+    Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
+        Band-Pass Filters for Economic Time Series." *Review of Economics and
+        Statistics*, 1999, 81(4), 575-593.
 
     Examples
     --------
@@ -64,12 +75,6 @@ def bkfilter(x, low=6, high=32, K=12):
     >>> plt.show()
 
     .. plot:: plots/bkf_plot.py
-
-    See Also
-    --------
-    statsmodels.tsa.filters.cf_filter.cffilter
-    statsmodels.tsa.filters.hp_filter.hpfilter
-    statsmodels.tsa.seasonal.seasonal_decompose
     """
     # TODO: change the docstring to ..math::?
     # TODO: allow windowing functions to correct for Gibb's Phenomenon?

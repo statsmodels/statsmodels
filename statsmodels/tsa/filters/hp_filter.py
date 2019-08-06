@@ -7,12 +7,12 @@ from statsmodels.tools.validation import array_like, PandasWrapper
 
 def hpfilter(x, lamb=1600):
     """
-    Hodrick-Prescott filter
+    Hodrick-Prescott filter.
 
     Parameters
     ----------
     x : array_like
-        The 1d ndarray timeseries to filter of length (nobs,) or (nobs,1)
+        The time series to filter, 1-d.
     lamb : float
         The Hodrick-Prescott smoothing parameter. A value of 1600 is
         suggested for quarterly data. Ravn and Uhlig suggest using a value
@@ -21,10 +21,49 @@ def hpfilter(x, lamb=1600):
 
     Returns
     -------
-    cycle : array
+    cycle : ndarray
         The estimated cycle in the data given lamb.
-    trend : array
+    trend : ndarray
         The estimated trend in the data given lamb.
+
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+        Baxter-King filter.
+    statsmodels.tsa.filters.cf_filter.cffilter
+        The Christiano Fitzgerald asymmetric, random walk filter.
+    statsmodels.tsa.seasonal.seasonal_decompose
+        Decompose a time series using moving averages.
+    statsmodels.tsa.seasonal.STL
+        Season-Trend decomposition using LOESS.
+
+    Notes
+    -----
+    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
+
+    min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
+     T   t
+
+    Here we implemented the HP filter as a ridge-regression rule using
+    scipy.sparse. In this sense, the solution can be written as
+
+    T = inv(I - lamb*K'K)x
+
+    where I is a nobs x nobs identity matrix, and K is a (nobs-2) x nobs matrix
+    such that
+
+    K[i,j] = 1 if i == j or i == j + 2
+    K[i,j] = -2 if i == j + 1
+    K[i,j] = 0 otherwise
+
+    References
+    ----------
+    Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
+        Empirical Investigation." `Carnegie Mellon University discussion
+        paper no. 451`.
+    Ravn, M.O and H. Uhlig. 2002. "Notes On Adjusted the Hodrick-Prescott
+        Filter for the Frequency of Observations." `The Review of Economics and
+        Statistics`, 84(2), 371-80.
 
     Examples
     --------
@@ -46,40 +85,6 @@ def hpfilter(x, lamb=1600):
     >>> plt.show()
 
     .. plot:: plots/hpf_plot.py
-
-    Notes
-    -----
-    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
-
-    min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
-     T   t
-
-    Here we implemented the HP filter as a ridge-regression rule using
-    scipy.sparse. In this sense, the solution can be written as
-
-    T = inv(I - lamb*K'K)x
-
-    where I is a nobs x nobs identity matrix, and K is a (nobs-2) x nobs matrix
-    such that
-
-    K[i,j] = 1 if i == j or i == j + 2
-    K[i,j] = -2 if i == j + 1
-    K[i,j] = 0 otherwise
-
-    See Also
-    --------
-    statsmodels.tsa.filters.bk_filter.bkfilter
-    statsmodels.tsa.filters.cf_filter.cffilter
-    statsmodels.tsa.seasonal.seasonal_decompose
-
-    References
-    ----------
-    Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
-        Empirical Investigation." `Carnegie Mellon University discussion
-        paper no. 451`.
-    Ravn, M.O and H. Uhlig. 2002. "Notes On Adjusted the Hodrick-Prescott
-        Filter for the Frequency of Observations." `The Review of Economics and
-        Statistics`, 84(2), 371-80.
     """
     pw = PandasWrapper(x)
     x = array_like(x, 'x', ndim=1)
