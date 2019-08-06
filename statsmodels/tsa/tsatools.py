@@ -49,6 +49,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     See Also
     --------
     statsmodels.tools.tools.add_constant
+        Add a constant column to an array.
     """
     prepend = bool_like(prepend, 'prepend')
     trend = string_like(trend, 'trend', options=('c', 't', 'ct', 'ctt'))

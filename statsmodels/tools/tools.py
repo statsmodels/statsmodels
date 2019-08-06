@@ -1,16 +1,16 @@
-'''
+"""
 Utility functions models code
-'''
+"""
 from functools import reduce
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
-import numpy.linalg as L
 import pandas as pd
 
 from statsmodels.compat.python import lzip, lmap
 
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
+from statsmodels.tools.validation import array_like
 
 
 def asstr2(s):
@@ -73,8 +73,8 @@ def drop_missing(Y, X=None, axis=1):
 # want to cast it to float
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):
-    '''
-    Returns a dummy matrix given an array of categorical variables.
+    """
+    Construct a dummy matrix given an array of categorical variables.
 
     Parameters
     ----------
@@ -148,7 +148,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Or
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
-    '''
+    """
     # TODO: add a NameValidator function
     if isinstance(col, (list, tuple)):
         if len(col) == 1:
@@ -276,12 +276,12 @@ def categorical(data, col=None, dictnames=False, drop=False):
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant='skip'):
     """
-    Adds a column of ones to an array
+    Add a column of ones to an array.
 
     Parameters
     ----------
     data : array_like
-        ``data`` is the column-ordered design matrix
+        A column-ordered design matrix.
     prepend : bool
         If true, the constant is in the first column.  Else the constant is
         appended (last column).
@@ -293,9 +293,9 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
     Returns
     -------
-    data : array, recarray or DataFrame
+    array_like
         The original values with a constant (column of ones) as the first or
-        last column. Returned value depends on input type.
+        last column. Returned value type depends on input type.
 
     Notes
     -----
@@ -326,9 +326,9 @@ def add_constant(data, prepend=True, has_constant='skip'):
     return np.column_stack(x)
 
 
-def isestimable(C, D):
+def isestimable(c, d):
     """
-    True if (Q, P) contrast `C` is estimable for (N, P) design `D`
+    True if (Q, P) contrast `c` is estimable for (N, P) design `d`.
 
     From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
     the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
@@ -336,34 +336,33 @@ def isestimable(C, D):
 
     Parameters
     ----------
-    C : (Q, P) array_like
-        contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
-    D : (N, P) array_like
-        design matrix
+    c : array_like
+        A contrast matrix with shape (Q, P). If 1 dimensional assume shape is
+        (1, P).
+    d : array_like
+        The design matrix, (N, P).
 
     Returns
     -------
-    tf : bool
-        True if the contrast `C` is estimable on design `D`
+    bool
+        True if the contrast `c` is estimable on design `d`.
 
     Examples
     --------
-    >>> D = np.array([[1, 1, 1, 0, 0, 0],
+    >>> d = np.array([[1, 1, 1, 0, 0, 0],
     ...               [0, 0, 0, 1, 1, 1],
     ...               [1, 1, 1, 1, 1, 1]]).T
-    >>> isestimable([1, 0, 0], D)
+    >>> isestimable([1, 0, 0], d)
     False
-    >>> isestimable([1, -1, 0], D)
+    >>> isestimable([1, -1, 0], d)
     True
     """
-    C = np.asarray(C)
-    D = np.asarray(D)
-    if C.ndim == 1:
-        C = C[None, :]
-    if C.shape[1] != D.shape[1]:
-        raise ValueError('Contrast should have %d columns' % D.shape[1])
-    new = np.vstack([C, D])
-    if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(D):
+    c = array_like(c, 'c', ndim=2)
+    d = array_like(d, ndim=2)
+    if c.shape[1] != d.shape[1]:
+        raise ValueError('Contrast should have %d columns' % d.shape[1])
+    new = np.vstack([c, d])
+    if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(d):
         return False
     return True
 
@@ -394,11 +393,18 @@ def pinv_extended(X, rcond=1e-15):
 
 def recipr(x):
     """
-    Return the reciprocal of an array, setting all entries less than or
-    equal to 0 to 0. Therefore, it presumes that X should be positive in
-    general.
-    """
+    Reciprocal of an array with entries less than or equal to 0 set to 0.
 
+    Parameters
+    ----------
+    x : array_like
+        The input array.
+
+    Returns
+    -------
+    ndarray
+        The array with 0-filled reciprocals.
+    """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
     nans = np.isnan(x.flat)
@@ -411,9 +417,17 @@ def recipr(x):
 
 def recipr0(x):
     """
-    Return the reciprocal of an array, setting all entries equal to 0
-    as 0. It does not assume that X should be positive in
-    general.
+    Reciprocal of an array with entries less than 0 set to 0.
+
+    Parameters
+    ----------
+    x : array_like
+        The input array.
+
+    Returns
+    -------
+    ndarray
+        The array with 0-filled reciprocals.
     """
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
@@ -428,37 +442,75 @@ def recipr0(x):
 def clean0(matrix):
     """
     Erase columns of zeros: can save some time in pseudoinverse.
+
+    Parameters
+    ----------
+    matrix : ndarray
+        The array to clean.
+
+    Returns
+    -------
+    ndarray
+        The cleaned array.
     """
     colsum = np.add.reduce(matrix**2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
     return np.array(np.transpose(val))
 
 
-def fullrank(X, r=None):
+def fullrank(x, r=None):
     """
-    Return a matrix whose column span is the same as X.
+    Return an array whose column span is the same as x.
 
-    If the rank of X is known it can be specified as r -- no check
-    is made to ensure that this really is the rank of X.
+    Parameters
+    ----------
+    x : ndarray
+        The array to adjust, 2d.
+    r : int, optional
+        The rank of x. If not provided, determined by `np.linalg.matrix_rank`.
 
+    Returns
+    -------
+    ndarray
+        The array adjusted to have full rank.
+
+    Notes
+    -----
+    If the rank of x is known it can be specified as r -- no check
+    is made to ensure that this really is the rank of x.
     """
-
     if r is None:
-        r = np.linalg.matrix_rank(X)
+        r = np.linalg.matrix_rank(x)
 
-    V, D, U = L.svd(X, full_matrices=0)
-    order = np.argsort(D)
+    v, d, u = np.linalg.svd(x, full_matrices=False)
+    order = np.argsort(d)
     order = order[::-1]
     value = []
     for i in range(r):
-        value.append(V[:, order[i]])
+        value.append(v[:, order[i]])
     return np.asarray(np.transpose(value)).astype(np.float64)
 
 
 def unsqueeze(data, axis, oldshape):
     """
-    Unsqueeze a collapsed array
+    Unsqueeze a collapsed array.
 
+    Parameters
+    ----------
+    data : ndarray
+        The data to unsqueeze.
+    axis : int
+        The axis to unsqueeze.
+    oldshape : tuple[int]
+        The original shape before the squeeze or reduce operation.
+
+    Returns
+    -------
+    ndarray
+        The unsqueezed array.
+
+    Examples
+    --------
     >>> from numpy import mean
     >>> from numpy.random import standard_normal
     >>> x = standard_normal((3,4,5))
@@ -534,9 +586,17 @@ def maybe_unwrap_results(results):
     """
     return getattr(results, '_results', results)
 
+
 class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
+
+    Parameters
+    ----------
+    *args
+        Arguments passed to dict constructor, tuples (key, value).
+    **kwargs
+        Keyword agument passed to dict constructor, key=value.
     """
     def __init__(self, *args, **kwargs):
         super(Bunch, self).__init__(*args, **kwargs)
