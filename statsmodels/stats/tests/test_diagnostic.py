@@ -9,23 +9,24 @@ License: BSD-3
 currently all tests are against R
 
 """
-import os
 import json
+import os
 
 import numpy as np
 import pandas as pd
-
+import pytest
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_allclose, assert_array_equal)
-import pytest
 
-from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
-from statsmodels.datasets import macrodata
-import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
-from statsmodels.tools.tools import Bunch
 import statsmodels.stats.outliers_influence as oi
+import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.datasets import macrodata
+from statsmodels.datasets import sunspots
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import add_constant
+from statsmodels.tsa.ar_model import AR
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -1060,3 +1061,14 @@ if __name__ == '__main__':
     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
     '''
+
+
+def test_ljungbox_dof_adj():
+    data = sunspots.load_pandas().data['SUNACTIVITY']
+    res = AR(data).fit(maxlag=4)
+    resid = res.resid
+    res1 = smsdia.acorr_ljungbox(resid, lags=10)
+    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=res.k_ar)
+    assert_allclose(res1[0], res2[0])
+    assert np.all(np.isnan(res2[1][:4]))
+    assert np.all(res2[1][4:] <= res1[1][4:])

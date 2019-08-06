@@ -29,11 +29,13 @@ missing:
 
 """
 from statsmodels.compat.python import iteritems
+from collections.abc import Iterable
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
+from statsmodels.tools.validation import array_like, int_like
 
 
 # get the old signature back so the examples work
@@ -221,80 +223,98 @@ class CompareJ(object):
 compare_j = CompareJ()
 
 
-def acorr_ljungbox(x, lags=None, boxpierce=False):
+def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
     """
     Ljung-Box test for no autocorrelation
 
     Parameters
     ----------
-    x : array_like, 1d
-        data series, regression residuals when used as diagnostic test
-    lags : None, int or array_like
+    x : array_like
+        The data series, assumed to have mean zero, .e.g, regression residuals
+        when used as diagnostic test.
+    lags : {None, int, array_like}
         If lags is an integer then this is taken to be the largest lag
-        that is included, the test result is reported for all smaller lag length.
-        If lags is a list or array, then all lags are included up to the largest
-        lag in the list, however only the tests for the lags in the list are
-        reported.
-        If lags is None, then the default maxlag is 'min((nobs // 2 - 2), 40)'
+        that is included, the test result is reported for all smaller lag
+        length. If lags is a list or array, then all lags are included up to
+        the largest lag in the list, however only the tests for the lags in
+        the list are reported. If lags is None, then the default maxlag is
+        min((nobs // 2 - 2), 40).
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
+    model_df : int
+        Number of degrees of freedome consumed by the model. In an ARMA model,
+        this value is usually p+q where p is the AR order and q is the MA
+        order. This value is subtracted from the degrees-of-freedom used in
+        the test so that the adjusted dof for the statistics are
+        lags - model_df. If lags - model_df <= 0, then NaN is returned.
 
     Returns
     -------
     lbvalue : float or array
-        test statistic
+        The Ljung-Box test statistic.
     pvalue : float or array
-        p-value based on chi-square distribution
+        The p-value based on chi-square distribution. The p-value is computed
+        as 1.0 - chi2.cdf(lbvalue, dof) where dof is lag - model_df. If
+        lag - model_df < 0, then NaN is returned for the pvalue.
     bpvalue : (optional), float or array
-        test statistic for Box-Pierce test
+        The test statistic for Box-Pierce test.
     bppvalue : (optional), float or array
-        p-value based for Box-Pierce test on chi-square distribution
+        The p-value based for Box-Pierce test on chi-square distribution.
+        The p-value is computed as 1.0 - chi2.cdf(bpvalue, dof) where dof is
+        lag - model_df. If lag - model_df < 0, then NaN is returned for the
+        pvalue.
 
     Notes
     -----
     Ljung-Box and Box-Pierce statistic differ in their scaling of the
-    autocorrelation function. Ljung-Box test is reported to have better
-    small sample properties.
-
-    TODO: could be extended to work with more than one series
-    1d or nd ? axis ? ravel ?
-    needs more testing
+    autocorrelation function. Ljung-Box test is has better finite-sample
+    properties.
 
     *Verification*
 
+    needs more testing
     Looks correctly sized in Monte Carlo studies.
     not yet compared to verified values
 
     Examples
     --------
-    see example script
+    >>> data = sm.datasets.sunspots.load_pandas().data
+    >>> res = sm.tsa.ARMA(data['SUNACTIVITY'], (1,1)).fit(disp=-1)
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
+    (array([214.10699875]), array([1.82736777e-40]))
 
     References
     ----------
     Greene
     Wikipedia
     """
-    x = np.asarray(x)
+    # TODO: Need a reasonable results class
+    x = array_like(x, 'x')
     nobs = x.shape[0]
     if lags is None:
-        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1)
-    elif isinstance(lags, int):
+        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=np.int)
+    elif not isinstance(lags, Iterable):
+        lags = int_like(lags, 'lags')
         lags = np.arange(1, lags + 1)
-    lags = np.asarray(lags)
-    maxlag = max(lags)
+    lags = array_like(lags, 'lags', dtype=np.int)
+    maxlag = lags.max()
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
-    acfx = acf(x, nlags=maxlag, fft=False)
-    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-    qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
-    pval = stats.chi2.sf(qljungbox, lags)
+    sacf = acf(x, nlags=maxlag, fft=False)
+    sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+    qljungbox = nobs * (nobs + 2) * np.cumsum(sacf2)[lags - 1]
+    adj_lags = lags - model_df
+    pval = np.full_like(qljungbox, np.nan)
+    loc = adj_lags > 0
+    pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
     if not boxpierce:
         return qljungbox, pval
-    else:
-        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
-        pvalbp = stats.chi2.sf(qboxpierce, lags)
-        return qljungbox, pval, qboxpierce, pvalbp
+
+    qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
+    pvalbp = np.full_like(qljungbox, np.nan)
+    pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
+    return qljungbox, pval, qboxpierce, pvalbp
 
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
