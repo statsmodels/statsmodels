@@ -243,7 +243,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
     model_df : int
-        Number of degrees of freedome consumed by the model. In an ARMA model,
+        Number of degrees of freedom consumed by the model. In an ARMA model,
         this value is usually p+q where p is the AR order and q is the MA
         order. This value is subtracted from the degrees-of-freedom used in
         the test so that the adjusted dof for the statistics are
