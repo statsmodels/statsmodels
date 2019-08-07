@@ -378,6 +378,7 @@ html_context = {'examples': example_context}
 # --------------- DOCTEST -------------------
 doctest_global_setup = """
 import statsmodels.api as sm
+import statsmodels.tsa.api as tsa
 import statsmodels.formula.api as smf
 import numpy as np
 import scipy.stats as stats
