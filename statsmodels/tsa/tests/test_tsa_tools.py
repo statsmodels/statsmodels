@@ -546,14 +546,28 @@ class TestAddTrend(object):
         assert_equal(tools.add_trend(self.arr_1d, trend='ct'), base[:, :3])
         assert_equal(tools.add_trend(self.arr_1d, trend='ctt'), base)
 
-        base = np.hstack((self.c[:, None], self.t[:, None], self.t[:, None] ** 2, self.arr_2d))
-        assert_equal(tools.add_trend(self.arr_2d, prepend=True), base[:, [0, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='t', prepend=True), base[:, [1, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='ct', prepend=True), base[:, [0, 1, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='ctt', prepend=True), base)
+        base = np.hstack((self.c[:, None],
+                          self.t[:, None],
+                          self.t[:, None] ** 2,
+                          self.arr_2d))
+        assert_equal(tools.add_trend(self.arr_2d, prepend=True),
+                     base[:, [0, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='t', prepend=True),
+                     base[:, [1, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='ct', prepend=True),
+                     base[:, [0, 1, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='ctt', prepend=True),
+                     base)
 
     def test_unknown_trend(self):
-        assert_raises(ValueError, tools.add_trend, x=self.arr_1d, trend='unknown')
+        assert_raises(ValueError, tools.add_trend, x=self.arr_1d,
+                      trend='unknown')
+
+    def test_trend_n(self):
+        assert_equal(tools.add_trend(self.arr_1d, 'n'), self.arr_1d)
+        assert tools.add_trend(self.arr_1d, 'n') is not self.arr_1d
+        assert_equal(tools.add_trend(self.arr_2d, 'n'), self.arr_2d)
+        assert tools.add_trend(self.arr_2d, 'n') is not self.arr_2d
 
 
 class TestLagmat2DS(object):

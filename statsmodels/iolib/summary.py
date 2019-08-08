@@ -417,10 +417,11 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     else:
         params = results.params
         std_err = results.bse
-        tvalues = results.tvalues  #is this sometimes called zvalues
+        tvalues = results.tvalues  # is this sometimes called zvalues
         pvalues = results.pvalues
         conf_int = results.conf_int(alpha)
-
+    if params.size == 0:
+        return SimpleTable([['No Model Parameters']])
     # Dictionary to store the header names for the parameter part of the
     # summary table. look up by modeltype
     if use_t:

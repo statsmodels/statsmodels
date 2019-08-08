@@ -2699,7 +2699,7 @@ def test_arima_repeated_fit(reset_randomstate):
     arma = ARIMA(x, (1, 1, 1))
     res = arma.fit(trend='c', disp=-1)
     repeat = arma.fit(trend='c', disp=-1)
-    tol = 1e-4 if PLATFORM_WIN32 else 1e-6
+    tol = 1e-3 if PLATFORM_WIN32 else 1e-6
     assert_allclose(res.params, repeat.params, atol=tol, rtol=tol)
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(repeat.summary().as_text(), str)

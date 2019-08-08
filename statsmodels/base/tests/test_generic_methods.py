@@ -11,7 +11,8 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
-from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_LINUX32
+from statsmodels.compat.platform import (PLATFORM_OSX, PLATFORM_LINUX32,
+                                         PLATFORM_WIN32)
 
 import numpy as np
 import pandas as pd
@@ -127,7 +128,7 @@ class CheckGenericMixin(object):
             # atol discussion at gh-5158
             rtol = 1e-10
             atol = 1e-12
-            if PLATFORM_OSX:
+            if PLATFORM_OSX or PLATFORM_WIN32:
                 # GH 5628
                 rtol = 1e-8
                 atol = 1e-10
