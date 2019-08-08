@@ -396,3 +396,8 @@ div.body h2 span.pre {
 div.body h3 span.pre {
   font-size: 1.136rem;
 }
+
+.reference.external span {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: bold;
+}
