@@ -2060,7 +2060,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # Form matters here.  If homoskedastics can be sigma^2 (X'X)^-1
         # If Heteroskedastic then the form below is fine
         # If HAC then need to use HAC
-        # If Cluster, shoudl use cluster
+        # If Cluster, should use cluster
 
         cov_type = getattr(self, 'cov_type', 'nonrobust')
         if cov_type == 'nonrobust':

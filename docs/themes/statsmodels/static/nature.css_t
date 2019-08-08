@@ -150,7 +150,7 @@ div.sphinxsidebar ul {
 }
 div.sphinxsidebar input {
     border: 1px solid #ccc;
-    font-family: sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 1em;
 }
 div.sphinxsidebar a{
@@ -277,11 +277,11 @@ tt {
     color: #222;
     /* padding: 1px 2px; */
     font-size: 1.1em;
-    font-family: monospace;
+    font-family: 'Roboto', sans-serif;
 }
 
 .viewcode-back {
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
 }
 
 div.viewcode-block:target {

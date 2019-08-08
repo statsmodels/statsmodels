@@ -19,31 +19,33 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
     Parameters
     ----------
-    X : array_like
+    x : array_like
         Original array of data.
-    trend : str {"c","t","ct","ctt"}
-        "c" add constant only
-        "t" add trend only
-        "ct" add constant and linear trend
-        "ctt" add constant and linear and quadratic trend.
+    trend : str {'n', 'c', 't', 'ct', 'ctt'}
+
+        * 'n' add no trend.
+        * 'c' add constant only.
+        * 't' add trend only.
+        * 'ct' add constant and linear trend.
+        * 'ctt' add constant and linear and quadratic trend.
     prepend : bool
         If True, prepends the new data to the columns of X.
     has_constant : str {'raise', 'add', 'skip'}
         Controls what happens when trend is 'c' and a constant already
-        exists in X. 'raise' will raise an error. 'add' will duplicate a
+        exists in x. 'raise' will raise an error. 'add' will duplicate a
         constant. 'skip' will return the data without change. 'skip' is the
         default.
 
     Returns
     -------
-    y : array, recarray or DataFrame
+    array_like
         The original data with the additional trend columns.  If x is a
         recarray or pandas Series or DataFrame, then the trend column names
         are 'const', 'trend' and 'trend_squared'.
 
     Notes
     -----
-    Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
+    Returns columns as ['ctt','ct','c'] whenever applicable. There is currently
     no checking for an existing trend.
 
     See Also
@@ -52,13 +54,15 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         Add a constant column to an array.
     """
     prepend = bool_like(prepend, 'prepend')
-    trend = string_like(trend, 'trend', options=('c', 't', 'ct', 'ctt'))
+    trend = string_like(trend, 'trend', options=('n', 'c', 't', 'ct', 'ctt'))
     has_constant = string_like(has_constant, 'has_constant',
                                options=('raise', 'add', 'skip'))
 
     # TODO: could be generalized for trend of aribitrary order
     columns = ['const', 'trend', 'trend_squared']
-    if trend == "c":  # handles structured arrays
+    if trend == 'n':
+        return x.copy()
+    elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
     elif trend == "ct" or trend == "t":
