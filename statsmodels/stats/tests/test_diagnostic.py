@@ -603,9 +603,9 @@ class TestDiagnosticG(object):
         lilliefors3 = dict(statistic=0.1333956004203103,
                            pvalue=0.455683, parameters=(), distr='-')
 
-        lf1 = smsdia.lilliefors(res.resid)
-        lf2 = smsdia.lilliefors(res.resid**2)
-        lf3 = smsdia.lilliefors(res.resid[:20])
+        lf1 = smsdia.lilliefors(res.resid, pvalmethod='approx')
+        lf2 = smsdia.lilliefors(res.resid**2, pvalmethod='approx')
+        lf3 = smsdia.lilliefors(res.resid[:20], pvalmethod='approx')
 
         compare_t_est(lf1, lilliefors1, decimal=(14, 14))
         compare_t_est(lf2, lilliefors2, decimal=(14, 14))  # pvalue very small
