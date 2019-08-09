@@ -101,12 +101,14 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_oaxaca.py \
         statsmodels/tests/ \
         statsmodels/tools/decorators.py \
+        statsmodels/tools/docstring.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/sm_exceptions.py \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/validation/ \
         statsmodels/tools/web.py \
+        statsmodels/tools/tests/test_docstring.py \
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/ar_model.py \
         statsmodels/tsa/arima_model.py \
