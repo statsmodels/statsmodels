@@ -505,7 +505,7 @@ class TestKPSS(SetupKPSS):
             kpss(self.x, 'CT', nlags='legacy')
 
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis",
-                      lags='legacy')
+                      nlags='legacy')
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
