@@ -1,6 +1,4 @@
 """Helper files for pickling"""
-import pickle
-
 from statsmodels.iolib.openfile import get_file_obj
 
 
@@ -13,6 +11,8 @@ def save_pickle(obj, fname):
     fname : str
         Filename to pickle to
     """
+    import pickle
+
     with get_file_obj(fname, 'wb') as fout:
         pickle.dump(obj, fout, protocol=-1)
 
@@ -30,5 +30,7 @@ def load_pickle(fname):
     -----
     This method can be used to load *both* models and results.
     """
+    import pickle
+
     with get_file_obj(fname, 'rb') as fin:
         return pickle.load(fin)

@@ -1,7 +1,6 @@
 from statsmodels.compat.python import lrange
 
 from io import StringIO
-import pickle
 import shutil
 from os import environ, makedirs
 from os.path import expanduser, exists, dirname, abspath, join
@@ -120,15 +119,13 @@ def _get_cache(cache):
 
 def _cache_it(data, cache_path):
     import zlib
-    data = data.decode('utf-8')
-    open(cache_path, "wb").write(zlib.compress(pickle.dumps(data)))
+    open(cache_path, "wb").write(zlib.compress(data))
 
 
 def _open_cache(cache_path):
     import zlib
     data = zlib.decompress(open(cache_path, 'rb').read())
     # return as bytes object encoded in utf-8 for cross-compat of cached
-    data = pickle.loads(data).encode('utf-8')
     return data
 
 
