@@ -480,7 +480,6 @@ class NumpyDocString(Mapping):
             return []
         out = []
         out += self._str_header("See Also")
-        out += ['']
         last_had_desc = True
         for funcs, desc in self['See Also']:
             assert isinstance(funcs, list)
@@ -491,7 +490,7 @@ class NumpyDocString(Mapping):
                 elif func_role:
                     link = ':%s:`%s`' % (func_role, func)
                 else:
-                    link = "`%s`_" % func
+                    link = "%s" % func
                 links.append(link)
             link = ', '.join(links)
             out += [link]
@@ -504,7 +503,6 @@ class NumpyDocString(Mapping):
 
         if last_had_desc:
             out += ['']
-        out += ['']
         return out
 
     def _str_index(self):
@@ -554,8 +552,11 @@ class Docstring(object):
     """
 
     def __init__(self, docstring):
-        self._ds = NumpyDocString(docstring)
+        self._ds = None
         self._docstring = docstring
+        if docstring is None:
+            return
+        self._ds = NumpyDocString(docstring)
 
     def remove_parameters(self, parameters):
         """
@@ -564,7 +565,7 @@ class Docstring(object):
         parameters : str, list[str]
             The names of the parameters to remove.
         """
-        if not self._docstring:
+        if self._docstring is None:
             # Protection against -oo execution
             return
         if isinstance(parameters, str):
@@ -585,7 +586,7 @@ class Docstring(object):
         parameters : Parameter, list[Parameter]
             A Parameter of a list of Parameters.
         """
-        if not self._docstring:
+        if self._docstring is None:
             # Protection against -oo execution
             return
         if isinstance(parameters, Parameter):
@@ -614,16 +615,43 @@ class Docstring(object):
             The replacement block. The structure of the replacement block must
             match how the block is stored by NumpyDocString.
         """
-        if not self._docstring:
+        if self._docstring is None:
             # Protection against -oo execution
             return
-        block_name = str.capitalize(block_name)
+        block_name = ' '.join(map(str.capitalize, block_name.split(' ')))
         if block_name not in self._ds:
             raise ValueError('{0} is not a block in the '
                              'docstring'.format(block_name))
         if not isinstance(block, list):
             block = [block]
         self._ds[block_name] = block
+
+    def extract_parameters(self, parameters, indent=0):
+        if self._docstring is None:
+            # Protection against -oo execution
+            return
+        if isinstance(parameters, str):
+            parameters = [parameters]
+        final = []
+        ds_params = [param.name for param in self._ds['Parameters']]
+        missing = set(parameters).difference(ds_params)
+        if missing:
+            raise ValueError('{0} were not found in the '
+                             'docstring'.format(','.join(missing)))
+        for param in parameters:
+            for ds_param in self._ds['Parameters']:
+                if ds_param.name == param:
+                    final.append(ds_param)
+        ds = copy.deepcopy(self._ds)
+        for key in ds:
+            if key != 'Parameters':
+                ds[key] = [] if key != 'index' else {}
+            else:
+                ds[key] = final
+        out = '\n'.join(str(ds).split('\n')[3:])
+        if indent:
+            out = textwrap.indent(out, ' ' * indent)
+        return out
 
     def __str__(self):
         return str(self._ds)
@@ -643,4 +671,6 @@ def remove_parameters(docstring, parameters):
     str
         The modified docstring.
     """
+    if docstring is None:
+        return
     return str(Docstring(docstring).remove_parameters(parameters))

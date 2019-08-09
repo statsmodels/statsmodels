@@ -138,7 +138,7 @@ def _urlopen_cached(url, cache):
     from_cache = False
     if cache is not None:
         cache_path = join(cache,
-                          url.split("://")[-1].replace('/', ',') + ".zip")
+                          url.split("://")[-1].replace('/', ',') + "-v2.zip")
         try:
             data = _open_cache(cache_path)
             from_cache = True
