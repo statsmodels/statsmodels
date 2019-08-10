@@ -1,6 +1,6 @@
-# TODO Variance can be calculated for the three_fold
-# TODO Group Size Effects can be accounted for
-# TODO Non-Linear Oaxaca-Blinder can be used
+# TODO Non-Linear Regressions can be used
+# TODO Further decomposition of the two_fold parameters i.e.
+# the delta method for further two_fold detail
 """
 Author: Austin Adams
 
@@ -8,7 +8,7 @@ This class implements Oaxaca-Blinder Decomposition. It returns
 a OaxacaResults Class:
 
 OaxacaBlinder:
-Two-Fold/Pooled (two_fold)
+Two-Fold (two_fold)
 Three-Fold (three_fold)
 
 OaxacaResults:
@@ -108,18 +108,24 @@ class OaxacaBlinder(object):
 
     >>> model.three_fold().summary()
     Oaxaca-Blinder Three-fold Effects
-    Characteristic Effect: 321.74824
+    Endowments Effect: 321.74824
     Coefficient Effect: 75.45371
     Interaction Effect: -238.45151
     Gap: 158.75044
     """
 
     def __init__(self, endog, exog, bifurcate, hasconst=True,
-                 swap=True, cov_type='nonrobust', cov_kwds=None):
+                 swap=True, var=False, cov_type='nonrobust', cov_kwds=None):
         if str(type(exog)).find('pandas') != -1:
             bifurcate = exog.columns.get_loc(bifurcate)
             endog, exog = np.array(endog), np.array(exog)
 
+        self.var = var
+        self.bifurcate = bifurcate
+        self.cov_type = cov_type
+        self.cov_kwds = cov_kwds
+        self.neumark = np.delete(exog, bifurcate, axis=1)
+        self.exog = exog
         bi_col = exog[:, bifurcate]
         endog = np.column_stack((bi_col, endog))
         bi = np.unique(bi_col)
@@ -134,8 +140,9 @@ class OaxacaBlinder(object):
         exog_s = np.delete(exog_s, bifurcate, axis=1)
         endog_f = endog_f[:, 1]
         endog_s = endog_s[:, 1]
-        endog = endog[:, 1]
+        self.endog = endog[:, 1]
 
+        self.len_f, self.len_s = len(endog_f), len(endog_s)
         self.gap = endog_f.mean() - endog_s.mean()
 
         if swap and self.gap < 0:
@@ -146,11 +153,21 @@ class OaxacaBlinder(object):
         if hasconst is False:
             exog_f = add_constant(exog_f, prepend=False)
             exog_s = add_constant(exog_s, prepend=False)
-            exog = add_constant(exog, prepend=False)
+            self.exog = add_constant(self.exog, prepend=False)
+            self.neumark = add_constant(self.neumark, prepend=False)
 
-        self._t_model = OLS(endog, exog).fit(
-                                            cov_type=cov_type,
-                                            cov_kwds=cov_kwds)
+        self.exog_f_mean = np.mean(exog_f, axis=0)
+        self.exog_s_mean = np.mean(exog_s, axis=0)
+
+        if self.var is True:
+            # instead of storing the exog arrays, we can store
+            # the variance of the matricies
+            # debate on if I should just calculate this all the time
+            f_cov = exog_f - 1 * np.mean(exog_f)
+            self.f_cov = (f_cov.T @ f_cov) / (len(f_cov) * (len(f_cov) - 1))
+            s_cov = exog_s - 1 * np.mean(exog_s)
+            self.s_cov = (s_cov.T @ s_cov) / (len(s_cov) * (len(s_cov) - 1))
+
         self._f_model = OLS(endog_f, exog_f).fit(
                                                 cov_type=cov_type,
                                                 cov_kwds=cov_kwds)
@@ -158,9 +175,65 @@ class OaxacaBlinder(object):
                                                 cov_type=cov_type,
                                                 cov_kwds=cov_kwds)
 
-        self.exog_f_mean = np.mean(exog_f, axis=0)
-        self.exog_s_mean = np.mean(exog_s, axis=0)
-        self.t_params = np.delete(self._t_model.params, bifurcate)
+    def variance(self, decomp_type):
+        """
+        A helper function to calculate the variance. Used to keep
+        the decomposition functions cleaner
+        """
+
+        if decomp_type == 3:
+            endow_var = ((
+                        (self.exog_f_mean - self.exog_s_mean)
+                        @ self._s_model.cov_params()
+                        @ (self.exog_f_mean - self.exog_s_mean))
+                        + (self._s_model.params @ (self.f_cov + self.s_cov)
+                            @ self._s_model.params))
+
+            coef_var = ((self.exog_s_mean @ (self._f_model.cov_params()
+                        + self._s_model.cov_params()) @ self.exog_s_mean)
+                        + ((self._f_model.params - self._s_model.params)
+                        @ self.s_cov
+                        @ (self._f_model.params - self._s_model.params)))
+
+            int_var = (((self.exog_f_mean - self.exog_s_mean)
+                        @ (self._f_model.cov_params()
+                        + self._s_model.cov_params())
+                        @ (self.exog_f_mean - self.exog_s_mean))
+                        + (self._f_model.params - self._s_model.params)
+                        @ (self.f_cov + self.s_cov)
+                        @ (self._f_model.params - self._s_model.params))
+            var = [endow_var, coef_var, int_var]
+        '''
+        if decomp_type == 2:
+            explained_var = (((self.exog_f_mean - self.exog_s_mean)\
+                            .reshape(-1,1)
+                            @ np.array([((self.weight[0]
+                            @ self._f_model.cov_params()
+                            @ self.weight[0])
+                            + (self.weight[1] @ self._s_model.cov_params()
+                            @ self.weight[1]))])
+                            @ (self.exog_f_mean - self.exog_s_mean))\
+                            .reshape(-1,1)
+                            + ((self.weight[0]
+                            @ self._f_model.params + self.weight[1]
+                            @ self._s_model.params)
+                            @ (self.f_cov + self.s_cov)
+                            @ (self.weight[0] @ self._f_model.params
+                              + self.weight[1]
+                            @ self._s_model.params)))
+           unexplained_var = ((self.weight[1] @ self.exog_f_mean
+                            + self.weight[0] @ self.exog_s_mean)
+                            @ (self._f_model.cov_params()
+                            + self._s_model.cov_params())
+                            @ (self.weight[1] @ self.exog_f_mean
+                            + self.weight[0] @ self.exog_s_mean)
+                            + ((self._f_model.params - self._s_model.params)
+                            @ (self.weight[1] @ self.f_cov @ self.weight[1]
+                            + self.weight[0] @ self.s_cov @ self.weight[0])
+                            @ (self._f_model.params - self._s_model.params)))
+            var = [explained_var, unexplained_var]
+        '''
+        return(var)
 
     def three_fold(self):
         """
@@ -171,8 +244,8 @@ class OaxacaBlinder(object):
         OaxacaResults
             A results container for the three-fold decomposition.
         """
-
-        self.char_eff = (
+        var_val = None
+        self.endow_eff = (
                         (self.exog_f_mean - self.exog_s_mean)
                         @ self._s_model.params)
         self.coef_eff = self.exog_s_mean @ (self._f_model.params
@@ -180,26 +253,109 @@ class OaxacaBlinder(object):
         self.int_eff = ((self.exog_f_mean - self.exog_s_mean)
                         @ (self._f_model.params - self._s_model.params))
 
-        return OaxacaResults(
-                            (self.char_eff, self.coef_eff,
-                                self.int_eff, self.gap), 3)
+        if self.var is True:
+            var_val = self.variance(3)
 
-    def two_fold(self):
+        return OaxacaResults(
+                            (self.endow_eff, self.coef_eff,
+                                self.int_eff, self.gap), 3, var_val=var_val)
+
+    def two_fold(self, two_fold_type='pooled', submitted_weight=None):
         """
         Calculates the two-fold or pooled Oaxaca Blinder Decompositions
+
+        Methods
+        -------
+        two_fold_type: string, optional
+            This method allows for the specific calculation of the
+            non-discriminatory model. There are four different types
+            available at this time. pooled, cotton, reimers, self_submitted.
+            Pooled is assumed and if a non-viable parameter is given,
+            pooled will be ran.
+
+            pooled - This type assumes that the pooled model's parameters
+            (a normal regression) is the non-discriminatory model.
+            This includes the indicator variable. This is generally
+            the best idea. If you have economic justification for
+            using others, then use others.
+
+            nuemark - This is similar to the pooled type, but the regression
+            is not done including the indicator variable.
+
+            cotton - This type uses the adjusted in Cotton (1988), which
+            accounts for the undervaluation of one group causing the
+            overevalution of another. It uses the sample size weights for
+            a linear combination of the two model parameters
+
+            reimers - This type uses a linear combination of the two
+            models with both parameters being 50% of the
+            non-discriminatory model.
+
+            self_submitted - This allows the user to submit their
+            own weights. Please be sure to put the weight of the larger mean
+            group only. This should be submitted in the
+            submitted_weights variable.
+
+        submitted_weight: int/float, required only for self_submitted,
+            This is the submitted weight for the larger mean. If the
+            weight for the larger mean is p, then the weight for the
+            other mean is 1-p. Only submit the first value.
 
         Returns
         -------
         OaxacaResults
             A results container for the two-fold decomposition.
         """
+        var_val = None
+        if two_fold_type == 'cotton':
+            submitted_weight = [self.len_f / (self.len_f + self.len_s),
+                                self.len_s / (self.len_f + self.len_s)]
+            self.t_params = (
+                            (self.len_f / (self.len_f + self.len_s)
+                                * self._f_model.params)
+                            + (self.len_s / (self.len_f + self.len_s)
+                                * self._s_model.params))
+
+        elif two_fold_type == 'reimers':
+            submitted_weight = [.5, .5]
+            self.t_params = .5 * (self._f_model.params + self._s_model.params)
+
+        elif two_fold_type == 'self_submitted':
+            if submitted_weight is None:
+                raise ValueError('Please submit weights')
+            submitted_weight = [submitted_weight, 1 - submitted_weight]
+            self.t_params = (
+                            submitted_weight[0] * self._f_model.params
+                            + submitted_weight[1] * self._s_model.params)
+
+        elif two_fold_type == 'nuemark':
+            self._t_model = OLS(self.endog, self.neumark).fit(
+                        cov_type=self.cov_type,
+                        cov_kwds=self.cov_kwds)
+            self.t_params = self._t_model.params
+            submitted_weight = [self.t_params, 1 - self.t_params]
+
+        else:
+            self._t_model = OLS(self.endog, self.exog).fit(
+                                    cov_type=self.cov_type,
+                                    cov_kwds=self.cov_kwds)
+            self.t_params = np.delete(self._t_model.params, self.bifurcate)
+            submitted_weight = [self.t_params, 1 - self.t_params]
+
+        self.weight = submitted_weight
         self.unexplained = ((self.exog_f_mean
                             @ (self._f_model.params - self.t_params))
                             + (self.exog_s_mean
                             @ (self.t_params - self._s_model.params)))
         self.explained = (self.exog_f_mean - self.exog_s_mean) @ self.t_params
 
-        return OaxacaResults((self.unexplained, self.explained, self.gap), 2)
+        # if self.var == True:
+        #     TODO
+        #     var_val = self.variance(2)
+
+        return OaxacaResults(
+                            (self.unexplained, self.explained, self.gap),
+                            2, var_val=var_val)
 
 
 class OaxacaResults:
@@ -227,7 +383,7 @@ class OaxacaResults:
     interaction effect, and the mean gap. The list will
     be of the following order and type.
 
-    characteristic effect : float
+    endowment effect : float
         This is the effect due to the group differences in
         predictors
     coefficient effect : float
@@ -244,8 +400,9 @@ class OaxacaResults:
     params
         A list of all values for the fitted models.
     """
-    def __init__(self, results, model_type):
+    def __init__(self, results, model_type, var_val=None):
         self.params = results
+        self.var = var_val
         self.model_type = model_type
 
     def summary(self):
@@ -266,7 +423,7 @@ class OaxacaResults:
             print(dedent("""\
             Oaxaca-Blinder Three-fold Effects
 
-            Characteristic Effect: {:.5f}
+            Endowment Effect: {:.5f}
             Coefficient Effect: {:.5f}
             Interaction Effect: {:.5f}
             Gap: {:.5f}""".format(
