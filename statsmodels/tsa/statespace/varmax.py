@@ -931,7 +931,7 @@ class VARMAXResults(MLEResults):
                 enforce_invertibility=self.model.enforce_invertibility,
                 trend_offset=self.model.trend_offset
             )
-            model.update(self.params)
+            model.update(self.params, transformed=True, includes_fixed=True)
             if model['state_intercept'].ndim > 1:
                 last_intercept = model['state_intercept', :, self.nobs - 1]
             else:

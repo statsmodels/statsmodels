@@ -1234,7 +1234,7 @@ class DynamicFactorResults(MLEResults):
                 error_cov_type=self.model.error_cov_type,
                 enforce_stationarity=self.model.enforce_stationarity
             )
-            model.update(self.params)
+            model.update(self.params, transformed=True, includes_fixed=True)
 
             # Set the kwargs with the update time-varying state space
             # representation matrices
