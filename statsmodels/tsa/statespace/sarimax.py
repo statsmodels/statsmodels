@@ -806,7 +806,8 @@ class SARIMAX(MLEModel):
 
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
-                                 polynomial_ma, k_trend=0, trend_data=None):
+                                 polynomial_ma, k_trend=0, trend_data=None,
+                                 warning_description=None):
         k = 2 * k_ma
         r = max(k + k_ma, k_ar)
 
@@ -815,34 +816,57 @@ class SARIMAX(MLEModel):
 
         residuals = None
         if k_ar + k_ma + k_trend > 0:
-            # If we have MA terms, get residuals from an AR(k) model to use
-            # as data for conditional sum of squares estimates of the MA
-            # parameters
-            if k_ma > 0:
-                Y = endog[k:]
-                X = lagmat(endog, k, trim='both')
-                params_ar = np.linalg.pinv(X).dot(Y)
-                residuals = Y - np.dot(X, params_ar)
+            try:
+                # If we have MA terms, get residuals from an AR(k) model to use
+                # as data for conditional sum of squares estimates of the MA
+                # parameters
+                if k_ma > 0:
+                    Y = endog[k:]
+                    X = lagmat(endog, k, trim='both')
+                    params_ar = np.linalg.pinv(X).dot(Y)
+                    residuals = Y - np.dot(X, params_ar)
 
-            # Run an ARMA(p,q) model using the just computed residuals as data
-            Y = endog[r:]
+                # Run an ARMA(p,q) model using the just computed residuals as
+                # data
+                Y = endog[r:]
 
-            X = np.empty((Y.shape[0], 0))
-            if k_trend > 0:
-                if trend_data is None:
-                    raise ValueError('Trend data must be provided if'
-                                     ' `k_trend` > 0.')
-                X = np.c_[X, trend_data[:(-r if r > 0 else None), :]]
-            if k_ar > 0:
-                cols = polynomial_ar.nonzero()[0][1:] - 1
-                X = np.c_[X, lagmat(endog, k_ar)[r:, cols]]
-            if k_ma > 0:
-                cols = polynomial_ma.nonzero()[0][1:] - 1
-                X = np.c_[X, lagmat(residuals, k_ma)[r-k:, cols]]
+                X = np.empty((Y.shape[0], 0))
+                if k_trend > 0:
+                    if trend_data is None:
+                        raise ValueError('Trend data must be provided if'
+                                         ' `k_trend` > 0.')
+                    X = np.c_[X, trend_data[:(-r if r > 0 else None), :]]
+                if k_ar > 0:
+                    cols = polynomial_ar.nonzero()[0][1:] - 1
+                    X = np.c_[X, lagmat(endog, k_ar)[r:, cols]]
+                if k_ma > 0:
+                    cols = polynomial_ma.nonzero()[0][1:] - 1
+                    X = np.c_[X, lagmat(residuals, k_ma)[r-k:, cols]]
 
-            # Get the array of [ar_params, ma_params]
-            params = np.linalg.pinv(X).dot(Y)
-            residuals = Y - np.dot(X, params)
+                # Get the array of [ar_params, ma_params]
+                params = np.linalg.pinv(X).dot(Y)
+                residuals = Y - np.dot(X, params)
+            except ValueError:
+                if warning_description is not None:
+                    warning_description = ' for %s' % warning_description
+                else:
+                    warning_description = ''
+                warn('Too few observations to estimate starting parameters%s.'
+                     ' All parameters except for variances will be set to'
+                     ' zeros.' % warning_description)
+                # Typically this will be raised if there are not enough
+                # observations for the `lagmat` calls.
+                params = np.zeros(k_trend + k_ar + k_ma, dtype=endog.dtype)
+                if len(endog) == 0:
+                    # This case usually happens when there are not even enough
+                    # observations for a complete set of differencing
+                    # operations (no hope of fitting, just set starting
+                    # variance to 1)
+                    residuals = np.ones(k_params_ma * 2 + 1, dtype=endog.dtype)
+                else:
+                    residuals = np.r_[
+                        np.zeros(k_params_ma * 2, dtype=endog.dtype),
+                        endog - np.mean(endog)]
 
         # Default output
         params_trend = []
@@ -913,8 +937,8 @@ class SARIMAX(MLEModel):
         (params_trend, params_ar, params_ma,
          params_variance) = self._conditional_sum_squares(
             endog, self.k_ar, self.polynomial_ar, self.k_ma,
-            self.polynomial_ma, self.k_trend, trend_data
-        )
+            self.polynomial_ma, self.k_trend, trend_data,
+            warning_description='ARMA and trend')
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
@@ -944,9 +968,8 @@ class SARIMAX(MLEModel):
         _, params_seasonal_ar, params_seasonal_ma, params_seasonal_variance = (
             self._conditional_sum_squares(
                 endog, self.k_seasonal_ar, self.polynomial_seasonal_ar,
-                self.k_seasonal_ma, self.polynomial_seasonal_ma
-            )
-        )
+                self.k_seasonal_ma, self.polynomial_seasonal_ma,
+                warning_description='seasonal ARMA'))
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
