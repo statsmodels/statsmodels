@@ -588,3 +588,16 @@ def test_dynamic_factor_diag_error_cov():
     # Can't check some parameters-related values because of the different
     # parameterization (i.e. cov_params, bse, pvalues, etc. won't match).
     check_results(res1, res2, check_params=False)
+
+
+def test_score_shape():
+    # Test that the `score()` output for fixed params has the same shape as the
+    # input vector
+    endog = macrodata['infl']
+
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+
+    with mod.fix_params({'ar.L1': 0.5}):
+        score = mod.score([1.0])
+
+    assert_equal(score.shape, (1,))
