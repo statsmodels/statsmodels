@@ -480,7 +480,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     drop_omitted : bool, optional
         Includes regressors that are not specified in regressor_order. If
         False, regressors not specified will be appended to end of the list.
-        If True, only regressors in regressors_list will be included.
+        If True, only regressors in regressor_order will be included.
     """
 
     if not isinstance(results, list):
