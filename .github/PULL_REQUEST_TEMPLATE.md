@@ -2,7 +2,7 @@
 - [ ] tests added / passed. 
 - [ ] code/documentation is well formatted.  
 - [ ] properly formatted commit message. See 
-      [NumPy's guide](https://docs.scipy.org/doc/numpy/dev/gitwash/development_workflow.html#writing-the-commit-message). 
+      [NumPy's guide](https://docs.scipy.org/doc/numpy-1.15.1/dev/gitwash/development_workflow.html#writing-the-commit-message). 
 
 <details>
 
