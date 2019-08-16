@@ -1775,7 +1775,7 @@ class UnobservedComponentsResults(MLEResults):
             model_kwargs = self._init_kwds.copy()
             model_kwargs['exog'] = exog
             model = UnobservedComponents(endog, **model_kwargs)
-            model.update(self.params)
+            model.update(self.params, transformed=True, includes_fixed=True)
 
             # Set the kwargs with the update time-varying state space
             # representation matrices

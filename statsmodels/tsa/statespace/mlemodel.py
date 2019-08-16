@@ -957,7 +957,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             for i in range(n):
                 ei[i] = epsilon[i]
                 self.update(params + ei, transformed=transformed,
-                            complex_step=False)
+                            includes_fixed=includes_fixed, complex_step=False)
                 _res = self.ssm.filter(complex_step=False, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
@@ -974,11 +974,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 ei[i] = epsilon[i]
 
                 self.update(params + ei, transformed=transformed,
-                            complex_step=False)
+                            includes_fixed=includes_fixed, complex_step=False)
                 _res1 = self.ssm.filter(complex_step=False, **kwargs)
 
                 self.update(params - ei, transformed=transformed,
-                            complex_step=False)
+                            includes_fixed=includes_fixed, complex_step=False)
                 _res2 = self.ssm.filter(complex_step=False, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
@@ -1145,7 +1145,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return np.sum(score_obs, axis=0)
 
     def _score_obs_harvey(self, params, approx_complex_step=True,
-                          approx_centered=False, **kwargs):
+                          approx_centered=False, includes_fixed=False,
+                          **kwargs):
         """
         Score
 
@@ -1173,7 +1174,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         n = len(params)
 
         # Get values at the params themselves
-        self.update(params, transformed=True, complex_step=approx_complex_step)
+        self.update(params, transformed=True, includes_fixed=includes_fixed,
+                    complex_step=approx_complex_step)
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
         res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
@@ -1181,7 +1183,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Get forecasts error partials
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
-                params, transformed=True,
+                params, transformed=True, includes_fixed=includes_fixed,
                 approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, res=res, **kwargs))
 
@@ -1264,6 +1266,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             params, transform_score = out
 
         if method == 'harvey':
+            kwargs['includes_fixed'] = True
             score = self._score_harvey(
                 params, approx_complex_step=approx_complex_step, **kwargs)
         elif method == 'approx' and approx_complex_step:
@@ -1278,6 +1281,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if not transformed:
             score = np.dot(transform_score, score)
+
+        if self._has_fixed_params and not includes_fixed:
+            score = score[self._free_params_index]
 
         return score
 
@@ -1611,7 +1617,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                   includes_fixed=includes_fixed)
 
     def simulate(self, params, nsimulations, measurement_shocks=None,
-                 state_shocks=None, initial_state=None):
+                 state_shocks=None, initial_state=None, includes_fixed=False):
         r"""
         Simulate a new time series following the state space model
 
@@ -1650,7 +1656,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         simulated_obs : array
             An (nsimulations x k_endog) array of simulated observations.
         """
-        self.update(params)
+        self.update(params, includes_fixed=includes_fixed)
 
         simulated_obs, simulated_states = self.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
@@ -1662,7 +1668,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return simulated_obs
 
     def impulse_responses(self, params, steps=1, impulse=0,
-                          orthogonalized=False, cumulative=False, **kwargs):
+                          orthogonalized=False, cumulative=False,
+                          includes_fixed=False, **kwargs):
         """
         Impulse response function
 
@@ -1706,7 +1713,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         calculating impulse responses.
 
         """
-        self.update(params)
+        self.update(params, includes_fixed=includes_fixed)
         irfs = self.ssm.impulse_responses(
             steps, impulse, orthogonalized, cumulative, **kwargs)
 
