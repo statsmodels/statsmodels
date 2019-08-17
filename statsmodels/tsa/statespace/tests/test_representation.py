@@ -1016,8 +1016,10 @@ def test_standardized_forecasts_error():
     data['lgdp'] = np.log(data['GDP'])
 
     # Fit an ARIMA(1, 1, 0) to log GDP
-    mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
+    mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0),
+                          use_exact_diffuse=True)
     res = mod.fit(disp=-1)
+    d = np.maximum(res.loglikelihood_burn, res.nobs_diffuse)
 
     standardized_forecasts_error = (
         res.filter_results.forecasts_error[0] /
@@ -1025,8 +1027,8 @@ def test_standardized_forecasts_error():
     )
 
     assert_allclose(
-        res.filter_results.standardized_forecasts_error[0],
-        standardized_forecasts_error,
+        res.filter_results.standardized_forecasts_error[0, d:],
+        standardized_forecasts_error[..., d:],
     )
 
 

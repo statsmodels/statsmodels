@@ -45,7 +45,8 @@ def get_dummy_mod(fit=True, pandas=False):
 
     mod = sarimax.SARIMAX(
         endog, exog=exog, order=(0, 0, 0),
-        time_varying_regression=True, mle_regression=False)
+        time_varying_regression=True, mle_regression=False,
+        use_exact_diffuse=True)
 
     if fit:
         with warnings.catch_warnings():
@@ -151,9 +152,9 @@ def test_wrapping():
 
     # Test that we can change the following properties: loglikelihood_burn,
     # initial_variance, tolerance
-    assert_equal(mod.loglikelihood_burn, 1)
-    mod.loglikelihood_burn = 0
-    assert_equal(mod.ssm.loglikelihood_burn, 0)
+    assert_equal(mod.loglikelihood_burn, 0)
+    mod.loglikelihood_burn = 1
+    assert_equal(mod.ssm.loglikelihood_burn, 1)
 
     assert_equal(mod.tolerance, mod.ssm.tolerance)
     mod.tolerance = 0.123
@@ -519,7 +520,7 @@ def check_results(pandas):
     assert_almost_equal(res.resid[2:], np.zeros(mod.nobs-2))
 
     # Test loglikelihood_burn
-    assert_equal(res.loglikelihood_burn, 1)
+    assert_equal(res.loglikelihood_burn, 0)
 
 
 def test_results(pandas=False):
