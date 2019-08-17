@@ -22,12 +22,13 @@ dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
 
-def run_ucm(name):
+def run_ucm(name, use_exact_diffuse=False):
     true = getattr(results_structural, name)
 
     for model in true['models']:
         kwargs = model.copy()
         kwargs.update(true['kwargs'])
+        kwargs['use_exact_diffuse'] = use_exact_diffuse
 
         # Make a copy of the data
         values = dta.copy()
@@ -84,7 +85,22 @@ def run_ucm(name):
         # Test that the likelihood is correct
         rtol = true.get('rtol', 1e-7)
         atol = true.get('atol', 0)
-        assert_allclose(res_true.llf, true['llf'], rtol=rtol, atol=atol)
+
+        if use_exact_diffuse:
+            # If we are using exact diffuse initialization, then we need to
+            # adjust for the fact that KFAS does not include the constant in
+            # the likelihood function for the diffuse periods
+            # (see note to test_exact_diffuse_filtering.py for details).
+            res_llf = (res_true.llf_obs.sum()
+                       + res_true.nobs_diffuse * 0.5 * np.log(2 * np.pi))
+        else:
+            # If we are using approximate diffuse initialization, then we need
+            # to ignore the first period, and this will agree with KFAS (since
+            # it does not include the constant in the likelihood function for
+            # diffuse periods).
+            res_llf = res_true.llf_obs[res_true.loglikelihood_burn:].sum()
+
+        assert_allclose(res_llf, true['llf'], rtol=rtol, atol=atol)
 
         # Optional smoke test for plot_components
         try:
@@ -101,11 +117,23 @@ def run_ucm(name):
 
         # Now fit the model via MLE
         with warnings.catch_warnings(record=True):
-            res = mod.fit(disp=-1)
+            fit_kwargs = {}
+            if 'maxiter' in true:
+                fit_kwargs['maxiter'] = true['maxiter']
+            res = mod.fit(start_params=true.get('start_params', None),
+                          disp=-1, **fit_kwargs)
             # If we found a higher likelihood, no problem; otherwise check
             # that we're very close to that found by R
-            if res.llf <= true['llf']:
-                assert_allclose(res.llf, true['llf'], rtol=1e-4)
+
+            # See note above about these computation
+            if use_exact_diffuse:
+                res_llf = (res.llf_obs.sum()
+                           + res.nobs_diffuse * 0.5 * np.log(2 * np.pi))
+            else:
+                res_llf = res.llf_obs[res_true.loglikelihood_burn:].sum()
+
+            if res_llf <= true['llf']:
+                assert_allclose(res_llf, true['llf'], rtol=1e-4)
 
             # Smoke test for summary
             res.summary()
@@ -113,6 +141,7 @@ def run_ucm(name):
 
 def test_irregular(close_figures):
     run_ucm('irregular')
+    run_ucm('irregular', use_exact_diffuse=True)
 
 
 def test_fixed_intercept(close_figures):
@@ -122,18 +151,22 @@ def test_fixed_intercept(close_figures):
     match = 'Specified model does not contain'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_intercept')
+        run_ucm('fixed_intercept', use_exact_diffuse=True)
 
 
 def test_deterministic_constant(close_figures):
     run_ucm('deterministic_constant')
+    run_ucm('deterministic_constant', use_exact_diffuse=True)
 
 
 def test_random_walk(close_figures):
     run_ucm('random_walk')
+    run_ucm('random_walk', use_exact_diffuse=True)
 
 
 def test_local_level(close_figures):
     run_ucm('local_level')
+    run_ucm('local_level', use_exact_diffuse=True)
 
 
 def test_fixed_slope(close_figures):
@@ -141,6 +174,7 @@ def test_fixed_slope(close_figures):
     match = 'irregular component added'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_slope')
+        run_ucm('fixed_slope', use_exact_diffuse=True)
 
 
 def test_fixed_slope_warn(close_figures):
@@ -151,58 +185,72 @@ def test_fixed_slope_warn(close_figures):
     match = 'irregular component added'
     with pytest.warns(warning, match=match):
         run_ucm('fixed_slope')
+        run_ucm('fixed_slope', use_exact_diffuse=True)
 
 
 def test_deterministic_trend(close_figures):
     run_ucm('deterministic_trend')
+    run_ucm('deterministic_trend', use_exact_diffuse=True)
 
 
 def test_random_walk_with_drift(close_figures):
     run_ucm('random_walk_with_drift')
+    run_ucm('random_walk_with_drift', use_exact_diffuse=True)
 
 
 def test_local_linear_deterministic_trend(close_figures):
     run_ucm('local_linear_deterministic_trend')
+    run_ucm('local_linear_deterministic_trend', use_exact_diffuse=True)
 
 
 def test_local_linear_trend(close_figures):
     run_ucm('local_linear_trend')
+    run_ucm('local_linear_trend', use_exact_diffuse=True)
 
 
 def test_smooth_trend(close_figures):
     run_ucm('smooth_trend')
+    run_ucm('smooth_trend', use_exact_diffuse=True)
 
 
 def test_random_trend(close_figures):
     run_ucm('random_trend')
+    run_ucm('random_trend', use_exact_diffuse=True)
 
 
 def test_cycle(close_figures):
-    run_ucm('cycle')
+    run_ucm('cycle_approx_diffuse')
+    run_ucm('cycle', use_exact_diffuse=True)
 
 
 def test_seasonal(close_figures):
-    run_ucm('seasonal')
+    run_ucm('seasonal_approx_diffuse')
+    run_ucm('seasonal', use_exact_diffuse=True)
 
 
 def test_freq_seasonal(close_figures):
-    run_ucm('freq_seasonal')
+    run_ucm('freq_seasonal_approx_diffuse')
+    run_ucm('freq_seasonal', use_exact_diffuse=True)
 
 
 def test_reg(close_figures):
-    run_ucm('reg')
+    run_ucm('reg_approx_diffuse')
+    run_ucm('reg', use_exact_diffuse=True)
 
 
 def test_rtrend_ar1(close_figures):
     run_ucm('rtrend_ar1')
+    run_ucm('rtrend_ar1', use_exact_diffuse=True)
 
 
 @pytest.mark.slow
 def test_lltrend_cycle_seasonal_reg_ar1(close_figures):
-    run_ucm('lltrend_cycle_seasonal_reg_ar1')
+    run_ucm('lltrend_cycle_seasonal_reg_ar1_approx_diffuse')
+    run_ucm('lltrend_cycle_seasonal_reg_ar1', use_exact_diffuse=True)
 
 
-def test_mle_reg():
+@pytest.mark.parametrize("use_exact_diffuse", [True, False])
+def test_mle_reg(use_exact_diffuse):
     endog = np.arange(100)*1.0
     exog = endog*2
     # Make the fit not-quite-perfect
@@ -211,17 +259,29 @@ def test_mle_reg():
 
     with warnings.catch_warnings(record=True):
         mod1 = UnobservedComponents(endog, irregular=True,
-                                    exog=exog, mle_regression=False)
+                                    exog=exog, mle_regression=False,
+                                    use_exact_diffuse=use_exact_diffuse)
         res1 = mod1.fit(disp=-1)
 
         mod2 = UnobservedComponents(endog, irregular=True,
-                                    exog=exog, mle_regression=True)
+                                    exog=exog, mle_regression=True,
+                                    use_exact_diffuse=use_exact_diffuse)
         res2 = mod2.fit(disp=-1)
 
     assert_allclose(res1.regression_coefficients.filtered[0, -1],
                     0.5,
                     atol=1e-5)
     assert_allclose(res2.params[1], 0.5, atol=1e-5)
+
+    # When the regression component is part of the state vector with exact
+    # diffuse initialization, we have two diffuse observations
+    if use_exact_diffuse:
+        print(res1.predicted_diffuse_state_cov)
+        assert_equal(res1.nobs_diffuse, 2)
+        assert_equal(res2.nobs_diffuse, 0)
+    else:
+        assert_equal(res1.loglikelihood_burn, 1)
+        assert_equal(res2.loglikelihood_burn, 0)
 
 
 def test_specifications():
