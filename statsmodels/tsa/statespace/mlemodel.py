@@ -1063,7 +1063,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
 
         information_matrix = np.zeros((n, n), dtype=dtype)
-        for t in range(self.ssm.loglikelihood_burn, self.nobs):
+        d = np.maximum(self.ssm.loglikelihood_burn, res.nobs_diffuse)
+        for t in range(d, self.nobs):
             inv_forecasts_error_cov[:, :, t] = (
                 np.linalg.inv(res.forecasts_error_cov[:, :, t])
             )
