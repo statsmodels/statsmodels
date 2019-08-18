@@ -3593,7 +3593,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
-            for discrete variables. For interpretations of these methods 
+            for discrete variables. For interpretations of these methods
             see notes below.
         atexog : array_like, optional
             Optionally, you can provide the exogenous variables over which to
@@ -3627,7 +3627,6 @@ class DiscreteResults(base.LikelihoodModelResults):
           change in `exog`
         - 'dyex' - proportional change in `endog` for a change in `exog`
         - 'eydx' - change in `endog` for a proportional change in `exog`
-        
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
 
