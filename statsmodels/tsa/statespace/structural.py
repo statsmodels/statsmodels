@@ -102,6 +102,10 @@ class UnobservedComponents(MLEModel):
         allow the cyclical component to be between 1.5 and 12 years; depending
         on the frequency of the endogenous variable, this will imply different
         specific bounds.
+    use_exact_diffuse : bool, optional
+        Whether or not to use exact diffuse initialization for non-stationary
+        states. Default is False (in which case approximate diffuse
+        initialization is used).
 
     Notes
     -----
