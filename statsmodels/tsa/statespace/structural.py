@@ -102,6 +102,10 @@ class UnobservedComponents(MLEModel):
         allow the cyclical component to be between 1.5 and 12 years; depending
         on the frequency of the endogenous variable, this will imply different
         specific bounds.
+    use_exact_diffuse : bool, optional
+        Whether or not to use exact diffuse initialization for non-stationary
+        states. Default is False (in which case approximate diffuse
+        initialization is used).
 
     Notes
     -----
@@ -356,7 +360,7 @@ class UnobservedComponents(MLEModel):
                  stochastic_freq_seasonal=None,
                  stochastic_cycle=False,
                  damped_cycle=False, cycle_period_bounds=None,
-                 mle_regression=True,
+                 mle_regression=True, use_exact_diffuse=False,
                  **kwargs):
 
         # Model options
@@ -395,6 +399,7 @@ class UnobservedComponents(MLEModel):
 
         self.damped_cycle = damped_cycle
         self.mle_regression = mle_regression
+        self.use_exact_diffuse = use_exact_diffuse
 
         # Check for string trend/level specification
         self.trend_specification = None
@@ -550,18 +555,17 @@ class UnobservedComponents(MLEModel):
             self.autoregressive
         )
 
-        # The ar states are initialized as stationary, so they do not need to
-        # be burned.
-        loglikelihood_burn = kwargs.get('loglikelihood_burn',
-                                        k_states
-                                        - self.ar_order)
+        # Handle non-default loglikelihood burn
+        self._loglikelihood_burn = kwargs.get('loglikelihood_burn', None)
 
         # We can still estimate the model with just the irregular component,
         # just need to have one state that does nothing.
+        self._unused_state = False
         if k_states == 0:
             if not self.irregular:
                 raise ValueError('Model has no components specified.')
             k_states = 1
+            self._unused_state = True
         if k_posdef == 0:
             k_posdef = 1
 
@@ -574,9 +578,6 @@ class UnobservedComponents(MLEModel):
         # Set as time-varying model if we have exog
         if self.k_exog > 0:
             self.ssm._time_invariant = False
-
-        # Initialize the model
-        self.ssm.loglikelihood_burn = loglikelihood_burn
 
         # Need to reset the MLE names (since when they were first set, `setup`
         # had not been run (and could not have been at that point))
@@ -782,24 +783,40 @@ class UnobservedComponents(MLEModel):
     def initialize_default(self, approximate_diffuse_variance=None):
         if approximate_diffuse_variance is None:
             approximate_diffuse_variance = self.ssm.initial_variance
+        if self.use_exact_diffuse:
+            diffuse_type = 'diffuse'
+        else:
+            diffuse_type = 'approximate_diffuse'
+
+            # Set the loglikelihood burn parameter, if not given in constructor
+            if self._loglikelihood_burn is None:
+                k_diffuse_states = (
+                    self.k_states - int(self._unused_state) - self.ar_order)
+                self.loglikelihood_burn = k_diffuse_states
 
         init = Initialization(
             self.k_states,
             approximate_diffuse_variance=approximate_diffuse_variance)
 
-        if self.autoregressive:
+        if self._unused_state:
+            # If this flag is set, it means we have a model with just an
+            # irregular component and nothing else. The state is then
+            # irrelevant and we can't put it as diffuse, since then the filter
+            # will never leave the diffuse state.
+            init.set(0, 'known', constant=[0])
+        elif self.autoregressive:
             offset = (self.level + self.trend +
                       self._k_seasonal_states +
                       self._k_freq_seas_states +
                       self._k_cycle_states)
             length = self.ar_order
-            init.set((0, offset), 'approximate_diffuse')
+            init.set((0, offset), diffuse_type)
             init.set((offset, offset + length), 'stationary')
-            init.set((offset + length, self.k_states), 'approximate_diffuse')
+            init.set((offset + length, self.k_states), diffuse_type)
         # If we do not have an autoregressive component, then everything has
         # a diffuse initialization
         else:
-            init.set(None, 'approximate_diffuse')
+            init.set(None, diffuse_type)
 
         self.ssm.initialization = init
 

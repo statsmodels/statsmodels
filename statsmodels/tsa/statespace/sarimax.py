@@ -102,6 +102,10 @@ class SARIMAX(MLEModel):
         The offset at which to start time trend values. Default is 1, so that
         if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
         set when the model created by extending a previous dataset.
+    use_exact_diffuse : bool, optional
+        Whether or not to use exact diffuse initialization for non-stationary
+        states. Default is False (in which case approximate diffuse
+        initialization is used).
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -305,7 +309,7 @@ class SARIMAX(MLEModel):
                  mle_regression=True, simple_differencing=False,
                  enforce_stationarity=True, enforce_invertibility=True,
                  hamilton_representation=False, concentrate_scale=False,
-                 trend_offset=1, **kwargs):
+                 trend_offset=1, use_exact_diffuse=False, **kwargs):
 
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
@@ -317,6 +321,7 @@ class SARIMAX(MLEModel):
         self.enforce_invertibility = enforce_invertibility
         self.hamilton_representation = hamilton_representation
         self.concentrate_scale = concentrate_scale
+        self.use_exact_diffuse = use_exact_diffuse
 
         # Save given orders
         self.order = order
@@ -453,11 +458,6 @@ class SARIMAX(MLEModel):
         if self.state_regression:
             k_states += self.k_exog
 
-        # Number of diffuse states
-        k_diffuse_states = k_states
-        if self.enforce_stationarity:
-            k_diffuse_states -= self._k_order
-
         # Number of positive definite elements of the state covariance matrix
         k_posdef = int(self._k_order > 0)
         # Only have an error component to the states if k_posdef > 0
@@ -470,6 +470,9 @@ class SARIMAX(MLEModel):
         # variance
         if self.state_regression:
             kwargs.setdefault('initial_variance', 1e10)
+
+        # Handle non-default loglikelihood burn
+        self._loglikelihood_burn = kwargs.get('loglikelihood_burn', None)
 
         # Number of parameters
         self.k_params = (
@@ -506,10 +509,6 @@ class SARIMAX(MLEModel):
         self.nobs = len(endog)
         self.k_states = k_states
         self.k_posdef = k_posdef
-
-        # By default, do not calculate likelihood while it is controlled by
-        # diffuse initial conditions.
-        kwargs.setdefault('loglikelihood_burn', k_diffuse_states)
 
         # Initialize the statespace
         super(SARIMAX, self).__init__(
@@ -645,6 +644,17 @@ class SARIMAX(MLEModel):
         """Initialize default"""
         if approximate_diffuse_variance is None:
             approximate_diffuse_variance = self.ssm.initial_variance
+        if self.use_exact_diffuse:
+            diffuse_type = 'diffuse'
+        else:
+            diffuse_type = 'approximate_diffuse'
+
+            # Set the loglikelihood burn parameter, if not given in constructor
+            if self._loglikelihood_burn is None:
+                k_diffuse_states = self.k_states
+                if self.enforce_stationarity:
+                    k_diffuse_states -= self._k_order
+                self.loglikelihood_burn = k_diffuse_states
 
         init = Initialization(
             self.k_states,
@@ -652,7 +662,7 @@ class SARIMAX(MLEModel):
 
         if self.enforce_stationarity:
             # Differencing operators are at the beginning
-            init.set((0, self._k_states_diff), 'approximate_diffuse')
+            init.set((0, self._k_states_diff), diffuse_type)
             # Stationary component in the middle
             init.set((self._k_states_diff,
                       self._k_states_diff + self._k_order),
@@ -660,11 +670,11 @@ class SARIMAX(MLEModel):
             # Regression components at the end
             init.set((self._k_states_diff + self._k_order,
                       self._k_states_diff + self._k_order + self.k_exog),
-                     'approximate_diffuse')
+                     diffuse_type)
         # If we're not enforcing a stationarity, then we cannot initialize a
         # stationary component
         else:
-            init.set(None, 'approximate_diffuse')
+            init.set(None, diffuse_type)
 
         self.ssm.initialization = init
 
