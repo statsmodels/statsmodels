@@ -3625,11 +3625,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         - 'dydx' - change in `endog` for a change in `exog`
         - 'eyex' - proportional change in `endog` for a proportional
           change in `exog`
-        - 'dyex' - proportional change in `endog` for a change in `exog`
-        - 'eydx' - change in `endog` for a proportional change in `exog`
+        - 'dyex' -  change in `endog` for a proportional change in `exog`
+        - 'eydx' - proportional change in `endog` for a change in `exog`
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
-
+        
         """
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
