@@ -5,6 +5,7 @@ Created on Thu Jul 04 23:44:33 2013
 
 Author: Josef Perktold
 """
+from functools import partial
 
 import pytest
 import numpy as np
@@ -50,7 +51,7 @@ class TestTArma(CheckTArmaMixin):
         nobs = 500
         ar = [1, -0.5, 0.1]
         ma = [1, 0.7]
-        dist = lambda n: np.random.standard_t(3, size=n)
+        dist = partial(np.random.standard_t, 3)
         np.random.seed(8659567)
         x = arma_generate_sample(ar, ma, nobs, sigma=1, distrvs=dist,
                                  burnin=500)
@@ -89,7 +90,7 @@ class TestArma(CheckTArmaMixin):
         nobs = 500
         ar = [1, -0.5, 0.1]
         ma = [1, 0.7]
-        dist = lambda n: np.random.standard_t(3, size=n)
+        dist = partial(np.random.standard_t, 3)
         np.random.seed(8659567)
         x = arma_generate_sample(ar, ma, nobs, sigma=1, distrvs=dist,
                                  burnin=500)
