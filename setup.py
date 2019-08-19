@@ -34,9 +34,6 @@ from setuptools.dist import Distribution
 
 import versioneer
 
-#import pdb
-#pdb.set_trace()
-
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
