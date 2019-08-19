@@ -673,4 +673,6 @@ def remove_parameters(docstring, parameters):
     """
     if docstring is None:
         return
-    return str(Docstring(docstring).remove_parameters(parameters))
+    ds = Docstring(docstring)
+    ds.remove_parameters(parameters)
+    return str(ds)

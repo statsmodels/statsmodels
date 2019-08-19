@@ -10,7 +10,7 @@ from . import _arma_innovations
 def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
                      normalize=False, prefix=None):
     """
-    Compute innovations using a given ARMA process
+    Compute innovations using a given ARMA process.
 
     Parameters
     ----------
@@ -38,7 +38,6 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         dividing through by the square root of the mean square error.
     innovations_mse : ndarray
         Mean square error for the innovations.
-
     """
     # Parameters
     endog = np.array(endog)
@@ -100,7 +99,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
 def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
     """
-    Compute loglikelihood of the given data assuming an ARMA process
+    Compute the log-likelihood of the given data assuming an ARMA process.
 
     Parameters
     ----------
@@ -119,9 +118,8 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
 
     Returns
     -------
-    loglike : numeric
+    float
         The joint loglikelihood.
-
     """
     llf_obs = arma_loglikeobs(endog, ar_params=ar_params, ma_params=ma_params,
                               sigma2=sigma2, prefix=prefix)
@@ -131,7 +129,7 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
 def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
                     prefix=None):
     """
-    Compute loglikelihood for each observation assuming an ARMA process
+    Compute the log-likelihood for each observation assuming an ARMA process.
 
     Parameters
     ----------
@@ -150,9 +148,8 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
 
     Returns
     -------
-    loglikeobs : array of numeric
+    ndarray
         Array of loglikelihood values for each observation.
-
     """
     endog = np.array(endog)
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
@@ -175,7 +172,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
                prefix=None):
     """
-    Compute the score (gradient of the loglikelihood function)
+    Compute the score (gradient of the log-likelihood function).
 
     Parameters
     ----------
@@ -198,7 +195,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
 
     Returns
     ---------
-    score : array
+    ndarray
         Score, evaluated at the given parameters.
 
     Notes
@@ -223,7 +220,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
 def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
                   prefix=None):
     """
-    Compute the score per observation (gradient of the loglikelihood function)
+    Compute the score (gradient) per observation.
 
     Parameters
     ----------
@@ -246,7 +243,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
 
     Returns
     ---------
-    scoreobs : array
+    ndarray
         Score per observation, evaluated at the given parameters.
 
     Notes

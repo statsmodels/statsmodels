@@ -386,20 +386,19 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
 
-
     Returns
     -------
-    res : Bunch
-        A bunch object with the following attributes:
+    Bunch
+        A bunch object containing the listed attributes.
 
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
-          The final seasonally adjusted ``endog``
+          The final seasonally adjusted ``endog``.
         - trend : pandas.Series
-          The trend-cycle component of ``endog``
+          The trend-cycle component of ``endog``.
         - irregular : pandas.Series
-          The final irregular component of ``endog``
+          The final irregular component of ``endog``.
         - stdout : str
           The captured stdout produced by x12/x13.
         - spec : str, optional
@@ -552,19 +551,19 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
 
     Returns
     -------
-    results : Bunch
-        A bunch object that has the following attributes:
+    Bunch
+        A bunch object containing the listed attributes.
 
         - order : tuple
-          The regular order
+          The regular order.
         - sorder : tuple
-          The seasonal order
+          The seasonal order.
         - include_mean : bool
-          Whether to include a mean or not
+          Whether to include a mean or not.
         - results : str
-          The full results from the X12/X13 analysis
+          The full results from the X12/X13 analysis.
         - stdout : str
-          The captured stdout from the X12/X13 analysis
+          The captured stdout from the X12/X13 analysis.
 
     Notes
     -----
