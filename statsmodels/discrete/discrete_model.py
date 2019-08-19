@@ -3593,7 +3593,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
-            for discrete variables.
+            for discrete variables. For interpretations of these methods
+            see notes below.
         atexog : array_like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
@@ -3620,8 +3621,15 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Notes
         -----
+        Interpretations of methods:
+        - 'dydx' - change in `endog` for a change in `exog`
+        - 'eyex' - proportional change in `endog` for a proportional
+          change in `exog`
+        - 'dyex' - change in `endog` for a proportional change in `exog`
+        - 'eydx' - proportional change in `endog` for a change in `exog`
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
+
         """
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
