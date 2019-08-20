@@ -344,8 +344,7 @@ setup(name=DISTNAME,
       setup_requires=SETUP_REQUIRES,
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
-      zip_safe=False,
-      data_files=[('', ['LICENSE.txt', 'setup.cfg'])]
+      zip_safe=False
       )
 
 # Clean-up copied files
