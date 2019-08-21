@@ -15,4 +15,6 @@ pip install doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling
 
 # TODO: Remove after numpydoc merger of #221
 pip install git+https://github.com/thequackdaddy/numpydoc.git@getdoc --upgrade || true
+# TODO: Remove after release
+pip install git+https://github.com/bashtage/sphinx-material.git
 

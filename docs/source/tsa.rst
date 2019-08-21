@@ -27,30 +27,27 @@ Currently, functions and classes have to be imported from the corresponding modu
 the main classes will be made available in the statsmodels.tsa namespace. The module
 structure is within statsmodels.tsa is
 
- - stattools : empirical properties and tests, acf, pacf, granger-causality,
-   adf unit root test, kpss test, bds test, ljung-box test and others.
- - ar_model : univariate autoregressive process, estimation with conditional
-   and exact maximum likelihood and conditional least-squares
- - arima_model : univariate ARMA process, estimation with conditional
-   and exact maximum likelihood and conditional least-squares
- - statespace : Comprehensive statespace model specification and estimation. See
-   the :ref:`statespace documentation <statespace>`.
- - vector_ar, var : vector autoregressive process (VAR) and vector error correction
-   models, estimation, impulse response analysis, forecast error variance decompositions,
-   and data visualization tools. See the :ref:`vector_ar documentation <var>`.
- - kalmanf : estimation classes for ARMA and other models with exact MLE using
-   Kalman Filter
- - arma_process : properties of arma processes with given parameters, this
-   includes tools to convert between ARMA, MA and AR representation as well as
-   acf, pacf, spectral density, impulse response function and similar
- - sandbox.tsa.fftarma : similar to arma_process but working in frequency domain
- - tsatools : additional helper functions, to create arrays of lagged variables,
-   construct regressors for trend, detrend and similar.
- - filters : helper function for filtering time series
- - regime_switching : Markov switching dynamic regression and autoregression
-   models
-
-
+- stattools : empirical properties and tests, acf, pacf, granger-causality,
+  adf unit root test, kpss test, bds test, ljung-box test and others.
+- ar_model : univariate autoregressive process, estimation with conditional
+  and exact maximum likelihood and conditional least-squares
+- arima_model : univariate ARMA process, estimation with conditional
+  and exact maximum likelihood and conditional least-squares
+- statespace : Comprehensive statespace model specification and estimation. See
+  the :ref:`statespace documentation <statespace>`.
+- vector_ar, var : vector autoregressive process (VAR) and vector error correction
+  models, estimation, impulse response analysis, forecast error variance decompositions,
+  and data visualization tools. See the :ref:`vector_ar documentation <var>`.
+- kalmanf : estimation classes for ARMA and other models with exact MLE using
+  Kalman Filter
+- arma_process : properties of arma processes with given parameters, this
+  includes tools to convert between ARMA, MA and AR representation as well as
+  acf, pacf, spectral density, impulse response function and similar
+- sandbox.tsa.fftarma : similar to arma_process but working in frequency domain
+- tsatools : additional helper functions, to create arrays of lagged variables,
+  construct regressors for trend, detrend and similar.
+- filters : helper function for filtering time series
+- regime_switching : Markov switching dynamic regression and autoregression models
 
 Some additional functions that are also useful for time series analysis are in
 other parts of statsmodels, for example additional statistical tests.

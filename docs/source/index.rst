@@ -1,7 +1,5 @@
-.. :tocdepth: 2
-
-Welcome to Statsmodels's Documentation
-======================================
+Statsmodels Documentation
+=========================
 
 :mod:`statsmodels` is a Python module that provides classes and functions for the estimation
 of many different statistical models, as well as for conducting statistical tests, and statistical
@@ -11,12 +9,11 @@ package is released under the open source Modified BSD (3-clause) license.
 The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
 
 
-Minimal Examples
-----------------
+Introductory Examples
+---------------------
 
-Since version ``0.5.0`` of ``statsmodels``, you can use R-style formulas
-together with ``pandas`` data frames to fit your models. Here is a simple
-example using ordinary least squares:
+``statsmodels`` supports specifying models using R-style formulas and ``pandas`` DataFrames.
+Here is a simple example using ordinary least squares:
 
 .. ipython:: python
 
@@ -54,16 +51,18 @@ You can also use ``numpy`` arrays instead of formulas:
     # Inspect the results
     print(results.summary())
 
-Have a look at `dir(results)` to see available results. Attributes are
-described in `results.__doc__` and results methods have their own docstrings.
+Have a look at `dir(results)` to see available results. Attributes are described in
+`results.__doc__` and results methods have their own docstrings.
 
 Citation
 --------
 
-When using statsmodels in scientific publication, please consider using the
-following citation:
+Please use following citation to cite statsmodels in scientific publications:
 
- Seabold, Skipper, and Josef Perktold. "`Statsmodels: Econometric and statistical modeling with python. <http://conference.scipy.org/proceedings/scipy2010/pdfs/seabold.pdf>`_" *Proceedings of the 9th Python in Science Conference.* 2010.
+
+Seabold, Skipper, and Josef Perktold. "`Statsmodels: Econometric and statistical modeling with
+python. <http://conference.scipy.org/proceedings/scipy2010/pdfs/seabold.pdf>`_" *Proceedings
+of the 9th Python in Science Conference.* 2010.
 
 Bibtex entry::
 
@@ -78,11 +77,12 @@ Basic Documentation
 -------------------
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 1
 
-    release/index
     gettingstarted
     example_formulas
+    examples/index
+    release/index
     install
     about
 
@@ -102,7 +102,7 @@ Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    regression
    glm

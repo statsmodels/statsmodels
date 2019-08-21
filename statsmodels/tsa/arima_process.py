@@ -197,9 +197,9 @@ def arma_acf(ar, ma, lags=10):
 
     See Also
     --------
-    arma_acovf : Autocovarinces from ARMA processes.
+    arma_acovf : Autocovariances from ARMA processes.
     acf : Sample autocorrelation function estimation.
-    acovf : Sample autocovarince function estimation.
+    acovf : Sample autocovariance function estimation.
     """
     acovf = arma_acovf(ar, ma, lags)
     return acovf / acovf[0]
