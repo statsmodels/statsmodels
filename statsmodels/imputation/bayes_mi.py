@@ -34,12 +34,8 @@ class BayesGaussMI(object):
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
 
-    Returns:
-    -------
-    BayesGaussMI object
-
-    Examples:
-    ---------
+    Examples
+    --------
     A basic example with OLS:
 
     >> def model_args_fn(x):

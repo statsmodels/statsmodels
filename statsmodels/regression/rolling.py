@@ -583,7 +583,6 @@ class RollingRegressionResults(object):
     @cache_readonly
     @Appender(LikelihoodModelResults.pvalues.func.__doc__)
     def pvalues(self):
-        """The two-tailed p values for the t-stats of the params."""
         if self.use_t:
             df_resid = getattr(self, 'df_resid_inference', self.df_resid)
             df_resid = np.asarray(df_resid)[:, None]
