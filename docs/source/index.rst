@@ -85,6 +85,7 @@ Basic Documentation
     release/index
     install
     about
+    api
 
 Information about the structure and development of
 statsmodels:
