@@ -53,10 +53,10 @@ html:
 	@echo "Running sphinx-build"
 	@echo @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
-	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
-	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
-	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
-	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
+	#@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
+	#$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
+	#@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
+	#$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

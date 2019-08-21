@@ -2,8 +2,8 @@
 
 .. _statsmodels-examples:
 
-Statsmodels Examples
-====================
+Examples
+========
 
 This page provides a series of examples, tutorials and recipes to help you get
 started with ``statsmodels``. Each of the examples shown here is made available
@@ -15,7 +15,7 @@ We also encourage users to submit their own examples, tutorials or cool
 <https://github.com/statsmodels/statsmodels/wiki/Examples>`_
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    notebooks/generated/categorical_interaction_plot
    notebooks/generated/chi2_fitting

@@ -18,6 +18,8 @@ import os
 import sys
 from os.path import dirname, join
 
+import sphinx_material
+
 from statsmodels import __version__
 
 # -- Monkey Patch ----------------------------------------------------------
@@ -121,7 +123,8 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', '**.ipynb_checkpoints', '*/autosummary/*.rst']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', '*/autosummary/*.rst',
+                    'Thumbs.db', '.DS_Store']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -139,7 +142,7 @@ add_function_parentheses = False
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'default'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -149,14 +152,24 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
+extensions.append("sphinx_material")
+html_theme_path = sphinx_material.html_theme_path()
+html_context = sphinx_material.get_html_context()
+html_theme = 'sphinx_material'
+html_title = project
+html_short_title = project
+# material theme options (see theme.conf for more information)
+html_theme_options = {
+    "globaltoc_depth": 1,
+    "globaltoc_collapse": True,
+    "globaltoc_includehidden": False
+}
+
+language = 'en'
+html_last_updated_fmt = ''
+
 # html_theme = 'default'
 
-if 'htmlhelp' in sys.argv:
-    # html_theme = 'statsmodels_htmlhelp'  #does not look nice yet
-    html_theme = 'default'
-    print('################# using statsmodels_htmlhelp ############')
-else:
-    html_theme = 'statsmodels'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -164,7 +177,6 @@ else:
 # html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ['../themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -373,7 +385,7 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 github_project_url = "https://github.com/statsmodels/statsmodels"
 
 example_context = json.load(open('examples/landing.json'))
-html_context = {'examples': example_context}
+html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------
 doctest_global_setup = """
