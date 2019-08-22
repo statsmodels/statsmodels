@@ -36,6 +36,10 @@ if [ -f "build/html/index.html" ]; then
   echo "docbuild succeeded.";
 else
   echo "docbuild failed. Aborting doctr.";
+  echo "contents of build"
+  ls build
+  echo "contents of build/html"
+  ls build/html
   exit 1;
 fi;
 
