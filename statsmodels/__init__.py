@@ -11,10 +11,26 @@ if debug_warnings:
     # warnings.filterwarnings("error", message=".*integer.*")
 
 
-def test(*args, **kwargs):
+def test(extra_args=None, exit=False):
+    """
+    Run the test suite
+
+    Parameters
+    ----------
+    extra_args : list[str]
+        List of argument to pass to pytest when running the test suite. The
+        default is ['--tb=short', '--disable-pytest-warnings'].
+    exit : bool
+        Flag indicating whether the test runner shoudl exist when finished.
+
+    Returns
+    -------
+    int
+        The status code from the test run if exit is False.
+    """
     from .tools._testing import PytestTester
     tst = PytestTester(package_path=__file__)
-    return tst(*args, **kwargs)
+    return tst(extra_args=extra_args, exit=exit)
 
 
 __version__ = get_versions()['version']

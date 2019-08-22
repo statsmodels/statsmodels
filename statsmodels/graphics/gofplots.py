@@ -14,7 +14,7 @@ __all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
 
 class ProbPlot(object):
     """
-    Class for convenient construction of Q-Q, P-P, and probability plots.
+    Q-Q and P-P Probability Plots
 
     Can take arguments specifying the parameters for dist or fit them
     automatically. (See fit under kwargs.)

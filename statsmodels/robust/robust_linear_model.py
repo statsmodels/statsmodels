@@ -35,7 +35,7 @@ def _check_convergence(criterion, iteration, tol, maxiter):
 
 class RLM(base.LikelihoodModel):
     __doc__ = """
-    Robust Linear Models
+    Robust Linear Model
 
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.

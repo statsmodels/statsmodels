@@ -55,7 +55,7 @@ def _check_convergence(criterion, iteration, atol, rtol):
 
 class GLM(base.LikelihoodModel):
     __doc__ = """
-    Generalized Linear Models class
+    Generalized Linear Models
 
     GLM inherits from statsmodels.base.model.LikelihoodModel
 

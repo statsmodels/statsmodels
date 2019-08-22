@@ -65,7 +65,7 @@ extra_base = _missing_param_doc
 extra_parameters = window_parameters + weight_parameters + extra_base
 
 _doc = """
-Rolling %(model)s regression
+Rolling %(model_type)s Least Squares
 
 %(parameters)s
 %(extra_parameters)s
@@ -98,7 +98,7 @@ Use params_only to skip all calculations except parameter estimation
 """
 
 
-@Substitution(model='WLS',
+@Substitution(model_type='Weidhted', model='WLS',
               parameters=common_params,
               extra_parameters=extra_parameters)
 @Appender(_doc)
@@ -357,7 +357,7 @@ class RollingWLS(object):
 extra_parameters = window_parameters + extra_base
 
 
-@Substitution(model='OLS',
+@Substitution(model_type='Ordinary', model='OLS',
               parameters=common_params,
               extra_parameters=extra_parameters)
 @Appender(_doc)

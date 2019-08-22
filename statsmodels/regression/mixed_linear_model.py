@@ -583,8 +583,7 @@ def _convert_vc(exog_vc):
 
 class MixedLM(base.LikelihoodModel):
     """
-    An object specifying a linear mixed effects model.  Use the `fit`
-    method to fit the model and obtain a results object.
+    Linear Mixed Effects Model
 
     Parameters
     ----------

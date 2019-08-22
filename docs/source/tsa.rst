@@ -191,12 +191,12 @@ process for given lag-polynomials.
 
 Statespace Models
 """""""""""""""""
-See the :ref:`statespace documentation. <statespace>`.
+See the :ref:`statespace documentation. <statespace>`
 
 
 Vector ARs and Vector Error Correction Models
 """""""""""""""""""""""""""""""""""""""""""""
-See the :ref:`vector_ar documentation. <var>`.
+See the :ref:`vector_ar documentation. <var>`
 
 Regime switching models
 """""""""""""""""""""""

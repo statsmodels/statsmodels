@@ -17,7 +17,7 @@ __docformat__ = 'restructuredtext en'
 
 class MANOVA(Model):
     """
-    Multivariate analysis of variance
+    Multivariate Analysis of Variance
 
     The implementation of MANOVA is based on multivariate regression and does
     not assume that the explanatory variables are categorical. Any type of

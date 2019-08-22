@@ -253,16 +253,19 @@ class PHSurvivalTime(object):
                 risk_exit1[ix].append(i)
 
             self.ufailt.append(uft)
-            self.ufailt_ix.append([np.asarray(x, dtype=np.int32) for x in uft_ix])
-            self.risk_enter.append([np.asarray(x, dtype=np.int32) for x in risk_enter1])
-            self.risk_exit.append([np.asarray(x, dtype=np.int32) for x in risk_exit1])
-
+            self.ufailt_ix.append([np.asarray(x, dtype=np.int32)
+                                   for x in uft_ix])
+            self.risk_enter.append([np.asarray(x, dtype=np.int32)
+                                    for x in risk_enter1])
+            self.risk_exit.append([np.asarray(x, dtype=np.int32)
+                                   for x in risk_exit1])
 
 
 class PHReg(model.LikelihoodModel):
     """
-    Fit the Cox proportional hazards regression model for right
-    censored data.
+    Cox Proportional Hazards Regression Model
+
+    The Cox PH Model is for right censored data.
 
     Parameters
     ----------

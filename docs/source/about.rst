@@ -44,6 +44,19 @@ adjust the user interface as we gain more experience and obtain feedback.
 These changes will always be noted in our release notes available in the
 documentation.
 
+Reporting Bugs
+^^^^^^^^^^^^^^
+If you encounter a bug or an unexpected behavior, please report it on
+`the issue tracker <https://github.com/statsmodels/statsmodels/issues>`_.
+Use the ``show_versions`` command to list the installed versions of
+statsmodels and its dependencies.
+
+.. autosummary::
+   :toctree: generated/
+
+   ~statsmodels.tools.print_version.show_versions
+
+
 Financial Support
 -----------------
 

@@ -105,8 +105,8 @@ version = __version__
 # and graphviz dot documentation http://www.graphviz.org/content/attrs
 # NOTE: giving the empty string to size allows graphviz to figure out
 # the size
-inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
-                               rankdir="LR")
+inheritance_graph_attrs = dict(size='""', ratio='compress', fontsize=14,
+                               rankdir='LR')
 
 # inheritance_node_attrs = dict(shape='ellipse', fontsize=14, height=0.75,
 #                              color='dodgerblue1', style='filled')
@@ -152,17 +152,24 @@ pygments_style = 'default'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-extensions.append("sphinx_material")
+extensions.append('sphinx_material')
 html_theme_path = sphinx_material.html_theme_path()
 html_context = sphinx_material.get_html_context()
 html_theme = 'sphinx_material'
 html_title = project
 html_short_title = project
 # material theme options (see theme.conf for more information)
+
+# TOOD: Switch to release if a release build
 html_theme_options = {
-    "globaltoc_depth": 1,
-    "globaltoc_collapse": True,
-    "globaltoc_includehidden": False
+    'base_url': 'https://www.statsmodels.org/devel/',
+    'repo_url': 'https://github.com/statsmodels/statsmodels',
+    'repo_name': 'statsmodels',
+    'globaltoc_depth': 1,
+    'globaltoc_collapse': True,
+    'globaltoc_includehidden': False,
+    'color_primary': 'indigo',
+    'color_accent': 'indigo'
 }
 
 language = 'en'
@@ -179,7 +186,7 @@ html_last_updated_fmt = ''
 # Add any paths that contain custom themes here, relative to this directory.
 
 # The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
+# '<project> v<release> documentation'.
 # html_title = None
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
@@ -196,7 +203,7 @@ html_favicon = 'images/statsmodels_hybi_favico.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+# so a file named 'default.css' will overwrite the builtin 'default.css'.
 html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
@@ -227,10 +234,10 @@ html_domain_indices = True
 # If true, links to the reST sources are added to the pages.
 # html_show_sourcelink = True
 
-# If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
+# If true, 'Created using Sphinx' is shown in the HTML footer. Default is True.
 # html_show_sphinx = True
 
-# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
+# If true, '(C) Copyright ...' is shown in the HTML footer. Default is True.
 # html_show_copyright = True
 
 # If true, an OpenSearch description file will be output, and all pages will
@@ -238,7 +245,7 @@ html_domain_indices = True
 # base URL from which the finished HTML is served.
 # html_use_opensearch = ''
 
-# This is the file name suffix for HTML files (e.g. ".xhtml").
+# This is the file name suffix for HTML files (e.g. '.xhtml').
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
@@ -264,7 +271,7 @@ latex_documents = [
 # the title page.
 # latex_logo = None
 
-# For "manual" documents, if this is true, then toplevel headings are parts,
+# For 'manual' documents, if this is true, then toplevel headings are parts,
 # not chapters.
 # latex_use_parts = False
 
@@ -382,7 +389,7 @@ intersphinx_mapping = {
 plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 
 # ghissue config
-github_project_url = "https://github.com/statsmodels/statsmodels"
+github_project_url = 'https://github.com/statsmodels/statsmodels'
 
 example_context = json.load(open('examples/landing.json'))
 html_context.update({'examples': example_context})

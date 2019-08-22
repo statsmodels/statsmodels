@@ -71,7 +71,7 @@ glw = [
 ]
 
 _init_doc = r"""
-    Fit a generalized linear mixed model using Bayesian methods.
+    Generalized Linear Mixed Model with Bayesian estimation
 
     The class implements the Laplace approximation to the posterior
     distribution (`fit_map`) and a variational Bayes approximation to

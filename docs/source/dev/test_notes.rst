@@ -40,6 +40,10 @@ You can test submodules by::
 
     >>> sm.discrete.test()
 
+.. autosummary::
+   :toctree: generated/
+
+   ~statsmodels.__init__.test
 
 Running Tests using the command line
 ------------------------------------

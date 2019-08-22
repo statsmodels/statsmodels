@@ -36,7 +36,7 @@ _doc_zi_params = """
 
 class GenericZeroInflated(CountModel):
     __doc__ = """
-    Generiz Zero Inflated model for count data
+    Generiz Zero Inflated Model
 
     %(params)s
     %(extra_params)s
@@ -455,7 +455,7 @@ class GenericZeroInflated(CountModel):
 
 class ZeroInflatedPoisson(GenericZeroInflated):
     __doc__ = """
-    Poisson Zero Inflated model for count data
+    Poisson Zero Inflated Model
 
     %(params)s
     %(extra_params)s
@@ -543,7 +543,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Poisson model for count data
+    Zero Inflated Generalized Poisson Model
 
     %(params)s
     %(extra_params)s
@@ -621,7 +621,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Negative Binomial model for count data
+    Zero Inflated Generalized Negative Binomial Model
 
     %(params)s
     %(extra_params)s

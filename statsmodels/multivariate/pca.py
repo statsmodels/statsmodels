@@ -17,7 +17,7 @@ def _norm(x):
 
 class PCA(object):
     """
-    Perform Principal Component Analysis (PCA).
+    Principal Component Analysis
 
     Parameters
     ----------
