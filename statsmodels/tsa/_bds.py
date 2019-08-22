@@ -169,7 +169,7 @@ def _var(indicators, max_dim):
 
 def bds(x, max_dim=2, epsilon=None, distance=1.5):
     """
-    Calculate the BDS test statistic for independence of a time series.
+    BDS Test Statistic for Independence of a Time Series
 
     Parameters
     ----------

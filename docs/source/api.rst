@@ -117,7 +117,7 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.acf
    ~statsmodels.tsa.stattools.acovf
    ~statsmodels.tsa.stattools.adfuller
-   ~statsmodels.tsa._bds.bds
+   ~statsmodels.tsa.stattools.bds
    ~statsmodels.tsa.stattools.ccf
    ~statsmodels.tsa.stattools.ccovf
    ~statsmodels.tsa.stattools.coint

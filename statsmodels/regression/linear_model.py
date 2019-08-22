@@ -417,7 +417,7 @@ class RegressionModel(base.LikelihoodModel):
 
 class GLS(RegressionModel):
     __doc__ = r"""
-    Generalized least squares model with a general covariance structure.
+    Generalized Least Squares
 
     %(params)s
     sigma : scalar or array
@@ -631,7 +631,7 @@ class GLS(RegressionModel):
 
 class WLS(RegressionModel):
     __doc__ = """
-    A regression model with diagonal but non-identity covariance structure.
+    Weighted Least Squares
 
     The weights are presumed to be (proportional to) the inverse of
     the variance of the observations.  That is, if the variables are
@@ -808,7 +808,7 @@ class WLS(RegressionModel):
 
 class OLS(WLS):
     __doc__ = """
-    Linear regression using ordinary least squares.
+    Ordinary Least Squares
 
     %(params)s
     %(extra_params)s
@@ -1148,7 +1148,7 @@ class OLS(WLS):
 
 class GLSAR(GLS):
     __doc__ = """
-    A regression model with an AR(p) covariance structure.
+    Generalized Least Squares with AR covariance structure
 
     %(params)s
     rho : int

@@ -900,11 +900,12 @@ class CountModel(DiscreteModel):
 class OrderedModel(DiscreteModel):
     pass
 
-#### Public Model Classes ####
+# Public Model Classes
+
 
 class Poisson(CountModel):
     __doc__ = """
-    Poisson model for count data
+    Poisson Model
 
     %(params)s
     %(extra_params)s
@@ -1311,7 +1312,7 @@ class Poisson(CountModel):
 
 class GeneralizedPoisson(CountModel):
     __doc__ = """
-    Generalized Poisson model for count data
+    Generalized Poisson Model
 
     %(params)s
     %(extra_params)s
@@ -1713,7 +1714,7 @@ class GeneralizedPoisson(CountModel):
 
 class Logit(BinaryModel):
     __doc__ = """
-    Binary choice logit model
+    Logit Model
 
     %(params)s
     %(extra_params)s
@@ -1925,7 +1926,7 @@ class Logit(BinaryModel):
 
 class Probit(BinaryModel):
     __doc__ = """
-    Binary choice Probit model
+    Probit Model
 
     %(params)s
     %(extra_params)s
@@ -2145,7 +2146,7 @@ class Probit(BinaryModel):
 
 class MNLogit(MultinomialModel):
     __doc__ = """
-    Multinomial logit model
+    Multinomial Logit Model
 
     Parameters
     ----------
@@ -2480,7 +2481,7 @@ class MNLogit(MultinomialModel):
 
 class NegativeBinomial(CountModel):
     __doc__ = """
-    Negative Binomial Model for count data
+    Negative Binomial Model
 
     %(params)s
     %(extra_params)s
@@ -2945,7 +2946,7 @@ class NegativeBinomial(CountModel):
 
 class NegativeBinomialP(CountModel):
     __doc__ = """
-    Generalized Negative Binomial (NB-P) model for count data
+    Generalized Negative Binomial (NB-P) Model
 
     %(params)s
     %(extra_params)s

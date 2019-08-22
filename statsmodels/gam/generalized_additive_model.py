@@ -469,7 +469,7 @@ wrap.populate_wrapper(GLMGamResultsWrapper, GLMGamResults)
 
 class GLMGam(PenalizedMixin, GLM):
     """
-    Model class for generalized additive models (GAM).
+    Generalized Additive Models (GAM)
 
     This inherits from `GLM`.
 
