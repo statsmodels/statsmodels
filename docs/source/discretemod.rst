@@ -24,6 +24,7 @@ Examples
   :okwarning:
 
   # Load the data from Spector and Mazzeo (1980)
+  import statsmodels.api as sm
   spector_data = sm.datasets.spector.load_pandas()
   spector_data.exog = sm.add_constant(spector_data.exog)
 
