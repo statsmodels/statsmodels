@@ -243,11 +243,11 @@ class RollingWLS(object):
             Method to use when computing the the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
-               This method is the fastest, but may be less accurate than the
-               other methods.
+              This method is the fastest, but may be less accurate than the
+              other methods.
             * 'lstsq' - Use numpy.linalg.lstsq
             * 'pinv' - Use numpy.linalg.pinv. This method matches the default
-               estimator in non-moving regression estimators.
+              estimator in non-moving regression estimators.
         cov_type : {'nonrobust', 'HCCM', 'HC0'}
             Covariance estimator:
 

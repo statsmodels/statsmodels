@@ -51,8 +51,8 @@ html:
 	mkdir -p $(BUILDDIR)/source/examples/notebooks/generated
 	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing --execute-only
 	@echo "Running sphinx-build"
-	@echo @$(SPHINXBUILD) -j auto -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
-	@$(SPHINXBUILD) -j auto -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
+	@echo @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
