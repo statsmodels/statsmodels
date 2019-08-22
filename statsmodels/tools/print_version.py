@@ -138,6 +138,14 @@ def _show_versions_only():
 
 
 def show_versions(show_dirs=True):
+    """
+    List the versions of statsmodels and any installed dependencies
+
+    Parameters
+    ----------
+    show_dirs: bool
+        Flag indicating to show module locations
+    """
     if not show_dirs:
         _show_versions_only()
     print("\nINSTALLED VERSIONS")

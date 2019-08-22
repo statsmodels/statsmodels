@@ -160,7 +160,7 @@ html_title = project
 html_short_title = project
 # material theme options (see theme.conf for more information)
 
-# TOOD: Switch to release if a release build
+# TODO: Switch base_url if a release build, need to check and parse tag
 html_theme_options = {
     'base_url': 'https://www.statsmodels.org/devel/',
     'repo_url': 'https://github.com/statsmodels/statsmodels',
@@ -169,7 +169,8 @@ html_theme_options = {
     'globaltoc_collapse': True,
     'globaltoc_includehidden': False,
     'color_primary': 'indigo',
-    'color_accent': 'indigo'
+    'color_accent': 'blue',
+    'nav_title': 'statsmodels'
 }
 
 language = 'en'
@@ -194,7 +195,7 @@ html_last_updated_fmt = ''
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels_hybi_banner_v2.png'
+html_logo = 'images/statsmodels.svg'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
