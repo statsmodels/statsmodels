@@ -472,8 +472,8 @@ def _check_args(endog, exog, groups, time, offset, exposure):
 class GEE(base.Model):
 
     __doc__ = (
-        "    Estimation of marginal regression models using Generalized\n"
-        "    Estimating Equations (GEE).\n" + _gee_init_doc %
+        "    Marginal Regression Model using Generalized Estimating "
+        "Equations.\n" + _gee_init_doc %
         {'extra_params': base._missing_param_doc,
          'family_doc': _gee_family_doc,
          'example': _gee_example})
@@ -2346,8 +2346,7 @@ wrap.populate_wrapper(GEEResultsWrapper, GEEResults)  # noqa:E305
 class OrdinalGEE(GEE):
 
     __doc__ = (
-        "    Estimation of ordinal response marginal regression models\n"
-        "    using Generalized Estimating Equations (GEE).\n" +
+        "    Ordinal Response Marginal Regression Model using GEE\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_ordinal_family_doc,
                          'example': _gee_ordinal_example})
@@ -2628,8 +2627,7 @@ wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)  # noqa:E305
 class NominalGEE(GEE):
 
     __doc__ = (
-        "    Estimation of nominal response marginal regression models\n"
-        "    using Generalized Estimating Equations (GEE).\n" +
+        "    Nominal Response Marginal Regression Model using GEE.\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_nominal_family_doc,
                          'example': _gee_nominal_example})

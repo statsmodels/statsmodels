@@ -4,7 +4,5 @@
 
 .. currentmodule:: {{ module }}
 
-method
-
 .. auto{{ objtype }}:: {{ objname }}
 
