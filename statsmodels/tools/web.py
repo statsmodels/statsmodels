@@ -2,6 +2,8 @@
 Provides a function to open the system browser to either search or go directly
 to a function's reference
 """
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import webbrowser
 from urllib.parse import urlencode
 
@@ -10,7 +12,7 @@ from statsmodels import __version__
 BASE_URL = 'https://www.statsmodels.org/'
 
 
-def _generate_url(arg, stable):
+def _generate_url(func, stable):
     """
     Parse inputs and return a correctly formatted URL or raises ValueError
     if the input is not understandable
@@ -21,15 +23,15 @@ def _generate_url(arg, stable):
     else:
         url += 'devel/'
 
-    if arg is None:
+    if func is None:
         return url
-    elif isinstance(arg, str):
+    elif isinstance(func, str):
         url += 'search.html?'
-        url += urlencode({'q': arg})
+        url += urlencode({'q': func})
         url += '&check_keywords=yes&area=default'
     else:
         try:
-            func = arg
+            func = func
             func_name = func.__name__
             func_module = func.__module__
             if not func_module.startswith('statsmodels.'):
@@ -41,15 +43,16 @@ def _generate_url(arg, stable):
     return url
 
 
-def webdoc(arg=None, stable=None):
+@deprecate_kwarg('arg', 'func')
+def webdoc(func=None, stable=None):
     """
     Opens a browser and displays online documentation
 
     Parameters
     ----------
-    arg, optional : str or statsmodels function
+    func : {str, callable}
         Either a string to search the documentation or a function
-    stable, optional : bool
+    stable : bool
         Flag indicating whether to use the stable documentation (True) or
         the development documentation (False).  If not provided, opens
         the stable documentation if the current version of statsmodels is a
@@ -58,18 +61,27 @@ def webdoc(arg=None, stable=None):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> sm.webdoc()  # Documention site
-    >>> sm.webdoc('glm')  # Search for glm in docs
-    >>> sm.webdoc(sm.OLS, stable=False)  # Go to generated help for OLS, devel
+
+    Documentation site
+
+    >>> sm.webdoc()
+
+    Search for glm in docs
+
+    >>> sm.webdoc('glm')
+
+    Go to current generated help for OLS
+
+    >>> sm.webdoc(sm.OLS, stable=False)
 
     Notes
     -----
-    By default, open stable documentation if the current version of statsmodels
-    is a release.  Otherwise opens the development documentation.
+    By default, open stable documentation if the current version of
+    statsmodels is a release.  Otherwise opens the development documentation.
 
     Uses the default system browser.
     """
     stable = __version__ if 'dev' not in __version__ else stable
-    url_or_error = _generate_url(arg, stable)
+    url_or_error = _generate_url(func, stable)
     webbrowser.open(url_or_error)
     return None

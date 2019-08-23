@@ -74,11 +74,11 @@ def drop_missing(Y, X=None, axis=1):
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):
     """
-    Construct a dummy matrix given an array of categorical variables.
+    Construct a dummy matrix from categorical variables
 
     Parameters
     ----------
-    data : array
+    data : array_like
         A structured array, recarray, array, Series or DataFrame.  This can be
         either a 1d vector of the categorical variable or a 2d array with
         the column specifying the categorical variable specified by the col
@@ -98,14 +98,15 @@ def categorical(data, col=None, dictnames=False, drop=False):
 
     Returns
     -------
-    dummy_matrix, [dictnames, optional]
+    dummy_matrix : array_like
         A matrix of dummy (indicator/binary) float variables for the
-        categorical data.  If dictnames is True, then the dictionary
-        is returned as well.
+        categorical data.
+    dictnames :  dict[int, str], optional
+        Mapping between column numbers and categorical names.
 
     Notes
     -----
-    This returns a dummy variable for EVERY distinct variable.  If a
+    This returns a dummy variable for *each* distinct variable.  If a
     a structured or recarray is provided, the names for the new variable is the
     old variable name - underscore - category name.  So if the a variable
     'vote' had answers as 'yes' or 'no' then the returned array would have to
@@ -120,11 +121,11 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Univariate examples
 
     >>> import string
-    >>> string_var = [string.ascii_lowercase[0:5], \
-                      string.ascii_lowercase[5:10], \
-                      string.ascii_lowercase[10:15], \
-                      string.ascii_lowercase[15:20],   \
-                      string.ascii_lowercase[20:25]]
+    >>> string_var = [string.ascii_lowercase[0:5],
+    ...               string.ascii_lowercase[5:10],
+    ...               string.ascii_lowercase[10:15],
+    ...               string.ascii_lowercase[15:20],
+    ...               string.ascii_lowercase[20:25]]
     >>> string_var *= 5
     >>> string_var = np.asarray(sorted(string_var))
     >>> design = sm.tools.categorical(string_var, drop=True)
@@ -137,8 +138,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
     With a structured array
 
     >>> num = np.random.randn(25,2)
-    >>> struct_ar = np.zeros((25,1), dtype=[('var1', 'f4'),('var2', 'f4'),  \
-                    ('instrument','f4'),('str_instr','a5')])
+    >>> struct_ar = np.zeros((25,1),
+    ...                      dtype=[('var1', 'f4'),('var2', 'f4'),
+    ...                             ('instrument','f4'),('str_instr','a5')])
     >>> struct_ar['var1'] = num[:,0][:,None]
     >>> struct_ar['var2'] = num[:,1][:,None]
     >>> struct_ar['instrument'] = instr[:,None]

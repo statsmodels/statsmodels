@@ -69,6 +69,8 @@ Model Class
    :toctree: generated/
 
    GEE
+   NominalGEE
+   OrdinalGEE
 
 .. module:: statsmodels.genmod.qif
    :synopsis: Quadratic inference functions

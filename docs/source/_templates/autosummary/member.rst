@@ -4,8 +4,6 @@
 
 .. currentmodule:: {{ module }}
 
-member
-
 .. auto{{ objtype }}:: {{ objname }}
 
 
