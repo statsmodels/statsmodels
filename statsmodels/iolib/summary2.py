@@ -470,7 +470,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
         Example: `info_dict = {"N":lambda x:(x.nobs), "R2": ..., "OLS":{
-        "R2":...}}` would only show `R2` for OLS regression models, but 
+        "R2":...}}` would only show `R2` for OLS regression models, but
         additionally `N` for all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
