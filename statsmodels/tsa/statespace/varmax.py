@@ -392,7 +392,7 @@ class VARMAX(MLEModel):
                     ma_params *= 0
 
         # Transform trend / exog params from mean form to intercept form
-        if self.k_ar > 0 and self.k_trend > 0 or self.mle_regression:
+        if self.k_ar > 0 and (self.k_trend > 0 or self.mle_regression):
             coefficient_matrices = (
                 ar_params.reshape(
                     self.k_endog * self.k_ar, self.k_endog
