@@ -1,5 +1,5 @@
 __all__ = ['AR', 'ARMA', 'ARIMA',
-           'var', 'VAR', 'VECM', 'SVAR', 'DynamicVAR',
+           'var', 'VAR', 'VECM', 'SVAR',
            'filters',
            'innovations',
            'tsatools',
@@ -17,7 +17,8 @@ __all__ = ['AR', 'ARMA', 'ARIMA',
            'SARIMAX', 'UnobservedComponents', 'VARMAX', 'DynamicFactor',
            'MarkovRegression', 'MarkovAutoregression',
            'ExponentialSmoothing', 'SimpleExpSmoothing', 'Holt',
-           'arma_generate_sample', 'ArmaProcess']
+           'arma_generate_sample', 'ArmaProcess', 'STL',
+           'bk_filter', 'cf_filter', 'hp_filter']
 
 from .ar_model import AR
 from .arima_model import ARMA, ARIMA
@@ -26,7 +27,6 @@ from .arima_process import arma_generate_sample, ArmaProcess
 from .vector_ar.var_model import VAR
 from .vector_ar.vecm import VECM
 from .vector_ar.svar_model import SVAR
-from .vector_ar.dynamic import DynamicVAR
 from .filters import api as filters
 from . import tsatools
 from .tsatools import (add_trend, detrend, lagmat, lagmat2ds, add_lag)
@@ -50,3 +50,5 @@ from .regime_switching.markov_regression import MarkovRegression
 from .regime_switching.markov_autoregression import MarkovAutoregression
 from .holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
 from .innovations import api as innovations
+from .seasonal import STL
+from .filters import bk_filter, cf_filter, hp_filter

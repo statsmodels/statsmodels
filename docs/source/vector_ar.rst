@@ -66,7 +66,7 @@ explicitly:
    import numpy as np
    import pandas
    import statsmodels.api as sm
-   from statsmodels.tsa.api import VAR, DynamicVAR
+   from statsmodels.tsa.api import VAR
    mdata = sm.datasets.macrodata.load_pandas().data
 
    # prepare the dates index
@@ -353,6 +353,25 @@ Reference
    CausalityTestResults
    NormalityTestResults
    WhitenessTestResults
+
+.. _svar:
+
+Structural Vector Autoregressions
+---------------------------------
+
+There are a matching set of classes that handle some types of Structural VAR models.
+
+.. module:: statsmodels.tsa.vector_ar.svar_model
+   :synopsis: Structural vector autoregressions and related tools
+
+.. currentmodule:: statsmodels.tsa.vector_ar.svar_model
+
+.. autosummary::
+   :toctree: generated/
+
+   SVAR
+   SVARProcess
+   SVARResults
 
 .. _vecm:
 

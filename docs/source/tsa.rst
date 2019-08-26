@@ -262,6 +262,7 @@ TSA Tools
 .. autosummary::
    :toctree: generated/
 
+   add_lag
    add_trend
    detrend
    lagmat
