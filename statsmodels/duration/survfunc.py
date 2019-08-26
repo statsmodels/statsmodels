@@ -798,7 +798,7 @@ def plot_survfunc(survfuncs, ax=None):
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))
-        ti = sf.time[ii]
+        ti = np.unique(sf.time[ii])
         jj = np.searchsorted(surv_times, ti) - 1
         sp = surv_prob[jj]
         ax.plot(ti, sp, '+', ms=12, color=li.get_color(),
