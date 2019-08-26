@@ -377,7 +377,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Return the index through the end of the loc / slice
         if isinstance(loc, slice):
-            end = loc.stop
+            end = loc.stop - 1
         else:
             end = loc
 
