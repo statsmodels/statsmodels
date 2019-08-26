@@ -659,7 +659,7 @@ def test_prediction_increment_pandas_noindex():
     assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
 
 
-def test_prediction_increment_pandas_dates():
+def test_prediction_increment_pandas_dates_daily():
     # Date-based index
     endog = dta[2].copy()
     endog.index = date_indexes[0][0]  # Daily, 1950-01-01, 1950-01-02, ...
@@ -679,6 +679,18 @@ def test_prediction_increment_pandas_dates():
     assert_equal(out_of_sample, 0)
     assert type(prediction_index) is type(endog.index)  # noqa: E721
     assert_equal(prediction_index.equals(mod._index), True)
+
+    # In-sample prediction: [0, 3]; the index is a subset of the date index
+    start_key = 0
+    end_key = 3
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, 3)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index[:4]), True)
 
     # Negative index: [-2, end]
     start_key = -2
@@ -705,6 +717,20 @@ def test_prediction_increment_pandas_dates():
     assert_equal(prediction_index.equals(desired_index), True)
 
     # Date-based keys
+
+    # In-sample prediction (equivalent to [1, 3])
+    start_key = '1950-01-02'
+    end_key = '1950-01-04'
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 3)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index[1:4]), True)
+
+    # Out-of-sample forecasting (equivalent to [0, 5])
     start_key = '1950-01-01'
     end_key = '1950-01-08'
     start, end, out_of_sample, prediction_index = (
@@ -715,7 +741,6 @@ def test_prediction_increment_pandas_dates():
     assert_equal(out_of_sample, 3)
     desired_index = pd.date_range(start='1950-01-01', periods=8, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
-
 
     # Test getting a location that exists in the (internal) index
     loc, index, index_was_expanded = mod._get_index_loc(2)
@@ -741,10 +766,118 @@ def test_prediction_increment_pandas_dates():
     assert_equal(index_was_expanded, False)
 
 
+def test_prediction_increment_pandas_dates_monthly():
+    # Date-based index
+    endog = dta[2].copy()
+    endog.index = date_indexes[2][0]  # Monthly, 1950-01, 1950-02, ...
+    mod = tsa_model.TimeSeriesModel(endog)
+
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
+
+    # Basic prediction: [0, end]; the index is the date index
+    start_key = 0
+    end_key = None
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, nobs-1)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index), True)
+
+    # In-sample prediction: [0, 3]; the index is a subset of the date index
+    start_key = 0
+    end_key = 3
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, 3)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index[:4]), True)
+
+    # Negative index: [-2, end]
+    start_key = -2
+    end_key = -1
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 3)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index[3:]), True)
+
+    # Forecasting: [1, 5]; the index is an extended version of the date index
+    start_key = 1
+    end_key = nobs
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 1)
+    desired_index = pd.date_range(start='1950-02', periods=5, freq='M')
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Date-based keys
+
+    # In-sample prediction (equivalent to [1, 3])
+    start_key = '1950-02'
+    end_key = '1950-04'
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 3)
+    assert_equal(out_of_sample, 0)
+    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert_equal(prediction_index.equals(mod._index[1:4]), True)
+
+    # Out-of-sample forecasting (equivalent to [0, 5])
+    start_key = '1950-01'
+    end_key = '1950-08'
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 3)
+    desired_index = pd.date_range(start='1950-01', periods=8, freq='M')
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Test getting a location that exists in the (internal) index
+    loc, index, index_was_expanded = mod._get_index_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.date_range(start='1950-01', periods=3, freq='M')
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the (internal) index
+    # when using the function that alternatively falls back to the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc(2)
+    assert_equal(loc, 2)
+    desired_index = pd.date_range(start='1950-01', periods=3, freq='M')
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+    # Test getting a location that exists in the given (unsupported) index
+    # Note that the returned index is now like the row labels
+    loc, index, index_was_expanded = mod._get_index_label_loc('1950-03')
+    assert_equal(loc, slice(2, 3, None))
+    desired_index = mod.data.row_labels[:3]
+    assert_equal(index.equals(desired_index), True)
+    assert_equal(index_was_expanded, False)
+
+
 def test_prediction_increment_pandas_dates_nanosecond():
     # Date-based index
     endog = dta[2].copy()
-    endog.index = pd.date_range(start='1970-01-01', periods=len(endog), freq='N')
+    endog.index = pd.date_range(start='1970-01-01', periods=len(endog),
+                                freq='N')
     mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
