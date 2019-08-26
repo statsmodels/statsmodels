@@ -151,6 +151,11 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
             kfilter.nobs_kendog_diffuse_nonsingular = kfilter.nobs_kendog_diffuse_nonsingular + 1
             forecast_error_cov_inv = 1.0 / forecast_error_cov
 
+            # Standardized forecasts error
+            if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
+                kfilter._standardized_forecast_error[i] = (
+                    kfilter._forecast_error[i] * forecast_error_cov_inv**0.5)
+
             # K0 = M[:, i:i+1] / F[i, i]
             blas.{{prefix}}copy(&kfilter.k_states, &kfilter._M[i*kfilter.k_states], &inc, kfilter._tmpK0, &inc)
             blas.{{prefix}}scal(&kfilter.k_states, &forecast_error_cov_inv, kfilter._tmpK0, &inc)
