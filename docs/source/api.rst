@@ -159,7 +159,6 @@ Multivariate Models
    ~statsmodels.tsa.statespace.varmax.VARMAX
    ~statsmodels.tsa.vector_ar.svar_model.SVAR
    ~statsmodels.tsa.vector_ar.vecm.VECM
-   ~statsmodels.tsa.vector_ar.dynamic.DynamicVAR
    ~statsmodels.tsa.statespace.structural.UnobservedComponents
 
 Tools
@@ -175,6 +174,10 @@ Tools
    ~statsmodels.tsa.tsatools.lagmat
    ~statsmodels.tsa.tsatools.lagmat2ds
    ~statsmodels.tsa.seasonal.seasonal_decompose
+   ~statsmodels.tsa.seasonal.STL
+   ~statsmodels.tsa.filters.bk_filter
+   ~statsmodels.tsa.filters.cf_filter
+   ~statsmodels.tsa.filters.hp_filter
 
 Markov Switching
 ~~~~~~~~~~~~~~~~

@@ -44,7 +44,7 @@ the namespace exploration features of IPython, Spyder, IDLE, etc.):
     'rainbow', 'rainbowplot', 'violinplot']
 
     >>> dir(sm.tsa)
-    ['AR', 'ARMA', 'DynamicVAR', 'SVAR', 'VAR', '__builtins__', '__doc__',
+    ['AR', 'ARMA', 'SVAR', 'VAR', '__builtins__', '__doc__',
     '__file__', '__name__', '__package__', 'acf', 'acovf', 'add_lag',
     'add_trend', 'adfuller', 'ccf', 'ccovf', 'datetools', 'detrend',
     'filters', 'grangercausalitytests', 'interp', 'lagmat', 'lagmat2ds',

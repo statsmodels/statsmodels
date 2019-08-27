@@ -43,6 +43,14 @@ Classes
    MICE
    MICEData
 
+.. currentmodule:: statsmodels.imputation.bayes_mi
+
+.. autosummary::
+   :toctree: generated/
+
+   MI
+   BayesGaussMI
+
 
 Implementation Details
 ----------------------
