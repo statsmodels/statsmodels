@@ -43,7 +43,7 @@ else:
 N = 200  # number of points to solve at
 K = X.shape[1]
 
-## Statsmodels
+## statsmodels
 logit_mod = sm.Logit(Y, X)
 sm_coeff = np.zeros((N, K))  # Holds the coefficients
 if use_spector:

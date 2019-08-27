@@ -149,7 +149,7 @@ or the very brief code snippet below:
    print(res_sarimax.summary())
 
 The results object has many of the attributes and methods you would expect from
-other Statsmodels results objects, including standard errors, z-statistics,
+other statsmodels results objects, including standard errors, z-statistics,
 and prediction / forecasting.
 
 Behind the scenes, the `SARIMAX` model creates the design and transition
@@ -373,7 +373,7 @@ This results in the following summary table::
    [1] Covariance matrix calculated using the outer product of gradients (complex-step).
 
 The results object has many of the attributes and methods you would expect from
-other Statsmodels results objects, including standard errors, z-statistics,
+other statsmodels results objects, including standard errors, z-statistics,
 and prediction / forecasting.
 
 More advanced usage is possible, including specifying parameter

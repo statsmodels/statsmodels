@@ -32,7 +32,7 @@ To learn more about Git, you may want to visit:
 Below, we describe the bare minimum git commands you need to contribute to
 `statsmodels`.
 
-Statsmodels Git/Github Workflow
+statsmodels Git/Github Workflow
 -------------------------------
 
 Forking and cloning

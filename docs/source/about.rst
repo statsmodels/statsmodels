@@ -5,7 +5,7 @@
 .. currentmodule:: statsmodels
 
 *****************
-About Statsmodels
+About statsmodels
 *****************
 
 Background

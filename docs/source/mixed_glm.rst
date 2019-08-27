@@ -5,7 +5,7 @@ Generalized Linear Mixed Effects Models
 
 Generalized Linear Mixed Effects (GLIMMIX) models are generalized
 linear models with random effects in the linear predictors.
-Statsmodels currently supports estimation of binomial and Poisson
+statsmodels currently supports estimation of binomial and Poisson
 GLIMMIX models using two Bayesian methods: the Laplace approximation
 to the posterior, and a variational Bayes approximation to the
 posterior.  Both methods provide point estimates (posterior means) and
@@ -16,7 +16,7 @@ The current implementation only supports independent random effects.
 Technical Documentation
 -----------------------
 
-Unlike Statsmodels mixed linear models, the GLIMMIX implementation is
+Unlike statsmodels mixed linear models, the GLIMMIX implementation is
 not group-based.  Groups are created by interacting all random effects
 with a categorical variable.  Note that this creates large, sparse
 random effects design matrices `exog_vc`.  Internally, `exog_vc` is

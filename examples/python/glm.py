@@ -127,7 +127,7 @@ graphics.gofplots.qqplot(resid, line='r')
 #
 #  In the example above, we printed the ``NOTE`` attribute to learn about
 # the
-#  Star98 dataset. Statsmodels datasets ships with other useful
+#  Star98 dataset. statsmodels datasets ships with other useful
 # information. For
 #  example:
 

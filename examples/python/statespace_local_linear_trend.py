@@ -9,7 +9,7 @@
 
 # # State space modeling: Local Linear Trends
 
-# This notebook describes how to extend the Statsmodels statespace classes
+# This notebook describes how to extend the statsmodels statespace classes
 # to create and estimate a custom model. Here we develop a local linear
 # trend model.
 #
@@ -191,7 +191,7 @@ df = pd.read_table(
 
 # Since we defined the local linear trend model as extending from
 # `MLEModel`, the `fit()` method is immediately available, just as in other
-# Statsmodels maximum likelihood classes. Similarly, the returned results
+# statsmodels maximum likelihood classes. Similarly, the returned results
 # class supports many of the same post-estimation results, like the
 # `summary` method.
 #

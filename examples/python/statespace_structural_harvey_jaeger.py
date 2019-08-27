@@ -25,7 +25,7 @@
 # met using the unobserved components approach rather than the popular
 # Hodrick-Prescott filter or Box-Jenkins ARIMA modeling techniques.
 #
-# Statsmodels has the ability to perform all three types of analysis, and
+# statsmodels has the ability to perform all three types of analysis, and
 # below we follow the steps of their paper, using a slightly updated
 # dataset.
 
@@ -38,7 +38,7 @@ from IPython.display import display, Latex
 
 # ## Unobserved Components
 #
-# The unobserved components model available in Statsmodels can be written
+# The unobserved components model available in statsmodels can be written
 # as:
 #
 # $$

@@ -220,7 +220,7 @@ print(res_reg_approx_diffuse$optim.out$value)    # 379.6233483
 
 # Random trend + AR(1)
 # Note: KFAS does not want to estimate these parameters, so just fix them
-# to the MLE estimates from Statsmodels and compare the loglikelihood
+# to the MLE estimates from statsmodels and compare the loglikelihood
 # mod.update([])
 mod_rtrend_ar1 <- SSModel(
   dta$unemp ~ SSMtrend(2, Q=list(matrix(0), matrix(0.0609)))

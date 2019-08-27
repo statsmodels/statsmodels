@@ -15,6 +15,8 @@ echo '========================================================================'
 echo '=                        Building documentation                        ='
 echo '========================================================================'
 echo 'make html 2>&1 | tee doc_build.log'
+# Multithreaded build
+export O="-j auto"
 make html 2>&1 | tee doc_build.log
 
 set +e

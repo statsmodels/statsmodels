@@ -3,7 +3,7 @@
 ``endog``, ``exog``, what's that?
 =================================
 
-Statsmodels is using ``endog`` and ``exog`` as names for the data, the
+statsmodels is using ``endog`` and ``exog`` as names for the data, the
 observed variables that are used in an estimation problem. Other names that
 are often used in different statistical packages or text books are, for
 example,

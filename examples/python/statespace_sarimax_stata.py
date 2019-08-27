@@ -78,7 +78,7 @@ from io import BytesIO
 # $$
 #
 # where $\beta_0$ is the mean of the process $y_t$. This model is
-# equivalent to the one estimated in the Statsmodels SARIMAX class, but the
+# equivalent to the one estimated in the statsmodels SARIMAX class, but the
 # interpretation is different. To see the equivalence, note that:
 #
 # $$
@@ -115,7 +115,7 @@ print(res.summary())
 # $$\beta_0 = \frac{c}{1 - \phi_1} = \frac{0.1050}{1 - 0.8740} = 0.83$$
 #
 # **Note**: these values are slightly different from the values in the
-# Stata documentation because the optimizer in Statsmodels has found
+# Stata documentation because the optimizer in statsmodels has found
 # parameters here that yield a higher likelihood. Nonetheless, they are very
 # close.
 
@@ -172,7 +172,7 @@ fig, axes = plt.subplots(1, 2, figsize=(15, 4))
 fig = sm.graphics.tsa.plot_acf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[0])
 fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 
-# To understand how to specify this model in Statsmodels, first recall
+# To understand how to specify this model in statsmodels, first recall
 # that from example 1 we used the following code to specify the ARIMA(1,1,1)
 # model:
 #
@@ -324,7 +324,7 @@ print(res.summary())
 # coefficients in front of the autoregressive lags are actually combinations
 # of the underlying seasonal and non-seasonal parameters.
 #
-# Specifying the model in Statsmodels is done simply by adding the
+# Specifying the model in statsmodels is done simply by adding the
 # `seasonal_order` argument, which accepts a tuple of the form `(Seasonal AR
 # specification, Seasonal Integration order, Seasonal MA, Seasonal
 # periodicity)`. The seasonal AR and MA specifications, as before, can be
@@ -432,7 +432,7 @@ print(res.summary())
 # ### ARIMA Postestimation: Example 1 - Dynamic Forecasting
 #
 # Here we describe some of the post-estimation capabilities of
-# Statsmodels' SARIMAX.
+# statsmodels' SARIMAX.
 #
 # First, using the model from example, we estimate the parameters using
 # data that *excludes the last few observations* (this is a little

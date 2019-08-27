@@ -39,7 +39,7 @@ $SOURCE
 Copyright
 ---------
 
-$COPYRIGHT
+$COPYRIGHT\
 """)
 
 if __name__ == "__main__":

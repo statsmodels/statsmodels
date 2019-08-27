@@ -2,24 +2,42 @@
 
 .. _install:
 
-Installation
-============
+Installing statsmodels
+======================
 
-Pre-packaged binaries
----------------------
+The easiest way to install statsmodels is to install it as part of the `Anaconda <http://docs.continuum.io/anaconda/>`_
+distribution, a cross-platform distribution for data analysis and scientific
+computing. This is the recommended installation method for most users.
 
-To obtain the latest released version of statsmodels using pip::
+Instructions for installing from PyPI, source or a development version are also provided.
 
-    pip install -U statsmodels
 
-Or follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__, download
-the wheel or source and install.
+Python Support
+--------------
 
-Statsmodels is also available in through conda provided by
+statsmodels supports Python 3.5, 3.6 and 3.7.
+
+Anaconda
+--------
+statsmodels is available in through conda provided by
 `Anaconda <https://www.continuum.io/downloads>`__. The latest release can
-be installed using::
+be installed using:
+
+.. code-block:: bash
+
+   conda install -c conda-forge statsmodels
+
+PyPI (pip)
+----------
+
+To obtain the latest released version of statsmodels using pip:
+
+.. code-block:: bash
 
     conda install -c conda-forge statsmodels
+
+Follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__ to directly
+download wheels or source.
 
 For Windows users, unofficial recent binaries (wheels) are occasionally
 available `here <https://www.lfd.uci.edu/~gohlke/pythonlibs/#statsmodels>`__.
@@ -30,11 +48,15 @@ Obtaining the Source
 We do not release very often but the master branch of our source code is
 usually fine for everyday use. You can get the latest source from our
 `github repository <https://github.com/statsmodels/statsmodels>`__. Or if you
-have git installed::
+have git installed:
+
+.. code-block:: bash
 
     git clone git://github.com/statsmodels/statsmodels.git
 
-If you want to keep up to date with the source on github just periodically do::
+If you want to keep up to date with the source on github just periodically do:
+
+.. code-block:: bash
 
     git pull
 
@@ -48,12 +70,14 @@ from the github source and not a source release, then you will also need
 Cython. You can follow the instructions below to get a C compiler setup for
 Windows.
 
-If your system is already set up with pip, a compiler, and git, you can try::
+If your system is already set up with pip, a compiler, and git, you can try:
+
+.. code-block:: bash
 
     pip install git+https://github.com/statsmodels/statsmodels
 
 If you do not have pip installed or want to do the installation more manually,
-you can also type::
+you can also type:
 
 .. code-block:: bash
 
@@ -74,6 +98,9 @@ restarts without having to re-install statsmodels.
 .. code-block:: bash
 
     python setup.py develop
+
+Compilers
+~~~~~~~~~
 
 Linux
 ^^^^^
@@ -114,7 +141,7 @@ Cython is required to build from a git checkout but not to run or install from P
 * `Cython <https://cython.org/>`__ >= 0.29 is required to build the code from
   github but not from a source distribution.
 
-Given the long release cycle, Statsmodels follows a loose time-based policy for
+Given the long release cycle, statsmodels follows a loose time-based policy for
 dependencies: minimal dependencies are lagged about one and a half to two
 years. Our next planned update of minimum versions is expected in the first
 half of 2020.

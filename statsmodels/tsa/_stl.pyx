@@ -187,6 +187,9 @@ cdef class STL(object):
     >>> from statsmodels.tsa.seasonal import STL
     >>> res = STL(data).fit()
     >>> res.plot()
+    >>> plt.show()
+
+    .. plot:: plots/stl_plot.py
     """
     cdef object endog
     cdef Py_ssize_t nobs

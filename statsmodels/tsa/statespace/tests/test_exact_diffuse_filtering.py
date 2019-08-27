@@ -9,7 +9,7 @@ These tests are against four sources:
 - Koopman (1997)
 - The R package KFAS (v1.3.1): test_exact_diffuse_filtering.R
 - Stata: test_exact_diffuse_filtering_stata.do
-- Statsmodels state space models using approximate diffuse filtering
+- statsmodels state space models using approximate diffuse filtering
 
 Koopman (1997) provides analytic results for a few cases that we can test
 against. More comprehensive tests are available against the R package KFAS,

@@ -33,7 +33,7 @@ dta.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 # $$
 #
 # Often, some or all of the values in the matrices $Z, H, T, R, Q$ are
-# unknown and must be estimated; in Statsmodels, estimation is often done by
+# unknown and must be estimated; in statsmodels, estimation is often done by
 # finding the parameters that maximize the likelihood function. In
 # particular, if we collect the parameters in a vector $\psi$, then each of
 # these matrices can be thought of as functions of those parameters, for
@@ -72,7 +72,7 @@ dta.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 # #### Typical approach
 #
 # First, we show how to define this model without concentrating out the
-# scale, using Statsmodels' state space library:
+# scale, using statsmodels' state space library:
 
 
 class LocalLevel(sm.tsa.statespace.MLEModel):

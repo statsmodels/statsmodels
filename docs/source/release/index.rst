@@ -10,7 +10,7 @@
 .. _whatsnew_index:
 
 =========================
-What's new in Statsmodels
+What's new in statsmodels
 =========================
 
 .. toctree::

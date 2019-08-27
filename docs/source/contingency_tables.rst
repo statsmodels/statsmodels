@@ -6,13 +6,13 @@
 Contingency tables
 ==================
 
-Statsmodels supports a variety of approaches for analyzing contingency
+statsmodels supports a variety of approaches for analyzing contingency
 tables, including methods for assessing independence, symmetry,
 homogeneity, and methods for working with collections of tables from a
 stratified population.
 
 The methods described here are mainly for two-way tables.  Multi-way
-tables can be analyzed using log-linear models.  Statsmodels does not
+tables can be analyzed using log-linear models.  statsmodels does not
 currently have a dedicated API for loglinear modeling, but Poisson
 regression in :class:`statsmodels.genmod.GLM` can be used for this
 purpose.
@@ -295,6 +295,6 @@ See also
 --------
 
 Scipy_ has several functions for analyzing contingency tables,
-including Fisher's exact test which is not currently in Statsmodels.
+including Fisher's exact test which is not currently in statsmodels.
 
 .. _Scipy: https://docs.scipy.org/doc/scipy-0.18.0/reference/stats.html#contingency-table-functions

@@ -59,7 +59,7 @@ inverse. This means that:
 + Rank deficient matrices will not raise an error
 + Cases of almost perfect multicollinearity or ill-conditioned design matrices might produce numerically unstable results. Users need to manually check the rank or condition number of the matrix if this is not the desired behavior
   
-Note: Statsmodels currently fails on the NIST benchmark case for Filip if the
+Note: statsmodels currently fails on the NIST benchmark case for Filip if the
 data is not rescaled, see `this blog <http://jpktd.blogspot.ca/2012/03/numerical-accuracy-in-linear-least.html>`_
 
 Incomplete convergence in maximum likelihood estimation

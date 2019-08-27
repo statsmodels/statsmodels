@@ -86,7 +86,7 @@ Conversations about development take place on the
 License
 -------
 
-Statsmodels is released under
+statsmodels is released under
 the `Modified (3-clause) BSD license <https://opensource.org/licenses/BSD-3-Clause>`_.
 
 Contents

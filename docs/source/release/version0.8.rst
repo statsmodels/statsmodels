@@ -14,7 +14,7 @@ on the statespace framework, multiple imputation using MICE as well as many
 other enhancements. The codebase also has been updated to be compatible with
 recent numpy and pandas releases.
 
-Statsmodels is using now github to store the updated documentation which
+statsmodels is using now github to store the updated documentation which
 is available under
 https://www.statsmodels.org/stable for the last release, and
 https://www.statsmodels.org/devel/ for the development version.

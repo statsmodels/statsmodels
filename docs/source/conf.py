@@ -38,6 +38,7 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',
+              # numpydoc or sphinx.ext.napoleon, but not both
               'numpydoc',
               'sphinx.ext.doctest',
               'sphinx.ext.extlinks',
@@ -52,9 +53,6 @@ extensions = ['sphinx.ext.autodoc',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
-              'github',  # for GitHub links,
-              # numpydoc or sphinx.ext.napoleon, but not both
-              'numpydoc',
               ]
 
 try:
@@ -84,7 +82,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2018, Josef Perktold, Skipper Seabold, ' \
+copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
             u'Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
@@ -96,8 +94,14 @@ autoclass_content = 'class'
 #
 
 release = __version__
-# The full version, including dev tag.
-version = __version__
+from distutils.version import LooseVersion
+
+lv = LooseVersion(release)
+full_version = version = short_version = lv.version
+if '+' in lv.version:
+    short_version = lv.vstring[:lv.vstring.index('+')]
+    commit = lv.version[lv.version.index('+') + 1]
+    version = short_version + '+' + str(commit)
 
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
@@ -160,17 +164,20 @@ html_title = project
 html_short_title = project
 # material theme options (see theme.conf for more information)
 
-# TODO: Switch base_url if a release build, need to check and parse tag
+base_url = 'https://statsmodels.org/'
+base_url += 'stable/' if full_version == version else 'devel/'
 html_theme_options = {
-    'base_url': 'https://www.statsmodels.org/devel/',
+    'base_url': base_url,
     'repo_url': 'https://github.com/statsmodels/statsmodels',
     'repo_name': 'statsmodels',
     'globaltoc_depth': 1,
     'globaltoc_collapse': True,
-    'globaltoc_includehidden': False,
+    'globaltoc_includehidden': True,
     'color_primary': 'indigo',
     'color_accent': 'blue',
-    'nav_title': 'statsmodels'
+    'nav_title': 'statsmodels {0}'.format(version),
+    'master_doc': False,
+    'nav_links': []
 }
 
 language = 'en'
@@ -195,12 +202,12 @@ html_last_updated_fmt = ''
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels.svg'
+html_logo = 'images/statsmodels-v2.svg'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = 'images/statsmodels_hybi_favico.ico'
+html_favicon = 'images/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -345,21 +352,6 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # Allow duplicate toc entries.
 # epub_tocdup = True
 
-# Sphinx napoleon options
-# napoleon_google_docstring = True
-# napoleon_numpy_docstring = True
-# napoleon_include_init_with_doc = False
-# napoleon_include_private_with_doc = False
-# napoleon_include_special_with_doc = False
-# napoleon_use_admonition_for_examples = False
-# napoleon_use_admonition_for_notes = False
-# napoleon_use_admonition_for_references = False
-# napoleon_use_ivar = False
-# napoleon_use_param = True
-# napoleon_use_rtype = True
-# napoleon_use_keyword = True
-# napoleon_custom_sections = None
-
 # Numpydoc options
 # numpydoc_attributes_as_param_list = True
 # numpydoc_show_class_members = False
@@ -411,3 +403,34 @@ extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
             'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
                       'Issue #')
             }
+
+
+def rstjinja(app, docname, source):
+    """
+    Render our pages as a jinja template for fancy templating goodness.
+    """
+    # http://ericholscher.com/blog/2016/jul/25/integrating-jinja-rst-sphinx/
+    # Make sure we're outputting HTML
+    if app.builder.format != "html":
+        return
+    src = source[0]
+    import copy
+    orig = copy.deepcopy(src)
+    # Skip converted notebooks
+    if 'nbconvert_exporter' in src:
+        return
+    try:
+        rendered = app.builder.templates.render_string(src,
+                                                       app.config.html_context)
+        source[0] = rendered
+    except Exception as exc:
+        from sphinx.util import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(exc)
+        logger.warning(source[0])
+
+
+def setup(app):
+    app.connect("source-read", rstjinja)
+    return {'parallel_read_safe': True,
+            'parallel_write_safe': True}

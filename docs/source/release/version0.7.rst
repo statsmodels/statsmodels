@@ -64,7 +64,7 @@ State Space Models
 Author: Chad Fulton
 
 State space methods provide a flexible structure for the estimation and
-analysis of a wide class of time series models. The Statsmodels implementation
+analysis of a wide class of time series models. The statsmodels implementation
 allows specification of state models, fast Kalman filtering, and built-in
 methods to facilitate maximum likelihood estimation of arbitrary models. One of
 the primary goals of this module is to allow end users to create and estimate

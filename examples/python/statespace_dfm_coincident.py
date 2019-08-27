@@ -170,7 +170,7 @@ dta['std_emp'] = (
 # where $i$ is one of: `[indprod, income, sales, emp ]`.
 #
 # This model can be formulated using the `DynamicFactor` model built-in to
-# Statsmodels. In particular, we have the following specification:
+# statsmodels. In particular, we have the following specification:
 #
 # - `k_factors = 1` - (there is 1 unobserved factor)
 # - `factor_order = 2` - (it follows an AR(2) process)
@@ -635,7 +635,7 @@ ax.fill_between(
 # is important to note at the outset that none of the methods defined below
 # could have been omitted. In fact, the methods `__init__`, `start_params`,
 # `param_names`, `transform_params`, `untransform_params`, and `update` form
-# the core of all state space models in Statsmodels, not just the
+# the core of all state space models in statsmodels, not just the
 # `DynamicFactor` class.
 
 from statsmodels.tsa.statespace import tools

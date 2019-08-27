@@ -66,7 +66,7 @@ def get_auth_token():
         "public_repo",
         "gist"
       ],
-      "note": "Statsmodels tools - {}".format(datetime.now().isoformat()),
+      "note": "statsmodels tools - {}".format(datetime.now().isoformat()),
       "note_url": "https://github.com/statsmodels/statsmodels/tree/master/tools",  # noqa:E501
     }
     response = requests.post('https://api.github.com/authorizations',

@@ -10,7 +10,7 @@
 # ## Markov switching autoregression models
 
 # This notebook provides an example of the use of Markov switching models
-# in Statsmodels to replicate a number of results presented in Kim and
+# in statsmodels to replicate a number of results presented in Kim and
 # Nelson (1999). It applies the Hamilton (1989) filter the Kim (1994)
 # smoother.
 #
@@ -58,7 +58,7 @@ usrec = DataReader(
 # *to* regime $j$.
 #
 # The model class is `MarkovAutoregression` in the time-series part of
-# `Statsmodels`. In order to create the model, we must specify the number of
+# `statsmodels`. In order to create the model, we must specify the number of
 # regimes with `k_regimes=2`, and the order of the autoregression with
 # `order=4`. The default model also includes switching autoregressive
 # coefficients, so here we also need to specify `switching_ar=False` to

@@ -2,7 +2,7 @@
 Release 0.5.0
 =============
 
-Statsmodels 0.5 is a large and very exciting release that brings together a year of work done by 38 authors, including over 2000 commits. It contains many new features and a large amount of bug fixes detailed below.
+statsmodels 0.5 is a large and very exciting release that brings together a year of work done by 38 authors, including over 2000 commits. It contains many new features and a large amount of bug fixes detailed below.
 
 See the :ref:`list of fixed issues <issues_list_05>` for specific closed issues.
 
@@ -11,7 +11,7 @@ The following major new features appear in this version.
 Support for Model Formulas via Patsy
 ====================================
 
-Statsmodels now supports fitting models with a formula. This functionality is provided by `patsy <https://patsy.readthedocs.org/en/latest/>`_. Patsy is now a dependency for statsmodels. Models can be individually imported from the ``statsmodels.formula.api`` namespace or you can import them all as::
+statsmodels now supports fitting models with a formula. This functionality is provided by `patsy <https://patsy.readthedocs.org/en/latest/>`_. Patsy is now a dependency for statsmodels. Models can be individually imported from the ``statsmodels.formula.api`` namespace or you can import them all as::
 
     import statsmodels.formula.api as smf
 
@@ -132,11 +132,11 @@ Other important new features
 
 .. currentmodule:: statsmodels.tsa.arima_model
 
-* **ARIMA modeling**: Statsmodels now has support for fitting Autoregressive Integrated Moving Average (ARIMA) models. See :class:`ARIMA` and :class:`ARIMAResults` for more information.
+* **ARIMA modeling**: statsmodels now has support for fitting Autoregressive Integrated Moving Average (ARIMA) models. See :class:`ARIMA` and :class:`ARIMAResults` for more information.
 
 * **Support for dynamic prediction in AR(I)MA models**: It is now possible to obtain dynamic in-sample forecast values in :class:`ARMA` and :class:`ARIMA` models.
 
-* **Improved Pandas integration**: Statsmodels now supports all frequencies available in pandas for time-series modeling. These are used for intelligent dates handling for prediction. These features are available, if you pass a pandas Series or DataFrame with a DatetimeIndex to a time-series model.
+* **Improved Pandas integration**: statsmodels now supports all frequencies available in pandas for time-series modeling. These are used for intelligent dates handling for prediction. These features are available, if you pass a pandas Series or DataFrame with a DatetimeIndex to a time-series model.
 
 .. currentmodule:: statsmodels
 
@@ -146,9 +146,9 @@ Other important new features
 Major Bugs fixed
 ----------------
 
-* Post-estimation statistics for weighted least squares that depended on the centered total sum of squares were not correct. These are now correct and tested. See :ghissue:`501`.
+* Post-estimation statistics for weighted least squares that depended on the centered total sum of squares were not correct. These are now correct and tested. See :issue:`501`.
 
-* Regression through the origin models now correctly use uncentered total sum of squares in post-estimation statistics. This affected the :math:`R^2` value in linear models without a constant. See :ghissue:`27`.
+* Regression through the origin models now correctly use uncentered total sum of squares in post-estimation statistics. This affected the :math:`R^2` value in linear models without a constant. See :issue:`27`.
 
 Backwards incompatible changes and deprecations
 -----------------------------------------------
@@ -243,386 +243,386 @@ This list is automatically generated, and may be incomplete:
 
 Pull Requests (172):
 
-* :ghpull:`1015`: DOC: Bump version. Remove done tasks.
-* :ghpull:`1010`: DOC/RLS: Update release notes workflow. Help Needed!
-* :ghpull:`1014`: DOC: nbgenerate does not like the comment at end of line.
-* :ghpull:`1012`: DOC: Add link to notebook and crosslink ref. Closes #924.
-* :ghpull:`997`: misc, tests, diagnostic
-* :ghpull:`1009`: MAINT: Add .mailmap file.
-* :ghpull:`817`: Add 3 new unit tests for arima_process
-* :ghpull:`1001`: BUG include_package_data for install closes #907
-* :ghpull:`1005`: GITHUB: Contributing guidelines
-* :ghpull:`1007`: Cleanup docs for release
-* :ghpull:`1003`: BUG: Workaround for bug in sphinx 1.1.3. See #1002.
-* :ghpull:`1004`: DOC: Update maintainer notes with branching instructions.
-* :ghpull:`1000`: BUG: Support pandas 0.8.0.
-* :ghpull:`996`: BUG: Handle combo of pandas 0.8.0 and dateutils 1.5.0
-* :ghpull:`995`: ENH: Print dateutil version.
-* :ghpull:`994`: ENH: Fail gracefully for version not found.
-* :ghpull:`993`: More conservative error catching in TimeSeriesModel
-* :ghpull:`992`: Misc fixes 12: adjustments to unit test
-* :ghpull:`985`: MAINT: Print versions script.
-* :ghpull:`986`: ENH: Prefer to_offset to get_offset. Closes #964.
-* :ghpull:`984`: COMPAT: Pandas 0.8.1 compatibility. Closes #983.
-* :ghpull:`982`: Misc fixes 11
-* :ghpull:`978`: TST: generic mle pareto disable bsejac tests with estimated loc
-* :ghpull:`977`: BUG python 3.3 fix for numpy str TypeError, see #633
-* :ghpull:`975`: Misc fixes 10 numdiff
-* :ghpull:`970`: BUG: array too long, raises exception with newer numpy closes #967
-* :ghpull:`965`: Vincent summary2 rebased
-* :ghpull:`933`: Update and improve GenericlikelihoodModel and miscmodels
-* :ghpull:`950`: BUG/REF mcnemar fix exact pvalue, allow table as input
-* :ghpull:`951`: Pylint emplike formula genmod
-* :ghpull:`956`: Fix a docstring in KDEMultivariateConditional.
-* :ghpull:`949`: BUG fix lowess sort when nans closes #946
-* :ghpull:`932`: ENH: support basinhopping solver in LikelihoodModel.fit()
-* :ghpull:`927`: DOC: clearer minimal example
-* :ghpull:`919`: OLS summary crash
-* :ghpull:`918`: Fixes10 emplike lowess
-* :ghpull:`909`: Bugs in GLM pvalues, more tests, pylint
-* :ghpull:`906`: ENH: No fmax with Windows SDK so define inline.
-* :ghpull:`905`: MAINT more fixes
-* :ghpull:`898`: Misc fixes 7
-* :ghpull:`896`: Quantreg rebase2
-* :ghpull:`895`: Fixes issue #832
-* :ghpull:`893`: ENH: Remove unneeded restriction on low. Closes #867.
-* :ghpull:`894`: MAINT: Remove broken function. Keep deprecation. Closes #781.
-* :ghpull:`856`: Carljv improved lowess rebased2
-* :ghpull:`884`: Pyflakes cleanup
-* :ghpull:`887`: BUG: Fix kde caching
-* :ghpull:`883`: Fixed pyflakes issue in discrete module
-* :ghpull:`882`: Update predstd.py
-* :ghpull:`871`: Update of sandbox doc
-* :ghpull:`631`: WIP: Correlation positive semi definite
-* :ghpull:`857`: BLD: apt get dependencies from Neurodebian, whitespace cleanup
-* :ghpull:`855`: AnaMP issue 783 mixture rvs tests rebased
-* :ghpull:`854`: Enrico multinear rebased
-* :ghpull:`849`: Tyler tukeyhsd rebased
-* :ghpull:`848`: BLD TravisCI use python-dateutil package
-* :ghpull:`784`: Misc07 cleanup multipletesting and proportions
-* :ghpull:`841`: ENH: Add load function to main API. Closes #840.
-* :ghpull:`820`: Ensure that tuples are not considered as data, not as data containers
-* :ghpull:`822`: DOC: Update for Cython changes.
-* :ghpull:`765`: Fix build issues
-* :ghpull:`800`: Automatically generate output from notebooks
-* :ghpull:`802`: BUG: Use two- not one-sided t-test in t_test. Closes #740.
-* :ghpull:`806`: ENH: Import formula.api in statsmodels.api namespace.
-* :ghpull:`803`: ENH: Fix arima error message for bad start_params
-* :ghpull:`801`: DOC: Fix ANOVA section titles
-* :ghpull:`795`: Negative Binomial Rebased
-* :ghpull:`787`: Origintests
-* :ghpull:`794`: ENH: Allow pandas-in/pandas-out in tsa.filters
-* :ghpull:`791`: Github stats for release notes
-* :ghpull:`779`: added np.asarray call to durbin_watson in stattools
-* :ghpull:`772`: Anova docs
-* :ghpull:`776`: BUG: Fix dates_from_range with length. Closes #775.
-* :ghpull:`774`: BUG: Attach prediction start date in AR. Closes #773.
-* :ghpull:`767`: MAINT: Remove use of deprecated from examples and docs.
-* :ghpull:`762`: ENH: Add new residuals to wrapper
-* :ghpull:`754`: Fix arima predict
-* :ghpull:`760`: ENH: Adjust for k_trend in information criteria. Closes #324.
-* :ghpull:`761`: ENH: Fixes and tests sign_test. Closes #642.
-* :ghpull:`759`: Fix 236
-* :ghpull:`758`: DOC: Update VAR docs. Closes #537.
-* :ghpull:`752`: Discrete cleanup
-* :ghpull:`750`: VAR with 1d array
-* :ghpull:`748`: Remove reference to new_t_test and new_f_test.
-* :ghpull:`739`: DOC: Remove outdated note in docstring
-* :ghpull:`732`: BLD: Check for patsy dependency at build time + docs
-* :ghpull:`731`: Handle wrapped
-* :ghpull:`730`: Fix opt fulloutput
-* :ghpull:`729`: Get rid of warnings in docs build
-* :ghpull:`698`: update url for hsb2 dataset
-* :ghpull:`727`: DOC: Fix indent and add missing params to linear models. Closes #709.
-* :ghpull:`726`: CLN: Remove unused method. Closes #694
-* :ghpull:`725`: BUG: Should call anova_single. Closes #702.
-* :ghpull:`723`: Rootfinding for Power
-* :ghpull:`722`: Handle pandas.Series with names in make_lags
-* :ghpull:`714`: Fix 712
-* :ghpull:`668`: Allow for any pandas frequency to be used in TimeSeriesModel.
-* :ghpull:`711`: Misc06 - bug fixes
-* :ghpull:`708`: BUG: Fix one regressor case for conf_int. Closes #706.
-* :ghpull:`700`: Bugs rebased
-* :ghpull:`680`: BUG: Swap arguments in fftconvolve for scipy >= 0.12.0
-* :ghpull:`640`: Misc fixes 05
-* :ghpull:`663`: a typo in runs.py doc string for mcnemar test
-* :ghpull:`652`: WIP: fixing pyflakes / pep8, trying to improve readability
-* :ghpull:`619`: DOC: intro to formulas
-* :ghpull:`648`: BF: Make RLM stick to Huber's description
-* :ghpull:`649`: Bug Fix
-* :ghpull:`637`: Pyflakes cleanup
-* :ghpull:`634`: VAR DOC typo
-* :ghpull:`623`: Slowtests
-* :ghpull:`621`: MAINT: in setup.py, only catch ImportError for pandas.
-* :ghpull:`590`: Cleanup test output
-* :ghpull:`591`: Interrater agreement and reliability measures
-* :ghpull:`618`: Docs fix the main warnings and errors during sphinx build
-* :ghpull:`610`: nonparametric examples and some fixes
-* :ghpull:`578`: Fix 577
-* :ghpull:`575`: MNT: Remove deprecated scikits namespace
-* :ghpull:`499`: WIP: Handle constant
-* :ghpull:`567`: Remove deprecated
-* :ghpull:`571`: Dataset docs
-* :ghpull:`561`: Grab rdatasets
-* :ghpull:`570`: DOC: Fixed links to Rdatasets
-* :ghpull:`524`: DOC: Clean up discrete model documentation.
-* :ghpull:`506`: ENH: Re-use effects if model fit with QR
-* :ghpull:`556`: WIP:  L1 doc fix
-* :ghpull:`564`: TST: Use native integer to avoid issues in dtype asserts
-* :ghpull:`543`: Travis CI using M.Brett nipy hack
-* :ghpull:`558`: Plot cleanup
-* :ghpull:`541`: Replace pandas DataMatrix with DataFrame
-* :ghpull:`534`: Stata test fixes
-* :ghpull:`532`: Compat 323
-* :ghpull:`531`: DOC: Add ECDF to distributions docs
-* :ghpull:`526`: ENH: Add class to write Stata binary dta files
-* :ghpull:`521`: DOC: Add abline plot to docs
-* :ghpull:`518`: Small fixes: interaction_plot
-* :ghpull:`508`: ENH: Avoid taking cholesky decomposition of diagonal matrix
-* :ghpull:`509`: DOC: Add ARIMA to docs
-* :ghpull:`510`: DOC: realdpi is disposable personal income. Closes #394.
-* :ghpull:`507`: ENH: Protect numdifftools import. Closes #45
-* :ghpull:`504`: Fix weights
-* :ghpull:`498`: DOC: Add patys requirement to install docs
-* :ghpull:`491`: Make _data a public attribute.
-* :ghpull:`494`: DOC: Fix pandas links
-* :ghpull:`492`: added intersphinx for pandas
-* :ghpull:`422`: Handle missing data
-* :ghpull:`485`: ENH: Improve error message for pandas objects without dates in index
-* :ghpull:`428`: Remove other data
-* :ghpull:`483`: Arima predict bug
-* :ghpull:`482`: TST: Do array-array comparison when using numpy.testing
-* :ghpull:`471`: Formula rename df -> data
-* :ghpull:`473`: Vincent docs tweak rebased
-* :ghpull:`468`: Docs 050
-* :ghpull:`462`: El aft rebased
-* :ghpull:`461`: TST: numpy 1.5.1 compatibility
-* :ghpull:`460`: Emplike desc reg rebase
-* :ghpull:`410`: Discrete model marginal effects
-* :ghpull:`417`: Numdiff cleanup
-* :ghpull:`398`: Improved plot_corr and plot_corr_grid functions.
-* :ghpull:`401`: BUG: Finish refactoring margeff for dummy. Closes #399.
-* :ghpull:`400`: MAINT: remove lowess.py, which was kept in 0.4.x for backwards compatibi...
-* :ghpull:`371`: BF+TEST: fixes, checks and tests for isestimable
-* :ghpull:`351`: ENH: Copy diagonal before write for upcoming numpy changes
-* :ghpull:`384`: REF: Move mixture_rvs out of sandbox.
-* :ghpull:`368`: ENH: Add polished version of acf/pacf plots with confidence intervals
-* :ghpull:`378`: Infer freq
-* :ghpull:`374`: ENH: Add Fair's extramarital affair dataset. From tobit-model branch.
-* :ghpull:`358`: ENH: Add method to OLSResults for outlier detection
-* :ghpull:`369`: ENH: allow predict to pass through patsy for transforms
-* :ghpull:`352`: Formula integration rebased
-* :ghpull:`360`: REF: Deprecate order in fit and move to ARMA init
-* :ghpull:`366`: Version fixes
-* :ghpull:`359`: DOC: Fix sphinx warnings
+* :pr:`1015`: DOC: Bump version. Remove done tasks.
+* :pr:`1010`: DOC/RLS: Update release notes workflow. Help Needed!
+* :pr:`1014`: DOC: nbgenerate does not like the comment at end of line.
+* :pr:`1012`: DOC: Add link to notebook and crosslink ref. Closes #924.
+* :pr:`997`: misc, tests, diagnostic
+* :pr:`1009`: MAINT: Add .mailmap file.
+* :pr:`817`: Add 3 new unit tests for arima_process
+* :pr:`1001`: BUG include_package_data for install closes #907
+* :pr:`1005`: GITHUB: Contributing guidelines
+* :pr:`1007`: Cleanup docs for release
+* :pr:`1003`: BUG: Workaround for bug in sphinx 1.1.3. See #1002.
+* :pr:`1004`: DOC: Update maintainer notes with branching instructions.
+* :pr:`1000`: BUG: Support pandas 0.8.0.
+* :pr:`996`: BUG: Handle combo of pandas 0.8.0 and dateutils 1.5.0
+* :pr:`995`: ENH: Print dateutil version.
+* :pr:`994`: ENH: Fail gracefully for version not found.
+* :pr:`993`: More conservative error catching in TimeSeriesModel
+* :pr:`992`: Misc fixes 12: adjustments to unit test
+* :pr:`985`: MAINT: Print versions script.
+* :pr:`986`: ENH: Prefer to_offset to get_offset. Closes #964.
+* :pr:`984`: COMPAT: Pandas 0.8.1 compatibility. Closes #983.
+* :pr:`982`: Misc fixes 11
+* :pr:`978`: TST: generic mle pareto disable bsejac tests with estimated loc
+* :pr:`977`: BUG python 3.3 fix for numpy str TypeError, see #633
+* :pr:`975`: Misc fixes 10 numdiff
+* :pr:`970`: BUG: array too long, raises exception with newer numpy closes #967
+* :pr:`965`: Vincent summary2 rebased
+* :pr:`933`: Update and improve GenericlikelihoodModel and miscmodels
+* :pr:`950`: BUG/REF mcnemar fix exact pvalue, allow table as input
+* :pr:`951`: Pylint emplike formula genmod
+* :pr:`956`: Fix a docstring in KDEMultivariateConditional.
+* :pr:`949`: BUG fix lowess sort when nans closes #946
+* :pr:`932`: ENH: support basinhopping solver in LikelihoodModel.fit()
+* :pr:`927`: DOC: clearer minimal example
+* :pr:`919`: OLS summary crash
+* :pr:`918`: Fixes10 emplike lowess
+* :pr:`909`: Bugs in GLM pvalues, more tests, pylint
+* :pr:`906`: ENH: No fmax with Windows SDK so define inline.
+* :pr:`905`: MAINT more fixes
+* :pr:`898`: Misc fixes 7
+* :pr:`896`: Quantreg rebase2
+* :pr:`895`: Fixes issue #832
+* :pr:`893`: ENH: Remove unneeded restriction on low. Closes #867.
+* :pr:`894`: MAINT: Remove broken function. Keep deprecation. Closes #781.
+* :pr:`856`: Carljv improved lowess rebased2
+* :pr:`884`: Pyflakes cleanup
+* :pr:`887`: BUG: Fix kde caching
+* :pr:`883`: Fixed pyflakes issue in discrete module
+* :pr:`882`: Update predstd.py
+* :pr:`871`: Update of sandbox doc
+* :pr:`631`: WIP: Correlation positive semi definite
+* :pr:`857`: BLD: apt get dependencies from Neurodebian, whitespace cleanup
+* :pr:`855`: AnaMP issue 783 mixture rvs tests rebased
+* :pr:`854`: Enrico multinear rebased
+* :pr:`849`: Tyler tukeyhsd rebased
+* :pr:`848`: BLD TravisCI use python-dateutil package
+* :pr:`784`: Misc07 cleanup multipletesting and proportions
+* :pr:`841`: ENH: Add load function to main API. Closes #840.
+* :pr:`820`: Ensure that tuples are not considered as data, not as data containers
+* :pr:`822`: DOC: Update for Cython changes.
+* :pr:`765`: Fix build issues
+* :pr:`800`: Automatically generate output from notebooks
+* :pr:`802`: BUG: Use two- not one-sided t-test in t_test. Closes #740.
+* :pr:`806`: ENH: Import formula.api in statsmodels.api namespace.
+* :pr:`803`: ENH: Fix arima error message for bad start_params
+* :pr:`801`: DOC: Fix ANOVA section titles
+* :pr:`795`: Negative Binomial Rebased
+* :pr:`787`: Origintests
+* :pr:`794`: ENH: Allow pandas-in/pandas-out in tsa.filters
+* :pr:`791`: Github stats for release notes
+* :pr:`779`: added np.asarray call to durbin_watson in stattools
+* :pr:`772`: Anova docs
+* :pr:`776`: BUG: Fix dates_from_range with length. Closes #775.
+* :pr:`774`: BUG: Attach prediction start date in AR. Closes #773.
+* :pr:`767`: MAINT: Remove use of deprecated from examples and docs.
+* :pr:`762`: ENH: Add new residuals to wrapper
+* :pr:`754`: Fix arima predict
+* :pr:`760`: ENH: Adjust for k_trend in information criteria. Closes #324.
+* :pr:`761`: ENH: Fixes and tests sign_test. Closes #642.
+* :pr:`759`: Fix 236
+* :pr:`758`: DOC: Update VAR docs. Closes #537.
+* :pr:`752`: Discrete cleanup
+* :pr:`750`: VAR with 1d array
+* :pr:`748`: Remove reference to new_t_test and new_f_test.
+* :pr:`739`: DOC: Remove outdated note in docstring
+* :pr:`732`: BLD: Check for patsy dependency at build time + docs
+* :pr:`731`: Handle wrapped
+* :pr:`730`: Fix opt fulloutput
+* :pr:`729`: Get rid of warnings in docs build
+* :pr:`698`: update url for hsb2 dataset
+* :pr:`727`: DOC: Fix indent and add missing params to linear models. Closes #709.
+* :pr:`726`: CLN: Remove unused method. Closes #694
+* :pr:`725`: BUG: Should call anova_single. Closes #702.
+* :pr:`723`: Rootfinding for Power
+* :pr:`722`: Handle pandas.Series with names in make_lags
+* :pr:`714`: Fix 712
+* :pr:`668`: Allow for any pandas frequency to be used in TimeSeriesModel.
+* :pr:`711`: Misc06 - bug fixes
+* :pr:`708`: BUG: Fix one regressor case for conf_int. Closes #706.
+* :pr:`700`: Bugs rebased
+* :pr:`680`: BUG: Swap arguments in fftconvolve for scipy >= 0.12.0
+* :pr:`640`: Misc fixes 05
+* :pr:`663`: a typo in runs.py doc string for mcnemar test
+* :pr:`652`: WIP: fixing pyflakes / pep8, trying to improve readability
+* :pr:`619`: DOC: intro to formulas
+* :pr:`648`: BF: Make RLM stick to Huber's description
+* :pr:`649`: Bug Fix
+* :pr:`637`: Pyflakes cleanup
+* :pr:`634`: VAR DOC typo
+* :pr:`623`: Slowtests
+* :pr:`621`: MAINT: in setup.py, only catch ImportError for pandas.
+* :pr:`590`: Cleanup test output
+* :pr:`591`: Interrater agreement and reliability measures
+* :pr:`618`: Docs fix the main warnings and errors during sphinx build
+* :pr:`610`: nonparametric examples and some fixes
+* :pr:`578`: Fix 577
+* :pr:`575`: MNT: Remove deprecated scikits namespace
+* :pr:`499`: WIP: Handle constant
+* :pr:`567`: Remove deprecated
+* :pr:`571`: Dataset docs
+* :pr:`561`: Grab rdatasets
+* :pr:`570`: DOC: Fixed links to Rdatasets
+* :pr:`524`: DOC: Clean up discrete model documentation.
+* :pr:`506`: ENH: Re-use effects if model fit with QR
+* :pr:`556`: WIP:  L1 doc fix
+* :pr:`564`: TST: Use native integer to avoid issues in dtype asserts
+* :pr:`543`: Travis CI using M.Brett nipy hack
+* :pr:`558`: Plot cleanup
+* :pr:`541`: Replace pandas DataMatrix with DataFrame
+* :pr:`534`: Stata test fixes
+* :pr:`532`: Compat 323
+* :pr:`531`: DOC: Add ECDF to distributions docs
+* :pr:`526`: ENH: Add class to write Stata binary dta files
+* :pr:`521`: DOC: Add abline plot to docs
+* :pr:`518`: Small fixes: interaction_plot
+* :pr:`508`: ENH: Avoid taking cholesky decomposition of diagonal matrix
+* :pr:`509`: DOC: Add ARIMA to docs
+* :pr:`510`: DOC: realdpi is disposable personal income. Closes #394.
+* :pr:`507`: ENH: Protect numdifftools import. Closes #45
+* :pr:`504`: Fix weights
+* :pr:`498`: DOC: Add patys requirement to install docs
+* :pr:`491`: Make _data a public attribute.
+* :pr:`494`: DOC: Fix pandas links
+* :pr:`492`: added intersphinx for pandas
+* :pr:`422`: Handle missing data
+* :pr:`485`: ENH: Improve error message for pandas objects without dates in index
+* :pr:`428`: Remove other data
+* :pr:`483`: Arima predict bug
+* :pr:`482`: TST: Do array-array comparison when using numpy.testing
+* :pr:`471`: Formula rename df -> data
+* :pr:`473`: Vincent docs tweak rebased
+* :pr:`468`: Docs 050
+* :pr:`462`: El aft rebased
+* :pr:`461`: TST: numpy 1.5.1 compatibility
+* :pr:`460`: Emplike desc reg rebase
+* :pr:`410`: Discrete model marginal effects
+* :pr:`417`: Numdiff cleanup
+* :pr:`398`: Improved plot_corr and plot_corr_grid functions.
+* :pr:`401`: BUG: Finish refactoring margeff for dummy. Closes #399.
+* :pr:`400`: MAINT: remove lowess.py, which was kept in 0.4.x for backwards compatibi...
+* :pr:`371`: BF+TEST: fixes, checks and tests for isestimable
+* :pr:`351`: ENH: Copy diagonal before write for upcoming numpy changes
+* :pr:`384`: REF: Move mixture_rvs out of sandbox.
+* :pr:`368`: ENH: Add polished version of acf/pacf plots with confidence intervals
+* :pr:`378`: Infer freq
+* :pr:`374`: ENH: Add Fair's extramarital affair dataset. From tobit-model branch.
+* :pr:`358`: ENH: Add method to OLSResults for outlier detection
+* :pr:`369`: ENH: allow predict to pass through patsy for transforms
+* :pr:`352`: Formula integration rebased
+* :pr:`360`: REF: Deprecate order in fit and move to ARMA init
+* :pr:`366`: Version fixes
+* :pr:`359`: DOC: Fix sphinx warnings
 
 Issues (208):
 
-* :ghissue:`1036`: Series no longer inherits from ndarray
-* :ghissue:`1038`: DataFrame with integer names not handled in ARIMA
-* :ghissue:`1028`: Test fail with windows and Anaconda - Low priority
-* :ghissue:`676`: acorr_breush_godfrey  undefined nlags
-* :ghissue:`922`: lowess returns inconsistent with option
-* :ghissue:`425`: no bse in robust with norm=TrimmedMean
-* :ghissue:`1025`: add_constant incorrectly detects constant column
-* :ghissue:`533`: py3 compatibility ``pandas.read_csv(urlopen(...))``
-* :ghissue:`662`: doc: install instruction: explicit about removing scikits.statsmodels
-* :ghissue:`910`: test failure Ubuntu TestARMLEConstant.test_dynamic_predict
-* :ghissue:`80`: t_model: f_test, t_test do not work
-* :ghissue:`432`: GenericLikelihoodModel change default for score and hessian
-* :ghissue:`454`: BUG/ENH: HuberScale instance is not used, allow user defined scale estimator
-* :ghissue:`98`: check connection or connect summary to variable names in wrappers
-* :ghissue:`418`: BUG: MNLogit loglikeobs, jac
-* :ghissue:`1017`: nosetests warnings
-* :ghissue:`924`: DOCS link in notebooks to notebook for download
-* :ghissue:`1011`: power ttest endless loop possible
-* :ghissue:`907`: BLD data_files for stats.libqsturng
-* :ghissue:`328`: consider moving example scripts into IPython notebooks
-* :ghissue:`1002`: Docs will not build with Sphinx 1.1.3
-* :ghissue:`69`: Make methods like compare_ftest work with wrappers
-* :ghissue:`503`: summary_old in RegressionResults
-* :ghissue:`991`: TST precision of normal_power
-* :ghissue:`945`: Installing statsmodels from github?
-* :ghissue:`964`: Prefer to_offset not get_offset in tsa stuff
-* :ghissue:`983`: bug: pandas 0.8.1 incompatibility
-* :ghissue:`899`: build_ext inplace does not cythonize
-* :ghissue:`923`: location of initialization code
-* :ghissue:`980`: auto lag selection in  S_hac_simple
-* :ghissue:`968`: genericMLE Ubuntu test failure
-* :ghissue:`633`: python 3.3 compatibility
-* :ghissue:`728`: test failure for solve_power with fsolve
-* :ghissue:`971`: numdiff test cases
-* :ghissue:`976`: VAR Model does not work in 1D
-* :ghissue:`972`: numdiff: epsilon has no minimum value
-* :ghissue:`967`: lowes test failure Ubuntu
-* :ghissue:`948`: nonparametric tests: mcnemar, cochranq unit test
-* :ghissue:`963`: BUG in runstest_2sample
-* :ghissue:`946`: Issue with lowess() smoother in statsmodels
-* :ghissue:`868`: k_vars > nobs
-* :ghissue:`917`: emplike emplikeAFT stray dimensions
-* :ghissue:`264`: version comparisons need to be made more robust (may be just use LooseVersion)
-* :ghissue:`674`: failure in test_foreign, pandas testing
-* :ghissue:`828`: GLMResults inconsistent distribution in pvalues
-* :ghissue:`908`: RLM missing test for tvalues, pvalues
-* :ghissue:`463`: formulas missing in docs
-* :ghissue:`256`: discrete Nbin has zero test coverage
-* :ghissue:`831`: test errors running bdist
-* :ghissue:`733`: Docs: interrater cohens_kappa is missing
-* :ghissue:`897`: lowess failure - sometimes
-* :ghissue:`902`: test failure tsa.filters  precision too high
-* :ghissue:`901`: test failure stata_writer_pandas, newer versions of pandas
-* :ghissue:`900`: ARIMA.__new__   errors on python 3.3
-* :ghissue:`832`: notebook errors
-* :ghissue:`867`: Baxter King has unneeded limit on value for low?
-* :ghissue:`781`: discreteResults margeff method not tests, obsolete
-* :ghissue:`870`: discrete unit tests duplicates
-* :ghissue:`630`: problems in regression plots
-* :ghissue:`885`: Caching behavior for KDEUnivariate icdf
-* :ghissue:`869`: sm.tsa.ARMA(..., order=(p,q)) gives "__init__() got an unexpected keyword argument 'order'" error
-* :ghissue:`783`: statsmodels.distributions.mixture_rvs.py    no unit tests
-* :ghissue:`824`: Multicomparison w/Pandas Series
-* :ghissue:`789`: presentation of multiple comparison results
-* :ghissue:`764`: BUG: multipletests incorrect reject for Holm-Sidak
-* :ghissue:`766`: multipletests - status and tests of 2step FDR procedures
-* :ghissue:`763`: Bug: multipletests raises exception with empty array
-* :ghissue:`840`: sm.load should be in the main API namespace
-* :ghissue:`830`: invalid version number
-* :ghissue:`821`: Fail gracefully when extensions are not built
-* :ghissue:`204`: Cython extensions built twice?
-* :ghissue:`689`: tutorial notebooks
-* :ghissue:`740`: why does t_test return one-sided p-value
-* :ghissue:`804`: What goes in statsmodels.formula.api?
-* :ghissue:`675`: Improve error message for ARMA SVD convergence failure.
-* :ghissue:`15`: arma singular matrix
-* :ghissue:`559`: Add Rdatasets to optional dependencies list
-* :ghissue:`796`: Prediction Standard Errors
-* :ghissue:`793`: filters are not pandas aware
-* :ghissue:`785`: Negative R-squared
-* :ghissue:`777`: OLS residuals returned as Pandas series when endog and exog are Pandas series
-* :ghissue:`770`: Add ANOVA to docs
-* :ghissue:`775`: Bug in dates_from_range
-* :ghissue:`773`: AR model pvalues error with Pandas
-* :ghissue:`768`: multipletests: numerical problems at threshold
-* :ghissue:`355`: add draw if interactive to plotting functions
-* :ghissue:`625`: Exog is not correctly handled in ARIMA predict
-* :ghissue:`626`: ARIMA summary does not print exogenous variable coefficients
-* :ghissue:`657`: order (0,1) breaks ARMA forecast
-* :ghissue:`736`: ARIMA predict problem for ARMA model
-* :ghissue:`324`: ic in ARResults, aic, bic, hqic, fpe inconsistent definition?
-* :ghissue:`642`: sign_test   check
-* :ghissue:`236`: AR start_params broken
-* :ghissue:`235`: tests hang on Windows
-* :ghissue:`156`: matplotlib deprecated legend ? var plots
-* :ghissue:`331`: Remove stale tests
-* :ghissue:`592`: test failures in datetools
-* :ghissue:`537`: Var Models
-* :ghissue:`755`: Unable to access AR fit parameters when model is estimated with pandas.DataFrame
-* :ghissue:`670`: discrete: numerically useless clipping
-* :ghissue:`515`: MNLogit residuals raise a TypeError
-* :ghissue:`225`: discrete models only define deviance residuals
-* :ghissue:`594`: remove skiptest in TestProbitCG
-* :ghissue:`681`: Dimension Error in discrete_model.py When Running test_dummy_*
-* :ghissue:`744`: DOC: new_f_test
-* :ghissue:`549`: Ship released patsy source in statsmodels
-* :ghissue:`588`: patsy is a hard dependency?
-* :ghissue:`716`: Tests missing for functions if pandas is used
-* :ghissue:`715`: statsmodels regression plots not working with pandas datatypes
-* :ghissue:`450`: BUG: full_output in optimizers Likelihood model
-* :ghissue:`709`: DOCstrings linear models do not have missing params
-* :ghissue:`370`: BUG weightstats has wrong cov
-* :ghissue:`694`: DiscreteMargins duplicate method
-* :ghissue:`702`: bug, pylint stats.anova
-* :ghissue:`423`: Handling of constant across models
-* :ghissue:`456`: BUG: ARMA date handling incompatibility with recent pandas
-* :ghissue:`514`: NaNs in Multinomial
-* :ghissue:`405`: Check for existing old version of scikits.statsmodels?
-* :ghissue:`586`: Segmentation fault with OLS
-* :ghissue:`721`: Unable to run AR on named time series objects
-* :ghissue:`125`: caching pinv_wexog broke iterative fit - GLSAR
-* :ghissue:`712`: TSA bug with frequency inference
-* :ghissue:`319`: Timeseries Frequencies
-* :ghissue:`707`: .summary with alpha ignores parsed value
-* :ghissue:`673`: nonparametric: bug in _kernel_base
-* :ghissue:`710`: test_power failures
-* :ghissue:`706`: .conf_int() fails on linear regression without intercept
-* :ghissue:`679`: Test Baxter King band-pass filter fails with scipy 0.12 beta1
-* :ghissue:`552`: influence outliers breaks when regressing on constant
-* :ghissue:`639`: test folders not on python path
-* :ghissue:`565`: omni_normtest does not propagate the axis argument
-* :ghissue:`563`: error in doc generation for AR.fit
-* :ghissue:`109`: TestProbitCG failure on Ubuntu
-* :ghissue:`661`: from scipy import comb fails on the latest scipy 0.11.0
-* :ghissue:`413`: DOC: example_discrete.py missing from 0.5 documentation
-* :ghissue:`644`: FIX: factor plot + examples broken
-* :ghissue:`645`: STY: pep8 violations in many examples
-* :ghissue:`173`: doc sphinx warnings
-* :ghissue:`601`: bspline.py dependency on old scipy.stats.models
-* :ghissue:`103`: ecdf and step function conventions
-* :ghissue:`18`: Newey-West sandwich covariance is missing
-* :ghissue:`279`: cov_nw_panel not tests, example broken
-* :ghissue:`150`: precision in test_discrete.TestPoissonNewton.test_jac ?
-* :ghissue:`480`: rescale loglike for optimization
-* :ghissue:`627`: Travis-CI support for scipy
-* :ghissue:`622`: mark tests as slow in emplike
-* :ghissue:`589`: OLS F-statistic error
-* :ghissue:`572`: statsmodels/tools/data.py Stuck looking for la.py
-* :ghissue:`580`: test errors in graphics
-* :ghissue:`577`: PatsyData detection buglet
-* :ghissue:`470`: remove deprecated features
-* :ghissue:`573`: lazy imports are (possibly) very slow
-* :ghissue:`438`: New results instances are not in online documentation
-* :ghissue:`542`: Regression plots fail when Series objects passed to sm.OLS
-* :ghissue:`239`: release 0.4.x
-* :ghissue:`530`: l1 docs issues
-* :ghissue:`539`: test for statawriter (failure)
-* :ghissue:`490`: Travis CI on PRs
-* :ghissue:`252`: doc: distributions.rst refers to sandbox only
-* :ghissue:`85`: release 0.4
-* :ghissue:`65`: MLE fit of AR model has no tests
-* :ghissue:`522`: ``test`` does not propagate arguments to nose
-* :ghissue:`517`: missing array conversion or shape in linear model
-* :ghissue:`523`: test failure with ubuntu decimals too large
-* :ghissue:`520`: web site documentation, source not updated
-* :ghissue:`488`: Avoid cholesky decomposition of diagonal matrices in linear regression models
-* :ghissue:`394`: Definition in macrodata NOTE
-* :ghissue:`45`: numdifftools dependency
-* :ghissue:`501`: WLS/GLS post estimation results
-* :ghissue:`500`: WLS fails if weights is a pandas.Series
-* :ghissue:`27`: add hasconstant indicator for R-squared and df calculations
-* :ghissue:`497`: DOC: add patsy?
-* :ghissue:`495`: ENH: add footer SimpleTable
-* :ghissue:`402`: model._data -> model.data?
-* :ghissue:`477`: VAR NaN Bug
-* :ghissue:`421`: Enhancement: Handle Missing Data
-* :ghissue:`489`: Expose model._data as model.data
-* :ghissue:`315`: tsa models assume pandas object indices are dates
-* :ghissue:`440`: arima predict is broken for steps > q and q != 1
-* :ghissue:`458`: TST BUG?   comparing pandas and array in tests, formula
-* :ghissue:`464`: from_formula signature
-* :ghissue:`245`: examples in docs: make nicer
-* :ghissue:`466`: broken example, pandas
-* :ghissue:`57`: Unhelpful error from bad exog matrix in model.py
-* :ghissue:`271`: ARMA.geterrors requires model to be fit
-* :ghissue:`350`: Writing to array returned np.diag
-* :ghissue:`354`: example_rst does not copy unchanged files over
-* :ghissue:`467`: Install issues with Pandas
-* :ghissue:`444`: ARMA example on stable release website not working
-* :ghissue:`377`: marginal effects count and discrete adjustments
-* :ghissue:`426`: "svd" method not supported for OLS.fit()
-* :ghissue:`409`: Move numdiff out of the sandbox
-* :ghissue:`416`: Switch to complex-step Hessian for AR(I)MA
-* :ghissue:`415`: bug in kalman_loglike_complex
-* :ghissue:`397`: plot_corr axis text labeling not working (with fix)
-* :ghissue:`399`: discrete errors due to incorrect in-place operation
-* :ghissue:`389`: VAR test_normality is broken with KeyError
-* :ghissue:`388`: Add tsaplots to graphics.api as graphics.tsa
-* :ghissue:`387`: predict date was not getting set with start = None
-* :ghissue:`386`: p-values not returned from acf
-* :ghissue:`385`: Allow AR.select_order to work without model being fit
-* :ghissue:`383`: Move mixture_rvs out of sandbox.
-* :ghissue:`248`: ARMA breaks with a 1d exog
-* :ghissue:`273`: When to give order for AR/AR(I)MA
-* :ghissue:`363`: examples folder -> tutorials folder
-* :ghissue:`346`: docs in sitepackages
-* :ghissue:`353`: PACF docs raise a sphinx warning
-* :ghissue:`348`: python 3.2.3 test failure zip_longest
+* :issue:`1036`: Series no longer inherits from ndarray
+* :issue:`1038`: DataFrame with integer names not handled in ARIMA
+* :issue:`1028`: Test fail with windows and Anaconda - Low priority
+* :issue:`676`: acorr_breush_godfrey  undefined nlags
+* :issue:`922`: lowess returns inconsistent with option
+* :issue:`425`: no bse in robust with norm=TrimmedMean
+* :issue:`1025`: add_constant incorrectly detects constant column
+* :issue:`533`: py3 compatibility ``pandas.read_csv(urlopen(...))``
+* :issue:`662`: doc: install instruction: explicit about removing scikits.statsmodels
+* :issue:`910`: test failure Ubuntu TestARMLEConstant.test_dynamic_predict
+* :issue:`80`: t_model: f_test, t_test do not work
+* :issue:`432`: GenericLikelihoodModel change default for score and hessian
+* :issue:`454`: BUG/ENH: HuberScale instance is not used, allow user defined scale estimator
+* :issue:`98`: check connection or connect summary to variable names in wrappers
+* :issue:`418`: BUG: MNLogit loglikeobs, jac
+* :issue:`1017`: nosetests warnings
+* :issue:`924`: DOCS link in notebooks to notebook for download
+* :issue:`1011`: power ttest endless loop possible
+* :issue:`907`: BLD data_files for stats.libqsturng
+* :issue:`328`: consider moving example scripts into IPython notebooks
+* :issue:`1002`: Docs will not build with Sphinx 1.1.3
+* :issue:`69`: Make methods like compare_ftest work with wrappers
+* :issue:`503`: summary_old in RegressionResults
+* :issue:`991`: TST precision of normal_power
+* :issue:`945`: Installing statsmodels from github?
+* :issue:`964`: Prefer to_offset not get_offset in tsa stuff
+* :issue:`983`: bug: pandas 0.8.1 incompatibility
+* :issue:`899`: build_ext inplace does not cythonize
+* :issue:`923`: location of initialization code
+* :issue:`980`: auto lag selection in  S_hac_simple
+* :issue:`968`: genericMLE Ubuntu test failure
+* :issue:`633`: python 3.3 compatibility
+* :issue:`728`: test failure for solve_power with fsolve
+* :issue:`971`: numdiff test cases
+* :issue:`976`: VAR Model does not work in 1D
+* :issue:`972`: numdiff: epsilon has no minimum value
+* :issue:`967`: lowes test failure Ubuntu
+* :issue:`948`: nonparametric tests: mcnemar, cochranq unit test
+* :issue:`963`: BUG in runstest_2sample
+* :issue:`946`: Issue with lowess() smoother in statsmodels
+* :issue:`868`: k_vars > nobs
+* :issue:`917`: emplike emplikeAFT stray dimensions
+* :issue:`264`: version comparisons need to be made more robust (may be just use LooseVersion)
+* :issue:`674`: failure in test_foreign, pandas testing
+* :issue:`828`: GLMResults inconsistent distribution in pvalues
+* :issue:`908`: RLM missing test for tvalues, pvalues
+* :issue:`463`: formulas missing in docs
+* :issue:`256`: discrete Nbin has zero test coverage
+* :issue:`831`: test errors running bdist
+* :issue:`733`: Docs: interrater cohens_kappa is missing
+* :issue:`897`: lowess failure - sometimes
+* :issue:`902`: test failure tsa.filters  precision too high
+* :issue:`901`: test failure stata_writer_pandas, newer versions of pandas
+* :issue:`900`: ARIMA.__new__   errors on python 3.3
+* :issue:`832`: notebook errors
+* :issue:`867`: Baxter King has unneeded limit on value for low?
+* :issue:`781`: discreteResults margeff method not tests, obsolete
+* :issue:`870`: discrete unit tests duplicates
+* :issue:`630`: problems in regression plots
+* :issue:`885`: Caching behavior for KDEUnivariate icdf
+* :issue:`869`: sm.tsa.ARMA(..., order=(p,q)) gives "__init__() got an unexpected keyword argument 'order'" error
+* :issue:`783`: statsmodels.distributions.mixture_rvs.py    no unit tests
+* :issue:`824`: Multicomparison w/Pandas Series
+* :issue:`789`: presentation of multiple comparison results
+* :issue:`764`: BUG: multipletests incorrect reject for Holm-Sidak
+* :issue:`766`: multipletests - status and tests of 2step FDR procedures
+* :issue:`763`: Bug: multipletests raises exception with empty array
+* :issue:`840`: sm.load should be in the main API namespace
+* :issue:`830`: invalid version number
+* :issue:`821`: Fail gracefully when extensions are not built
+* :issue:`204`: Cython extensions built twice?
+* :issue:`689`: tutorial notebooks
+* :issue:`740`: why does t_test return one-sided p-value
+* :issue:`804`: What goes in statsmodels.formula.api?
+* :issue:`675`: Improve error message for ARMA SVD convergence failure.
+* :issue:`15`: arma singular matrix
+* :issue:`559`: Add Rdatasets to optional dependencies list
+* :issue:`796`: Prediction Standard Errors
+* :issue:`793`: filters are not pandas aware
+* :issue:`785`: Negative R-squared
+* :issue:`777`: OLS residuals returned as Pandas series when endog and exog are Pandas series
+* :issue:`770`: Add ANOVA to docs
+* :issue:`775`: Bug in dates_from_range
+* :issue:`773`: AR model pvalues error with Pandas
+* :issue:`768`: multipletests: numerical problems at threshold
+* :issue:`355`: add draw if interactive to plotting functions
+* :issue:`625`: Exog is not correctly handled in ARIMA predict
+* :issue:`626`: ARIMA summary does not print exogenous variable coefficients
+* :issue:`657`: order (0,1) breaks ARMA forecast
+* :issue:`736`: ARIMA predict problem for ARMA model
+* :issue:`324`: ic in ARResults, aic, bic, hqic, fpe inconsistent definition?
+* :issue:`642`: sign_test   check
+* :issue:`236`: AR start_params broken
+* :issue:`235`: tests hang on Windows
+* :issue:`156`: matplotlib deprecated legend ? var plots
+* :issue:`331`: Remove stale tests
+* :issue:`592`: test failures in datetools
+* :issue:`537`: Var Models
+* :issue:`755`: Unable to access AR fit parameters when model is estimated with pandas.DataFrame
+* :issue:`670`: discrete: numerically useless clipping
+* :issue:`515`: MNLogit residuals raise a TypeError
+* :issue:`225`: discrete models only define deviance residuals
+* :issue:`594`: remove skiptest in TestProbitCG
+* :issue:`681`: Dimension Error in discrete_model.py When Running test_dummy_*
+* :issue:`744`: DOC: new_f_test
+* :issue:`549`: Ship released patsy source in statsmodels
+* :issue:`588`: patsy is a hard dependency?
+* :issue:`716`: Tests missing for functions if pandas is used
+* :issue:`715`: statsmodels regression plots not working with pandas datatypes
+* :issue:`450`: BUG: full_output in optimizers Likelihood model
+* :issue:`709`: DOCstrings linear models do not have missing params
+* :issue:`370`: BUG weightstats has wrong cov
+* :issue:`694`: DiscreteMargins duplicate method
+* :issue:`702`: bug, pylint stats.anova
+* :issue:`423`: Handling of constant across models
+* :issue:`456`: BUG: ARMA date handling incompatibility with recent pandas
+* :issue:`514`: NaNs in Multinomial
+* :issue:`405`: Check for existing old version of scikits.statsmodels?
+* :issue:`586`: Segmentation fault with OLS
+* :issue:`721`: Unable to run AR on named time series objects
+* :issue:`125`: caching pinv_wexog broke iterative fit - GLSAR
+* :issue:`712`: TSA bug with frequency inference
+* :issue:`319`: Timeseries Frequencies
+* :issue:`707`: .summary with alpha ignores parsed value
+* :issue:`673`: nonparametric: bug in _kernel_base
+* :issue:`710`: test_power failures
+* :issue:`706`: .conf_int() fails on linear regression without intercept
+* :issue:`679`: Test Baxter King band-pass filter fails with scipy 0.12 beta1
+* :issue:`552`: influence outliers breaks when regressing on constant
+* :issue:`639`: test folders not on python path
+* :issue:`565`: omni_normtest does not propagate the axis argument
+* :issue:`563`: error in doc generation for AR.fit
+* :issue:`109`: TestProbitCG failure on Ubuntu
+* :issue:`661`: from scipy import comb fails on the latest scipy 0.11.0
+* :issue:`413`: DOC: example_discrete.py missing from 0.5 documentation
+* :issue:`644`: FIX: factor plot + examples broken
+* :issue:`645`: STY: pep8 violations in many examples
+* :issue:`173`: doc sphinx warnings
+* :issue:`601`: bspline.py dependency on old scipy.stats.models
+* :issue:`103`: ecdf and step function conventions
+* :issue:`18`: Newey-West sandwich covariance is missing
+* :issue:`279`: cov_nw_panel not tests, example broken
+* :issue:`150`: precision in test_discrete.TestPoissonNewton.test_jac ?
+* :issue:`480`: rescale loglike for optimization
+* :issue:`627`: Travis-CI support for scipy
+* :issue:`622`: mark tests as slow in emplike
+* :issue:`589`: OLS F-statistic error
+* :issue:`572`: statsmodels/tools/data.py Stuck looking for la.py
+* :issue:`580`: test errors in graphics
+* :issue:`577`: PatsyData detection buglet
+* :issue:`470`: remove deprecated features
+* :issue:`573`: lazy imports are (possibly) very slow
+* :issue:`438`: New results instances are not in online documentation
+* :issue:`542`: Regression plots fail when Series objects passed to sm.OLS
+* :issue:`239`: release 0.4.x
+* :issue:`530`: l1 docs issues
+* :issue:`539`: test for statawriter (failure)
+* :issue:`490`: Travis CI on PRs
+* :issue:`252`: doc: distributions.rst refers to sandbox only
+* :issue:`85`: release 0.4
+* :issue:`65`: MLE fit of AR model has no tests
+* :issue:`522`: ``test`` does not propagate arguments to nose
+* :issue:`517`: missing array conversion or shape in linear model
+* :issue:`523`: test failure with ubuntu decimals too large
+* :issue:`520`: web site documentation, source not updated
+* :issue:`488`: Avoid cholesky decomposition of diagonal matrices in linear regression models
+* :issue:`394`: Definition in macrodata NOTE
+* :issue:`45`: numdifftools dependency
+* :issue:`501`: WLS/GLS post estimation results
+* :issue:`500`: WLS fails if weights is a pandas.Series
+* :issue:`27`: add hasconstant indicator for R-squared and df calculations
+* :issue:`497`: DOC: add patsy?
+* :issue:`495`: ENH: add footer SimpleTable
+* :issue:`402`: model._data -> model.data?
+* :issue:`477`: VAR NaN Bug
+* :issue:`421`: Enhancement: Handle Missing Data
+* :issue:`489`: Expose model._data as model.data
+* :issue:`315`: tsa models assume pandas object indices are dates
+* :issue:`440`: arima predict is broken for steps > q and q != 1
+* :issue:`458`: TST BUG?   comparing pandas and array in tests, formula
+* :issue:`464`: from_formula signature
+* :issue:`245`: examples in docs: make nicer
+* :issue:`466`: broken example, pandas
+* :issue:`57`: Unhelpful error from bad exog matrix in model.py
+* :issue:`271`: ARMA.geterrors requires model to be fit
+* :issue:`350`: Writing to array returned np.diag
+* :issue:`354`: example_rst does not copy unchanged files over
+* :issue:`467`: Install issues with Pandas
+* :issue:`444`: ARMA example on stable release website not working
+* :issue:`377`: marginal effects count and discrete adjustments
+* :issue:`426`: "svd" method not supported for OLS.fit()
+* :issue:`409`: Move numdiff out of the sandbox
+* :issue:`416`: Switch to complex-step Hessian for AR(I)MA
+* :issue:`415`: bug in kalman_loglike_complex
+* :issue:`397`: plot_corr axis text labeling not working (with fix)
+* :issue:`399`: discrete errors due to incorrect in-place operation
+* :issue:`389`: VAR test_normality is broken with KeyError
+* :issue:`388`: Add tsaplots to graphics.api as graphics.tsa
+* :issue:`387`: predict date was not getting set with start = None
+* :issue:`386`: p-values not returned from acf
+* :issue:`385`: Allow AR.select_order to work without model being fit
+* :issue:`383`: Move mixture_rvs out of sandbox.
+* :issue:`248`: ARMA breaks with a 1d exog
+* :issue:`273`: When to give order for AR/AR(I)MA
+* :issue:`363`: examples folder -> tutorials folder
+* :issue:`346`: docs in sitepackages
+* :issue:`353`: PACF docs raise a sphinx warning
+* :issue:`348`: python 3.2.3 test failure zip_longest

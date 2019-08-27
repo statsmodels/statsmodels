@@ -7,7 +7,7 @@
 # flake8: noqa
 # DO NOT EDIT
 
-# # Statsmodels Principal Component Analysis
+# # statsmodels Principal Component Analysis
 
 # *Key ideas:* Principal component analysis, world bank data, fertility
 #
