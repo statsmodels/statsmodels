@@ -1,4 +1,4 @@
-Statsmodels Documentation
+statsmodels Documentation
 =========================
 
 :mod:`statsmodels` is a Python module that provides classes and functions for the estimation
@@ -7,7 +7,6 @@ data exploration. An extensive list of result statistics are available for each 
 The results are tested against existing statistical packages to ensure that they are correct. The
 package is released under the open source Modified BSD (3-clause) license.
 The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
-
 
 Introductory Examples
 ---------------------
@@ -60,80 +59,30 @@ Citation
 Please use following citation to cite statsmodels in scientific publications:
 
 
-Seabold, Skipper, and Josef Perktold. "`Statsmodels: Econometric and statistical modeling with
+Seabold, Skipper, and Josef Perktold. "`statsmodels: Econometric and statistical modeling with
 python. <http://conference.scipy.org/proceedings/scipy2010/pdfs/seabold.pdf>`_" *Proceedings
 of the 9th Python in Science Conference.* 2010.
 
 Bibtex entry::
 
   @inproceedings{seabold2010statsmodels,
-    title={Statsmodels: Econometric and statistical modeling with python},
+    title={statsmodels: Econometric and statistical modeling with python},
     author={Seabold, Skipper and Perktold, Josef},
     booktitle={9th Python in Science Conference},
     year={2010},
   }
 
-Basic Documentation
--------------------
-
-.. toctree::
-    :maxdepth: 1
-
-    gettingstarted
-    example_formulas
-    examples/index
-    release/index
-    install
-    about
-    api
-
-Information about the structure and development of
-statsmodels:
-
 .. toctree::
    :maxdepth: 1
 
-   endog_exog
-   importpaths
-   pitfalls
+   install
+   gettingstarted
+   user-guide
+   examples/index
+   release/index
+   api
+   about
    dev/index
-   dev/internal
-
-Table of Contents
------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   regression
-   glm
-   gee
-   gam
-   rlm
-   mixed_linear
-   discretemod
-   mixed_glm
-   anova
-   tsa
-   statespace
-   vector_ar
-   duration
-   stats
-   nonparametric
-   gmm
-   contingency_tables
-   imputation
-   multivariate
-   emplike
-   miscmodels
-   distributions
-   graphics
-   iolib
-   tools
-   datasets/index
-   sandbox
-   large_data
-   optimization
 
 
 Indices and tables

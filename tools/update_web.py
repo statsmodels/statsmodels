@@ -319,10 +319,10 @@ def email_me(status='ok'):
         message = """
     HTML Documentation uploaded successfully.
     """
-        subject = "Statsmodels HTML Build OK"
+        subject = "statsmodels HTML Build OK"
     else:
         message = status
-        subject = "Statsmodels HTML Build Failed"
+        subject = "statsmodels HTML Build Failed"
 
     msg = MIMEText(message)
     msg['Subject'] = subject

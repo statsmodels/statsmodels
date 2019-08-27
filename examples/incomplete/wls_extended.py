@@ -30,7 +30,7 @@ plt.grid()
 wls_fit = sm.WLS(data.endog, data.exog[:, :-1], weights=1/incomesq).fit()
 
 # This however, leads to difficulties in interpreting the post-estimation
-# statistics.  Statsmodels does not yet handle this elegantly, but
+# statistics.  statsmodels does not yet handle this elegantly, but
 # the following may be more appropriate
 
 # explained sum of squares

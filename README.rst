@@ -1,9 +1,9 @@
 |Travis Build Status| |Azure CI Build Status| |Appveyor Build Status| |Coveralls Coverage|
 
-About Statsmodels
+About statsmodels
 =================
 
-Statsmodels is a Python package that provides a complement to scipy for
+statsmodels is a Python package that provides a complement to scipy for
 statistical computations including descriptive statistics and estimation
 and inference for statistical models.
 

@@ -69,5 +69,5 @@ offers much more detailed information about the process.
 License
 ~~~~~~~
 
-Statsmodels is released under the
+statsmodels is released under the
 `Modified (3-clause) BSD license <https://www.opensource.org/licenses/BSD-3-Clause>`_.

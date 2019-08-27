@@ -229,7 +229,7 @@
             "img": "../_static/images/statespace_local_linear_trend.png"
         },
         {
-            "text": "ARMA: Sunspots Data",
+            "text": "Statespace ARMA: Sunspots Data",
             "target": "notebooks/generated/statespace_arma_0.html",
             "img": "../_static/images/statespace_arma0.png"
         },

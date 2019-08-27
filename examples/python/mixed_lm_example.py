@@ -13,17 +13,17 @@ import numpy as np
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
-# Comparing R lmer to Statsmodels MixedLM
+# Comparing R lmer to statsmodels MixedLM
 # =======================================
 #
-# The Statsmodels imputation of linear mixed models (MixedLM) closely
+# The statsmodels imputation of linear mixed models (MixedLM) closely
 # follows the approach outlined in Lindstrom and Bates (JASA 1988).  This is
 # also the approach followed in the  R package LME4.  Other packages such as
 # Stata, SAS, etc. should also be consistent with this approach, as the
 # basic techniques in this area are mostly mature.
 #
 # Here we show how linear mixed models can be fit using the MixedLM
-# procedure in Statsmodels.  Results from R (LME4) are included for
+# procedure in statsmodels.  Results from R (LME4) are included for
 # comparison.
 #
 # Here are our import statements:
@@ -45,9 +45,9 @@ print(mdf.summary())
 
 # Here is the same model fit in R using LMER:
 
-# Note that in the Statsmodels summary of results, the fixed effects and
+# Note that in the statsmodels summary of results, the fixed effects and
 # random effects parameter estimates are shown in a single table.  The
-# random effect for animal is labeled "Intercept RE" in the Statsmodels
+# random effect for animal is labeled "Intercept RE" in the statsmodels
 # output above.  In the LME4 output, this effect is the pig intercept under
 # the random effects section.
 #

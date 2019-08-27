@@ -210,7 +210,7 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
-    Statsmodels supports two separate definitions of weights: frequency weights
+    statsmodels supports two separate definitions of weights: frequency weights
     and variance weights.
 
     Frequency weights produce the same results as repeating observations by the

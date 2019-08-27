@@ -34,7 +34,7 @@ def _show_versions_only():
     except ImportError:
         has_sm = False
 
-    print('\nStatsmodels\n===========\n')
+    print('\nstatsmodels\n===========\n')
     if has_sm:
         print('Installed: %s' % safe_version(statsmodels))
     else:
@@ -167,7 +167,7 @@ def show_versions(show_dirs=True):
     except ImportError:
         has_sm = False
 
-    print('\nStatsmodels\n===========\n')
+    print('\nstatsmodels\n===========\n')
     if has_sm:
         print('Installed: %s (%s)' % (safe_version(statsmodels),
                                       dirname(statsmodels.__file__)))

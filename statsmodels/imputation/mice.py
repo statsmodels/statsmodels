@@ -1111,7 +1111,7 @@ class MICE(object):
     __doc__ = """\
     Multiple Imputation with Chained Equations.
 
-    This class can be used to fit most Statsmodels models to data sets
+    This class can be used to fit most statsmodels models to data sets
     with missing values using the 'multiple imputation with chained
     equations' (MICE) approach..
 

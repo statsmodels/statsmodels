@@ -9,7 +9,7 @@
 Multiple Imputation with Chained Equations
 ==========================================
 
-The MICE module allows most Statsmodels models to be fit to a dataset
+The MICE module allows most statsmodels models to be fit to a dataset
 with missing values on the independent and/or dependent variables, and
 provides rigorous standard errors for the fitted parameters.  The
 basic idea is to treat each variable with missing values as the

@@ -6,7 +6,7 @@ from statsmodels.base.model import LikelihoodModelResults
 
 class BayesGaussMI(object):
     """
-    BayesGaussMI uses a Gaussian model to impute multivariate data.
+    Bayesian Imputation using a Gaussian model.
 
     The approach is Bayesian.  The goal is to sample from the joint
     distribution of the mean vector, covariance matrix, and missing
@@ -36,13 +36,21 @@ class BayesGaussMI(object):
 
     Examples
     --------
-    A basic example with OLS:
+    A basic example with OLS. Data is generated assuming 10% is missing at
+    random.
 
-    >> def model_args_fn(x):
-           # Return endog, exog from x
-           return (x[:, 0], x[:, 1:])
-    >> imp = BayesGaussMI(x)
-    >> mi = MI(imp, sm.OLS, model_args_fn)
+    >>> import numpy as np
+    >>> x = np.random.standard_normal((1000, 2))
+    >>> x.flat[np.random.sample(2000) < 0.1] = np.nan
+
+    The imputer is used with ``MI``.
+
+    >>> import statsmodels.api as sm
+    >>> def model_args_fn(x):
+    ...     # Return endog, exog from x
+    ...    return x[:, 0], x[:, 1:]
+    >>> imp = sm.BayesGaussMI(x)
+    >>> mi = sm.MI(imp, sm.OLS, model_args_fn)
     """
 
     def __init__(self, data, mean_prior=None, cov_prior=None, cov_prior_df=1):

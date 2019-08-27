@@ -116,7 +116,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # will not have is_numeric_dtype == True), so explicitly
                     # check for it here. But note also that in very early
                     # Pandas (~0.12), Float64Index does not exist (and so the
-                    # Statsmodels compat makes it an empty tuple, so in that
+                    # statsmodels compat makes it an empty tuple, so in that
                     # case also check if the first element is a float.
                     _index = np.asarray(index)
                     if (is_numeric_dtype(_index) or

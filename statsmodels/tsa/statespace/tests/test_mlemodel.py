@@ -600,7 +600,7 @@ def test_summary():
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
     mod = MLEModel(endog, **kwargs)
-    # the data directly available in the model is the Statsmodels version of
+    # the data directly available in the model is the statsmodels version of
     # the data; it should be 2-dim, C-contiguous, long-shaped:
     # (nobs, k_endog) == (2, 1)
     assert_equal(mod.endog.ndim, 2)
@@ -621,7 +621,7 @@ def test_basic_endog():
     # Test various types of basic python endog inputs (e.g. lists, scalars...)
 
     # Check cannot call with non-array_like
-    # fails due to checks in Statsmodels base classes
+    # fails due to checks in statsmodels base classes
     assert_raises(ValueError, MLEModel, endog=1, k_states=1)
     assert_raises(ValueError, MLEModel, endog='a', k_states=1)
     assert_raises(ValueError, MLEModel, endog=True, k_states=1)
@@ -677,7 +677,7 @@ def test_numpy_endog():
 
     # Example  (failure): 0-dim array
     endog = np.array(1.)
-    # raises error due to len(endog) failing in Statsmodels base classes
+    # raises error due to len(endog) failing in statsmodels base classes
     assert_raises(TypeError, check_endog, endog, **kwargs)
 
     # Example : 1-dim array, both C- and F-contiguous, length 2
@@ -735,7 +735,7 @@ def test_numpy_endog():
 
     # Example  (failure): 3-dim array
     endog = np.array([1., 2.]).reshape(2, 1, 1)
-    # raises error due to direct ndim check in Statsmodels base classes
+    # raises error due to direct ndim check in statsmodels base classes
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Example : np.array with 2 columns
@@ -767,7 +767,7 @@ def test_pandas_endog():
 
     # Example : pandas.Series, string datatype
     endog = pd.Series(['a', 'b'], index=dates)
-    # raises error due to direct type casting check in Statsmodels base classes
+    # raises error due to direct type casting check in statsmodels base classes
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Example : pandas.Series
@@ -919,7 +919,7 @@ def test_diagnostics_nile_durbinkoopman():
 @pytest.mark.smoke
 def test_prediction_results():
     # Just smoke tests for the PredictionResults class, which is copied from
-    # elsewhere in Statsmodels
+    # elsewhere in statsmodels
 
     mod, res = get_dummy_mod()
     predict = res.get_prediction()

@@ -9,7 +9,7 @@
 
 # # VARMAX models
 #
-# This is a brief introduction notebook to VARMAX models in Statsmodels.
+# This is a brief introduction notebook to VARMAX models in statsmodels.
 # The VARMAX model is generically specified as:
 # $$
 # y_t = \nu + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
@@ -30,10 +30,10 @@ endog = dta.loc['1960-04-01':'1978-10-01',
 
 # ## Model specification
 #
-# The `VARMAX` class in Statsmodels allows estimation of VAR, VMA, and
+# The `VARMAX` class in statsmodels allows estimation of VAR, VMA, and
 # VARMA models (through the `order` argument), optionally with a constant
 # term (via the `trend` argument). Exogenous regressors may also be included
-# (as usual in Statsmodels, by the `exog` argument), and in this way a time
+# (as usual in statsmodels, by the `exog` argument), and in this way a time
 # trend may be added. Finally, the class allows measurement error (via the
 # `measurement_error` argument) and allows specifying either a diagonal or
 # unstructured innovation covariance matrix (via the `error_cov_type`

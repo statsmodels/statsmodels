@@ -29,6 +29,13 @@ comma-separated values file to a ``DataFrame`` object.
 statistical models and building `Design Matrices
 <https://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.
 
+.. note::
+
+   This example uses the API interface.  See :ref:`importpaths` for information on
+   the difference between importing the API interfaces (``statsmodels.api`` and
+   ``statsmodels.tsa.api``) and directly importing from the module that defines
+   the model.
+
 Data
 ----
 
