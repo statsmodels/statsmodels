@@ -1,7 +1,6 @@
 .. module:: statsmodels
    :synopsis: Statistical analysis in Python
 
-
 .. currentmodule:: statsmodels
 
 *****************
@@ -78,3 +77,75 @@ We also thank our continuous integration providers,
 `Travis CI <https://travis-ci.org/>`_ and `AppVeyor <https://ci.appveyor.com>`_ for
 unit testing, and `Codecov <https://codecov.io>`_ and `Coveralls <https://coveralls.io>`_ for
 code coverage.
+
+Brand Marks
+-----------
+
+Please make use of the statsmodels logos when preparing demonstrations involving
+statsmodels code.
+
+Color
+^^^^^
+
++----------------+---------------------+
+| Horizontal     | |color-horizontal|  |
++----------------+---------------------+
+| Vertical       | |color-vertical|    |
++----------------+---------------------+
+| Logo Only      | |color-notext|      |
++----------------+---------------------+
+
+Monochrome (Dark)
+^^^^^^^^^^^^^^^^^
+
++----------------+---------------------+
+| Horizontal     | |dark-horizontal|   |
++----------------+---------------------+
+| Vertical       | |dark-vertical|     |
++----------------+---------------------+
+| Logo Only      | |dark-notext|       |
++----------------+---------------------+
+
+Monochrome (Light)
+^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+   The light brand marks are light grey on transparent, and so are difficult to see on this
+   page. They are intended for use on a dark background.
+
+
++----------------+---------------------+
+| Horizontal     | |light-horizontal|  |
++----------------+---------------------+
+| Vertical       | |light-vertical|    |
++----------------+---------------------+
+| Logo Only      | |light-notext|      |
++----------------+---------------------+
+
+.. |color-horizontal| image:: images/statsmodels-logo-v2-horizontal.svg
+   :width: 50%
+
+.. |color-vertical| image:: images/statsmodels-logo-v2.svg
+   :width: 14%
+
+.. |color-notext| image:: images/statsmodels-logo-v2-no-text.svg
+   :width: 9%
+
+.. |dark-horizontal| image:: images/statsmodels-logo-v2-horizontal-dark.svg
+   :width: 50%
+
+.. |dark-vertical| image:: images/statsmodels-logo-v2-dark.svg
+   :width: 14%
+
+.. |dark-notext| image:: images/statsmodels-logo-v2-no-text-dark.svg
+   :width: 9%
+
+.. |light-horizontal| image:: images/statsmodels-logo-v2-horizontal-light.svg
+   :width: 50%
+
+.. |light-vertical| image:: images/statsmodels-logo-v2-light.svg
+   :width: 14%
+
+.. |light-notext| image:: images/statsmodels-logo-v2-no-text-light.svg
+   :width: 9%

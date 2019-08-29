@@ -1,15 +1,17 @@
-statsmodels Documentation
-=========================
+.. image:: images/statsmodels-logo-v2-horizontal.svg
+   :width: 50%
+   :alt: statsmodels
+   :align: left
 
-:mod:`statsmodels` is a Python module that provides classes and functions for the estimation
+:ref:`statsmodels <about:About statsmodels>` is a Python module that provides classes and functions for the estimation
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are available for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
 package is released under the open source Modified BSD (3-clause) license.
 The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
 
-Introductory Examples
----------------------
+Introduction
+============
 
 ``statsmodels`` supports specifying models using R-style formulas and ``pandas`` DataFrames.
 Here is a simple example using ordinary least squares:
@@ -54,7 +56,7 @@ Have a look at `dir(results)` to see available results. Attributes are described
 `results.__doc__` and results methods have their own docstrings.
 
 Citation
---------
+========
 
 Please use following citation to cite statsmodels in scientific publications:
 
@@ -85,9 +87,8 @@ Bibtex entry::
    dev/index
 
 
-Indices and tables
-------------------
+Index
+=====
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

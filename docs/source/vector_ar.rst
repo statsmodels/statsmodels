@@ -254,9 +254,6 @@ the long run effects as follows:
    irf.plot_cum_effects(orth=False)
 
 
-Reference
-~~~~~~~~~
-
 .. currentmodule:: statsmodels.tsa.vector_ar.irf
 .. autosummary::
    :toctree: generated/
@@ -289,9 +286,6 @@ They can also be visualized through the returned :class:`FEVD` object:
    @savefig var_fevd.png
    results.fevd(20).plot()
 
-
-Reference
-~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa.vector_ar.var_model
 .. autosummary::
@@ -342,8 +336,6 @@ To test the whiteness of the estimation residuals (this means absence of
 significant residual autocorrelations) one can use the `test_whiteness`
 method of :class:`VARResults`.
 
-Reference
-~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
 .. autosummary::
@@ -440,9 +432,6 @@ IV    :math:`\neq 0`                   :math:`- \alpha \beta^T \gamma`      ``"c
 V     :math:`\neq 0`                   :math:`\neq 0`                       ``"colo"``
 ====  ===============================  ===================================  =============
 
-Reference
-~~~~~~~~~
-
 .. currentmodule:: statsmodels.tsa.vector_ar.vecm
 .. autosummary::
    :toctree: generated/
@@ -457,7 +446,7 @@ Reference
 
 
 References
-^^^^^^^^^^
+----------
 .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
 
 .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *

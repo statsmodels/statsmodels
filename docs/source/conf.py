@@ -44,6 +44,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.extlinks',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
+              'sphinx.ext.autosectionlabel',
               # One of mathjax or imgmath
               'nbsphinx',
               'sphinx.ext.mathjax',
@@ -202,7 +203,7 @@ html_last_updated_fmt = ''
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/statsmodels-v2.svg'
+html_logo = 'images/statsmodels-logo-v2-bw.svg'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -404,6 +405,7 @@ extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
                       'Issue #')
             }
 
+autosectionlabel_prefix_document = True
 
 def rstjinja(app, docname, source):
     """
