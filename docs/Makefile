@@ -11,7 +11,6 @@ BUILDDIR      = build
 PAPER         =
 TOOLSPATH	  = ../tools/
 DATASETBUILD  = dataset_rst.py
-EXAMPLEBUILD  = examples_rst.py
 NOTEBOOKBUILD = nbgenerate.py
 FOLDTOC  = fold_toc.py
 

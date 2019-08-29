@@ -5,8 +5,6 @@ include README.rst
 recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
-include tools/examples_rst.py
-include tools/hash_funcs.py
 
 graft statsmodels/datasets
 graft statsmodels/sandbox/regression/data

@@ -7,8 +7,11 @@ The main statsmodels API is split into models:
 * ``statsmodels.tsa.api``: Time-series models and methods. Canonically imported
   using ``import statsmodels.tsa.api as tsa``.
 
-The API focuses on models and the most frequently used statistical test, and tools.  See the
-detailed topic pages for a more complete list of available models, statistics, and tools.
+The API focuses on models and the most frequently used statistical test, and tools.
+`Import Paths and Structure`_ explains the design of the two API modules and how
+importing from the API differs from directly importing from the module where the
+model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
+list of available models, statistics, and tools.
 
 ``statsmodels.api``
 -------------------
@@ -128,7 +131,7 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.periodogram
    ~statsmodels.tsa.stattools.q_stat
 
-Univariate Time Series Analysis
+Univariate Time-Series Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
@@ -138,6 +141,8 @@ Univariate Time Series Analysis
    ~statsmodels.tsa.arima_model.ARMA
    ~statsmodels.tsa.statespace.sarimax.SARIMAX
    ~statsmodels.tsa.stattools.arma_order_select_ic
+   ~statsmodels.tsa.arima_process.arma_generate_sample
+   ~statsmodels.tsa.arima_process.ArmaProcess
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -161,31 +166,35 @@ Multivariate Models
    ~statsmodels.tsa.vector_ar.vecm.VECM
    ~statsmodels.tsa.statespace.structural.UnobservedComponents
 
-Tools
-~~~~~
+Filters and Decompositions
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
-   ~statsmodels.tsa.tsatools.add_lag
-   ~statsmodels.tsa.tsatools.add_trend
-   ~statsmodels.tsa.arima_process.arma_generate_sample
-   ~statsmodels.tsa.arima_process.ArmaProcess
-   ~statsmodels.tsa.tsatools.detrend
-   ~statsmodels.tsa.tsatools.lagmat
-   ~statsmodels.tsa.tsatools.lagmat2ds
    ~statsmodels.tsa.seasonal.seasonal_decompose
    ~statsmodels.tsa.seasonal.STL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
    ~statsmodels.tsa.filters.hp_filter.hpfilter
 
-Markov Switching
-~~~~~~~~~~~~~~~~
+Markov Regime Switching Models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
    ~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression
    ~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression
+
+Time-Series Tools
+~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~statsmodels.tsa.tsatools.add_lag
+   ~statsmodels.tsa.tsatools.add_trend
+   ~statsmodels.tsa.tsatools.detrend
+   ~statsmodels.tsa.tsatools.lagmat
+   ~statsmodels.tsa.tsatools.lagmat2ds
 
 X12/X13 Interface
 ~~~~~~~~~~~~~~~~~
