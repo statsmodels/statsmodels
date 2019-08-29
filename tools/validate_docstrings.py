@@ -267,6 +267,11 @@ def get_api_items(api_doc_fd):
                 position = None
                 continue
             item = line.strip()
+            if item.startswith('~statsmodels.'):
+                path = item.replace('~', '').split('.')
+                item = path[-1]
+                current_module = '.'.join(path[:-1])
+
             func = importlib.import_module(current_module)
             for part in item.split('.'):
                 func = getattr(func, part)
