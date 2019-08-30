@@ -822,7 +822,7 @@ class MultiComparison(object):
                 idx = np.where(self.groups == name)[0]
                 count += len(idx)
                 self.groupintlab[idx] = np.where(self.groupsunique == name)[0]
-            if count != data.shape[0]:
+            if count != self.data.shape[0]:
                 #raise ValueError('group_order does not contain all groups')
                 # warn and keep only observations with label in group_order
                 import warnings
