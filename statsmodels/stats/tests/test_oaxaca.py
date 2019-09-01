@@ -205,7 +205,7 @@ class TestOneModel(object):
             hasconst=False).two_fold(
             True,
             two_fold_type='self_submitted',
-            self_weight=1)
+            submitted_weight=1)
 
     def test_results(self):
         unexp, exp, gap = self.one_model.params
@@ -232,7 +232,7 @@ class TestZeroModel(object):
             hasconst=False).two_fold(
             True,
             two_fold_type='self_submitted',
-            self_weight=0)
+            submitted_weight=0)
 
     def test_results(self):
         unexp, exp, gap = self.zero_model.params
@@ -289,8 +289,8 @@ class TestPooledModel(object):
         unexp, exp, gap = self.pooled_model.params
         unexp_std, exp_std = self.pooled_model.std
         pool_params_stata_results = np.array(
-            ['27.940908', '130.809536', '158.75044'])
-        pool_std_stata_results = np.array(['89.209487', '58.612367'])
+            [27.940908, 130.809536, 158.75044])
+        pool_std_stata_results = np.array([89.209487, 58.612367])
 
         np.testing.assert_almost_equal(unexp, pool_params_stata_results[0], 3)
         np.testing.assert_almost_equal(exp, pool_params_stata_results[1], 3)
