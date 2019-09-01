@@ -191,7 +191,6 @@ class OaxacaBlinder(object):
         int_eff_list = []
         exp_eff_list = []
         unexp_eff_list = []
-
         for _ in range(0, n):
             endog = np.column_stack((self.bi_col, self.endog))
             exog = self.exog
@@ -317,8 +316,9 @@ class OaxacaBlinder(object):
         OaxacaResults
             A results container for the three-fold decomposition.
         """
-        self.n = n
-        self.conf = conf
+        self.submitted_n = n
+        self.submitted_conf = conf
+        self.submitted_weight = None
         std_val = None
         self.endow_eff = (
                         (self.exog_f_mean - self.exog_s_mean)
@@ -412,7 +412,7 @@ class OaxacaBlinder(object):
 
         elif two_fold_type == 'reimers':
             submitted_weight = [.5, .5]
-            self.t_params = .5 * (self._f_model.params + self._s_model.params)
+            self.t_params = .5 * (self._f_model.params)  + .5 *  (self._s_model.params)
 
         elif two_fold_type == 'self_submitted':
             if submitted_weight is None:
@@ -427,14 +427,12 @@ class OaxacaBlinder(object):
                         cov_type=self.cov_type,
                         cov_kwds=self.cov_kwds)
             self.t_params = self._t_model.params
-            submitted_weight = [self.t_params, 1 - self.t_params]
 
         else:
             self._t_model = OLS(self.endog, self.exog).fit(
                                     cov_type=self.cov_type,
                                     cov_kwds=self.cov_kwds)
             self.t_params = np.delete(self._t_model.params, self.bifurcate)
-            submitted_weight = [self.t_params, 1 - self.t_params]
 
         self.unexplained = ((self.exog_f_mean
                             @ (self._f_model.params - self.t_params))
