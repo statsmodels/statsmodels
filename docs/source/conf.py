@@ -99,10 +99,11 @@ from distutils.version import LooseVersion
 
 lv = LooseVersion(release)
 full_version = version = short_version = lv.version
+commit = ''
 if '+' in lv.version:
     short_version = lv.vstring[:lv.vstring.index('+')]
     commit = lv.version[lv.version.index('+') + 1]
-    version = short_version + '+' + str(commit)
+    version = short_version + ' (+{0})'.format(commit)
 
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
@@ -178,7 +179,11 @@ html_theme_options = {
     'color_accent': 'blue',
     'nav_title': 'statsmodels {0}'.format(version),
     'master_doc': False,
-    'nav_links': []
+    'nav_links': [],
+    'heroes': {'index': 'statistical models, hypothesis tests, and data '
+                        'exploration',
+               'examples/index': 'examples and tutorials to get started with '
+                                 'statsmodels'}
 }
 
 language = 'en'
