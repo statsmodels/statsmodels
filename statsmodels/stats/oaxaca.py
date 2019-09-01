@@ -412,7 +412,7 @@ class OaxacaBlinder(object):
 
         elif two_fold_type == 'reimers':
             submitted_weight = [.5, .5]
-            self.t_params = .5 * (self._f_model.params)  + .5 *  (self._s_model.params)
+            self.t_params = .5 * (self._f_model.params + self._s_model.params)
 
         elif two_fold_type == 'self_submitted':
             if submitted_weight is None:
