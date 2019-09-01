@@ -6,6 +6,10 @@ The main statsmodels API is split into models:
   using ``import statsmodels.api as sm``.
 * ``statsmodels.tsa.api``: Time-series models and methods. Canonically imported
   using ``import statsmodels.tsa.api as tsa``.
+* ``statsmodels.formula.api``: A convenience interface for specifying models
+  using formula strings and DataFrames. This API directly exposes the ``from_formula``
+  class method of models that support the formula API. Canonically imported using
+  ``import statsmodels.formula.api as smf``
 
 The API focuses on models and the most frequently used statistical test, and tools.
 `Import Paths and Structure`_ explains the design of the two API modules and how
@@ -203,6 +207,38 @@ X12/X13 Interface
 
    ~statsmodels.tsa.x13.x13_arima_analysis
    ~statsmodels.tsa.x13.x13_arima_select_order
+
+``statsmodels.formula.api``
+---------------------------
+
+Models
+~~~~~~
+
+The function descriptions of the methods exposed in the formula API are generic.
+See the documentation for the parent model for details.
+
+.. autosummary::
+   :toctree: generated/
+
+   ~statsmodels.formula.api.gls
+   ~statsmodels.formula.api.wls
+   ~statsmodels.formula.api.ols
+   ~statsmodels.formula.api.glsar
+   ~statsmodels.formula.api.mixedlm
+   ~statsmodels.formula.api.glm
+   ~statsmodels.formula.api.rlm
+   ~statsmodels.formula.api.mnlogit
+   ~statsmodels.formula.api.logit
+   ~statsmodels.formula.api.probit
+   ~statsmodels.formula.api.poisson
+   ~statsmodels.formula.api.negativebinomial
+   ~statsmodels.formula.api.quantreg
+   ~statsmodels.formula.api.phreg
+   ~statsmodels.formula.api.ordinal_gee
+   ~statsmodels.formula.api.nominal_gee
+   ~statsmodels.formula.api.gee
+   ~statsmodels.formula.api.glmgam
+
 
 .. _importpaths:
 
