@@ -225,3 +225,16 @@ def test_predict_nondataframe():
     error = patsy.PatsyError
     with pytest.raises(error):
         fit.predict([0.25])
+
+
+def test_formula_environment():
+    df = pd.DataFrame({'x': [1, 2, 3], 'y': [2, 4, 6]})
+    env = patsy.EvalEnvironment({})
+
+    try:
+        ols('y ~ x', eval_env=env, data=df)
+    except Exception:
+        raise
+
+    with pytest.raises(TypeError):
+        ols('y ~ x', eval_env='env', data=df)
