@@ -440,6 +440,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `start_params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
         cov_type : str, optional
             The `cov_type` keyword governs the method for calculating the
             covariance matrix of parameter estimates. Can be one of:
@@ -459,7 +464,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             Default is 'opg' unless memory conservation is used to avoid
             computing the loglikelihood values for each observation, in which
-            case the default is 'oim'.
+            case the default is 'approx'.
         cov_kwds : dict or None, optional
             A dictionary of arguments affecting covariance matrix computation.
 
