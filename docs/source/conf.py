@@ -172,7 +172,7 @@ html_theme_options = {
     'base_url': base_url,
     'repo_url': 'https://github.com/statsmodels/statsmodels',
     'repo_name': 'statsmodels',
-    'globaltoc_depth': 1,
+    'globaltoc_depth': 3,
     'globaltoc_collapse': True,
     'globaltoc_includehidden': True,
     'color_primary': 'indigo',
@@ -230,7 +230,8 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-    'index': ['indexsidebar.html', 'searchbox.html', 'sidelinks.html']}
+    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
