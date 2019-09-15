@@ -356,8 +356,8 @@ class DiscreteModel(base.LikelihoodModel):
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
-            raise ValueError("Attempt to use l1_cvxopt_cp failed since cvxopt "
-                        "could not be imported")
+            raise ValueError("Cannot use l1_cvxopt_cp as cvxopt "
+                "was not found (install it, or use method='l1' instead)")
 
         if callback is None:
             callback = self._check_perfect_pred
