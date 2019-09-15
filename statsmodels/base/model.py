@@ -2145,7 +2145,8 @@ class LikelihoodModelResults(Results):
     @classmethod
     def load(cls, fname):
         """
-        Load a pickled results instance.
+        Load a pickled results instance; use only on trusted files,
+        as unpickling can run arbitrary code.
 
         Parameters
         ----------

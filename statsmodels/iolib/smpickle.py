@@ -19,7 +19,9 @@ def save_pickle(obj, fname):
 
 def load_pickle(fname):
     """
-    Load a previously saved object from file
+    Load a previously saved object; **use only on trusted files**,
+    as unpickling can run arbitrary code.  (i.e. calling this on a
+    malicious file can wipe or take over your system.)
 
     Parameters
     ----------
