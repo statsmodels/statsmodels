@@ -356,7 +356,7 @@ class DiscreteModel(base.LikelihoodModel):
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
-            message = ("Attempt to use l1_cvxopt_cp failed since cvxopt "
+            raise ValueError("Attempt to use l1_cvxopt_cp failed since cvxopt "
                         "could not be imported")
 
         if callback is None:
