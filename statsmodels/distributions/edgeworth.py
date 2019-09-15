@@ -123,7 +123,7 @@ class ExpandedNormal(rv_continuous):
 
     >>> import matplotlib.pyplot as plt
     >>> from scipy import stats
-    >>> from scipy.misc import factorial
+    >>> from scipy.special import factorial
     >>> df = 12
     >>> chi2_c = [2**(j-1) * factorial(j-1) * df for j in range(1, 5)]
     >>> edgw_chi2 = ExpandedNormal(chi2_c, name='edgw_chi2', momtype=0)

@@ -14,7 +14,7 @@ change/check: instead of using marep, use fft-transform of ar and ma
     separately, use ratio check theory is correct and example works
     DONE : feels much faster than lfilter
     -> use for estimation of ARMA
-    -> use pade (scipy.misc) approximation to get starting polynomial
+    -> use pade (scipy.interpolate) approximation to get starting polynomial
        from autocorrelation (is autocorrelation of AR(p) related to marep?)
        check if pade is fast, not for larger arrays ?
        maybe pade does not do the right thing for this, not tried yet
