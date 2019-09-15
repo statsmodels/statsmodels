@@ -159,7 +159,7 @@ class Model(object):
         elif eval_env == -1:
             from patsy import EvalEnvironment
             eval_env = EvalEnvironment({})
-        else:
+        elif isinstance(eval_env, int):
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get('missing', 'drop')
         if missing == 'none':  # with patsy it's drop or raise. let's raise.
