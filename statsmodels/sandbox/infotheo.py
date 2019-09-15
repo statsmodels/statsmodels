@@ -36,7 +36,7 @@ from statsmodels.compat.python import lzip, lmap
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.misc import logsumexp as sp_logsumexp
+from scipy.special import logsumexp as sp_logsumexp
 
 #TODO: change these to use maxentutils so that over/underflow is handled
 #with the logsumexp.
