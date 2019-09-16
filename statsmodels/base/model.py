@@ -2147,11 +2147,11 @@ class LikelihoodModelResults(Results):
         """
         Load a pickled results instance
 
-         .. warning::
+        .. warning::
 
-            Loading pickled models is not secure against erroneous or
-            maliciously constructed data. Never unpickle data received from
-            an untrusted or unauthenticated source.
+           Loading pickled models is not secure against erroneous or
+           maliciously constructed data. Never unpickle data received from
+           an untrusted or unauthenticated source.
 
         Parameters
         ----------
