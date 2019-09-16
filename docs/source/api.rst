@@ -74,8 +74,8 @@ Discrete and Count Models
    ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
    ~statsmodels.discrete.count_model.ZeroInflatedPoisson
 
-Multivarite Models
-~~~~~~~~~~~~~~~~~~
+Multivariate Models
+~~~~~~~~~~~~~~~~~~~
 .. autosummary::
 
    ~statsmodels.multivariate.manova.MANOVA

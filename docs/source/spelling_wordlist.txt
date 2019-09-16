@@ -2266,3 +2266,16 @@ lbvalue
 Todo
 inproceedings
 booktitle
+NominalGEE
+NominalGEE
+BayesGaussMI
+iterable
+SVARProcess
+SVARResults
+glmgam
+mnlogit
+negativebinomial
+phreg
+xfunc
+webdoc
+pytest

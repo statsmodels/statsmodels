@@ -2374,7 +2374,7 @@ class OrdinalGEE(GEE):
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
         Restructure ordinal data as binary indicators so that they can
-        be analysed using Generalized Estimating Equations.
+        be analyzed using Generalized Estimating Equations.
         """
 
         self.endog_orig = endog.copy()
@@ -2659,7 +2659,7 @@ class NominalGEE(GEE):
     def setup_nominal(self, endog, exog, groups, time, offset):
         """
         Restructure nominal data as binary indicators so that they can
-        be analysed using Generalized Estimating Equations.
+        be analyzed using Generalized Estimating Equations.
         """
 
         self.endog_orig = endog.copy()

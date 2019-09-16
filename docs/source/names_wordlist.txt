@@ -108,3 +108,4 @@ oaxaca
 OaxacaBlinder
 Eiker
 seabold
+Wishart

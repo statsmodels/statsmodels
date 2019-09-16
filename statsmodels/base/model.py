@@ -2145,12 +2145,13 @@ class LikelihoodModelResults(Results):
     @classmethod
     def load(cls, fname):
         """
-        Load a pickled results instance; use only on trusted files.
+        Load a pickled results instance
 
-        Unpickling can run arbitrary code from the file being loaded.
-        This allows it to load a wide range of object types, but is
-        also a security risk: calling this on a malicious file can
-        wipe or take over your system.
+         .. warning::
+
+            Loading pickled models is not secure against erroneous or
+            maliciously constructed data. Never unpickle data received from
+            an untrusted or unauthenticated source.
 
         Parameters
         ----------
@@ -2174,7 +2175,9 @@ class LikelihoodModelResults(Results):
         memory. Currently tested for use with predict from an unpickled
         results and model instance.
 
-        .. warning:: Since data and some intermediate results have been removed
+        .. warning::
+
+           Since data and some intermediate results have been removed
            calculating new statistics that require them will raise exceptions.
            The exception will occur the first time an attribute is accessed
            that has been set to None.

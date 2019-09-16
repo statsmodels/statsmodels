@@ -19,12 +19,13 @@ def save_pickle(obj, fname):
 
 def load_pickle(fname):
     """
-    Load a previously saved object; **use only on trusted files**.
+    Load a previously saved object
 
-    Unpickling can run arbitrary code from the file being loaded.
-    This allows it to load a wide range of object types, but is also
-    a security risk: calling this on a malicious file can wipe or
-    take over your system.
+    .. warning::
+
+       Loading pickled models is not secure against erroneous or maliciously
+       constructed data. Never unpickle data received from an untrusted or
+       unauthenticated source.
 
     Parameters
     ----------

@@ -294,7 +294,7 @@ def strip_column_names(df):
     Returns
     -------
     df : DataFrame
-        Dataframe with stripped column names
+        DataFrame with stripped column names
 
     Notes
     -----
