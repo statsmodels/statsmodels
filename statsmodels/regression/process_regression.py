@@ -669,10 +669,10 @@ class ProcessMLE(base.LikelihoodModel):
         smooth_params : array_like
             The regression parameters for the smoothing part
             of the covariance structure.
-        scale_data : Dataframe
+        scale_data : DataFrame
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth_data : Dataframe
+        smooth_data : DataFrame
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 

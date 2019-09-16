@@ -79,7 +79,7 @@ class TestDiff(object):
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
 
-            # Test as Pandas Dataframe
+            # Test as Pandas DataFrame
             series = pd.DataFrame(series)
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)

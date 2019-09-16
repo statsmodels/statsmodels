@@ -204,7 +204,7 @@ class MI(object):
     model_args_fn : function
         A function taking an imputed dataset as input and returning
         endog, exog.  If the model is fit using a formula, returns
-        a Dataframe used to build the model.  Optional when a formula
+        a DataFrame used to build the model.  Optional when a formula
         is used.
     model_kwds_fn : function, optional
         A function taking an imputed dataset as input and returning
@@ -225,7 +225,7 @@ class MI(object):
         Number of imputed data sets to use in the analysis
     skip : int
         Number of Gibbs iterations to skip between successive
-        mutiple imputation fits.
+        multiple imputation fits.
 
     Notes
     -----

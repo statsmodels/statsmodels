@@ -213,7 +213,7 @@ def _detection_limit_index(obs, cohn):
         A single observation from the larger dataset.
 
     cohn : pandas.DataFrame
-        Dataframe of Cohn numbers.
+        DataFrame of Cohn numbers.
 
     Returns
     -------
@@ -293,7 +293,7 @@ def _ros_plot_pos(row, censorship, cohn):
         False -> uncensored)
 
     cohn : pandas.DataFrame
-        Dataframe of Cohn numbers.
+        DataFrame of Cohn numbers.
 
     Returns
     -------
@@ -353,7 +353,7 @@ def plotting_positions(df, censorship, cohn):
         False -> uncensored)
 
     cohn : pandas.DataFrame
-        Dataframe of Cohn numbers.
+        DataFrame of Cohn numbers.
 
     Returns
     -------
@@ -433,7 +433,7 @@ def _impute(df, observations, censorship, transform_in, transform_out):
 
 def _do_ros(df, observations, censorship, transform_in, transform_out):
     """
-    Dataframe-centric function to impute censored valies with ROS.
+    DataFrame-centric function to impute censored valies with ROS.
 
     Prepares a dataframe for, and then esimates the values of a censored
     dataset using Regression on Order Statistics

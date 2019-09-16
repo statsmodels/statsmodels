@@ -90,7 +90,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         a dataframe containing an extract from the summary of the model
         obtained for each columns. It will give the model complexive f test
         result and p-value, and the regression value and standard deviarion
-        for each of the regressors. The Dataframe has a hierachical column
+        for each of the regressors. The DataFrame has a hierachical column
         structure, divided as:
 
             - params: contains the parameters resulting from the models. Has

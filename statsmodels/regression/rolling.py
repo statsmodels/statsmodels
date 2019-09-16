@@ -98,7 +98,7 @@ Use params_only to skip all calculations except parameter estimation
 """
 
 
-@Substitution(model_type='Weidhted', model='WLS',
+@Substitution(model_type='Weighted', model='WLS',
               parameters=common_params,
               extra_parameters=extra_parameters)
 @Appender(_doc)
