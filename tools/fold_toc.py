@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
 import re
+import sys
 
 # Read doc to string
 filename = sys.argv[1]
 try:
     static_path = sys.argv[2]
-except:
+except IndexError:
     static_path = '_static'
 doc = open(filename, encoding='utf8').read()
 
@@ -26,33 +26,33 @@ pre = '''<div class="toctree-wrapper compound">
 post = '''<div class="toctree-wrapper compound">
 <a onclick="expandTree('toctree#')" href="javascript:void(0);">Expand all. </a>
 <a onclick="collapseTree('toctree#')" href="javascript:void(0);">Collapse all.</a>
-<ul class="mktree" id="toctree#">'''
+<ul class="mktree" id="toctree#">'''  # noqa:E501
 toc_n = doc.count('toctree-wrapper')
 for i in range(toc_n):
     post_n = re.sub('#', str(i), post)
     doc = re.sub(pre, post_n, doc, count=1)
 
-## TOC entries
+# TOC entries
 pre = '<li class="toctree-l1">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 2nd level
 pre = '<li class="toctree-l2">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 3rd level
 pre = '<li class="toctree-l3">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # TOC entries 4th level
 pre = '<li class="toctree-l4">'
 post = '<li class="liClosed"> '
-doc =  re.sub(pre, post, doc)
+doc = re.sub(pre, post, doc)
 
 # Write to file
-f = open(filename, 'w')
+f = open(filename, 'w', encoding='utf8')
 f.write(doc)
 f.close()

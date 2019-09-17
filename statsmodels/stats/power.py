@@ -30,7 +30,6 @@ refactoring
 
 
 """
-from __future__ import print_function
 from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats, optimize
@@ -44,7 +43,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
         df = nobs - 1
 
     if alternative in ['two-sided', '2s']:
-        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+        alpha_ = alpha / 2.  #no inplace changes, does not work
     elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:
@@ -77,7 +76,7 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     d = effect_size
 
     if alternative in ['two-sided', '2s']:
-        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+        alpha_ = alpha / 2.  #no inplace changes, does not work
     elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:
@@ -210,7 +209,7 @@ class Power(object):
         #    nicer but requires inspect? and not generic across tests
         #    I'm duplicating this in the subclass to get informative docstring
         key = [k for k,v in iteritems(kwds) if v is None]
-        #print kwds, key;
+        #print kwds, key
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
         key = key[0]
@@ -311,7 +310,7 @@ class Power(object):
 
         Parameters
         ----------
-        dep_var : string in ['nobs', 'effect_size', 'alpha']
+        dep_var : str in ['nobs', 'effect_size', 'alpha']
             This specifies which variable is used for the horizontal axis.
             If dep_var='nobs' (default), then one curve is created for each
             value of ``effect_size``. If dep_var='effect_size' or alpha, then
@@ -327,7 +326,7 @@ class Power(object):
             If ax is None, than a matplotlib figure is created. If ax is a
             matplotlib axis instance, then it is reused, and the plot elements
             are created with it.
-        title : string
+        title : str
             title for the axis. Use an empty string, ``''``, to avoid a title.
         plt_kwds : None or dict
             not used yet
@@ -416,7 +415,7 @@ class TTestPower(Power):
         df : int or float
             degrees of freedom. By default this is None, and the df from the
             one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -463,7 +462,7 @@ class TTestPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -533,7 +532,7 @@ class TTestIndPower(Power):
         df : int or float
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -587,7 +586,7 @@ class TTestIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -648,7 +647,7 @@ class NormalIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -708,7 +707,7 @@ class NormalIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ration given the other
             arguments it has to be explicitly set to None.
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        alternative : str, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -810,7 +809,7 @@ class FTestPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -819,7 +818,7 @@ class FTestPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -900,7 +899,7 @@ class FTestAnovaPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -914,7 +913,7 @@ class FTestAnovaPower(Power):
 
         '''
         # update start values for root finding
-        if not k_groups is None:
+        if k_groups is not None:
             self.start_ttp['nobs'] = k_groups * 10
             self.start_bqexp['nobs'] = dict(low=k_groups * 2,
                                             start_upp=k_groups * 10)
@@ -1068,7 +1067,7 @@ class _GofChisquareIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ration given the other
             arguments it has to be explicitely set to None.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -1119,7 +1118,7 @@ class _GofChisquareIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ration given the other
             arguments it has to be explicitely set to None.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : str, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -1128,7 +1127,7 @@ class _GofChisquareIndPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes

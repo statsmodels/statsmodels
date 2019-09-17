@@ -1,7 +1,7 @@
-from statsmodels.compat.python import range
 import numpy as np
 
-#TODO: add plots to weighting functions for online docs.
+# TODO: add plots to weighting functions for online docs.
+
 
 class RobustNorm(object):
     """
@@ -10,10 +10,13 @@ class RobustNorm(object):
     Lays out the methods expected of the robust norms to be used
     by statsmodels.RLM.
 
-    Parameters
-    ----------
-    None :
-        Some subclasses have optional tuning constants.
+    See Also
+    --------
+    statsmodels.rlm
+
+    Notes
+    -----
+    Currently only M-estimators are available.
 
     References
     ----------
@@ -24,15 +27,6 @@ class RobustNorm(object):
 
     R Venables, B Ripley. 'Modern Applied Statistics in S'
         Springer, New York, 2002.
-
-    See Also
-    --------
-    statsmodels.rlm for more information on how the estimators are used
-    and the inputs for the methods of RobustNorm and subclasses.
-
-    Notes
-    -----
-    Currently only M-estimators are available.
     """
 
     def rho(self, z):
@@ -66,15 +60,15 @@ class RobustNorm(object):
         raise NotImplementedError
 
     def psi_deriv(self, z):
-        '''
-        Deriative of psi.  Used to obtain robust covariance matrix.
+        """
+        Derivative of psi.  Used to obtain robust covariance matrix.
 
         See statsmodels.rlm for more information.
 
         Abstract method:
 
         psi_derive = psi'
-        '''
+        """
         raise NotImplementedError
 
     def __call__(self, z):
@@ -83,14 +77,15 @@ class RobustNorm(object):
         """
         return self.rho(z)
 
+
 class LeastSquares(RobustNorm):
 
     """
     Least squares rho for M-estimation and its derived functions.
 
-    See also
+    See Also
     --------
-    statsmodels.robust.norms.RobustNorm for the methods.
+    statsmodels.robust.norms.RobustNorm
     """
 
     def rho(self, z):
@@ -98,7 +93,7 @@ class LeastSquares(RobustNorm):
         The least squares estimator rho function
 
         Parameters
-        -----------
+        ----------
         z : array
             1d array
 
@@ -118,7 +113,7 @@ class LeastSquares(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -137,7 +132,7 @@ class LeastSquares(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -164,6 +159,7 @@ class LeastSquares(RobustNorm):
         """
         return np.ones(z.shape, np.float64)
 
+
 class HuberT(RobustNorm):
     """
     Huber's T for M estimation.
@@ -174,7 +170,7 @@ class HuberT(RobustNorm):
         The tuning constant for Huber's t function. The default value is
         1.345.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -187,7 +183,7 @@ class HuberT(RobustNorm):
         Huber's T is defined piecewise over the range for z
         """
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.t)
+        return np.less_equal(np.abs(z), self.t)
 
     def rho(self, z):
         r"""
@@ -195,7 +191,7 @@ class HuberT(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -208,17 +204,17 @@ class HuberT(RobustNorm):
         z = np.asarray(z)
         test = self._subset(z)
         return (test * 0.5 * z**2 +
-                (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
+                (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Huber's t estimator
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -233,14 +229,14 @@ class HuberT(RobustNorm):
         return test * z + (1 - test) * self.t * np.sign(z)
 
     def weights(self, z):
-        """
+        r"""
         Huber's t weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -252,7 +248,7 @@ class HuberT(RobustNorm):
         """
         z = np.asarray(z)
         test = self._subset(z)
-        absz = np.fabs(z)
+        absz = np.abs(z)
         absz[test] = 1.0
         return test + (1 - test) * self.t / absz
 
@@ -264,9 +260,10 @@ class HuberT(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-        return np.less_equal(np.fabs(z), self.t)
+        return np.less_equal(np.abs(z), self.t)
 
-#TODO: untested, but looks right.  RamsayE not available in R or SAS?
+
+# TODO: untested, but looks right.  RamsayE not available in R or SAS?
 class RamsayE(RobustNorm):
     """
     Ramsay's Ea for M estimation.
@@ -277,12 +274,12 @@ class RamsayE(RobustNorm):
         The tuning constant for Ramsay's Ea function.  The default value is
         0.3.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = .3):
+    def __init__(self, a=.3):
         self.a = a
 
     def rho(self, z):
@@ -291,7 +288,7 @@ class RamsayE(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -300,18 +297,18 @@ class RamsayE(RobustNorm):
             rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
         """
         z = np.asarray(z)
-        return (1 - np.exp(-self.a * np.fabs(z)) *
-                (1 + self.a * np.fabs(z))) / self.a**2
+        return (1 - np.exp(-self.a * np.abs(z)) *
+                (1 + self.a * np.abs(z))) / self.a**2
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Ramsay's Ea estimator
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -320,17 +317,17 @@ class RamsayE(RobustNorm):
             psi(z) = z*exp(-a*\|z\|)
         """
         z = np.asarray(z)
-        return z * np.exp(-self.a * np.fabs(z))
+        return z * np.exp(-self.a * np.abs(z))
 
     def weights(self, z):
-        """
+        r"""
         Ramsay's Ea weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -340,7 +337,7 @@ class RamsayE(RobustNorm):
         """
 
         z = np.asarray(z)
-        return np.exp(-self.a * np.fabs(z))
+        return np.exp(-self.a * np.abs(z))
 
     def psi_deriv(self, z):
         """
@@ -350,9 +347,13 @@ class RamsayE(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+        a = self.a
+        x = np.exp(-a * np.abs(z))
+        dx = -a * x * np.sign(z)
+        y = z
+        dy = 1
+        return x * dy + y * dx
 
-        return np.exp(-self.a * np.fabs(z)) + z**2*\
-                np.exp(-self.a*np.fabs(z))*-self.a/np.fabs(z)
 
 class AndrewWave(RobustNorm):
 
@@ -365,11 +366,11 @@ class AndrewWave(RobustNorm):
         The tuning constant for Andrew's Wave function.  The default value is
         1.339.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
-    def __init__(self, a = 1.339):
+    def __init__(self, a=1.339):
         self.a = a
 
     def _subset(self, z):
@@ -377,7 +378,7 @@ class AndrewWave(RobustNorm):
         Andrew's wave is defined piecewise over the range of z.
         """
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.a * np.pi)
+        return np.less_equal(np.abs(z), self.a * np.pi)
 
     def rho(self, z):
         r"""
@@ -385,7 +386,7 @@ class AndrewWave(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -403,14 +404,14 @@ class AndrewWave(RobustNorm):
                 (1 - test) * 2 * a)
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Andrew's wave
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -427,14 +428,14 @@ class AndrewWave(RobustNorm):
         return test * np.sin(z / a)
 
     def weights(self, z):
-        """
+        r"""
         Andrew's wave weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -447,7 +448,16 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return test * np.sin(z / a) / (z / a)
+        ratio = z / a
+        small = np.abs(ratio) < np.finfo(np.double).eps
+        if np.any(small):
+            weights = np.ones_like(ratio)
+            large = ~small
+            ratio = ratio[large]
+            weights[large] = test[large] * np.sin(ratio) / ratio
+        else:
+            weights = test * np.sin(ratio) / ratio
+        return weights
 
     def psi_deriv(self, z):
         """
@@ -461,7 +471,8 @@ class AndrewWave(RobustNorm):
         test = self._subset(z)
         return test*np.cos(z / self.a)/self.a
 
-#TODO: this is untested
+
+# TODO: this is untested
 class TrimmedMean(RobustNorm):
     """
     Trimmed mean function for M-estimation.
@@ -472,7 +483,7 @@ class TrimmedMean(RobustNorm):
         The tuning constant for Ramsay's Ea function.  The default value is
         2.0.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
@@ -486,7 +497,7 @@ class TrimmedMean(RobustNorm):
         """
 
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), self.c)
+        return np.less_equal(np.abs(z), self.c)
 
     def rho(self, z):
         r"""
@@ -494,7 +505,7 @@ class TrimmedMean(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -510,14 +521,14 @@ class TrimmedMean(RobustNorm):
         return test * z**2 * 0.5
 
     def psi(self, z):
-        """
+        r"""
         The psi function for least trimmed mean
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -533,14 +544,14 @@ class TrimmedMean(RobustNorm):
         return test * z
 
     def weights(self, z):
-        """
+        r"""
         Least trimmed mean weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -566,6 +577,7 @@ class TrimmedMean(RobustNorm):
         test = self._subset(z)
         return test
 
+
 class Hampel(RobustNorm):
     """
 
@@ -579,12 +591,12 @@ class Hampel(RobustNorm):
         The tuning constants for Hampel's function.  The default values are
         a,b,c = 2, 4, 8.
 
-    See also
+    See Also
     --------
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = 2., b = 4., c = 8.):
+    def __init__(self, a=2., b=4., c=8.):
         self.a = a
         self.b = b
         self.c = c
@@ -593,7 +605,7 @@ class Hampel(RobustNorm):
         """
         Hampel's function is defined piecewise over the range of z
         """
-        z = np.fabs(np.asarray(z))
+        z = np.abs(np.asarray(z))
         t1 = np.less_equal(z, self.a)
         t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
         t3 = np.less_equal(z, self.c) * np.greater(z, self.b)
@@ -605,7 +617,7 @@ class Hampel(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -620,8 +632,10 @@ class Hampel(RobustNorm):
             rho(z) = a*(b + c - a)                  for \|z\| > c
         """
 
-        z = np.fabs(z)
-        a = self.a; b = self.b; c = self.c
+        z = np.abs(z)
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
@@ -630,14 +644,14 @@ class Hampel(RobustNorm):
         return v
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Hampel's estimator
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -652,24 +666,26 @@ class Hampel(RobustNorm):
             psi(z) = 0                            for \|z\| > c
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
-        z = np.fabs(z)
+        z = np.abs(z)
         v = s * (t1 * z +
                  t2 * a*s +
                  t3 * a*s * (c - z) / (c - b))
         return v
 
     def weights(self, z):
-        """
+        r"""
         Hampel weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -685,17 +701,30 @@ class Hampel(RobustNorm):
 
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
-        v = (t1 +
-            t2 * a/np.fabs(z) +
-            t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
-        v[np.where(np.isnan(v))]=1. # for some reason 0 returns a nan?
+
+        v = np.zeros_like(z)
+        v[t1] = 1.0
+        abs_z = np.abs(z)
+        v[t2] = a / abs_z[t2]
+        abs_zt3 = abs_z[t3]
+        v[t3] = a * (c - abs_zt3) / (abs_zt3 * (c - b))
+        v[np.where(np.isnan(v))] = 1.  # TODO: for some reason 0 returns a nan?
         return v
 
     def psi_deriv(self, z):
         t1, t2, t3 = self._subset(z)
-        return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
+        a, b, c = self.a, self.b, self.c
+        # default is t1
+        d = np.zeros_like(z)
+        d[t1] = 1.0
+        zt3 = z[t3]
+        d[t3] = (a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+        return d
+
 
 class TukeyBiweight(RobustNorm):
     """
@@ -713,14 +742,14 @@ class TukeyBiweight(RobustNorm):
     Tukey's biweight is sometime's called bisquare.
     """
 
-    def __init__(self, c = 4.685):
+    def __init__(self, c=4.685):
         self.c = c
 
     def _subset(self, z):
         """
         Tukey's biweight is defined piecewise over the range of z
         """
-        z = np.fabs(np.asarray(z))
+        z = np.abs(np.asarray(z))
         return np.less_equal(z, self.c)
 
     def rho(self, z):
@@ -729,7 +758,7 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -743,14 +772,14 @@ class TukeyBiweight(RobustNorm):
         return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
 
     def psi(self, z):
-        """
+        r"""
         The psi function for Tukey's biweight estimator
 
         The analytic derivative of rho
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -765,16 +794,15 @@ class TukeyBiweight(RobustNorm):
         subset = self._subset(z)
         return z * (1 - (z / self.c)**2)**2 * subset
 
-
     def weights(self, z):
-        """
+        r"""
         Tukey's biweight weighting function for the IRLS algorithm
 
         The psi function scaled by z
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             1d array
 
         Returns
@@ -797,8 +825,9 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset*((1 - (z/self.c)**2)**2 - (4*z**2/self.c**2) *\
-                    (1-(z/self.c)**2))
+        return subset * ((1 - (z/self.c)**2)**2
+                         - (4*z**2/self.c**2) * (1-(z/self.c)**2))
+
 
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
@@ -829,7 +858,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         Toleration for convergence.  The default is 1e-06.
 
     Returns
-    --------
+    -------
     mu : array
         Estimate of location
     """
@@ -844,9 +873,9 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     for iter in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
-        if np.alltrue(np.less(np.fabs(mu - nmu), scale * tol)):
+        if np.alltrue(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"\
-            % maxiter)
+    raise ValueError("location estimator failed to converge in %d iterations"
+                     % maxiter)

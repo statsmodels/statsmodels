@@ -8,12 +8,11 @@ Author: Josef Perktold
 
 import numpy as np
 
-class Holder():
-    pass
+from statsmodels.tools.testing import Holder
 
 res_t_dfest = Holder()
-#> tfit3 <- tlm(m.marietta ~ CRSP, data = mm, start = list(dof = 3),estDof = TRUE)
-#> cat_items(tfit3, "res_t_dfest.")
+# > tfit3 <- tlm(m.marietta~CRSP, data=mm, start=list(dof = 3), estDof=TRUE)
+# > cat_items(tfit3, "res_t_dfest.")
 res_t_dfest.random = np.array([
      0.6242843, 1.349205, 1.224172, 1.272655, 1.323455, 1.091313, 1.227218,
      0.0316284, 0.7202973, 1.038392, 1.091907, 0.7966355, 0.784222,

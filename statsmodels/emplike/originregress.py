@@ -16,8 +16,6 @@ General References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
-from __future__ import division
-
 import numpy as np
 from scipy.stats import chi2
 from scipy import optimize
@@ -179,7 +177,7 @@ class OriginResults(RegressionResults):
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 
-        method : string
+        method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'

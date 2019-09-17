@@ -17,7 +17,7 @@ class UnivariateGamPenalty(Penalty):
     Penalty for smooth term in Generalized Additive Models
 
     Parameters
-    -----------
+    ----------
     univariate_smoother : instance
         instance of univariate smoother or spline class
     alpha : float
@@ -26,7 +26,7 @@ class UnivariateGamPenalty(Penalty):
         TODO: not used and verified, might be removed
 
     Attributes
-    -----------
+    ----------
     Parameters are stored, additionally
     nob s: The number of samples used during the estimation
     n_columns : number of columns in smoother basis
@@ -132,13 +132,13 @@ class MultivariateGamPenalty(Penalty):
     Penalty for Generalized Additive Models
 
     Parameters
-    -----------
+    ----------
     multivariate_smoother : instance
         instance of additive smoother or spline class
     alpha : list of float
         default penalty weight, list with length equal to the number of smooth
         terms. ``alpha`` can also be provided to each method.
-    weights: array-like
+    weights: array_like
         currently not used
         is a list of doubles of the same length as alpha or a list
         of ndarrays where each component has the length equal to the number
@@ -149,7 +149,7 @@ class MultivariateGamPenalty(Penalty):
         start at ``start_index``.
 
     Attributes
-    -----------
+    ----------
     Parameters are stored, additionally
     nob s: The number of samples used during the estimation
 

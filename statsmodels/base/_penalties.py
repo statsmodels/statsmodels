@@ -19,8 +19,6 @@ The penaties should be smooth so that they can be subtracted from log
 likelihood functions and optimized using standard methods (i.e. L1
 penalties do not belong here).
 """
-from __future__ import division
-
 import numpy as np
 
 
@@ -32,7 +30,7 @@ def _check_wts(weights, wts):
         warnings.warn('`wts` method is deprecated. Use `weights` instead',
                       DeprecationWarning)
     weights = weights if weights is not None else wts
-    return wts
+    return weights
 
 
 class Penalty(object):
@@ -41,7 +39,7 @@ class Penalty(object):
 
     Parameters
     ----------
-    weights : array-like
+    weights : array_like
         A vector of weights that determines the weight of the penalty
         for each parameter.
 
@@ -60,7 +58,7 @@ class Penalty(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             A vector of parameters.
 
         Returns
@@ -76,7 +74,7 @@ class Penalty(object):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             A vector of parameters
 
         Returns

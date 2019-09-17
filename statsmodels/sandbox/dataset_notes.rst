@@ -58,7 +58,7 @@ from data import *
 
 8) Edit the datasets.__init__.py to import the new directory
 
-9) Make sure everything is correct, and you've saved everything,
+9) Make sure everything is correct, and you have saved everything,
    and put the directory under version control.
 
 bzr add spector

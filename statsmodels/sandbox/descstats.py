@@ -18,7 +18,7 @@ def descstats(data, cols=None, axis=0):
     Prints descriptive statistics for one or multiple variables.
 
     Parameters
-    ------------
+    ----------
     data: numpy array
         `x` is the data
 
@@ -118,10 +118,16 @@ def descstats(data, cols=None, axis=0):
 #                +str(x[var].max())+')'+os.linesep}
 #        else:
         for var in range(x.shape[1]):
-                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
-%(range)20s" % {'name': var, 'obs': len(x[:,var]), 'mean': x[:,var].mean(),
-                'stddev': x[:,var].std(), 'range': '('+str(x[:,var].min())+', '+\
-                str(x[:,var].max())+')'+os.linesep}
+            xv = x[:, var]
+            kwargs = {
+                'name': var,
+                'obs': len(xv),
+                'mean': xv.mean(),
+                'stddev': xv.std(),
+                'range': '('+str(xv.min())+', '+str(xv.max())+')'+os.linesep
+                }
+            desc += ("%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g "
+                     "%(range)20s" % kwargs)
     else:
         raise ValueError("data not understood")
 
@@ -158,7 +164,6 @@ def descstats(data, cols=None, axis=0):
 
 if __name__ == '__main__':
     import statsmodels.api as sm
-    import os
     data = sm.datasets.longley.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     sum1 = descstats(data.exog)

@@ -66,7 +66,7 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'spector.csv', sep='\s')
+    data = du.load_csv(__file__, 'spector.csv', sep=r'\s')
     data = du.strip_column_names(data)
     data = data.iloc[:, [1, 2, 3, 4]]
     return data.astype(float)

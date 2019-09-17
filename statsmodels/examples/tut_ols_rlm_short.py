@@ -8,7 +8,6 @@ closer to true slope and not tilted like OLS.
 Note: uncomment plt.show() to display graphs
 '''
 
-from __future__ import print_function
 import numpy as np
 #from scipy import stats
 import statsmodels.api as sm

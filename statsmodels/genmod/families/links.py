@@ -20,12 +20,12 @@ class Link(object):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Probabilities
 
         Returns
         -------
-        g(p) : array-like
+        g(p) : array_like
             The value of the link function g(p) = z
         """
         return NotImplementedError
@@ -36,7 +36,7 @@ class Link(object):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor of the transformed variable
             in the IRLS algorithm for GLM.
 
@@ -55,7 +55,7 @@ class Link(object):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
 
         Returns
         -------
@@ -79,7 +79,7 @@ class Link(object):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -90,9 +90,32 @@ class Link(object):
         Notes
         -----
         This reference implementation gives the correct result but is
-        inefficient, so it can be overriden in subclasses.
+        inefficient, so it can be overridden in subclasses.
         """
         return 1 / self.deriv(self.inverse(z))
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g'^(-1)(z) : array
+            The value of the second derivative of the inverse of the link
+            function
+
+        Notes
+        -----
+        This reference implementation gives the correct result but is
+        inefficient, so it can be overridden in subclasses.
+        """
+        iz = self.inverse(z)
+        return -self.deriv2(iz) / self.deriv(iz)**3
 
 
 class Logit(Link):
@@ -113,12 +136,12 @@ class Logit(Link):
         Clip logistic values to range (eps, 1-eps)
 
         Parameters
-        -----------
-        p : array-like
+        ----------
+        p : array_like
             Probabilities
 
         Returns
-        --------
+        -------
         pclip : array
             Clipped probabilities
         """
@@ -130,7 +153,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Probabilities
 
         Returns
@@ -151,7 +174,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the logit transform at `p`
 
         Returns
@@ -174,7 +197,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p: array-like
+        p: array_like
             Probabilities
 
         Returns
@@ -198,7 +221,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -216,7 +239,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             probabilities
 
         Returns
@@ -259,12 +282,12 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
         -------
-        z : array-like
+        z : array_like
             Power transform of x
 
         Notes
@@ -282,7 +305,7 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array-like
+        `z` : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
@@ -305,11 +328,11 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
-        --------
+        -------
         g'(p) : array
             Derivative of power transform of `p`
 
@@ -328,11 +351,11 @@ class Power(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
-        --------
+        -------
         g''(p) : array
             Second derivative of the power transform of `p`
 
@@ -351,7 +374,7 @@ class Power(Link):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             `z` is usually the linear predictor for a GLM or GEE model.
 
         Returns
@@ -364,6 +387,27 @@ class Power(Link):
             return np.ones_like(z)
         else:
             return np.power(z, (1 - self.power)/self.power) / self.power
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the power transform
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the power transform
+        function
+        """
+        if self.power == 1:
+            return np.zeros_like(z)
+        else:
+            return ((1 - self.power) *
+                    np.power(z, (1 - 2*self.power)/self.power) / self.power**2)
 
 
 class inverse_power(Power):
@@ -395,7 +439,7 @@ class sqrt(Power):
 
 
 class inverse_squared(Power):
-    """
+    r"""
     The inverse squared transform
 
     Notes
@@ -441,7 +485,7 @@ class Log(Link):
 
         Parameters
         ----------
-        x : array-like
+        x : array_like
             Mean parameters
 
         Returns
@@ -482,7 +526,7 @@ class Log(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -503,7 +547,7 @@ class Log(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -574,7 +618,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -595,7 +639,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the link function at `p`
 
         Returns
@@ -615,7 +659,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             mean parameters
 
         Returns
@@ -691,7 +735,7 @@ class cauchy(CDFLink):
 
         Parameters
         ----------
-        p: array-like
+        p: array_like
             Probabilities
 
         Returns
@@ -743,7 +787,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the CLogLog link function at `p`
 
         Returns
@@ -763,7 +807,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -784,7 +828,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -804,7 +848,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        z : array-like
+        z : array_like
             The value of the inverse of the CLogLog link function at `p`
 
         Returns
@@ -853,7 +897,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -873,8 +917,8 @@ class NegativeBinomial(Link):
         Inverse of the negative binomial transform
 
         Parameters
-        -----------
-        z : array-like
+        ----------
+        z : array_like
             The value of the inverse of the negative binomial link at `p`.
 
         Returns
@@ -894,7 +938,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -914,7 +958,7 @@ class NegativeBinomial(Link):
 
         Parameters
         ----------
-        p : array-like
+        p : array_like
             Mean parameters
 
         Returns
@@ -936,8 +980,8 @@ class NegativeBinomial(Link):
         Derivative of the inverse of the negative binomial transform
 
         Parameters
-        -----------
-        z : array-like
+        ----------
+        z : array_like
             Usually the linear predictor for a GLM or GEE model
 
         Returns

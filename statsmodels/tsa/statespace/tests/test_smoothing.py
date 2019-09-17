@@ -1,4 +1,4 @@
-"""
+r"""
 Tests for smoothing and estimation of unobserved states and disturbances
 
 - Predicted states: :math:`E(\alpha_t | Y_{t-1})`
@@ -12,7 +12,6 @@ MATLAB (ssm toolbox)
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 import os
 
 import numpy as np

@@ -91,5 +91,5 @@ if __name__ == '__main__':
     mu = stats.gamma.rvs(10, scale=30, size=10000000)
     import time
     t = time.time()
-    l = series_density(y=y, mu=mu, p=1.5, phi=20)
+    out = series_density(y=y, mu=mu, p=1.5, phi=20)
     print('That took {} seconds'.format(time.time() - t))

@@ -15,7 +15,7 @@ from statsmodels.regression._prediction import get_prediction
 
 
 def test_predict_se():
-    # this test doesn't use reference values
+    # this test does not use reference values
     # checks conistency across options, and compares to direct calculation
 
     # generate dataset
@@ -145,7 +145,7 @@ class TestWLSPrediction(object):
         sf = pred_res.summary_frame()
 
         col_names = ['mean', 'mean_se', 'mean_ci_lower', 'mean_ci_upper',
-                      'obs_ci_lower', 'obs_ci_upper']
+                     'obs_ci_lower', 'obs_ci_upper']
         assert_equal(sf.columns.tolist(), col_names)
 
         pred_res2 = res_wls.get_prediction()

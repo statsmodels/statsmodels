@@ -3,7 +3,7 @@
 formulas for mean and var of runs taken from SAS manual NPAR tests, also idea
 for runstest_1samp and runstest_2samp
 
-Description in NIST handbook and dataplot doesn't explain their expected
+Description in NIST handbook and dataplot does not explain their expected
 values, or variance
 
 Note:
@@ -19,7 +19,6 @@ TODO
 
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy.special import comb
@@ -70,7 +69,7 @@ class Runs(object):
 
         Parameters
         ----------
-        correction: bool
+        correction : bool
             Following the SAS manual, for samplesize below 50, the test
             statistic is corrected by 0.5. This can be turned off with
             correction=False, and was included to match R, tseries, which
@@ -113,7 +112,7 @@ def runstest_1samp(x, cutoff='mean', correction=True):
     cutoff : {'mean', 'median'} or number
         This specifies the cutoff to split the data into large and small
         values.
-    correction: bool
+    correction : bool
         Following the SAS manual, for samplesize below 50, the test
         statistic is corrected by 0.5. This can be turned off with
         correction=False, and was included to match R, tseries, which
@@ -151,7 +150,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
-    correction: bool
+    correction : bool
         Following the SAS manual, for samplesize below 50, the test
         statistic is corrected by 0.5. This can be turned off with
         correction=False, and was included to match R, tseries, which
@@ -185,7 +184,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     maximum number of runs would use alternating groups in the ties.)
     Maybe adding random noise would be the better approach.
 
-    SAS has exact distribution for sample size <=30, doesn't look standard
+    SAS has exact distribution for sample size <=30, does not look standard
     but should be easy to add.
 
     currently two-sided test only
@@ -204,13 +203,13 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
 
     '''
     x = np.asarray(x)
-    if not y is None:
+    if y is not None:
         y = np.asarray(y)
         groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
         # note reassigning x
         x = np.concatenate((x, y))
         gruni = np.arange(2)
-    elif not groups is None:
+    elif groups is not None:
         gruni = np.unique(groups)
         if gruni.size != 2:  # pylint: disable=E1103
             raise ValueError('not exactly two groups specified')
@@ -226,7 +225,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
         print('ties detected')   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
         eps = x_mindiff/2.
-        xx = x.copy()  #don't change original, just in case
+        xx = x.copy()  #do not change original, just in case
 
         xx[groups==gruni[0]] += eps
         xargsort = np.argsort(xx)
@@ -257,7 +256,7 @@ class TotalRunsProb(object):
 
     Notes
     -----
-    Written as a class so I can store temporary calculations, but I don't
+    Written as a class so I can store temporary calculations, but I do not
     think it matters much.
 
     Formulas taken from SAS manual for one-sided significance level.
@@ -469,7 +468,7 @@ def cochrans_q(x):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Cochran_test
+    https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
 
     '''
@@ -545,7 +544,7 @@ def mcnemar(x, y=None, exact=True, correction=True):
         n1, n2 = x[1, 0], x[0, 1]
     else:
         # I'm not checking here whether x and y are binary,
-        # isn't this also paired sign test
+        # is not this also paired sign test
         n1 = np.sum(x < y, 0)
         n2 = np.sum(x > y, 0)
 
@@ -609,7 +608,7 @@ def symmetry_bowker(table):
     if k != k2:
         raise ValueError('table needs to be square')
 
-    #low_idx = np.tril_indices(k, -1)  # this doesn't have Fortran order
+    #low_idx = np.tril_indices(k, -1)  # this does not have Fortran order
     upp_idx = np.triu_indices(k, 1)
 
     tril = table.T[upp_idx]   # lower triangle in column order

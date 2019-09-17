@@ -20,11 +20,10 @@ Harvey uses Durbin and Koopman notation.
 # Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
-# e.g., with a DSGE model.  See also
+# e.g., with a DSGE model.  See Also
 # http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
-from __future__ import print_function
 import numpy as np
 
 from . import kalman_loglike
@@ -36,7 +35,7 @@ from . import kalman_loglike
 
 
 class KalmanFilter(object):
-    """
+    r"""
     Kalman Filter code intended for use with the ARMA model.
 
     Notes
@@ -45,11 +44,11 @@ class KalmanFilter(object):
 
     The observation equations is
 
-    .. math:: y_{t} = Z_{t}\\alpha_{t} + \\epsilon_{t}
+    .. math:: y_{t} = Z_{t}\alpha_{t} + \epsilon_{t}
 
     The state equation is
 
-    .. math:: \\alpha_{t+1} = T_{t}\\alpha_{t} + R_{t}\\eta_{t}
+    .. math:: \alpha_{t+1} = T_{t}\alpha_{t} + R_{t}\eta_{t}
 
     For the present purposed \epsilon_{t} is assumed to always be zero.
     """
@@ -173,7 +172,7 @@ class KalmanFilter(object):
         if arma_model.transparams:
             newparams = arma_model._transparams(params)
         else:
-            newparams = params  # don't need a copy if not modified.
+            newparams = params  # do not need a copy if not modified.
 
         if k > 0:
             y -= np.dot(arma_model.exog, newparams[:k])
@@ -212,7 +211,7 @@ class KalmanFilter(object):
         """
         # TODO: see section 3.4.6 in Harvey for computing the derivatives in
         # the recursion itself.
-        # TODO: this won't work for time-varying parameters
+        # TODO: this will not work for time-varying parameters
         (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
          paramsdtype) = cls._init_kalman_state(params, arma_model)
         if np.issubdtype(paramsdtype, np.float64):

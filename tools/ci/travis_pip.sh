@@ -28,8 +28,6 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   eval "$(pyenv init -)"
 
   pyenv install "$PYTHON"
-  pyenv local "$PYTHON"
-  pyenv global "$PYTHON"
   pyenv shell "$PYTHON"
 fi
 

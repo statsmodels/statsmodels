@@ -4,7 +4,6 @@ Tests for simulation smoothing
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 import os
 
 import numpy as np
@@ -396,7 +395,7 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     """
     Notes
     -----
-    Can't test against KFAS because they have a different behavior for
+    Cannot test against KFAS because they have a different behavior for
     missing entries. When an entry is missing, KFAS does not draw a simulation
     smoothed value for that entry, whereas we draw from the unconditional
     distribution. It appears there is nothing to definitively recommend one

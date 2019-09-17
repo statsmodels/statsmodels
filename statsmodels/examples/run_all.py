@@ -1,4 +1,4 @@
-'''run all examples to make sure we don't get an exception
+'''run all examples to make sure we do not get an exception
 
 Note:
 If an example contaings plt.show(), then all plot windows have to be closed
@@ -7,7 +7,6 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import lzip, input
 import matplotlib.pyplot as plt #matplotlib is required for many examples
 

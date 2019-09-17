@@ -18,7 +18,7 @@ Issues
   -> hessian inverts and bse look ok if row and column are dropped, pinv also works
 * GenericMLE: still get somewhere (where?)
    "CacheWriteWarning: The attribute 'bse' cannot be overwritten"
-* bfgs is too fragile, doesn't come back
+* bfgs is too fragile, does not come back
 * `nm` is slow but seems to work
 * need good start_params and their use in genericmle needs to be checked for
   consistency, set as attribute or method (called as attribute)
@@ -28,12 +28,11 @@ Issues
 
 
 """
-from __future__ import print_function
 import numpy as np
 from scipy import stats
-from statsmodels.compat.scipy import factorial
-import statsmodels.api as sm
+from scipy.special import factorial
 from statsmodels.base.model import GenericLikelihoodModel
+
 
 def maxabs(arr1, arr2):
     return np.max(np.abs(arr1 - arr2))
@@ -106,7 +105,7 @@ class PoissonGMLE(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -124,9 +123,14 @@ class PoissonGMLE(GenericLikelihoodModel):
     def predict_distribution(self, exog):
         '''return frozen scipy.stats distribution with mu at estimated prediction
         '''
-        if not hasattr(self, result):
+        if not hasattr(self, "result"):
+            # TODO: why would this be ValueError instead of AttributeError?
+            # TODO: Why even make this a Model attribute in the first place?
+            #  It belongs on the Results class
             raise ValueError
         else:
+            result = self.result
+            params = result.params
             mu = np.exp(np.dot(exog, params))
             return stats.poisson(mu, loc=0)
 
@@ -147,7 +151,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
-        if not offset is None:
+        if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:,None] #need column
             self.offset = offset.ravel()
@@ -156,7 +160,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
         super(PoissonOffsetGMLE, self).__init__(endog, exog, missing=missing,
                 **kwds)
 
-#this was added temporarily for bug-hunting, but shouldn't be needed
+#this was added temporarily for bug-hunting, but should not be needed
 #    def loglike(self, params):
 #        return -self.nloglikeobs(params).sum(0)
 
@@ -167,7 +171,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -204,7 +208,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
         super(PoissonZiGMLE, self).__init__(endog, exog, missing=missing,
                 **kwds)
-        if not offset is None:
+        if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:,None] #need column
             self.offset = offset.ravel()  #which way?
@@ -229,7 +233,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns

@@ -2,7 +2,7 @@
 Handle file opening for read/write
 """
 from numpy.lib._iotools import _is_string_like
-from statsmodels.compat.python import PY3
+
 
 class EmptyContextManager(object):
     """
@@ -17,26 +17,20 @@ class EmptyContextManager(object):
         return self._obj
 
     def __exit__(self, *args):
-        '''Don't hide anything'''
+        '''Do not hide anything'''
         return False
 
     def __getattr__(self, name):
         return getattr(self._obj, name)
 
-if PY3:
-    def _open(fname, mode, encoding):
-        if fname.endswith('.gz'):
-            import gzip
-            return gzip.open(fname, mode, encoding=encoding)
-        else:
-            return open(fname, mode, encoding=encoding)
-else:
-    def _open(fname, mode, encoding):
-        if fname.endswith('.gz'):
-            import gzip
-            return gzip.open(fname, mode)
-        else:
-            return open(fname, mode)
+
+def _open(fname, mode, encoding):
+    if fname.endswith('.gz'):
+        import gzip
+        return gzip.open(fname, mode, encoding=encoding)
+    else:
+        return open(fname, mode, encoding=encoding)
+
 
 def get_file_obj(fname, mode='r', encoding=None):
     """
@@ -45,18 +39,19 @@ def get_file_obj(fname, mode='r', encoding=None):
     It also handle '.gz' files.
 
     Parameters
-    ==========
-    fname: string or file-like object
+    ----------
+    fname : str or file-like object
         File to open / forward
-    mode: string
+    mode : str
         Argument passed to the 'open' or 'gzip.open' function
-    encoding: string
+    encoding : str
         For Python 3 only, specify the encoding of the file
 
     Returns
-    =======
-    A file-like object that is always a context-manager. If the `fname` was already a file-like object,
-    the returned context manager *will not close the file*.
+    -------
+    A file-like object that is always a context-manager. If the `fname` was
+    already a file-like object, the returned context manager *will not
+    close the file*.
     """
     if _is_string_like(fname):
         return _open(fname, mode, encoding)

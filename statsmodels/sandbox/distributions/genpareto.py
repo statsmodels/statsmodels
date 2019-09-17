@@ -6,11 +6,11 @@ Warning: not tried out or tested yet, Done
 
 Author: josef-pktd
 """
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy.special import comb
 from scipy.stats.distributions import rv_continuous
+import matplotlib.pyplot as plt
 
 from numpy import where, inf
 from numpy import abs as np_abs
@@ -50,8 +50,7 @@ Generalized Pareto distribution
 
 genpareto2.pdf(x,c) = (1+c*x)**(-1-1/c)
 for c != 0, and for x >= 0 for all c, and x < 1/abs(c) for c < 0.
-"""
-                          )
+""")
 
 shape, loc, scale = 0.5, 0, 1
 rv = np.arange(5)
@@ -99,7 +98,7 @@ def meanexcess(thresh, shape, scale):
 
 def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
     if method == 'est':
-        #doesn't make much sense yet,
+        #does not make much sense yet,
         #estimate the parameters and use theoretical meanexcess
         if params is None:
             raise NotImplementedError
@@ -112,7 +111,7 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
         meanexcess = meanexcess[::-1]
         if plot:
             plt.plot(datasorted[:-uidx], meanexcess[:-uidx])
-            if not params is None:
+            if params is not None:
                 shape, scale = params
                 plt.plot(datasorted[:-uidx], (scale - datasorted[:-uidx] * shape) / (1. + shape))
     return datasorted, meanexcess
@@ -120,7 +119,6 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
 
 print(meanexcess(5, -0.5, 10))
 print(meanexcess(5, -2, 10))
-import matplotlib.pyplot as plt
 
 data = genpareto2.rvs(-0.75, scale=5, size=1000)
 #data = np.random.uniform(50, size=1000)
@@ -161,9 +159,6 @@ print(rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean())
 
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 [ 1.   0.5  0.   0.   0. ]
 [ 1.   0.5  0.   0.   0. ]
 [ 0.    0.75  1.    1.    1.  ]

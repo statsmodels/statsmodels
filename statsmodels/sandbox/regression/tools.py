@@ -19,7 +19,6 @@ A: josef-pktd
 
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import special
 from scipy.special import gammaln
@@ -123,7 +122,7 @@ def tstd_lls(y, params, df):
         normally distributed random variable
     params: array, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
-    df : integer
+    df : int
         degrees of freedom of the t distribution
 
     Returns
@@ -150,16 +149,6 @@ def norm_dlldy(y):
     '''
     return -y
 
-def ts_dlldy(y, df):
-    '''derivative of log pdf of standardized (?) t with respect to y
-
-    Notes
-    -----
-    parameterized for garch, with mean 0 and variance 1
-    '''
-    #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
-    #return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
-    return -(df+1)/(df) / (1 + y**2/(df)) * y
 
 def tstd_pdf(x, df):
     '''pdf for standardized (not standard) t distribution, variance is one
@@ -180,7 +169,7 @@ def ts_lls(y, params, df):
         normally distributed random variable
     params: array, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
-    df : integer
+    df : int
         degrees of freedom of the t distribution
 
     Returns
@@ -241,7 +230,7 @@ def tstd_dlldy(y, df):
     '''derivative of log pdf of standardized t with respect to y
 
         Parameters
-    ----------
+        ----------
     y : array_like
         data points of random variable at which loglike is evaluated
     df : array_like

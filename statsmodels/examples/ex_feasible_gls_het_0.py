@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Examples for linear model with heteroscedasticity estimated by feasible GLS
 
-These are examples to check the results during developement.
+These are examples to check the results during development.
 
 The assumptions:
 
@@ -16,11 +16,10 @@ Author: Josef Perktold
 
 """
 
-from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from statsmodels.regression.linear_model import OLS, WLS, GLS
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.feasible_gls import GLSHet, GLSHet2
 from statsmodels.tools.tools import add_constant
 

@@ -27,30 +27,27 @@ Currently, functions and classes have to be imported from the corresponding modu
 the main classes will be made available in the statsmodels.tsa namespace. The module
 structure is within statsmodels.tsa is
 
- - stattools : empirical properties and tests, acf, pacf, granger-causality,
-   adf unit root test, kpss test, bds test, ljung-box test and others.
- - ar_model : univariate autoregressive process, estimation with conditional
-   and exact maximum likelihood and conditional least-squares
- - arima_model : univariate ARMA process, estimation with conditional
-   and exact maximum likelihood and conditional least-squares
- - statespace : Comprehensive statespace model specification and estimation. See
-   the :ref:`statespace documentation <statespace>`.
- - vector_ar, var : vector autoregressive process (VAR) and vector error correction
-   models, estimation, impulse response analysis, forecast error variance decompositions,
-   and data visualization tools. See the :ref:`vector_ar documentation <var>`.
- - kalmanf : estimation classes for ARMA and other models with exact MLE using
-   Kalman Filter
- - arma_process : properties of arma processes with given parameters, this
-   includes tools to convert between ARMA, MA and AR representation as well as
-   acf, pacf, spectral density, impulse response function and similar
- - sandbox.tsa.fftarma : similar to arma_process but working in frequency domain
- - tsatools : additional helper functions, to create arrays of lagged variables,
-   construct regressors for trend, detrend and similar.
- - filters : helper function for filtering time series
- - regime_switching : Markov switching dynamic regression and autoregression
-   models
-
-
+- stattools : empirical properties and tests, acf, pacf, granger-causality,
+  adf unit root test, kpss test, bds test, ljung-box test and others.
+- ar_model : univariate autoregressive process, estimation with conditional
+  and exact maximum likelihood and conditional least-squares
+- arima_model : univariate ARMA process, estimation with conditional
+  and exact maximum likelihood and conditional least-squares
+- statespace : Comprehensive statespace model specification and estimation. See
+  the :ref:`statespace documentation <statespace>`.
+- vector_ar, var : vector autoregressive process (VAR) and vector error correction
+  models, estimation, impulse response analysis, forecast error variance decompositions,
+  and data visualization tools. See the :ref:`vector_ar documentation <var>`.
+- kalmanf : estimation classes for ARMA and other models with exact MLE using
+  Kalman Filter
+- arma_process : properties of arma processes with given parameters, this
+  includes tools to convert between ARMA, MA and AR representation as well as
+  acf, pacf, spectral density, impulse response function and similar
+- sandbox.tsa.fftarma : similar to arma_process but working in frequency domain
+- tsatools : additional helper functions, to create arrays of lagged variables,
+  construct regressors for trend, detrend and similar.
+- filters : helper function for filtering time series
+- regime_switching : Markov switching dynamic regression and autoregression models
 
 Some additional functions that are also useful for time series analysis are in
 other parts of statsmodels, for example additional statistical tests.
@@ -75,16 +72,21 @@ Descriptive Statistics and Tests
    stattools.pacf
    stattools.pacf_yw
    stattools.pacf_ols
+   stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
    stattools.periodogram
    stattools.adfuller
    stattools.kpss
+   stattools.zivot_andrews
    stattools.coint
    stattools.bds
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.innovations_algo
+   stattools.innovations_filter
+   stattools.levinson_durbin_pacf
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -95,8 +97,8 @@ Estimation
 The following are the main estimation classes, which can be accessed through
 statsmodels.tsa.api and their result classes
 
-Univariate Autogressive Processes (AR)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Univariate Autoregressive Processes (AR)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
 
@@ -107,8 +109,8 @@ Univariate Autogressive Processes (AR)
    ar_model.ARResults
 
 
-Autogressive Moving-Average Processes (ARMA) and Kalman Filter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.tsa
 
@@ -131,6 +133,7 @@ these are rarely needed by end-users):
    :toctree: generated/
 
    kalmanf.kalmanfilter.KalmanFilter
+   innovations.arma_innovations.arma_innovations
    innovations.arma_innovations.arma_loglike
    innovations.arma_innovations.arma_loglikeobs
    innovations.arma_innovations.arma_score
@@ -177,76 +180,108 @@ process for given lag-polynomials.
    arima_process.lpol_fima
    arima_process.lpol_sdiff
 
-.. currentmodule:: statsmodels
+.. currentmodule:: statsmodels.sandbox.tsa.fftarma
 
 .. autosummary::
    :toctree: generated/
 
-   sandbox.tsa.fftarma.ArmaFft
+   ArmaFft
 
 .. currentmodule:: statsmodels.tsa
 
 Statespace Models
 """""""""""""""""
-See the :ref:`statespace documentation. <statespace>`.
+See the :ref:`statespace documentation. <statespace>`
 
 
 Vector ARs and Vector Error Correction Models
 """""""""""""""""""""""""""""""""""""""""""""
-See the :ref:`vector_ar documentation. <var>`.
+See the :ref:`vector_ar documentation. <var>`
 
 Regime switching models
 """""""""""""""""""""""
 
+.. currentmodule:: statsmodels.tsa.regime_switching.markov_regression
 .. autosummary::
    :toctree: generated/
 
-   regime_switching.markov_regression.MarkovRegression
-   regime_switching.markov_autoregression.MarkovAutoregression
+   MarkovRegression
+
+.. currentmodule:: statsmodels.tsa.regime_switching.markov_autoregression
+.. autosummary::
+   :toctree: generated/
+
+   MarkovAutoregression
 
 
 Time Series Filters
 """""""""""""""""""
 
+.. currentmodule:: statsmodels.tsa.filters.bk_filter
 .. autosummary::
    :toctree: generated/
 
-   filters.bk_filter.bkfilter
-   filters.hp_filter.hpfilter
-   filters.cf_filter.cffilter
-   filters.filtertools.convolution_filter
-   filters.filtertools.recursive_filter
-   filters.filtertools.miso_lfilter
-   filters.filtertools.fftconvolve3
-   filters.filtertools.fftconvolveinv
-   seasonal.seasonal_decompose
+   bkfilter
 
+.. currentmodule:: statsmodels.tsa.filters.hp_filter
+.. autosummary::
+   :toctree: generated/
+
+   hpfilter
+
+.. currentmodule:: statsmodels.tsa.filters.cf_filter
+.. autosummary::
+   :toctree: generated/
+
+   cffilter
+
+.. currentmodule:: statsmodels.tsa.filters.filtertools
+.. autosummary::
+   :toctree: generated/
+
+   convolution_filter
+   recursive_filter
+   miso_lfilter
+   fftconvolve3
+   fftconvolveinv
+
+
+.. currentmodule:: statsmodels.tsa.seasonal
+.. autosummary::
+   :toctree: generated/
+
+   seasonal_decompose
+   STL
+   DecomposeResult
 
 TSA Tools
 """""""""
 
-.. currentmodule:: statsmodels.tsa
+.. currentmodule:: statsmodels.tsa.tsatools
 
 .. autosummary::
    :toctree: generated/
 
-   tsatools.add_trend
-   tsatools.detrend
-   tsatools.lagmat
-   tsatools.lagmat2ds
+   add_lag
+   add_trend
+   detrend
+   lagmat
+   lagmat2ds
 
 VARMA Process
 """""""""""""
 
+.. currentmodule:: statsmodels.tsa.varma_process
 .. autosummary::
    :toctree: generated/
 
-   varma_process.VarmaPoly
+   VarmaPoly
 
 Interpolation
 """""""""""""
 
+.. currentmodule:: statsmodels.tsa.interp.denton
 .. autosummary::
    :toctree: generated/
 
-   interp.denton.dentonm
+   dentonm

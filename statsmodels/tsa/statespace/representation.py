@@ -4,7 +4,6 @@ State Space Representation
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .tools import (
@@ -95,7 +94,7 @@ class Representation(object):
 
     Parameters
     ----------
-    k_endog : array_like or integer
+    k_endog : {array_like, int}
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -107,7 +106,7 @@ class Representation(object):
     initial_variance : float, optional
         Initial variance used when approximate diffuse initialization is
         specified. Default is 1e6.
-    initialization : Initialization object or string, optional
+    initialization : Initialization object or str, optional
         Initialization method for the initial state. If a string, must be one
         of {'diffuse', 'approximate_diffuse', 'stationary', 'known'}.
     initial_state : array_like, optional
@@ -116,7 +115,7 @@ class Representation(object):
     initial_state_cov : array_like, optional
         If `initialization='known'` is used, the covariance matrix of the
         initial state's distribution.
-    nobs : integer, optional
+    nobs : int, optional
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
@@ -588,7 +587,7 @@ class Representation(object):
 
     def initialize(self, initialization, approximate_diffuse_variance=None,
                    constant=None, stationary_cov=None):
-        # Create an Initialization object if necessary
+        """Create an Initialization object if necessary"""
         if initialization == 'known':
             initialization = Initialization(self.k_states, 'known',
                                             constant=constant,
@@ -845,6 +844,7 @@ class FrozenRepresentation(object):
         self.update_representation(model)
 
     def update_representation(self, model):
+        """Update model Representation"""
         # Model
         self.model = model
 

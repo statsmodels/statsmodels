@@ -32,11 +32,11 @@ Golan, A., Judge, G., and Miller, D.  1996.  Maximum Entropy Econometrics.
 #bias and variance. Technical Report 2003/131 School of Computer Science and Software Engineer-
 #ing, Monash University.
 
-from statsmodels.compat.python import range, lzip, lmap
+from statsmodels.compat.python import lzip, lmap
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.misc import logsumexp as sp_logsumexp
+from scipy.special import logsumexp as sp_logsumexp
 
 #TODO: change these to use maxentutils so that over/underflow is handled
 #with the logsumexp.
@@ -50,7 +50,7 @@ def logsumexp(a, axis=None):
 
     Parameters
     ----------
-    a : array-like
+    a : array_like
         The vector to exponentiate and sum
     axis : int, optional
         The axis along which to apply the operation.  Defaults is None.
@@ -96,7 +96,7 @@ def discretize(X, method="ef", nbins=None):
     ----------
     bins : int, optional
         Number of bins.  Default is floor(sqrt(N))
-    method : string
+    method : str
         "ef" is equal-frequency binning
         "ew" is equal-width binning
 
@@ -104,7 +104,7 @@ def discretize(X, method="ef", nbins=None):
     --------
     """
     nobs = len(X)
-    if nbins == None:
+    if nbins is None:
         nbins = np.floor(np.sqrt(nobs))
     if method == "ef":
         discrete = np.ceil(nbins * stats.rankdata(X)/nobs)
@@ -160,7 +160,7 @@ def shannonentropy(px, logbase=2):
     This is Shannon's entropy
 
     Parameters
-    -----------
+    ----------
     logbase, int or np.e
         The base of the log
     px : 1d or 2d array_like
@@ -179,7 +179,7 @@ def shannonentropy(px, logbase=2):
     -----
     shannonentropy(0) is defined as 0
     """
-#TODO: haven't defined the px,py case?
+#TODO: have not defined the px,py case?
     px = np.asarray(px)
     if not np.all(px <= 1) or not np.all(px >= 0):
         raise ValueError("px does not define proper distribution")
@@ -196,7 +196,7 @@ def shannoninfo(px, logbase=2):
 
     Parameters
     ----------
-    px : float or array-like
+    px : float or array_like
         `px` is a discrete probability distribution
 
     Returns
@@ -218,9 +218,9 @@ def condentropy(px, py, pxpy=None, logbase=2):
 
     Parameters
     ----------
-    px : array-like
-    py : array-like
-    pxpy : array-like, optional
+    px : array_like
+    py : array_like
+    pxpy : array_like, optional
         If pxpy is None, the distributions are assumed to be independent
         and conendtropy(px,py) = shannonentropy(px)
     logbase : int or np.e
@@ -234,9 +234,9 @@ def condentropy(px, py, pxpy=None, logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
     condent = np.sum(pxpy * np.nan_to_num(np.log2(py/pxpy)))
     if logbase == 2:
@@ -250,11 +250,11 @@ def mutualinfo(px,py,pxpy, logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like
+    pxpy : 2d array_like
         The joint probability distribution of random variables X and Y.
         Note that if X and Y are independent then the mutual information
         is zero.
@@ -267,9 +267,9 @@ def mutualinfo(px,py,pxpy, logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
     return shannonentropy(px, logbase=logbase) - condentropy(px,py,pxpy,
             logbase=logbase)
@@ -284,11 +284,11 @@ def corrent(px,py,pxpy,logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional
@@ -306,9 +306,9 @@ def corrent(px,py,pxpy,logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
 
     return mutualinfo(px,py,pxpy,logbase=logbase)/shannonentropy(py,
@@ -324,11 +324,11 @@ def covent(px,py,pxpy,logbase=2):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional
@@ -347,13 +347,15 @@ def covent(px,py,pxpy,logbase=2):
     """
     if not _isproperdist(px) or not _isproperdist(py):
         raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
+    if pxpy is not None and not _isproperdist(pxpy):
         raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
+    if pxpy is None:
         pxpy = np.outer(py,px)
 
-    return condent(px,py,pxpy,logbase=logbase) + condent(py,px,pxpy,
-            logbase=logbase)
+    # FIXME: these should be `condentropy`, not `condent`
+    return (condent(px, py, pxpy, logbase=logbase)  # noqa:F821  See GH#5756
+            + condent(py, px, pxpy, logbase=logbase))  # noqa:F821  See GH#5756
+
 
 
 #### Generalized Entropies ####
@@ -364,7 +366,7 @@ def renyientropy(px,alpha=1,logbase=2,measure='R'):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X.  Note that
         px is assumed to be a proper probability distribution.
     logbase : int or np.e, optional
@@ -415,11 +417,11 @@ def gencrossentropy(px,py,pxpy,alpha=1,logbase=2, measure='T'):
 
     Parameters
     ----------
-    px : array-like
+    px : array_like
         Discrete probability distribution of random variable X
-    py : array-like
+    py : array_like
         Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
+    pxpy : 2d array_like, optional
         Joint probability distribution of X and Y.  If pxpy is None, X and Y
         are assumed to be independent.
     logbase : int or np.e, optional

@@ -4,9 +4,11 @@ Author: josef pktd
 '''
 
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_
 import scipy
 from scipy import stats
 import matplotlib.pylab as plt
+
 
 class gaussian_kde_set_covariance(stats.gaussian_kde):
     '''
@@ -62,8 +64,7 @@ def plotkde(covfact):
     plt.title('Kernel Density Estimation - ' + str(gkde.covfact))
     plt.legend()
 
-from numpy.testing import assert_array_almost_equal, \
-               assert_almost_equal, assert_
+
 def test_kde_1d():
     np.random.seed(8765678)
     n_basesample = 500
@@ -75,7 +76,7 @@ def test_kde_1d():
     # get kde for original sample
     gkde = stats.gaussian_kde(xn)
 
-    # evaluate the density funtion for the kde for some points
+    # evaluate the density function for the kde for some points
     xs = np.linspace(-7,7,501)
     kdepdf = gkde.evaluate(xs)
     normpdf = stats.norm.pdf(xs, loc=xnmean, scale=xnstd)
@@ -117,7 +118,7 @@ if __name__ == '__main__':
     # get kde for original sample
     #gkde = stats.gaussian_kde(xn)
     gkde = gaussian_kde_covfact(xn, 0.1)
-    # evaluate the density funtion for the kde for some points
+    # evaluate the density function for the kde for some points
     ind = np.linspace(-7,7,101)
     kdepdf = gkde.evaluate(ind)
 

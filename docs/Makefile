@@ -11,7 +11,6 @@ BUILDDIR      = build
 PAPER         =
 TOOLSPATH	  = ../tools/
 DATASETBUILD  = dataset_rst.py
-EXAMPLEBUILD  = examples_rst.py
 NOTEBOOKBUILD = nbgenerate.py
 FOLDTOC  = fold_toc.py
 
@@ -43,22 +42,14 @@ html:
 	@echo "Make static directory for images"
 	mkdir -p $(BUILDDIR)/html/_static
 	# generate the examples rst files
-	@echo "Generating reST from examples folder"
-	#$(TOOLSPATH)$(EXAMPLEBUILD)
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
-	@echo "Generating notebooks from examples/notebooks folder"
-	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing
+	@echo "Executing notebooks from examples/notebooks folder"
+	mkdir -p $(BUILDDIR)/source/examples/notebooks/generated
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing --execute-only
 	@echo "Running sphinx-build"
 	@echo @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
-	@echo "Copying rendered example notebooks"
-	mkdir -p $(BUILDDIR)/html/examples/notebooks/generated
-	cp source/examples/notebooks/generated/*html $(BUILDDIR)/html/examples/notebooks/generated
-	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
-	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
-	@echo $(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
-	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

@@ -24,7 +24,7 @@ the only two group specific methods or get_within_cov and whiten
 
 import numpy as np
 from statsmodels.regression.linear_model import OLS, GLS
-from statsmodels.tools.grouputils import Group, GroupSorted
+from statsmodels.tools.grouputils import GroupSorted
 
 
 def sum_outer_product_loop(x, group_iter):
@@ -180,7 +180,7 @@ class ShortPanelGLS(GLS):
 
         Parameters
         ----------
-        maxiter : integer, optional
+        maxiter : int, optional
             the number of iterations
 
         Notes
@@ -198,7 +198,7 @@ class ShortPanelGLS(GLS):
         redundant recalculations (whitening or calculating pinv_wexog).
 
         """
-        #Note: in contrast to GLSHet, we don't have an auxilliary regression here
+        #Note: in contrast to GLSHet, we do not have an auxiliary regression here
         #      might be needed if there is more structure in cov_i
 
         #because we only have the loop we are not attaching the ols_pooled

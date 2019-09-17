@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from statsmodels.compat.python import lzip, zip
+from statsmodels.compat.python import lzip
 import numpy as np
 from . import kernels
 
@@ -12,7 +11,7 @@ class KDE(object):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         N-dimensional array from which the density is to be estimated
     kernel : Kernel Class
         Should be a class from *

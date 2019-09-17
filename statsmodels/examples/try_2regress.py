@@ -7,7 +7,6 @@ Created on Thu Mar 25 22:56:45 2010
 Author: josef-pktd
 """
 
-from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm

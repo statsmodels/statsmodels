@@ -23,7 +23,6 @@ I guess this is currently only for one sided test statistics, e.g. for
 two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
 
@@ -64,7 +63,7 @@ class StatTestMC(object):
        not be updated, and, therefore, not correspond to the same run.
 
     .. Warning::
-       Under Construction, don't expect stability in Api or implementation
+       Under Construction, do not expect stability in Api or implementation
 
 
     Examples
@@ -144,7 +143,7 @@ class StatTestMC(object):
             #self.nreturn = nreturns = 1
             mcres = np.zeros(nrepl)
             mcres[0] = mcres0
-            for ii in range(1, repl-1, nreturns):
+            for ii in range(1, nrepl-1, nreturns):
                 x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
                 #should I ravel?
                 mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
@@ -166,7 +165,7 @@ class StatTestMC(object):
 
         does not do any plotting
 
-        I don't remember what I wanted here, looks similar to the new cdf
+        I do not remember what I wanted here, looks similar to the new cdf
         method, but this also does a binned pdf (self.histo)
 
 
@@ -232,7 +231,7 @@ class StatTestMC(object):
         '''
 
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -304,7 +303,7 @@ class StatTestMC(object):
             be used in the calculation
         distpdf : callable
             probability density function of reference distribution
-        bins : integer or array_like
+        bins : {int, array_like}
             used unchanged for matplotlibs hist call
         ax : TODO: not implemented yet
         kwds : None or tuple of dicts
@@ -321,7 +320,7 @@ class StatTestMC(object):
         if kwds is None:
             kwds = ({},{})
         if self.mcres.ndim == 2:
-            if not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')
@@ -332,7 +331,7 @@ class StatTestMC(object):
 
 
         import matplotlib.pyplot as plt
-        #I don't want to figure this out now
+        #I do not want to figure this out now
 #        if ax=None:
 #            fig = plt.figure()
 #            ax = fig.addaxis()
@@ -450,7 +449,6 @@ class StatTestMC(object):
 
 if __name__ == '__main__':
     from scipy import stats
-    from statsmodels.iolib.table import SimpleTable
 
     from statsmodels.sandbox.stats.diagnostic import (
                     acorr_ljungbox, unitroot_adf)
@@ -472,7 +470,6 @@ if __name__ == '__main__':
 #    print(mc1.quantiles()
 
     print('\nLjung Box')
-    from statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
         s,p = acorr_ljungbox(x, lags=4)

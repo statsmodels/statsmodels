@@ -3,7 +3,7 @@ from numpy.testing import assert_raises, assert_equal
 from pandas import Series
 import pytest
 
-from statsmodels.graphics.factorplots import interaction_plot
+from statsmodels.graphics.factorplots import interaction_plot, _recode
 
 try:
     import matplotlib.pyplot as plt
@@ -62,3 +62,10 @@ class TestInteractionPlot(object):
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='scatter')
         assert_equal(isinstance(fig, plt.Figure), True)
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, plottype='unknown')
+
+    def test_recode_series(self):
+        series = Series(['a', 'b'] * 10, index=np.arange(0, 40, 2),
+                        name='index_test')
+        series_ = _recode(series, {'a': 0, 'b': 1})
+        assert_equal(series_.index.values, series.index.values,
+                     err_msg='_recode changed the index')

@@ -1,4 +1,5 @@
 # pylint: disable=W0611
+# flake8: noqa
 from . import diagnostic
 from .diagnostic import (
     acorr_ljungbox, acorr_breusch_godfrey,
@@ -11,9 +12,10 @@ from .diagnostic import (
     normal_ad, lilliefors
 )
 
+from ._knockoff import RegressionFDR
 from . import multicomp
 from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage,
-                        local_fdr, NullDistribution, RegressionFDR)
+                        local_fdr, NullDistribution)
 from .multicomp import tukeyhsd
 from . import gof
 from .gof import (powerdiscrepancy, gof_chisquare_discrete,
@@ -48,6 +50,8 @@ from .power import (TTestPower, TTestIndPower, GofChisquarePower,
 from .descriptivestats import Describe
 
 from .anova import anova_lm
+
+from .oaxaca import OaxacaBlinder
 
 from . import moment_helpers
 from .correlation_tools import (

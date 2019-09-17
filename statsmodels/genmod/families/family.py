@@ -2,7 +2,8 @@
 The one parameter exponential family distributions used by GLM.
 '''
 # TODO: quasi, quasibinomial, quasipoisson
-# see http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
+# see
+# http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
 
 
@@ -31,7 +32,7 @@ class Family(object):
 
     See Also
     --------
-    :ref:`links`
+    :ref:`links` : Further details on links.
     """
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
@@ -78,7 +79,9 @@ class Family(object):
             warnmssg = "Calling Family(..) with a link class as argument "
             warnmssg += "is deprecated.\n"
             warnmssg += "Use an instance of a link class instead."
-            warnings.warn(warnmssg, category=DeprecationWarning)
+            lvl = 2 if type(self) is Family else 3
+            warnings.warn(warnmssg,
+                          category=DeprecationWarning, stacklevel=lvl)
             self.link = link()
         else:
             self.link = link
@@ -114,7 +117,7 @@ class Family(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             The transformed mean response variable in the exponential family
 
         Returns
@@ -139,13 +142,13 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array-like
+        endog : array_like
             The endogenous response variable
-        mu : array-like
+        mu : array_like
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
-        freq_weights : array-like
+        freq_weights : array_like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
@@ -181,11 +184,11 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array-like
+        endog : array_like
             The endogenous response variable
-        mu : array-like
+        mu : array_like
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
@@ -202,7 +205,7 @@ class Family(object):
 
         .. math::
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
-           
+
         D_i is calculated from the _resid_dev method in each family.
         Distribution-specific documentation of the calculation is available
         there.
@@ -211,19 +214,18 @@ class Family(object):
         resid_dev *= var_weights / scale
         return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0., np.inf))
 
-
     def fitted(self, lin_pred):
         r"""
         Fitted values based on linear predictors lin_pred.
 
         Parameters
-        -----------
+        ----------
         lin_pred : array
             Values of the linear predictor of the model.
             :math:`X \cdot \beta` in a classical linear model.
 
         Returns
-        --------
+        -------
         mu : array
             The mean response variables given by the inverse of the link
             function.
@@ -259,7 +261,7 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -289,9 +291,9 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
-        freq_weights : array-like
+        freq_weights : array_like
             1d array of frequency weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -327,7 +329,7 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -385,10 +387,10 @@ class Poisson(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
@@ -438,7 +440,7 @@ class Poisson(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -468,7 +470,7 @@ class Poisson(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -477,7 +479,7 @@ class Poisson(Family):
         Returns
         -------
         resid_anscombe : array
-            The Anscome residuals for the Poisson family defined below
+            The Anscombe residuals for the Poisson family defined below
 
         Notes
         -----
@@ -511,10 +513,10 @@ class Gaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.constant
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -561,7 +563,7 @@ class Gaussian(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -610,7 +612,7 @@ class Gaussian(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -655,10 +657,10 @@ class Gamma(Family):
         ``variance`` is an instance of
         statsmodels.genmod.family.varfuncs.mu_squared
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
     """
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
@@ -707,7 +709,7 @@ class Gamma(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -747,7 +749,7 @@ class Gamma(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -789,14 +791,22 @@ class Binomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.binary
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
-    endog for Binomial can be specified in one of three ways.
+    endog for Binomial can be specified in one of three ways:
+    A 1d array of 0 or 1 values, indicating failure or success
+    respectively.
+    A 2d array, with two columns. The first column represents the
+    success count and the second column represents the failure
+    count.
+    A 1d array of proportions, indicating the proportion of
+    successes, with parameter `var_weights` containing the
+    number of trials for each row.
     """
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
@@ -835,7 +845,7 @@ class Binomial(Family):
             1d array of frequency weights
 
         Returns
-        --------
+        -------
         If `endog` is binary, returns `endog`
 
         If `endog` is a 2d array, then the input is assumed to be in the format
@@ -845,7 +855,11 @@ class Binomial(Family):
         '''
         # if not np.all(np.asarray(freq_weights) == 1):
         #     self.variance = V.Binomial(n=freq_weights)
-        if (endog.ndim > 1 and endog.shape[1] > 1):
+        if endog.ndim > 1 and endog.shape[1] > 2:
+            raise ValueError('endog has more than 2 columns. The Binomial '
+                             'link supports either a single response variable '
+                             'or a paired response variable.')
+        elif endog.ndim > 1 and endog.shape[1] > 1:
             y = endog[:, 0]
             # overwrite self.freq_weights for deviance below
             self.n = endog.sum(1)
@@ -892,7 +906,7 @@ class Binomial(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -942,7 +956,7 @@ class Binomial(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1016,16 +1030,15 @@ class InverseGaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu_cubed
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
-    The inverse Guassian distribution is sometimes referred to in the
+    The inverse Gaussian distribution is sometimes referred to in the
     literature as the Wald distribution.
-
     """
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
@@ -1073,7 +1086,7 @@ class InverseGaussian(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1107,7 +1120,7 @@ class InverseGaussian(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1154,10 +1167,10 @@ class NegativeBinomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.nbinom
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
 
     Notes
     -----
@@ -1166,7 +1179,7 @@ class NegativeBinomial(Family):
     Parameterization for :math:`y=0, 1, 2, \ldots` is
 
     .. math::
-      
+
        f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
               \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
               \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y
@@ -1228,7 +1241,7 @@ class NegativeBinomial(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1279,7 +1292,7 @@ class NegativeBinomial(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1329,6 +1342,10 @@ class Tweedie(Family):
         See statsmodels.genmod.families.links for more information.
     var_power : float, optional
         The variance power. The default is 1.
+    eql : bool
+        If True, the Extended Quasi-Likelihood is used, else the
+        likelihood is used (however the latter is not implemented).
+        If eql is True, var_power must be between 1 and 2.
 
     Attributes
     ----------
@@ -1340,23 +1357,28 @@ class Tweedie(Family):
     Tweedie.var_power : float
         The power of the variance function.
 
-    See also
+    See Also
     --------
-    statsmodels.genmod.families.family.Family
-    :ref:`links`
+    statsmodels.genmod.families.family.Family : Parent class for all links.
+    :ref:`links` : Further details on links.
+
     Notes
     -----
-    Logliklihood function not implemented because of the complexity of
+    Loglikelihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.
     """
     links = [L.log, L.Power]
-    variance = V.Power
+    variance = V.Power(power=1.5)
     safe_links = [L.log, L.Power]
 
-    def __init__(self, link=None, var_power=1.):
+    def __init__(self, link=None, var_power=1., eql=False):
         self.var_power = var_power
+        self.eql = eql
+        if eql and (var_power < 1 or var_power > 2):
+            raise ValueError("Tweedie: if EQL=True then var_power must fall "
+                             "between 1 and 2")
         if link is None:
             link = L.log()
         super(Tweedie, self).__init__(
@@ -1438,7 +1460,7 @@ class Tweedie(Family):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1451,10 +1473,39 @@ class Tweedie(Family):
 
         Notes
         -----
-        This is not implemented because of the complexity of calculating an
-        infinite series of sums.
+        If eql is True, the Extended Quasi-Likelihood is used.  At present,
+        this method returns NaN if eql is False.  When the actual likelihood
+        is implemented, it will be accessible by setting eql to False.
+
+        References
+        ----------
+        JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.
+        Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
-        return np.nan
+        if not self.eql:
+            # We have not yet implemented the actual likelihood
+            return np.nan
+
+        # Equations 9-10 or Nelder and Pregibon
+        p = self.var_power
+        llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
+        llf /= -2
+
+        if p == 1:
+            u = endog * np.log(endog / mu) - (endog - mu)
+            u *= var_weights / scale
+        elif p == 2:
+            yr = endog / mu
+            u = yr - np.log(yr) - 1
+            u *= var_weights / scale
+        else:
+            u = (endog ** (2 - p)
+                 - (2 - p) * endog * mu ** (1 - p)
+                 + (1 - p) * mu ** (2 - p))
+            u *= var_weights / (scale * (1 - p) * (2 - p))
+        llf -= u
+
+        return llf
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -1466,7 +1517,7 @@ class Tweedie(Family):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array-like
+        var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).

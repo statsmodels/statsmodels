@@ -15,7 +15,7 @@ other versions need normalization
 TODO:
 
 * check fourier case again:  base is orthonormal,
-  but needs offsetfact = 0 and doesn't integrate to 1, rescaled looks good
+  but needs offsetfact = 0 and does not integrate to 1, rescaled looks good
 * hermite: works but DensityOrthoPoly requires currently finite bounds
   I use it with offsettfactor 0.5 in example
 * not implemented methods:
@@ -37,11 +37,9 @@ enhancements:
 
 
 '''
-from __future__ import print_function
-from statsmodels.compat.python import zip
-from scipy import stats, integrate
-import numpy as np
+from scipy import stats, integrate, special
 
+import numpy as np
 
 
 sqr2 = np.sqrt(2.)
@@ -49,7 +47,7 @@ sqr2 = np.sqrt(2.)
 class FPoly(object):
     '''Orthonormal (for weight=1) Fourier Polynomial on [0,1]
 
-    orthonormal polynomial but density needs corfactor that I don't see what
+    orthonormal polynomial but density needs corfactor that I do not see what
     it is analytically
 
     parameterization on [0,1] from
@@ -74,7 +72,7 @@ class FPoly(object):
 class F2Poly(object):
     '''Orthogonal (for weight=1) Fourier Polynomial on [0,pi]
 
-    is orthogonal but first component doesn't square-integrate to 1
+    is orthogonal but first component does not square-integrate to 1
     final result seems to need a correction factor of sqrt(pi)
     _corfactor = sqrt(pi) from integrating the density
 
@@ -128,10 +126,6 @@ class ChebyTPoly(object):
         else:
             return self.poly(x) / (1-x**2)**(1/4.) /np.sqrt(np.pi) *np.sqrt(2)
 
-
-
-from statsmodels.compat.scipy import factorial
-from scipy import special
 
 logpi2 = np.log(np.pi)/2
 
@@ -202,7 +196,7 @@ def inner_cont(polys, lower, upper, weight=None):
         for j in range(i+1):
             p1 = polys[i]
             p2 = polys[j]
-            if not weight is None:
+            if weight is not None:
                 innp, err = integrate.quad(lambda x: p1(x)*p2(x)*weight(x),
                                        lower, upper)
             else:
@@ -287,7 +281,7 @@ class DensityOrthoPoly(object):
     '''
 
     def __init__(self, polybase=None, order=5):
-        if not polybase is None:
+        if polybase is not None:
             self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
         #try:
@@ -387,7 +381,7 @@ class DensityOrthoPoly(object):
         '''
 
         #use domain from first instance
-        #class doesn't have domain  self.polybase.domain[0] AttributeError
+        #class does not have domain  self.polybase.domain[0] AttributeError
         domain = self.polys[0].domain
 
         ilen = (domain[1] - domain[0])
@@ -399,7 +393,6 @@ class DensityOrthoPoly(object):
 
 #old version as a simple function
 def density_orthopoly(x, polybase, order=5, xeval=None):
-    from scipy.special import legendre, hermitenorm, chebyt, chebyu, hermite
     #polybase = legendre  #chebyt #hermitenorm#
     #polybase = chebyt
     #polybase = FPoly
@@ -452,7 +445,6 @@ if __name__ == '__main__':
         f_hat, grid, coeffs, polys = density_orthopoly(obs_dist, ChebyTPoly, order=20, xeval=None)
         #f_hat /= f_hat.sum() * (grid.max() - grid.min())/len(grid)
         f_hat0 = f_hat
-        from scipy import integrate
         fint = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
         #f_hat -= fint/2.
         print('f_hat.min()', f_hat.min())

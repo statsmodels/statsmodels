@@ -22,8 +22,8 @@ Idea for second part
 
 
 
-from __future__ import print_function
-from statsmodels.compat.python import zip
+from numpy.testing import assert_equal
+
 import numpy as np
 
 #next 3 functions copied from multicomp.py
@@ -153,7 +153,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
                               for c,v in zip(row, names_prod)[::-1] if c != 0])
                                  for row in contrast_prod2]
 
-    if (not intgroup1 is None) and (not intgroup1 is None):
+    if (intgroup1 is not None) and (intgroup1 is not None):
         d1, _ = dummy_1d(intgroup1)
         d2, _ = dummy_1d(intgroup2)
         dummy = dummy_product(d1, d2)
@@ -174,7 +174,7 @@ def dummy_1d(x, varname=None):
     ----------
     x : ndarray, 1d
         categorical variable, requires integers if varname is None
-    varname : string
+    varname : str
         name of the variable used in labels for category levels
 
     Returns
@@ -182,7 +182,7 @@ def dummy_1d(x, varname=None):
     dummy : ndarray, 2d
         array of dummy variables, one column for each level of the
         category (full set)
-    labels : list of strings
+    labels : list[str]
         labels for the columns, i.e. levels of each category
 
 
@@ -550,16 +550,8 @@ class TwoWay(object):
                            txt_fmt=table_fmt)
 
 
-
-
-
-
-
-#--------------- tests
-
-from numpy.testing import assert_equal
-
-#TODO: several tests still missing, several are in the example with print
+# --------------- tests
+# TODO: several tests still missing, several are in the example with print
 
 class TestContrastTools(object):
 

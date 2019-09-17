@@ -6,7 +6,6 @@ Created on Wed Jan 02 13:43:44 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.nonparametric.api as nparam
 
@@ -32,12 +31,12 @@ if __name__ == '__main__':
         y_cens = np.minimum(y, c_val)
 
     model = nparam.KernelCensoredReg(endog=[y_cens],
-                             #exog=[np.column_stack((x, x**2))], reg_type='lc',
-                             exog=[x, x2], reg_type='ll',
-                             var_type='cc', bw='aic', #'cv_ls', #[0.23, 434697.22], #'cv_ls',
-                             censor_val=c_val[:,None],
-                             #defaults=nparam.EstimatorSettings(efficient=True)
-                             )
+                                     #exog=[np.column_stack((x, x**2))], reg_type='lc',
+                                     exog=[x, x2], reg_type='ll',
+                                     var_type='cc', bw='aic', #'cv_ls', #[0.23, 434697.22], #'cv_ls',
+                                     censor_val=c_val[:,None]
+                                     #defaults=nparam.EstimatorSettings(efficient=True)
+                                     )
 
     sm_bw = model.bw
 
@@ -49,9 +48,8 @@ if __name__ == '__main__':
 #    mean1, mfx1 = model1.fit()
 
     model2 = nparam.KernelReg(endog=[y_cens],
-                             exog=[x, x2], reg_type='ll',
-                             var_type='cc', bw='aic',# 'cv_ls'
-                             )
+                              exog=[x, x2], reg_type='ll',
+                              var_type='cc', bw='aic')#, 'cv_ls'
 
     mean2, mfx2 = model2.fit()
 

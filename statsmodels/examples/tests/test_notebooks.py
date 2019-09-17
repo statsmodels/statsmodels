@@ -48,6 +48,7 @@ if not nbs:
     pytestmark = pytest.mark.skip(reason='No notebooks found so not tests run')
 
 
+@pytest.mark.slow
 @pytest.mark.example
 def test_notebook(notebook):
     fullfile = os.path.abspath(notebook)

@@ -126,14 +126,14 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
     if verbose:
         print("Tried directories %s but none started with prefix %s" %
               (str(rootdirs), parentdir_prefix))
-    raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
+    raise NotThisMethod("rootdir does not start with parentdir_prefix")
 
 
 @register_vcs_handler("git", "get_keywords")
 def git_get_keywords(versionfile_abs):
     """Extract version information from the given file."""
     # the code embedded in _version.py can just fetch the value of these
-    # keywords. When used from setup.py, we don't want to import _version.py,
+    # keywords. When used from setup.py, we do not want to import _version.py,
     # so we do it with a regexp instead. This function is not used from
     # _version.py.
     keywords = {}
@@ -218,7 +218,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
     """Get version from 'git describe' in the root of the source tree.
 
     This only gets called if the git-archive 'subst' keywords were *not*
-    expanded, and _version.py hasn't already been rewritten with a short
+    expanded, and _version.py has not already been rewritten with a short
     version string, meaning we're inside a checked out source tree.
     """
     GITS = ["git"]
@@ -233,7 +233,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         raise NotThisMethod("'git rev-parse --git-dir' returned error")
 
     # if there is a tag matching tag_prefix, this yields TAG-NUM-gHEX[-dirty]
-    # if there isn't one, this yields HEX[-dirty] (no NUM)
+    # if there is not one, this yields HEX[-dirty] (no NUM)
     describe_out, rc = run_command(GITS, ["describe", "--tags", "--dirty",
                                           "--always", "--long",
                                           "--match", "%s*" % tag_prefix],
@@ -277,9 +277,9 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         full_tag = mo.group(1)
         if not full_tag.startswith(tag_prefix):
             if verbose:
-                fmt = "tag '%s' doesn't start with prefix '%s'"
+                fmt = "tag '%s' does not start with prefix '%s'"
                 print(fmt % (full_tag, tag_prefix))
-            pieces["error"] = ("tag '%s' doesn't start with prefix '%s'"
+            pieces["error"] = ("tag '%s' does not start with prefix '%s'"
                                % (full_tag, tag_prefix))
             return pieces
         pieces["closest-tag"] = full_tag[len(tag_prefix):]
@@ -306,7 +306,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
 
 
 def plus_or_dot(pieces):
-    """Return a + if we don't already have one, else return a ."""
+    """Return a + if we do not already have one, else return a ."""
     if "+" in pieces.get("closest-tag", ""):
         return "."
     return "+"
@@ -358,7 +358,7 @@ def render_pep440_post(pieces):
 
     The ".dev0" means dirty. Note that .dev0 sorts backwards
     (a dirty tree will appear "older" than the corresponding clean one),
-    but you shouldn't be releasing software with -dirty anyways.
+    but you should not be releasing software with -dirty anyways.
 
     Exceptions:
     1: no tags. 0.postDISTANCE[.dev0]
@@ -478,7 +478,7 @@ def get_versions():
     """Get version information or return default if unable to do so."""
     # I am in _version.py, which lives at ROOT/VERSIONFILE_SOURCE. If we have
     # __file__, we can work backwards from there to the root. Some
-    # py2exe/bbfreeze/non-CPython implementations don't do __file__, in which
+    # py2exe/bbfreeze/non-CPython implementations do not do __file__, in which
     # case we can only use expanded keywords.
 
     cfg = get_config()

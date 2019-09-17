@@ -15,12 +15,11 @@ few modules and functions:
 
 .. ipython:: python
 
-    from __future__ import print_function
     import statsmodels.api as sm
     import pandas
     from patsy import dmatrices
 
-`pandas <http://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
+`pandas <https://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
 rich data structures and data analysis tools. The ``pandas.DataFrame`` function
 provides labelled arrays of (potentially heterogenous) data, similar to the
 ``R`` "data.frame". The ``pandas.read_csv`` function can be used to convert a
@@ -29,6 +28,13 @@ comma-separated values file to a ``DataFrame`` object.
 `patsy <https://github.com/pydata/patsy>`_ is a Python library for describing
 statistical models and building `Design Matrices
 <https://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.
+
+.. note::
+
+   This example uses the API interface.  See :ref:`importpaths` for information on
+   the difference between importing the API interfaces (``statsmodels.api`` and
+   ``statsmodels.tsa.api``) and directly importing from the module that defines
+   the model.
 
 Data
 ----
@@ -94,7 +100,7 @@ capita (*Lottery*). :math:`X` is :math:`N \times 7` with an intercept, the
 *Literacy* and *Wealth* variables, and 4 region binary variables.
 
 The ``patsy`` module provides a convenient function to prepare design matrices
-using ``R``-like formulas. You can find more information `here <http://patsy.readthedocs.io/en/latest/>`_.
+using ``R``-like formulas. You can find more information `here <https://patsy.readthedocs.io/en/latest/>`_.
 
 We use ``patsy``'s ``dmatrices`` function to create design matrices:
 
@@ -116,7 +122,7 @@ Notice that ``dmatrices`` has
 * returned ``pandas`` DataFrames instead of simple numpy arrays. This is useful because DataFrames allow ``statsmodels`` to carry-over meta-data (e.g. variable names) when reporting results.
 
 The above behavior can of course be altered. See the `patsy doc pages
-<http://patsy.readthedocs.io/en/latest/>`_.
+<https://patsy.readthedocs.io/en/latest/>`_.
 
 Model fit and summary
 ---------------------
@@ -175,6 +181,17 @@ plot of partial regression for a set of regressors by:
     @savefig gettingstarted_0.png
     sm.graphics.plot_partregress('Lottery', 'Wealth', ['Region', 'Literacy'],
                                  data=df, obs_labels=False)
+
+Documentation
+-------------
+Documentation can be accessed from an IPython session
+using :func:`~statsmodels.tools.web.webdoc`.
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   ~statsmodels.tools.web.webdoc
 
 More
 ----

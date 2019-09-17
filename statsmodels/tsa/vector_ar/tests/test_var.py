@@ -2,33 +2,28 @@
 """
 Test VAR Model
 """
+from statsmodels.compat.python import iteritems, lrange
+
+from io import StringIO, BytesIO
 import warnings
-# pylint: disable=W0612,W0231
-from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
-                                       range)
 
 import os
 import sys
 
 import numpy as np
+import pandas as pd
+from pandas.util.testing import assert_index_equal
 import pytest
-
-try:
-    import matplotlib  # noqa: F401
-    from distutils.version import LooseVersion
-    MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
-except ImportError:
-    MATPLOTLIB_GT_15 = False
 
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.vector_ar.var_model import VAR, var_acf
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
 DECIMAL_12 = 12
@@ -39,8 +34,26 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 
 
-class CheckVAR(object):
-    # just so pylint won't complain
+@pytest.fixture()
+def bivariate_var_data(reset_randomstate):
+    """A bivariate dataset for VAR estimation"""
+    e = np.random.standard_normal((252, 2))
+    y = np.zeros_like(e)
+    y[:2] = e[:2]
+    for i in range(2, 252):
+        y[i] = .2 * y[i - 1] + .1 * y[i - 2] + e[i]
+    return y
+
+
+@pytest.fixture()
+def bivariate_var_result(bivariate_var_data):
+    """A bivariate VARResults for reuse"""
+    mod = VAR(bivariate_var_data)
+    return mod.fit()
+
+
+class CheckVAR(object):  # FIXME: not inherited, so these tests are never run!
+    # just so pylint will not complain
     res1 = None
     res2 = None
 
@@ -102,14 +115,14 @@ def get_macrodata():
     return nd.ravel().view(data.dtype, type=np.ndarray)
 
 
-def generate_var():
+def generate_var():  # FIXME: make a test?
     from rpy2.robjects import r
     import pandas.rpy.common as prp
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
 
-def write_generate_var():
+def write_generate_var():  # FIXME: make a test?
     result = generate_var()
     np.savez('tests/results/vars_results.npz', **result)
 
@@ -161,7 +174,9 @@ def setup_module():
 
 class CheckIRF(object):
 
-    ref = None; res = None; irf = None
+    ref = None
+    res = None
+    irf = None
     k = None
 
     #---------------------------------------------------------------------------
@@ -199,6 +214,7 @@ class CheckIRF(object):
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
 
+@pytest.mark.smoke
 class CheckFEVD(object):
 
     fevd = None
@@ -216,11 +232,13 @@ class CheckFEVD(object):
     def test_fevd_summary(self):
         self.fevd.summary()
 
-    @pytest.mark.xfail(reason="FEVD.cov() is not implemented")
+    @pytest.mark.xfail(reason="FEVD.cov() is not implemented",
+                       raises=NotImplementedError, strict=True)
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
         covs = self.fevd.cov()
+        raise NotImplementedError
 
 
 class TestVARResults(CheckIRF, CheckFEVD):
@@ -267,6 +285,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(Exception):
             self.res.get_eq_index('foo')
 
+    @pytest.mark.smoke
     def test_repr(self):
         # just want this to work
         foo = str(self.res)
@@ -275,19 +294,24 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
 
+    @pytest.mark.smoke
     def test_cov_params(self):
         # do nothing for now
         self.res.cov_params
 
+    @pytest.mark.smoke
     def test_cov_ybar(self):
         self.res.cov_ybar()
 
+    @pytest.mark.smoke
     def test_tstat(self):
         self.res.tvalues
 
+    @pytest.mark.smoke
     def test_pvalues(self):
         self.res.pvalues
 
+    @pytest.mark.smoke
     def test_summary(self):
         summ = self.res.summary()
 
@@ -354,6 +378,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(Exception):
             self.res.test_causality(0, 1, kind='foo')
 
+    @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
         result = self.model.fit(10, ic='fpe', verbose=True)
@@ -374,14 +399,37 @@ class TestVARResults(CheckIRF, CheckFEVD):
         acfs = self.res.acf()
         assert(len(acfs) == self.p + 1)
 
+    def test_acf_2_lags(self):
+        c = np.zeros((2, 2, 2))
+        c[0] = np.array([[.2, .1], [.15, .15]])
+        c[1] = np.array([[.1, .9], [0, .1]])
+
+        acf = var_acf(c, np.eye(2), 3)
+
+        gamma = np.zeros((6, 6))
+        gamma[:2, :2] = acf[0]
+        gamma[2:4, 2:4] = acf[0]
+        gamma[4:6, 4:6] = acf[0]
+        gamma[2:4, :2] = acf[1].T
+        gamma[4:, :2] = acf[2].T
+        gamma[:2, 2:4] = acf[1]
+        gamma[:2, 4:] = acf[2]
+        recovered = np.dot(gamma[:2, 2:], np.linalg.inv(gamma[:4, :4]))
+        recovered = [recovered[:, 2 * i:2 * (i + 1)] for i in range(2)]
+        recovered = np.array(recovered)
+        assert_allclose(recovered, c, atol=1e-7)
+
+    @pytest.mark.smoke
     def test_acorr(self):
         acorrs = self.res.acorr(10)
 
+    @pytest.mark.smoke
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        self.res.forecast(self.res.endog[-5:], 5)
 
+    @pytest.mark.smoke
     def test_forecast_interval(self):
-        y = self.res.y[:-self.p:]
+        y = self.res.endog[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     @pytest.mark.matplotlib
@@ -654,29 +702,35 @@ class TestVARExtras(object):
 
         irf = res0.irf()
 
-        # partially SMOKE test
-        if MATPLOTLIB_GT_15:
-            res0.plotsim()
-            res0.plot_acorr()
+    @pytest.mark.matplotlib
+    def test_process_plotting(self, close_figures):
+        # Partially a smoke test
+        res0 = self.res0
+        k_ar = res0.k_ar
+        fc20 = res0.forecast(res0.endog[-k_ar:], 20)
+        irf = res0.irf()
 
-            fig = res0.plot_forecast(20)
-            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
-            # Note values are equal, but keep rtol buffer
-            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
-            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
-            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
+        res0.plotsim()
+        res0.plot_acorr()
 
-            fig_asym = irf.plot()
-            fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
+        fig = res0.plot_forecast(20)
+        fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+        # Note values are equal, but keep rtol buffer
+        assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+        fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+        fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-            for k in range(3):
-                a = fig_asym.axes[1].get_children()[k].get_ydata()
-                m = fig_mc.axes[1].get_children()[k].get_ydata()
-                # use m as desired because it is larger
-                # a is for some irf much smaller than m
-                assert_allclose(a, m, atol=0.1, rtol=0.9)
+        fig_asym = irf.plot()
+        fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
+
+        for k in range(3):
+            a = fig_asym.axes[1].get_children()[k].get_ydata()
+            m = fig_mc.axes[1].get_children()[k].get_ydata()
+            # use m as desired because it is larger
+            # a is for some irf much smaller than m
+            assert_allclose(a, m, atol=0.1, rtol=0.9)
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only
@@ -745,3 +799,21 @@ class TestVARExtras(object):
         assert_allclose(fci2, fci1, rtol=1e-12)
         assert_allclose(fci3, fci1, rtol=1e-12)
         assert_allclose(fci3, fci2, rtol=1e-12)
+
+
+@pytest.mark.parametrize('attr', ['y', 'ys_lagged'])
+def test_deprecated_attributes_varresults(bivariate_var_result, attr):
+    with pytest.warns(FutureWarning):
+        getattr(bivariate_var_result, attr)
+
+
+def test_var_cov_params_pandas(bivariate_var_data):
+    df = pd.DataFrame(bivariate_var_data, columns=['x', 'y'])
+    mod = VAR(df)
+    res = mod.fit(2)
+    cov = res.cov_params()
+    assert isinstance(cov, pd.DataFrame)
+    exog_names = ('const', 'L1.x', 'L1.y', 'L2.x', 'L2.y')
+    index = pd.MultiIndex.from_product((exog_names, ('x', 'y')))
+    assert_index_equal(cov.index, cov.columns)
+    assert_index_equal(cov.index, index)

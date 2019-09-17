@@ -6,7 +6,6 @@ Author: josef-pktd
 License: BSD (3-clause)
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.tools import pca
@@ -130,7 +129,7 @@ class FactorModelUnivariate(object):
 
         Returns
         -------
-        sumstr : string
+        sumstr : str
             summary of the results for selecting the number of factors
 
         '''
@@ -146,8 +145,7 @@ class FactorModelUnivariate(object):
 
         sumstr += '\n' + ' '*19 + '%5d %4d %6d %5d' % tuple(self.best_nfact)
 
-        from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
-                                default_latex_fmt, default_html_fmt)
+        from statsmodels.iolib.table import SimpleTable
 
         headers = 'k, AIC, BIC, R2_adj, L1O'.split(', ')
         numformat = ['%6d'] + ['%10.3f']*4 #'%10.4f'

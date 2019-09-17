@@ -6,7 +6,7 @@ This script checks Gaussian models.
 See the generated file "gee_gaussian_simulation_check.txt" for
 results.
 """
-from statsmodels.compat.python import range, lrange, zip
+from statsmodels.compat.python import lrange
 import scipy
 import numpy as np
 from itertools import product

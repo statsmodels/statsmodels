@@ -4,7 +4,6 @@ Tests for tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import pytest
 import numpy as np
@@ -30,7 +29,9 @@ class TestCompanionMatrix(object):
          np.array([[1, 2, 5, 6],
                    [3, 4, 7, 8],
                    [1, 0, 0, 0],
-                   [0, 1, 0, 0]]).T)
+                   [0, 1, 0, 0]]).T),
+        # GH 5570
+        (np.int64(2), np.array([[0, 1], [0, 0]]))
     ]
 
     def test_cases(self):
@@ -78,7 +79,7 @@ class TestDiff(object):
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
 
-            # Test as Pandas Dataframe
+            # Test as Pandas DataFrame
             series = pd.DataFrame(series)
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
@@ -224,7 +225,7 @@ class TestUnconstrainStationaryUnivariate(object):
 
 
 class TestStationaryUnivariate(object):
-    # Test that the constraint and unconstraint functions are inverses
+    # Test that the constraint and unconstrained functions are inverses
 
     constrained_cases = [
         np.array([0]), np.array([0.1]), np.array([-0.5]), np.array([0.999])]
@@ -422,7 +423,7 @@ class TestUnconstrainStationaryMultivariate(object):
 
 
 class TestStationaryMultivariate(object):
-    # Test that the constraint and unconstraint functions are inverses
+    # Test that the constraint and unconstrained functions are inverses
 
     constrained_cases = [
         np.array([[0]]), np.array([[0.1]]),

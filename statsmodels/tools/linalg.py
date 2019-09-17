@@ -1,10 +1,8 @@
 """
 Linear Algebra solvers and other helpers
 """
-from __future__ import print_function
-from statsmodels.compat.python import range
 import numpy as np
-from scipy.linalg import pinv, pinv2, lstsq  # noqa:F421
+from scipy.linalg import pinv, pinv2, lstsq  # noqa:F401
 
 
 def logdet_symm(m, check_symm=False):
@@ -13,7 +11,7 @@ def logdet_symm(m, check_symm=False):
 
     Parameters
     ----------
-    m : array-like
+    m : array_like
         2d array that is positive-definite (and symmetric)
 
     Returns
@@ -38,10 +36,10 @@ def stationary_solve(r, b):
 
     Parameters
     ----------
-    r : array-like
+    r : array_like
         A vector describing the coefficient matrix.  r[0] is the first
         band next to the diagonal, r[1] is the second band, etc.
-    b : array-like
+    b : array_like
         The right-hand side for which we are solving, i.e. we solve
         Tx = b and return b, where T is the Toeplitz coefficient matrix.
 
@@ -114,7 +112,8 @@ def transf_constraints(constraints):
     return transf
 
 
-def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15):
+def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
+                threshold=1e-15):
     """matrix square root for symmetric matrices
 
     Usage is for decomposing a covariance function S into a square root R

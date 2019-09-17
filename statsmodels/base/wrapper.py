@@ -1,8 +1,8 @@
-import inspect
-import functools
+from statsmodels.compat.python import iteritems
 
-import numpy as np
-from statsmodels.compat.python import iteritems, getargspec
+import functools
+import inspect
+from textwrap import dedent
 
 
 class ResultsWrapper(object):
@@ -44,27 +44,27 @@ class ResultsWrapper(object):
         return obj
 
     def __getstate__(self):
-        #print 'pickling wrapper', self.__dict__
+        # print 'pickling wrapper', self.__dict__
         return self.__dict__
 
     def __setstate__(self, dict_):
-        #print 'unpickling wrapper', dict_
+        # print 'unpickling wrapper', dict_
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
-        '''save a pickle of this instance
+        """
+        Save a pickle of this instance.
 
         Parameters
         ----------
-        fname : string or filehandle
-            fname can be a string to a file path or filename, or a filehandle.
+        fname : {str, handle}
+            Either a filename or a valid file handle.
         remove_data : bool
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
             pickling. See the remove_data method.
             In some cases not all arrays will be set to None.
-
-        '''
+        """
         from statsmodels.iolib.smpickle import save_pickle
 
         if remove_data:
@@ -74,6 +74,25 @@ class ResultsWrapper(object):
 
     @classmethod
     def load(cls, fname):
+        """
+        Load a pickled results instance
+
+        .. warning::
+
+           Loading pickled models is not secure against erroneous or
+           maliciously constructed data. Never unpickle data received from
+           an untrusted or unauthenticated source.
+
+        Parameters
+        ----------
+        fname : {str, handle}
+            A string filename or a file handle.
+
+        Returns
+        -------
+        Results
+            The unpickled results instance.
+        """
         from statsmodels.iolib.smpickle import load_pickle
         return load_pickle(fname)
 
@@ -96,17 +115,11 @@ def make_wrapper(func, how):
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
 
-    try:  # Python 3.3+
-        sig = inspect.signature(func)
-        formatted = str(sig)
-    except AttributeError:
-        # TODO: Remove when Python 2.7 is dropped
-        argspec = getargspec(func)
-        formatted = inspect.formatargspec(argspec[0],
-                                          varargs=argspec[1],
-                                          defaults=argspec[3])
+    sig = inspect.signature(func)
+    formatted = str(sig)
 
-    wrapper.__doc__ = "%s%s\n%s" % (func.__name__, formatted, wrapper.__doc__)
+    doc = dedent(wrapper.__doc__) if wrapper.__doc__ else ''
+    wrapper.__doc__ = "\n%s%s\n%s" % (func.__name__, formatted, doc)
 
     return wrapper
 
@@ -119,37 +132,3 @@ def populate_wrapper(klass, wrapping):
         func = getattr(wrapping, meth)
         wrapper = make_wrapper(func, how)
         setattr(klass, meth, wrapper)
-
-
-if __name__ == '__main__':
-    import statsmodels.api as sm
-    from pandas import DataFrame
-    data = sm.datasets.longley.load(as_pandas=False)
-    df = DataFrame(data.exog, columns=data.exog_name)
-    y = data.endog
-    # data.exog = sm.add_constant(data.exog)
-    df['intercept'] = 1.
-    olsresult = sm.OLS(y, df).fit()
-    rlmresult = sm.RLM(y, df).fit()
-
-    # olswrap = RegressionResultsWrapper(olsresult)
-    # rlmwrap = RLMResultsWrapper(rlmresult)
-
-    data = sm.datasets.wfs.load(as_pandas=False)
-    # get offset
-    offset = np.log(data.exog[:, -1])
-    exog = data.exog[:, :-1]
-
-    # convert dur to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
-    # drop reference category
-    # convert res to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
-    # convert edu to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
-    # drop reference categories and add intercept
-    exog = sm.add_constant(exog[:, [1, 2, 3, 4, 5, 7, 8, 10, 11, 12]], prepend=False)
-
-    endog = np.round(data.endog)
-    mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
-    # glmwrap = GLMResultsWrapper(mod)

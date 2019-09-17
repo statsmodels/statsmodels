@@ -41,6 +41,7 @@ class HypothesisTestResults(object):
         self.signif_str = " at {:.0%} significance level".format(self.signif)
 
     def summary(self):
+        """Return summary"""
         title = self.title + ". " + self.h0 + ". " \
                                   + self.conclusion_str + self.signif_str + "."
         data_fmt = {"data_fmts": ["%#0.4g", "%#0.4g", "%#0.3F", "%s"]}
@@ -135,8 +136,8 @@ class CausalityTestResults(HypothesisTestResults):
         # instantaneous causality is a symmetric relation ==> causing and
         # caused may be swapped
         if not variables and self.test == "inst":
-            variables = self.causing == other.caused and \
-                        self.caused == other.causing
+            variables = (self.causing == other.caused and
+                         self.caused == other.causing)
         return test and variables
 
 

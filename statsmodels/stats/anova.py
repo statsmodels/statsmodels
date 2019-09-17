@@ -10,25 +10,23 @@ from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
 from statsmodels.iolib import summary2
 
+
 def _get_covariance(model, robust):
     if robust is None:
         return model.cov_params()
     elif robust == "hc0":
-        se = model.HC0_se
         return model.cov_HC0
     elif robust == "hc1":
-        se = model.HC1_se
         return model.cov_HC1
     elif robust == "hc2":
-        se = model.HC2_se
         return model.cov_HC2
     elif robust == "hc3":
-        se = model.HC3_se
         return model.cov_HC3
-    else: # pragma: no cover
+    else:  # pragma: no cover
         raise ValueError("robust options %s not understood" % robust)
 
-#NOTE: these need to take into account weights !
+
+# NOTE: these need to take into account weights !
 
 def anova_single(model, **kwargs):
     """
@@ -261,7 +259,7 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
-    #NOTE: Don't need to sort because terms are an ordered dict now
+    #NOTE: Do not need to sort because terms are an ordered dict now
     #table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
     ssr = table[test] * table['df'] * model.ssr/model.df_resid
@@ -436,15 +434,15 @@ class AnovaRM(object):
     Parameters
     ----------
     data : DataFrame
-    depvar : string
+    depvar : str
         The dependent variable in `data`
-    subject : string
+    subject : str
         Specify the subject id
-    within : a list of string(s)
+    within : list[str]
         The within-subject factors
-    between : a list of string(s)
+    between : list[str]
         The between-subject factors, this is not yet implemented
-    aggregate_func : None, 'mean', or function
+    aggregate_func : {None, 'mean', callable}
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will
@@ -454,7 +452,7 @@ class AnovaRM(object):
 
     Returns
     -------
-    results: AnovaResults instance
+    results : AnovaResults instance
 
     Raises
     ------
@@ -635,7 +633,7 @@ class AnovaResults(object):
 
         Returns
         -------
-        summary : Summary instance
+        summary : summary2.Summary instance
 
         """
         summ = summary2.Summary()
@@ -643,6 +641,7 @@ class AnovaResults(object):
         summ.add_df(self.anova_table)
 
         return summ
+
 
 if __name__ == "__main__":
     import pandas

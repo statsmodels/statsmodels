@@ -28,10 +28,10 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
 
     Parameters
     ----------
-    Y : array-like
+    Y : array_like
         Either endog (the LHS) of a model specification or all of the data.
         Y must define __getitem__ for now.
-    X : array-like
+    X : array_like
         Either exog or None. If all the data for the formula is provided in
         Y then you must explicitly set X to None.
     formula : str or patsy.model_desc
@@ -41,9 +41,9 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
 
     Returns
     -------
-    endog : array-like
+    endog : array_like
         Should preserve the input type of Y,X
-    exog : array-like
+    exog : array_like
         Should preserve the input type of Y,X. Could be None.
     """
     # half ass attempt to handle other formula objects
@@ -88,9 +88,11 @@ def _remove_intercept_patsy(terms):
         terms.remove(INTERCEPT)
     return terms
 
+
 def _has_intercept(design_info):
     from patsy.desc import INTERCEPT
     return INTERCEPT in design_info.terms
+
 
 def _intercept_idx(design_info):
     """
@@ -99,6 +101,7 @@ def _intercept_idx(design_info):
     from patsy.desc import INTERCEPT
     from numpy import array
     return array([INTERCEPT == i for i in design_info.terms])
+
 
 def make_hypotheses_matrices(model_results, test_formula):
     """

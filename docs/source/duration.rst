@@ -32,9 +32,6 @@ and simultaneous confidence bands for the survival function, and
 plotting procedures.  The ``duration.survdiff`` function provides
 testing procedures for comparing survival distributions.
 
-Examples
---------
-
 Here we create a ``SurvfuncRight`` object using data from the
 `flchain` study, which is available through the R datasets repository.
 We fit the survival distribution only for the female subjects.
@@ -149,8 +146,6 @@ express the covariate effects in terms of "hazard ratios", meaning the
 the hazard (instantaneous event rate) is multiplied by a given factor
 depending on the value of the covariates.
 
-Examples
---------
 
 .. code-block:: python
 

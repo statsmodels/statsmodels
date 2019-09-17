@@ -7,9 +7,8 @@ see the docstring of the mosaic function for more informations.
 """
 # Author: Enrico Giampieri - 21 Jan 2013
 
-from __future__ import division
-from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
-                                itervalues, zip, range)
+from statsmodels.compat.python import (iteritems, iterkeys, lrange, lzip,
+                                       itervalues)
 import numpy as np
 from collections import OrderedDict
 from itertools import product
@@ -124,7 +123,7 @@ def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
     like a single integer number, but keep the string healthy)
     """
-    if np.iterable(obj) and not isinstance(obj, string_types):
+    if np.iterable(obj) and not isinstance(obj, str):
         res = tuple(str(o) for o in obj)
     else:
         res = (str(obj),)
@@ -152,7 +151,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     count_dict.  This is the function that actually perform the tiling
     for the creation of the mosaic plot.  If the gap array has been specified
     it will insert a corresponding amount of space (proportional to the
-    unit lenght), while retaining the proportionality of the tiles.
+    unit length), while retaining the proportionality of the tiles.
 
     Parameters
     ----------
@@ -160,19 +159,19 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         Dictionary containing the contingency table.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be representes; if that is not true, will
+        of keys to be represents; if that is not true, will
         automatically consider the missing values as 0
     horizontal : bool
         The starting direction of the split (by default along
         the horizontal axis)
     gap : float or array of floats
         The list of gaps to be applied on each subdivision.
-        If the lenght of the given array is less of the number
+        If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
 
     Returns
-    ----------
+    ---------
     base_rect : dict
         A dictionary containing the result of the split.
         To each key is associated a 4-tuple of coordinates
@@ -230,7 +229,7 @@ def _create_default_properties(data):
     first it will varies the color hue (first category) then the color
     saturation (second category) and then the color value
     (third category).  If a fourth category is found, it will put
-    decoration on the rectangle.  Doesn't manage more than four
+    decoration on the rectangle.  Does not manage more than four
     level of categories
     """
     categories_levels = _categories_level(list(iterkeys(data)))
@@ -310,7 +309,7 @@ def _normalize_data(data, index):
     data = contingency
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
-    # right now it doesn't do any check, but can be modified in the future
+    # right now it does not do any check, but can be modified in the future
     index = lrange(len(categories_levels)) if index is None else index
     contingency = OrderedDict()
     for key, value in iteritems(data):
@@ -330,6 +329,8 @@ def _normalize_dataframe(dataframe, index):
     grouped = data.groupby(index, sort=False)
     counted = grouped[index].count()
     averaged = counted.mean(axis=1)
+    # Fill empty missing with 0, see GH5639
+    averaged = averaged.fillna(0.0)
     return averaged
 
 
@@ -480,16 +481,16 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be representes; if that is not true, will
+        of keys to be represents; if that is not true, will
         automatically consider the missing values as 0.  The order
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
         is used, it will take the keys as labels.  If a
         np.ndarray is provided, it will generate a simple
         numerical labels.
-    index: list, optional
+    index : list, optional
         Gives the preferred order for the category ordering. If not specified
-        will default to the given order.  It doesn't support named indexes
+        will default to the given order.  It does not support named indexes
         for hierarchical Series.  If a DataFrame is provided, it expects
         a list with the name of the columns.
     ax : matplotlib.Axes, optional
@@ -500,10 +501,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         the horizontal axis)
     gap : float or array of floats
         The list of gaps to be applied on each subdivision.
-        If the lenght of the given array is less of the number
+        If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
-    labelizer : function (key) -> string, optional
+    labelizer : function (key) -> str, optional
         A function that generate the text to display at the center of
         each tile base on the key of that tile
     properties : function (key) -> dict, optional
@@ -516,23 +517,23 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         to indicate that it should use the default property for the tile.
         A dictionary of the properties for each key can be passed,
         and it will be internally converted to the correct function
-    statistic: bool, optional (default False)
+    statistic : bool, optional (default False)
         if true will use a crude statistical model to give colors to the plot.
-        If the tile has a containt that is more than 2 standard deviation
-        from the expected value under independence hipotesys, it will
+        If the tile has a constraint that is more than 2 standard deviation
+        from the expected value under independence hypothesis, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
-    title: string, optional
+    title : str, optional
         The title of the axis
-    axes_label: boolean, optional
+    axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation: float or list of float
+    label_rotation : float or list of float
         the rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 
     Returns
-    ----------
+    ---------
     fig : matplotlib.Figure
         The generate figure
     rects : dict
@@ -540,7 +541,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         dataset, that holds a reference to the coordinates of the
         tile and the Rectangle that represent it
 
-    See Also
+    References
     ----------
     A Brief History of the Mosaic Display
         Michael Friendly, York University, Psychology Department
@@ -550,18 +551,23 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         Michael Friendly, York University, Psychology Department
         Proceedings of the Statistical Graphics Section, 1992, 61-68.
 
-    Mosaic displays for multi-way contingecy tables.
+    Mosaic displays for multi-way contingency tables.
         Michael Friendly, York University, Psychology Department
         Journal of the american statistical association
         March 1994, Vol. 89, No. 425, Theory and Methods
 
     Examples
     ----------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> import matplotlib.pyplot as plt
+    >>> from statsmodels.graphics.mosaicplot import mosaic
+
     The most simple use case is to take a dictionary and plot the result
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> mosaic(data, title='basic dictionary')
-    >>> pylab.show()
+    >>> plt.show()
 
     A more useful example is given by a dictionary with multiple indices.
     In this case we use a wider gap to a better visual separation of the
@@ -569,26 +575,25 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     >>> data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3, ('d', 'c'): 4}
     >>> mosaic(data, gap=0.05, title='complete dictionary')
-    >>> pylab.show()
+    >>> plt.show()
 
     The same data can be given as a simple or hierarchical indexed Series
 
     >>> rand = np.random.random
     >>> from itertools import product
-    >>>
     >>> tuples = list(product(['bar', 'baz', 'foo', 'qux'], ['one', 'two']))
     >>> index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
     >>> data = pd.Series(rand(8), index=index)
     >>> mosaic(data, title='hierarchical index series')
-    >>> pylab.show()
+    >>> plt.show()
 
-    The third accepted data structureis the np array, for which a
+    The third accepted data structure is the np array, for which a
     very simple index will be created.
 
     >>> rand = np.random.random
     >>> data = 1+rand((2,2))
     >>> mosaic(data, title='random non-labeled array')
-    >>> pylab.show()
+    >>> plt.show()
 
     If you need to modify the labeling and the coloring you can give
     a function tocreate the labels and one with the graphical properties
@@ -596,18 +601,21 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second', \
-                               ('c',): 'third'}[k]
-    >>> mosaic(data, title='colored dictionary', \
-                properties=props, labelizer=labelizer)
-    >>> pylab.show()
+    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second',
+    ...                        ('c',): 'third'}[k]
+    >>> mosaic(data, title='colored dictionary', properties=props,
+    ...        labelizer=labelizer)
+    >>> plt.show()
 
     Using a DataFrame as source, specifying the name of the columns of interest
+
     >>> gender = ['male', 'male', 'male', 'female', 'female', 'female']
     >>> pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
-    >>> data = pandas.DataFrame({'gender': gender, 'pet': pet})
-    >>> mosaic(data, ['pet', 'gender'])
-    >>> pylab.show()
+    >>> data = pd.DataFrame({'gender': gender, 'pet': pet})
+    >>> mosaic(data, ['pet', 'gender'], title='DataFrame as Source')
+    >>> plt.show()
+
+    .. plot :: plots/graphics_mosaicplot_mosaic.py
     """
     if isinstance(data, DataFrame) and index is None:
         raise ValueError("You must pass an index if data is a DataFrame."

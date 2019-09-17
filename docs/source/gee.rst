@@ -69,15 +69,36 @@ Model Class
    :toctree: generated/
 
    GEE
+   NominalGEE
+   OrdinalGEE
+
+.. module:: statsmodels.genmod.qif
+   :synopsis: Quadratic inference functions
+
+.. currentmodule:: statsmodels.genmod.qif
+
+.. autosummary::
+   :toctree: generated/
+
+   QIF
 
 Results Classes
 ^^^^^^^^^^^^^^^
+
+.. currentmodule:: statsmodels.genmod.generalized_estimating_equations
 
 .. autosummary::
    :toctree: generated/
 
    GEEResults
    GEEMargins
+
+.. currentmodule:: statsmodels.genmod.qif
+
+.. autosummary::
+   :toctree: generated/
+
+   QIFResults
 
 Dependence Structures
 ^^^^^^^^^^^^^^^^^^^^^
@@ -112,7 +133,6 @@ The distribution families are the same as for GLM, currently implemented are
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/glmfamilies.rst
 
    Family
    Binomial
@@ -121,6 +141,7 @@ The distribution families are the same as for GLM, currently implemented are
    InverseGaussian
    NegativeBinomial
    Poisson
+   Tweedie
 
 
 Link Functions
@@ -156,4 +177,3 @@ The list of available link functions can be obtained by
    logit
    nbinom
    probit
-

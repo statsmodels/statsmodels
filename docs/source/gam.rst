@@ -72,6 +72,7 @@ Module Reference
 
 .. module:: statsmodels.gam.generalized_additive_model
    :synopsis: Generalized Additive Models
+.. currentmodule:: statsmodels.gam.generalized_additive_model
 
 Model Class
 ^^^^^^^^^^^
@@ -80,6 +81,7 @@ Model Class
    :toctree: generated/
 
    GLMGam
+   LogitGam
 
 Results Classes
 ^^^^^^^^^^^^^^^

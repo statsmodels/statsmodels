@@ -38,7 +38,7 @@ print(mc1.cdf(crit, [1,2,3])[1])
 #----------------------
 
 def randwalksim(nobs=500, drift=0.0):
-        return (drift+np.random.randn(nobs)).cumsum()
+    return (drift+np.random.randn(nobs)).cumsum()
 
 def adf20(x):
     return unitroot_adf(x, 2, trendorder=0, autolag=None)

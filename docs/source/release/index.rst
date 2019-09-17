@@ -10,18 +10,17 @@
 .. _whatsnew_index:
 
 =========================
-What's new in Statsmodels
+What's new in statsmodels
 =========================
 
 .. toctree::
    :maxdepth: 1
 
+   version0.10
    version0.9
    version0.8
    version0.7
    version0.6
-   github-stats-0.6
    version0.5
-   github-stats-0.5
 
-For an overview of changes that occured previous to the 0.5.0 release see :ref:`old_changes`.
+For an overview of changes that occurred previous to the 0.5.0 release see :ref:`old_changes`.

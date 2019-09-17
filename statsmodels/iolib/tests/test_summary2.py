@@ -2,10 +2,12 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_equal
 
 from statsmodels.iolib.summary2 import summary_col
-from statsmodels.regression.linear_model import OLS, add_constant
+from statsmodels.tools.tools import add_constant
+from statsmodels.regression.linear_model import OLS
 
 class TestSummaryLatex(object):
 
@@ -17,13 +19,14 @@ class TestSummaryLatex(object):
 \begin{center}
 \begin{tabular}{lcc}
 \hline
-      &   y I    &   y II    \\
+          &   y I    &   y II    \\
 \midrule
-\midrule
-const & 7.7500   & 12.4231   \\
-      & (1.1058) & (3.1872)  \\
-x1    & -0.7500  & -1.5769   \\
-      & (0.2368) & (0.6826)  \\
+const     & 7.7500   & 12.4231   \\
+          & (1.1058) & (3.1872)  \\
+x1        & -0.7500  & -1.5769   \\
+          & (0.2368) & (0.6826)  \\
+R-squared & 0.6930   & 0.5202    \\
+          & 0.7697   & 0.6401    \\
 \hline
 \end{tabular}
 \end{center}
@@ -38,6 +41,32 @@ x1    & -0.7500  & -1.5769   \\
         actual = summary_col([reg1,reg2]).as_latex()
         actual = '\n%s\n' % actual
         assert_equal(desired, actual)
+
+    def test_summarycol_float_format(self):
+        # Test for latex output of summary_col object
+        desired = r"""
+=====================
+           y I   y II
+---------------------
+const     7.7   12.4 
+          (1.1) (3.2)
+x1        -0.7  -1.6 
+          (0.2) (0.7)
+R-squared 0.7   0.5  
+          0.8   0.6  
+=====================
+Standard errors in
+parentheses.
+"""  # noqa:W291
+        x = [1, 5, 7, 3, 5]
+        x = add_constant(x)
+        y1 = [6, 4, 2, 7, 4]
+        y2 = [8, 5, 0, 12, 4]
+        reg1 = OLS(y1, x).fit()
+        reg2 = OLS(y2, x).fit()
+        actual = summary_col([reg1, reg2], float_format='%0.1f').as_text()
+        actual = '%s\n' % actual
+        assert_equal(actual, desired)
 
     def test_summarycol_drop_omitted(self):
         # gh-3702
@@ -96,16 +125,20 @@ x1    & -0.7500  & -1.5769   \\
         assert(result is True)
 
 
-class TestSummaryLabels(object):
+def test_ols_summary_rsquared_label():
+    # Check that the "uncentered" label is correctly added after rsquared
+    x = [1, 5, 7, 3, 5, 2, 5, 3]
+    y = [6, 4, 2, 7, 4, 9, 10, 2]
+    reg_with_constant = OLS(y, add_constant(x)).fit()
+    r2_str = 'R-squared:'
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_with_constant.summary2())
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_with_constant.summary())
 
-    def test_OLSsummary_rsquared_label(self):
-        # Check that the "uncentered" label is correctly added after rsquared
-        x = [1, 5, 7, 3, 5, 2, 5, 3]
-        y = [6, 4, 2, 7, 4, 9, 10, 2]
-        reg_with_constant = OLS(y, x, hasconst=True).fit()
-        assert 'R-squared:' in str(reg_with_constant.summary2())
-        assert 'R-squared:' in str(reg_with_constant.summary())
-
-        reg_without_constant = OLS(y, x, hasconst=False).fit()
-        assert 'R-squared (uncentered):' in str(reg_without_constant.summary2())
-        assert 'R-squared (uncentered):' in str(reg_without_constant.summary())
+    reg_without_constant = OLS(y, x, hasconst=False).fit()
+    r2_str = 'R-squared (uncentered):'
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_without_constant.summary2())
+    with pytest.warns(UserWarning):
+        assert r2_str in str(reg_without_constant.summary())

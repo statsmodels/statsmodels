@@ -10,15 +10,14 @@ distribution fit, but these are neither general nor verified.
 Author: josef-pktd
 License: Simplified BSD
 '''
-from __future__ import print_function
-from statsmodels.compat.python import range, lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 from scipy import stats, optimize, integrate
 
 
 ########## patching scipy
 
-#vonmises doesn't define finite bounds, because it is intended for circular
+#vonmises does not define finite bounds, because it is intended for circular
 #support which does not define a proper pdf on the real line
 
 stats.distributions.vonmises.a = -np.pi
@@ -78,7 +77,7 @@ def _fitstart_beta(self, x, fixed=None):
     References
     ----------
     for method of moment estimator for known loc and scale
-    http://en.wikipedia.org/wiki/Beta_distribution#Parameter_estimation
+    https://en.wikipedia.org/wiki/Beta_distribution#Parameter_estimation
     http://www.itl.nist.gov/div898/handbook/eda/section3/eda366h.htm
     NIST reference also includes reference to MLE in
     Johnson, Kotz, and Balakrishan, Volume II, pages 221-235
@@ -140,7 +139,7 @@ def _fitstart_poisson(self, x, fixed=None):
     References
     ----------
     MLE :
-    http://en.wikipedia.org/wiki/Poisson_distribution#Maximum_likelihood
+    https://en.wikipedia.org/wiki/Poisson_distribution#Maximum_likelihood
 
     '''
     #todo: separate out this part to be used for other compact support distributions
@@ -174,7 +173,7 @@ def nnlf_fr(self, thetash, x, frmask):
     #   where theta are the parameters (including loc and scale)
     #
     try:
-        if frmask != None:
+        if frmask is not None:
             theta = frmask.copy()
             theta[np.isnan(frmask)] = thetash
         else:
@@ -271,6 +270,14 @@ def fit_fr(self, data, *args, **kwds):
             raise ValueError("Incorrect number of frozen arguments.")
         else:
             # keep starting values for not frozen parameters
+            for n in range(len(frmask)):
+                # Troubleshooting ex_generic_mle_tdist
+                if isinstance(frmask[n], np.ndarray) and frmask[n].size == 1:
+                    frmask[n] = frmask[n].item()
+
+            # If there were array elements, then frmask will be object-dtype,
+            #  in which case np.isnan will raise TypeError
+            frmask = frmask.astype(np.float64)
             x0  = np.array(x0)[np.isnan(frmask)]
     else:
         frmask = None
@@ -303,7 +310,7 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
         lb, ub : numbers
            lower and upper bound for integration, default is set to the support
            of the distribution
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the integral is corrected by the conditional probability
            of the integration interval. The return value is the expectation
            of the function, conditional on being in the given interval.
@@ -352,7 +359,7 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
         lb, ub : numbers
            lower and upper bound for integration, default is set using
            quantiles of the distribution, see Notes
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the integral is corrected by the conditional probability
            of the integration interval. The return value is the expectation
            of the function, conditional on being in the given interval.
@@ -435,7 +442,7 @@ def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
         lb, ub : numbers
            lower and upper bound for integration, default is set to the support
            of the distribution, lb and ub are inclusive (ul<=k<=ub)
-        conditional : boolean (False)
+        conditional : bool (False)
            If true then the expectation is corrected by the conditional
            probability of the integration interval. The return value is the
            expectation of the function, conditional on being in the given
@@ -550,7 +557,7 @@ def distfitbootstrap(sample, distr, nrepl=100):
     sample : array
         original sample data for bootstrap
     distr : distribution instance with fit_fr method
-    nrepl : integer
+    nrepl : int
         number of bootstrap replications
 
     Returns
@@ -578,7 +585,7 @@ def distfitmc(sample, distr, nrepl=100, distkwds={}):
     sample : array
         original sample data, in Monte Carlo only used to get nobs,
     distr : distribution instance with fit_fr method
-    nrepl : integer
+    nrepl : int
         number of Monte Carlo replications
 
     Returns
@@ -667,7 +674,7 @@ if __name__ == '__main__':
             print('\nnobs:', nobs)
             print('true parameter')
             print('1.23, loc=0, scale=1')
-            print('unconstraint')
+            print('unconstrained')
             print(stats.vonmises.fit(x))
             print(stats.vonmises.fit_fr(x, frozen=[np.nan, np.nan, np.nan]))
             print('with fixed loc and scale')
@@ -682,7 +689,7 @@ if __name__ == '__main__':
             print('\nnobs:', nobs)
             print('true parameter')
             print('%f, loc=%f, scale=%f' % (arg, loc, scale))
-            print('unconstraint')
+            print('unconstrained')
             print(distr.fit(x))
             print(distr.fit_fr(x, frozen=[np.nan, np.nan, np.nan]))
             print('with fixed loc and scale')

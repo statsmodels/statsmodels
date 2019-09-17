@@ -2,8 +2,8 @@
 """
 Created on Thu Aug 30 12:26:38 2012
 Author: Josef Perktold
-"""
-'''
+
+
 function jc =  c_sja(n,p)
 % PURPOSE: find critical values for Johansen maximum eigenvalue statistic
 % ------------------------------------------------------------
@@ -35,7 +35,8 @@ function jc =  c_sja(n,p)
 % 2801 W. Bancroft St,
 % Toledo, OH 43606
 % jlesage@spatial-econometrics.com
-'''
+
+"""
 
 import numpy as np
 
@@ -107,7 +108,7 @@ function jc = c_sjt(n,p)
 % ------------------------------------------------------------
 % USAGE:  jc = c_sjt(n,p)
 % where:    n = dimension of the VAR system
-%               NOTE: routine doesn't work for n > 12
+%               NOTE: routine does not work for n > 12
 %           p = order of time polynomial in the null-hypothesis
 %                 p = -1, no deterministic part
 %                 p =  0, for constant term

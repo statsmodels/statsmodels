@@ -1,10 +1,3 @@
-import pandas as pd
-import patsy
-import numpy as np
-import warnings
-
-from statsmodels.tools.sm_exceptions import ValueWarning
-
 """
 A predict-like function that constructs means and pointwise or
 simultaneous confidence bands for the function f(x) = E[Y | X*=x,
@@ -13,6 +6,13 @@ non-focus variables.  This is especially useful when conducting a
 functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
+import pandas as pd
+import patsy
+import numpy as np
+import warnings
+
+from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.compat.pandas import Appender
 
 _predict_functional_doc =\
     """
@@ -30,7 +30,7 @@ _predict_functional_doc =\
     ----------
     result : statsmodels result object
         A results object for the fitted model.
-    focus_var : string
+    focus_var : str
         The name of the 'focus variable'.
     summaries : dict-like
         A map from names of non-focus variables to summary functions.
@@ -44,15 +44,15 @@ _predict_functional_doc =\
         A second set of fixed values used to define a contrast.
     alpha : float
         `1 - alpha` is the coverage probability.
-    ci_method : string
+    ci_method : str
         The method for constructing the confidence band, one of
         'pointwise', 'scheffe', and 'simultaneous'.
-    num_points : integer
+    num_points : int
         The number of equally-spaced quantile points where the
         prediction is made.
-    exog : array-like
+    exog : array_like
         Explicitly provide points to cover with the confidence band.
-    exog2 : array-like
+    exog2 : array_like
         Explicitly provide points to contrast to `exog` in a functional
         confidence band.
     kwargs :
@@ -60,12 +60,12 @@ _predict_functional_doc =\
 
     Returns
     -------
-    pred : array-like
+    pred : array_like
         The predicted mean values.
-    cb : array-like
+    cb : array_like
         An array with two columns, containing respectively the lower
         and upper limits of a confidence band.
-    fvals : array-like
+    fvals : array_like
         The values of the focus variable at which the prediction is
         made.
 
@@ -190,7 +190,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         fexog.loc[:, ky] = values[ky]
 
-    dexog = patsy.dmatrix(model.data.design_info.builder, fexog, return_type='dataframe')
+    dexog = patsy.dmatrix(model.data.design_info, fexog,
+                          return_type='dataframe')
     return dexog, fexog, fvals
 
 
@@ -282,14 +283,15 @@ def _check_args(values, summaries, values2, summaries2):
     return values, summaries, values2, summaries2
 
 
+@Appender(_predict_functional_doc)
 def predict_functional(result, focus_var, summaries=None, values=None,
                        summaries2=None, values2=None, alpha=0.05,
                        ci_method="pointwise", linear=True, num_points=10,
                        exog=None, exog2=None, **kwargs):
-    # docstring attached below
 
     if ci_method not in ("pointwise", "scheffe", "simultaneous"):
-        raise ValueError('confidence band method must be one of `pointwise`, `scheffe`, and `simultaneous`.')
+        raise ValueError('confidence band method must be one of '
+                         '`pointwise`, `scheffe`, and `simultaneous`.')
 
     contrast = (values2 is not None) or (summaries2 is not None)
 
@@ -300,28 +302,33 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     if exog is not None:
 
         if any(x is not None for x in [summaries, summaries2, values, values2]):
-            raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
+            raise ValueError("if `exog` is provided then do not "
+                             "provide `summaries` or `values`")
 
         fexog = exog
-        dexog = patsy.dmatrix(model.data.design_info.builder,
+        dexog = patsy.dmatrix(model.data.design_info,
                               fexog, return_type='dataframe')
         fvals = exog[focus_var]
 
         if exog2 is not None:
             fexog2 = exog
-            dexog2 = patsy.dmatrix(model.data.design_info.builder,
+            dexog2 = patsy.dmatrix(model.data.design_info,
                                    fexog2, return_type='dataframe')
             fvals2 = fvals
 
     else:
 
         values, summaries, values2, summaries2 = _check_args(values,
-                             summaries, values2, summaries2)
+                                                             summaries,
+                                                             values2,
+                                                             summaries2)
 
-        dexog, fexog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
+        dexog, fexog, fvals = _make_exog(result, focus_var, summaries,
+                                         values, num_points)
 
         if len(summaries2) + len(values2) > 0:
-            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2, values2, num_points)
+            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2,
+                                                values2, num_points)
 
     from statsmodels.genmod.generalized_linear_model import GLM
     from statsmodels.genmod.generalized_estimating_equations import GEE
@@ -372,7 +379,6 @@ def predict_functional(result, focus_var, summaries=None, values=None,
 
     return pred, cb, fvals
 
-predict_functional.__doc__ = _predict_functional_doc
 
 def _glm_basic_scr(result, exog, alpha):
     """
@@ -384,7 +390,7 @@ def _glm_basic_scr(result, exog, alpha):
     ----------
     result : results instance
         The fitted GLM results instance
-    exog : array-like
+    exog : array_like
         The exog values spanning the interval
     alpha : float
         `1 - alpha` is the coverage probability.
@@ -435,7 +441,7 @@ def _glm_basic_scr(result, exog, alpha):
     from scipy.optimize import brentq
 
     c, rslt = brentq(func, 1, 10, full_output=True)
-    if rslt.converged == False:
+    if not rslt.converged:
         raise ValueError("Root finding error in basic SCR")
 
     return sigma, c

@@ -1,5 +1,4 @@
-
-from statsmodels.compat.python import range, lrange, lzip, long, PY3
+from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.numpy import recarray_select
 
 import numpy as np
@@ -9,51 +8,63 @@ from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
+from statsmodels.tools.validation import int_like, bool_like, string_like
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
+from statsmodels.tools.validation import array_like
 
 
 def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     """
-    Adds a trend and/or constant to an array.
+    Add a trend and/or constant to an array.
 
     Parameters
     ----------
-    X : array-like
+    x : array_like
         Original array of data.
-    trend : str {"c","t","ct","ctt"}
-        "c" add constant only
-        "t" add trend only
-        "ct" add constant and linear trend
-        "ctt" add constant and linear and quadratic trend.
+    trend : str {'n', 'c', 't', 'ct', 'ctt'}
+        The trend to add.
+
+        * 'n' add no trend.
+        * 'c' add constant only.
+        * 't' add trend only.
+        * 'ct' add constant and linear trend.
+        * 'ctt' add constant and linear and quadratic trend.
     prepend : bool
         If True, prepends the new data to the columns of X.
     has_constant : str {'raise', 'add', 'skip'}
         Controls what happens when trend is 'c' and a constant already
-        exists in X. 'raise' will raise an error. 'add' will duplicate a
+        exists in x. 'raise' will raise an error. 'add' will duplicate a
         constant. 'skip' will return the data without change. 'skip' is the
         default.
 
     Returns
     -------
-    y : array, recarray or DataFrame
+    array_like
         The original data with the additional trend columns.  If x is a
         recarray or pandas Series or DataFrame, then the trend column names
         are 'const', 'trend' and 'trend_squared'.
 
-    Notes
-    -----
-    Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
-    no checking for an existing trend.
-
-    See also
+    See Also
     --------
     statsmodels.tools.tools.add_constant
+        Add a constant column to an array.
+
+    Notes
+    -----
+    Returns columns as ['ctt','ct','c'] whenever applicable. There is currently
+    no checking for an existing trend.
     """
+    prepend = bool_like(prepend, 'prepend')
+    trend = string_like(trend, 'trend', options=('n', 'c', 't', 'ct', 'ctt'))
+    has_constant = string_like(has_constant, 'has_constant',
+                               options=('raise', 'add', 'skip'))
+
     # TODO: could be generalized for trend of aribitrary order
-    trend = trend.lower()
     columns = ['const', 'trend', 'trend_squared']
-    if trend == "c":  # handles structured arrays
+    if trend == 'n':
+        return x.copy()
+    elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
     elif trend == "ct" or trend == "t":
@@ -63,8 +74,6 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
-    else:
-        raise ValueError("trend %s not understood" % trend)
 
     is_recarray = _is_recarray(x)
     is_pandas = _is_using_pandas(x, None) or is_recarray
@@ -96,11 +105,16 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
                     return False
             col_const = x.apply(safe_is_const, 0)
         else:
-            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(x), axis=0) == 0, axis=0),
-                                       np.all(x != 0.0, axis=0))
+            ptp0 = np.ptp(np.asanyarray(x), axis=0)
+            col_is_const = ptp0 == 0
+            nz_const = col_is_const & (x[0] != 0)
+            col_const = nz_const
+
         if np.any(col_const):
             if has_constant == 'raise':
-                raise ValueError("x already contains a constant")
+                msg = "x contains a constant. Adding a constant with " \
+                      "trend='{0}' is not allowed.".format(trend)
+                raise ValueError(msg)
             elif has_constant == 'skip':
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
@@ -122,14 +136,6 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
             descr = new_descr[:extra_col] + descr
         else:
             descr = descr + new_descr[-extra_col:]
-
-        if not PY3:
-            # See 3658
-            names = [entry[0] for entry in descr]
-            dtypes = [entry[1] for entry in descr]
-            names = [bytes(name) for name in names]
-            # Fail loudly if there is a non-ascii name
-            descr = list(zip(names, dtypes))
 
         x = x.astype(np.dtype(descr))
 
@@ -177,23 +183,17 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     so that the length of the returned array is len(`X`) - lags. The lags are
     returned in increasing order, ie., t-1,t-2,...,t-lags
     """
+    lags = int_like(lags, 'lags')
+    drop = bool_like(drop, 'drop')
+
     if x.dtype.names:
         names = x.dtype.names
         if not col and np.squeeze(x).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
         elif len(names) == 1:
             col = names[0]
-        if isinstance(col, (int, long)):
+        if isinstance(col, int):
             col = x.dtype.names[col]
-        if not PY3:
-            # TODO: Get rid of this kludge.  See GH # 3658
-            names = [bytes(name)
-                     if isinstance(name, unicode)  # noqa:F821
-                     else name for name in names]
-            # Fail loudly if there is a non-ascii name.
-            x.dtype.names = names
-            if isinstance(col, unicode):  # noqa:F821
-                col = bytes(col)
 
         contemp = x[col]
 
@@ -222,7 +222,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             else:
                 last_names.pop(last_names.index(col))
 
-        if first_names: # only do this if x isn't "empty"
+        if first_names: # only do this if x is not "empty"
             # Workaround to avoid NumPy FutureWarning
             _x = recarray_select(x, first_names)
             first_arr = nprf.append_fields(_x[lags:], tmp_names, ndlags.T,
@@ -280,26 +280,29 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
 
 def detrend(x, order=1, axis=0):
     """
-    Detrend an array with a trend of given order along axis 0 or 1
+    Detrend an array with a trend of given order along axis 0 or 1.
 
     Parameters
     ----------
     x : array_like, 1d or 2d
-        data, if 2d, then each row or column is independently detrended with the
-        same trendorder, but independent trend estimates
+        Data, if 2d, then each row or column is independently detrended with
+        the same trendorder, but independent trend estimates.
     order : int
-        specifies the polynomial order of the trend, zero is constant, one is
-        linear trend, two is quadratic trend
+        The polynomial order of the trend, zero is constant, one is
+        linear trend, two is quadratic trend.
     axis : int
-        axis can be either 0, observations by rows,
-        or 1, observations by columns
+        Axis can be either 0, observations by rows, or 1, observations by
+        columns.
 
     Returns
     -------
-    detrended data series : ndarray
+    ndarray
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
     """
+    order = int_like(order, 'order')
+    axis = int_like(axis, 'axis')
+
     if x.ndim == 2 and int(axis) == 1:
         x = x.T
     elif x.ndim > 2:
@@ -322,36 +325,46 @@ def detrend(x, order=1, axis=0):
 
 def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
     """
-    Create 2d array of lags
+    Create 2d array of lags.
 
     Parameters
     ----------
-    x : array_like, 1d or 2d
-        data; if 2d, observation in rows and variables in columns
+    x : array_like
+        Data; if 2d, observation in rows and variables in columns.
     maxlag : int
-        all lags from zero to maxlag are included
-    trim : str {'forward', 'backward', 'both', 'none'} or None
-        * 'forward' : trim invalid observations in front
-        * 'backward' : trim invalid initial observations
-        * 'both' : trim invalid observations on both sides
-        * 'none', None : no trimming of observations
-    original : str {'ex','sep','in'}
+        All lags from zero to maxlag are included.
+    trim : {'forward', 'backward', 'both', 'none', None}
+        The trimming method to use.
+
+        * 'forward' : trim invalid observations in front.
+        * 'backward' : trim invalid initial observations.
+        * 'both' : trim invalid observations on both sides.
+        * 'none', None : no trimming of observations.
+    original : {'ex','sep','in'}
+        How the original is treated.
+
         * 'ex' : drops the original array returning only the lagged values.
         * 'in' : returns the original array and the lagged values as a single
           array.
         * 'sep' : returns a tuple (original array, lagged values). The original
                   array is truncated to have the same number of rows as
                   the returned lagmat.
-    use_pandas : bool, optional
+    use_pandas : bool
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
 
     Returns
     -------
-    lagmat : 2d array
-        array with lagged observations
-    y : 2d array, optional
-        Only returned if original == 'sep'
+    lagmat : ndarray
+        The array with lagged observations.
+    y : ndarray, optional
+        Only returned if original == 'sep'.
+
+    Notes
+    -----
+    When using a pandas DataFrame or Series with use_pandas=True, trim can only
+    be 'forward' or 'both' since it is not possible to consistently extend
+    index values.
 
     Examples
     --------
@@ -377,26 +390,25 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
        [ 5.,  6.,  3.,  4.,  1.,  2.],
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
-
-    Notes
-    -----
-    When using a pandas DataFrame or Series with use_pandas=True, trim can only
-    be 'forward' or 'both' since it is not possible to consistently extend index
-    values.
     """
+    maxlag = int_like(maxlag, 'maxlag')
+    use_pandas = bool_like(use_pandas, 'use_pandas')
+    trim = string_like(trim, 'trim', optional=True,
+                       options=('forward', 'backward', 'both', 'none'))
+    original = string_like(original, 'original', options=('ex', 'sep', 'in'))
+
     # TODO:  allow list of lags additional to maxlag
-    is_pandas = _is_using_pandas(x, None) and use_pandas
+    orig = x
+    x = array_like(x, 'x', ndim=2, dtype=None)
+    is_pandas = _is_using_pandas(orig, None) and use_pandas
     trim = 'none' if trim is None else trim
     trim = trim.lower()
     if is_pandas and trim in ('none', 'backward'):
         raise ValueError("trim cannot be 'none' or 'forward' when used on "
                          "Series or DataFrames")
 
-    xa = np.asarray(x)
     dropidx = 0
-    if xa.ndim == 1:
-        xa = xa[:, None]
-    nobs, nvar = xa.shape
+    nobs, nvar = x.shape
     if original in ['ex', 'sep']:
         dropidx = nvar
     if maxlag >= nobs:
@@ -404,7 +416,7 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
         lm[maxlag - k:nobs + maxlag - k,
-        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = xa
+        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = x
 
     if trim in ('none', 'forward'):
         startobs = 0
@@ -419,6 +431,7 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
         stopobs = nobs
 
     if is_pandas:
+        x = orig
         x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
@@ -443,39 +456,44 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
               use_pandas=False):
     """
-    Generate lagmatrix for 2d array, columns arranged by variables
+    Generate lagmatrix for 2d array, columns arranged by variables.
 
     Parameters
     ----------
-    x : array_like, 2d
-        2d data, observation in rows and variables in columns
+    x : array_like
+        Data, 2d. Observations in rows and variables in columns.
     maxlag0 : int
-        for first variable all lags from zero to maxlag are included
-    maxlagex : None or int
-        max lag for all other variables all lags from zero to maxlag are included
-    dropex : int (default is 0)
-        exclude first dropex lags from other variables
-        for all variables, except the first, lags from dropex to maxlagex are
-        included
-    trim : string
-        * 'forward' : trim invalid observations in front
-        * 'backward' : trim invalid initial observations
-        * 'both' : trim invalid observations on both sides
-        * 'none' : no trimming of observations
-    use_pandas : bool, optional
+        The first variable all lags from zero to maxlag are included.
+    maxlagex : {None, int}
+        The max lag for all other variables all lags from zero to maxlag are
+        included.
+    dropex : int
+        Exclude first dropex lags from other variables. For all variables,
+        except the first, lags from dropex to maxlagex are included.
+    trim : str
+        The trimming method to use.
+
+        * 'forward' : trim invalid observations in front.
+        * 'backward' : trim invalid initial observations.
+        * 'both' : trim invalid observations on both sides.
+        * 'none' : no trimming of observations.
+    use_pandas : bool
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
 
     Returns
     -------
-    lagmat : 2d array
-        array with lagged observations, columns ordered by variable
+    ndarray
+        The array with lagged observations, columns ordered by variable.
 
     Notes
     -----
-    Inefficient implementation for unequal lags, implemented for convenience
+    Inefficient implementation for unequal lags, implemented for convenience.
     """
-
+    maxlag0 = int_like(maxlag0, 'maxlag0')
+    maxlagex = int_like(maxlagex, 'maxlagex', optional=True)
+    trim = string_like(trim, 'trim', optional=True,
+                       options=('forward', 'backward', 'both', 'none'))
     if maxlagex is None:
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
@@ -565,6 +583,7 @@ def duplication_matrix(n):
     -------
     D_n : ndarray
     """
+    n = int_like(n, 'n')
     tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
 
@@ -581,6 +600,7 @@ def elimination_matrix(n):
     -------
 
     """
+    n = int_like(n, 'n')
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
 
@@ -598,6 +618,9 @@ def commutation_matrix(p, q):
     -------
     K : ndarray (pq x pq)
     """
+    p = int_like(p, 'p')
+    q = int_like(q, 'q')
+
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
@@ -609,17 +632,15 @@ def _ar_transparams(params):
 
     Parameters
     ----------
-    params : array
+    params : array_like
         The AR coefficients
 
     Reference
     ---------
     Jones(1980)
     """
-    newparams = ((1-np.exp(-params))/
-                (1+np.exp(-params))).copy()
-    tmp = ((1-np.exp(-params))/
-               (1+np.exp(-params))).copy()
+    newparams = np.tanh(params/2)
+    tmp = np.tanh(params/2)
     for j in range(1,len(params)):
         a = newparams[j]
         for kiter in range(j):
@@ -634,10 +655,10 @@ def _ar_invtransparams(params):
 
     Parameters
     ----------
-    params : array
+    params : array_like
         The transformed AR coefficients
     """
-    # AR coeffs
+    params = params.copy()
     tmp = params.copy()
     for j in range(len(params)-1,0,-1):
         a = params[j]
@@ -645,7 +666,7 @@ def _ar_invtransparams(params):
             tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
                     (1-a**2)
         params[:j] = tmp[:j]
-    invarcoefs = -np.log((1-params)/(1+params))
+    invarcoefs = 2*np.arctanh(params)
     return invarcoefs
 
 
@@ -699,14 +720,14 @@ def unintegrate_levels(x, d):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The original series
     d : int
         The number of differences of the differenced series.
 
     Returns
     -------
-    y : array-like
+    y : array_like
         The increasing differences from 0 to d-1 of the first d elements
         of x.
 
@@ -714,6 +735,7 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
+    d = int_like(d, 'd')
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
 
@@ -724,7 +746,7 @@ def unintegrate(x, levels):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The n-th differenced series
     levels : list
         A list of the first-value in each differenced series, for
@@ -732,7 +754,7 @@ def unintegrate(x, levels):
 
     Returns
     -------
-    y : array-like
+    y : array_like
         The original series de-differenced
 
     Examples
@@ -795,4 +817,4 @@ def freq_to_period(freq):
 
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
-           'vec', 'vech', 'unvec', 'unvech']
+           'vec', 'vech', 'unvec', 'unvech', 'freq_to_period']

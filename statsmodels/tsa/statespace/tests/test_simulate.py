@@ -5,22 +5,21 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from __future__ import division, absolute_import, print_function
-
-import warnings
 import numpy as np
-from scipy.signal import lfilter
-
-from statsmodels.tsa.statespace import (sarimax, structural, varmax,
-                                        dynamic_factor)
 from numpy.testing import assert_allclose
 import pytest
+from scipy.signal import lfilter
+
+from statsmodels.tools.sm_exceptions import SpecificationWarning, \
+    EstimationWarning
+from statsmodels.tsa.statespace import (sarimax, structural, varmax,
+                                        dynamic_factor)
 
 
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
     # Note: the first elements of the generated SARIMAX datasets are based on
-    # the initial state, so we don't include them in the comparisons
+    # the initial state, so we do not include them in the comparisons
     np.random.seed(10239)
     nobs = 100
     eps = np.random.normal(size=nobs)
@@ -51,7 +50,7 @@ def test_arma_direct():
     # Tests of an ARMA model simulation against direct construction
     # This is useful for e.g. trend components
     # Note: the first elements of the generated SARIMAX datasets are based on
-    # the initial state, so we don't include them in the comparisons
+    # the initial state, so we do not include them in the comparisons
     np.random.seed(10239)
     nobs = 100
     eps = np.random.normal(size=nobs)
@@ -148,9 +147,6 @@ def test_arma_direct():
 
 
 def test_structural():
-    # Clear warnings
-    structural.__warningregistry__ = {}
-
     np.random.seed(38947)
     nobs = 100
     eps = np.random.normal(size=nobs)
@@ -190,8 +186,9 @@ def test_structural():
     # Fixed intercept
     # (in practice this is a deterministic constant, because an irregular
     #  component must be added)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    warning = SpecificationWarning
+    match = 'irregular component added'
+    with pytest.warns(warning, match=match):
         mod = structural.UnobservedComponents([0], 'fixed intercept')
     actual = mod.simulate([1.], nobs, measurement_shocks=eps,
                           initial_state=[10])
@@ -220,8 +217,9 @@ def test_structural():
     # Fixed slope
     # (in practice this is a deterministic trend, because an irregular
     #  component must be added)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    warning = SpecificationWarning
+    match = 'irregular component added'
+    with pytest.warns(warning, match=match):
         mod = structural.UnobservedComponents([0], 'fixed slope')
     actual = mod.simulate([1., 1.], nobs, measurement_shocks=eps,
                           state_shocks=eps2, initial_state=[0, 1])
@@ -330,9 +328,6 @@ def test_structural():
 
 
 def test_varmax():
-    # Clear warnings
-    varmax.__warningregistry__ = {}
-
     np.random.seed(371934)
     nobs = 100
     eps = np.random.normal(size=nobs)
@@ -345,7 +340,7 @@ def test_varmax():
     eps3[50:] = 1
 
     # VAR(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -354,7 +349,7 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VMA(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(0, 0, 2))
     actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -363,9 +358,10 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) - single series
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='nc')
+    warning = EstimationWarning
+    match = r'VARMA\(p,q\) models is not'
+    with pytest.warns(warning, match=match):
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
     actual = mod1.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps,
                            initial_state=np.zeros(mod1.k_states))
@@ -374,7 +370,10 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
+    warning = EstimationWarning
+    match = r'VARMA\(p,q\) models is not'
+    with pytest.warns(warning, match=match):
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
     actual = mod1.simulate([10, 0.5, 0.2, 0.1, -0.2, 1], nobs,
                            state_shocks=eps,
@@ -404,7 +403,7 @@ def test_varmax():
     assert_allclose(actual, desired)
 
     # VAR(1) + measurement error
-    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc',
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='n',
                         measurement_error=True)
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1., 1., 1.], nobs,
                           measurement_shocks=np.c_[eps, eps],
@@ -413,7 +412,7 @@ def test_varmax():
     assert_allclose(actual, np.c_[eps, eps])
 
     # VARX(1)
-    mod = varmax.VARMAX(np.zeros((nobs, 2)), order=(1, 0), trend='nc',
+    mod = varmax.VARMAX(np.zeros((nobs, 2)), order=(1, 0), trend='n',
                         exog=exog)
     actual = mod.simulate(np.r_[transition.ravel(), 5, -2, 1., 0, 1.], nobs,
                           state_shocks=np.c_[eps1, eps1], initial_state=[1, 1])
@@ -428,13 +427,14 @@ def test_varmax():
     # VMA(1)
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
-        np.random.normal(size=(nobs, 2)), order=(0, 1), trend='nc')
+        np.random.normal(size=(nobs, 2)), order=(0, 1), trend='n')
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog
     # TODO: This is just a smoke test
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    warning = EstimationWarning
+    match = r"VARMA\(p,q\) models is not"
+    with pytest.warns(warning, match=match):
         mod = varmax.VARMAX(
             np.random.normal(size=(nobs, 2)), order=(2, 2), trend='c',
             exog=exog)
@@ -519,7 +519,7 @@ def test_known_initialization():
     # (here just test that with an independent VAR we have each initial state
     # geometrically declining at the appropriate rate)
     transition = np.diag([0.5, 0.2])
-    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc')
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='n')
     mod.initialize_known([100, 50], np.diag([0, 0]))
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
                           measurement_shocks=np.c_[eps1, eps1],
@@ -533,7 +533,7 @@ def test_known_initialization():
     # correctly onto the series)
     mod = dynamic_factor.DynamicFactor([[0, 0]], k_factors=1, factor_order=1)
     mod.initialize_known([100], [[0]])
-    print(mod.param_names)
+
     actual = mod.simulate([0.8, 0.2, 1.0, 1.0, 0.5], nobs,
                           measurement_shocks=np.c_[eps1, eps1],
                           state_shocks=eps1)

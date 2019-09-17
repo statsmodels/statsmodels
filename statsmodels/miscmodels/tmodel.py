@@ -26,7 +26,7 @@ License: BSD
 TODO
 ----
 * add starting values based on OLS
-* bugs: store_params doesn't seem to be defined, I think this was a module
+* bugs: store_params does not seem to be defined, I think this was a module
         global for debugging - commented out
 * parameter restriction: check whether version with some fixed parameters works
 
@@ -35,14 +35,17 @@ TODO
 #mostly copied from the examples directory written for trying out generic mle.
 
 import numpy as np
-from scipy import special #, stats
+from scipy import special, stats
+
+from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tsa.arma_mle import Arma
+
+
 #redefine some shortcuts
 np_log = np.log
 np_pi = np.pi
 sps_gamln = special.gammaln
 
-
-from statsmodels.base.model import GenericLikelihoodModel
 
 class TLinearModel(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Linear Model with t-distributed errors
@@ -141,7 +144,7 @@ class TLinearModel(GenericLikelihoodModel):
         """
         #print len(params),
         #store_params.append(params)
-        if not self.fixed_params is None:
+        if self.fixed_params is not None:
             #print 'using fixed'
             params = self.expandparams(params)
 
@@ -162,9 +165,6 @@ class TLinearModel(GenericLikelihoodModel):
             exog = self.exog
         return np.dot(exog, params[:self.exog.shape[1]])
 
-
-from scipy import stats
-from statsmodels.tsa.arma_mle import Arma
 
 class TArma(Arma):
     '''Univariate Arma Model with t-distributed errors

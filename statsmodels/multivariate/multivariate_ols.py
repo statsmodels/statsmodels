@@ -4,21 +4,19 @@
 
 author: Yichuan Liu
 """
-from __future__ import division
-
 import numpy as np
 from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
 from scipy import stats
 import pandas as pd
 from patsy import DesignInfo
 
-from statsmodels.compat import string_types
+from statsmodels.compat.pandas import Substitution
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
 
 _hypotheses_doc = \
-"""hypotheses: A list of tuples
+"""hypotheses : list[tuple]
     Hypothesis `L*B*M = C` to be tested where B is the parameters in
     regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
 
@@ -71,7 +69,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
         each column is a dependent variable
     exog : array_like
         each column is a independent variable
-    method : string
+    method : str
         'svd' - Singular value decomposition
         'pinv' - Moore-Penrose pseudoinverse
     tolerance : float, a small positive number
@@ -265,7 +263,40 @@ def _multivariate_ols_test(hypotheses, fit_results, exog_names,
     return _multivariate_test(hypotheses, exog_names, endog_names, fn)
 
 
+@Substitution(hypotheses_doc=_hypotheses_doc)
 def _multivariate_test(hypotheses, exog_names, endog_names, fn):
+    """
+    Multivariate linear model hypotheses testing
+
+    For y = x * params, where y are the dependent variables and x are the
+    independent variables, testing L * params * M = 0 where L is the contrast
+    matrix for hypotheses testing and M is the transformation matrix for
+    transforming the dependent variables in y.
+
+    Algorithm:
+        T = L*inv(X'X)*L'
+        H = M'B'L'*inv(T)*LBM
+        E =  M'(Y'Y - B'X'XB)M
+    And then finding the eigenvalues of inv(H + E)*H
+
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+
+    Parameters
+    ----------
+    %(hypotheses_doc)s
+    k_xvar : int
+        The number of independent variables
+    k_yvar : int
+        The number of dependent variables
+    fn : function
+        a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
+        where q is the rank of T matrix
+
+    Returns
+    -------
+    results : MANOVAResults
+    """
+
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
@@ -282,7 +313,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         else:
             raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
                              ' len(hypotheses)=%d' % len(hypo))
-        if any(isinstance(j, string_types) for j in L):
+        if any(isinstance(j, str) for j in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
@@ -293,7 +324,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                                  (L.shape[1], k_xvar))
         if M is None:
             M = np.eye(k_yvar)
-        elif any(isinstance(j, string_types) for j in M):
+        elif any(isinstance(j, str) for j in M):
             M = DesignInfo(endog_names).linear_constraint(M).coefs.T
         else:
             if M is not None:
@@ -329,40 +360,6 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                          'transform_M':M, 'constant_C':C}
     return results
 
-_multivariate_test.__doc__ = (
-        """
-        Multivariate linear model hypotheses testing
-
-        For y = x * params, where y are the dependent variables and x are the
-        independent variables, testing L * params * M = 0 where L is the contrast
-        matrix for hypotheses testing and M is the transformation matrix for
-        transforming the dependent variables in y.
-
-        Algorithm:
-            T = L*inv(X'X)*L'
-            H = M'B'L'*inv(T)*LBM
-            E =  M'(Y'Y - B'X'XB)M
-        And then finding the eigenvalues of inv(H + E)*H
-
-        .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
-
-        Parameters
-        ----------
-        """ + _hypotheses_doc +
-        """
-        k_xvar : int
-            The number of independent variables
-        k_yvar : int
-            The number of dependent variables
-        fn : function
-            a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
-            where q is the rank of T matrix
-
-        Returns
-        -------
-        results : MANOVAResults
-
-        """)
 
 class _MultivariateOLS(Model):
     """
@@ -383,12 +380,14 @@ class _MultivariateOLS(Model):
         default)
 
     Attributes
-    -----------
+    ----------
     endog : array
         See Parameters.
     exog : array
         See Parameters.
     """
+    _formula_max_endog = None
+
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError('There must be more than one dependent variable'
@@ -420,8 +419,29 @@ class _MultivariateOLSResults(object):
     def __str__(self):
         return self.summary().__str__()
 
+    @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None):
+        """
+        Linear hypotheses testing
 
+        Parameters
+        ----------
+        %(hypotheses_doc)s
+
+        Returns
+        -------
+        results: _MultivariateOLSResults
+
+        Notes
+        -----
+        Tests hypotheses of the form
+
+            L * params * M = C
+
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params, `L` is the contrast matrix, `M` is the
+        dependent variable transform matrix and C is the constant matrix.
+        """
         k_xvar = len(self.exog_names)
         if hypotheses is None:
             if self.design_info is not None:
@@ -444,27 +464,7 @@ class _MultivariateOLSResults(object):
         return MultivariateTestResults(results,
                                        self.endog_names,
                                        self.exog_names)
-    mv_test.__doc__ = ("""
-Linear hypotheses testing
 
-Parameters
-----------
-""" + _hypotheses_doc + """
-
-Returns
--------
-results: _MultivariateOLSResults
-
-Notes
------
-Tests hypotheses of the form
-
-    L * params * M = C
-
-where `params` is the regression coefficient matrix for the
-linear model y = x * params, `L` is the contrast matrix, `M` is the
-dependent variable transform matrix and C is the constant matrix.
-""")
     def summary(self):
         raise NotImplementedError
 
@@ -474,15 +474,15 @@ class MultivariateTestResults(object):
     Returned by `mv_test` method of `_MultivariateOLSResults` class
 
     Attributes
-    -----------
+    ----------
     results : dict
        For hypothesis name `key`:
-           results[key]['stat'] contains the multivaraite test results
+           results[key]['stat'] contains the multivariate test results
            results[key]['contrast_L'] contains the contrast_L matrix
            results[key]['transform_M'] contains the transform_M matrix
            results[key]['constant_C'] contains the constant_C matrix
-    endog_names : string
-    exog_names : string
+    endog_names : str
+    exog_names : str
     summary_frame : multiindex dataframe
         Returns results as a multiindex dataframe
     """

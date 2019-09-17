@@ -1,0 +1,12 @@
+{# Import the theme's layout. #}
+{% extends "!layout.html" %}
+
+{%- block htmltitle %}
+  {{ super() }}
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ pathto('_static/icons/favicon-32x32.png', 1) }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ pathto('_static/icons/favicon-16x16.png', 1) }}">
+  <link rel="manifest" href="{{ pathto('_static/icons/site.webmanifest', 1) }}">
+  <link rel="mask-icon" href="{{ pathto('_static/icons/safari-pinned-tab.svg', 1) }}" color="#919191">
+  <meta name="msapplication-TileColor" content="#2b5797">
+  <meta name="msapplication-config" content="{{ pathto('_static/icons/browserconfig.xml', 1) }}">
+{%- endblock %}

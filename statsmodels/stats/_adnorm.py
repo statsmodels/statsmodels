@@ -5,12 +5,9 @@ Created on Sun Sep 25 21:23:38 2011
 Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
-from __future__ import print_function
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import stats
 
-from numpy import exp
 
 def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     '''calculate anderson-darling A2 statistic
@@ -26,7 +23,7 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
         Currently only for 1d data x, except in case dist='norm'
     params : tuple
         optional distribution parameters if fit is False
-    axis : integer
+    axis : int
         If dist is 'norm' or fit is False, then data can be an n-dimensional
         and axis specifies the axis of a variable
 

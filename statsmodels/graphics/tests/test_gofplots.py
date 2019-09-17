@@ -6,6 +6,7 @@ import statsmodels.api as sm
 
 
 class BaseProbplotMixin(object):
+    # TODO: can this be setup_class?  same below
     def setup(self):
         try:
             import matplotlib.pyplot as plt
@@ -37,8 +38,9 @@ class BaseProbplotMixin(object):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
+    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
-    def t_est_probplot_other_array(self, close_figures):
+    def test_probplot_other_array(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_array)
 
@@ -52,8 +54,9 @@ class BaseProbplotMixin(object):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
+    @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
-    def t_est_probplot_other_prbplt(self, close_figures):
+    def test_probplot_other_prbplt(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_prbplot)
 
@@ -99,6 +102,10 @@ class BaseProbplotMixin(object):
                              markeredgecolor='white',
                              alpha=0.5)
 
+    def test_fit_params(self):
+        assert self.prbplt.fit_params[-2] == self.prbplt.loc
+        assert self.prbplt.fit_params[-1] == self.prbplt.scale
+
 
 class TestProbPlotLongely(BaseProbplotMixin):
     def setup(self):
@@ -137,6 +144,54 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.line = '45'
         super(TestProbPlotRandomNormalLocScale, self).setup()
 
+    def test_loc_set(self):
+        assert self.prbplt.loc == 8.25
+
+    def test_scale_set(self):
+        assert self.prbplt.scale == 3.25
+
+
+class TestCompareSamplesDifferentSize(object):
+    def setup(self):
+        np.random.seed(5)
+        self.data1 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25,
+                                                  size=37))
+        self.data2 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25,
+                                                  size=55))
+
+    @pytest.mark.matplotlib
+    def test_qqplot(self, close_figures):
+        self.data1.qqplot(other=self.data2)
+        with pytest.raises(ValueError):
+            self.data2.qqplot(other=self.data1)
+
+    @pytest.mark.matplotlib
+    def test_ppplot(self, close_figures):
+        self.data1.ppplot(other=self.data2)
+        self.data2.ppplot(other=self.data1)
+
+
+class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
+
+    def setup(self):
+        np.random.seed(5)
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data, loc=8, scale=3)
+        self.line = '45'
+        super(TestProbPlotRandomNormalLocScaleDist, self).setup()
+
+    def test_loc_set(self):
+        assert self.prbplt.loc == 8
+
+    def test_scale_set(self):
+        assert self.prbplt.scale == 3
+
+    def test_loc_set_in_dist(self):
+        assert self.prbplt.dist.mean() == 8.
+
+    def test_scale_set_in_dist(self):
+        assert self.prbplt.dist.var() == 9.
+
 
 class TestTopLevel(object):
     def setup(self):
@@ -167,10 +222,19 @@ class TestTopLevel(object):
             sm.qqplot_2samples(self.prbplt, self.other_prbplot,
                                line=line)
 
-
     @pytest.mark.matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
             # test with arrays
             sm.qqplot_2samples(self.res, self.other_array, line=line)
+
+
+def test_invalid_dist_config(close_figures):
+    # GH 4226
+    np.random.seed(5)
+    data = sm.datasets.longley.load(as_pandas=False)
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    mod_fit = sm.OLS(data.endog, data.exog).fit()
+    with pytest.raises(TypeError, match=r'dist\(0, 1, 4, loc=0, scale=1\)'):
+        sm.ProbPlot(mod_fit.resid, stats.t, distargs=(0, 1, 4))

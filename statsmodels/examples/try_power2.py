@@ -6,7 +6,6 @@ Created on Wed Mar 13 13:06:14 2013
 Author: Josef Perktold
 """
 
-from __future__ import print_function
 from statsmodels.stats.power import TTestPower, TTestIndPower, tt_solve_power
 
 if __name__ == '__main__':

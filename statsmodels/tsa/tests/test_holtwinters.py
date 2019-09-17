@@ -2,6 +2,8 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.platform import PLATFORM_OSX
+
 import os
 import warnings
 
@@ -28,25 +30,25 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     Simple, slow, direct implementation of double exp smoothing for testing
     """
     n = x.shape[0]
-    l = np.zeros(n)
+    lvals = np.zeros(n)
     b = np.zeros(n)
     xhat = np.zeros(n)
     f = np.zeros(nforecast)
-    l[0] = l0
+    lvals[0] = l0
     b[0] = b0
     # Special case the 0 observations since index -1 is not available
     xhat[0] = l0 + b0
-    l[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
-    b[0] = beta * (l[0] - l0) + (1 - beta) * b0
+    lvals[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
+    b[0] = beta * (lvals[0] - l0) + (1 - beta) * b0
     for t in range(1, n):
         # Obs in index t is the time t forecast for t + 1
-        l[t] = alpha * x[t] + (1 - alpha) * (l[t - 1] + b[t - 1])
-        b[t] = beta * (l[t] - l[t - 1]) + (1 - beta) * b[t - 1]
+        lvals[t] = alpha * x[t] + (1 - alpha) * (lvals[t - 1] + b[t - 1])
+        b[t] = beta * (lvals[t] - lvals[t - 1]) + (1 - beta) * b[t - 1]
 
-    xhat[1:] = l[0:-1] + b[0:-1]
-    f[:] = l[-1] + np.arange(1, nforecast + 1) * b[-1]
+    xhat[1:] = lvals[0:-1] + b[0:-1]
+    f[:] = lvals[-1] + np.arange(1, nforecast + 1) * b[-1]
     err = x - xhat
-    return l, b, f, err, xhat
+    return lvals, b, f, err, xhat
 
 
 class TestHoltWinters(object):
@@ -156,9 +158,11 @@ class TestHoltWinters(object):
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(self.aust.values, seasonal_periods=4,
                                     trend='add', seasonal='mul').fit()
-        assert_almost_equal(fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3)
+        assert_almost_equal(fit1.forecast(4),
+                            [61.3083, 37.3730, 46.9652, 51.5578], 3)
 
-    @pytest.mark.xfail(reason='Optimizer does not converge')
+    # FIXME: this is passing 2019-05-22 on some platforms; what has changed?
+    @pytest.mark.xfail(reason='Optimizer does not converge', strict=False)
     def test_forecast(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
                                     seasonal='add').fit()
@@ -204,7 +208,9 @@ class TestHoltWinters(object):
         assert_almost_equal(fit3.forecast(5),
                             [42.85, 43.81, 44.66, 45.41, 46.06], 2)
 
-    def test_holt_damp(self):
+    @pytest.mark.smoke
+    def test_holt_damp_fit(self):
+        # Smoke test for parameter estimation
         fit1 = SimpleExpSmoothing(self.livestock2_livestock).fit()
         mod4 = Holt(self.livestock2_livestock, damped=True)
         fit4 = mod4.fit(damping_slope=0.98)
@@ -222,14 +228,102 @@ class TestHoltWinters(object):
         assert_almost_equal(fit4.params['smoothing_slope'], 0.00, 2)
         assert_almost_equal(fit4.params['damping_slope'], 0.98, 2)
         assert_almost_equal(fit4.params['initial_level'], 257.36, 2)
-        assert_almost_equal(fit4.params['initial_slope'], 6.51, 2)
+        assert_almost_equal(fit4.params['initial_slope'], 6.64, 2)
         assert_almost_equal(fit4.sse, 6036.56, 2)  # 6080.26
+
         assert_almost_equal(fit5.params['smoothing_level'], 0.97, 2)
         assert_almost_equal(fit5.params['smoothing_slope'], 0.00, 2)
         assert_almost_equal(fit5.params['damping_slope'], 0.98, 2)
         assert_almost_equal(fit5.params['initial_level'], 258.95, 2)
-        assert_almost_equal(fit5.params['initial_slope'], 1.02, 2)
+        assert_almost_equal(fit5.params['initial_slope'], 1.04, 2)
         assert_almost_equal(fit5.sse, 6082.00, 2)  # 6100.11
+
+    def test_holt_damp_R(self):
+        # Test the damping parameters against the R forecast packages `ets`
+        # library(ets)
+        # livestock2_livestock <- c(...)
+        # res <- ets(livestock2_livestock, model='AAN', damped=TRUE, phi=0.98)
+        mod = Holt(self.livestock2_livestock, damped=True)
+        params = {
+            'smoothing_level': 0.97402626,
+            'smoothing_slope': 0.00010006,
+            'damping_slope': 0.98,
+            'initial_level': 252.59039965,
+            'initial_slope': 6.90265918}
+        fit = mod.fit(optimized=False, **params)
+
+        # Check that we captured the parameters correctly
+        for key in params.keys():
+            assert_allclose(fit.params[key], params[key])
+
+        # Summary output
+        # print(res$mse)
+        assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)
+        # print(res$aicc)
+        # TODO: this fails - different AICC definition?
+        # assert_allclose(fit.aicc, 282.386426659408, atol=1e-3)
+        # print(res$bic)
+        # TODO: this fails - different BIC definition?
+        # assert_allclose(fit.bic, 287.1563626818338)
+
+        # print(res$states[,'l'])
+        # note: this array includes the initial level
+        desired = [
+            252.5903996514365, 263.7992355246843, 268.3623324350207,
+            261.0312983437606, 266.6590942700923, 277.3958197247272,
+            283.8256217863908, 290.2962560621914, 292.5701438129583,
+            300.7655919939834, 309.2118057241649, 318.2377698496536,
+            329.2238709362550, 338.7709778307978, 339.3669793596703,
+            329.0127022356033, 314.7684267018998, 314.5948077575944,
+            321.3612035017972, 329.6924360833211, 346.0712138652086,
+            352.2534120008911, 348.5862874190927, 415.8839400693967,
+            417.2018843196238, 417.8435306633725, 412.4857261252961,
+            412.0647865321129, 395.2500605270393, 401.4367438266322,
+            408.1907701386275, 414.1814574903921]
+        assert_allclose(np.r_[fit.params['initial_level'], fit.level], desired)
+
+        # print(res$states[,'b'])
+        # note: this array includes the initial slope
+        desired = [
+            6.902659175332394, 6.765062519124909, 6.629548973536494,
+            6.495537532917715, 6.365550989616566, 6.238702070454378,
+            6.113960476763530, 5.991730467006233, 5.871526257315264,
+            5.754346516684953, 5.639547926790058, 5.527116419415724,
+            5.417146212898857, 5.309238662451385, 5.202580636191761,
+            5.096941655567694, 4.993026494493987, 4.892645486210410,
+            4.794995106664251, 4.699468310763351, 4.606688340205792,
+            4.514725879754355, 4.423600168391240, 4.341595902295941,
+            4.254462303550087, 4.169010676686062, 4.084660399498803,
+            4.002512751871354, 3.920332298146730, 3.842166514133902,
+            3.765630194200260, 3.690553892582855]
+        # TODO: not sure why the precision is so low here...
+        assert_allclose(np.r_[fit.params['initial_slope'], fit.slope], desired,
+                        atol=1e-3)
+
+        # print(res$fitted)
+        desired = [
+            259.3550056432622, 270.4289967934267, 274.8592904290865,
+            267.3969251260200, 272.8973342399166, 283.5097477537724,
+            289.8173030536191, 296.1681519198575, 298.3242395451272,
+            306.4048515803347, 314.7385626924191, 323.6543439406810,
+            334.5326742248959, 343.9740317200002, 344.4655083831382,
+            334.0077050580596, 319.6615926665040, 319.3896003340806,
+            326.0602987063282, 334.2979150278692, 350.5857684386102,
+            356.6778433630504, 352.9214155841161, 420.1387040536467,
+            421.3712573771029, 421.9291611265248, 416.4886933168049,
+            415.9872490289468, 399.0919861792231, 405.2020670104834,
+            411.8810877289437]
+        assert_allclose(fit.fittedvalues, desired, atol=1e-3)
+
+        # print(forecast(res)$mean)
+        desired = [
+            417.7982003051233, 421.3426082635598, 424.8161280628277,
+            428.2201774661102, 431.5561458813270, 434.8253949282395,
+            438.0292589942138, 441.1690457788685, 444.2460368278302,
+            447.2614880558126]
+        assert_allclose(fit.forecast(10), desired, atol=1e-4)
+
+
 
     def test_hw_seasonal(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4,
@@ -254,7 +348,8 @@ class TestHoltWinters(object):
         # assert_almost_equal(fit5.forecast(1), [60.60], 2)
         # assert_almost_equal(fit6.forecast(1), [61.47], 2)
 
-    @pytest.mark.xfail(reason='Optimizer does not converge')
+    # FIXME: this is passing 2019-05-22; what has changed?
+    # @pytest.mark.xfail(reason='Optimizer does not converge')
     def test_hw_seasonal_buggy(self):
         fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     seasonal='add').fit(use_boxcox=True)
@@ -279,7 +374,7 @@ def test_negative_multipliative(trend_seasonal):
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_dampen_no_trend(seasonal):
     y = -np.ones(100)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ExponentialSmoothing(housing_data, trend=False, seasonal=seasonal, damped=True,
                              seasonal_periods=10)
 
@@ -331,7 +426,9 @@ def test_basin_hopping(reset_randomstate):
     mod = ExponentialSmoothing(housing_data, trend='add')
     res = mod.fit()
     res2 = mod.fit(use_basinhopping=True)
-    assert res2.sse <= res.sse
+    # GH 5642
+    tol = 1e-6 if PLATFORM_OSX else 0.0
+    assert res2.sse <= res.sse + tol
 
 
 def test_debiased():
@@ -341,9 +438,10 @@ def test_debiased():
     assert np.any(res.fittedvalues != res2.fittedvalues)
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize('trend', TRENDS)
 @pytest.mark.parametrize('seasonal', SEASONALS)
-def test_float_boxcox_smoke(trend, seasonal):
+def test_float_boxcox(trend, seasonal):
     res = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal).fit(use_boxcox=0.5)
     assert_allclose(res.params['use_boxcox'], 0.5)
 
@@ -352,13 +450,17 @@ def test_float_boxcox_smoke(trend, seasonal):
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_equivalence_cython_python(trend, seasonal):
     mod = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal)
-    res = mod.fit()
+
+    with pytest.warns(None):
+        # Overflow in mul-mul case fixed
+        res = mod.fit()
+
     res.summary()  # Smoke test
     params = res.params
     nobs = housing_data.shape[0]
     y = np.squeeze(np.asarray(housing_data))
     m = 12 if seasonal else 0
-    l = np.zeros(nobs)
+    lvals = np.zeros(nobs)
     b = np.zeros(nobs)
     s = np.zeros(nobs + m - 1)
     p = np.zeros(6 + m)
@@ -377,8 +479,8 @@ def test_equivalence_cython_python(trend, seasonal):
     py_func = PY_SMOOTHERS[(seasonal, trend)]
     cy_func = SMOOTHERS[(seasonal, trend)]
     p_copy = p.copy()
-    sse_cy = cy_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
-    sse_py = py_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
+    sse_cy = cy_func(p, xi, p_copy, y, lvals, b, s, m, nobs, max_seen)
+    sse_py = py_func(p, xi, p_copy, y, lvals, b, s, m, nobs, max_seen)
     assert_allclose(sse_py, sse_cy)
 
 
@@ -410,3 +512,13 @@ def test_direct_holt_add():
     assert_allclose(b, res.slope)
     assert_allclose(f, res.level.iloc[-1] + res.slope.iloc[-1] * np.array([1, 2, 3, 4, 5]))
     assert_allclose(f, res.forecast(5))
+
+
+def test_integer_array(reset_randomstate):
+    rs = np.random.RandomState(12345)
+    e = 10*rs.standard_normal((1000,2))
+    y_star = np.cumsum(e[:,0])
+    y = y_star + e[:,1]
+    y = y.astype(np.long)
+    res = ExponentialSmoothing(y,trend='add').fit()
+    assert res.params['smoothing_level'] != 0.0

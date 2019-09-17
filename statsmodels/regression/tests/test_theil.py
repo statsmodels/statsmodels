@@ -6,15 +6,14 @@ Author: Josef Perktold
 """
 
 import os
+
 import numpy as np
 import pandas as pd
-from scipy import stats
+import pytest
 
-from numpy.testing import assert_allclose, assert_equal, assert_warns
+from numpy.testing import assert_allclose
 
-from statsmodels.regression.linear_model import OLS, WLS, GLS
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.regression.linear_model import OLS, GLS
 
 from statsmodels.sandbox.regression.penalized import TheilGLS
 
@@ -118,8 +117,10 @@ class TestTheilTextile(object):
         assert_allclose(res_theil.params, res_ols.params, rtol=1e-10)
         assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-10)
 
-    def test_smoke(self):
-        self.res1.summary()
+    @pytest.mark.smoke
+    def test_summary(self):
+        with pytest.warns(UserWarning):
+            self.res1.summary()
 
 
 class CheckEquivalenceMixin(object):

@@ -330,7 +330,7 @@ def aic(llf, nobs, df_modelwc):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Akaike_information_criterion
+    https://en.wikipedia.org/wiki/Akaike_information_criterion
 
     """
     return -2. * llf + 2. * df_modelwc
@@ -355,7 +355,7 @@ def aicc(llf, nobs, df_modelwc):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
+    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
     """
     return -2. * llf + 2. * df_modelwc * nobs / (nobs - df_modelwc - 1.)
@@ -380,7 +380,7 @@ def bic(llf, nobs, df_modelwc):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Bayesian_information_criterion
+    https://en.wikipedia.org/wiki/Bayesian_information_criterion
 
     """
     return -2. * llf + np.log(nobs) * df_modelwc
@@ -405,7 +405,7 @@ def hqic(llf, nobs, df_modelwc):
 
     References
     ----------
-    Wikipedia doesn't say much
+    Wikipedia does not say much
 
     """
     return -2. * llf + 2 * np.log(np.log(nobs)) * df_modelwc
@@ -414,7 +414,7 @@ def hqic(llf, nobs, df_modelwc):
 # IC based on residual sigma
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Akaike information criterion
+    r"""Akaike information criterion
 
     Parameters
     ----------
@@ -462,7 +462,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Akaike_information_criterion
+    https://en.wikipedia.org/wiki/Akaike_information_criterion
 
     """
     if not islog:
@@ -497,7 +497,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
+    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
     """
     if not islog:
@@ -532,7 +532,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Bayesian_information_criterion
+    https://en.wikipedia.org/wiki/Bayesian_information_criterion
 
     """
     if not islog:

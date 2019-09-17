@@ -11,7 +11,7 @@ includes kernel density estimation for univariate and multivariate data,
 kernel regression and locally weighted scatterplot smoothing (lowess).
 
 sandbox.nonparametric contains additional functions that are work in progress
-or don't have unit tests yet. We are planning to include here nonparametric
+or do not have unit tests yet. We are planning to include here nonparametric
 density estimators, especially based on kernel or orthogonal polynomials,
 smoothers, and tools for nonparametric models and methods in other parts of
 statsmodels.
@@ -89,25 +89,42 @@ Module Reference
 
 The public functions and classes are
 
+.. currentmodule:: statsmodels.nonparametric.smoothers_lowess
 .. autosummary::
    :toctree: generated/
 
-   smoothers_lowess.lowess
-   kde.KDEUnivariate
-   kernel_density.KDEMultivariate
-   kernel_density.KDEMultivariateConditional
-   kernel_density.EstimatorSettings
-   kernel_regression.KernelReg
-   kernel_regression.KernelCensoredReg
+   lowess
+
+.. currentmodule:: statsmodels.nonparametric.kde
+.. autosummary::
+   :toctree: generated/
+
+   KDEUnivariate
+
+.. currentmodule:: statsmodels.nonparametric.kernel_density
+.. autosummary::
+   :toctree: generated/
+
+   KDEMultivariate
+   KDEMultivariateConditional
+   EstimatorSettings
+
+.. currentmodule:: statsmodels.nonparametric.kernel_regression
+.. autosummary::
+   :toctree: generated/
+
+   KernelReg
+   KernelCensoredReg
 
 helper functions for kernel bandwidths
 
+.. currentmodule:: statsmodels.nonparametric.bandwidths
 .. autosummary::
    :toctree: generated/
 
-   bandwidths.bw_scott
-   bandwidths.bw_silverman
-   bandwidths.select_bandwidth
+   bw_scott
+   bw_silverman
+   select_bandwidth
 
 There are some examples for nonlinear functions in
 :mod:`statsmodels.nonparametric.dgp_examples`

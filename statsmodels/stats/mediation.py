@@ -15,12 +15,9 @@ In the case of linear models with no interactions involving the
 mediator, the results should be similar or identical to the earlier
 Barron-Kenny approach.
 """
-from statsmodels.compat.python import string_types
-
 import numpy as np
 import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
-import statsmodels.compat.pandas as pdc  # pragma: no cover
 
 
 class Mediation(object):
@@ -37,14 +34,14 @@ class Mediation(object):
         Regression model for the mediator variable.  Predictor
         variables include the treatment/exposure and any other
         variables of interest.
-    exposure : string or (int, int) tuple
+    exposure : str or (int, int) tuple
         The name or column position of the treatment/exposure
         variable.  If positions are given, the first integer is the
         column position of the exposure variable in the outcome model
         and the second integer is the position of the exposure variable
         in the mediator model.  If a string is given, it must be the name
         of the exposure variable in both regression models.
-    mediator : string or int
+    mediator : {str, int}
         The name or column position of the mediator variable in the
         outcome regression model.  If None, infer the name from the
         mediator model formula (if present).
@@ -164,7 +161,7 @@ class Mediation(object):
             return maybe_name_or_idx(self.mediator, mod)[1]
 
         exp = self.exposure
-        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, string_types))
+        exp_is_2 = ((len(exp) == 2) and not isinstance(exp, str))
 
         if exp_is_2:
             if model == 'outcome':
@@ -265,9 +262,9 @@ class Mediation(object):
 
         Parameters
         ----------
-        method : string
+        method : str
             Either 'parametric' or 'bootstrap'.
-        n_rep : integer
+        n_rep : int
             The number of simulation replications.
 
         Returns a MediationResults object.
@@ -369,22 +366,26 @@ class MediationResults(object):
         self.ACME_avg = (self.ACME_ctrl + self.ACME_tx) / 2
         self.ADE_avg = (self.ADE_ctrl + self.ADE_tx) / 2
 
-
     def summary(self, alpha=0.05):
         """
         Provide a summary of a mediation analysis.
         """
 
         columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]
-        index = ["ACME (control)", "ACME (treated)", "ADE (control)", "ADE (treated)",
-                 "Total effect", "Prop. mediated (control)", "Prop. mediated (treated)",
-                 "ACME (average)", "ADE (average)", "Prop. mediated (average)"]
+        index = ["ACME (control)", "ACME (treated)",
+                 "ADE (control)", "ADE (treated)",
+                 "Total effect",
+                 "Prop. mediated (control)",
+                 "Prop. mediated (treated)",
+                 "ACME (average)", "ADE (average)",
+                 "Prop. mediated (average)"]
         smry = pd.DataFrame(columns=columns, index=index)
 
-        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx, self.ADE_ctrl, self.ADE_tx,
+        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx,
+                                 self.ADE_ctrl, self.ADE_tx,
                                  self.total_effect, self.prop_med_ctrl,
-                                 self.prop_med_tx, self.ACME_avg, self.ADE_avg,
-                                 self.prop_med_avg]):
+                                 self.prop_med_tx, self.ACME_avg,
+                                 self.ADE_avg, self.prop_med_avg]):
 
             if ((vec is self.prop_med_ctrl) or (vec is self.prop_med_tx) or
                     (vec is self.prop_med_avg)):
@@ -395,9 +396,6 @@ class MediationResults(object):
             smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
             smry.iloc[i, 3] = _pvalue(vec)
 
-        if pdc.version < '0.17.0':  # pragma: no cover
-            smry = smry.convert_objects(convert_numeric=True)
-        else:  # pragma: no cover
-            smry = smry.apply(pd.to_numeric, errors='coerce')
+        smry = smry.apply(pd.to_numeric, errors='coerce')
 
         return smry

@@ -4,7 +4,6 @@ Created on Sat Mar 13 07:56:22 2010
 
 Author: josef-pktd
 """
-from __future__ import print_function
 import sympy as sy
 
 
@@ -44,7 +43,9 @@ dlddf = (tllf1-tllf2).diff(df)
 print(dlddf)
 print(sy.cse(dlddf))
 print('\n derivative of loglike of t distribution wrt df')
-for k,v in sy.cse(dlddf)[0]: print(k,'=',v)
+for k,v in sy.cse(dlddf)[0]:
+    print(k, '=', v)
+
 print(sy.cse(dlddf)[1][0])
 
 print('\nstandard t distribution, dll_df, dll_dy')
@@ -56,6 +57,6 @@ print('\n')
 
 print(dlddf.subs(dict(y=1,mu=1,sigma2=1.5,df=10.0001)))
 print(dlddf.subs(dict(y=1,mu=1,sigma2=1.5,df=10.0001)).evalf())
-# Note: derivatives of nested function doesn't work in sympy
+# Note: derivatives of nested function does not work in sympy
 #       at least not higher order derivatives (second or larger)
 #       looks like print(failure

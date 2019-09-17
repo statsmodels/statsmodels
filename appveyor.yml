@@ -8,19 +8,10 @@ environment:
   PYTEST_DIRECTIVES: --skip-slow
   matrix:
     # Pip builds
-    - PYTHON: C:\Python27
-      PYTEST_DIRECTIVES:
-    - PYTHON: C:\Python27-x64
     - PYTHON: C:\Python36
-    - PYTHON: C:\Python36-x64
       PYTEST_DIRECTIVES:
-    # Conda builds
-    - PY_MAJOR_VER: 2
+    - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86"
-    - PY_MAJOR_VER: 2
-      PYTHON_ARCH: "x86_64"
-      SCIPY: "0.18"
-      NUMPY: "1.11"
     - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86_64"
       TEST_INSTALL: "true"

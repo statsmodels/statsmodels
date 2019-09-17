@@ -1,7 +1,10 @@
 """
 Test functions for models.tools
 """
-from statsmodels.compat.python import lrange, range
+from statsmodels.compat.python import lrange
+
+import string
+
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
@@ -13,6 +16,19 @@ import pytest
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
+
+
+@pytest.fixture('module')
+def string_var():
+    string_var = [string.ascii_lowercase[0:5],
+                  string.ascii_lowercase[5:10],
+                  string.ascii_lowercase[10:15],
+                  string.ascii_lowercase[15:20],
+                  string.ascii_lowercase[20:25]]
+    string_var *= 5
+    string_var = np.asarray(sorted(string_var))
+    series = pd.Series(string_var, name='string_var')
+    return series
 
 
 class TestTools(object):
@@ -162,7 +178,7 @@ def test_estimable():
     assert not isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X)
     assert not isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X)
     assert isestimable(np.hstack([np.eye(5), np.eye(5)]), X)
-    # Test array-like for design
+    # Test array_like for design
     XL = X.tolist()
     assert isestimable(np.hstack([np.eye(5), np.eye(5)]), XL)
     # Test ValueError for incorrect number of columns
@@ -211,8 +227,12 @@ class TestCategoricalNumerical(object):
 
     def test_array1d(self):
         des = tools.categorical(self.instr)
-        assert_array_equal(des[:,-5:], self.dummy)
-        assert_equal(des.shape[1],6)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 6)
+
+    def test_array1d_col_error(self):
+        with pytest.raises(TypeError, match='col must be a str, int or None'):
+            tools.categorical(self.instr, col={'a': 1})
 
     def test_array2d_drop(self):
         des = np.column_stack((self.des, self.instr, self.des))
@@ -231,6 +251,11 @@ class TestCategoricalNumerical(object):
         test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
         assert_array_equal(test_des, self.dummy)
         assert_equal(len(des.dtype.names), 9)
+
+    def test_recarray2d_error(self):
+        arr = np.c_[self.recdes, self.recdes]
+        with pytest.raises(IndexError, match='col is None and the input'):
+            tools.categorical(arr, col=None)
 
     def test_recarray2dint(self):
         des = tools.categorical(self.recdes, col=2)
@@ -290,60 +315,91 @@ class TestCategoricalNumerical(object):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
-#    def test_arraylike2d(self):
-#        des = tools.categorical(self.structdes.tolist(), col=2)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test_des, self.dummy)
-#        assert_equal(des.shape[1], 9)
+    @pytest.mark.xfail(reason="Call to tools.categorical raises "
+                              "AttributeError.  Previously this was "
+                              "commented-out with the comment "
+                              "'comment out until we have type coercion'.",
+                       strict=True, raises=AttributeError)
+    def test_arraylike2d(self):
+        des = tools.categorical(self.structdes.tolist(), col=2)
+        test_des = des[:,-5:]
+        assert_array_equal(test_des, self.dummy)
+        assert_equal(des.shape[1], 9)
 
-#    def test_arraylike1d(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = tools.categorical(instr)
-#        test_dum = dum[:,-5:]
-#        assert_array_equal(test_dum, self.dummy)
-#        assert_equal(dum.shape[1], 6)
+    @pytest.mark.xfail(reason="Call to tools.categorical raises "
+                              "AttributeError.  Previously this was "
+                              "commented-out with the comment "
+                              "'comment out until we have type coercion'.",
+                       strict=True, raises=AttributeError)
+    def test_arraylike1d(self):
+        instr = self.structdes['instrument'].tolist()
+        dum = tools.categorical(instr)
+        test_dum = dum[:,-5:]
+        assert_array_equal(test_dum, self.dummy)
+        assert_equal(dum.shape[1], 6)
 
-#    def test_arraylike2d_drop(self):
-#        des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test__des, self.dummy)
-#        assert_equal(des.shape[1], 8)
+    @pytest.mark.xfail(reason="Call to tools.categorical raises "
+                              "AttributeError.  Previously this was "
+                              "commented-out with the comment "
+                              "'comment out until we have type coercion'.",
+                       strict=True, raises=AttributeError)
+    def test_arraylike2d_drop(self):
+        des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
+        test_des = des[:,-5:]
+        assert_array_equal(test_des, self.dummy)
+        assert_equal(des.shape[1], 8)
 
-#    def test_arraylike1d_drop(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = tools.categorical(instr, drop=True)
-#        assert_array_equal(dum, self.dummy)
-#        assert_equal(dum.shape[1], 5)
+    @pytest.mark.xfail(reason="Call to tools.categorical raises "
+                              "AttributeError.  Previously this was "
+                              "commented-out with the comment "
+                              "'comment out until we have type coercion'.",
+                       strict=True, raises=AttributeError)
+    def test_arraylike1d_drop(self):
+        instr = self.structdes['instrument'].tolist()
+        dum = tools.categorical(instr, drop=True)
+        assert_array_equal(dum, self.dummy)
+        assert_equal(dum.shape[1], 5)
 
 
 class TestCategoricalString(TestCategoricalNumerical):
 
-# comment out until we have type coercion
-#    def test_array2d(self):
-#        des = np.column_stack((self.des, self.instr, self.des))
-#        des = tools.categorical(des, col=2)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],10)
+    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
+                              "this commented out with the comment "
+                              "'comment out until we have type coercion'",
+                              strict=False)
+    def test_array2d(self):
+        des = np.column_stack((self.des, self.instr, self.des))
+        des = tools.categorical(des, col=2)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 10)
 
-#    def test_array1d(self):
-#        des = tools.categorical(self.instr)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],6)
+    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
+                              "this commented out with the comment "
+                              "'comment out until we have type coercion'",
+                              strict=False)
+    def test_array1d(self):
+        des = tools.categorical(self.instr)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 6)
 
-#    def test_array2d_drop(self):
-#        des = np.column_stack((self.des, self.instr, self.des))
-#        des = tools.categorical(des, col=2, drop=True)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],9)
+    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
+                              "this commented out with the comment "
+                              "'comment out until we have type coercion'",
+                              strict=False)
+    def test_array2d_drop(self):
+        des = np.column_stack((self.des, self.instr, self.des))
+        des = tools.categorical(des, col=2, drop=True)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 9)
 
     def test_array1d_drop(self):
         des = tools.categorical(self.string_var, drop=True)
         assert_array_equal(des, self.dummy)
-        assert_equal(des.shape[1],5)
+        assert_equal(des.shape[1], 5)
 
     def test_recarray2d(self):
         des = tools.categorical(self.recdes, col='str_instr')
-        # better way to do this?
+        # TODO: better way to do this?
         test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
         assert_array_equal(test_des, self.dummy)
         assert_equal(len(des.dtype.names), 9)
@@ -406,17 +462,26 @@ class TestCategoricalString(TestCategoricalNumerical):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_arraylike2d(self):
-        pass
+        raise NotImplementedError
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_arraylike1d(self):
-        pass
+        raise NotImplementedError
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_arraylike2d_drop(self):
-        pass
+        raise NotImplementedError
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
     def test_arraylike1d_drop(self):
-        pass
+        raise NotImplementedError
+
 
 def test_rec_issue302():
     arr = np.rec.fromrecords([[10], [11]], names='group')
@@ -569,6 +634,50 @@ class TestEnsure2d(object):
         assert_array_equal(results[0], self.ndarray)
         assert_equal(results[1], None)
 
-        results = tools._ensure_2d(self.ndarray[:,0])
-        assert_array_equal(results[0], self.ndarray[:,[0]])
+        results = tools._ensure_2d(self.ndarray[:, 0])
+        assert_array_equal(results[0], self.ndarray[:, [0]])
         assert_equal(results[1], None)
+
+
+def test_categorical_pandas_errors(string_var):
+    with pytest.raises(ValueError, match='data.name does not match col'):
+        tools.categorical(string_var, 'unknown')
+
+    df = pd.DataFrame(string_var)
+    with pytest.raises(TypeError, match='col must be a str or int'):
+        tools.categorical(df, None)
+    with pytest.raises(ValueError, match='Column \'unknown\' not found in '
+                                         'data'):
+        tools.categorical(df, 'unknown')
+
+
+def test_categorical_series(string_var):
+    design = tools.categorical(string_var, drop=True)
+    dummies = pd.get_dummies(pd.Categorical(string_var))
+    assert_frame_equal(design, dummies)
+    design = tools.categorical(string_var, drop=False)
+    dummies.columns = list(dummies.columns)
+    assert_frame_equal(design.iloc[:, :5], dummies)
+    assert_series_equal(design.iloc[:, 5], string_var)
+    _, dictnames = tools.categorical(string_var, drop=False, dictnames=True)
+    for i, c in enumerate(pd.Categorical(string_var).categories):
+        assert i in dictnames
+        assert dictnames[i] == c
+
+
+def test_categorical_dataframe(string_var):
+    df = pd.DataFrame(string_var)
+    design = tools.categorical(df, 'string_var', drop=True)
+    dummies = pd.get_dummies(pd.Categorical(string_var))
+    assert_frame_equal(design, dummies)
+
+    df = pd.DataFrame({'apple': string_var, 'ban': string_var})
+    design = tools.categorical(df, 'apple', drop=True)
+    assert_frame_equal(design, dummies)
+
+
+def test_categorical_errors(string_var):
+    with pytest.raises(ValueError, match='Can only convert one column'):
+        tools.categorical(string_var, (0, 1))
+    with pytest.raises(ValueError, match='data.name does not match col'):
+        tools.categorical(string_var, {'a': 1})

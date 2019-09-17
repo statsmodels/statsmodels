@@ -89,6 +89,8 @@ Outliers and influence measures
    :toctree: generated/
 
    OLSInfluence
+   GLMInfluence
+   MLEInfluence
    variance_inflation_factor
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
@@ -211,7 +213,7 @@ correction based on fdr in `fdrcorrection`.
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in developement
+to one way ANOVA, but still in development
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons
@@ -256,6 +258,20 @@ to one way ANOVA, but still in developement
    fdrcorrection_twostage
    NullDistribution
    RegressionFDR
+
+.. module:: statsmodels.stats.knockoff_regeffects
+   :synopsis: Regression Knock-Off Effects
+
+.. currentmodule:: statsmodels.stats.knockoff_regeffects
+
+.. autosummary::
+   :toctree: generated/
+
+   CorrelationEffects
+   OLSEffects
+   ForwardEffects
+   OLSEffects
+   RegModelEffects
 
 The following functions are not (yet) public
 
@@ -428,6 +444,8 @@ positive definite and close to the original matrix.
    cov_nearest
    cov_nearest_factor_homog
    FactoredPSDMatrix
+   kernel_covariance
+
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
@@ -476,3 +494,26 @@ to verify in an observational setting.
 
    Mediation
    MediationResults
+
+
+Oaxaca-Blinder Decomposition
+----------------------------
+ 
+The Oaxaca-Blinder, or Blinder-Oaxaca as some call it, decomposition attempts to explain 
+gaps in means of groups. It uses the linear models of two given regression equations to 
+show what is explained by regression coefficients and known data and what is unexplained 
+using the same data. There are two types of Oaxaca-Blinder decompositions, the two-fold 
+and the three-fold, both of which can and are used in Economics Literature to discuss 
+differences in groups. This method helps classify discrimination or unobserved effects.
+This function attempts to port the functionality of the oaxaca command in STATA to Python.
+
+.. module:: statsmodels.stats.oaxaca
+   :synopsis: Oaxaca-Blinder Decomposition
+
+.. currentmodule:: statsmodels.stats.oaxaca
+
+.. autosummary::
+   :toctree: generated/
+
+   OaxacaBlinder
+   OaxacaResults

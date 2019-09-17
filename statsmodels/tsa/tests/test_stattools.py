@@ -1,6 +1,3 @@
-from statsmodels.compat.pandas import assert_index_equal
-from statsmodels.compat.python import lrange
-
 import os
 import warnings
 
@@ -9,19 +6,25 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
-from pandas import Series, DatetimeIndex, DataFrame
+from pandas import Series, date_range, DataFrame
 
-from statsmodels.datasets import macrodata, sunspots
+from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.platform import PLATFORM_WIN
+from statsmodels.compat.python import lrange
+from statsmodels.datasets import macrodata, sunspots, nile, randhie, modechoice
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
-                                             MissingDataError)
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+                                             MissingDataError,
+                                             InterpolationWarning)
+from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
-                                       innovations_algo, innovations_filter)
-from statsmodels.tsa.arima_process import arma_acovf
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+                                       innovations_algo, innovations_filter,
+                                       periodogram, zivot_andrews)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -30,6 +33,8 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
+
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture('module')
@@ -85,6 +90,7 @@ class TestADFConstantTrend(CheckADF):
         cls.critvalues = [-4.007, -3.437, -3.137]
 
 
+# FIXME: do not leave commented-out
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
@@ -100,9 +106,12 @@ class TestADFNoConstant(CheckADF):
         cls.res1 = adfuller(cls.x, regression="nc", autolag=None,
                 maxlag=4)
         cls.teststat = 3.5227498
-        cls.pvalue = .99999 # Stata does not return a p-value for noconstant.
-                        # Tau^max in MacKinnon (1994) is missing, so it is
-                        # assumed that its right-tail is well-behaved
+
+        cls.pvalue = .99999
+        # Stata does not return a p-value for noconstant.
+        # Tau^max in MacKinnon (1994) is missing, so it is
+        # assumed that its right-tail is well-behaved
+
         cls.critvalues = [-2.587, -1.950, -1.617]
 
 
@@ -151,12 +160,8 @@ class CheckCorrGram(object):
     """
     data = macrodata.load_pandas()
     x = data.data['realgdp']
-    filename = os.path.dirname(os.path.abspath(__file__))+\
-            "/results/results_corrgram.csv"
+    filename = os.path.join(CURR_DIR, 'results', 'results_corrgram.csv')
     results = pd.read_csv(filename, delimiter=',')
-
-    #not needed: add 1. for lag zero
-    #self.results['acvar'] = np.concatenate(([1.], self.results['acvar']))
 
 
 class TestACF(CheckCorrGram):
@@ -182,9 +187,10 @@ class TestACF(CheckCorrGram):
         assert_almost_equal(self.res1[2][:40], self.qstat, DECIMAL_3)
         # 3 decimal places because of stata rounding
 
-#    def pvalue(self):
-#        pass
-#NOTE: shouldn't need testing if Q stat is correct
+    # FIXME: enable/xfail/skip or delete
+    #def pvalue(self):
+    #    pass
+    # NOTE: should not need testing if Q stat is correct
 
 
 class TestACF_FFT(CheckCorrGram):
@@ -238,6 +244,7 @@ class TestACFMissing(CheckCorrGram):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
 
+# FIXME: enable/xfail/skip or delete
 # how to do this test? the correct q_stat depends on whether nobs=len(x) is
 # used when x contains NaNs or whether nobs<len(x) when x contains NaNs
 #    def test_qstat_drop(self):
@@ -261,6 +268,21 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0., 0.])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_ols_inefficient(self):
+        lag_len = 5
+        pacfols = pacf_ols(self.x, nlags=lag_len, efficient=False)
+        x = self.x.copy()
+        x -= x.mean()
+        n = x.shape[0]
+        lags = np.zeros((n - 5, 5))
+        lead = x[5:]
+        direct = np.empty(lag_len + 1)
+        direct[0] = 1.0
+        for i in range(lag_len):
+            lags[:, i] = x[5 - (i + 1):-(i + 1)]
+            direct[i + 1] = lstsq(lags[:, :(i + 1)], lead, rcond=None)[0][-1]
+        assert_allclose(pacfols, direct, atol=1e-8)
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
@@ -291,7 +313,7 @@ class CheckCoint(object):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
 
 
-# this doesn't produce the old results anymore
+# this does not produce the old results anymore
 class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
@@ -315,6 +337,7 @@ def test_coint():
     y += const
     y = np.round(y, 4)
 
+    # FIXME: enable/xfail/skip or delete
     for trend in []:#['c', 'ct', 'ctt', 'nc']:
         print('\n', trend)
         print(coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None))
@@ -417,13 +440,28 @@ class TestGrangerCausality(object):
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
 
-        #R: lmtest:grangertest
+        # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
         gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
-        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'], decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                            decimal=7)
 
-    def test_granger_fails_on_nobs_check(self):
+    def test_grangercausality_single(self):
+        mdata = macrodata.load_pandas().data
+        mdata = mdata[['realgdp', 'realcons']].values
+        data = mdata.astype(float)
+        data = np.diff(np.log(data), axis=0)
+        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        assert 1 in gr
+        assert 1 not in gr2
+        assert_almost_equal(gr[2][0]['ssr_ftest'], gr2[2][0]['ssr_ftest'],
+                            decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr2[2][0]['ssr_ftest'],
+                            decimal=7)
+
+    def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         X = np.random.rand(10, 2)
         grangercausalitytests(X, 2, verbose=False)  # This should pass.
@@ -447,54 +485,122 @@ class TestKPSS(SetupKPSS):
     macrodata['realgdp'] series.
     """
 
-    def test_fail_nonvector_input(self):
-        with warnings.catch_warnings(record=True) as w:
-            kpss(self.x)  # should be fine
+    def test_fail_nonvector_input(self, reset_randomstate):
+        # should be fine
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, nlags='legacy')
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
-        with warnings.catch_warnings(record=True) as w:
-            kpss(self.x, 'c')
-            kpss(self.x, 'C')
-            kpss(self.x, 'ct')
-            kpss(self.x, 'CT')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'c', nlags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'C', nlags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'ct', nlags='legacy')
+        with pytest.warns(InterpolationWarning):
+            kpss(self.x, 'CT', nlags='legacy')
 
-        assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
+        assert_raises(ValueError, kpss, self.x, "unclear hypothesis",
+                      nlags='legacy')
 
     def test_teststat(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_equal(pval, 0.01)
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_equal(pval, 0.01)
 
     def test_store(self):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(InterpolationWarning):
             kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
         assert_equal(store.lags, 3)
 
+    # test autolag function _kpss_autolag against SAS 9.3
     def test_lags(self):
-        with warnings.catch_warnings(record=True) as w:
-            kpss_stat, pval, lags, crits = kpss(self.x, 'c')
-        assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
-        # assert_warns(UserWarning, kpss, self.x)
+        # real GDP from macrodata data set
+        with pytest.warns(InterpolationWarning):
+            res = kpss(self.x, 'c', nlags='auto')
+        assert_equal(res[2], 9)
+        # real interest rates from macrodata data set
+        res = kpss(sunspots.load(True).data['SUNACTIVITY'], 'c', nlags='auto')
+        assert_equal(res[2], 7)
+        # volumes from nile data set
+        with pytest.warns(InterpolationWarning):
+            res = kpss(nile.load(True).data['volume'], 'c', nlags='auto')
+        assert_equal(res[2], 5)
+        # log-coinsurance from randhie data set
+        with pytest.warns(InterpolationWarning):
+            res = kpss(randhie.load(True).data['lncoins'], 'ct', nlags='auto')
+        assert_equal(res[2], 75)
+        # in-vehicle time from modechoice data set
+        with pytest.warns(InterpolationWarning):
+            res = kpss(modechoice.load(True).data['invt'], 'ct', nlags='auto')
+        assert_equal(res[2], 18)
+
+    def test_kpss_fails_on_nobs_check(self):
+        # Test that if lags exceeds number of observations KPSS raises a
+        # clear error
+        # GH5925
+        nobs = len(self.x)
+        msg = (r"lags \({}\) must be < number of observations \({}\)"
+               .format(nobs, nobs))
+        with pytest.raises(ValueError, match=msg):
+            kpss(self.x, 'c', nlags=nobs)
+
+    def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
+        # Test that if *autolags* exceeds number of observations, we set
+        # suitable lags
+        # GH5925
+        data_which_breaks_autolag = np.array(
+            [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0,
+             0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+             0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+             1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1,
+             0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0,
+             0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+             0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+             1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]).astype(float)
+
+        kpss(data_which_breaks_autolag, nlags="auto")
+
+    def test_legacy_lags(self):
+        # Test legacy lags are the same
+        with pytest.warns(InterpolationWarning):
+            res = kpss(self.x, 'c', nlags='legacy')
+        assert_equal(res[2], 15)
+
+    def test_unknown_lags(self):
+        # Test legacy lags are the same
+        with pytest.raises(ValueError):
+            kpss(self.x, 'c', nlags='unknown')
+
+    def test_deprecation(self):
+        with pytest.warns(FutureWarning):
+            kpss(self.x, 'c')
 
 
 def test_pandasacovf():
@@ -502,9 +608,9 @@ def test_pandasacovf():
     assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
-def test_acovf2d():
+def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    dta.index = date_range(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))
@@ -513,17 +619,18 @@ def test_acovf2d():
         acovf(x, fft=False)
 
 
-def test_acovf_fft_vs_convolution():
+@pytest.mark.parametrize('demean', [True, False])
+@pytest.mark.parametrize('unbiased', [True, False])
+def test_acovf_fft_vs_convolution(demean, unbiased):
     np.random.seed(1)
     q = np.random.normal(size=100)
 
-    for demean in [True, False]:
-        for unbiased in [True, False]:
-            F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
-            F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
-            assert_almost_equal(F1, F2, decimal=7)
+    F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
+    F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
+    assert_almost_equal(F1, F2, decimal=7)
 
 
+@pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
@@ -688,7 +795,7 @@ def test_pacf2acf_errors():
     with pytest.raises(ValueError):
         levinson_durbin_pacf(pacf, nlags=20)
     with pytest.raises(ValueError):
-        levinson_durbin_pacf(pacf[:1])
+        levinson_durbin_pacf(pacf[1:])
     with pytest.raises(ValueError):
         levinson_durbin_pacf(np.zeros(10))
     with pytest.raises(ValueError):
@@ -742,17 +849,17 @@ def test_innovations_algo_rtol():
 def test_innovations_errors():
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         innovations_algo(acovf, nobs=2.2)
     with pytest.raises(ValueError):
         innovations_algo(acovf, nobs=-1)
     with pytest.raises(ValueError):
         innovations_algo(np.empty((2, 2)))
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         innovations_algo(acovf, rtol='none')
 
 
-def test_innovations_filter_brockwell_davis():
+def test_innovations_filter_brockwell_davis(reset_randomstate):
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
@@ -766,7 +873,7 @@ def test_innovations_filter_brockwell_davis():
     assert_allclose(resid, expected)
 
 
-def test_innovations_filter_pandas():
+def test_innovations_filter_pandas(reset_randomstate):
     ma = np.array([-0.9, 0.5])
     acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, _ = innovations_algo(acovf, nobs=10)
@@ -791,7 +898,7 @@ def test_innovations_filter_errors():
         innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
 
 
-def test_innovations_algo_filter_kalman_filter():
+def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
     ar_params = np.array([0.5])
@@ -816,6 +923,95 @@ def test_innovations_algo_filter_kalman_filter():
     res = mod.filter(np.r_[ar_params, ma_params, sigma2])
 
     # Test that the two approaches are identical
-    assert_allclose(u, res.forecasts_error[0])
-    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1])
-    assert_allclose(llf_obs, res.llf_obs)
+    atol = 1e-6 if PLATFORM_WIN else 0.0
+    assert_allclose(u, res.forecasts_error[0], rtol=1e-6, atol=atol)
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1],
+                    atol=atol)
+    assert_allclose(llf_obs, res.llf_obs, atol=atol)
+
+
+def test_adfuller_short_series(reset_randomstate):
+    y = np.random.standard_normal(7)
+    res = adfuller(y, store=True)
+    assert res[-1].maxlag == 1
+    y = np.random.standard_normal(2)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y)
+    y = np.random.standard_normal(3)
+    with pytest.raises(ValueError, match='sample size is too short'):
+        adfuller(y, regression='ct')
+
+
+def test_adfuller_maxlag_too_large(reset_randomstate):
+    y = np.random.standard_normal(100)
+    with pytest.raises(ValueError, match='maxlag must be less than'):
+        adfuller(y, maxlag=51)
+
+
+def test_periodogram_future_warning(reset_randomstate):
+    with pytest.warns(FutureWarning):
+        periodogram(np.random.standard_normal(100))
+
+
+class SetupZivotAndrews(object):
+    # test directory
+    cur_dir = CURR_DIR
+    run_dir = os.path.join(cur_dir, 'results')
+    # use same file for testing failure modes
+    fail_file = os.path.join(run_dir, 'rgnp.csv')
+    fail_mdl = np.asarray(pd.read_csv(fail_file))
+
+
+class TestZivotAndrews(SetupZivotAndrews):
+
+    # failure mode tests
+    def test_fail_regression_type(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, regression='x')
+
+    def test_fail_trim_value(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, trim=0.5)
+
+    def test_fail_array_shape(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(np.random.rand(50, 2))
+
+    def test_fail_autolag_type(self):
+        with pytest.raises(ValueError):
+            zivot_andrews(self.fail_mdl, autolag='None')
+
+    # following tests compare results to R package urca.ur.za (1.13-0)
+    def test_rgnp_case(self):
+        res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c',
+                            autolag=None)
+        assert_allclose([res[0], res[1], res[4]],
+                        [-5.57615, 0.00312, 20], rtol=1e-3)
+
+    def test_gnpdef_case(self):
+        mdlfile = os.path.join(self.run_dir, 'gnpdef.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-4.12155, 0.28024, 5, 40], rtol=1e-3)
+
+    def test_stkprc_case(self):
+        mdlfile = os.path.join(self.run_dir, 'stkprc.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=8, regression='ct', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-5.60689, 0.00894, 1, 65], rtol=1e-3)
+
+    def test_rgnpq_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rgnpq.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, maxlag=12, regression='t', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.02761, 0.63993, 12, 102], rtol=1e-3)
+
+    def test_rand10000_case(self):
+        mdlfile = os.path.join(self.run_dir, 'rand10000.csv')
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        res = zivot_andrews(mdl, regression='c', autolag='t-stat')
+        assert_allclose([res[0], res[1], res[3], res[4]],
+                        [-3.48223, 0.69111, 25, 7071], rtol=1e-3)

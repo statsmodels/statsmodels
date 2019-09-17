@@ -67,6 +67,9 @@ class PenalizedMixin(object):
         return scale
 
     def loglike(self, params, pen_weight=None, **kwds):
+        """
+        Log-likelihood of model at params
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -78,6 +81,9 @@ class PenalizedMixin(object):
         return llf
 
     def loglikeobs(self, params, pen_weight=None, **kwds):
+        """
+        Log-likelihood of model observations at params
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -107,6 +113,9 @@ class PenalizedMixin(object):
             raise ValueError('method not recognized, should be "fd" or "cs"')
 
     def score(self, params, pen_weight=None, **kwds):
+        """
+        Gradient of model at params
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -118,6 +127,9 @@ class PenalizedMixin(object):
         return sc
 
     def score_obs(self, params, pen_weight=None, **kwds):
+        """
+        Gradient of model observations at params
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -141,6 +153,9 @@ class PenalizedMixin(object):
         return approx_hess(params, loglike)
 
     def hessian(self, params, pen_weight=None, **kwds):
+        """
+        Hessian of model at params
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -162,7 +177,7 @@ class PenalizedMixin(object):
         ----------
         method : None or str
             Method specifies the scipy optimizer as in nonlinear MLE models.
-        trim : Boolean or float
+        trim : {bool, float}
             Default is False or None, which uses no trimming.
             If trim is True or a float, then small parameters are set to zero.
             If True, then a default threshold is used. If trim is a float, then

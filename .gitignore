@@ -8,8 +8,10 @@ dist
 docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
+docs/source/datasets/generated
 docs/source/examples/notebooks/generated
 docs/source/datasets/statsmodels.datasets.*
+docs/source/savefig
 docs/gettingstarted_0.png
 examples/executed
 

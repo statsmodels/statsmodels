@@ -1,7 +1,6 @@
 """
 Tests for ARMA innovations algorithm wrapper
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pytest
@@ -22,6 +21,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
+    np.random.seed(42)
     endog = np.random.normal(size=100)
 
     # Innovations algorithm approach

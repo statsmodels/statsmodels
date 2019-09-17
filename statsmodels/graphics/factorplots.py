@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat.python import iterkeys, lrange, zip, iteritems
+from statsmodels.compat.python import iterkeys, lrange, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -17,21 +17,21 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     Interaction plot for factor level statistics.
 
     Note. If categorial factors are supplied levels will be internally
-    recoded to integers. This ensures matplotlib compatiblity.
+    recoded to integers. This ensures matplotlib compatibility.
 
     uses pandas.DataFrame to calculate an `aggregate` statistic for each
     level of the factor or group given by `trace`.
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         The `x` factor levels constitute the x-axis. If a `pandas.Series` is
         given its name will be used in `xlabel` if `xlabel` is None.
-    trace : array-like
+    trace : array_like
         The `trace` factor levels will be drawn as lines in the plot.
         If `trace` is a `pandas.Series` its name will be used as the
         `legendtitle` if `legendtitle` is None.
-    response : array-like
+    response : array_like
         The reponse or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
     func : function
@@ -52,8 +52,8 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     linestyles : list, optional
         If given, must have length == number of levels in trace.
     markers : list, optional
-        If given, must have length == number of lovels in trace
-    kwargs
+        If given, must have length == number of levels in trace
+    **kwargs
         These will be passed to the plot command used either plot or scatter.
         If you want to control the overall plotting options, use kwargs.
 
@@ -159,7 +159,7 @@ def _recode(x, levels):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         array like object supporting with numpy array methods of categorially
         coded data.
     levels : dict
@@ -172,9 +172,11 @@ def _recode(x, levels):
     """
     from pandas import Series
     name = None
+    index = None
 
     if isinstance(x, Series):
         name = x.name
+        index = x.index
         x = x.values
 
     if x.dtype.type not in [np.str_, np.object_]:
@@ -194,7 +196,6 @@ def _recode(x, levels):
             out[x == level] = coding
 
         if name:
-            out = Series(out)
-            out.name = name
+            out = Series(out, name=name, index=index)
 
         return out

@@ -20,22 +20,27 @@ The NB-P and left-truncated model results have not been compared to other
 implementations. Note that NB-P appears to only have been implemented in the
 LIMDEP software.
 '''
+from urllib.request import urlopen
 
 import numpy as np
-from scipy.special import gammaln
+from numpy.testing import assert_almost_equal
+from scipy.special import digamma
 from scipy.stats import nbinom
+import pandas
+import patsy
+
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.model import GenericLikelihoodModelResults
-import statsmodels.api as sm
+
 
 #### Negative Binomial Log-likelihoods ####
 def _ll_nbp(y, X, beta, alph, Q):
-    '''
+    r'''
     Negative Binomial Log-likelihood -- type P
 
     References:
 
-    Greene, W. 2008. "Functional forms for the negtive binomial model
+    Greene, W. 2008. "Functional forms for the negative binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
 
@@ -56,20 +61,28 @@ def _ll_nbp(y, X, beta, alph, Q):
     prob = size/(size+mu)
     ll = nbinom.logpmf(y, size, prob)
     return ll
+
+
 def _ll_nb1(y, X, beta, alph):
     '''Negative Binomial regression (type 1 likelihood)'''
     ll = _ll_nbp(y, X, beta, alph, Q=1)
     return ll
+
+
 def _ll_nb2(y, X, beta, alph):
     '''Negative Binomial regression (type 2 likelihood)'''
     ll = _ll_nbp(y, X, beta, alph, Q=0)
     return ll
+
+
 def _ll_geom(y, X, beta):
     '''Geometric regression'''
     ll = _ll_nbp(y, X, beta, alph=1, Q=0)
     return ll
+
+
 def _ll_nbt(y, X, beta, alph, C=0):
-    '''
+    r'''
     Negative Binomial (truncated)
 
     Truncated densities for count models (Cameron & Trivedi, 2005, 680):
@@ -85,6 +98,7 @@ def _ll_nbt(y, X, beta, alph, C=0):
     ll = nbinom.logpmf(y, size, prob) - np.log(1 - nbinom.cdf(C, size, prob))
     return ll
 
+
 #### Model Classes ####
 class NBin(GenericLikelihoodModel):
     '''
@@ -92,20 +106,20 @@ class NBin(GenericLikelihoodModel):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         1-d array of the response variable.
-    exog : array-like
+    exog : array_like
         `exog` is an n x p array where n is the number of observations and p
         is the number of regressors including the intercept if one is
         included in the data.
-    ll_type: string
+    ll_type: str
         log-likelihood type
         `nb2`: Negative Binomial type-2 (most common)
         `nb1`: Negative Binomial type-1
         `nbp`: Negative Binomial type-P (Greene, 2008)
         `nbt`: Left-truncated Negative Binomial (type-2)
         `geom`: Geometric regression model
-    C: integer
+    C: int
         Cut-point for `nbt` model
     '''
     def __init__(self, endog, exog, ll_type='nb2', C=0, **kwds):
@@ -139,6 +153,7 @@ class NBin(GenericLikelihoodModel):
             self.ll_func = _ll_nbp
         elif ll_type == 'nbt':
             self.ll_func = _ll_nbt
+
     def nloglikeobs(self, params):
         alph = params[-1]
         beta = params[:self.exog.shape[1]]
@@ -151,8 +166,9 @@ class NBin(GenericLikelihoodModel):
             return -self.ll_func(self.endog, self.exog, beta, alph, Q)
         else:
             return -self.ll_func(self.endog, self.exog, beta, alph)
+
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
-        if start_params==None:
+        if start_params is None:
             countfit = super(NBin, self).fit(start_params=self.start_params_default,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         else:
@@ -160,6 +176,7 @@ class NBin(GenericLikelihoodModel):
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         countfit = CountResults(self, countfit)
         return countfit
+
 
 class CountResults(GenericLikelihoodModelResults):
     def __init__(self, model, mlefit):
@@ -172,8 +189,7 @@ class CountResults(GenericLikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     ('Converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
+                     ('Converged:', ["%s" % self.mle_retvals['converged']])]
         top_right = [('No. Observations:', None),
                      ('Log-Likelihood:', None),
                      ]
@@ -190,10 +206,12 @@ class CountResults(GenericLikelihoodModelResults):
                              use_t=True)
         return smry
 
+
 #### Score function for NB-P ####
-from scipy.special import digamma
+
+
 def _score_nbp(y, X, beta, thet, Q):
-    '''
+    r'''
     Negative Binomial Score -- type P likelihood from Greene (2007)
     .. math::
 
@@ -228,11 +246,8 @@ def _score_nbp(y, X, beta, thet, Q):
     sc = np.concatenate([db.sum(axis=0), sc])
     return sc
 
+
 #### Tests ####
-from statsmodels.compat.python import urlopen
-from numpy.testing import assert_almost_equal
-import pandas
-import patsy
 medpar = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'))
 mdvis = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv'))
 

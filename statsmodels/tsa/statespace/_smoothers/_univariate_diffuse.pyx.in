@@ -29,7 +29,7 @@ So, what we ought to have is:
 \hat \varepsilon_{t,i} = \sigma_{t,i}^2 F_{t,i}^{-1} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
 Var(\hat \varepsilon_{t,i}) = \sigma_{t,i}^2 - \sigma_{t,i}^4 F_{t,i}^{-2} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -100,8 +100,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
         smoother.scaled_smoothed_diffuse1_estimator_cov[:, :, model.nobs-1] = 0
         smoother.scaled_smoothed_diffuse2_estimator_cov[:, :, model.nobs-1] = 0
 
-    # Smoothing error  
-    # (not used in the univariate approach)  
+    # Smoothing error
+    # (not used in the univariate approach)
 
     # Given r_{t,0}:
     # calculate r_{t-1,p}, ..., r_{t-1, 0} and N_{t-1,p}, ..., N_{t-1,0}
@@ -527,7 +527,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
 
     # Temporary arrays
 
-    # $\\#_0 = R_t Q_t$  
+    # $\\#_0 = R_t Q_t$
     # $(m \times r) = (m \times r) (r \times r)$
     blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_posdef, &model._k_posdef,
               &alpha, model._selection, &model._k_states,
@@ -539,9 +539,9 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
         forecast_error_diffuse_cov = kfilter._forecast_error_diffuse_cov[i + i*kfilter.k_endog]
         obs_cov = model._obs_cov[i + i*model._k_endog]
 
-        # Smoothed measurement disturbance  
+        # Smoothed measurement disturbance
         if smoother.smoother_output & SMOOTHER_DISTURBANCE:
-            if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:  
+            if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:
                 smoother._smoothed_measurement_disturbance[i] = -obs_cov * smoother._smoothed_measurement_disturbance[i]
             elif not forecast_error_cov == 0:
                 smoother._smoothed_measurement_disturbance[i] = obs_cov * (
@@ -549,9 +549,9 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
             else:
                 smoother._smoothed_measurement_disturbance[i] = 0
 
-        # Smoothed measurement disturbance covariance matrix  
+        # Smoothed measurement disturbance covariance matrix
         if smoother.smoother_output & SMOOTHER_DISTURBANCE_COV:
-            if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:  
+            if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:
                 smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = (
                     obs_cov * (1 - obs_cov * smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog]))
             elif not forecast_error_cov == 0:
@@ -560,14 +560,14 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
             else:
                 smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = obs_cov
 
-    # Smoothed state disturbance  
+    # Smoothed state disturbance
     if smoother.smoother_output & SMOOTHER_DISTURBANCE:
         blas.{{prefix}}gemv("T", &model._k_states, &model._k_posdef,
                       &alpha, smoother._tmp0, &kfilter.k_states,
                               smoother._input_scaled_smoothed_estimator, &inc,
                       &beta, smoother._smoothed_state_disturbance, &inc)
 
-    # Smoothed state disturbance covariance matrix  
+    # Smoothed state disturbance covariance matrix
     if smoother.smoother_output & SMOOTHER_DISTURBANCE_COV:
         blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_posdef, &model._k_states,
                   &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,

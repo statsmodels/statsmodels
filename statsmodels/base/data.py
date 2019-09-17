@@ -2,12 +2,15 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+from statsmodels.compat.python import iteritems, lmap
+
+from functools import reduce
+
 import numpy as np
-from pandas import DataFrame, Series, isnull
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
-                                          cache_writable)
+from pandas import DataFrame, Series, isnull, MultiIndex
+
 import statsmodels.tools.data as data_util
+from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 
@@ -21,7 +24,7 @@ def _asarray_2d_null_rows(x):
     Makes sure input is an array and is 2d. Makes sure output is 2d. True
     indicates a null in the rows of 2d x.
     """
-    #Have to have the asarrays because isnull doesn't account for array-like
+    #Have to have the asarrays because isnull does not account for array_like
     #input
     x = np.asarray(x)
     if x.ndim == 1:
@@ -33,7 +36,7 @@ def _nan_rows(*arrs):
     """
     Returns a boolean array which is True where any of the rows in any
     of the _2d_ arrays in arrs are NaNs. Inputs can be any mixture of Series,
-    DataFrames or array-like.
+    DataFrames or array_like.
     """
     if len(arrs) == 1:
         arrs += ([[False]],)
@@ -52,6 +55,7 @@ class ModelData(object):
     appropriate form
     """
     _param_names = None
+    _cov_names = None
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
@@ -74,10 +78,11 @@ class ModelData(object):
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
-        # this has side-effects, attaches k_constant and const_idx
+        self.const_idx = None
+        self.k_constant = 0
         self._handle_constant(hasconst)
         self._check_integrity()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     def __getstate__(self):
         from copy import copy
@@ -113,16 +118,9 @@ class ModelData(object):
         self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):
-        if hasconst is not None:
-            if hasconst:
-                self.k_constant = 1
-                self.const_idx = None
-            else:
-                self.k_constant = 0
-                self.const_idx = None
-        elif self.exog is None:
-            self.const_idx = None
+        if hasconst is False or self.exog is None:
             self.k_constant = 0
+            self.const_idx = None
         else:
             # detect where the constant is
             check_implicit = False
@@ -134,7 +132,7 @@ class ModelData(object):
 
             if self.k_constant == 1:
                 if self.exog[:, const_idx].mean() != 0:
-                    self.const_idx = const_idx
+                    self.const_idx = int(const_idx)
                 else:
                     # we only have a zero column and no other constant
                     check_implicit = True
@@ -146,26 +144,26 @@ class ModelData(object):
                     value = self.exog[:, idx].mean()
                     if value == 1:
                         self.k_constant = 1
-                        self.const_idx = idx
+                        self.const_idx = int(idx)
                         break
                     values.append(value)
                 else:
-                    # we didn't break, no column of ones
+                    # we did not break, no column of ones
                     pos = (np.array(values) != 0)
                     if pos.any():
                         # take the first nonzero column
                         self.k_constant = 1
-                        self.const_idx = const_idx[pos.argmax()]
+                        self.const_idx = int(const_idx[pos.argmax()])
                     else:
                         # only zero columns
                         check_implicit = True
             elif self.k_constant == 0:
                 check_implicit = True
             else:
-                # shouldn't be here
+                # should not be here
                 pass
 
-            if check_implicit:
+            if check_implicit and not hasconst:
                 # look for implicit constant
                 # Compute rank of augmented matrix
                 augmented_exog = np.column_stack(
@@ -174,6 +172,10 @@ class ModelData(object):
                 rank_orig = np.linalg.matrix_rank(self.exog)
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
+            elif hasconst:
+                # Ensure k_constant is 1 any time hasconst is True
+                # even if one is not found
+                self.k_constant = 1
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
@@ -230,7 +232,7 @@ class ModelData(object):
                     combined_2d_names += [key]
                 else:
                     raise ValueError("Arrays with more than 2 dimensions "
-                                     "aren't yet handled")
+                                     "are not yet handled")
 
         if missing_idx is not None:
             nan_mask = missing_idx
@@ -259,7 +261,7 @@ class ModelData(object):
             if combined_2d:
                 nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
-        if not np.any(nan_mask):  # no missing don't do anything
+        if not np.any(nan_mask):  # no missing do not do anything
             combined = dict(zip(combined_names, combined))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names, combined_2d)))
@@ -351,6 +353,26 @@ class ModelData(object):
     def param_names(self, values):
         self._param_names = values
 
+    @property
+    def cov_names(self):
+        """
+        Labels for covariance matrices
+
+        In multidimensional models, each dimension of a covariance matrix
+        differs from the number of param_names.
+
+        If not set, returns param_names
+        """
+        # for handling names of covariance names in multidimensional models
+        if self._cov_names is not None:
+            return self._cov_names
+        return self.param_names
+
+    @cov_names.setter
+    def cov_names(self, value):
+        # for handling names of covariance names in multidimensional models
+        self._cov_names = value
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog
@@ -366,7 +388,12 @@ class ModelData(object):
 
     def _get_names(self, arr):
         if isinstance(arr, DataFrame):
-            return list(arr.columns)
+            if isinstance(arr.columns, MultiIndex):
+                # Flatten MultiIndexes into "simple" column names
+                return ['_'.join((level for level in c if level))
+                        for c in arr.columns]
+            else:
+                return list(arr.columns)
         elif isinstance(arr, Series):
             if arr.name:
                 return [arr.name]
@@ -421,6 +448,8 @@ class ModelData(object):
             return self.attach_generic_columns_2d(obj, names)
         elif how == 'ynames':
             return self.attach_ynames(obj)
+        elif how == 'multivariate_confint':
+            return self.attach_mv_confint(obj)
         else:
             return obj
 
@@ -440,6 +469,9 @@ class ModelData(object):
         return result
 
     def attach_dates(self, result):
+        return result
+
+    def attach_mv_confint(self, result):
         return result
 
     def attach_generic_columns(self, result, *args, **kwargs):
@@ -481,7 +513,7 @@ class PandasData(ModelData):
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
-        if hasattr(x, 'ix'):
+        if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask].loc[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans_2d(x, nan_mask)
@@ -516,7 +548,7 @@ class PandasData(ModelData):
 
     def attach_columns(self, result):
         # this can either be a 1d array or a scalar
-        # don't squeeze because it might be a 2d row array
+        # do not squeeze because it might be a 2d row array
         # if it needs a squeeze, the bug is elsewhere
         if result.ndim <= 1:
             return Series(result, index=self.param_names)
@@ -527,8 +559,7 @@ class PandasData(ModelData):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
-        return DataFrame(result, index=self.param_names,
-                         columns=self.param_names)
+        return DataFrame(result, index=self.cov_names, columns=self.cov_names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
@@ -558,6 +589,11 @@ class PandasData(ModelData):
         else:
             return DataFrame(result, index=self.predict_dates,
                              columns=self.ynames)
+
+    def attach_mv_confint(self, result):
+        return DataFrame(result.reshape((-1, 2)),
+                         index=self.cov_names,
+                         columns=['lower', 'upper'])
 
     def attach_ynames(self, result):
         squeezed = result.squeeze()

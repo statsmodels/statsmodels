@@ -48,7 +48,6 @@ finance applications ? option pricing, interest rate models
 
 
 '''
-from __future__ import print_function
 import numpy as np
 from scipy import stats, signal
 import matplotlib.pyplot as plt
@@ -82,7 +81,7 @@ class Diffusion(object):
         return U, Umean, t
 
 class AffineDiffusion(Diffusion):
-    '''
+    r'''
 
     differential equation:
 
@@ -92,7 +91,7 @@ class AffineDiffusion(Diffusion):
     integral:
 
     :math::
-    x_T = x_0 + \\int_{0}^{T}f(t,S)dt + \\int_0^T  \\sigma(t,S)dW_t
+    x_T = x_0 + \int_{0}^{T}f(t,S)dt + \int_0^T  \sigma(t,S)dW_t
 
     TODO: check definition, affine, what about jump diffusion?
 
@@ -102,7 +101,7 @@ class AffineDiffusion(Diffusion):
         pass
 
     def sim(self, nobs=100, T=1, dt=None, nrepl=1):
-        # this doesn't look correct if drift or sig depend on x
+        # this does not look correct if drift or sig depend on x
         # see arithmetic BM
         W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dx =  self._drift() + self._sig() * W
@@ -132,9 +131,9 @@ class AffineDiffusion(Diffusion):
         W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dW = self.dW
         t = np.linspace(dt, 1, nobs)
-        Dt = Tratio*dt;
-        L = nobs/Tratio;        # L EM steps of size Dt = R*dt
-        Xem = np.zeros((nrepl,L));    # preallocate for efficiency
+        Dt = Tratio*dt
+        L = nobs/Tratio        # L EM steps of size Dt = R*dt
+        Xem = np.zeros((nrepl,L))    # preallocate for efficiency
         Xtemp = xzero
         Xem[:,0] = xzero
         for j in np.arange(1,L):
@@ -180,7 +179,7 @@ class ExactDiffusion(AffineDiffusion):
         expddt = np.exp(-self.lambd * ddt)
         normrvs = np.random.normal(size=(nrepl,nobs))
         #do I need lfilter here AR(1) ? if mean reverting lag-coeff<1
-        #lfilter doesn't handle 2d arrays, it does?
+        #lfilter does not handle 2d arrays, it does?
         inc = self._exactconst(expddt) + self._exactstd(expddt) * normrvs
         return signal.lfilter([1.], [1.,-expddt], inc)
 
@@ -232,8 +231,8 @@ class GeometricBrownian(AffineDiffusion):
     dx_t &= \\mu x_t dt + \\sigma x_t dW_t
 
     $x_t $ stochastic process of Geometric Brownian motion,
-    $\mu $ is the drift,
-    $\sigma $ is the Volatility,
+    $\\mu $ is the drift,
+    $\\sigma $ is the Volatility,
     $W$ is the Wiener process (Brownian motion).
 
     '''
@@ -294,7 +293,7 @@ class OUprocess(AffineDiffusion):
         expnt = np.exp(-self.lambd * t)
         expddt = np.exp(-self.lambd * ddt)
         normrvs = np.random.normal(size=(nrepl,nobs))
-        #do I need lfilter here AR(1) ? lfilter doesn't handle 2d arrays, it does?
+        #do I need lfilter here AR(1) ? lfilter does not handle 2d arrays, it does?
         from scipy import signal
         #xzero * expnt
         inc = ( self.mu * (1-expddt) +
@@ -379,8 +378,10 @@ class SchwartzOne(ExactDiffusion):
         kappa = -np.log(slope)/dt
         sigma = np.sqrt(errvar * kappa / (1-np.exp(-2*kappa*dt)))
         mu = const / (1-np.exp(-kappa*dt)) + sigma**2/2./kappa
-        if np.shape(mu)== (1,): mu = mu[0]   # how to remove scalar array ?
-        if np.shape(sigma)== (1,): sigma = sigma[0]
+        if np.shape(mu)== (1,):
+            mu = mu[0]   # TODO: how to remove scalar array ?
+        if np.shape(sigma)== (1,):
+            sigma = sigma[0]
         #mu, kappa are good, sigma too small
         return mu, kappa, sigma
 

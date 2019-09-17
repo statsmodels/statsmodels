@@ -11,25 +11,21 @@ Author: Josef Perktold
 """
 import copy
 import warnings
-from distutils.version import LooseVersion
-
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns)
 import pytest
-import scipy
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # noqa:F401
 except ImportError:
     pass
 
-
-SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
 
 class CheckPowerMixin(object):
 
@@ -45,6 +41,7 @@ class CheckPowerMixin(object):
         res1 = self.cls()
         assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=decimal)
 
+    #@pytest.mark.xfail(strict=True)
     def test_positional(self):
 
         res1 = self.cls()
@@ -492,7 +489,7 @@ class TestNormalIndPower_onesamp1(CheckPowerMixin):
         cls.res2 = res2
         cls.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power}
-        # keyword for which we don't look for root:
+        # keyword for which we do not look for root:
         cls.kwds_extra = {'ratio': 0}
 
         cls.cls = smp.NormalIndPower
@@ -516,7 +513,7 @@ class TestNormalIndPower_onesamp2(CheckPowerMixin):
         cls.res2 = res2
         cls.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power}
-        # keyword for which we don't look for root:
+        # keyword for which we do not look for root:
         cls.kwds_extra = {'ratio': 0, 'alternative':'smaller'}
 
         cls.cls = smp.NormalIndPower
@@ -540,13 +537,13 @@ class TestChisquarePower(CheckPowerMixin):
         cls.res2 = res2
         cls.kwds = {'effect_size': res2.w, 'nobs': res2.N,
                      'alpha': res2.sig_level, 'power':res2.power}
-        # keyword for which we don't look for root:
-        # solving for n_bins doesn't work, will not be used in regular usage
+        # keyword for which we do not look for root:
+        # solving for n_bins does not work, will not be used in regular usage
         cls.kwds_extra = {'n_bins': res2.df + 1}
 
         cls.cls = smp.GofChisquarePower
 
-    def _test_positional(self):
+    def test_positional(self):
 
         res1 = self.cls()
         args_names = ['effect_size','nobs', 'alpha', 'n_bins']
@@ -586,7 +583,7 @@ def test_ftest_power():
 
 
     # TODO: no class yet
-    # examples agains R::pwr
+    # examples against R::pwr
     res2 = Holder()
     #> rf = pwr.f2.test(u=5, v=199, f2=0.1**2, sig.level=0.01)
     #> cat_items(rf, "res2.")
@@ -655,9 +652,9 @@ class TestFtestAnovaPower(CheckPowerMixin):
         cls.res2 = res2
         cls.kwds = {'effect_size': res2.f, 'nobs': res2.n,
                      'alpha': res2.alpha, 'power': res2.power}
-        # keyword for which we don't look for root:
-        # solving for n_bins doesn't work, will not be used in regular usage
-        cls.kwds_extra = {'k_groups': res2.k} # rootfinding doesn't work
+        # keyword for which we do not look for root:
+        # solving for n_bins does not work, will not be used in regular usage
+        cls.kwds_extra = {'k_groups': res2.k} # rootfinding does not work
         #cls.args_names = ['effect_size','nobs', 'alpha']#, 'k_groups']
         cls.cls = smp.FTestAnovaPower
         # precision for test_power
@@ -683,8 +680,8 @@ class TestFtestPower(CheckPowerMixin):
         cls.kwds = {'effect_size': np.sqrt(res2.f2), 'df_num': res2.v,
                      'df_denom': res2.u, 'alpha': res2.sig_level,
                      'power': res2.power}
-        # keyword for which we don't look for root:
-        # solving for n_bins doesn't work, will not be used in regular usage
+        # keyword for which we do not look for root:
+        # solving for n_bins does not work, will not be used in regular usage
         cls.kwds_extra = {}
         cls.args_names = ['effect_size', 'df_num', 'df_denom', 'alpha']
         cls.cls = smp.FTestPower
@@ -730,15 +727,19 @@ def test_power_solver():
     assert_almost_equal(es, 0.01)
 
     # I let this case fail, could be fixed for some statistical tests
-    # (we shouldn't get here in the first place)
+    # (we should not get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
-    assert_raises(ValueError, nip.solve_power, nobs1=None, effect_size=0, alpha=0.01,
-                  power=0.005, ratio=1, alternative='larger')
+    with pytest.warns(HypothesisTestWarning):
+        with pytest.raises(ValueError):
+            nip.solve_power(nobs1=None, effect_size=0, alpha=0.01,
+                            power=0.005, ratio=1, alternative='larger')
 
-@pytest.mark.skipif(SM_GT_10, reason='Known failure on modern SciPy')
+
+# TODO: can something useful be made from this?
+@pytest.mark.xfail(reason='Known failure on modern SciPy >= 0.10', strict=True)
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,

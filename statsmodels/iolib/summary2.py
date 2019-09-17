@@ -1,9 +1,9 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
-                                       reduce, itervalues, zip, string_types,
-                                       range)
+                                       itervalues)
 
 from collections import OrderedDict
 import datetime
+from functools import reduce
 import re
 import textwrap
 
@@ -43,9 +43,9 @@ class Summary(object):
             Reproduce the DataFrame column labels in summary table
         index: bool
             Reproduce the DataFrame row labels in summary table
-        float_format: string
+        float_format : str
             Formatting to float data columns
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -60,9 +60,9 @@ class Summary(object):
         Parameters
         ----------
         array : numpy array (2D)
-        float_format: string
+        float_format : str
             Formatting to array if type is float
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -80,7 +80,7 @@ class Summary(object):
             Users are encouraged to format them before using add_dict.
         ncols: int
             Number of columns of the output table
-        align : string
+        align : str
             Data alignment (l/c/r)
         '''
 
@@ -108,15 +108,15 @@ class Summary(object):
         provided but a results instance is provided, statsmodels attempts
         to construct a useful title automatically.
         '''
-        if isinstance(title, string_types):
+        if isinstance(title, str):
             self.title = title
         else:
-            try:
+            if results is not None:
                 model = results.model.__class__.__name__
                 if model in _model_types:
                     model = _model_types[model]
                 self.title = 'Results: ' + model
-            except:
+            else:
                 self.title = ''
 
     def add_base(self, results, alpha=0.05, float_format="%.4f", title=None,
@@ -128,13 +128,13 @@ class Summary(object):
         results : Model results instance
         alpha : float
             significance level for the confidence intervals (optional)
-        float_formatting: string
+        float_formatting: str
             Float formatting for summary of parameters (optional)
-        title : string
+        title : str
             Title of the summary table (optional)
-        xname : List of strings of length equal to the number of parameters
+        xname : list[str] of length equal to the number of parameters
             Names of the independent variables (optional)
-        yname : string
+        yname : str
             Name of the dependent variable (optional)
         '''
 
@@ -160,8 +160,6 @@ class Summary(object):
         pad_col, pad_index, widest = _measure_tables(tables, settings)
 
         rule_equal = widest * '='
-        #TODO: this isn't used anywhere?
-        rule_dash = widest * '-'
 
         simple_tables = _simple_tables(tables, settings, pad_col, pad_index)
         tab = [x.as_text() for x in simple_tables]
@@ -193,8 +191,6 @@ class Summary(object):
 
         tables = self.tables
         settings = self.settings
-        #TODO: this isn't used anywhere
-        title = self.title
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_html() for x in simple_tables]
@@ -219,11 +215,11 @@ class Summary(object):
         tab = '\n\\hline\n'.join(tab)
 
         to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
-        'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
+                      'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
 
         if self._merge_latex:
             # create single tabular object for summary_col
-            tab = re.sub(to_replace,r'\\midrule\n\\midrule\n', tab)
+            tab = re.sub(to_replace, r'\\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -255,23 +251,25 @@ def _measure_tables(tables, settings):
     return pad_sep, pad_index, max(length)
 
 
-# Useful stuff
-_model_types = {'OLS' : 'Ordinary least squares',
-                'GLS' : 'Generalized least squares',
-                'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weighted least squares',
-                'RLM' : 'Robust linear model',
+# Useful stuff  # TODO: be more specific
+_model_types = {'OLS': 'Ordinary least squares',
+                'GLS': 'Generalized least squares',
+                'GLSAR': 'Generalized least squares with AR(p)',
+                'WLS': 'Weighted least squares',
+                'RLM': 'Robust linear model',
                 'NBin': 'Negative binomial model',
-                'GLM' : 'Generalized linear model'
+                'GLM': 'Generalized linear model'
                 }
 
 
 def summary_model(results):
     '''Create a dict with information about the model
     '''
+
     def time_now(*args, **kwds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
+
     info = OrderedDict()
     info['Model:'] = lambda x: x.model.__class__.__name__
     info['Model Family:'] = lambda x: x.family.__class.__name__
@@ -290,7 +288,7 @@ def summary_model(results):
 
     rsquared_type = '' if results.k_constant else ' (uncentered)'
     info['R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared
-    info['Adj. R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared_adj
+    info['Adj. R-squared' + rsquared_type + ':'] = lambda x: "%#8.3f" % x.rsquared_adj  # noqa:E501
     info['Pseudo R-squared:'] = lambda x: "%#8.3f" % x.prsquared
     info['AIC:'] = lambda x: "%8.4f" % x.aic
     info['BIC:'] = lambda x: "%8.4f" % x.bic
@@ -306,8 +304,9 @@ def summary_model(results):
     for key, func in iteritems(info):
         try:
             out[key] = func(results)
-        # NOTE: some models don't have loglike defined (RLM), so that's NIE
         except (AttributeError, KeyError, NotImplementedError):
+            # NOTE: some models do not have loglike defined (RLM),
+            #   so raise NotImplementedError
             pass
     return out
 
@@ -321,9 +320,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     res : results instance
         some required information is directly taken from the result
         instance
-    yname : string or None
+    yname : {str, None}
         optional name for the endogenous variable, default is "y"
-    xname : list of strings or None
+    xname : {list[str], None}
         optional names for the exogenous variables, default is "var_xx"
     alpha : float
         significance level for the confidence intervals
@@ -333,7 +332,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     skip_headers : bool
         If false (default), then the header row is added. If true, then no
         header row is added.
-    float_format : string
+    float_format : str
         float formatting options (e.g. ".3g")
 
     Returns
@@ -394,6 +393,22 @@ def _col_params(result, float_format='%.4f', stars=True):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
+    res = res.iloc[:, :2]
+    rsquared = rsquared_adj = np.nan
+    if hasattr(result, 'rsquared'):
+        rsquared = result.rsquared
+    if hasattr(result, 'rsquared_adj'):
+        rsquared_adj = result.rsquared_adj
+    r_result = pd.DataFrame({'Basic': [rsquared], 'Adj.': [rsquared_adj]},
+                            index=['R-squared'])
+    if not np.all(np.isnan(np.asarray(r_result))):
+        for col in r_result:
+            r_result[col] = r_result[col].apply(lambda x: float_format % x)
+        try:
+            res = pd.DataFrame(res).append(r_result, sort=True)
+        except TypeError:
+            # TODO: Remove when min pandas >= 0.23
+            res = pd.DataFrame(res).append(r_result)
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
@@ -414,7 +429,7 @@ def _col_info(result, info_dict=None):
             continue
         try:
             out.append(info_dict[i](result))
-        except:
+        except AttributeError:
             out.append('')
         index.append(i)
     out = pd.DataFrame({str(result.model.endog_names): out}, index=index)
@@ -442,10 +457,10 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
-    float_format : string, optional
+    float_format : str, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list of strings, optional
+    model_names : list[str], optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
     stars : bool
@@ -454,18 +469,18 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
-        Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would
-        only show `R2` for OLS regression models, but additionally `N` for
-        all other results.
+        Example: `info_dict = {"N":lambda x:(x.nobs), "R2": ..., "OLS":{
+        "R2":...}}` would only show `R2` for OLS regression models, but
+        additionally `N` for all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list of strings, optional
+    regressor_order : list[str], optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional
-        Includes regressors that are not specified in regressor_order. If False,
-        regressors not specified will be appended to end of the list. If True,
-        only regressors in regressors_list will be included.
+        Includes regressors that are not specified in regressor_order. If
+        False, regressors not specified will be appended to end of the list.
+        If True, only regressors in regressor_order will be included.
     """
 
     if not isinstance(results, list):
@@ -482,8 +497,10 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     for i in range(len(cols)):
         cols[i].columns = [colnames[i]]
 
-    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
-                                left_index=True)
+    def merg(x, y):
+        return x.merge(y, how='outer', right_index=True,
+                       left_index=True)
+
     summ = reduce(merg, cols)
 
     if regressor_order:
@@ -492,7 +509,9 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         unordered = [x for x in varnames if x not in regressor_order + ['']]
         order = ordered + list(np.unique(unordered))
 
-        f = lambda idx: sum([[x + 'coef', x + 'stde'] for x in idx], [])
+        def f(idx):
+            return sum([[x + 'coef', x + 'stde'] for x in idx], [])
+
         summ.index = f(pd.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
@@ -512,8 +531,11 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     # use unique column names, otherwise the merge will not succeed
     for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
-    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
-                                left_index=True)
+
+    def merg(x, y):
+        return x.merge(y, how='outer', right_index=True,
+                       left_index=True)
+
     info = reduce(merg, cols)
     dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
     dat.columns = summ.columns
@@ -535,7 +557,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
 def _formatter(element, float_format='%.4f'):
     try:
         out = float_format % element
-    except:
+    except (ValueError, TypeError):
         out = str(element)
     return out.strip()
 
@@ -552,7 +574,8 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.iloc[:, 0]]
+        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' '
+                          for x in dat.iloc[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
@@ -567,7 +590,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
 
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
     simple_tables = []
-    float_format = '%.4f'
+    float_format = settings[0]['float_format'] if settings else '%.4f'
     if pad_col is None:
         pad_col = [0] * len(tables)
     if pad_index is None:

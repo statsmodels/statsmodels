@@ -1,6 +1,6 @@
 '''VAR and VARMA process
 
-this doesn't actually do much, trying out a version for a time loop
+this does not actually do much, trying out a version for a time loop
 
 alternative representation:
 * textbook, different blocks in matrices
@@ -22,7 +22,6 @@ Author : josefpkt
 License : BSD
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import signal
 
@@ -60,8 +59,8 @@ def VAR(x,B, const=0):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Vector_Autoregression
-    http://en.wikipedia.org/wiki/General_matrix_notation_of_a_VAR(p)
+    https://en.wikipedia.org/wiki/Vector_Autoregression
+    https://en.wikipedia.org/wiki/General_matrix_notation_of_a_VAR(p)
     '''
     p = B.shape[0]
     T = x.shape[0]
@@ -137,7 +136,7 @@ if __name__ == '__main__':
     C[1,1,1] = 0.5
     xhat3, err3 = VARMA(x,B,C)
 
-    x = np.r_[np.zeros((P,K)),x]  #prepend inital conditions
+    x = np.r_[np.zeros((P,K)),x]  #prepend initial conditions
     xhat4, err4 = VARMA(x,B,C)
 
     C[1,1,1] = 1

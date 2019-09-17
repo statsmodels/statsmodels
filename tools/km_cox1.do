@@ -30,7 +30,7 @@ ereturn list,
 matlist e(V)
 matlist e(p)
 
-* the next doesn't work
+* the next does not work
 * predict predictall, hr xb stdp basesurv basechazard basehc mgale csnell deviance ldisplace lmax effects
 /* generate in python:
 >>> for i in 'hr xb stdp basesurv basechazard basehc mgale csnell deviance ldisplace lmax effects'.split(): print 'predict %s, %s' % (i,i)

@@ -2,8 +2,7 @@
 
 Author: josef-pktd
 '''
-from __future__ import print_function
-from statsmodels.compat.python import range, lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 
 def prob_bv_rectangle(lower, upper, cdf):

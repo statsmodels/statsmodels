@@ -1,4 +1,3 @@
-from statsmodels.compat.python import range
 import numpy as np
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
@@ -51,7 +50,7 @@ class ContrastResults(object):
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
             self.dist_args = kwds.get('dist_args', ())
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.pvalue = self.dist.sf(self.statistic, df_denom)
                 self.df_denom = df_denom
             else:
@@ -93,39 +92,29 @@ class ContrastResults(object):
         else:
             raise NotImplementedError('Confidence Interval not available')
 
-
-    def __array__(self):
-        if hasattr(self, "fvalue"):
-            return self.fvalue
-        else:
-            return self.tvalue
-
     def __str__(self):
         return self.summary().__str__()
 
-
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
-
 
     def summary(self, xname=None, alpha=0.05, title=None):
         """Summarize the Results of the hypothesis test
 
         Parameters
-        -----------
-
-        xname : list of strings, optional
-            Default is `c_##` for ## in p the number of regressors
+        ----------
+        xname : list[str], optional
+            Default is `c_##` for ## in the number of regressors
         alpha : float
             significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
-        title : string, optional
+        title : str, optional
             Title for the params table. If not None, then this replaces the
             default title
 
         Returns
         -------
-        smry : string or Summary instance
+        smry : str or Summary instance
             This contains a parameter results table in the case of t or z test
             in the same form as the parameter results table in the model
             results summary.
@@ -138,7 +127,7 @@ class ContrastResults(object):
             if title is None:
                 title = 'Test for Constraints'
             elif title == '':
-                # don't add any title,
+                # do not add any title,
                 # I think SimpleTable skips on None - check
                 title = None
             # we have everything for a params table
@@ -215,8 +204,8 @@ class Contrast(object):
 
     Parameters
     ----------
-    term : array-like
-    design : array-like
+    term : array_like
+    design : array_like
 
     Attributes
     ----------
@@ -321,8 +310,8 @@ def contrastfromcols(L, D, pseudo=None):
 
     Parameters
     ----------
-    L : array-like
-    D : array-like
+    L : array_like
+    D : array_like
     """
     L = np.asarray(L)
     D = np.asarray(D)
@@ -366,7 +355,7 @@ class WaldTestResults(object):
         #self.sd = sd
         self.dist_args = dist_args
 
-        # The following is because I don't know which we want
+        # The following is because I do not know which we want
         if table is not None:
             self.statistic = table['statistic'].values
             self.pvalues = table['pvalue'].values
@@ -375,11 +364,11 @@ class WaldTestResults(object):
                 self.df_denom = table['df_denom'].values
 
         else:
-            if self.distribution is 'chi2':
+            if self.distribution == 'chi2':
                 self.dist = stats.chi2
                 self.df_constraints = self.dist_args[0]  # assumes tuple
                 # using dist_args[0] is a bit dangerous,
-            elif self.distribution is 'F':
+            elif self.distribution == 'F':
                 self.dist = stats.f
                 self.df_constraints, self.df_denom = self.dist_args
 
@@ -406,7 +395,7 @@ class WaldTestResults(object):
         # needs to be a method for consistency
         if hasattr(self, '_dframe'):
             return self._dframe
-        # rename the column nambes, but don't copy data
+        # rename the column nambes, but do not copy data
         renaming = dict(zip(self.table.columns, self.col_names))
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
@@ -484,13 +473,13 @@ def t_test_multi(result, contrasts, method='hs', alpha=0.05, ci_method=None,
         results of an estimated model
     contrasts : ndarray
         restriction matrix for t_test
-    method : string or list of strings
+    method : str or list of strings
         method for multiple testing p-value correction, default is'hs'.
     alpha : float
         significance level for multiple testing reject decision.
     ci_method : None
         not used yet, will be for multiplicity corrected confidence intervals
-    contrast_names : list of strings or None
+    contrast_names : {list[str], None}
         If contrast_names are provided, then they are used in the index of the
         returned dataframe, otherwise some generic default names are created.
 
@@ -606,7 +595,8 @@ def _constraints_factor(encoding_matrix, comparison='pairwise', k_params=None,
 
 def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
                     factor_labels=None, ignore=False):
-    """perform pairwise t_test with multiple testing corrected p-values
+    """
+    Perform pairwise t_test with multiple testing corrected p-values.
 
     This uses the formula design_info encoding contrast matrix and should
     work for all encodings of a main effect.
@@ -619,20 +609,20 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
         name of the term for which pairwise comparisons are computed.
         Term names for categorical effects are created by patsy and
         correspond to the main part of the exog names.
-    method : str or list of strings
+    method : {str, list[str]}
         multiple testing p-value correction, default is 'hs',
         see stats.multipletesting
     alpha : float
         significance level for multiple testing reject decision.
-    factor_labels : None, list of str
+    factor_labels : {list[str], None}
         Labels for the factor levels used for pairwise labels. If not
         provided, then the labels from the formula design_info are used.
-    ignore : boolean
+    ignore : bool
         Turn off some of the exceptions raised by input checks.
 
     Returns
     -------
-    results : instance of a simple Results class
+    MultiCompResult
         The results are stored as attributes, the main attributes are the
         following two. Other attributes are added for debugging purposes
         or as background information.
@@ -650,7 +640,6 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
 
     Currently there are no multiple testing corrected confidence intervals
     available.
-
     """
 
     desinfo = result.model.data.design_info

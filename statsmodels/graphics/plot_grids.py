@@ -4,14 +4,13 @@ Author: Josef Perktold
 License: BSD-3
 
 TODO: update script to use sharex, sharey, and visible=False
-    see http://www.scipy.org/Cookbook/Matplotlib/Multiple_Subplots_with_One_Axis_Label
+    see https://www.scipy.org/Cookbook/Matplotlib/Multiple_Subplots_with_One_Axis_Label
     for sharex I need to have the ax of the last_row when editing the earlier
     rows. Or you axes_grid1, imagegrid
     http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html
 '''
 
 
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import stats
 
@@ -75,6 +74,19 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     fig : Matplotlib figure instance
         If `fig` is None, the created figure.  Otherwise `fig` itself.
 
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+
+    >>> from statsmodels.graphics.plot_grids import scatter_ellipse
+    >>> data = sm.datasets.statecrime.load_pandas().data
+    >>> fig = plt.figure(figsize=(8,8))
+    >>> scatter_ellipse(data, varnames=data.columns, fig=fig)
+    >>> plt.show()
+
+    ..plot :: plots/graphics_correlation_plot_corr_grid.py
     """
     fig = utils.create_mpl_fig(fig)
     import matplotlib.ticker as mticker
@@ -102,7 +114,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         for j in range(i):
             #print i,j, i*(nvars-1)+j+1
             ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1)
-##                                 #sharey=ax_last) #sharey doesn't allow empty ticks?
+##                                 #sharey=ax_last) #sharey does not allow empty ticks?
 ##            if j == 0:
 ##                print 'new ax_last', j
 ##                ax_last = ax

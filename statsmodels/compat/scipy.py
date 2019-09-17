@@ -1,7 +1,10 @@
-from __future__ import absolute_import
-import numpy as np
+from distutils.version import LooseVersion
 
-NumpyVersion = np.lib.NumpyVersion
+import numpy as np
+import scipy
+
+SCIPY_11 = (LooseVersion(scipy.__version__) < LooseVersion('1.2.0') and
+            LooseVersion(scipy.__version__) >= LooseVersion('1.1.0'))
 
 
 def _next_regular(target):
@@ -93,25 +96,3 @@ def _lazywhere(cond, arrays, f, fillvalue=None, f2=None):
         np.place(out, ~cond, f2(*temp))
 
     return out
-
-
-# Work around for complex chnges in gammaln in 1.0.0.
-#   loggamma introduced in 0.18.
-try:
-    from scipy.special import loggamma  # noqa:F401
-except ImportError:
-    from scipy.special import gammaln  # noqa:F401
-    loggamma = gammaln
-
-# Work around for factorial changes in 1.0.0
-
-try:
-    from scipy.special import factorial, factorial2  # noqa:F401
-except ImportError:
-    from scipy.misc import factorial, factorial2  # noqa:F401
-
-# Moved in 1.0 to special
-try:
-    from scipy.special import logsumexp  # noqa:F401
-except:
-    from scipy.misc import logsumexp  # noqa:F401

@@ -4,7 +4,6 @@ Tests for recursive least squares models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
@@ -19,6 +18,7 @@ from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ValueWarning
 from numpy.testing import assert_equal, assert_raises, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -213,7 +213,7 @@ def test_glm(constraints=None):
     # used in OLS. Compute new ic based on llf_alternative to compare.
     actual_aic = aic(llf_alternative, res.nobs_effective, res.df_model)
     assert_allclose(actual_aic, res_glm.aic)
-    # See gh#1733 for details on why the BIC doesn't match while AIC does
+    # See gh#1733 for details on why the BIC does not match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
 
@@ -263,6 +263,11 @@ def test_plots(close_figures):
     res = mod.fit()
 
     # Basic plot
+    try:
+        from pandas.plotting import register_matplotlib_converters
+        register_matplotlib_converters()
+    except ImportError:
+        pass
     fig = res.plot_recursive_coefficient()
 
     # Specific variable
@@ -299,7 +304,9 @@ def test_plots(close_figures):
 
 
 def test_from_formula():
-    mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+    with pytest.warns(ValueWarning, match="No frequency information"):
+        mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+
     res = mod.fit()
 
     # Test the RLS estimates against OLS estimates
@@ -381,7 +388,8 @@ def test_cusum():
 def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
     mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
-    res = mod.fit()
+    with pytest.warns(UserWarning):
+        res = mod.fit()
     d = max(res.nobs_diffuse, res.loglikelihood_burn)
 
     assert_allclose(res.resid_recursive[3:], results_stata.iloc[3:]['rr'],

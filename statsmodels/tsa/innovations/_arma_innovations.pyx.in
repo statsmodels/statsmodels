@@ -89,9 +89,9 @@ cdef {{prefix}}toeplitz(int n, int offset0, int offset1,
               out_matrix[offset0 + j, offset1 + i] = in_column[i - j]
 
 
-def {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
-                                         {{cython_type}} [:] ma,
-                                         {{cython_type}} [:] arma_acovf):
+cpdef {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
+                                            {{cython_type}} [:] ma,
+                                            {{cython_type}} [:] arma_acovf):
     """
     arma_transformed_acovf_fast({{cython_type}} [:] ar, {{cython_type}} [:] ma, {{cython_type}} [:] arma_acovf)
     
@@ -196,11 +196,11 @@ def {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
     return acovf[:n, :n], acovf2
 
 
-def {{prefix}}arma_innovations_algo_fast(int nobs,
-                                         {{cython_type}} [:] ar_params,
-                                         {{cython_type}} [:] ma_params,
-                                         {{cython_type}} [:, :] acovf,
-                                         {{cython_type}} [:] acovf2):
+cpdef {{prefix}}arma_innovations_algo_fast(int nobs,
+                                           {{cython_type}} [:] ar_params,
+                                           {{cython_type}} [:] ma_params,
+                                           {{cython_type}} [:, :] acovf,
+                                           {{cython_type}} [:] acovf2):
     """
     arma_innovations_algo_fast(int nobs, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params, {{cython_type}} [:, :] acovf, {{cython_type}} [:] acovf2)
     
@@ -301,10 +301,10 @@ def {{prefix}}arma_innovations_algo_fast(int nobs,
     return theta, v
 
 
-def {{prefix}}arma_innovations_filter({{cython_type}} [:] endog,
-                                      {{cython_type}} [:] ar_params,
-                                      {{cython_type}} [:] ma_params,
-                                      {{cython_type}} [:, :] theta):
+cpdef {{prefix}}arma_innovations_filter({{cython_type}} [:] endog,
+                                        {{cython_type}} [:] ar_params,
+                                        {{cython_type}} [:] ma_params,
+                                        {{cython_type}} [:, :] theta):
     """
     arma_innovations_filter({{cython_type}} [:] endog, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params, {{cython_type}} [:, :] theta):
     
@@ -373,6 +373,70 @@ def {{prefix}}arma_innovations_filter({{cython_type}} [:] endog,
     return u
 
 
+cpdef {{prefix}}arma_innovations({{cython_type}} [:] endog,
+                                      {{cython_type}} [:] ar_params,
+                                      {{cython_type}} [:] ma_params,
+                                      {{cython_type}} sigma2):
+    """
+    arma_innovations({{cython_type}} [:] endog, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params):
+    
+    Compute innovations and variances based on an ARMA process.
+
+    Parameters
+    ----------
+    endog : ndarray
+        The observed time-series process.
+    ar_params : ndarray
+        Autoregressive parameters.
+    ma_params : ndarray
+        Moving average parameters.
+    sigma2 : ndarray
+        The ARMA innovation variance.
+
+    Returns
+    -------
+    u : ndarray
+        The vector of innovations: the one-step-ahead prediction errors from
+        applying the innovations algorithm.
+    v : ndarray
+        The vector of innovation variances.
+
+    Notes
+    -----
+    The innovations algorithm is presented in _[1], section 2.5.2.
+
+    References
+    ----------
+    .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
+       Time Series: Theory and Methods. 2nd ed. 1991.
+       New York, NY: Springer.
+
+    """
+    cdef Py_ssize_t nobs = len(endog), i
+    cdef {{cython_type}} const
+    cdef {{cython_type}} [:] ar, ma, arma_acovf, llf_obs, acovf2, u, v
+    cdef {{cython_type}} [:, :] acovf
+    cdef cnp.npy_intp dim1[1]
+
+    dim1[0] = len(ar_params) + 1;
+    ar = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)
+    dim1[0] = len(ma_params) + 1;
+    ma = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)
+
+    ar[0] = 1
+    for i in range(1, len(ar_params) + 1):
+        ar[i] = -1 * ar_params[i - 1]
+    ma[0] = 1
+    ma[1:] = ma_params
+
+    arma_acovf = arima_process.arma_acovf(ar, ma, nobs, sigma2, dtype={{dtype}}) / sigma2
+    acovf, acovf2 = {{prefix}}arma_transformed_acovf_fast(ar, ma, arma_acovf)
+    theta, v = {{prefix}}arma_innovations_algo_fast(nobs, ar_params, ma_params, acovf, acovf2)
+    u = {{prefix}}arma_innovations_filter(endog, ar_params, ma_params, theta)
+
+    return u, v
+
+
 cpdef {{prefix}}arma_loglikeobs_fast({{cython_type}} [:] endog,
                                      {{cython_type}} [:] ar_params,
                                      {{cython_type}} [:] ma_params,
@@ -413,25 +477,10 @@ cpdef {{prefix}}arma_loglikeobs_fast({{cython_type}} [:] endog,
 
     cdef Py_ssize_t nobs = len(endog), i
     cdef {{cython_type}} const
-    cdef {{cython_type}} [:] ar, ma, arma_acovf, llf_obs, acovf2
-    cdef {{cython_type}} [:, :] acovf
+    cdef {{cython_type}} [:] llf_obs, u, v
     cdef cnp.npy_intp dim1[1]
 
-    dim1[0] = len(ar_params) + 1;
-    ar = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)
-    dim1[0] = len(ma_params) + 1;
-    ma = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)
-
-    ar[0] = 1
-    for i in range(1, len(ar_params) + 1):
-        ar[i] = -1 * ar_params[i - 1]
-    ma[0] = 1
-    ma[1:] = ma_params
-
-    arma_acovf = arima_process.arma_acovf(ar, ma, nobs, sigma2, dtype={{dtype}}) / sigma2
-    acovf, acovf2 = {{prefix}}arma_transformed_acovf_fast(ar, ma, arma_acovf)
-    theta, v = {{prefix}}arma_innovations_algo_fast(nobs, ar_params, ma_params, acovf, acovf2)
-    u = {{prefix}}arma_innovations_filter(endog, ar_params, ma_params, theta)
+    u, v = {{prefix}}arma_innovations(endog, ar_params, ma_params, sigma2)
 
     dim1[0] = nobs;
     llf_obs = cnp.PyArray_ZEROS(1, dim1, {{typenum}}, C)

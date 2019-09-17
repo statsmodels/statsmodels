@@ -115,7 +115,7 @@ class TestCompareGamma(CheckGEEGLM):
     def setup_class(cls):
         # adjusted for Gamma, not in test_gee.py
         vs = Independence()
-        family = families.Gamma(link=links.log)
+        family = families.Gamma(link=links.log())
         np.random.seed(987126)
         #Y = np.random.normal(size=100)**2
         Y = np.exp(0.1 + np.random.normal(size=100))   # log-normal

@@ -7,7 +7,6 @@ Author: Luca Puggini
 Created on 08/07/2015
 """
 
-from __future__ import division
 import os
 import numpy as np
 from numpy.testing import assert_allclose
@@ -258,8 +257,9 @@ def test_multivariate_penalty():
 
     gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
     gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
-    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
-                                 weights=weights)
+    with pytest.warns(UserWarning, match="weights is currently ignored"):
+        mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas,
+                                     weights=weights)
 
     for i in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers[0].dim_basis)
@@ -337,7 +337,7 @@ def test_multivariate_gam_1d_data():
 
 def test_multivariate_gam_cv():
     # SMOKE test
-    # no test is performed. It only checks that there isn't any runtime error
+    # no test is performed. It only checks that there is not any runtime error
 
     def cost(x1, x2):
         return np.linalg.norm(x1 - x2) / len(x1)
@@ -703,7 +703,7 @@ def test_partial_values2():
 
 
 def test_partial_values():
-    # this test is only approximate because we don't use the same spline
+    # this test is only approximate because we do not use the same spline
     # basis functions (knots) as mgcv
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")

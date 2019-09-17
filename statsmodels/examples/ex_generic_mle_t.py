@@ -6,12 +6,12 @@ Author: josef-pktd
 """
 
 
-from __future__ import print_function
 import numpy as np
 
-from scipy import stats, special
+from scipy import special
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.numdiff import approx_hess
 
 #redefine some shortcuts
 np_log = np.log
@@ -50,7 +50,7 @@ class MyT(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -92,7 +92,6 @@ resp = modp.fit(start_params = modp.start_value)
 print(resp.params)
 print(resp.bse)
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_value)
@@ -110,10 +109,6 @@ print(tmp.shape)
 8
 >>> tmp.shape
 (100, 100)
->>> np.dot(modp.exog, beta).shape
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'beta' is not defined
 
 >>> params = modp.start_value
 >>> beta = params[:-2]
@@ -129,9 +124,6 @@ NameError: name 'beta' is not defined
 '''
 
 '''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
 repr(start_params) array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
 Optimization terminated successfully.
          Current function value: 91.897859
@@ -257,10 +249,7 @@ array([ 31.93524822,  22.0333515 ,          NaN,  29.90198792,
 >>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-8)
 >>> np.sqrt(np.diag(np.linalg.inv(hb)))
 Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 423, in inv
-    return wrap(solve(a, identity(a.shape[0], dtype=a.dtype)))
-  File "C:\Programs\Python25\lib\site-packages\numpy\linalg\linalg.py", line 306, in solve
+  [...]
     raise LinAlgError, 'Singular matrix'
 numpy.linalg.linalg.LinAlgError: Singular matrix
 >>> resp.params

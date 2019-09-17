@@ -85,7 +85,7 @@ class TestCMTOLS(CheckCMT):
 
         # weights used for GMM to replicate OLS
         weights = np.linalg.inv(cov_moms)
-        # we don't use last two variables
+        # we do not use last two variables
         weights[:, -k_constraints:] = 0
         weights[-k_constraints:, :] = 0
 

@@ -5,7 +5,6 @@ Created on Sat Mar 23 13:35:51 2013
 
 Author: Josef Perktold
 """
-from __future__ import print_function
 import numpy as np
 from statsmodels.tools.rootfinding import brentq_expanding
 
@@ -17,25 +16,29 @@ from statsmodels.tools.rootfinding import brentq_expanding
 DEBUG = False #True
 
 
-
 def func(x, a):
     f = (x - a)**3
-    if DEBUG: print('evaluating at %g, fval = %f' % (x, f))
+    if DEBUG:
+        print('evaluating at %g, fval = %f' % (x, f))
     return f
+
 
 def func_nan(x, a, b):
     x = np.atleast_1d(x)
     f = (x - 1.*a)**3
     f[x < b] = np.nan
-    if DEBUG: print('evaluating at %f, fval = %f' % (x, f))
+    if DEBUG:
+        print('evaluating at %f, fval = %f' % (x, f))
     return f
 
 
 
 def funcn(x, a):
     f = -(x - a)**3
-    if DEBUG: print('evaluating at %g, fval = %g' % (x, f))
+    if DEBUG:
+        print('evaluating at %g, fval = %g' % (x, f))
     return f
+
 
 def func2(x, a):
     f = (x - a)**3
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     raise ValueError('start_upp needs to be positive')
     -499.999996336
     '''
-    ''' this doesn't work
+    ''' this does not work
     >>> print(brentq_expanding(func, args=(-500,), start_upp=-1000)
     raise ValueError('start_upp needs to be positive')
     OverflowError: (34, 'Result too large')

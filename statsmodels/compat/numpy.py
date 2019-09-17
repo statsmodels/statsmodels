@@ -2,7 +2,7 @@
 
 np_new_unique
 -------------
-Optionally provides the count of the number of occurences of each
+Optionally provides the count of the number of occurrences of each
 unique element.
 
 Copied from Numpy source, under license:
@@ -39,11 +39,11 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from __future__ import absolute_import
+from distutils.version import LooseVersion
+
 import numpy as np
 
-from .python import PY3
-
+NP_LT_114 = LooseVersion(np.__version__) < LooseVersion('1.14')
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
@@ -62,15 +62,14 @@ def recarray_select(recarray, fields):
         recarray = DataFrame.from_records(recarray)
         selection = recarray[fields].to_records(index=False)
 
-    _bytelike_dtype_names(selection)
     return selection
 
 
-def _bytelike_dtype_names(arr):
-    # See # 3658
-    if not PY3:
-        dtype = arr.dtype
-        names = dtype.names
-        names = [bytes(name) if isinstance(name, unicode)  # noqa:F821
-                 else name for name in names]
-        dtype.names = names
+def lstsq(a, b, rcond=None):
+    """
+    Shim that allows modern rcond setting with backward compat for NumPY
+    earlier than 1.14
+    """
+    if NP_LT_114 and rcond is None:
+        rcond = -1
+    return np.linalg.lstsq(a, b, rcond=rcond)

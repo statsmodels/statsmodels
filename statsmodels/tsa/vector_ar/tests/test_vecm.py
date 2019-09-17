@@ -1,11 +1,9 @@
-from __future__ import absolute_import, print_function
 
 import numpy as np
 from numpy.testing import (assert_, assert_allclose, assert_raises,
                            assert_array_equal, assert_raises_regex)
 
 import statsmodels.datasets.interest_inflation.data as e6
-from statsmodels.compat.python import range
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import dt_s_tup_to_string
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import load_results_jmulti
@@ -911,7 +909,7 @@ def test_granger_causality():
                 granger_sm_str = results_sm[ds][
                     dt].test_granger_causality(caused_names, causing_names)
 
-                # call methods to assure they don't raise exceptions
+                # call methods to assure they do not raise exceptions
                 granger_sm_ind.summary()
                 str(granger_sm_ind)  # __str__()
                 assert_(granger_sm_ind == granger_sm_str)  # __eq__()
@@ -931,7 +929,7 @@ def test_granger_causality():
                 g_t_obt_str = granger_sm_str.test_statistic
                 assert_allclose(g_t_obt_str, g_t_obt, 1e-07, 0, False,
                                 err_msg_g_t + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
@@ -942,7 +940,7 @@ def test_granger_causality():
                     g_t_obt_single = granger_sm_single_ind.test_statistic
                     assert_allclose(g_t_obt_single, g_t_obt, 1e-07, 0, False,
                                     err_msg_g_t + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
                 # test p-value for Granger non-causality:
                 g_p_obt = granger_sm_ind.pvalue
@@ -953,14 +951,14 @@ def test_granger_causality():
                 g_p_obt_str = granger_sm_str.pvalue
                 assert_allclose(g_p_obt_str, g_p_obt, 1e-07, 0, False,
                     err_msg_g_t + " - sequences of integers and ".upper() + \
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
                     assert_allclose(g_p_obt_single, g_p_obt, 1e-07, 0, False,
                         err_msg_g_t + " - list of int and int as ".upper() + \
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
 
 def test_inst_causality():  # test instantaneous causality
@@ -995,7 +993,7 @@ def test_inst_causality():  # test instantaneous causality
                     dt].test_inst_causality(causing_ind)
                 inst_sm_str = results_sm[ds][dt].test_inst_causality(
                     causing_names)
-                # call methods to assure they don't raise exceptions
+                # call methods to assure they do not raise exceptions
                 inst_sm_ind.summary()
                 str(inst_sm_ind)  # __str__()
                 assert_(inst_sm_ind == inst_sm_str)  # __eq__()
@@ -1015,7 +1013,7 @@ def test_inst_causality():  # test instantaneous causality
                 t_obt_str = inst_sm_str.test_statistic
                 assert_allclose(t_obt_str, t_obt, 1e-07, 0, False,
                                 err_msg_i_t + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -1024,7 +1022,7 @@ def test_inst_causality():  # test instantaneous causality
                     t_obt_single = inst_sm_single_ind.test_statistic
                     assert_allclose(t_obt_single, t_obt, 1e-07, 0, False,
                                     err_msg_i_t + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
                 # test p-value for instantaneous non-causality
                 p_obt = results_sm[ds][dt].test_inst_causality(
@@ -1036,7 +1034,7 @@ def test_inst_causality():  # test instantaneous causality
                 p_obt_str = inst_sm_str.pvalue
                 assert_allclose(p_obt_str, p_obt, 1e-07, 0, False,
                                 err_msg_i_p + " - sequences of integers and ".upper() +
-                                "strings as arguments don't yield the same result!".upper())
+                                "strings as arguments do not yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -1045,7 +1043,7 @@ def test_inst_causality():  # test instantaneous causality
                     p_obt_single = inst_sm_single_ind.pvalue
                     assert_allclose(p_obt_single, p_obt, 1e-07, 0, False,
                                     err_msg_i_p + " - list of int and int as ".upper() +
-                                    "argument don't yield the same result!".upper())
+                                    "argument do not yield the same result!".upper())
 
 
 def test_impulse_response():
@@ -1129,7 +1127,7 @@ def test_lag_order_selection():
                 if exog_coint:
                     assert_equal(getattr(obtained_all_exog_coint, ic),
                                  getattr(obtained_all, ic), "WITH EXOG_COINT" + err_msg)
-            # call methods to assure they don't raise exceptions
+            # call methods to assure they do not raise exceptions
             obtained_all.summary()
             str(obtained_all)  # __str__()
 
@@ -1167,7 +1165,7 @@ def test_normality():
             obt_pvalue = obtained.pvalue
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             assert_allclose(obt_pvalue, des_pvalue, rtol, atol, False, err_msg)
-            # call methods to assure they don't raise exceptions
+            # call methods to assure they do not raise exceptions
             obtained.summary()
             str(obtained)  # __str__()
             assert_(obtained == obtained_exog)  # __eq__()
@@ -1231,7 +1229,7 @@ def test_whiteness():
                                             "P-VALUE (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
             assert_allclose(obtained.pvalue, desired, rtol, atol, False, err_msg)
-            # call methods to assure they don't raise exceptions
+            # call methods to assure they do not raise exceptions
             obtained.summary()
             str(obtained)  # __str__()
             assert_(obtained == obtained_exog)  # __eq__()
@@ -1312,7 +1310,7 @@ def test_exceptions():
                     deterministic="co").fit()
     # ##### exog_fc not passed as argument:
     assert_raises_regex(ValueError, "exog_fc is None.*", vecm_res.predict)
-        # ##### exog_fc is too short:
+    # ##### exog_fc is too short:
     exog_fc = np.ones(STEPS)
     assert_raises_regex(ValueError, ".*exog_fc must have at least steps elements.*",
                         vecm_res.predict, 5, None, exog_fc[:2])  # [:2] shortens exog_fc

@@ -8,11 +8,9 @@ and estimated.
 Note: uncomment plt.show() to display graphs
 '''
 
-example = 2 #3  # 1,2 or 3
 import time
 
 import numpy as np
-from statsmodels.compat.python import zip
 import numpy.random as R
 import matplotlib.pyplot as plt
 import scipy.stats
@@ -20,7 +18,9 @@ import scipy.stats
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
+
+
+example = 2 #3  # 1,2 or 3
 
 #np.random.seed(987654)
 
@@ -50,7 +50,7 @@ z = f1(x1) + f2(x2)
 z -= np.median(z)
 print('z.std()', z.std())
 #z = standardize(z) + 0.2
-# with standardize I get better values, but I don't know what the true params are
+# with standardize I get better values, but I do not know what the true params are
 print(z.mean(), z.min(), z.max())
 
 #y += z  #noise
@@ -90,8 +90,8 @@ if example == 3:
     f = families.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
-    #p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)], float)
-    p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(z)], float)
+    p = np.asarray([scipy.stats.poisson.rvs(val) for val in f.link.inverse(z)],
+                   float)
     p.shape = y.shape
     m = GAM(p, d, family=f)
     toc = time.time()

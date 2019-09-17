@@ -33,7 +33,7 @@ def _data_gen(endog, exog, partitions):
 
 def test_calc_grad():
 
-    # seperately tests that _calc_grad returns
+    # separately tests that _calc_grad returns
     # sensible results
     #
     # regression test
@@ -50,7 +50,7 @@ def test_calc_grad():
 
 def test_calc_wdesign_mat():
 
-    # seperately tests that _calc_wdesign_mat
+    # separately tests that _calc_wdesign_mat
     # returns sensible results
     #
     # regression test

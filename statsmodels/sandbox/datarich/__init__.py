@@ -40,7 +40,7 @@ Regression with many moments or many instruments
 The same tools apply and can be used in these two cases.
 e.g. Tychonov regularization of weighting matrix in GMM, similar to Ridge regression, the
 weighting matrix can be shrunk towards the identity matrix.
-Simplest case will be part of GMM. I don't know how much will be standalone
+Simplest case will be part of GMM. I do not know how much will be standalone
 functions.
 
 
@@ -63,7 +63,7 @@ of data on reduced factors, required for criteria in Bai/Ng.
 Selection criteria based on eigenvalue cutoffs.
 
 Paper on PCA and structural breaks. Could add additional results during
-find_nfact to test for parameter stability. I haven't read the paper yet.
+find_nfact to test for parameter stability. I have not read the paper yet.
 
 Idea: for forecasting, use up to h-step ahead endogenous variables to directly
 get the forecasts.

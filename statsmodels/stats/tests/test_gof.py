@@ -12,9 +12,8 @@ from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.stats.gof import (chisquare, chisquare_power,
                                    chisquare_effectsize)
+from statsmodels.tools.testing import Holder
 
-class Holder(object):
-    pass
 
 def test_chisquare_power():
     from .results.results_power import pwr_chisquare

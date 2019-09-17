@@ -71,9 +71,9 @@ TODO:
 
 
 random bug (showed up only once, need fuzz-testing to replicate)
-  File "...\diffusion2.py", line 375, in <module>
+  File "../diffusion2.py", line 375, in <module>
     x = jd.simulate(mu,sigma,lambd,a,D,ts,nrepl)
-  File "...\diffusion2.py", line 129, in simulate
+  File "../diffusion2.py", line 129, in simulate
     jumps_ts[n] = CumS[Events]
 IndexError: index out of bounds
 
@@ -266,9 +266,9 @@ class NIG(object):
             if t>1:
                 Dt=ts[t]-ts[t-1]
 
-            l = 1/k*(Dt**2)
+            lfrac = 1/k*(Dt**2)
             m = Dt
-            DS = IG().simulate(l,m,nrepl)
+            DS = IG().simulate(lfrac, m, nrepl)
             N = np.random.randn(nrepl)
 
             DX = s*N*np.sqrt(DS) + th*DS

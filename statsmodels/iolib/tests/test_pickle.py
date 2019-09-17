@@ -1,8 +1,9 @@
+from io import BytesIO
 import tempfile
 
 from numpy.testing import assert_equal
 
-from statsmodels.compat.python import lrange, BytesIO
+from statsmodels.compat.python import lrange
 from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
 

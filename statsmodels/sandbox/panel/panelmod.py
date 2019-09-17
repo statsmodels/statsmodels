@@ -6,11 +6,11 @@ References
 
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
-from __future__ import print_function
-from statsmodels.compat.python import range, reduce
-from statsmodels.tools.tools import categorical
-from statsmodels.regression.linear_model import GLS, WLS
+from functools import reduce
+
 import numpy as np
+
+from statsmodels.regression.linear_model import GLS
 
 __all__ = ["PanelModel"]
 
@@ -73,7 +73,7 @@ def repanel_cov(groups, sigmas):
         groupuniq = np.unique(group)
         dummygr = sigmas[igr] * (group == groupuniq).astype(float)
         omega +=  np.dot(dummygr, dummygr.T)
-    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    ev, evec = np.linalg.eigh(omega)  #eig does not work
     omegainv = np.dot(evec, (1/ev * evec).T)
     omegainvhalf = evec/np.sqrt(ev)
     return omega, omegainv, omegainvhalf
@@ -88,8 +88,8 @@ class PanelModel(object):
     An abstract statistical model class for panel (longitudinal) datasets.
 
     Parameters
-    ---------
-    endog : array-like or str
+    ----------
+    endog : array_like or str
         If a pandas object is used then endog should be the name of the
         endogenous variable as a string.
 #    exog
@@ -104,7 +104,7 @@ class PanelModel(object):
     """
     def __init__(self, endog=None, exog=None, panel=None, time=None,
             xtnames=None, equation=None, panel_data=None):
-        if panel_data == None:
+        if panel_data is None:
 #            if endog == None and exog == None and panel == None and \
 #                    time == None:
 #                raise ValueError("If pandel_data is False then endog, exog, \
@@ -180,12 +180,12 @@ class PanelModel(object):
 # on the pandas LongPanel structure for speed and convenience.
 # not sure this part is finished...
 
-#TODO: doesn't conform to new initialize
+#TODO: does not conform to new initialize
     def initialize_pandas(self, panel_data, endog_name, exog_name):
         self.panel_data = panel_data
         endog = panel_data[endog_name].values # does this create a copy?
         self.endog = np.squeeze(endog)
-        if exog_name == None:
+        if exog_name is None:
             exog_name = panel_data.columns.tolist()
             exog_name.remove(endog_name)
         self.exog = panel_data.filterItems(exog_name).values # copy?
@@ -219,13 +219,13 @@ class PanelModel(object):
             mean = np.dot(dummy,X)/dummy.sum(1)[:,None]
         else:
             mean = np.dot(dummy,X)/dummy.sum(1)
-        if counts == False and dummies == False:
+        if counts is False and dummies is False:
             return mean
-        elif counts == True and dummies == False:
+        elif counts is True and dummies is False:
             return mean, dummy.sum(1)
-        elif counts == True and dummies == True:
+        elif counts is True and dummies is True:
             return mean, dummy.sum(1), dummy
-        elif counts == False and dummies == True:
+        elif counts is False and dummies is True:
             return mean, dummy
 
 #TODO: Use kwd arguments or have fit_method methods?
@@ -252,7 +252,7 @@ class PanelModel(object):
 
 
         Notes
-        ------
+        -----
         This is unfinished.  None of the method arguments work yet.
         Only oneway effects should work.
         """
@@ -289,8 +289,8 @@ class PanelModel(object):
             endog = self._group_mean(self.endog, index=effects)
             exog = self._group_mean(self.exog, index=effects)
         else:
-            raise ValueError("%s effects is not valid for the between \
-estimator" % s)
+            raise ValueError("%s effects is not valid for the between "
+                             "estimator" % effects)
         befit = GLS(endog, exog).fit()
         return befit
 
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     import numpy.lib.recfunctions as nprf
 
     data = sm.datasets.grunfeld.load(as_pandas=False)
-    # Baltagi doesn't include American Steel
+    # Baltagi does not include American Steel
     endog = data.endog[:-20]
     fullexog = data.exog[:-20]
 #    fullexog.sort(order=['firm','year'])
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     year = fullexog['year']
     panel_mod = PanelModel(endog, exog, panel, year, xtnames=['firm','year'],
             equation='invest value capital')
-# note that equation doesn't actually do anything but name the variables
+# note that equation does not actually do anything but name the variables
     panel_ols = panel_mod.fit(model='pooled')
 
     panel_be = panel_mod.fit(model='between', effects='oneway')
@@ -404,7 +404,7 @@ if __name__ == "__main__":
     omega = np.dot(dummyall, dummyall.T) + sigma* np.eye(nobs)
     print(omega)
     print(np.linalg.cholesky(omega))
-    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    ev, evec = np.linalg.eigh(omega)  #eig does not work
     omegainv = np.dot(evec, (1/ev * evec).T)
     omegainv2 = np.linalg.inv(omega)
     omegacomp = np.dot(evec, (ev * evec).T)
@@ -412,7 +412,7 @@ if __name__ == "__main__":
     #check
     #print(np.dot(omegainv,omega)
     print(np.max(np.abs(np.dot(omegainv,omega) - np.eye(nobs))))
-    omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev shouldn't be column
+    omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev should not be column
     print(np.max(np.abs(np.dot(omegainvhalf,omegainvhalf.T) - omegainv)))
 
     # now we can use omegainvhalf in GLS (instead of the cholesky)

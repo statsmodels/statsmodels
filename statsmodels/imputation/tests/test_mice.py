@@ -4,10 +4,11 @@ import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose
+import warnings
 
 try:
     import matplotlib.pyplot as plt
-except:
+except ImportError:
     pass
 
 pdf_output = False
@@ -106,6 +107,22 @@ class TestMICEData(object):
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
+    def test_settingwithcopywarning(self):
+        "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
+
+        df = gendat()
+        # There need to be some ints in here for the error to be thrown
+        df['intcol'] = np.arange(len(df))
+        df['intcol'] = df.intcol.astype('int32')
+
+        miceData = mice.MICEData(df)
+
+        with pd.option_context('mode.chained_assignment', 'warn'):
+            with warnings.catch_warnings(record=True) as ws:
+                warnings.simplefilter('always')
+                miceData.update_all()
+
+                assert len(ws) == 0
 
     def test_next_sample(self):
 
@@ -178,7 +195,7 @@ class TestMICEData(object):
             x = idata.next_sample()
             assert(isinstance(x, pd.DataFrame))
 
-        assert(all([x == (299, 4) for x in hist]))
+        assert(all([val == (299, 4) for val in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
@@ -331,7 +348,7 @@ class TestMICE(object):
             assert(isinstance(x, GLMResultsWrapper))
             assert(isinstance(x.family, sm.families.Binomial))
 
-
+    @pytest.mark.slow
     def test_combine(self):
 
         np.random.seed(3897)

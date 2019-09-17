@@ -33,7 +33,7 @@ which follows the methods outlined in
 
 Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
 "Communication-Efficient Sparse Regression: A One-Shot Approach."
-arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
+arXiv:1503.04337. 2015. https://arxiv.org/abs/1503.04337.
 
 There are several variables that are taken from the source paper
 for which the interpretation may not be directly clear from the
@@ -88,7 +88,7 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the paramters for the regularized fit
+    An array of the parameters for the regularized fit
     """
 
     if fit_kwds is None:
@@ -156,9 +156,9 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
     ----------
     mod : statsmodels model class instance
         The model for the current partition.
-    params : array-like
+    params : array_like
         The estimated coefficients for the current partition.
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -200,7 +200,7 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
     ----------
     mod : statsmodels model class instance
         The model for the current partition.
-    params : array-like
+    params : array_like
         The estimated coefficients for the current partition.
     hess_kwds : dict-like or None
         Keyword arguments for the hessian function.
@@ -329,7 +329,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
                           init_kwds_e={}):
     """handles the model fitting for each machine. NOTE: this
     is primarily handled outside of DistributedModel because
-    joblib can't handle class methods.
+    joblib cannot handle class methods.
 
     Parameters
     ----------
@@ -337,9 +337,9 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
         An instance of DistributedModel.
     pnum : scalar
         index of current partition.
-    endog : array-like
+    endog : array_like
         endogenous data for current partition.
-    exog : array-like
+    exog : array_like
         exogenous data for current partition.
     fit_kwds : dict-like
         Keywords needed for the model fitting.
@@ -659,12 +659,15 @@ class DistributedResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        exog : array-like NOT optional
+        exog : array_like NOT optional
             The values for which we want to predict, unlike standard
             predict this is NOT optional since the data in self.model
             is fake.
-        args, kwargs :
-            Some models can take additional arguments or keywords, see the
+        *args :
+            Some models can take additional arguments. See the
+            predict method of the model for the details.
+        **kwargs :
+            Some models can take additional keywords arguments. See the
             predict method of the model for the details.
 
         Returns
