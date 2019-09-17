@@ -193,12 +193,12 @@ class MLEModel(tsbase.TimeSeriesModel):
     def clone(self, endog, exog=None, **kwargs):
         raise NotImplementedError
 
-    def _clone_from_init_kwds(self, endog, exog=None, **kwargs):
+    def _clone_from_init_kwds(self, endog, **kwargs):
         # Cannot make this the default, because there is extra work required
         # for subclasses to make _get_init_kwds useful.
         use_kwargs = self._get_init_kwds()
         use_kwargs.update(kwargs)
-        return self.__class__(endog, exog=exog, **use_kwargs)
+        return self.__class__(endog, **use_kwargs)
 
     def set_filter_method(self, filter_method=None, **kwargs):
         """

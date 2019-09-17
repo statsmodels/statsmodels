@@ -821,7 +821,7 @@ class UnobservedComponents(MLEModel):
         self.ssm.initialization = init
 
     def clone(self, endog, exog=None, **kwargs):
-        return self._clone_from_init_kwds(endog, exog, **kwargs)
+        return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
     def _res_classes(self):

@@ -874,6 +874,8 @@ class KalmanFilter(Representation):
         loglike : float
             The joint loglikelihood.
         """
+        kwargs.setdefault('conserve_memory',
+                          MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD)
         kfilter = self._filter(**kwargs)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
@@ -935,7 +937,12 @@ class KalmanFilter(Representation):
             raise RuntimeError('Cannot compute loglikelihood if'
                                ' MEMORY_NO_LIKELIHOOD option is selected.')
         if not self.filter_method & FILTER_CONCENTRATED:
-            kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
+            kwargs.setdefault('conserve_memory',
+                              MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD)
+        else:
+            kwargs.setdefault(
+                'conserve_memory',
+                MEMORY_CONSERVE ^ (MEMORY_NO_FORECAST | MEMORY_NO_LIKELIHOOD))
         kfilter = self._filter(**kwargs)
         llf_obs = np.array(kfilter.loglikelihood, copy=True)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',

@@ -430,7 +430,7 @@ class DynamicFactor(MLEModel):
         self._idx_error_transition = np.s_['transition', idx[0], idx[1]]
 
     def clone(self, endog, exog=None, **kwargs):
-        return self._clone_from_init_kwds(endog, exog, **kwargs)
+        return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
     def _res_classes(self):
