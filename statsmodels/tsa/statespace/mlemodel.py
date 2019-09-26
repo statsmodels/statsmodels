@@ -18,7 +18,7 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
                                        approx_fprime_cs, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.eval_measures import aic, bic, hqic
+from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 
 import statsmodels.base.wrapper as wrap
 
@@ -2015,16 +2015,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Akaike Information Criterion
         """
-        # return -2 * self.llf + 2 * self.df_model
         return aic(self.llf, self.nobs_effective, self.df_model)
+
+    @cache_readonly
+    def aicc(self):
+        """
+        (float) Akaike Information Criterion with small sample correction
+        """
+        return aicc(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def bic(self):
         """
         (float) Bayes Information Criterion
         """
-        # return (-2 * self.llf +
-        #         self.df_model * np.log(self.nobs_effective))
         return bic(self.llf, self.nobs_effective, self.df_model)
 
     def _cov_params_approx(self, approx_complex_step=True,
@@ -2329,6 +2333,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.filter_results.loglikelihood_burn
 
     @cache_readonly
+    def mae(self):
+        """
+        (float) Mean absolute error
+        """
+        return np.mean(np.abs(self.resid))
+
+    @cache_readonly
+    def mse(self):
+        """
+        (float) Mean squared error
+        """
+        return self.sse / self.nobs
+
+    @cache_readonly
     def pvalues(self):
         """
         (array) The p-values associated with the z-statistics of the
@@ -2358,6 +2376,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         else:
             resid = resid.T
         return resid
+
+    @cache_readonly
+    def sse(self):
+        """
+        (float) Sum of squared errors
+        """
+        return np.sum(self.resid**2)
 
     @cache_readonly
     def zvalues(self):
