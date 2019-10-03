@@ -1110,6 +1110,24 @@ class SARIMAX(MLEModel):
         ]
 
     @property
+    def state_names(self):
+        # TODO: we may be able to revisit these states to get somewhat more
+        # informative names, but ultimately probably not much better.
+        # TODO: alternatively, we may be able to get better for certain models,
+        # like pure AR models.
+        k_ar_states = self._k_order
+        if not self.simple_differencing:
+            k_ar_states += (self.seasonal_periods * self._k_seasonal_diff +
+                            self._k_diff)
+        names = ['state.%d' % i for i in range(k_ar_states)]
+
+        if self.k_exog > 0 and self.state_regression:
+            names += ['beta.%s' % self.exog_names[i]
+                      for i in range(self.k_exog)]
+
+        return names
+
+    @property
     def model_orders(self):
         """
         The orders of each of the polynomials in the model.

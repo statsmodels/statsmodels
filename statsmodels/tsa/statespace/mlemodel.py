@@ -9,12 +9,13 @@ import contextlib
 import warnings
 
 from collections import OrderedDict
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
 from statsmodels.tools.tools import pinv_extended, Bunch
-from statsmodels.tools.sm_exceptions import PrecisionWarning
+from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
                                        approx_fprime_cs, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
@@ -25,6 +26,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 
+from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 
 from .simulation_smoother import SimulationSmoother
@@ -173,6 +175,36 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Other dimensions, now that `ssm` is available
         self.k_endog = self.ssm.k_endog
+
+    def _get_index_with_initial_state(self):
+        # The index we inherit from `TimeSeriesModel` will only cover the
+        # data sample itself, but we will also need an index value for the
+        # initial state which is the previous time step to the first datapoint.
+        # This method figures out an appropriate value for the three types of
+        # supported indexes: date-based, Int64Index, or RangeIndex
+        if self._index_dates:
+            # value = self._index.shift(-1)[0]
+            if isinstance(self._index, pd.DatetimeIndex):
+                index = pd.date_range(
+                    end=self._index[-1], periods=len(self._index) + 1,
+                    freq=self._index.freq)
+            elif isinstance(self._index, pd.PeriodIndex):
+                index = pd.period_range(
+                    end=self._index[-1], periods=len(self._index) + 1,
+                    freq=self._index.freq)
+            else:
+                raise NotImplementedError
+        elif isinstance(self._index, pd.Int64Index):
+            # The only valid Int64Index is a full, incrementing index, so this
+            # is general
+            value = self._index[0] - 1
+            index = pd.Int64Index([value] + self._index.tolist())
+        elif isinstance(self._index, pd.RangeIndex):
+            index = pd.RangeIndex(self._index.start - self._index.step,
+                                  self._index.end, self._index.step)
+        else:
+            raise NotImplementedError
+        return index
 
     def __setitem__(self, key, value):
         return self.ssm.__setitem__(key, value)
@@ -1492,6 +1524,17 @@ class MLEModel(tsbase.TimeSeriesModel):
                 names = []
             return names
 
+    @property
+    def state_names(self):
+        """
+        (list of str) List of human readable names for uonbserved states.
+        """
+        if hasattr(self, '_state_names'):
+            return self._state_names
+        else:
+            names = ['state.%d' % i for i in range(self.k_states)]
+        return names
+
     def transform_jacobian(self, unconstrained, approx_centered=False):
         """
         Jacobian matrix for the parameter transformation function
@@ -1877,22 +1920,89 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             setattr(self, name, getattr(self.filter_results, name, None))
 
         # Remove too-short results when memory conservation was used
-        if model.ssm.memory_no_forecast:
+        if self.filter_results.memory_no_forecast:
             self.forecasts = None
             self.forecasts_error = None
             self.forecasts_error_cov = None
-        if model.ssm.memory_no_predicted:
+        if self.filter_results.memory_no_predicted:
             self.predicted_state = None
             self.predicted_state_cov = None
-        if model.ssm.memory_no_filtered:
+        if self.filter_results.memory_no_filtered:
             self.filtered_state = None
             self.filtered_state_cov = None
-        if model.ssm.memory_no_gain:
+        if self.filter_results.memory_no_gain:
             pass
-        if model.ssm.memory_no_smoothing:
+        if self.filter_results.memory_no_smoothing:
             pass
-        if model.ssm.memory_no_std_forecast:
+        if self.filter_results.memory_no_std_forecast:
             self.standardized_forecasts_error = None
+
+        # Save more convenient access to states
+        # (will create a private attribute _states here and provide actual
+        # access via a getter, so that we can e.g. issue a warning in the case
+        # that a useless Pandas index was given in the model specification)
+        self._states = SimpleNamespace()
+
+        use_pandas = isinstance(self.data, PandasData)
+        index = self.model._index
+        columns = self.model.state_names
+
+        # Predicted states
+        # Note: a complication here is that we also include the initial values
+        # here, so that we need an extended index in the Pandas case
+        if (self.predicted_state is None or
+                self.filter_results.memory_no_predicted):
+            self._states.predicted = None
+            self._states.predicted_cov = None
+        elif use_pandas:
+            extended_index = self.model._get_index_with_initial_state()
+            self._states.predicted = pd.DataFrame(
+                self.predicted_state.T, index=extended_index, columns=columns)
+            tmp = np.transpose(self.predicted_state_cov, (2, 0, 1))
+            self._states.predicted_cov = pd.DataFrame(
+                np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
+                index=pd.MultiIndex.from_product(
+                    [extended_index, columns]).swaplevel(),
+                columns=columns)
+        else:
+            self._states.predicted = self.predicted_state.T
+            self._states.predicted_cov = np.transpose(
+                self.predicted_state_cov, (2, 0, 1))
+
+        # Filtered states
+        if (self.filtered_state is None or
+                self.filter_results.memory_no_filtered):
+            self._states.filtered = None
+            self._states.filtered_cov = None
+        elif use_pandas:
+            self._states.filtered = pd.DataFrame(
+                self.filtered_state.T, index=index, columns=columns)
+            tmp = np.transpose(self.filtered_state_cov, (2, 0, 1))
+            self._states.filtered_cov = pd.DataFrame(
+                np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
+                index=pd.MultiIndex.from_product([index, columns]).swaplevel(),
+                columns=columns)
+        else:
+            self._states.filtered = self.filtered_state.T
+            self._states.filtered_cov = np.transpose(
+                self.filtered_state_cov, (2, 0, 1))
+
+        # Smoothed states
+        if self.smoothed_state is None:
+            self._states.smoothed = None
+            self._states.smoothed_cov = None
+        elif use_pandas:
+            self._states.smoothed = pd.DataFrame(
+                self.smoothed_state.T, index=index, columns=columns)
+            tmp = np.transpose(self.smoothed_state_cov, (2, 0, 1))
+            self._states.smoothed_cov = pd.DataFrame(
+                np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
+                index=pd.MultiIndex.from_product([index, columns]).swaplevel(),
+                columns=columns)
+        else:
+            self._states.smoothed = self.smoothed_state.T
+            self._states.smoothed_cov = np.transpose(
+                self.smoothed_state_cov, (2, 0, 1))
 
         # Handle removing data
         self._data_attr_model = getattr(self, '_data_attr_model', [])
@@ -2358,6 +2468,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         else:
             resid = resid.T
         return resid
+
+    @property
+    def states(self):
+        if self.model._index_generated and not self.model._index_none:
+            warnings.warn('No supported index is available. The `states`'
+                          ' DataFrame uses a generated integer index',
+                          ValueWarning)
+        return self._states
 
     @cache_readonly
     def zvalues(self):

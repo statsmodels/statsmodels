@@ -1,6 +1,8 @@
 """
 Univariate structural time series models
 
+TODO: tests: "** On entry to DLASCL, parameter number  4 had an illegal value"
+
 Author: Chad Fulton
 License: Simplified-BSD
 """
@@ -972,6 +974,33 @@ class UnobservedComponents(MLEModel):
             else:
                 param_names.append(key)
         return param_names
+
+    @property
+    def state_names(self):
+        names = []
+        if self.level:
+            names.append('level')
+        if self.trend:
+            names.append('trend')
+        if self.seasonal:
+            names.append('seasonal')
+            names += ['seasonal.L%d' % i
+                      for i in range(1, self._k_seasonal_states)]
+        if self.freq_seasonal:
+            names += ['freq_seasonal.%d' % i
+                      for i in range(self._k_freq_seas_states)]
+        if self.cycle:
+            names += ['cycle', 'cycle.auxilliary']
+        if self.ar_order > 0:
+            names += ['ar.L%d' % i
+                      for i in range(1, self.ar_order + 1)]
+        if self.k_exog > 0 and not self.mle_regression:
+            names += ['beta.%s' % self.exog_names[i]
+                      for i in range(self.k_exog)]
+        if self._unused_state:
+            names += ['dummy']
+
+        return names
 
     def transform_params(self, unconstrained):
         """
