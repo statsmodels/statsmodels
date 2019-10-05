@@ -181,9 +181,13 @@ class DynamicFactor(MLEModel):
             k_states += self._error_order
             k_posdef += k_endog
 
+        # We can still estimate the model with no dynamic state (e.g. SUR), we
+        # just need to have one state that does nothing.
+        self._unused_state = False
         if k_states == 0:
             k_states = 1
             k_posdef = 1
+            self._unused_state = True
 
         # Test for non-multivariate endog
         if k_endog < 2:
@@ -535,6 +539,7 @@ class DynamicFactor(MLEModel):
             else:
                 # In the case of individual autoregressions, extract just the
                 # diagonal elements
+                # TODO: can lead to explosive parameterizations
                 params[self._params_error_transition] = (
                     res_errors.params.T[self._idx_error_diag])
 
@@ -617,6 +622,29 @@ class DynamicFactor(MLEModel):
             ]
 
         return param_names
+
+    @property
+    def state_names(self):
+        names = []
+        endog_names = self.endog_names
+
+        # Factors and lags
+        names += [
+            (('f%d' % (j + 1)) if i == 0 else ('f%d.L%d' % (j + 1, i)))
+            for i in range(max(1, self.factor_order))
+            for j in range(self.k_factors)]
+
+        if self.error_order > 0:
+            names += [
+                (('e(%s)' % endog_names[j]) if i == 0
+                 else ('e(%s).L%d' % (endog_names[j], i)))
+                for i in range(self.error_order)
+                for j in range(self.k_endog)]
+
+        if self._unused_state:
+            names += ['dummy']
+
+        return names
 
     def transform_params(self, unconstrained):
         """
