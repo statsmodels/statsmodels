@@ -139,6 +139,9 @@ _fit_regularized_doc =\
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
+        The cvxopt module is required to estimate model using the square root
+        lasso.
+
         References
         ----------
         .. [*] Friedman, Hastie, Tibshirani (2008).  Regularization paths for
