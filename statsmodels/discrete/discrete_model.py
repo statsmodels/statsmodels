@@ -279,6 +279,8 @@ class DiscreteModel(base.LikelihoodModel):
 
         Notes
         -----
+        Using 'l1_cvxopt_cp' requires the cvxopt module.
+
         Extra parameters are not penalized if alpha is given as a scalar.
         An example is the shape parameter in NegativeBinomial `nb1` and `nb2`.
 

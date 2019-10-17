@@ -149,6 +149,8 @@ half of 2020.
 Optional Dependencies
 ---------------------
 
+* `cvxopt <https://cvxopt.org/>`__ is required for regularized fitting of
+  some models.
 * `Matplotlib <https://matplotlib.org/>`__ >= 2.2 is needed for plotting
   functions and running many of the examples.
 * If installed, `X-12-ARIMA <https://www.census.gov/srd/www/x13as/>`__ or
