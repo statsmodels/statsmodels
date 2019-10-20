@@ -2795,7 +2795,7 @@ class NominalGEE(GEE):
 
         Notes
         -----
-        offset_exposure must be set at None for the multinoial family.
+        offset_exposure must be set at None for the multinomial family.
         """
 
         if offset_exposure is not None:

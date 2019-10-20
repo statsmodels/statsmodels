@@ -1527,7 +1527,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def state_names(self):
         """
-        (list of str) List of human readable names for uonbserved states.
+        (list of str) List of human readable names for unobserved states.
         """
         if hasattr(self, '_state_names'):
             return self._state_names
