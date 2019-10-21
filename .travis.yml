@@ -104,7 +104,7 @@ before_install:
   # Source recipe to install packages
   - source $BUILD_INIT
   - pip install pytest pip pytest-randomly nose cvxopt jupyter_client nbformat
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install pytest-xdist; fi;
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist!=1.30"; fi;
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
