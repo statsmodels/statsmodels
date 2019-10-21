@@ -36,7 +36,7 @@ _doc_zi_params = """
 
 class GenericZeroInflated(CountModel):
     __doc__ = """
-    Generiz Zero Inflated Model
+    Generic Zero Inflated Model
 
     %(params)s
     %(extra_params)s

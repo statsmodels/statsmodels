@@ -435,19 +435,18 @@ class ConditionalResults(base.LikelihoodModelResults):
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
-            significance level for the confidence intervals
+            Significance level for the confidence intervals
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
         --------
         statsmodels.iolib.summary.Summary : class to hold summary
             results
-
         """
 
         top_left = [
@@ -500,14 +499,14 @@ class ConditionalMNLogit(_ConditionalModel):
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
 
+    Notes
+    -----
+    Equivalent to femlogit in Stata.
+
     References
     ----------
     Gary Chamberlain (1980).  Analysis of covariance with qualitative
     data. The Review of Economic Studies.  Vol. 47, No. 1, pp. 225-238.
-
-    Notes
-    -----
-    Equivalent to femlogit in Stata.
     """
 
     def __init__(self, endog, exog, missing='none', **kwargs):
