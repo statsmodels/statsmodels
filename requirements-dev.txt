@@ -8,4 +8,5 @@ cvxopt
 # test
 pytest
 pytest-randomly
+pytest-xdist!=1.30
 flake8
