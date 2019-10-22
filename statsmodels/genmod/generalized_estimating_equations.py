@@ -309,6 +309,12 @@ _gee_fit_doc = """
         scaled by this value.  Default is 1, Stata uses N / (N - g),
         where N is the total sample size and g is the average group
         size.
+    scale : str or float, optional
+        `scale` can be None, 'X2', or a float
+        If a float, its value is used as the scale parameter.
+        The default value is None, which uses `X2` (Pearson's
+        chi-square) for Gamma, Gaussian, and Inverse Gaussian.
+        The default is 1 for the Binomial and Poisson families.
 
     Returns
     -------
@@ -799,6 +805,10 @@ class GEE(base.Model):
         http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
         """
 
+        # Since the model has not been fit, its scaletype has not been
+        # set.  So give it the scaletype of the submodel.
+        self.scaletype = submodel.model.scaletype
+
         # Check consistency between model and submodel (not a comprehensive
         # check)
         submod = submodel.model
@@ -888,15 +898,15 @@ class GEE(base.Model):
     def estimate_scale(self):
         """
         Estimate the dispersion/scale.
-
-        The scale parameter for binomial, Poisson, and multinomial
-        families is fixed at 1, otherwise it is estimated from
-        the data.
         """
 
-        if isinstance(self.family, (families.Binomial, families.Poisson,
-                                    _Multinomial)):
-            return 1.
+        if self.scaletype is None:
+            if isinstance(self.family, (families.Binomial, families.Poisson,
+                                        families.NegativeBinomial,
+                                        _Multinomial)):
+                return 1.
+        elif isinstance(self.scaletype, float):
+            return np.array(self.scaletype)
 
         endog = self.endog_li
         cached_means = self.cached_means
@@ -1252,7 +1262,10 @@ class GEE(base.Model):
     @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
-            cov_type='robust', ddof_scale=None, scaling_factor=1.):
+            cov_type='robust', ddof_scale=None, scaling_factor=1.,
+            scale=None):
+
+        self.scaletype = scale
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
@@ -1388,7 +1401,7 @@ class GEE(base.Model):
 
         return GEEResultsWrapper(results)
 
-    def _update_regularized(self, params, pen_wt, scad_param, eps):
+    def _update_regularized(self, params, pen_wt, scad_param, eps, scale):
 
         sn, hm = 0, 0
 
@@ -1444,7 +1457,7 @@ class GEE(base.Model):
 
     def fit_regularized(self, pen_wt, scad_param=3.7, maxiter=100,
                         ddof_scale=None, update_assoc=5,
-                        ctol=1e-5, ztol=1e-3, eps=1e-6):
+                        ctol=1e-5, ztol=1e-3, eps=1e-6, scale=None):
         """
         Regularized estimation for GEE.
 
@@ -1492,6 +1505,8 @@ class GEE(base.Model):
         http://users.stat.umn.edu/~wangx346/research/GEE_selection.pdf
         """
 
+        self.scaletype = scale
+
         mean_params = np.zeros(self.exog.shape[1])
         self.update_cached_means(mean_params)
         converged = False
@@ -1510,7 +1525,7 @@ class GEE(base.Model):
         for itr in range(maxiter):
 
             update, hm = self._update_regularized(
-                              mean_params, pen_wt, scad_param, eps)
+                              mean_params, pen_wt, scad_param, eps, scale)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update",
                 warnings.warn(msg, ConvergenceWarning)

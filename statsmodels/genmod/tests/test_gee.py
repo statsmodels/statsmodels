@@ -1974,3 +1974,25 @@ def test_qic_warnings():
         model = gee.GEE(y, x1, family=fam, groups=g)
         result = model.fit()
         result.qic()
+
+
+def test_quasipoisson():
+
+    np.random.seed(343)
+
+    n = 1000
+    x = np.random.normal(size=(n, 3))
+    g = np.random.gamma(1, 1, size=n)
+    y = np.random.poisson(g)
+    grp = np.kron(np.arange(100), np.ones(n // 100))
+
+    model1 = gee.GEE(y, x, family=families.Poisson(), groups=grp, cov_type="naive")
+    result1 = model1.fit()
+
+    model2 = gee.GEE(y, x, family=families.Poisson(), groups=grp, cov_type="naive")
+    result2 = model2.fit(scale="X2")
+
+    assert_allclose(result1.params, result2.params)
+
+    assert_allclose(result2.cov_naive / result1.cov_naive,
+                    result2.scale * np.ones_like(result2.cov_naive))
