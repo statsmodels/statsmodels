@@ -1401,7 +1401,7 @@ class GEE(base.Model):
 
         return GEEResultsWrapper(results)
 
-    def _update_regularized(self, params, pen_wt, scad_param, eps, scale):
+    def _update_regularized(self, params, pen_wt, scad_param, eps):
 
         sn, hm = 0, 0
 
@@ -1430,10 +1430,11 @@ class GEE(base.Model):
         en /= eps + ap
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
-        hm *= self.estimate_scale()
         sn -= self.num_group * en * params
+        update = np.linalg.solve(hm, sn)
+        hm *= self.estimate_scale()
 
-        return np.linalg.solve(hm, sn), hm
+        return update, hm
 
     def _regularized_covmat(self, mean_params):
 
@@ -1522,15 +1523,20 @@ class GEE(base.Model):
                     "ddof_scale must be a non-negative number or None")
             self.ddof_scale = ddof_scale
 
+        # Keep this private for now.  In some cases the early steps are
+        # very small so it seems necessary to ensure a certain minimum
+        # number of iterations before testing for convergence.
+        miniter = 20
+
         for itr in range(maxiter):
 
             update, hm = self._update_regularized(
-                              mean_params, pen_wt, scad_param, eps, scale)
+                              mean_params, pen_wt, scad_param, eps)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update",
                 warnings.warn(msg, ConvergenceWarning)
                 break
-            if np.sqrt(np.sum(update**2)) < ctol:
+            if itr > miniter and np.sqrt(np.sum(update**2)) < ctol:
                 converged = True
                 break
             mean_params += update
