@@ -1486,6 +1486,12 @@ class GEE(base.Model):
             being zero, default is based on section 5 of Wang et al.
         eps : non-negative scalar
             Numerical constant, see section 3.2 of Wang et al.
+        scale : float or string
+            If a float, this value is used as the scale parameter.
+            If "X2", the scale parameter is always estimated using
+            Pearson's chi-square method (e.g. as in a quasi-Poisson
+            analysis).  If None, the default approach for the family
+            is used to estimate the scale parameter.
 
         Returns
         -------
