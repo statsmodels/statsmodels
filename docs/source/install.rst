@@ -34,7 +34,7 @@ To obtain the latest released version of statsmodels using pip:
 
 .. code-block:: bash
 
-    conda install -c conda-forge statsmodels
+    pip install statsmodels
 
 Follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__ to directly
 download wheels or source.
