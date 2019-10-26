@@ -5,7 +5,7 @@
 Installing statsmodels
 ======================
 
-The easiest way to install statsmodels is to install it as part of the `Anaconda <http://docs.continuum.io/anaconda/>`_
+The easiest way to install statsmodels is to install it as part of the `Anaconda <https://docs.continuum.io/anaconda/>`_
 distribution, a cross-platform distribution for data analysis and scientific
 computing. This is the recommended installation method for most users.
 
@@ -19,7 +19,7 @@ statsmodels supports Python 3.5, 3.6 and 3.7.
 
 Anaconda
 --------
-statsmodels is available in through conda provided by
+statsmodels is available through conda provided by
 `Anaconda <https://www.continuum.io/downloads>`__. The latest release can
 be installed using:
 
@@ -36,7 +36,7 @@ To obtain the latest released version of statsmodels using pip:
 
     pip install statsmodels
 
-Follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__ to directly
+Follow `this link to our PyPI page <https://pypi.org/project/statsmodels/>`__ to directly
 download wheels or source.
 
 For Windows users, unofficial recent binaries (wheels) are occasionally
@@ -106,7 +106,7 @@ Linux
 ^^^^^
 
 If you are using Linux, we assume that you are savvy enough to install `gcc` on
-your own. More than likely, its already installed.
+your own. More than likely, it is already installed.
 
 Windows
 ^^^^^^^
@@ -121,7 +121,7 @@ clarify which version of Python uses which compiler by default.
 Mac
 ^^^
 
-Installing statsmodels on MacOS will requires installing `gcc` which provides
+Installing statsmodels on MacOS requires installing `gcc` which provides
 a suitable C compiler. We recommend installing Xcode and the Command Line
 Tools.
 
