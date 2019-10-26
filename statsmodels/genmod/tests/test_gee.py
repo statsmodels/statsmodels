@@ -1988,9 +1988,9 @@ def test_quasipoisson(reg):
     grp = np.kron(np.arange(100), np.ones(n // 100))
 
     model1 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-        cov_type="naive")
+                     cov_type="naive")
     model2 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-        cov_type="naive")
+                     cov_type="naive")
 
     if reg:
         result1 = model1.fit_regularized(pen_wt=0.1)
