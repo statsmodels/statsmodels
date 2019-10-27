@@ -2604,7 +2604,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Likelihood:"] = self.llf
+        info["Log-Likelihood:"] = self.llf
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         smry.add_title("Mixed Linear Model Regression Results")
