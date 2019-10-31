@@ -1974,3 +1974,37 @@ def test_qic_warnings():
         model = gee.GEE(y, x1, family=fam, groups=g)
         result = model.fit()
         result.qic()
+
+
+@pytest.mark.parametrize("reg", [False, True])
+def test_quasipoisson(reg):
+
+    np.random.seed(343)
+
+    n = 1000
+    x = np.random.normal(size=(n, 3))
+    g = np.random.gamma(1, 1, size=n)
+    y = np.random.poisson(g)
+    grp = np.kron(np.arange(100), np.ones(n // 100))
+
+    model1 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
+                     cov_type="naive")
+    model2 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
+                     cov_type="naive")
+
+    if reg:
+        result1 = model1.fit_regularized(pen_wt=0.1)
+        result2 = model2.fit_regularized(pen_wt=0.1, scale="X2")
+    else:
+        result1 = model1.fit()
+        result2 = model2.fit(scale="X2")
+
+    # The parameter estimates are the same regardless of how
+    # the scale parameter is handled
+    assert_allclose(result1.params, result2.params)
+
+    if not reg:
+        # The robust covariance does not depend on the scale parameter,
+        # but the naive covariance does.
+        assert_allclose(result2.cov_naive / result1.cov_naive,
+                        result2.scale * np.ones_like(result2.cov_naive))
