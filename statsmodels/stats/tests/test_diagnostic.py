@@ -475,7 +475,7 @@ class TestDiagnosticG(object):
         assert_almost_equal(jt1, jtest[0][3:5], decimal=13)
 
         jt2 = smsdia.compare_j(res, res2)
-        assert_almost_equal(jt2, jtest[1][3:5], decimal=14)
+        assert_almost_equal(jt2, jtest[1][3:5], decimal=13)
 
         #Estimate        Std. Error  z value   Pr(>|z|)
         coxtest = [('fitted(M1) ~ M2', -0.782030488930356, 0.599696502782265,
@@ -484,7 +484,7 @@ class TestDiagnosticG(object):
                     -5.727181590258883, 1.021128495098556e-08, '***')]
 
         ct1 = smsdia.compare_cox(res, res2)
-        assert_almost_equal(ct1, coxtest[0][3:5], decimal=13)
+        assert_almost_equal(ct1, coxtest[0][3:5], decimal=12)
 
         ct2 = smsdia.compare_cox(res2, res)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
