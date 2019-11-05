@@ -57,10 +57,11 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
                         confint[:, 1] - acf_x, alpha=.25)
 
 
-def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
-             fft=False, title='Autocorrelation', zero=True,
-             vlines_kwargs=None, **kwargs):
-    """Plot the autocorrelation function
+def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
+             unbiased=False, fft=False, missing='none',
+             title='Autocorrelation', zero=True, vlines_kwargs=None, **kwargs):
+    """
+    Plot the autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
 
@@ -88,6 +89,9 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         If True, then denominators for autocovariance are n-k, otherwise n
     fft : bool, optional
         If True, computes the ACF via FFT.
+    missing : str, optional
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying how
+        the NaNs are to be treated.
     title : str, optional
         Title to place on plot.  Default is 'Autocorrelation'
     zero : bool, optional
@@ -145,12 +149,10 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     confint = None
     # acf has different return type based on alpha
-    if alpha is None:
-        acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft,
-                    unbiased=unbiased)
-    else:
-        acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
-                             unbiased=unbiased)
+    acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft, unbiased=unbiased,
+                missing=missing)
+    if alpha is not None:
+        acf_x, confint = acf_x
 
     _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
                vlines_kwargs, **kwargs)
