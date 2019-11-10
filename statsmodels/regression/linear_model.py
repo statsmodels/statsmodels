@@ -461,7 +461,7 @@ class GLS(RegressionModel):
 
     See Also
     --------
-    WLS : Fit a linear model using weighted Least Squares.
+    WLS : Fit a linear model using Weighted Least Squares.
     OLS : Fit a linear model using Ordinary Least Squares.
 
     Notes

@@ -728,7 +728,7 @@ class GLM(base.LikelihoodModel):
 
     def estimate_scale(self, mu):
         """
-        Estimates the dispersion/scale.
+        Estimate the dispersion/scale.
 
         Type of scale can be chose in the fit method.
 
@@ -801,7 +801,7 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         power : float
-            The estimated shape or power
+            The estimated shape or power.
         """
         if method == 'brentq':
             from scipy.optimize import brentq
@@ -884,7 +884,7 @@ class GLM(base.LikelihoodModel):
     def get_distribution(self, params, scale=1, exog=None, exposure=None,
                          offset=None):
         """
-        Returns a random number generator for the predictive distribution.
+        Return a random number generator for the predictive distribution.
 
         Parameters
         ----------

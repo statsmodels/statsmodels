@@ -2316,7 +2316,6 @@ class ResultMixin(object):
         """
         covariance of parameters based on outer product of jacobian of
         log-likelihood
-
         """
         #  if not hasattr(self, '_results'):
         #      raise ValueError('need to call fit first')
