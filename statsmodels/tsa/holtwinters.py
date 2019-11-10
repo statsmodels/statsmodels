@@ -949,7 +949,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                        'smoothing_seasonal': gamma,
                        'damping_slope': phi if damped else np.nan,
                        'initial_level': lvls[0],
-                       'initial_slope': b[0] / phi,
+                       'initial_slope': b[0] / phi if phi > 0 else 0,
                        'initial_seasons': s[:m],
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,

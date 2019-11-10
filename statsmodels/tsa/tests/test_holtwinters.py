@@ -522,3 +522,17 @@ def test_integer_array(reset_randomstate):
     y = y.astype(np.long)
     res = ExponentialSmoothing(y,trend='add').fit()
     assert res.params['smoothing_level'] != 0.0
+
+
+def test_damping_slope_zero():
+    endog = np.arange(10)
+    mod = ExponentialSmoothing(endog, trend='add', damped=True)
+    res1 = mod.fit(smoothing_level=1, smoothing_slope=0.0, damping_slope=1e-20)
+    pred1 = res1.predict(start=0)
+    assert_allclose(pred1, np.r_[0., np.arange(9)], atol=1e-10)
+
+    res2 = mod.fit(smoothing_level=1, smoothing_slope=0.0, damping_slope=0)
+    pred2 = res2.predict(start=0)
+    assert_allclose(pred2, np.r_[0., np.arange(9)], atol=1e-10)
+
+    assert_allclose(pred1, pred2, atol=1e-10)
