@@ -19,6 +19,7 @@ from .tools import (
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
@@ -516,7 +517,7 @@ class DynamicFactor(MLEModel):
                 cov_factor = np.diag(endog.std(axis=0))
                 params[self._params_error_cov] = (
                     cov_factor[self._idx_lower_error_cov].ravel())
-        else:
+        elif self.error_var:
             mod_errors = VAR(endog)
             res_errors = mod_errors.fit(maxlags=self.error_order, ic=None,
                                         trend='nc')
@@ -535,15 +536,8 @@ class DynamicFactor(MLEModel):
                                  ' `enforce_stationarity` set to True.')
 
             # Get the error autoregressive parameters
-            if self.error_var:
-                params[self._params_error_transition] = (
+            params[self._params_error_transition] = (
                     np.array(res_errors.params.T).ravel())
-            else:
-                # In the case of individual autoregressions, extract just the
-                # diagonal elements
-                # TODO: can lead to explosive parameterizations
-                params[self._params_error_transition] = (
-                    res_errors.params.T[self._idx_error_diag])
 
             # Get the error covariance parameters
             if self.error_cov_type == 'scalar':
@@ -561,6 +555,18 @@ class DynamicFactor(MLEModel):
                     res_errors.sigma_u.diagonal().mean()**0.5)
                 params[self._params_error_cov] = (
                     cov_factor[self._idx_lower_error_cov].ravel())
+        else:
+            error_ar_params = []
+            error_cov_params = []
+            for i in range(self.k_endog):
+                mod_error = ARIMA(endog[:, i], order=(self.error_order, 0, 0),
+                                  trend='n', enforce_stationarity=True)
+                res_error = mod_error.fit(method='burg')
+                error_ar_params += res_error.params[:self.error_order].tolist()
+                error_cov_params += res_error.params[-1:].tolist()
+
+            params[self._params_error_transition] = np.r_[error_ar_params]
+            params[self._params_error_cov] = np.r_[error_cov_params]
 
         return params
 
