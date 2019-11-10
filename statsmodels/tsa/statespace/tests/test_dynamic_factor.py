@@ -972,3 +972,18 @@ def test_apply_results():
 
     assert_allclose(res3.forecast(10, exog=np.ones(10)),
                     res1.forecast(10, exog=np.ones(10)))
+
+
+def test_start_params_nans():
+    ix = pd.date_range('1960-01-01', '1982-10-01', freq='QS')
+    dta = np.log(pd.DataFrame(
+        results_varmax.lutkepohl_data, columns=['inv', 'inc', 'consump'],
+        index=ix)).diff().iloc[1:]
+
+    endog1 = dta.iloc[:-1]
+    mod1 = dynamic_factor.DynamicFactor(endog1, k_factors=1, factor_order=1)
+    endog2 = dta.copy()
+    endog2.iloc[-1:] = np.nan
+    mod2 = dynamic_factor.DynamicFactor(endog2, k_factors=1, factor_order=1)
+
+    assert_allclose(mod2.start_params, mod1.start_params)
