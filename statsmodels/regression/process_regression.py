@@ -56,7 +56,7 @@ class ProcessCovariance(object):
 
     def jac(self, time, sc, sm):
         """
-        The Jacobian of the covariance respect to the parameters.
+        The Jacobian of the covariance with respect to the parameters.
 
         See get_cov for parameters.
 

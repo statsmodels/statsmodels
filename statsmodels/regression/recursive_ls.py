@@ -468,7 +468,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def ess(self):
-        """esss"""
+        """ess"""
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
