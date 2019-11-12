@@ -2177,11 +2177,6 @@ def test_arima000():
     res = mod.smooth(mod.start_params)
     assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
 
-    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
-    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
-                          seasonal_order=(0, 1, 0, 1))
-    res = mod.smooth(mod.start_params)
-
     # Exogenous variables
     error = np.random.normal(size=nobs)
     endog = np.ones(nobs) * 10 + error
@@ -2676,3 +2671,27 @@ def test_simple_differencing_strindex():
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))
     assert_(mod.data.row_labels.equals(index[1:]))
+
+
+def test_invalid_order():
+    endog = np.zeros(10)
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, order=(1,))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, order=(1, 2, 3, 4))
+
+
+def test_invalid_seasonal_order():
+    endog = np.zeros(10)
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1,))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 2, 3, 4, 5))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 0, 0, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(0, 0, 1, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 0, 1, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(0, 0, 0, 1))

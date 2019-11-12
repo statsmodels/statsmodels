@@ -324,6 +324,18 @@ class SARIMAX(MLEModel):
                  hamilton_representation=False, concentrate_scale=False,
                  trend_offset=1, use_exact_diffuse=False, **kwargs):
 
+        # Save given orders
+        self.order = order
+        self.seasonal_order = seasonal_order
+
+        # Validate orders
+        if len(self.order) != 3:
+            raise ValueError('`order` argument must be an iterable with three'
+                             ' elements.')
+        if len(self.seasonal_order) != 4:
+            raise ValueError('`seasonal_order` argument must be an iterable'
+                             ' with four elements.')
+
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
         self.measurement_error = measurement_error
@@ -335,10 +347,6 @@ class SARIMAX(MLEModel):
         self.hamilton_representation = hamilton_representation
         self.concentrate_scale = concentrate_scale
         self.use_exact_diffuse = use_exact_diffuse
-
-        # Save given orders
-        self.order = order
-        self.seasonal_order = seasonal_order
 
         # Enforce non-MLE coefficients if time varying coefficients is
         # specified
@@ -419,6 +427,15 @@ class SARIMAX(MLEModel):
         self.k_seasonal_ma_params = (
             int(np.sum(self.polynomial_seasonal_ma) - 1)
         )
+
+        # Make sure we don't have a seasonal specification without a valid
+        # seasonal period.
+        if self.seasonal_order[3] == 1:
+            raise ValueError('Seasonal period must be greater than 1.')
+        if self.seasonal_order[3] == 0 and (self.k_seasonal_ar > 0 or
+                                            self.k_seasonal_ma > 0):
+            raise ValueError('Seasonal AR or MA components cannot be set when'
+                             ' the given seasonal period is equal to 0.')
 
         # Make internal copies of the differencing orders because if we use
         # simple differencing, then we will need to internally use zeros after
