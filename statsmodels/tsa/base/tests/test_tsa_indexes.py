@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 
 from numpy.testing import assert_equal, assert_raises
-import pytest
 
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tools.sm_exceptions import ValueWarning
@@ -1119,13 +1118,16 @@ def test_nonmonotonic_periodindex():
     index = tmp.tolist() + tmp.tolist()
     endog = pd.Series(np.zeros(len(index)), index=index)
 
-    message = ('A Period index has been provided, but it is not'
+    message = ('A date index has been provided, but it is not'
                ' monotonic and so will be ignored when e.g.'
                ' forecasting.')
     with pytest.warns(ValueWarning, match=message):
-        _ = tsa_model.TimeSeriesModel(endog)
+        tsa_model.TimeSeriesModel(endog)
 
 
+@pytest.mark.xfail(reason='Pandas PeriodIndex.is_full does not yet work for'
+                          ' all frequencies (e.g. frequencies with a'
+                          ' multiplier, like "2Q").')
 def test_nonfull_periodindex():
     index = pd.PeriodIndex(['2000-01', '2000-03'], freq='M')
     endog = pd.Series(np.zeros(len(index)), index=index)
@@ -1134,4 +1136,4 @@ def test_nonfull_periodindex():
                ' full and so will be ignored when e.g.'
                ' forecasting.')
     with pytest.warns(ValueWarning, match=message):
-        _ = tsa_model.TimeSeriesModel(endog)
+        tsa_model.TimeSeriesModel(endog)
