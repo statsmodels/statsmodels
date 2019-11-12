@@ -2676,3 +2676,27 @@ def test_simple_differencing_strindex():
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))
     assert_(mod.data.row_labels.equals(index[1:]))
+
+
+def test_invalid_order():
+    endog = np.zeros(10)
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, order=(1,))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, order=(1, 2, 3, 4))
+
+
+def test_invalid_seasonal_order():
+    endog = np.zeros(10)
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1,))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 2, 3, 4, 5))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 0, 0, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(0, 0, 1, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(1, 0, 1, 0))
+    with pytest.raises(ValueError):
+        sarimax.SARIMAX(endog, seasonal_order=(0, 0, 0, 1))
