@@ -228,6 +228,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self._index = _index
         self._index_generated = index_generated
         self._index_none = index is None
+        self._index_int64 = int_index and not range_index and not date_index
         self._index_dates = date_index and not index_generated
         self._index_freq = self._index.freq if self._index_dates else None
         self._index_inferred_freq = inferred_freq
