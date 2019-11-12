@@ -600,8 +600,7 @@ class DynamicFactor(MLEModel):
             ]
         elif self.error_cov_type == 'unstructured':
             param_names += [
-                ('sqrt.var.%s' % endog_names[i] if i == j else
-                 'sqrt.cov.%s.%s' % (endog_names[j], endog_names[i]))
+                'cov.chol[%d,%d]' % (i + 1, j + 1)
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
