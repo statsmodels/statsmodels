@@ -554,22 +554,22 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # -> Check that we have the right coefficients
         offset = self.model.k_endog * self.model.k_factors
         assert re.search(
-            'sqrt.var.dln_inv +' + forg(params[offset + 0], prec=4),
+            r'cov.chol\[1,1\] +' + forg(params[offset + 0], prec=4),
             table)
         assert re.search(
-            'sqrt.cov.dln_inv.dln_inc +' + forg(params[offset + 1], prec=4),
+            r'cov.chol\[2,1\] +' + forg(params[offset + 1], prec=4),
             table)
         assert re.search(
-            'sqrt.var.dln_inc +' + forg(params[offset + 2], prec=4),
+            r'cov.chol\[2,2\] +' + forg(params[offset + 2], prec=4),
             table)
         assert re.search(
-            'sqrt.cov.dln_inv.dln_consump +' + forg(params[offset+3], prec=4),
+            r'cov.chol\[3,1\] +' + forg(params[offset+3], prec=4),
             table)
         assert re.search(
-            'sqrt.cov.dln_inc.dln_consump +' + forg(params[offset+4], prec=4),
+            r'cov.chol\[3,2\] +' + forg(params[offset+4], prec=4),
             table)
         assert re.search(
-            'sqrt.var.dln_consump +' + forg(params[offset + 5], prec=4),
+            r'cov.chol\[3,3\] +' + forg(params[offset + 5], prec=4),
             table)
 
 
