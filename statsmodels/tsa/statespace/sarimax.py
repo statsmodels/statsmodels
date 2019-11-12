@@ -7,6 +7,7 @@ License: Simplified-BSD
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 
 from statsmodels.compat.pandas import Appender
 
@@ -81,9 +82,10 @@ class SARIMAX(MLEModel):
         Whether or not to use partially conditional maximum likelihood
         estimation. If True, differencing is performed prior to estimation,
         which discards the first :math:`s D + d` initial rows but results in a
-        smaller state-space formulation. If False, the full SARIMAX model is
-        put in state-space form so that all datapoints can be used in
-        estimation. Default is False.
+        smaller state-space formulation. See the Notes section for important
+        details about interpreting results when this option is used. If False,
+        the full SARIMAX model is put in state-space form so that all
+        datapoints can be used in estimation. Default is False.
     enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
@@ -278,6 +280,17 @@ class SARIMAX(MLEModel):
     compute the variance of the measurement error in this case one would
     multiply `snr.measurement_error` parameter by the scale.
 
+    If `simple_differencing = True` is used, then the `endog` and `exog` data
+    are differenced prior to putting the model in state-space form. This has
+    the same effect as if the user differenced the data prior to constructing
+    the model, which has implications for using the results:
+
+    - Forecasts and predictions will be about the *differenced* data, not about
+      the original data. (while if `simple_differencing = False` is used, then
+      forecasts and predictions will be about the original data).
+    - If the original data has an Int64Index, a new RangeIndex will be created
+      for the differenced data that starts from one, and forecasts and
+      predictions will use this new index.
 
     Detailed information about state space models can be found in [1]_. Some
     specific references are:
@@ -569,7 +582,9 @@ class SARIMAX(MLEModel):
                 self.data._cache['row_labels'] = (
                     self.data.row_labels[orig_length - new_length:])
             if self._index is not None:
-                if self._index_generated:
+                if self._index_int64:
+                    self._index = pd.RangeIndex(start=1, stop=new_length + 1)
+                elif self._index_generated:
                     self._index = self._index[:-(orig_length - new_length)]
                 else:
                     self._index = self._index[orig_length - new_length:]
@@ -1945,7 +1960,12 @@ class SARIMAXResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-            start = self.model._index[0]
+            if (self.model.simple_differencing and
+                    not self.model._index_generated and
+                    not self.model._index_dates):
+                start = 0
+            else:
+                start = self.model._index[0]
 
         # Handle start, end, dynamic
         _start, _end, _out_of_sample, prediction_index = (
