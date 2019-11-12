@@ -10,7 +10,7 @@ PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}==${SCIPY}"; fi
 PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}==${PATSY}"; fi
 PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}==${PANDAS}"; fi
 PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}==${CYTHON}"; fi
-if [ ${USEMPL} = true ]; then
+if [ ${USE_MATPLOTLIB} = true ]; then
     PKGS="${PKGS} matplotlib"
     if [ ${MATPLOTLIB} ]; then
         PKGS="${PKGS}==${MATPLOTLIB}"
