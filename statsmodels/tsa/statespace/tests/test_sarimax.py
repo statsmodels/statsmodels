@@ -2177,11 +2177,6 @@ def test_arima000():
     res = mod.smooth(mod.start_params)
     assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
 
-    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
-    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
-                          seasonal_order=(0, 1, 0, 1))
-    res = mod.smooth(mod.start_params)
-
     # Exogenous variables
     error = np.random.normal(size=nobs)
     endog = np.ones(nobs) * 10 + error
