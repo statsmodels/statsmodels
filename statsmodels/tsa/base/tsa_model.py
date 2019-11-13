@@ -201,11 +201,13 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
+        period_index = isinstance(index, PeriodIndex)
         int_index = isinstance(index, Int64Index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
+        is_monotonic = index.is_monotonic if date_index else None
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
@@ -215,12 +217,17 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn('A date index has been provided, but it has no'
                           ' associated frequency information and so will be'
                           ' ignored when e.g. forecasting.', ValueWarning)
+        if date_index and not is_monotonic:
+            warnings.warn('A date index has been provided, but it is not'
+                          ' monotonic and so will be ignored when e.g.'
+                          ' forecasting.', ValueWarning)
 
         # Construct the internal index
         index_generated = False
+        valid_index = ((date_index and has_freq and is_monotonic) or
+                       (int_index and is_increment) or range_index)
 
-        if ((date_index and has_freq) or (int_index and is_increment) or
-                range_index):
+        if valid_index:
             _index = index
         else:
             _index = increment
