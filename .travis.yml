@@ -14,7 +14,8 @@ env:
   global:
     - OPTIONAL=
     - COVERAGE=false
-    - USEMPL=true
+    - USE_MATPLOTLIB=true
+    - USE_CVXOPT=true
     - MATPLOTLIB=
     - DOCBUILD=false
     - LINT=false
@@ -88,6 +89,11 @@ matrix:
       env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
+    - python: 3.8
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
     - os: osx
       language: generic
       env:
@@ -137,8 +143,10 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install pytest pip pytest-randomly nose
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install pytest-xdist; fi;
+  - pip install pytest pip pytest-randomly nose jupyter_client nbformat
+  # Moved to enable Python 3.8 since cvxopt wheel is not available
+  - if [ ${USE_CVXOPT} = true ]; then pip install cvxopt; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist!=1.30"; fi;
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
