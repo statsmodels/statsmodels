@@ -13,7 +13,8 @@ env:
   global:
     - OPTIONAL=
     - COVERAGE=false
-    - USEMPL=true
+    - USE_MATPLOTLIB=true
+    - USE_CVXOPT=true
     - MATPLOTLIB=
     - DOCBUILD=false
     - LINT=false
@@ -34,6 +35,11 @@ matrix:
   fast_finish: true
   include:
     # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
+    - python: 3.8
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
     - python: 3.7
       env:
         - PYTHON=3.7
@@ -103,7 +109,9 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install pytest pip pytest-randomly nose cvxopt jupyter_client nbformat
+  - pip install pytest pip pytest-randomly nose jupyter_client nbformat
+  # Moved to enable Python 3.8 since cvxopt wheel is not available
+  - if [ ${USE_CVXOPT} = true ]; then pip install cvxopt; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist!=1.30"; fi;
   - |
     if [ ${COVERAGE} = true ]; then
