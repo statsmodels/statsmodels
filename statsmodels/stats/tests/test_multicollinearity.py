@@ -100,17 +100,20 @@ class CheckMuLtiCollinear(object):
 
         rsquared0 = np.array([res.rsquared for res in ols_results])
         vif0 = 1. / (1. - rsquared0)
+        # for checking singular cases with pdb in pytest
+        # if ((1. - rsquared0)<1e-14).any():
+        #     raise
 
         mcoll = MultiCollinearity(self.x)
 
         assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-13)
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e14)
+        assert_allclose_large(mcoll.vif, vif0, rtol=1e-12, ltol=1e12)
 
         vif1_ = vif(self.x)
         vif1 = np.asarray(vif1_)   # check values if pandas.Series
         # TODO: why does mcoll.vif have infs but vif1 doesn't?
-        assert_allclose_large(vif1, mcoll.vif, rtol=1e-13, ltol=1e12)
-        assert_allclose_large(vif1, vif0, rtol=1e-13, ltol=1e12)
+        assert_allclose_large(vif1, mcoll.vif, rtol=1e-12, ltol=1e12)
+        assert_allclose_large(vif1, vif0, rtol=1e-12, ltol=1e12)
 
         if self.check_pandas:
             assert_equal(vif1_.index.values, self.names)
@@ -145,9 +148,9 @@ class CheckMuLtiCollinear(object):
         mcoll_ns = MultiCollinearity(xf, standardize=False)
         vif_nc = mcoll_ns.vif[1:] * xf.var(0)[1:]
         # inf in vif_nc but not in mcoll_ns.vif
-        assert_allclose_large(mcoll.vif, vif_nc, rtol=1e-13, ltol=1e12)
+        assert_allclose_large(mcoll.vif, vif_nc, rtol=1e-12, ltol=1e12)
         vif_nc2 = vif(xf, standardize=False)[1:] * xf.var(0)[1:]
-        assert_allclose_large(mcoll.vif, vif_nc2, rtol=1e-13, ltol=1e12)
+        assert_allclose_large(mcoll.vif, vif_nc2, rtol=1e-12, ltol=1e12)
 
 
 class TestMultiCollinearSingular1(CheckMuLtiCollinear):
