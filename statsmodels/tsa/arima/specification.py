@@ -421,6 +421,11 @@ class SARIMAXSpecification(object):
         self.endog = None if faux_endog else self._model.endog
         self.exog = self._model.exog
 
+        # Validate endog shape
+        if not faux_endog and self.endog.ndim > 1 and self.endog.shape[1] > 1:
+            raise ValueError('SARIMAX models require univariate `endog`. Got'
+                             ' shape %s.' % str(self.endog.shape))
+
         self._has_missing = (
             None if faux_endog else np.any(np.isnan(self.endog)))
 
