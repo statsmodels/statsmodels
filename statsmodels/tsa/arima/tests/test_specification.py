@@ -488,6 +488,8 @@ def test_invalid():
     assert_raises(ValueError, specification.SARIMAXSpecification,
                   order=(0, 1.5, 0))
     assert_raises(ValueError, specification.SARIMAXSpecification,
+                  order=(0,))
+    assert_raises(ValueError, specification.SARIMAXSpecification,
                   seasonal_order=(0, 1.5, 0, 4))
     assert_raises(ValueError, specification.SARIMAXSpecification,
                   seasonal_order=(-1, 0, 0, 4))
@@ -501,6 +503,13 @@ def test_invalid():
                   seasonal_order=(1, 0, 0, 0))
     assert_raises(ValueError, specification.SARIMAXSpecification,
                   seasonal_order=(1, 0, 0, -1))
+    assert_raises(ValueError, specification.SARIMAXSpecification,
+                  seasonal_order=(1, 0, 0, 1))
+    assert_raises(ValueError, specification.SARIMAXSpecification,
+                  seasonal_order=(1,))
+
+    assert_raises(ValueError, specification.SARIMAXSpecification,
+                  order=(1, 0, 0), endog=np.zeros((10, 2)))
 
     spec = specification.SARIMAXSpecification(ar_order=1)
     assert_raises(ValueError, spec.join_params)
