@@ -50,7 +50,8 @@ class MultiCollinearity(object):
 
     """
 
-    def __init__(self, data, moment_matrix=None, standardize=True):
+    def __init__(self, data, moment_matrix=None, standardize=True,
+                 ridge_factor=1e-14):
 
         if hasattr(data, 'columns'):
             self.columns = data.columns
@@ -83,16 +84,18 @@ class MultiCollinearity(object):
 
         self.k_vars = xm.shape[1]
         self.mom = xm
+        self.ridge_factor = ridge_factor
 
     @cache_readonly
     def vif(self):
         """Variance inflation factor based on moment or correlation matrix.
         """
+        ridge = self.ridge_factor * np.eye(self.k_vars)
         # np.diag returns read only array, need copy
-        vif_ = np.diag(np.linalg.inv(self.mom)).copy()
+        vif_ = np.diag(np.linalg.inv(self.mom + ridge)).copy()
         # It is possible that singular matrix has slightly negative eigenvalues,
         # and large negative instead of positive vif
-        mask = vif_ < 1e-14
+        mask = vif_ < 1e-13
         vif_[mask] = np.inf
         return vif_
 
@@ -231,7 +234,7 @@ class MultiCollinearitySequential(MultiCollinearity):
         return 1 - self.rss / self.tss
 
 
-def vif(data, standardize=True, moment_matrix=None):
+def vif(data, standardize=True, moment_matrix=None, ridge_factor=1e-14):
     """Variance inflation factor
 
     The standard interpretation requires standardize is true, or that the data is already
@@ -275,15 +278,17 @@ def vif(data, standardize=True, moment_matrix=None):
                 xm /= np.outer(xstd, xstd)
     else:
         if standardize:
-            xm = np.corrcoef(x, rowvar=0)
             if np.any(np.ptp(x, axis=0) == 0):
                 # TODO: change this? detect from xcorr, drop constant ?
                 raise ValueError('If standardize is true, then data should ' +
                                  'not include a constant')
+            xm = np.corrcoef(x, rowvar=0)
         else:
             xm = np.dot(x.T, x) / float(x.shape[0])
 
-    vif_ = np.abs(np.diag(np.linalg.inv(xm)))
+    k_vars = xm.shape[1]
+    ridge = ridge_factor * np.eye(k_vars)
+    vif_ = np.abs(np.diag(np.linalg.inv(xm + ridge)))
 
     if hasattr(data, 'columns'):
         import pandas
