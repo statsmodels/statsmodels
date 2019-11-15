@@ -276,6 +276,10 @@ class TestGlmGaussian(CheckModelResultsMixin):
         # low precision because of badly scaled exog
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
 
+    def test_pred_table(self):
+        # make sure None is returned if family is not Binomial
+        assert self.res1.pred_table() is None
+
 # FIXME: enable or delete
 #    def setup(self):
 #        if skipR:
@@ -419,6 +423,13 @@ class TestGlmBinomial(CheckModelResultsMixin):
             sm.GLM.from_formula("y ~ x1 + x2", data,
                                 family=sm.families.Binomial())
 
+    def test_pred_table(self):
+        # test pred_table with 0.5, 1.0, and 0.0 thresholds
+        assert_equal(self.res1.pred_table(), self.res2.pred_table)
+        assert_equal(self.res1.pred_table(1.),
+                     np.array([[195., 0.], [108., 0.]]))
+        assert_equal(self.res1.pred_table(0.),
+                     np.array([[0., 195.], [0., 108.]]))
 
 # FIXME: enable/xfail/skip or delete
 # TODO:
@@ -2275,3 +2286,15 @@ def test_non_invertible_hessian_fails_summary():
         mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
         res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
         res.summary()
+
+
+def test_binary_pred_table_zeros():
+    # Tests simple intercept-only model, will predict all zeros
+    nobs = 10
+    y = np.zeros(nobs)
+    y[[1, 3]] = 1
+
+    # Check that model predicts all zeros
+    res = GLM(y, np.ones(nobs), family=sm.families.Binomial()).fit(disp=0)
+    expected = np.array([[8.,  0.], [2.,  0.]])
+    assert_equal(res.pred_table(), expected)

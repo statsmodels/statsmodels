@@ -1904,6 +1904,31 @@ class GLMResults(base.LikelihoodModelResults):
 
         return smry
 
+    def pred_table(self, threshold=.5):
+        """
+        Prediction table for GLMs with Binomial family.
+
+        Parameters
+        ----------
+        threshold : scalar
+            Number between 0 and 1. Threshold above which a prediction is
+            considered 1 and below which a prediction is considered 0.
+
+        Returns
+        -------
+        pred_table : ndarray
+            A confusion table, where pred_table[i,j] refers to the number of
+            times "i" was observed and the model predicted "j". Correct
+            predictions are along the diagonal. If the family is not Binomial,
+            nothing is returned.
+        """
+        if isinstance(self.family, families.Binomial):
+            model = self.model
+            actual = model.endog
+            pred = np.array(self.predict() > threshold, dtype=float)
+            bins = np.array([0, 0.5, 1])
+            return np.histogram2d(actual, pred, bins=bins)[0]
+
 
 class GLMResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {
