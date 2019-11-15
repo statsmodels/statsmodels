@@ -55,7 +55,8 @@ class CheckMuLtiCollinear(object):
 
         mcoll = MultiCollinearitySequential(self.x)
 
-        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-12, atol=1e-15)
+        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-12,
+                        atol=1e-15)
         # infs could be just large values because of floating point imprecision
         #assert_allclose(mcoll.vif, vif0, rtol=1e-13)
         #mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
@@ -69,14 +70,16 @@ class CheckMuLtiCollinear(object):
             x_dm = x - x.mean(0)  # standardize doesn't demean
             mcoll2 = MultiCollinearitySequential(None,
                                                  moment_matrix=x_dm.T.dot(x_dm))
-            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
+            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
+                            rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
             # check correlation matrix as input
             mcoll2 = MultiCollinearitySequential(None,
                                                  np.corrcoef(x, rowvar=False),
                                                  standardize=False)
-            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
+            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
+                            rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         # Note we need a constant since x is not demeaned
@@ -121,14 +124,16 @@ class CheckMuLtiCollinear(object):
         # check moment matrix as input
         x_dm = self.x - self.x.mean(0)  # standardize doesn't demean
         mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
-        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
+        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
+                        rtol=1e-13)
         # the following has floating point noise, mcoll.vif has inf
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
 
         # check correlation matrix as input
         corr = np.corrcoef(self.x, rowvar=False)
         mcoll2 = MultiCollinearity(None, corr, standardize=False)
-        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
+        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
+                        rtol=1e-13)
         assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         corr = np.corrcoef(self.x, rowvar=False)
@@ -264,12 +269,14 @@ def test_vif_ridge():
      92     0.700       0.140    0.34598      0.140
      95     0.800       0.130    0.30859      0.130
      98     0.900       0.121    0.27695      0.121
-    101     1.000       0.113    0.24994      0.112'''.split(), float).reshape(-1, 5)
+    101     1.000       0.113    0.24994      0.112'''.split(), float
+    ).reshape(-1, 5)
 
 
 
     import pandas as pd
-    example = pd.DataFrame(dta, columns='YEAR IMPORT DOPROD STOCK CONSUM'.lower().split())
+    columns='YEAR IMPORT DOPROD STOCK CONSUM'.lower().split()
+    example = pd.DataFrame(dta, columns=columns)
 
     x = example['doprod stock consum'.split()].values
     y = example['import'].values
