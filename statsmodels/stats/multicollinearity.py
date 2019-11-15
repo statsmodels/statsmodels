@@ -9,8 +9,7 @@ License: BSD-3
 """
 
 import numpy as np
-import statsmodels.stats.outliers_influence as smio
-from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.decorators import cache_readonly
 
 
@@ -87,6 +86,10 @@ class MultiCollinearity(object):
         self.ridge_factor = ridge_factor
 
     @cache_readonly
+    def mom_inv(self):
+        return np.linalg.inv(self.mom)
+
+    @cache_readonly
     def vif(self):
         """Variance inflation factor based on moment or correlation matrix.
         """
@@ -100,7 +103,7 @@ class MultiCollinearity(object):
         return vif_
 
     @property
-    def partial_corr(self):
+    def rsquared_partial(self):
         """Partial correlation of one variable with all others
 
         This corresponds to R^2 in a linear regression of one variable on all others,
@@ -110,10 +113,20 @@ class MultiCollinearity(object):
 
         not cached
 
+        TODO: rsquared should be scale invariant
         TODO: we might want to use name `partial_corr` for partial correlation of pairs
         given all others.
         """
         return 1. - 1. / self.vif
+
+    @property
+    def corr_partial(self):
+        """partial correlation matrix
+
+        Pairwise partial correlation of two variables conditional on remaining
+        variables.
+        """
+        return cov2corr(self.mom_inv)
 
 
     @cache_readonly
@@ -217,7 +230,7 @@ class MultiCollinearitySequential(MultiCollinearity):
         return np.diag(self.triu2)
 
     @property
-    def partial_corr(self):
+    def rsquared_partial(self):
         """Partial correlation of one variable with all previous variables
 
         This corresponds to R^2 in a linear regression of one variable on all other
@@ -225,11 +238,9 @@ class MultiCollinearitySequential(MultiCollinearity):
         is true.
 
         The interpretation as correlation assumes that standardize is true.
+        TODO: rsquared should be scale invariant
 
         not cached
-
-        TODO: we might want to use name `partial_corr` for partial correlation of pairs
-        given all others.
         """
         return 1 - self.rss / self.tss
 
