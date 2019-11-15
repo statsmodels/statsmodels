@@ -17,6 +17,8 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ValueWarning
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.tsatools import lagmat
 
 from .initialization import Initialization
@@ -322,19 +324,21 @@ class SARIMAX(MLEModel):
                  mle_regression=True, simple_differencing=False,
                  enforce_stationarity=True, enforce_invertibility=True,
                  hamilton_representation=False, concentrate_scale=False,
-                 trend_offset=1, use_exact_diffuse=False, **kwargs):
+                 trend_offset=1, use_exact_diffuse=False, dates=None,
+                 freq=None, missing='none', **kwargs):
+
+        self._spec = SARIMAXSpecification(
+            endog, exog=exog, order=order, seasonal_order=seasonal_order,
+            trend=trend, enforce_stationarity=None, enforce_invertibility=None,
+            concentrate_scale=concentrate_scale, dates=dates, freq=freq,
+            missing=missing)
+        self._params = SARIMAXParams(self._spec)
 
         # Save given orders
+        order = self._spec.order
+        seasonal_order = self._spec.seasonal_order
         self.order = order
         self.seasonal_order = seasonal_order
-
-        # Validate orders
-        if len(self.order) != 3:
-            raise ValueError('`order` argument must be an iterable with three'
-                             ' elements.')
-        if len(self.seasonal_order) != 4:
-            raise ValueError('`seasonal_order` argument must be an iterable'
-                             ' with four elements.')
 
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
@@ -357,47 +361,20 @@ class SARIMAX(MLEModel):
                              ' be set to False.')
 
         # Lag polynomials
-        # Assume that they are given from lowest degree to highest, that all
-        # degrees except for the constant are included, and that they are
-        # boolean vectors (0 for not included, 1 for included).
-        if isinstance(order[0], (int, np.integer)):
-            self.polynomial_ar = np.r_[1., np.ones(order[0])]
-        else:
-            self.polynomial_ar = np.r_[1., order[0]]
+        self._params.ar_params = -1
+        self.polynomial_ar = self._params.ar_poly.coef
         self._polynomial_ar = self.polynomial_ar.copy()
-        if isinstance(order[2], (int, np.integer)):
-            self.polynomial_ma = np.r_[1., np.ones(order[2])]
-        else:
-            self.polynomial_ma = np.r_[1., order[2]]
+
+        self._params.ma_params = 1
+        self.polynomial_ma = self._params.ma_poly.coef
         self._polynomial_ma = self.polynomial_ma.copy()
-        # Assume that they are given from lowest degree to highest, that the
-        # degrees correspond to (1*s, 2*s, ..., P*s), and that they are
-        # boolean vectors (0 for not included, 1 for included).
-        if isinstance(seasonal_order[0], (int, np.integer)):
-            self.polynomial_seasonal_ar = np.r_[
-                1.,  # constant
-                ([0] * (self.seasonal_periods - 1) + [1]) * seasonal_order[0]
-            ]
-        else:
-            self.polynomial_seasonal_ar = np.r_[
-                1., [0] * self.seasonal_periods * len(seasonal_order[0])
-            ]
-            for i in range(len(seasonal_order[0])):
-                tmp = (i + 1) * self.seasonal_periods
-                self.polynomial_seasonal_ar[tmp] = seasonal_order[0][i]
+
+        self._params.seasonal_ar_params = -1
+        self.polynomial_seasonal_ar = self._params.seasonal_ar_poly.coef
         self._polynomial_seasonal_ar = self.polynomial_seasonal_ar.copy()
-        if isinstance(seasonal_order[2], (int, np.integer)):
-            self.polynomial_seasonal_ma = np.r_[
-                1.,  # constant
-                ([0] * (self.seasonal_periods - 1) + [1]) * seasonal_order[2]
-            ]
-        else:
-            self.polynomial_seasonal_ma = np.r_[
-                1., [0] * self.seasonal_periods * len(seasonal_order[2])
-            ]
-            for i in range(len(seasonal_order[2])):
-                tmp = (i + 1) * self.seasonal_periods
-                self.polynomial_seasonal_ma[tmp] = seasonal_order[2][i]
+
+        self._params.seasonal_ma_params = 1
+        self.polynomial_seasonal_ma = self._params.seasonal_ma_poly.coef
         self._polynomial_seasonal_ma = self.polynomial_seasonal_ma.copy()
 
         # Deterministic trend polynomial
@@ -412,30 +389,19 @@ class SARIMAX(MLEModel):
         # Note: for a typical ARMA(p,q) model, p = k_ar_params = k_ar - 1 and
         # q = k_ma_params = k_ma - 1, although this may not be true for models
         # with arbitrary log polynomials.
-        self.k_ar = int(self.polynomial_ar.shape[0] - 1)
-        self.k_ar_params = int(np.sum(self.polynomial_ar) - 1)
+        self.k_ar = self._spec.max_ar_order
+        self.k_ar_params = self._spec.k_ar_params
         self.k_diff = int(order[1])
-        self.k_ma = int(self.polynomial_ma.shape[0] - 1)
-        self.k_ma_params = int(np.sum(self.polynomial_ma) - 1)
+        self.k_ma = self._spec.max_ma_order
+        self.k_ma_params = self._spec.k_ma_params
 
-        self.k_seasonal_ar = int(self.polynomial_seasonal_ar.shape[0] - 1)
-        self.k_seasonal_ar_params = (
-            int(np.sum(self.polynomial_seasonal_ar) - 1)
-        )
+        self.k_seasonal_ar = (self._spec.max_seasonal_ar_order *
+                              self._spec.seasonal_periods)
+        self.k_seasonal_ar_params = self._spec.k_seasonal_ar_params
         self.k_seasonal_diff = int(seasonal_order[1])
-        self.k_seasonal_ma = int(self.polynomial_seasonal_ma.shape[0] - 1)
-        self.k_seasonal_ma_params = (
-            int(np.sum(self.polynomial_seasonal_ma) - 1)
-        )
-
-        # Make sure we don't have a seasonal specification without a valid
-        # seasonal period.
-        if self.seasonal_order[3] == 1:
-            raise ValueError('Seasonal period must be greater than 1.')
-        if self.seasonal_order[3] == 0 and (self.k_seasonal_ar > 0 or
-                                            self.k_seasonal_ma > 0):
-            raise ValueError('Seasonal AR or MA components cannot be set when'
-                             ' the given seasonal period is equal to 0.')
+        self.k_seasonal_ma = (self._spec.max_seasonal_ma_order *
+                              self._spec.seasonal_periods)
+        self.k_seasonal_ma_params = self._spec.k_seasonal_ma_params
 
         # Make internal copies of the differencing orders because if we use
         # simple differencing, then we will need to internally use zeros after
@@ -1935,7 +1901,7 @@ class SARIMAXResults(MLEResults):
 
     def get_prediction(self, start=None, end=None, dynamic=False, index=None,
                        exog=None, **kwargs):
-        """
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
@@ -2042,11 +2008,11 @@ class SARIMAXResults(MLEResults):
             if self.model.k_ar == self.model.k_ar_params:
                 order_ar = self.model.k_ar
             else:
-                order_ar = tuple(self.polynomial_ar.nonzero()[0][1:])
+                order_ar = list(self.model._spec.ar_lags)
             if self.model.k_ma == self.model.k_ma_params:
                 order_ma = self.model.k_ma
             else:
-                order_ma = tuple(self.polynomial_ma.nonzero()[0][1:])
+                order_ma = list(self.model._spec.ma_lags)
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
             k_diff = 0 if self.model.simple_differencing else self.model.k_diff
@@ -2059,22 +2025,18 @@ class SARIMAXResults(MLEResults):
             self.model.k_seasonal_ma
         ) > 0
         if has_seasonal:
-            if self.model.k_ar == self.model.k_ar_params:
+            tmp = int(self.model.k_seasonal_ar / self.model.seasonal_periods)
+            if tmp == self.model.k_seasonal_ar_params:
                 order_seasonal_ar = (
                     int(self.model.k_seasonal_ar / self.model.seasonal_periods)
                 )
             else:
-                order_seasonal_ar = (
-                    tuple(self.polynomial_seasonal_ar.nonzero()[0][1:])
-                )
-            if self.model.k_ma == self.model.k_ma_params:
-                order_seasonal_ma = (
-                    int(self.model.k_seasonal_ma / self.model.seasonal_periods)
-                )
+                order_seasonal_ar = list(self.model._spec.seasonal_ar_lags)
+            tmp = int(self.model.k_seasonal_ma / self.model.seasonal_periods)
+            if tmp == self.model.k_ma_params:
+                order_seasonal_ma = tmp
             else:
-                order_seasonal_ma = (
-                    tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
-                )
+                order_seasonal_ma = list(self.model._spec.seasonal_ma_lags)
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
             k_seasonal_diff = self.model.k_seasonal_diff
@@ -2090,7 +2052,8 @@ class SARIMAXResults(MLEResults):
             '%s%s%s' % (self.model.__class__.__name__, order, seasonal_order)
             )
         return super(SARIMAXResults, self).summary(
-            alpha=alpha, start=start, model_name=model_name
+            alpha=alpha, start=start, title='SARIMAX Results',
+            model_name=model_name
         )
 
 

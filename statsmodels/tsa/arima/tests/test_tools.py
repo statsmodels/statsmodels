@@ -65,6 +65,10 @@ def test_standardize_lag_order_invalid():
     assert_raises(ValueError, standardize_lag_order, -1)
     assert_raises(ValueError, standardize_lag_order,
                   np.arange(4).reshape(2, 2))
+    # Boolean list can't have 2, lag order list can't have 0
+    assert_raises(ValueError, standardize_lag_order, [0, 2])
+    # Can't have duplicates
+    assert_raises(ValueError, standardize_lag_order, [1, 1, 2])
 
 
 def test_validate_basic():

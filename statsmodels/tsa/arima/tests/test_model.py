@@ -36,13 +36,13 @@ def test_default_trend():
     # Defaults when only endog is specified
     mod = ARIMA(endog)
     # with no integration, default trend a constant
-    assert_equal(mod._spec.trend_order, 0)
+    assert_equal(mod._spec_arima.trend_order, 0)
     assert_allclose(mod.exog, np.ones((mod.nobs, 1)))
 
     # Defaults with integrated model
     mod = ARIMA(endog, order=(0, 1, 0))
     # with no integration, default trend is none
-    assert_equal(mod._spec.trend_order, None)
+    assert_equal(mod._spec_arima.trend_order, None)
     assert_equal(mod.exog, None)
 
 

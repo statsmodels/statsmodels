@@ -57,7 +57,7 @@ def standardize_lag_order(order, title=None):
 
     # Only positive integers are valid
     if np.any(order < 0):
-        raise ValueError('Terms in the %s cannot be negative.')
+        raise ValueError('Terms in the %s cannot be negative.' % title)
 
     # Try to squeeze out an irrelevant trailing dimension
     if order.ndim == 2 and order.shape[1] == 1:
@@ -75,7 +75,16 @@ def standardize_lag_order(order, title=None):
         order = 0
     else:
         # Option 2: boolean list
-        if 0 in order or np.sum(order == 1) > 1 and not np.any(order > 1):
+        has_zeros = (0 in order)
+        has_multiple_ones = np.sum(order == 1) > 1
+        has_gt_one = np.any(order > 1)
+        if has_zeros or has_multiple_ones:
+            if has_gt_one:
+                raise ValueError('Invalid %s. Appears to be a boolean list'
+                                 ' (since it contains a 0 element and/or'
+                                 ' multiple elements) but also contains'
+                                 ' elements greater than 1 like a list of'
+                                 ' lag orders.' % title)
             order = (np.where(order == 1)[0] + 1)
 
         # (Default) Option 3: list of lag orders to include
@@ -91,6 +100,11 @@ def standardize_lag_order(order, title=None):
         # Otherwise, convert to list
         else:
             order = order.tolist()
+
+    # Check for duplicates
+    has_duplicate = isinstance(order, list) and np.any(np.diff(order) == 0)
+    if has_duplicate:
+        raise ValueError('Invalid %s. Cannot have duplicate elements.' % title)
 
     return order
 

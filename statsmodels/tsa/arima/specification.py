@@ -262,6 +262,14 @@ class SARIMAXSpecification(object):
         elif not has_seasonal_order:
             seasonal_order = (0, 0, 0, 0)
 
+        # Validate shapes of `order`, `seasonal_order`
+        if len(order) != 3:
+            raise ValueError('`order` argument must be an iterable with three'
+                             ' elements.')
+        if len(seasonal_order) != 4:
+            raise ValueError('`seasonal_order` argument must be an iterable'
+                             ' with four elements.')
+
         # Validate differencing parameters
         if order[1] < 0:
             raise ValueError('Cannot specify negative differencing.')
@@ -287,6 +295,8 @@ class SARIMAXSpecification(object):
             int(seasonal_order[3]))
 
         # Validate seasonals
+        if seasonal_order[3] == 1:
+            raise ValueError('Seasonal periodicity must be greater than 1.')
         if ((seasonal_order[0] != 0 or seasonal_order[1] != 0 or
                 seasonal_order[2] != 0) and seasonal_order[3] == 0):
             raise ValueError('Must include nonzero seasonal periodicity if'
@@ -410,6 +420,11 @@ class SARIMAXSpecification(object):
                                       missing=missing)
         self.endog = None if faux_endog else self._model.endog
         self.exog = self._model.exog
+
+        # Validate endog shape
+        if not faux_endog and self.endog.ndim > 1 and self.endog.shape[1] > 1:
+            raise ValueError('SARIMAX models require univariate `endog`. Got'
+                             ' shape %s.' % str(self.endog.shape))
 
         self._has_missing = (
             None if faux_endog else np.any(np.isnan(self.endog)))

@@ -122,14 +122,17 @@ class ARIMA(sarimax.SARIMAX):
         # because we don't actually want to restrict the estimators based on
         # this criteria. Instead, we'll just make sure that the parameter
         # estimates from those methods satisfy the criteria.)
-        self._spec = SARIMAXSpecification(
+        self._spec_arima = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
             missing=missing)
-        exog = self._spec._model.data.orig_exog
+        exog = self._spec_arima._model.data.orig_exog
 
         # Initialize the base SARIMAX class
+        # Note: we don't pass in a trend value to the base class, since ARIMA
+        # standardizes the trend to always be part of exog, while the base
+        # SARIMAX class puts it in the transition equation.
         super(ARIMA, self).__init__(
             endog, exog, order=order, seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
@@ -233,7 +236,7 @@ class ARIMA(sarimax.SARIMAX):
         # Determine which method to use
         # 1. If method is specified, make sure it is valid
         if method is not None:
-            self._spec.validate_estimator(method)
+            self._spec_arima.validate_estimator(method)
         # 2. Otherwise, use state space
         # TODO: may want to consider using innovations (MLE) if possible here,
         # (since in some cases it may be faster than state space), but it is
@@ -281,7 +284,7 @@ class ARIMA(sarimax.SARIMAX):
         # Perform estimation, depending on whether we have exog or not
         p = None
         fit_details = None
-        has_exog = self._spec.exog is not None
+        has_exog = self._spec_arima.exog is not None
         if has_exog or method == 'statespace':
             # Use GLS if it was explicitly requested (`gls = True`) or if it
             # was left at the default (`gls = None`) and the ARMA estimator is
@@ -312,15 +315,16 @@ class ARIMA(sarimax.SARIMAX):
             # (these methods do not support handling integration internally,
             # so we need to manually do the differencing)
             endog = self.endog
-            order = self._spec.order
-            seasonal_order = self._spec.seasonal_order
-            if self._spec.is_integrated:
+            order = self._spec_arima.order
+            seasonal_order = self._spec_arima.seasonal_order
+            if self._spec_arima.is_integrated:
                 warnings.warn('Provided `endog` series has been differenced'
                               ' to eliminate integration prior to parameter'
                               ' estimation by method "%s".' % method)
-                endog = diff(endog, k_diff=self._spec.diff,
-                             k_seasonal_diff=self._spec.seasonal_diff,
-                             seasonal_periods=self._spec.seasonal_periods)
+                endog = diff(
+                    endog, k_diff=self._spec_arima.diff,
+                    k_seasonal_diff=self._spec_arima.seasonal_diff,
+                    seasonal_periods=self._spec_arima.seasonal_periods)
                 if order[1] > 0:
                     order = (order[0], 0, order[2])
                 if seasonal_order[1] > 0:
@@ -357,7 +361,7 @@ class ARIMA(sarimax.SARIMAX):
         if p is not None:
             # Need to check that fitted parameters satisfy given restrictions
             if (self.enforce_stationarity
-                    and self._spec.max_reduced_ar_order > 0
+                    and self._spec_arima.max_reduced_ar_order > 0
                     and not p.is_stationary):
                 raise ValueError('Non-stationary autoregressive parameters'
                                  ' found with `enforce_stationarity=True`.'
@@ -366,7 +370,7 @@ class ARIMA(sarimax.SARIMAX):
                                  ' method="statespace".')
 
             if (self.enforce_invertibility
-                    and self._spec.max_reduced_ma_order > 0
+                    and self._spec_arima.max_reduced_ma_order > 0
                     and not p.is_invertible):
                 raise ValueError('Non-invertible moving average parameters'
                                  ' found with `enforce_invertibility=True`.'
