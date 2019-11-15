@@ -55,7 +55,7 @@ class CheckMuLtiCollinear(object):
 
         mcoll = MultiCollinearitySequential(self.x)
 
-        assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-12, atol=1e-15)
+        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-12, atol=1e-15)
         # infs could be just large values because of floating point imprecision
         #assert_allclose(mcoll.vif, vif0, rtol=1e-13)
         #mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
@@ -69,14 +69,14 @@ class CheckMuLtiCollinear(object):
             x_dm = x - x.mean(0)  # standardize doesn't demean
             mcoll2 = MultiCollinearitySequential(None,
                                                  moment_matrix=x_dm.T.dot(x_dm))
-            assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
             # check correlation matrix as input
             mcoll2 = MultiCollinearitySequential(None,
                                                  np.corrcoef(x, rowvar=False),
                                                  standardize=False)
-            assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         # Note we need a constant since x is not demeaned
@@ -106,7 +106,7 @@ class CheckMuLtiCollinear(object):
 
         mcoll = MultiCollinearity(self.x)
 
-        assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-13)
+        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-13)
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-12, ltol=1e12)
 
         vif1_ = vif(self.x)
@@ -121,14 +121,14 @@ class CheckMuLtiCollinear(object):
         # check moment matrix as input
         x_dm = self.x - self.x.mean(0)  # standardize doesn't demean
         mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
-        assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
         # the following has floating point noise, mcoll.vif has inf
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
 
         # check correlation matrix as input
         corr = np.corrcoef(self.x, rowvar=False)
         mcoll2 = MultiCollinearity(None, corr, standardize=False)
-        assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13)
         assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         corr = np.corrcoef(self.x, rowvar=False)
@@ -276,7 +276,7 @@ def test_vif_ridge():
 
     x = x[:11]
     y = y[:11]
-    xxs = np.corrcoef(x, rowvar=0, bias=True)
+    xxs = np.corrcoef(x, rowvar=0)
 
     res_vif = vif_ridge(xxs, [0.01])
 
