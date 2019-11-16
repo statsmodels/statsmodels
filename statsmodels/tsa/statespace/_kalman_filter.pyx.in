@@ -45,18 +45,26 @@ cdef int STABILITY_FORCE_SYMMETRY = 0x01
 
 # ### Memory conservation options
 cdef int MEMORY_STORE_ALL = 0
-cdef int MEMORY_NO_FORECAST = 0x01
-cdef int MEMORY_NO_PREDICTED = 0x02
-cdef int MEMORY_NO_FILTERED = 0x04
-cdef int MEMORY_NO_LIKELIHOOD = 0x08
-cdef int MEMORY_NO_GAIN = 0x10
-cdef int MEMORY_NO_SMOOTHING = 0x20
-cdef int MEMORY_NO_STD_FORECAST = 0x40
+cdef int MEMORY_NO_FORECAST_MEAN = 0x01
+cdef int MEMORY_NO_FORECAST_COV = 0x02
+cdef int MEMORY_NO_FORECAST = MEMORY_NO_FORECAST_MEAN | MEMORY_NO_FORECAST_COV
+cdef int MEMORY_NO_PREDICTED_MEAN = 0x04
+cdef int MEMORY_NO_PREDICTED_COV = 0x08
+cdef int MEMORY_NO_PREDICTED = (
+    MEMORY_NO_PREDICTED_MEAN | MEMORY_NO_PREDICTED_COV)
+cdef int MEMORY_NO_FILTERED_MEAN = 0x10
+cdef int MEMORY_NO_FILTERED_COV = 0x20
+cdef int MEMORY_NO_FILTERED = MEMORY_NO_FILTERED_MEAN | MEMORY_NO_FILTERED_COV
+cdef int MEMORY_NO_LIKELIHOOD = 0x40
+cdef int MEMORY_NO_GAIN = 0x80
+cdef int MEMORY_NO_SMOOTHING = 0x100
+cdef int MEMORY_NO_STD_FORECAST = 0x200
 cdef int MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
     MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
     MEMORY_NO_STD_FORECAST
 )
+
 
 # ### Timing options
 # By default, assume filter is initialized with predicted values (as in
@@ -513,13 +521,17 @@ cdef class {{prefix}}KalmanFilter(object):
         # Arrays for Kalman filter output
 
         # Forecast
-        if self.conserve_memory & MEMORY_NO_FORECAST:
+        if self.conserve_memory & MEMORY_NO_FORECAST_MEAN:
             storage = 2
         else:
             storage = self.model.nobs
         dim2[0] = self.k_endog; dim2[1] = storage;
         self.forecast = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self.forecast_error = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        if self.conserve_memory & MEMORY_NO_FORECAST_COV:
+            storage = 2
+        else:
+            storage = self.model.nobs
         dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
         self.forecast_error_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
         # Standardized forecast errors
@@ -531,34 +543,42 @@ cdef class {{prefix}}KalmanFilter(object):
         self.standardized_forecast_error = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Filtered
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
+        if self.conserve_memory & MEMORY_NO_FILTERED_MEAN > 0:
             storage = 2
         else:
             storage = self.model.nobs
         dim2[0] = self.k_states; dim2[1] = storage;
         self.filtered_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
+            storage = 2
+        else:
+            storage = self.model.nobs
         dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = storage;
         self.filtered_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
         # Predicted
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
+        if self.conserve_memory & MEMORY_NO_PREDICTED_MEAN > 0:
             storage = 2
         else:
             storage = self.model.nobs
         dim2[0] = self.k_states; dim2[1] = storage+1;
         self.predicted_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
+            storage = 2
+        else:
+            storage = self.model.nobs
         dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = storage+1;
         self.predicted_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
         # Exact diffuse initialization
         # TODO: only create full nobs-length arrays if necessary
-        if self.conserve_memory & MEMORY_NO_FORECAST:
+        if self.conserve_memory & MEMORY_NO_FORECAST_COV:
             storage = 2
         else:
             storage = self.model.nobs
         dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
         self.forecast_error_diffuse_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
             storage = 2
         else:
             storage = self.model.nobs
@@ -775,12 +795,18 @@ cdef class {{prefix}}KalmanFilter(object):
         Perform an iteration of the Kalman filter
         """
         cdef int inc = 1
-        cdef int filtered_t = self.t
-        cdef int predicted_t = self.t
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
-            filtered_t = 1
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
-            predicted_t = 1
+        cdef int filtered_mean_t = self.t
+        cdef int filtered_cov_t = self.t
+        cdef int predicted_mean_t = self.t
+        cdef int predicted_cov_t = self.t
+        if self.conserve_memory & MEMORY_NO_FILTERED_MEAN > 0:
+            filtered_mean_t = 1
+        if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
+            filtered_cov_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_MEAN > 0:
+            predicted_mean_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
+            predicted_cov_t = 1
 
         # Get time subscript, and stop the iterator if at the end
         if not self.t < self.model.nobs:
@@ -822,8 +848,8 @@ cdef class {{prefix}}KalmanFilter(object):
                                               ' timing with exact diffuse'
                                               ' initialization.')
             else:
-                self._filtered_state = &self.filtered_state[0, filtered_t-1]
-                self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_t-1]
+                self._filtered_state = &self.filtered_state[0, filtered_mean_t-1]
+                self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_cov_t-1]
 
             # Perform the prediction step
             self.prediction(self, self.model)
@@ -834,8 +860,8 @@ cdef class {{prefix}}KalmanFilter(object):
 
             # Now shift back to the current filtered_* arrays (so they can be
             # set in the updating step)
-            self._filtered_state = &self.filtered_state[0, filtered_t]
-            self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_t]
+            self._filtered_state = &self.filtered_state[0, filtered_mean_t]
+            self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_cov_t]
 
         # Form forecasts
         self.forecasting(self, self.model)
@@ -870,9 +896,9 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Last prediction step (alternate timing)
         if self.filter_timing == TIMING_INIT_FILTERED and self.t == self.model.nobs-1:
-            self._predicted_state = &self.predicted_state[0, predicted_t+1]
-            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t+1]
-            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t+1]
+            self._predicted_state = &self.predicted_state[0, predicted_mean_t+1]
+            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_cov_t+1]
+            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_cov_t+1]
             self.prediction(self, self.model)
 
         # Check for convergence
@@ -924,19 +950,28 @@ cdef class {{prefix}}KalmanFilter(object):
             int inc = 1
         # Indices for arrays that may or may not be stored completely
         cdef:
-            int forecast_t = t
-            int filtered_t = t
-            int predicted_t = t
+            int forecast_mean_t = t
+            int forecast_cov_t = t
+            int filtered_mean_t = t
+            int filtered_cov_t = t
+            int predicted_mean_t = t
+            int predicted_cov_t = t
             int gain_t = t
             int smoothing_t = t
             int loglikelihood_t = t
             int std_forecast_t = t
-        if self.conserve_memory & MEMORY_NO_FORECAST > 0:
-            forecast_t = 1
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
-            filtered_t = 1
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
-            predicted_t = 1
+        if self.conserve_memory & MEMORY_NO_FORECAST_MEAN > 0:
+            forecast_mean_t = 1
+        if self.conserve_memory & MEMORY_NO_FORECAST_COV > 0:
+            forecast_cov_t = 1
+        if self.conserve_memory & MEMORY_NO_FILTERED_MEAN > 0:
+            filtered_mean_t = 1
+        if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
+            filtered_cov_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_MEAN > 0:
+            predicted_mean_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
+            predicted_cov_t = 1
         if self.conserve_memory & MEMORY_NO_GAIN > 0:
             gain_t = 0
         if self.conserve_memory & MEMORY_NO_SMOOTHING > 0:
@@ -947,9 +982,9 @@ cdef class {{prefix}}KalmanFilter(object):
             std_forecast_t = 0
 
         # Initialize object-level pointers to input arrays
-        self._input_state = &self.predicted_state[0, predicted_t]
-        self._input_state_cov = &self.predicted_state_cov[0, 0, predicted_t]
-        self._input_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t]
+        self._input_state = &self.predicted_state[0, predicted_mean_t]
+        self._input_state_cov = &self.predicted_state_cov[0, 0, predicted_cov_t]
+        self._input_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_cov_t]
 
         # Copy initialization arrays to input arrays if we're starting the
         # filter
@@ -972,25 +1007,25 @@ cdef class {{prefix}}KalmanFilter(object):
             blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
 
         # Initialize object-level pointers to output arrays
-        self._forecast = &self.forecast[0, forecast_t]
-        self._forecast_error = &self.forecast_error[0, forecast_t]
-        self._forecast_error_cov = &self.forecast_error_cov[0, 0, forecast_t]
-        self._forecast_error_diffuse_cov = &self.forecast_error_diffuse_cov[0, 0, forecast_t]
+        self._forecast = &self.forecast[0, forecast_mean_t]
+        self._forecast_error = &self.forecast_error[0, forecast_mean_t]
+        self._forecast_error_cov = &self.forecast_error_cov[0, 0, forecast_cov_t]
+        self._forecast_error_diffuse_cov = &self.forecast_error_diffuse_cov[0, 0, forecast_cov_t]
         self._standardized_forecast_error = &self.standardized_forecast_error[0, std_forecast_t]
 
-        self._filtered_state = &self.filtered_state[0, filtered_t]
-        self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_t]
+        self._filtered_state = &self.filtered_state[0, filtered_mean_t]
+        self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_cov_t]
         
         if self.filter_timing == TIMING_INIT_PREDICTED:
-            self._predicted_state = &self.predicted_state[0, predicted_t+1]
-            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t+1]
-            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t+1]
+            self._predicted_state = &self.predicted_state[0, predicted_mean_t+1]
+            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_cov_t+1]
+            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_cov_t+1]
         else:
-            self._predicted_state = &self.predicted_state[0, predicted_t]
-            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t]
-            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t]
-        self._M = &self.M[0, 0, predicted_t]
-        self._M_inf = &self.M_inf[0, 0, predicted_t]
+            self._predicted_state = &self.predicted_state[0, predicted_mean_t]
+            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_cov_t]
+            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_cov_t]
+        self._M = &self.M[0, 0, predicted_cov_t]
+        self._M_inf = &self.M_inf[0, 0, predicted_cov_t]
 
         self._kalman_gain = &self.kalman_gain[0, 0, gain_t]
 
@@ -1090,14 +1125,14 @@ cdef class {{prefix}}KalmanFilter(object):
 
     cdef void numerical_stability(self):
         cdef int i, j
-        cdef int predicted_t = self.t
+        cdef int predicted_cov_t = self.t
         cdef {{cython_type}} value
 
-        if self.conserve_memory & MEMORY_NO_PREDICTED:
-            predicted_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV:
+            predicted_cov_t = 1
 
         if self.filter_timing == TIMING_INIT_PREDICTED:
-            predicted_t += 1
+            predicted_cov_t += 1
 
         if self.stability_method & STABILITY_FORCE_SYMMETRY:
             # Enforce symmetry of predicted covariance matrix  
@@ -1106,11 +1141,11 @@ cdef class {{prefix}}KalmanFilter(object):
             for i in range(self.k_states):
                 for j in range(i, self.k_states):
                     value = 0.5 * (
-                        self.predicted_state_cov[i,j,predicted_t] +
-                        self.predicted_state_cov[j,i,predicted_t]
+                        self.predicted_state_cov[i,j,predicted_cov_t] +
+                        self.predicted_state_cov[j,i,predicted_cov_t]
                     )
-                    self.predicted_state_cov[i,j,predicted_t] = value
-                    self.predicted_state_cov[j,i,predicted_t] = value
+                    self.predicted_state_cov[i,j,predicted_cov_t] = value
+                    self.predicted_state_cov[j,i,predicted_cov_t] = value
 
     cdef int check_diffuse(self):
         cdef:
@@ -1140,16 +1175,16 @@ cdef class {{prefix}}KalmanFilter(object):
             {{cython_type}} gamma = -1.0
         # Indices for arrays that may or may not be stored completely
         cdef:
-            int forecast_t = self.t
-            int filtered_t = self.t
-            int predicted_t = self.t
+            int forecast_cov_t = self.t
+            int filtered_cov_t = self.t
+            int predicted_cov_t = self.t
             int gain_t = self.t
-        if self.conserve_memory & MEMORY_NO_FORECAST > 0:
-            forecast_t = 1
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
-            filtered_t = 1
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
-            predicted_t = 1
+        if self.conserve_memory & MEMORY_NO_FORECAST_COV > 0:
+            forecast_cov_t = 1
+        if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
+            filtered_cov_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
+            predicted_cov_t = 1
         if self.conserve_memory & MEMORY_NO_GAIN > 0:
             gain_t = 0
 
@@ -1166,8 +1201,8 @@ cdef class {{prefix}}KalmanFilter(object):
                 blas.{{prefix}}copy(&self.k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
                 blas.{{prefix}}axpy(&self.k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)
             elif self.t > 0:
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0,0,predicted_t], &inc, self._tmp0, &inc)
-                blas.{{prefix}}axpy(&self.k_states2, &gamma, &self.predicted_state_cov[0,0,predicted_t-1], &inc, self._tmp0, &inc)
+                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0,0,predicted_cov_t], &inc, self._tmp0, &inc)
+                blas.{{prefix}}axpy(&self.k_states2, &gamma, &self.predicted_state_cov[0,0,predicted_cov_t-1], &inc, self._tmp0, &inc)
             else:
                 return
 
@@ -1188,17 +1223,17 @@ cdef class {{prefix}}KalmanFilter(object):
             # converged storage
             if self.converged == 1:
                 # $F_t$
-                blas.{{prefix}}copy(&self.k_endog2, &self.forecast_error_cov[0, 0, forecast_t], &inc, self._converged_forecast_error_cov, &inc)
+                blas.{{prefix}}copy(&self.k_endog2, &self.forecast_error_cov[0, 0, forecast_cov_t], &inc, self._converged_forecast_error_cov, &inc)
                 # $P_{t|t}$
-                blas.{{prefix}}copy(&self.k_states2, &self.filtered_state_cov[0, 0, filtered_t], &inc, self._converged_filtered_state_cov, &inc)
+                blas.{{prefix}}copy(&self.k_states2, &self.filtered_state_cov[0, 0, filtered_cov_t], &inc, self._converged_filtered_state_cov, &inc)
                 # $P_t$
-                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, predicted_t], &inc, self._converged_predicted_state_cov, &inc)
+                blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc, self._converged_predicted_state_cov, &inc)
                 # $|F_t|$
                 self.converged_determinant = self.determinant
                 # $K_t$
                 blas.{{prefix}}copy(&self.k_endogstates, &self.kalman_gain[0, 0, gain_t], &inc, self._converged_kalman_gain, &inc)
                 # $M_t$
-                blas.{{prefix}}copy(&self.k_endogstates, &self.M[0, 0, predicted_t], &inc, self._converged_M, &inc)
+                blas.{{prefix}}copy(&self.k_endogstates, &self.M[0, 0, predicted_cov_t], &inc, self._converged_M, &inc)
 
     cdef void migrate_storage(self):
         cdef:
@@ -1207,26 +1242,33 @@ cdef class {{prefix}}KalmanFilter(object):
 
 
         # Forecast: 1 -> 0
-        if self.conserve_memory & MEMORY_NO_FORECAST > 0:
+        if self.conserve_memory & MEMORY_NO_FORECAST_MEAN > 0:
             blas.{{prefix}}copy(&self.k_endog, &self.forecast[0, 1], &inc, &self.forecast[0, 0], &inc)
             blas.{{prefix}}copy(&self.k_endog, &self.forecast_error[0, 1], &inc, &self.forecast_error[0, 0], &inc)
+        if self.conserve_memory & MEMORY_NO_FORECAST_COV > 0:
             blas.{{prefix}}copy(&self.k_endog2, &self.forecast_error_cov[0, 0, 1], &inc, &self.forecast_error_cov[0, 0, 0], &inc)
 
         # Filtered: 1 -> 0
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
+        if self.conserve_memory & MEMORY_NO_FILTERED_MEAN > 0:
             blas.{{prefix}}copy(&self.k_states, &self.filtered_state[0, 1], &inc, &self.filtered_state[0, 0], &inc)
+        if self.conserve_memory & MEMORY_NO_FILTERED_COV > 0:
             blas.{{prefix}}copy(&self.k_states2, &self.filtered_state_cov[0, 0, 1], &inc, &self.filtered_state_cov[0, 0, 0], &inc)
 
-        # Predicted: 1 -> 0
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
+        if self.conserve_memory & MEMORY_NO_PREDICTED_MEAN > 0:
+            # Predicted: 1 -> 0
             blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 1], &inc, &self.predicted_state[0, 0], &inc)
+            # Predicted: 2 -> 1
+            if self.filter_timing == TIMING_INIT_PREDICTED:
+                blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
+
+        if self.conserve_memory & MEMORY_NO_PREDICTED_COV > 0:
+            # Predicted: 1 -> 0
             blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 1], &inc, &self.predicted_state_cov[0, 0, 0], &inc)
             if diffuse:
                 blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 1], &inc, &self.predicted_diffuse_state_cov[0, 0, 0], &inc)
 
             # Predicted: 2 -> 1
             if self.filter_timing == TIMING_INIT_PREDICTED:
-                blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
                 blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 2], &inc, &self.predicted_state_cov[0, 0, 1], &inc)
                 if diffuse:
                     blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 2], &inc, &self.predicted_diffuse_state_cov[0, 0, 1], &inc)

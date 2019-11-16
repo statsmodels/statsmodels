@@ -36,15 +36,21 @@ INVERT_CHOLESKY = 0x10
 STABILITY_FORCE_SYMMETRY = 0x01
 
 MEMORY_STORE_ALL = 0
-MEMORY_NO_FORECAST = 0x01
-MEMORY_NO_PREDICTED = 0x02
-MEMORY_NO_FILTERED = 0x04
-MEMORY_NO_LIKELIHOOD = 0x08
-MEMORY_NO_GAIN = 0x10
-MEMORY_NO_SMOOTHING = 0x20
-MEMORY_NO_STD_FORECAST = 0x40
+MEMORY_NO_FORECAST_MEAN = 0x01
+MEMORY_NO_FORECAST_COV = 0x02
+MEMORY_NO_FORECAST = MEMORY_NO_FORECAST_MEAN | MEMORY_NO_FORECAST_COV
+MEMORY_NO_PREDICTED_MEAN = 0x04
+MEMORY_NO_PREDICTED_COV = 0x08
+MEMORY_NO_PREDICTED = MEMORY_NO_PREDICTED_MEAN | MEMORY_NO_PREDICTED_COV
+MEMORY_NO_FILTERED_MEAN = 0x10
+MEMORY_NO_FILTERED_COV = 0x20
+MEMORY_NO_FILTERED = MEMORY_NO_FILTERED_MEAN | MEMORY_NO_FILTERED_COV
+MEMORY_NO_LIKELIHOOD = 0x40
+MEMORY_NO_GAIN = 0x80
+MEMORY_NO_SMOOTHING = 0x100
+MEMORY_NO_STD_FORECAST = 0x200
 MEMORY_CONSERVE = (
-    MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
+    MEMORY_NO_FORECAST_COV | MEMORY_NO_PREDICTED_COV | MEMORY_NO_FILTERED_COV |
     MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
     MEMORY_NO_STD_FORECAST
 )
@@ -212,8 +218,12 @@ class KalmanFilter(Representation):
     """
 
     memory_options = [
-        'memory_store_all', 'memory_no_forecast', 'memory_no_predicted',
-        'memory_no_filtered', 'memory_no_likelihood', 'memory_no_gain',
+        'memory_store_all', 'memory_no_forecast_mean',
+        'memory_no_forecast_cov', 'memory_no_forecast',
+        'memory_no_predicted_mean', 'memory_no_predicted_cov',
+        'memory_no_predicted', 'memory_no_filtered_mean',
+        'memory_no_filtered_cov', 'memory_no_filtered',
+        'memory_no_likelihood', 'memory_no_gain',
         'memory_no_smoothing', 'memory_no_std_forecast', 'memory_conserve'
     ]
 
@@ -221,13 +231,43 @@ class KalmanFilter(Representation):
     """
     (bool) Flag for storing all intermediate results in memory (default).
     """
+    memory_no_forecast_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FORECAST_MEAN)
+    """
+    (bool) Flag to prevent storing forecasts and forecast errors.
+    """
+    memory_no_forecast_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FORECAST_COV)
+    """
+    (bool) Flag to prevent storing forecast error covariance matrices.
+    """
     memory_no_forecast = OptionWrapper('conserve_memory', MEMORY_NO_FORECAST)
     """
-    (bool) Flag to prevent storing forecasts.
+    (bool) Flag to prevent storing all forecast-related output.
+    """
+    memory_no_predicted_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_PREDICTED_MEAN)
+    """
+    (bool) Flag to prevent storing predicted states.
+    """
+    memory_no_predicted_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_PREDICTED_COV)
+    """
+    (bool) Flag to prevent storing predicted state covariance matrices.
     """
     memory_no_predicted = OptionWrapper('conserve_memory', MEMORY_NO_PREDICTED)
     """
     (bool) Flag to prevent storing predicted state and covariance matrices.
+    """
+    memory_no_filtered_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FILTERED_MEAN)
+    """
+    (bool) Flag to prevent storing filtered states.
+    """
+    memory_no_filtered_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FILTERED_COV)
+    """
+    (bool) Flag to prevent storing filtered state covariance matrices.
     """
     memory_no_filtered = OptionWrapper('conserve_memory', MEMORY_NO_FILTERED)
     """
@@ -424,15 +464,15 @@ class KalmanFilter(Representation):
         The filtering method is defined by a collection of boolean flags, and
         is internally stored as a bitmask. The methods available are:
 
-        FILTER_CONVENTIONAL = 0x01
+        FILTER_CONVENTIONAL
             Conventional Kalman filter.
-        FILTER_UNIVARIATE = 0x10
+        FILTER_UNIVARIATE
             Univariate approach to Kalman filtering. Overrides conventional
             method if both are specified.
-        FILTER_COLLAPSED = 0x20
+        FILTER_COLLAPSED
             Collapsed approach to Kalman filtering. Will be used *in addition*
             to conventional or univariate filtering.
-        FILTER_CONCENTRATED = 0x20
+        FILTER_CONCENTRATED
             Use the concentrated log-likelihood function. Will be used
             *in addition* to the other options.
 
@@ -505,19 +545,19 @@ class KalmanFilter(Representation):
         The inversion method is defined by a collection of boolean flags, and
         is internally stored as a bitmask. The methods available are:
 
-        INVERT_UNIVARIATE = 0x01
+        INVERT_UNIVARIATE
             If the endogenous time series is univariate, then inversion can be
             performed by simple division. If this flag is set and the time
             series is univariate, then division will always be used even if
             other flags are also set.
-        SOLVE_LU = 0x02
+        SOLVE_LU
             Use an LU decomposition along with a linear solver (rather than
             ever actually inverting the matrix).
-        INVERT_LU = 0x04
+        INVERT_LU
             Use an LU decomposition along with typical matrix inversion.
-        SOLVE_CHOLESKY = 0x08
+        SOLVE_CHOLESKY
             Use a Cholesky decomposition along with a linear solver.
-        INVERT_CHOLESKY = 0x10
+        INVERT_CHOLESKY
             Use an Cholesky decomposition along with typical matrix inversion.
 
         If the bitmask is set directly via the `inversion_method` argument,
@@ -650,34 +690,45 @@ class KalmanFilter(Representation):
         flags, and is internally stored as a bitmask. The methods available
         are:
 
-        MEMORY_STORE_ALL = 0
+        MEMORY_STORE_ALL
             Store all intermediate matrices. This is the default value.
-        MEMORY_NO_FORECAST = 0x01
+        MEMORY_NO_FORECAST_MEAN
+            Do not store the forecast or forecast errors. If this option is
+            used, the `predict` method from the results class is unavailable.
+        MEMORY_NO_FORECAST_COV
+            Do not store the forecast error covariance matrices.
+        MEMORY_NO_FORECAST
             Do not store the forecast, forecast error, or forecast error
             covariance matrices. If this option is used, the `predict` method
             from the results class is unavailable.
-        MEMORY_NO_PREDICTED = 0x02
+        MEMORY_NO_PREDICTED_MEAN
+            Do not store the predicted state.
+        MEMORY_NO_PREDICTED_COV
+            Do not store the predicted state covariance
+            matrices.
+        MEMORY_NO_PREDICTED
             Do not store the predicted state or predicted state covariance
             matrices.
-        MEMORY_NO_FILTERED = 0x04
+        MEMORY_NO_FILTERED_MEAN
+            Do not store the filtered state.
+        MEMORY_NO_FILTERED_COV
+            Do not store the filtered state covariance
+            matrices.
+        MEMORY_NO_FILTERED
             Do not store the filtered state or filtered state covariance
             matrices.
-        MEMORY_NO_LIKELIHOOD = 0x08
+        MEMORY_NO_LIKELIHOOD
             Do not store the vector of loglikelihood values for each
             observation. Only the sum of the loglikelihood values is stored.
-        MEMORY_NO_GAIN = 0x10
+        MEMORY_NO_GAIN
             Do not store the Kalman gain matrices.
-        MEMORY_NO_SMOOTHING = 0x20
+        MEMORY_NO_SMOOTHING
             Do not store temporary variables related to Klaman smoothing. If
             this option is used, smoothing is unavailable.
-        MEMORY_NO_SMOOTHING = 0x20
+        MEMORY_NO_STD_FORECAST
             Do not store standardized forecast errors.
         MEMORY_CONSERVE
             Do not store any intermediate matrices.
-
-        Note that if using a Scipy version less than 0.16, the options
-        MEMORY_NO_GAIN, MEMORY_NO_SMOOTHING, and MEMORY_NO_STD_FORECAST
-        have no effect.
 
         If the bitmask is set directly via the `conserve_memory` argument,
         then the full method must be provided.
