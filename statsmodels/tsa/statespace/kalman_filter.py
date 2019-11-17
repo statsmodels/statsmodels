@@ -1705,7 +1705,11 @@ class FilterResults(FrozenRepresentation):
         # Kalman filter implements observations that are either partly or
         # completely missing)
         # Construct the predictions, forecasts
-        if not (self.memory_no_forecast or self.memory_no_predicted):
+        can_compute_mean = not (self.memory_no_forecast_mean or
+                                self.memory_no_predicted_mean)
+        can_compute_cov = not (self.memory_no_forecast_cov or
+                               self.memory_no_predicted_cov)
+        if can_compute_mean or can_compute_cov:
             for t in range(self.nobs):
                 design_t = 0 if self.design.shape[2] == 1 else t
                 obs_cov_t = 0 if self.obs_cov.shape[2] == 1 else t
@@ -1734,39 +1738,45 @@ class FilterResults(FrozenRepresentation):
                     # missing_forecasts, etc. then provide the forecasts, etc.
                     # provided by the Kalman filter, from which the data can be
                     # retrieved if desired.
-                    self.forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.predicted_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
-                    self.forecasts_error[:, t] = np.nan
-                    self.forecasts_error[mask, t] = (
-                        self.endog[mask, t] - self.forecasts[mask, t])
+                    if can_compute_mean:
+                        self.forecasts[:, t] = np.dot(
+                            self.design[:, :, design_t],
+                            self.predicted_state[:, t]
+                        ) + self.obs_intercept[:, obs_intercept_t]
+                        self.forecasts_error[:, t] = np.nan
+                        self.forecasts_error[mask, t] = (
+                            self.endog[mask, t] - self.forecasts[mask, t])
                     # TODO: We should only fill in the non-masked elements of
                     # this array. Also, this will give the multivariate version
                     # even if univariate filtering was selected. Instead, we
                     # should use the reordering methods and then replace the
                     # masked values with NaNs
-                    self.forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.predicted_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
+                    if can_compute_cov:
+                        self.forecasts_error_cov[:, :, t] = np.dot(
+                            np.dot(self.design[:, :, design_t],
+                                   self.predicted_state_cov[:, :, t]),
+                            self.design[:, :, design_t].T
+                        ) + self.obs_cov[:, :, obs_cov_t]
                 # In the collapsed case, everything just needs to be rebuilt
                 # for the original observed data, since the Kalman filter
                 # produced these values for the collapsed data.
                 elif self.filter_collapsed:
-                    self.forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.predicted_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
+                    if can_compute_mean:
+                        self.forecasts[:, t] = np.dot(
+                            self.design[:, :, design_t],
+                            self.predicted_state[:, t]
+                        ) + self.obs_intercept[:, obs_intercept_t]
 
-                    self.forecasts_error[:, t] = (
-                        self.endog[:, t] - self.forecasts[:, t]
-                    )
+                        self.forecasts_error[:, t] = (
+                            self.endog[:, t] - self.forecasts[:, t]
+                        )
 
-                    self.forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.predicted_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
+                    if can_compute_cov:
+                        self.forecasts_error_cov[:, :, t] = np.dot(
+                            np.dot(self.design[:, :, design_t],
+                                   self.predicted_state_cov[:, :, t]),
+                            self.design[:, :, design_t].T
+                        ) + self.obs_cov[:, :, obs_cov_t]
 
         # Note: if we concentrated out the scale, need to adjust the
         # loglikelihood values and all of the covariance matrices and the
@@ -2059,13 +2069,20 @@ class FilterResults(FrozenRepresentation):
             # (use max(., 0), since dynamic can be prior to start)
             nstatic = max(dynamic - start, 0)
 
-        # Cannot do in-sample prediction if we do not have appropriate arrays
-        # (we can do out-of-sample forecasting, however)
-        insample = nstatic > 0 or ndynamic > 0
-        if insample and (self.memory_no_forecast or self.memory_no_predicted):
-            raise ValueError('In-sample prediction is not possible if memory'
+        # Cannot do in-sample prediction if we do not have appropriate
+        # arrays (we can do out-of-sample forecasting, however)
+        if nstatic > 0 and self.memory_no_forecast_mean:
+            raise ValueError('In-sample prediction is not available if memory'
                              ' conservation has been used to avoid storing'
-                             ' forecasts or predicted values.')
+                             ' forecast means.')
+        # Cannot do dynamic in-sample prediction if we do not have appropriate
+        # arrays (we can do out-of-sample forecasting, however)
+        if ndynamic > 0 and (self.memory_no_forecast or
+                             self.memory_no_predicted):
+            raise ValueError('In-sample dynamic prediction is not available if'
+                             ' memory conservation has been used to avoid'
+                             ' storing forecasted or predicted state means'
+                             ' or covariances.')
 
         # Construct the design and observation intercept and covariance
         # matrices for start-npadded:end. If not time-varying in the original
@@ -2171,9 +2188,10 @@ class FilterResults(FrozenRepresentation):
                                  nobs=endog.shape[1], **model_kwargs)
             model.bind(endog)
 
-            # The only valid case in which we have not stored predicted values
-            # is pure out-of-sample forecasting, in which case we want to start
-            # with the last predicted value
+            # Even if we have not stored all predicted values (means and covs),
+            # we can still do pure out-of-sample forecasting because we will
+            # always have stored the last predicted values. In this case, we
+            # will initialize the forecasting filter with these values
             if self.memory_no_predicted:
                 constant = self.predicted_state[..., -1]
                 stationary_cov = self.predicted_state_cov[..., -1]

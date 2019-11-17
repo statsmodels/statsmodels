@@ -3613,7 +3613,7 @@ class PredictionResults(pred.PredictionResults):
     """
     def __init__(self, model, prediction_results, row_labels=None):
         if model.model.k_endog == 1:
-            endog = pd.Series(prediction_results.endog[:, 0],
+            endog = pd.Series(prediction_results.endog[0],
                               name=model.model.endog_names)
         else:
             endog = pd.DataFrame(prediction_results.endog.T,
@@ -3623,13 +3623,22 @@ class PredictionResults(pred.PredictionResults):
         self.prediction_results = prediction_results
 
         # Get required values
-        predicted_mean = self.prediction_results.forecasts
+        k_endog, nobs = prediction_results.endog.shape
+        if not prediction_results.results.memory_no_forecast_mean:
+            predicted_mean = self.prediction_results.forecasts
+        else:
+            predicted_mean = np.zeros((k_endog, nobs)) * np.nan
+
         if predicted_mean.shape[0] == 1:
             predicted_mean = predicted_mean[0, :]
         else:
             predicted_mean = predicted_mean.transpose()
 
-        var_pred_mean = self.prediction_results.forecasts_error_cov
+        if not prediction_results.results.memory_no_forecast_cov:
+            var_pred_mean = self.prediction_results.forecasts_error_cov
+        else:
+            var_pred_mean = np.zeros((k_endog, k_endog, nobs)) * np.nan
+
         if var_pred_mean.shape[0] == 1:
             var_pred_mean = var_pred_mean[0, 0, :]
         else:
