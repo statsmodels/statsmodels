@@ -16,9 +16,9 @@ from statsmodels.datasets import macrodata
 from statsmodels.tsa.statespace import (
     sarimax, varmax, dynamic_factor)
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_NO_FORECAST_MEAN, MEMORY_NO_FORECAST_COV, MEMORY_NO_FORECAST,
+    MEMORY_NO_FORECAST_MEAN, MEMORY_NO_FORECAST_COV,
     MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED,
-    MEMORY_NO_FILTERED, MEMORY_NO_SMOOTHING, MEMORY_NO_GAIN, MEMORY_CONSERVE)
+    MEMORY_NO_SMOOTHING, MEMORY_NO_GAIN, MEMORY_CONSERVE)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
