@@ -16,7 +16,9 @@ from statsmodels.datasets import macrodata
 from statsmodels.tsa.statespace import (
     sarimax, varmax, dynamic_factor)
 from statsmodels.tsa.statespace.kalman_filter import (
-    MEMORY_NO_GAIN, MEMORY_CONSERVE)
+    MEMORY_NO_FORECAST_MEAN, MEMORY_NO_FORECAST_COV, MEMORY_NO_FORECAST,
+    MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED,
+    MEMORY_NO_FILTERED, MEMORY_NO_SMOOTHING, MEMORY_NO_GAIN, MEMORY_CONSERVE)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
@@ -211,8 +213,9 @@ def test_fit():
 
         # Specific checks for each type
         if option in ['memory_no_predicted', 'memory_conserve']:
-            assert_(res2.predicted_state is None)
             assert_(res2.predicted_state_cov is None)
+            if option == 'memory_no_predicted':
+                assert_(res2.predicted_state is None)
         else:
             assert_allclose(res2.predicted_state, res.predicted_state)
             assert_allclose(res2.predicted_state_cov, res.predicted_state_cov)
@@ -244,3 +247,46 @@ def test_low_memory_fit():
     assert_equal(res.filter_results.conserve_memory, MEMORY_CONSERVE)
     assert_(res.llf_obs is None)
     assert_equal(mod.ssm.conserve_memory, MEMORY_NO_GAIN)
+
+
+@pytest.mark.parametrize("conserve_memory", [
+    MEMORY_CONSERVE, MEMORY_NO_FORECAST_COV])
+def test_fittedvalues_resid_predict(conserve_memory):
+    # Basic test that as long as MEMORY_NO_FORECAST_MEAN is not set, we should
+    # be able to use fittedvalues, resid, predict() with dynamic=False and
+    # forecast
+    endog = dta['infl'].iloc[:20]
+    mod1 = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=True)
+    mod2 = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=True)
+
+    mod1.ssm.set_conserve_memory(conserve_memory)
+    assert_equal(mod1.ssm.conserve_memory, conserve_memory)
+    assert_equal(mod2.ssm.conserve_memory, 0)
+
+    res1 = mod1.filter([0])
+    res2 = mod2.filter([0])
+    assert_equal(res1.filter_results.conserve_memory,
+                 conserve_memory | MEMORY_NO_SMOOTHING)
+    assert_equal(res2.filter_results.conserve_memory, MEMORY_NO_SMOOTHING)
+
+    # Test output against known values
+    assert_allclose(res1.fittedvalues, 0)
+    assert_allclose(res1.predict(), 0)
+    assert_allclose(res1.predict(start=endog.index[10]), np.zeros(10))
+    assert_allclose(res1.resid, endog)
+    assert_allclose(res1.forecast(3), np.zeros(3))
+
+    # Test output against results without memory conservation
+    assert_allclose(res1.fittedvalues, res2.fittedvalues)
+    assert_allclose(res1.predict(), res2.predict())
+    assert_allclose(res1.predict(start=endog.index[10]),
+                    res2.predict(start=endog.index[10]))
+    assert_allclose(res1.resid, res2.resid)
+    assert_allclose(res1.forecast(3), res2.forecast(3))
+
+    assert_allclose(res1.test_normality('jarquebera'),
+                    res2.test_normality('jarquebera'))
+    assert_allclose(res1.test_heteroskedasticity('breakvar'),
+                    res2.test_heteroskedasticity('breakvar'))
+    assert_allclose(res1.test_serial_correlation('ljungbox'),
+                    res2.test_serial_correlation('ljungbox'))

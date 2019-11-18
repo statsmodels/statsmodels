@@ -1920,15 +1920,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             setattr(self, name, getattr(self.filter_results, name, None))
 
         # Remove too-short results when memory conservation was used
-        if self.filter_results.memory_no_forecast:
+        if self.filter_results.memory_no_forecast_mean:
             self.forecasts = None
             self.forecasts_error = None
+        if self.filter_results.memory_no_forecast_cov:
             self.forecasts_error_cov = None
-        if self.filter_results.memory_no_predicted:
+        if self.filter_results.memory_no_predicted_mean:
             self.predicted_state = None
+        if self.filter_results.memory_no_predicted_cov:
             self.predicted_state_cov = None
-        if self.filter_results.memory_no_filtered:
+        if self.filter_results.memory_no_filtered_mean:
             self.filtered_state = None
+        if self.filter_results.memory_no_filtered_cov:
             self.filtered_state_cov = None
         if self.filter_results.memory_no_gain:
             pass
@@ -1951,13 +1954,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Note: a complication here is that we also include the initial values
         # here, so that we need an extended index in the Pandas case
         if (self.predicted_state is None or
-                self.filter_results.memory_no_predicted):
+                self.filter_results.memory_no_predicted_mean):
             self._states.predicted = None
-            self._states.predicted_cov = None
         elif use_pandas:
             extended_index = self.model._get_index_with_initial_state()
             self._states.predicted = pd.DataFrame(
                 self.predicted_state.T, index=extended_index, columns=columns)
+        else:
+            self._states.predicted = self.predicted_state.T
+        if (self.predicted_state_cov is None or
+                self.filter_results.memory_no_predicted_cov):
+            self._states.predicted_cov = None
+        elif use_pandas:
+            extended_index = self.model._get_index_with_initial_state()
             tmp = np.transpose(self.predicted_state_cov, (2, 0, 1))
             self._states.predicted_cov = pd.DataFrame(
                 np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
@@ -1965,42 +1974,48 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     [extended_index, columns]).swaplevel(),
                 columns=columns)
         else:
-            self._states.predicted = self.predicted_state.T
             self._states.predicted_cov = np.transpose(
                 self.predicted_state_cov, (2, 0, 1))
 
         # Filtered states
         if (self.filtered_state is None or
-                self.filter_results.memory_no_filtered):
+                self.filter_results.memory_no_filtered_mean):
             self._states.filtered = None
-            self._states.filtered_cov = None
         elif use_pandas:
             self._states.filtered = pd.DataFrame(
                 self.filtered_state.T, index=index, columns=columns)
+        else:
+            self._states.filtered = self.filtered_state.T
+        if (self.filtered_state_cov is None or
+                self.filter_results.memory_no_filtered_cov):
+            self._states.filtered_cov = None
+        elif use_pandas:
             tmp = np.transpose(self.filtered_state_cov, (2, 0, 1))
             self._states.filtered_cov = pd.DataFrame(
                 np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
                 index=pd.MultiIndex.from_product([index, columns]).swaplevel(),
                 columns=columns)
         else:
-            self._states.filtered = self.filtered_state.T
             self._states.filtered_cov = np.transpose(
                 self.filtered_state_cov, (2, 0, 1))
 
         # Smoothed states
         if self.smoothed_state is None:
             self._states.smoothed = None
-            self._states.smoothed_cov = None
         elif use_pandas:
             self._states.smoothed = pd.DataFrame(
                 self.smoothed_state.T, index=index, columns=columns)
+        else:
+            self._states.smoothed = self.smoothed_state.T
+        if self.smoothed_state_cov is None:
+            self._states.smoothed_cov = None
+        elif use_pandas:
             tmp = np.transpose(self.smoothed_state_cov, (2, 0, 1))
             self._states.smoothed_cov = pd.DataFrame(
                 np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
                 index=pd.MultiIndex.from_product([index, columns]).swaplevel(),
                 columns=columns)
         else:
-            self._states.smoothed = self.smoothed_state.T
             self._states.smoothed_cov = np.transpose(
                 self.smoothed_state_cov, (2, 0, 1))
 

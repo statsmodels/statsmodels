@@ -51,8 +51,7 @@ MEMORY_NO_SMOOTHING = 0x100
 MEMORY_NO_STD_FORECAST = 0x200
 MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST_COV | MEMORY_NO_PREDICTED_COV | MEMORY_NO_FILTERED_COV |
-    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
-    MEMORY_NO_STD_FORECAST
+    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
 )
 
 TIMING_INIT_PREDICTED = 0
@@ -241,10 +240,22 @@ class KalmanFilter(Representation):
     """
     (bool) Flag to prevent storing forecast error covariance matrices.
     """
-    memory_no_forecast = OptionWrapper('conserve_memory', MEMORY_NO_FORECAST)
-    """
-    (bool) Flag to prevent storing all forecast-related output.
-    """
+    @property
+    def memory_no_forecast(self):
+        """
+        (bool) Flag to prevent storing all forecast-related output.
+        """
+        return self.memory_no_forecast_mean or self.memory_no_forecast_cov
+
+    @memory_no_forecast.setter
+    def memory_no_forecast(self, value):
+        if bool(value):
+            self.memory_no_forecast_mean = True
+            self.memory_no_forecast_cov = True
+        else:
+            self.memory_no_forecast_mean = False
+            self.memory_no_forecast_cov = False
+
     memory_no_predicted_mean = OptionWrapper(
         'conserve_memory', MEMORY_NO_PREDICTED_MEAN)
     """
@@ -255,10 +266,22 @@ class KalmanFilter(Representation):
     """
     (bool) Flag to prevent storing predicted state covariance matrices.
     """
-    memory_no_predicted = OptionWrapper('conserve_memory', MEMORY_NO_PREDICTED)
-    """
-    (bool) Flag to prevent storing predicted state and covariance matrices.
-    """
+    @property
+    def memory_no_predicted(self):
+        """
+        (bool) Flag to prevent storing predicted state and covariance matrices.
+        """
+        return self.memory_no_predicted_mean or self.memory_no_predicted_cov
+
+    @memory_no_predicted.setter
+    def memory_no_predicted(self, value):
+        if bool(value):
+            self.memory_no_predicted_mean = True
+            self.memory_no_predicted_cov = True
+        else:
+            self.memory_no_predicted_mean = False
+            self.memory_no_predicted_cov = False
+
     memory_no_filtered_mean = OptionWrapper(
         'conserve_memory', MEMORY_NO_FILTERED_MEAN)
     """
@@ -269,10 +292,22 @@ class KalmanFilter(Representation):
     """
     (bool) Flag to prevent storing filtered state covariance matrices.
     """
-    memory_no_filtered = OptionWrapper('conserve_memory', MEMORY_NO_FILTERED)
-    """
-    (bool) Flag to prevent storing filtered state and covariance matrices.
-    """
+    @property
+    def memory_no_filtered(self):
+        """
+        (bool) Flag to prevent storing filtered state and covariance matrices.
+        """
+        return self.memory_no_filtered_mean or self.memory_no_filtered_cov
+
+    @memory_no_filtered.setter
+    def memory_no_filtered(self, value):
+        if bool(value):
+            self.memory_no_filtered_mean = True
+            self.memory_no_filtered_cov = True
+        else:
+            self.memory_no_filtered_mean = False
+            self.memory_no_filtered_cov = False
+
     memory_no_likelihood = (
         OptionWrapper('conserve_memory', MEMORY_NO_LIKELIHOOD)
     )

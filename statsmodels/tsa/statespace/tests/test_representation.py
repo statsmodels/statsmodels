@@ -876,7 +876,8 @@ def test_predict():
     mod['selection', :] = 1
     mod['state_cov', :] = 1
 
-    # Check that we need both forecasts and predicted output for prediction
+    # Check that we need both forecasts and predicted output for dynamic
+    # prediction
     mod.memory_no_forecast = True
     res = mod.filter()
     assert_raises(ValueError, res.predict)
@@ -884,7 +885,7 @@ def test_predict():
 
     mod.memory_no_predicted = True
     res = mod.filter()
-    assert_raises(ValueError, res.predict)
+    assert_raises(ValueError, res.predict, dynamic=True)
     mod.memory_no_predicted = False
 
     # Now get a clean filter object
