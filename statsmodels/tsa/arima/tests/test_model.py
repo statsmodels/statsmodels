@@ -194,7 +194,6 @@ def test_low_memory():
 
     # Check that low memory was actually used (just check a couple)
     assert_(res2.llf_obs is None)
-    assert_(res2.forecasts is None)
     assert_(res2.predicted_state is None)
     assert_(res2.filtered_state is None)
     assert_(res2.smoothed_state is None)
