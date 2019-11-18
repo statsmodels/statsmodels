@@ -2112,8 +2112,7 @@ class FilterResults(FrozenRepresentation):
                              ' forecast means.')
         # Cannot do dynamic in-sample prediction if we do not have appropriate
         # arrays (we can do out-of-sample forecasting, however)
-        if ndynamic > 0 and (self.memory_no_forecast or
-                             self.memory_no_predicted):
+        if ndynamic > 0 and self.memory_no_predicted:
             raise ValueError('In-sample dynamic prediction is not available if'
                              ' memory conservation has been used to avoid'
                              ' storing forecasted or predicted state means'

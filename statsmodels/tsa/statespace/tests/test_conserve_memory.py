@@ -161,7 +161,7 @@ def test_fit():
     res = mod.fit(disp=False)
 
     options_smooth = [
-        'memory_no_forecast',  'memory_no_filtered', 'memory_no_likelihood',
+        'memory_no_forecast', 'memory_no_filtered', 'memory_no_likelihood',
         'memory_no_std_forecast']
     for option in options_smooth:
         mod.ssm.set_conserve_memory(0)
@@ -290,3 +290,67 @@ def test_fittedvalues_resid_predict(conserve_memory):
                     res2.test_heteroskedasticity('breakvar'))
     assert_allclose(res1.test_serial_correlation('ljungbox'),
                     res2.test_serial_correlation('ljungbox'))
+
+
+def test_get_prediction_memory_conserve():
+    endog = dta['infl'].iloc[:20]
+    mod1 = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=True)
+    mod2 = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=True)
+
+    mod1.ssm.set_conserve_memory(MEMORY_CONSERVE)
+    assert_equal(mod1.ssm.conserve_memory, MEMORY_CONSERVE)
+    assert_equal(mod2.ssm.conserve_memory, 0)
+
+    res1 = mod1.filter([0])
+    res2 = mod2.filter([0])
+    assert_equal(res1.filter_results.conserve_memory, MEMORY_CONSERVE)
+    assert_equal(res2.filter_results.conserve_memory, MEMORY_NO_SMOOTHING)
+
+    p1 = res1.get_prediction()
+    p2 = res2.get_prediction()
+
+    assert_allclose(p1.predicted_mean, p2.predicted_mean)
+    assert_allclose(p1.se_mean, np.nan)
+    assert_allclose(p1.conf_int(), np.nan)
+
+    s1 = p1.summary_frame()
+    s2 = p2.summary_frame()
+
+    assert_allclose(s1['mean'], s2['mean'])
+    assert_allclose(s1.mean_se, np.nan)
+    assert_allclose(s1.mean_ci_lower, np.nan)
+    assert_allclose(s1.mean_ci_upper, np.nan)
+
+
+def test_invalid_fittedvalues_resid_predict():
+    endog = dta['infl'].iloc[:20]
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), concentrate_scale=True)
+
+    # Check that we can't do any prediction without forecast means
+    res = mod.filter([0], conserve_memory=MEMORY_NO_FORECAST_MEAN)
+    assert_equal(res.filter_results.conserve_memory,
+                 MEMORY_NO_FORECAST_MEAN)
+
+    message = ('In-sample prediction is not available if memory conservation'
+               ' has been used to avoid storing forecast means.')
+    with pytest.raises(ValueError, match=message):
+        res.predict()
+    with pytest.raises(ValueError, match=message):
+        res.get_prediction()
+
+    # Check that we can't do dynamic prediction without predicted means,
+    # predicted covs
+    options = [
+        MEMORY_NO_PREDICTED_MEAN, MEMORY_NO_PREDICTED_COV, MEMORY_NO_PREDICTED]
+    for option in options:
+        res = mod.filter([0], conserve_memory=option)
+        assert_equal(res.filter_results.conserve_memory, option)
+
+        message = ('In-sample dynamic prediction is not available if'
+                   ' memory conservation has been used to avoid'
+                   ' storing forecasted or predicted state means'
+                   ' or covariances.')
+        with pytest.raises(ValueError, match=message):
+            res.predict(dynamic=True)
+        with pytest.raises(ValueError, match=message):
+            res.predict(start=endog.index[10], dynamic=True)
