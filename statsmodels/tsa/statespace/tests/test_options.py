@@ -206,10 +206,10 @@ class TestOptions(Options):
         assert_equal(
             model.conserve_memory,
             MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-            MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
-            MEMORY_NO_STD_FORECAST
+            MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN |
+            MEMORY_NO_SMOOTHING | MEMORY_NO_STD_FORECAST
         )
-        assert_equal(model.conserve_memory, MEMORY_CONSERVE)
+        assert_equal(model.conserve_memory & MEMORY_CONSERVE, MEMORY_CONSERVE)
         for name in model.memory_options:
             if name == 'memory_conserve':
                 continue

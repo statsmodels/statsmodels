@@ -36,17 +36,22 @@ INVERT_CHOLESKY = 0x10
 STABILITY_FORCE_SYMMETRY = 0x01
 
 MEMORY_STORE_ALL = 0
-MEMORY_NO_FORECAST = 0x01
-MEMORY_NO_PREDICTED = 0x02
-MEMORY_NO_FILTERED = 0x04
-MEMORY_NO_LIKELIHOOD = 0x08
-MEMORY_NO_GAIN = 0x10
-MEMORY_NO_SMOOTHING = 0x20
-MEMORY_NO_STD_FORECAST = 0x40
+MEMORY_NO_FORECAST_MEAN = 0x01
+MEMORY_NO_FORECAST_COV = 0x02
+MEMORY_NO_FORECAST = MEMORY_NO_FORECAST_MEAN | MEMORY_NO_FORECAST_COV
+MEMORY_NO_PREDICTED_MEAN = 0x04
+MEMORY_NO_PREDICTED_COV = 0x08
+MEMORY_NO_PREDICTED = MEMORY_NO_PREDICTED_MEAN | MEMORY_NO_PREDICTED_COV
+MEMORY_NO_FILTERED_MEAN = 0x10
+MEMORY_NO_FILTERED_COV = 0x20
+MEMORY_NO_FILTERED = MEMORY_NO_FILTERED_MEAN | MEMORY_NO_FILTERED_COV
+MEMORY_NO_LIKELIHOOD = 0x40
+MEMORY_NO_GAIN = 0x80
+MEMORY_NO_SMOOTHING = 0x100
+MEMORY_NO_STD_FORECAST = 0x200
 MEMORY_CONSERVE = (
-    MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
-    MEMORY_NO_STD_FORECAST
+    MEMORY_NO_FORECAST_COV | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
+    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
 )
 
 TIMING_INIT_PREDICTED = 0
@@ -212,8 +217,12 @@ class KalmanFilter(Representation):
     """
 
     memory_options = [
-        'memory_store_all', 'memory_no_forecast', 'memory_no_predicted',
-        'memory_no_filtered', 'memory_no_likelihood', 'memory_no_gain',
+        'memory_store_all', 'memory_no_forecast_mean',
+        'memory_no_forecast_cov', 'memory_no_forecast',
+        'memory_no_predicted_mean', 'memory_no_predicted_cov',
+        'memory_no_predicted', 'memory_no_filtered_mean',
+        'memory_no_filtered_cov', 'memory_no_filtered',
+        'memory_no_likelihood', 'memory_no_gain',
         'memory_no_smoothing', 'memory_no_std_forecast', 'memory_conserve'
     ]
 
@@ -221,18 +230,84 @@ class KalmanFilter(Representation):
     """
     (bool) Flag for storing all intermediate results in memory (default).
     """
-    memory_no_forecast = OptionWrapper('conserve_memory', MEMORY_NO_FORECAST)
+    memory_no_forecast_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FORECAST_MEAN)
     """
-    (bool) Flag to prevent storing forecasts.
+    (bool) Flag to prevent storing forecasts and forecast errors.
     """
-    memory_no_predicted = OptionWrapper('conserve_memory', MEMORY_NO_PREDICTED)
+    memory_no_forecast_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FORECAST_COV)
     """
-    (bool) Flag to prevent storing predicted state and covariance matrices.
+    (bool) Flag to prevent storing forecast error covariance matrices.
     """
-    memory_no_filtered = OptionWrapper('conserve_memory', MEMORY_NO_FILTERED)
+    @property
+    def memory_no_forecast(self):
+        """
+        (bool) Flag to prevent storing all forecast-related output.
+        """
+        return self.memory_no_forecast_mean or self.memory_no_forecast_cov
+
+    @memory_no_forecast.setter
+    def memory_no_forecast(self, value):
+        if bool(value):
+            self.memory_no_forecast_mean = True
+            self.memory_no_forecast_cov = True
+        else:
+            self.memory_no_forecast_mean = False
+            self.memory_no_forecast_cov = False
+
+    memory_no_predicted_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_PREDICTED_MEAN)
     """
-    (bool) Flag to prevent storing filtered state and covariance matrices.
+    (bool) Flag to prevent storing predicted states.
     """
+    memory_no_predicted_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_PREDICTED_COV)
+    """
+    (bool) Flag to prevent storing predicted state covariance matrices.
+    """
+    @property
+    def memory_no_predicted(self):
+        """
+        (bool) Flag to prevent storing predicted state and covariance matrices.
+        """
+        return self.memory_no_predicted_mean or self.memory_no_predicted_cov
+
+    @memory_no_predicted.setter
+    def memory_no_predicted(self, value):
+        if bool(value):
+            self.memory_no_predicted_mean = True
+            self.memory_no_predicted_cov = True
+        else:
+            self.memory_no_predicted_mean = False
+            self.memory_no_predicted_cov = False
+
+    memory_no_filtered_mean = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FILTERED_MEAN)
+    """
+    (bool) Flag to prevent storing filtered states.
+    """
+    memory_no_filtered_cov = OptionWrapper(
+        'conserve_memory', MEMORY_NO_FILTERED_COV)
+    """
+    (bool) Flag to prevent storing filtered state covariance matrices.
+    """
+    @property
+    def memory_no_filtered(self):
+        """
+        (bool) Flag to prevent storing filtered state and covariance matrices.
+        """
+        return self.memory_no_filtered_mean or self.memory_no_filtered_cov
+
+    @memory_no_filtered.setter
+    def memory_no_filtered(self, value):
+        if bool(value):
+            self.memory_no_filtered_mean = True
+            self.memory_no_filtered_cov = True
+        else:
+            self.memory_no_filtered_mean = False
+            self.memory_no_filtered_cov = False
+
     memory_no_likelihood = (
         OptionWrapper('conserve_memory', MEMORY_NO_LIKELIHOOD)
     )
@@ -424,15 +499,15 @@ class KalmanFilter(Representation):
         The filtering method is defined by a collection of boolean flags, and
         is internally stored as a bitmask. The methods available are:
 
-        FILTER_CONVENTIONAL = 0x01
+        FILTER_CONVENTIONAL
             Conventional Kalman filter.
-        FILTER_UNIVARIATE = 0x10
+        FILTER_UNIVARIATE
             Univariate approach to Kalman filtering. Overrides conventional
             method if both are specified.
-        FILTER_COLLAPSED = 0x20
+        FILTER_COLLAPSED
             Collapsed approach to Kalman filtering. Will be used *in addition*
             to conventional or univariate filtering.
-        FILTER_CONCENTRATED = 0x20
+        FILTER_CONCENTRATED
             Use the concentrated log-likelihood function. Will be used
             *in addition* to the other options.
 
@@ -505,19 +580,19 @@ class KalmanFilter(Representation):
         The inversion method is defined by a collection of boolean flags, and
         is internally stored as a bitmask. The methods available are:
 
-        INVERT_UNIVARIATE = 0x01
+        INVERT_UNIVARIATE
             If the endogenous time series is univariate, then inversion can be
             performed by simple division. If this flag is set and the time
             series is univariate, then division will always be used even if
             other flags are also set.
-        SOLVE_LU = 0x02
+        SOLVE_LU
             Use an LU decomposition along with a linear solver (rather than
             ever actually inverting the matrix).
-        INVERT_LU = 0x04
+        INVERT_LU
             Use an LU decomposition along with typical matrix inversion.
-        SOLVE_CHOLESKY = 0x08
+        SOLVE_CHOLESKY
             Use a Cholesky decomposition along with a linear solver.
-        INVERT_CHOLESKY = 0x10
+        INVERT_CHOLESKY
             Use an Cholesky decomposition along with typical matrix inversion.
 
         If the bitmask is set directly via the `inversion_method` argument,
@@ -650,34 +725,45 @@ class KalmanFilter(Representation):
         flags, and is internally stored as a bitmask. The methods available
         are:
 
-        MEMORY_STORE_ALL = 0
+        MEMORY_STORE_ALL
             Store all intermediate matrices. This is the default value.
-        MEMORY_NO_FORECAST = 0x01
+        MEMORY_NO_FORECAST_MEAN
+            Do not store the forecast or forecast errors. If this option is
+            used, the `predict` method from the results class is unavailable.
+        MEMORY_NO_FORECAST_COV
+            Do not store the forecast error covariance matrices.
+        MEMORY_NO_FORECAST
             Do not store the forecast, forecast error, or forecast error
             covariance matrices. If this option is used, the `predict` method
             from the results class is unavailable.
-        MEMORY_NO_PREDICTED = 0x02
+        MEMORY_NO_PREDICTED_MEAN
+            Do not store the predicted state.
+        MEMORY_NO_PREDICTED_COV
+            Do not store the predicted state covariance
+            matrices.
+        MEMORY_NO_PREDICTED
             Do not store the predicted state or predicted state covariance
             matrices.
-        MEMORY_NO_FILTERED = 0x04
+        MEMORY_NO_FILTERED_MEAN
+            Do not store the filtered state.
+        MEMORY_NO_FILTERED_COV
+            Do not store the filtered state covariance
+            matrices.
+        MEMORY_NO_FILTERED
             Do not store the filtered state or filtered state covariance
             matrices.
-        MEMORY_NO_LIKELIHOOD = 0x08
+        MEMORY_NO_LIKELIHOOD
             Do not store the vector of loglikelihood values for each
             observation. Only the sum of the loglikelihood values is stored.
-        MEMORY_NO_GAIN = 0x10
+        MEMORY_NO_GAIN
             Do not store the Kalman gain matrices.
-        MEMORY_NO_SMOOTHING = 0x20
+        MEMORY_NO_SMOOTHING
             Do not store temporary variables related to Klaman smoothing. If
             this option is used, smoothing is unavailable.
-        MEMORY_NO_SMOOTHING = 0x20
+        MEMORY_NO_STD_FORECAST
             Do not store standardized forecast errors.
         MEMORY_CONSERVE
             Do not store any intermediate matrices.
-
-        Note that if using a Scipy version less than 0.16, the options
-        MEMORY_NO_GAIN, MEMORY_NO_SMOOTHING, and MEMORY_NO_STD_FORECAST
-        have no effect.
 
         If the bitmask is set directly via the `conserve_memory` argument,
         then the full method must be provided.
@@ -879,7 +965,7 @@ class KalmanFilter(Representation):
         kfilter = self._filter(**kwargs)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
-        if not self.memory_no_likelihood:
+        if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
             loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
         else:
             loglike = np.sum(kfilter.loglikelihood)
@@ -896,7 +982,7 @@ class KalmanFilter(Representation):
             # associated with a singular forecast error covariance matrix
             nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
 
-            if not self.memory_no_likelihood:
+            if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
                 scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
             else:
                 scale = kfilter.scale[0] / nobs_k_endog
@@ -1654,7 +1740,11 @@ class FilterResults(FrozenRepresentation):
         # Kalman filter implements observations that are either partly or
         # completely missing)
         # Construct the predictions, forecasts
-        if not (self.memory_no_forecast or self.memory_no_predicted):
+        can_compute_mean = not (self.memory_no_forecast_mean or
+                                self.memory_no_predicted_mean)
+        can_compute_cov = not (self.memory_no_forecast_cov or
+                               self.memory_no_predicted_cov)
+        if can_compute_mean or can_compute_cov:
             for t in range(self.nobs):
                 design_t = 0 if self.design.shape[2] == 1 else t
                 obs_cov_t = 0 if self.obs_cov.shape[2] == 1 else t
@@ -1683,39 +1773,45 @@ class FilterResults(FrozenRepresentation):
                     # missing_forecasts, etc. then provide the forecasts, etc.
                     # provided by the Kalman filter, from which the data can be
                     # retrieved if desired.
-                    self.forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.predicted_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
-                    self.forecasts_error[:, t] = np.nan
-                    self.forecasts_error[mask, t] = (
-                        self.endog[mask, t] - self.forecasts[mask, t])
+                    if can_compute_mean:
+                        self.forecasts[:, t] = np.dot(
+                            self.design[:, :, design_t],
+                            self.predicted_state[:, t]
+                        ) + self.obs_intercept[:, obs_intercept_t]
+                        self.forecasts_error[:, t] = np.nan
+                        self.forecasts_error[mask, t] = (
+                            self.endog[mask, t] - self.forecasts[mask, t])
                     # TODO: We should only fill in the non-masked elements of
                     # this array. Also, this will give the multivariate version
                     # even if univariate filtering was selected. Instead, we
                     # should use the reordering methods and then replace the
                     # masked values with NaNs
-                    self.forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.predicted_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
+                    if can_compute_cov:
+                        self.forecasts_error_cov[:, :, t] = np.dot(
+                            np.dot(self.design[:, :, design_t],
+                                   self.predicted_state_cov[:, :, t]),
+                            self.design[:, :, design_t].T
+                        ) + self.obs_cov[:, :, obs_cov_t]
                 # In the collapsed case, everything just needs to be rebuilt
                 # for the original observed data, since the Kalman filter
                 # produced these values for the collapsed data.
                 elif self.filter_collapsed:
-                    self.forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.predicted_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
+                    if can_compute_mean:
+                        self.forecasts[:, t] = np.dot(
+                            self.design[:, :, design_t],
+                            self.predicted_state[:, t]
+                        ) + self.obs_intercept[:, obs_intercept_t]
 
-                    self.forecasts_error[:, t] = (
-                        self.endog[:, t] - self.forecasts[:, t]
-                    )
+                        self.forecasts_error[:, t] = (
+                            self.endog[:, t] - self.forecasts[:, t]
+                        )
 
-                    self.forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.predicted_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
+                    if can_compute_cov:
+                        self.forecasts_error_cov[:, :, t] = np.dot(
+                            np.dot(self.design[:, :, design_t],
+                                   self.predicted_state_cov[:, :, t]),
+                            self.design[:, :, design_t].T
+                        ) + self.obs_cov[:, :, obs_cov_t]
 
         # Note: if we concentrated out the scale, need to adjust the
         # loglikelihood values and all of the covariance matrices and the
@@ -2008,13 +2104,19 @@ class FilterResults(FrozenRepresentation):
             # (use max(., 0), since dynamic can be prior to start)
             nstatic = max(dynamic - start, 0)
 
-        # Cannot do in-sample prediction if we do not have appropriate arrays
-        # (we can do out-of-sample forecasting, however)
-        insample = nstatic > 0 or ndynamic > 0
-        if insample and (self.memory_no_forecast or self.memory_no_predicted):
-            raise ValueError('In-sample prediction is not possible if memory'
+        # Cannot do in-sample prediction if we do not have appropriate
+        # arrays (we can do out-of-sample forecasting, however)
+        if nstatic > 0 and self.memory_no_forecast_mean:
+            raise ValueError('In-sample prediction is not available if memory'
                              ' conservation has been used to avoid storing'
-                             ' forecasts or predicted values.')
+                             ' forecast means.')
+        # Cannot do dynamic in-sample prediction if we do not have appropriate
+        # arrays (we can do out-of-sample forecasting, however)
+        if ndynamic > 0 and self.memory_no_predicted:
+            raise ValueError('In-sample dynamic prediction is not available if'
+                             ' memory conservation has been used to avoid'
+                             ' storing forecasted or predicted state means'
+                             ' or covariances.')
 
         # Construct the design and observation intercept and covariance
         # matrices for start-npadded:end. If not time-varying in the original
@@ -2120,9 +2222,10 @@ class FilterResults(FrozenRepresentation):
                                  nobs=endog.shape[1], **model_kwargs)
             model.bind(endog)
 
-            # The only valid case in which we have not stored predicted values
-            # is pure out-of-sample forecasting, in which case we want to start
-            # with the last predicted value
+            # Even if we have not stored all predicted values (means and covs),
+            # we can still do pure out-of-sample forecasting because we will
+            # always have stored the last predicted values. In this case, we
+            # will initialize the forecasting filter with these values
             if self.memory_no_predicted:
                 constant = self.predicted_state[..., -1]
                 stationary_cov = self.predicted_state_cov[..., -1]

@@ -73,9 +73,9 @@ def test_memory_no_predicted():
     assert_equal(res1.predicted_state_cov.shape, (1, 1, 5))
     assert_(res2.predicted_state_cov is None)
 
-    # Check that we can't do in-sample prediction
-    assert_raises(ValueError, res2.predict)
-    assert_raises(ValueError, res2.get_prediction)
+    # Check that we can't do dynamic in-sample prediction
+    assert_raises(ValueError, res2.predict, dynamic=True)
+    assert_raises(ValueError, res2.get_prediction, dynamic=True)
 
     # Make sure the point forecasts are the same
     assert_allclose(res1.forecast(10), res2.forecast(10))
