@@ -62,6 +62,9 @@ coverage_html_report/
 # Idea IDE
 .idea/
 
+# VS Code
+.vscode/
+
 # Project specific
 statsmodels/version.py
 statsmodels.egg-info/
