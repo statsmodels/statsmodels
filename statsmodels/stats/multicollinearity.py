@@ -18,14 +18,14 @@ class MultiCollinearity(object):
     This treats all variables in a symmetric way, analysing each variable
     compared to all others.
 
-    see class MultiCollinearSequential where all variables are analyzed in given
-    sequence.
+    see class MultiCollinearSequential where all variables are analyzed in
+    given sequence.
 
     Parameters
     ----------
     data : array_like
-        data with observations in rows and variables in columns. This is ignored
-        if moment_matrix is not None.
+        data with observations in rows and variables in columns. This is
+        ignored if moment_matrix is not None.
     moment_matrix : None or ndarray
         Optional moment or correlation matrix to be used for the analysis.
         If it is provided then data is ignored.
@@ -33,22 +33,22 @@ class MultiCollinearity(object):
         If true and data are provided, then the data will be standardized to
         mean zero and standard deviation equal to one, which is equivalent to
         using the correlation matrix. TODO: This might be replaced by separate
-        demean option. Variance inflation factor can be calculated for data that
-        is scaled but not demeaned.
+        demean option. Variance inflation factor can be calculated for data
+        that is scaled but not demeaned.
         See Notes
 
     Notes
     -----
 
-    The default treatment assumes that there is no constant in the data array or
-    in the moment matrix. However, VIF is defined under the assumption of a
+    The default treatment assumes that there is no constant in the data array
+    or in the moment matrix. However, VIF is defined under the assumption of a
     constant in the corrsponding regression. Use `standardize=False` if
     demeaning is not desired.
 
-    THe only case I know so far is if we have a categorical factor in the design
-    matrix but no constant, that is the constant is implicit in the full dummy
-    set. Using VIF with demeaned data will show that the dummy set is perfectly
-    collinear (up to floating point precision).
+    THe only case I know so far is if we have a categorical factor in the
+    design matrix but no constant, that is the constant is implicit in the full
+    dummy set. Using VIF with demeaned data will show that the dummy set is
+    perfectly collinear (up to floating point precision).
 
 
     """
@@ -81,8 +81,8 @@ class MultiCollinearity(object):
                 xm = np.corrcoef(x, rowvar=0)
                 if np.any(np.ptp(x, axis=0) == 0):
                     # TODO: change this? detect from xcorr, drop constant ?
-                    raise ValueError('If standardize is true, then data should '
-                                     'not include a constant')
+                    raise ValueError('If standardize is true, then data should'
+                                     ' not include a constant')
             else:
                 xm = np.dot(x.T, x) / float(x.shape[0])
 
@@ -101,7 +101,7 @@ class MultiCollinearity(object):
         ridge = self.ridge_factor * np.eye(self.k_vars)
         # np.diag returns read only array, need copy
         vif_ = np.diag(np.linalg.inv(self.mom + ridge)).copy()
-        # It is possible that singular matrix has slightly negative eigenvalues,
+        # It is possible that singular matrix has slightly negative eigenvalues
         # and large negative instead of positive vif
         mask = vif_ < 1e-13
         vif_[mask] = np.inf
@@ -133,7 +133,6 @@ class MultiCollinearity(object):
         """
         return cov2corr(self.mom_inv)
 
-
     @cache_readonly
     def eigenvalues(self):
         """eigenvalue of the correlation matrix
@@ -146,7 +145,6 @@ class MultiCollinearity(object):
         mask = (evals > -1e-14) & (evals < 0)
         evals[mask] = 0
         return evals
-
 
     @cache_readonly
     def condition_number(self):
@@ -170,13 +168,14 @@ class MultiCollinearitySequential(MultiCollinearity):
     Parameters
     ----------
     data : array_like
-        data with observations in rows and variables in columns. This is ignored
-        if moment_matrix is not None. Data can be of smaller than full rank.
+        data with observations in rows and variables in columns. This is
+        ignored if moment_matrix is not None. Data can be of smaller than full
+        rank.
     moment_matrix : None or ndarray
         Optional moment or correlation matrix to be used for the analysis.
         If it is provided then data is ignored.
-        The moment_matrix needs to be nonsingular because Cholesky decomposition
-        is used.
+        The moment_matrix needs to be nonsingular because Cholesky
+        decomposition is used.
     standardize : bool, default True
         If true and data are provided, then the data will be standardized to
         mean zero and standard deviation equal to one, which is equivalent to
@@ -216,8 +215,8 @@ class MultiCollinearitySequential(MultiCollinearity):
                 x = (x - x.mean(0)) / x.std(0)
                 if np.any(np.ptp(x, axis=0) == 0):
                     # TODO: change this? detect from xcorr, drop constant ?
-                    raise ValueError('If standardize is true, then data should '
-                                     'not include a constant')
+                    raise ValueError('If standardize is true, then data should'
+                                     ' not include a constant')
             triu = np.linalg.qr(x, mode='r')
         # Note: we only need elementwise squares, signs in qr are irrelevant
         self.k_vars = triu.shape[1]
@@ -244,8 +243,8 @@ class MultiCollinearitySequential(MultiCollinearity):
         """Partial correlation of one variable with all previous variables
 
         This corresponds to R^2 in a linear regression of one variable on all
-        other variables that are before in the sequence, including a constant if
-        standarize is true.
+        other variables that are before in the sequence, including a constant
+        if standarize is true.
 
         The interpretation as correlation assumes that standardize is true.
         TODO: rsquared should be scale invariant
@@ -265,8 +264,9 @@ def vif(data, standardize=True, moment_matrix=None, ridge_factor=1e-14):
     Parameters
     ----------
     data : array_like
-        data with observations in rows and variables in columns. This is ignored
-        if moment_matrix is not None. Data can be of smaller than full rank.
+        data with observations in rows and variables in columns. This is
+        ignored if moment_matrix is not None. Data can be of smaller than full
+        rank.
     moment_matrix : None or ndarray
         Optional moment or correlation matrix to be used for the analysis.
         If it is providedthen data is ignored.
@@ -278,8 +278,8 @@ def vif(data, standardize=True, moment_matrix=None, ridge_factor=1e-14):
         If true and data are provided, then the data will be standardized to
         mean zero and standard deviation equal to one, which is equivalent to
         using the correlation matrix. TODO: This might be replaced by separate
-        demean option. Variance inflation factor can be calculated for data that
-        is scaled but not demeaned. See Notes in class MultiCollinear
+        demean option. Variance inflation factor can be calculated for data
+        that is scaled but not demeaned. See Notes in class MultiCollinear
 
     Return
     ------
@@ -343,13 +343,13 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
     Parameters
     ----------
     data : array_like
-        data with observations in rows and variables in columns. This is ignored
-        if moment_matrix is not None. Data can be of smaller than full rank.
+        data with observations in rows and variables in columns. This is
+        ignored if moment_matrix is not None. Data can be of smaller than full
+        rank.
     moment_matrix : None or ndarray
         Optional moment or correlation matrix to be used for the analysis.
         If it is provided then data is ignored.
     standardize : bool, default True
-
         If true and data are provided, then the data will be standardized to
         mean zero and standard deviation equal to one, which is equivalent to
         using the correlation matrix.
@@ -362,7 +362,8 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
     Return
     ------
     keep : ndarray or DataFrame columns
-        Indices or column names that are still included after dropping variables
+        Indices or column names that are still included after dropping
+        variables
     results : None
         currently not used, place holder for additional results
 
@@ -384,19 +385,19 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
             xm = np.dot(x.T, x)
 
     # set up for recursive, itearative dropping of variables
-    #we reverse data sequence to drop later variables in case of ties for max
+    # we reverse data sequence to drop later variables in case of ties for max
     xidx = list(range(k_vars))[::-1]
     xc_remain = xm[::-1, ::-1]
     dropped = []
-    for i in range(k_vars):
+    for _ in range(k_vars):
         vif = np.abs(np.diag(np.linalg.inv(xc_remain)))
         max_idx = np.argmax(vif)
-        #print('dropping', max_idx, vif[max_idx], xidx[max_idx])
+        # print('dropping', max_idx, vif[max_idx], xidx[max_idx])
         if vif[max_idx] <= threshold:
             break
         else:
-            #keep = np.ones(len(xidx), bool)
-            #keep[max_idx] = False
+            # keep = np.ones(len(xidx), bool)
+            # keep[max_idx] = False
             keep = list(range(len(xidx)))
             keep.pop(max_idx)
             keep = np.asarray(keep)
@@ -419,7 +420,7 @@ def vif_ridge(corr_x, pen_factors, is_corr=True):
     Parameters
     ----------
     corr_x : array_like
-        correlation matrix if is_corr=True or original data if is_corr is False.
+        correlation matrix if is_corr=True or original data if is_corr is False
     pen_factors : iterable
         iterable of Ridge penalization factors
     is_corr : bool
@@ -493,4 +494,4 @@ def collinear_index(data, atol=1e-14, rtol=1e-13):
         return idx_collinear, idx_keep
     else:
         names = data.columns.values
-        names[idx_collinear], names[idx_keep]
+        return names[idx_collinear], names[idx_keep]

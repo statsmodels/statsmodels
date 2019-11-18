@@ -7,13 +7,13 @@ License: BSD-3
 """
 
 import numpy as np
-from numpy.testing import (assert_allclose, assert_array_less, assert_equal,
-                           assert_almost_equal)
-import statsmodels.stats.outliers_influence as smio
+from numpy.testing import (
+    assert_allclose, assert_array_less, assert_equal, assert_almost_equal)
+# import statsmodels.stats.outliers_influence as smio
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.multicollinearity import (vif, vif_selection, vif_ridge,
-                         MultiCollinearity, MultiCollinearitySequential,
-                         collinear_index)
+from statsmodels.stats.multicollinearity import (
+    vif, vif_selection, vif_ridge, MultiCollinearity,
+    MultiCollinearitySequential, collinear_index)
 
 
 def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e12):
@@ -27,7 +27,6 @@ def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e12):
 
 def _get_data(nobs=100, k_vars=4):
     np.random.seed(987536)
-    nobs = 100
     rho_coeff = np.linspace(0.5, 0.9, k_vars - 1)
     x = np.random.randn(nobs, k_vars - 1) * (1 - rho_coeff)
     x += rho_coeff * np.random.randn(nobs, 1)
@@ -36,11 +35,10 @@ def _get_data(nobs=100, k_vars=4):
 
 class CheckMuLtiCollinear(object):
 
-
     @classmethod
     def get_data(cls):
         nobs, k_vars = 100, 4
-        cls.x = x =  _get_data(nobs=nobs, k_vars=k_vars)
+        cls.x = x = _get_data(nobs=nobs, k_vars=k_vars)
         cls.xs = (x - x.mean(0)) / x.std(0)
         cls.xf = np.column_stack((np.ones(nobs), x))
         cls.check_pandas = False
@@ -48,8 +46,8 @@ class CheckMuLtiCollinear(object):
     def test_sequential(self):
         xf = self.xf
         x = self.x
-        ols_results = [OLS(xf[:,k], xf[:, :k]).fit()
-                           for k in range(1, xf.shape[1])]
+        ols_results = [OLS(xf[:, k], xf[:, :k]).fit()
+                       for k in range(1, xf.shape[1])]
         rsquared0 = np.array([res.rsquared for res in ols_results])
         vif0 = 1. / (1. - rsquared0)
 
@@ -58,18 +56,18 @@ class CheckMuLtiCollinear(object):
         assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-12,
                         atol=1e-15)
         # infs could be just large values because of floating point imprecision
-        #assert_allclose(mcoll.vif, vif0, rtol=1e-13)
-        #mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
-        #assert_allclose(mcoll.vif[~mask_inf], vif0[~mask_inf], rtol=1e-13)
-        #assert_array_less(1e30, mcoll.vif[mask_inf])
+        # assert_allclose(mcoll.vif, vif0, rtol=1e-13)
+        # mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
+        # assert_allclose(mcoll.vif[~mask_inf], vif0[~mask_inf], rtol=1e-13)
+        # assert_array_less(1e30, mcoll.vif[mask_inf])
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
         if not np.isinf(vif0).any():
             # The following requires nonsingular matrix because of Cholesky
             # check moment matrix as input
             x_dm = x - x.mean(0)  # standardize doesn't demean
-            mcoll2 = MultiCollinearitySequential(None,
-                                                 moment_matrix=x_dm.T.dot(x_dm))
+            mcoll2 = MultiCollinearitySequential(
+                        None, moment_matrix=x_dm.T.dot(x_dm))
             assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
                             rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
@@ -84,22 +82,22 @@ class CheckMuLtiCollinear(object):
 
         # Note we need a constant since x is not demeaned
         collinear_columns, keep_columns = collinear_index(xf)
-        not_coll = [i for i in range(xf.shape[1]) if not i in collinear_columns]
+        not_coll = [i for i in range(xf.shape[1])
+                    if i not in collinear_columns]
         assert_equal(not_coll, keep_columns)
         # I haven't checked what the equvalent threshold is exactly
         # subtracting 1 from index to ignore constant column
         assert_equal(collinear_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
 
-
     def test_multicoll(self):
         xf = np.asarray(self.xf)  # convert from pandas DataFrame, for OLS only
-        nobs, k_vars = self.xf.shape
+        k_vars = self.xf.shape[1]
         ols_results = []
 
         for k in range(1, k_vars):
             idx_k = list(range(k_vars))
             del idx_k[k]
-            ols_results.append(OLS(xf[:,k], xf[:, idx_k]).fit())
+            ols_results.append(OLS(xf[:, k], xf[:, idx_k]).fit())
 
         rsquared0 = np.array([res.rsquared for res in ols_results])
         vif0 = 1. / (1. - rsquared0)
@@ -194,6 +192,7 @@ class TestMultiCollinearPandas(CheckMuLtiCollinear):
         cls.x = pandas.DataFrame(cls.x, columns=cls.names)
         cls.check_pandas = True
 
+
 def test_vif_selection():
     x = _get_data(nobs=100, k_vars=15)
     idx, _ = vif_selection(x)
@@ -208,7 +207,6 @@ def test_vif_selection():
     idx, _ = vif_selection(x[:, ::-1], threshold=threshold)
     assert_equal(idx, np.arange(7, 14, dtype=int))
     assert_array_less(vif(x[:, x.shape[1] - np.array(idx) - 1]), threshold)
-
 
 
 def test_vif_ridge():
@@ -233,7 +231,7 @@ def test_vif_ridge():
     65 50.3 336.8 1.2 232
     66 56.6 353.9 4.5 242.9'''.split(), float).reshape(-1, 5)
 
-    #Obs    _RIDGE_     DOPROD     STOCK      CONSUM
+    # Obs    _RIDGE_     DOPROD     STOCK      CONSUM
 
     results_vif = np.array('''
       2     0.000     185.997    1.01891    186.110
@@ -270,12 +268,10 @@ def test_vif_ridge():
      95     0.800       0.130    0.30859      0.130
      98     0.900       0.121    0.27695      0.121
     101     1.000       0.113    0.24994      0.112'''.split(), float
-    ).reshape(-1, 5)
-
-
+    ).reshape(-1, 5)  # noqa
 
     import pandas as pd
-    columns='YEAR IMPORT DOPROD STOCK CONSUM'.lower().split()
+    columns = 'YEAR IMPORT DOPROD STOCK CONSUM'.lower().split()
     example = pd.DataFrame(dta, columns=columns)
 
     x = example['doprod stock consum'.split()].values
@@ -285,12 +281,10 @@ def test_vif_ridge():
     y = y[:11]
     xxs = np.corrcoef(x, rowvar=0)
 
-    res_vif = vif_ridge(xxs, [0.01])
-
-    pen_factors = results_vif[:,1]
+    pen_factors = results_vif[:, 1]
     res_vif = vif_ridge(xxs, pen_factors)
 
-    assert_almost_equal(res_vif, results_vif[:,2:], decimal=3)
+    assert_almost_equal(res_vif, results_vif[:, 2:], decimal=3)
 
     from statsmodels.tools.tools import add_constant
     exog = add_constant(x)
