@@ -104,8 +104,8 @@ def test_burg():
 
 
 def test_hannan_rissanen():
-    # Test for basic use of Yule-Walker estimation
-    endog = dta['infl'].iloc[:100]
+    # Test for basic use of Hannan-Rissanen estimation
+    endog = dta['infl'].diff().iloc[1:101]
 
     # ARMA(1, 1), no trend (since trend would imply GLS estimation)
     desired_p, _ = hannan_rissanen(

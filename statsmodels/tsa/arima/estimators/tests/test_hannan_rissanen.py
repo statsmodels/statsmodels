@@ -94,9 +94,9 @@ def test_nonconsecutive_lags():
     hannan_rissanen(endog, ar_order=0, ma_order=0)
 
 
-@pytest.mark.xfail(reason='TODO: improve check/conversions on datatype.')
-def test_overflow_error():
-    endog = np.arange(100)
-    # TODO: this currently raises an overflow error, because we aren't
-    # forcing a conversion from int to float
-    hannan_rissanen(endog, ma_order=1, demean=False)
+def test_unbiased_error():
+    # Test that we get the appropriate error when we specify unbiased=True
+    # but the second-stage yields non-stationary parameters.
+    endog = (np.arange(1000) * 1.0)
+    with pytest.raises(ValueError, match='Cannot perform third step'):
+        hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)

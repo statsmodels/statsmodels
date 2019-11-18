@@ -16,7 +16,7 @@ from statsmodels.tsa.arima.params import SARIMAXParams
 
 
 def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
-                    initial_ar_order=None, unbiased=True):
+                    initial_ar_order=None, unbiased=None):
     """
     Estimate ARMA parameters using Hannan-Rissanen procedure.
 
@@ -35,7 +35,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         Order of long autoregressive process used for initial computation of
         residuals.
     unbiased: bool, optional
-        Whether or not to apply the bias correction step. Default is True.
+        Whether or not to apply the bias correction step. Default is True if
+        the estimated coefficients from the previous step imply a stationary
+        and invertible process and False otherwise.
 
     Returns
     -------
@@ -54,7 +56,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
     1. Fit a large-order AR model via Yule-Walker to estimate residuals
     2. Compute AR and MA estimates via least squares
-    3. (Unless `unbiased=False`) Perform bias correction
+    3. (Unless the estimated coefficients from step (2) are non-stationary /
+       non-invertible or `unbiased=False`) Perform bias correction
 
     The order used for the AR model in the first step may be given as an
     argument. If it is not, we compute it as suggested by [2]_.
@@ -68,7 +71,14 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     possible. See test_hannan_rissanen::test_brockwell_davis_example_517 for
     an example of how to compute this variance manually.
 
-    This procedure assumes that the series is stationary.
+    This procedure assumes that the series is stationary, but if this is not
+    true, it is still possible that this procedure will return parameters that
+    imply a non-stationary / non-invertible process.
+
+    Note that the third stage will only be applied if the parameters from the
+    second stage imply a stationary / invertible model. If `unbiased=True` is
+    given, then non-stationary / non-invertible parameters in the second stage
+    will throw an exception.
 
     References
     ----------
@@ -138,44 +148,55 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         p.sigma2 = res.scale
 
         # Step 3: bias correction (if requested)
-        if unbiased:
-            Z = np.zeros_like(endog)
-            V = np.zeros_like(endog)
-            W = np.zeros_like(endog)
+        if unbiased is True or unbiased is None:
+            if p.is_stationary and p.is_invertible:
+                Z = np.zeros_like(endog)
+                V = np.zeros_like(endog)
+                W = np.zeros_like(endog)
 
-            ar_coef = p.ar_poly.coef
-            ma_coef = p.ma_poly.coef
+                ar_coef = p.ar_poly.coef
+                ma_coef = p.ma_poly.coef
 
-            for t in range(nobs):
-                if t >= max(max_ar_order, max_ma_order):
-                    # Note: in the case of non-consecutive lag orders, the
-                    # polynomials have the appropriate zeros so we don't need
-                    # to subset `endog[t - max_ar_order:t]` or
-                    # Z[t - max_ma_order:t]
-                    tmp_ar = np.dot(
-                        -ar_coef[1:], endog[t - max_ar_order:t][::-1])
-                    tmp_ma = np.dot(ma_coef[1:], Z[t - max_ma_order:t][::-1])
-                    Z[t] = endog[t] - tmp_ar - tmp_ma
+                for t in range(nobs):
+                    if t >= max(max_ar_order, max_ma_order):
+                        # Note: in the case of non-consecutive lag orders, the
+                        # polynomials have the appropriate zeros so we don't
+                        # need to subset `endog[t - max_ar_order:t]` or
+                        # Z[t - max_ma_order:t]
+                        tmp_ar = np.dot(
+                            -ar_coef[1:], endog[t - max_ar_order:t][::-1])
+                        tmp_ma = np.dot(ma_coef[1:],
+                                        Z[t - max_ma_order:t][::-1])
+                        Z[t] = endog[t] - tmp_ar - tmp_ma
 
-            V = lfilter([1], ar_coef, Z)
-            W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
+                V = lfilter([1], ar_coef, Z)
+                W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
 
-            lagged_V = lagmat(V, max_ar_order, trim='both')
-            lagged_W = lagmat(W, max_ma_order, trim='both')
+                lagged_V = lagmat(V, max_ar_order, trim='both')
+                lagged_W = lagmat(W, max_ma_order, trim='both')
 
-            exog = np.c_[
-                lagged_V[max(max_ma_order - max_ar_order, 0):, ar_ix],
-                lagged_W[max(max_ar_order - max_ma_order, 0):, ma_ix]]
+                exog = np.c_[
+                    lagged_V[max(max_ma_order - max_ar_order, 0):, ar_ix],
+                    lagged_W[max(max_ar_order - max_ma_order, 0):, ma_ix]]
 
-            mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
-            res_unbias = mod_unbias.fit()
+                mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
+                res_unbias = mod_unbias.fit()
 
-            p.ar_params = p.ar_params + res_unbias.params[:spec.k_ar_params]
-            p.ma_params = p.ma_params + res_unbias.params[spec.k_ar_params:]
+                p.ar_params = (
+                    p.ar_params + res_unbias.params[:spec.k_ar_params])
+                p.ma_params = (
+                    p.ma_params + res_unbias.params[spec.k_ar_params:])
 
-            # Recompute sigma2
-            resid = mod.endog - mod.exog.dot(np.r_[p.ar_params, p.ma_params])
-            p.sigma2 = np.inner(resid, resid) / len(resid)
+                # Recompute sigma2
+                resid = mod.endog - mod.exog.dot(
+                    np.r_[p.ar_params, p.ma_params])
+                p.sigma2 = np.inner(resid, resid) / len(resid)
+            elif unbiased is True:
+                raise ValueError('Cannot perform third step of Hannan-Rissanen'
+                                 ' estimation to remove paramater bias,'
+                                 ' because parameters estimated from the'
+                                 ' second step are non-stationary or'
+                                 ' non-invertible')
 
     # TODO: Gomez and Maravall (2001) or Gomez (1998)
     # propose one more step here to further improve MA estimates
