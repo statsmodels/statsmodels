@@ -965,7 +965,7 @@ class KalmanFilter(Representation):
         kfilter = self._filter(**kwargs)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
-        if not self.memory_no_likelihood:
+        if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
             loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
         else:
             loglike = np.sum(kfilter.loglikelihood)
@@ -982,7 +982,7 @@ class KalmanFilter(Representation):
             # associated with a singular forecast error covariance matrix
             nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
 
-            if not self.memory_no_likelihood:
+            if not (kwargs['conserve_memory'] & MEMORY_NO_LIKELIHOOD):
                 scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
             else:
                 scale = kfilter.scale[0] / nobs_k_endog
