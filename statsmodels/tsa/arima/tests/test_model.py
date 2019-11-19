@@ -197,3 +197,42 @@ def test_low_memory():
     assert_(res2.predicted_state is None)
     assert_(res2.filtered_state is None)
     assert_(res2.smoothed_state is None)
+
+
+def check_cloned(mod, endog, exog=None):
+    mod_c = mod.clone(endog, exog=exog)
+
+    assert_allclose(mod.nobs, mod_c.nobs)
+    assert_(mod._index.equals(mod_c._index))
+    assert_equal(mod.k_params, mod_c.k_params)
+    assert_allclose(mod.start_params, mod_c.start_params)
+    p = mod.start_params
+    assert_allclose(mod.loglike(p), mod_c.loglike(p))
+    assert_allclose(mod.concentrate_scale, mod_c.concentrate_scale)
+
+
+def test_clone():
+    endog = dta['infl'].iloc[:50]
+    exog = np.arange(endog.shape[0])
+
+    # Basic model
+    check_cloned(ARIMA(endog), endog)
+    check_cloned(ARIMA(endog.values), endog.values)
+    # With trends
+    check_cloned(ARIMA(endog, trend='c'), endog)
+    check_cloned(ARIMA(endog, trend='t'), endog)
+    check_cloned(ARIMA(endog, trend='ct'), endog)
+    # With exog
+    check_cloned(ARIMA(endog, exog=exog), endog, exog=exog)
+    check_cloned(ARIMA(endog, exog=exog, trend='c'), endog, exog=exog)
+    # Concentrated scale
+    check_cloned(ARIMA(endog, exog=exog, trend='c', concentrate_scale=True),
+                 endog, exog=exog)
+
+    # Higher order (use a different dataset to avoid warnings about
+    # non-invertible start params)
+    endog = dta['realgdp'].iloc[:100]
+    exog = np.arange(endog.shape[0])
+    check_cloned(ARIMA(endog, order=(2, 1, 1), seasonal_order=(1, 1, 2, 4),
+                       exog=exog, trend='c', concentrate_scale=True),
+                 endog, exog=exog)
