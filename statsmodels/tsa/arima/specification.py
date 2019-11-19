@@ -214,13 +214,14 @@ class SARIMAXSpecification(object):
                  seasonal_ar_order=None, seasonal_diff=None,
                  seasonal_ma_order=None, seasonal_periods=None, trend=None,
                  enforce_stationarity=None, enforce_invertibility=None,
-                 concentrate_scale=None, dates=None, freq=None,
+                 concentrate_scale=None, trend_offset=1, dates=None, freq=None,
                  missing='none'):
 
         # Basic parameters
         self.enforce_stationarity = enforce_stationarity
         self.enforce_invertibility = enforce_invertibility
         self.concentrate_scale = concentrate_scale
+        self.trend_offset = trend_offset
 
         # Validate that we were not given conflicting specifications
         has_order = order is not None
@@ -403,7 +404,7 @@ class SARIMAXSpecification(object):
         # Add trend data into exog
         nobs = len(endog) if exog is None else len(exog)
         if self.trend_order is not None:
-            trend_data = self.construct_trend_data(nobs)
+            trend_data = self.construct_trend_data(nobs, trend_offset)
             if exog is None:
                 exog = trend_data
             elif _is_using_pandas(exog, None):

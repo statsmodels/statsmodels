@@ -104,8 +104,8 @@ class ARIMA(sarimax.SARIMAX):
     def __init__(self, endog, exog=None, order=(0, 0, 0),
                  seasonal_order=(0, 0, 0, 0), trend=None,
                  enforce_stationarity=True, enforce_invertibility=True,
-                 concentrate_scale=False, dates=None, freq=None,
-                 missing='none'):
+                 concentrate_scale=False, trend_offset=1, dates=None,
+                 freq=None, missing='none'):
         # Default for trend
         # 'c' if there is no integration and 'n' otherwise
         # TODO: if trend='c', then we could alternatively use `demean=True` in
@@ -134,11 +134,19 @@ class ARIMA(sarimax.SARIMAX):
         # standardizes the trend to always be part of exog, while the base
         # SARIMAX class puts it in the transition equation.
         super(ARIMA, self).__init__(
-            endog, exog, order=order, seasonal_order=seasonal_order,
+            endog, exog, trend=None, order=order,
+            seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
             missing=missing)
+        self.trend = trend
+
+        # Remove some init kwargs that aren't used in this model
+        unused = ['measurement_error', 'time_varying_regression',
+                  'mle_regression', 'simple_differencing',
+                  'hamilton_representation']
+        self._init_keys = [key for key in self._init_keys if key not in unused]
 
     @property
     def _res_classes(self):
