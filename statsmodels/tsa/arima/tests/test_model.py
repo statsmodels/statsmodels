@@ -236,3 +236,14 @@ def test_clone():
     check_cloned(ARIMA(endog, order=(2, 1, 1), seasonal_order=(1, 1, 2, 4),
                        exog=exog, trend='c', concentrate_scale=True),
                  endog, exog=exog)
+
+
+def test_append():
+    endog = dta['infl'].iloc[:100].values
+    mod = ARIMA(endog[:50], trend='c')
+    res = mod.fit()
+    res_e = res.append(endog[50:])
+    mod2 = ARIMA(endog)
+    res2 = mod2.filter(res_e.params)
+
+    assert_allclose(res2.llf, res_e.llf)
