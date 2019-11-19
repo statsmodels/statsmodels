@@ -2105,7 +2105,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res.cov_type = kwargs['custom_cov_type']
             res.cov_params_default = kwargs['custom_cov_params']
             res.cov_kwds['description'] = kwargs['custom_description']
-            res._rank = np.linalg.matrix_rank(res.cov_params_default)
+            if len(self.fixed_params) > 0:
+                mask = np.ix_(self._free_params_index, self._free_params_index)
+            else:
+                mask = np.s_[...]
+            res._rank = np.linalg.matrix_rank(res.cov_params_default[mask])
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
@@ -3088,9 +3092,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                        % self.cov_kwds['description'])}
 
             if self.smoother_results is not None:
-                res = mod.smooth(self.params, **fit_kwargs)
+                func = mod.smooth
             else:
-                res = mod.filter(self.params, **fit_kwargs)
+                func = mod.filter
+
+            if self._has_fixed_params:
+                with mod.fix_params(self._fixed_params):
+                    fit_kwargs.setdefault('includes_fixed', True)
+                    res = func(self.params, **fit_kwargs)
+            else:
+                res = func(self.params, **fit_kwargs)
 
         return res
 
@@ -3180,6 +3191,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         new_endog = concat([self.model.data.orig_endog, endog], axis=0)
+        if isinstance(new_endog, (pd.DataFrame, pd.Series)):
+            start = self.model._index[0]
+            end = len(new_endog) - 1
+            _, _, _, new_index = self.model._get_prediction_index(start, end)
+            new_endog.index = new_index
         if exog is not None:
             _, exog = prepare_exog(exog)
             new_exog = concat([self.model.data.orig_exog, exog], axis=0)
