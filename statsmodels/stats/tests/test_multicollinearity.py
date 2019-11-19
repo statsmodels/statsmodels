@@ -132,7 +132,7 @@ class CheckMuLtiCollinear(object):
         mcoll2 = MultiCollinearity(None, corr, standardize=False)
         assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
                         rtol=1e-13)
-        assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
 
         corr = np.corrcoef(self.x, rowvar=False)
         vif1 = vif(None, moment_matrix=corr)

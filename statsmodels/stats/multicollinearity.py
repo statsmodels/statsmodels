@@ -51,6 +51,8 @@ class MultiCollinearity(object):
     dummy set. Using VIF with demeaned data will show that the dummy set is
     perfectly collinear (up to floating point precision).
 
+    This class does not return pandas object if data is a pandas object
+
     """
 
     def __init__(self, data, moment_matrix=None, standardize=True,
@@ -76,19 +78,27 @@ class MultiCollinearity(object):
                 if (np.diag(xm) != 1).any():
                     xstd = np.sqrt(np.diag(xm))
                     xm = xm / np.outer(xstd, xstd)
+
+            self._init_moment(xm)
         else:
             if standardize:
-                xm = np.corrcoef(x, rowvar=0)
+                x = (x - x.mean(0)) / x.std(0)
                 if np.any(np.ptp(x, axis=0) == 0):
                     # TODO: change this? detect from xcorr, drop constant ?
                     raise ValueError('If standardize is true, then data should'
                                      ' not include a constant')
-            else:
-                xm = np.dot(x.T, x) / float(x.shape[0])
 
-        self.k_vars = xm.shape[1]
-        self.mom = xm
+            self._init_data(x)
+
+        self.k_vars = self.mom.shape[1]
         self.ridge_factor = ridge_factor
+
+    def _init_moment(self, xm):
+        self.mom = xm
+
+    def _init_data(self, x):
+        xm = np.dot(x.T, x) / float(x.shape[0])
+        self.mom = xm
 
     @cache_readonly
     def mom_inv(self):
@@ -201,39 +211,19 @@ class MultiCollinearitySequential(MultiCollinearity):
     """
 
     def __init__(self, data, moment_matrix=None, standardize=True):
+        super(MultiCollinearitySequential, self).__init__(
+            data, moment_matrix=moment_matrix, standardize=standardize)
 
-        if hasattr(data, 'columns'):
-            self.columns = data.columns
-        else:
-            self.columns = None
+        self.k_vars = self.triu.shape[1]  # innocent override of super
+        self.triu2 = self.triu**2
 
-        if data is not None:
-            x = np.asarray(data)
+    def _init_moment(self, xm):
+        self.mom = xm
+        self.triu = np.linalg.cholesky(xm).T
 
-        if moment_matrix is not None:
-            xm = np.asarray(moment_matrix)
-            if standardize:
-                # check if we have correlation matrix,
-                # we cannot demean but we can scale
-                # (We could demean if const is included in uncentred moment
-                #  matrix)
-                if (np.diag(xm) != 1).any():
-                    xstd = np.sqrt(np.diag(xm))
-                    xm = xm / np.outer(xstd, xstd)
-
-            triu = np.linalg.cholesky(xm).T
-
-        else:
-            if standardize:
-                x = (x - x.mean(0)) / x.std(0)
-                if np.any(np.ptp(x, axis=0) == 0):
-                    # TODO: change this? detect from xcorr, drop constant ?
-                    raise ValueError('If standardize is true, then data should'
-                                     ' not include a constant')
-            triu = np.linalg.qr(x, mode='r')
-        # Note: we only need elementwise squares, signs in qr are irrelevant
-        self.k_vars = triu.shape[1]
-        self.triu2 = triu**2
+    def _init_data(self, x):
+        self.triu = triu = np.linalg.qr(x, mode='r')
+        self.mom = triu.T.dot(triu)
 
     @cache_readonly
     def vif(self):
@@ -301,33 +291,11 @@ def vif(data, standardize=True, moment_matrix=None, ridge_factor=1e-14):
         a `columns` attribute as provided by a pandas DataFrame.
 
     """
-    # most parts are duplicate code, copied from vif_selection
-    x = np.asarray(data)
-    # TODO: use pandas corrcoef below to have nan handling ?
 
-    if moment_matrix is not None:
-        xm = np.asarray(moment_matrix)
-        if standardize:
-            # check if we have correlation matrix,
-            # we cannot demean but we can scale
-            # (We could demean if const is included in uncentred moment matrix)
-            if (np.diag(xm) != 1).any():
-                xstd = np.sqrt(np.diag(xm))
-                xm /= np.outer(xstd, xstd)
-    else:
-        if standardize:
-            if np.any(np.ptp(x, axis=0) == 0):
-                # TODO: change this? detect from xcorr, drop constant ?
-                raise ValueError('If standardize is true, then data should ' +
-                                 'not include a constant')
-            xm = np.corrcoef(x, rowvar=0)
-        else:
-            xm = np.dot(x.T, x) / float(x.shape[0])
-
-    k_vars = xm.shape[1]
-    ridge = ridge_factor * np.eye(k_vars)
-    vif_ = np.abs(np.diag(np.linalg.inv(xm + ridge)))
-
+    mc = MultiCollinearity(data, moment_matrix=moment_matrix,
+                           standardize=standardize,
+                           ridge_factor=ridge_factor)
+    vif_ = mc.vif
     if hasattr(data, 'columns'):
         import pandas
         return pandas.Series(vif_, index=data.columns)
