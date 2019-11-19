@@ -32,9 +32,10 @@ class MultiCollinearity(object):
     standardize : bool, default True
         If true and data are provided, then the data will be standardized to
         mean zero and standard deviation equal to one, which is equivalent to
-        using the correlation matrix. TODO: This might be replaced by separate
-        demean option. Variance inflation factor can be calculated for data
-        that is scaled but not demeaned.
+        using the correlation matrix.
+        TODO: This might be replaced by separate demean option. Variance
+        inflation factor can be calculated for data that is scaled but not
+        demeaned.
         See Notes
 
     Notes
@@ -49,7 +50,6 @@ class MultiCollinearity(object):
     design matrix but no constant, that is the constant is implicit in the full
     dummy set. Using VIF with demeaned data will show that the dummy set is
     perfectly collinear (up to floating point precision).
-
 
     """
 
@@ -94,13 +94,27 @@ class MultiCollinearity(object):
     def mom_inv(self):
         return np.linalg.inv(self.mom)
 
+    def get_vif(self, ridge_factor=None):
+        if ridge_factor is None:
+            ridge_factor = self.ridge_factor
+
+        if ridge_factor == 0:
+            mmi = self.mom_inv
+        else:
+            ridge = self.ridge_factor * np.eye(self.k_vars)
+            mmi = np.linalg.inv(self.mom + ridge)
+
+        # np.diag returns read only array, need copy
+        vif_ = np.diag(mmi).copy()
+        return vif_
+
     @cache_readonly
     def vif(self):
         """Variance inflation factor based on moment or correlation matrix.
+
+        cached attribute
         """
-        ridge = self.ridge_factor * np.eye(self.k_vars)
-        # np.diag returns read only array, need copy
-        vif_ = np.diag(np.linalg.inv(self.mom + ridge)).copy()
+        vif_ = self.get_vif()
         # It is possible that singular matrix has slightly negative eigenvalues
         # and large negative instead of positive vif
         mask = vif_ < 1e-13
@@ -119,10 +133,9 @@ class MultiCollinearity(object):
         not cached
 
         TODO: rsquared should be scale invariant
-        TODO: we might want to use name `partial_corr` for partial correlation
-        of pairs given all others.
         """
-        return 1. - 1. / self.vif
+        r2p = 1. - 1. / self.vif
+        return r2p
 
     @property
     def corr_partial(self):
@@ -335,7 +348,6 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
     TODO: replace inv by sweep algorithm,
     question: how do we start sweep in backwards selection?
 
-
     Note: This function tries to remove the last variable in case of ties in
     vif. However, which variable of those that have theoretically equal vif
     may be random because of floating point imprecision.
@@ -368,13 +380,13 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
         currently not used, place holder for additional results
 
     """
-    x = np.asarray(data)
-    k_vars = x.shape[1]
+
     # TODO: use pandas corrcoef below to have nan handling ?
 
     if moment_matrix is not None:
         xm = np.asarray(moment_matrix, copy=True)
     else:
+        x = np.asarray(data)
         if standardize:
             xm = np.corrcoef(x, rowvar=0)
             if np.any(np.ptp(x, axis=0) == 0):
@@ -384,6 +396,7 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
         else:
             xm = np.dot(x.T, x)
 
+    k_vars = xm.shape[1]
     # set up for recursive, itearative dropping of variables
     # we reverse data sequence to drop later variables in case of ties for max
     xidx = list(range(k_vars))[::-1]
