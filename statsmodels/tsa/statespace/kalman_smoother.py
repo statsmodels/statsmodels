@@ -122,6 +122,16 @@ class KalmanSmoother(KalmanFilter):
         self.set_smoother_output(**kwargs)
         self.set_smooth_method(**kwargs)
 
+    def _clone_kwargs(self, endog, **kwargs):
+        # See Representation._clone_kwargs for docstring
+        kwargs = super(KalmanSmoother, self)._clone_kwargs(endog, **kwargs)
+
+        # Get defaults for options
+        kwargs.setdefault('smoother_output', self.smoother_output)
+        kwargs.setdefault('smooth_method', self.smooth_method)
+
+        return kwargs
+
     @property
     def _kalman_smoother(self):
         prefix = self.prefix

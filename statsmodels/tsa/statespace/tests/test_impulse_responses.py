@@ -7,11 +7,12 @@ License: Simplified-BSD
 import warnings
 
 import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_, assert_allclose
 
 from statsmodels.tools.sm_exceptions import EstimationWarning
-from statsmodels.tsa.statespace import (sarimax, structural, varmax,
+from statsmodels.tsa.statespace import (mlemodel, sarimax, structural, varmax,
                                         dynamic_factor)
 
 
@@ -307,3 +308,360 @@ def test_dynamic_factor():
                                        error_order=2, error_var=True,
                                        enforce_stationarity=False)
     mod.impulse_responses(mod.start_params, steps)
+
+
+def test_time_varying_ssm():
+    # Create an ad-hoc time-varying model
+    mod = sarimax.SARIMAX([0] * 11, order=(1, 0, 0))
+    mod.update([0.5, 1.0])
+    T = np.zeros((1, 1, 11))
+    T[..., :5] = 0.5
+    T[..., 5:] = 0.2
+    mod['transition'] = T
+
+    irfs = mod.ssm.impulse_responses()
+    desired = np.cumprod(np.r_[1, [0.5] * 4, [0.2] * 5]).reshape(10, 1)
+    assert_allclose(irfs, desired)
+
+
+class TVSS(mlemodel.MLEModel):
+    """
+    Time-varying state space model for testing
+
+    This creates a state space model with randomly generated time-varying
+    system matrices. When used in a test, that test should use
+    `reset_randomstate` to ensure consistent test runs.
+    """
+    def __init__(self, endog):
+        k_states = 2
+        k_posdef = 2
+        super(TVSS, self).__init__(endog, k_states=k_states, k_posdef=k_posdef,
+                                   initialization='diffuse')
+
+        self['obs_intercept'] = np.random.normal(
+            size=(self.k_endog, self.nobs))
+        self['design'] = np.random.normal(
+            size=(self.k_endog, self.k_states, self.nobs))
+        self['transition'] = np.random.normal(
+            size=(self.k_states, self.k_states, self.nobs))
+        self['selection'] = np.random.normal(
+            size=(self.k_states, self.ssm.k_posdef, self.nobs))
+
+        # Need to make sure the covariances are positive definite
+        H05 = np.random.normal(size=(self.k_endog, self.k_endog, self.nobs))
+        Q05 = np.random.normal(
+            size=(self.ssm.k_posdef, self.ssm.k_posdef, self.nobs))
+        H = np.zeros_like(H05)
+        Q = np.zeros_like(Q05)
+        for t in range(self.nobs):
+            H[..., t] = np.dot(H05[..., t], H05[..., t].T)
+            Q[..., t] = np.dot(Q05[..., t], Q05[..., t].T)
+        self['obs_cov'] = H
+        self['state_cov'] = Q
+
+
+def test_time_varying_in_sample(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+
+    # Compute the max number of in-sample IRFs
+    irfs = mod.impulse_responses([], steps=mod.nobs - 1)
+    # Compute the same thing, but now with explicit anchor argument
+    irfs_anchor = mod.impulse_responses([], steps=mod.nobs - 1, anchor=0)
+
+    # Cumulative IRFs
+    cirfs = mod.impulse_responses([], steps=mod.nobs - 1, cumulative=True)
+    # Orthogonalized IRFs
+    oirfs = mod.impulse_responses([], steps=mod.nobs - 1, orthogonalized=True)
+    # Cumulative, orthogonalized IRFs
+    coirfs = mod.impulse_responses([], steps=mod.nobs - 1, cumulative=True,
+                                   orthogonalized=True)
+
+    # Compute IRFs manually
+    Z = mod['design']
+    T = mod['transition']
+    R = mod['selection']
+    Q = mod['state_cov', ..., 0]
+    L = np.linalg.cholesky(Q)
+
+    desired_irfs = np.zeros((mod.nobs - 1, 2)) * np.nan
+    desired_oirfs = np.zeros((mod.nobs - 1, 2)) * np.nan
+    tmp = R[..., 0]
+    for i in range(1, mod.nobs):
+        desired_irfs[i - 1] = Z[:, :, i].dot(tmp)[:, 0]
+        desired_oirfs[i - 1] = Z[:, :, i].dot(tmp).dot(L)[:, 0]
+        tmp = T[:, :, i].dot(tmp)
+
+    assert_allclose(irfs, desired_irfs)
+    assert_allclose(irfs_anchor, desired_irfs)
+
+    assert_allclose(cirfs, np.cumsum(desired_irfs, axis=0))
+    assert_allclose(oirfs, desired_oirfs)
+    assert_allclose(coirfs, np.cumsum(desired_oirfs, axis=0))
+
+
+def test_time_varying_out_of_sample(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+
+    # Compute all in-sample IRFs and also one out-of-sample IRF
+    new_Z = np.random.normal(size=mod['design', :, :, -1].shape)
+    new_T = np.random.normal(size=mod['transition', :, :, -1].shape)
+    irfs = mod.impulse_responses(
+        [], steps=mod.nobs, design=new_Z[:, :, None],
+        transition=new_T[:, :, None])
+    # Compute the same thing, but now with explicit anchor argument
+    irfs_anchor = mod.impulse_responses(
+        [], steps=mod.nobs, anchor=0, design=new_Z[:, :, None],
+        transition=new_T[:, :, None])
+
+    # Cumulative IRFs
+    cirfs = mod.impulse_responses([], steps=mod.nobs, design=new_Z[:, :, None],
+                                  transition=new_T[:, :, None],
+                                  cumulative=True)
+    # Orthogonalized IRFs
+    oirfs = mod.impulse_responses([], steps=mod.nobs, design=new_Z[:, :, None],
+                                  transition=new_T[:, :, None],
+                                  orthogonalized=True)
+    # Cumulative, orthogonalized IRFs
+    coirfs = mod.impulse_responses(
+        [], steps=mod.nobs, design=new_Z[:, :, None],
+        transition=new_T[:, :, None], cumulative=True, orthogonalized=True)
+
+    # Compute IRFs manually
+    Z = mod['design']
+    T = mod['transition']
+    R = mod['selection']
+    Q = mod['state_cov', ..., 0]
+    L = np.linalg.cholesky(Q)
+
+    desired_irfs = np.zeros((mod.nobs, 2)) * np.nan
+    desired_oirfs = np.zeros((mod.nobs, 2)) * np.nan
+    tmp = R[..., 0]
+    for i in range(1, mod.nobs):
+        desired_irfs[i - 1] = Z[:, :, i].dot(tmp)[:, 0]
+        desired_oirfs[i - 1] = Z[:, :, i].dot(tmp).dot(L)[:, 0]
+        tmp = T[:, :, i].dot(tmp)
+    desired_irfs[mod.nobs - 1] = new_Z.dot(tmp)[:, 0]
+    desired_oirfs[mod.nobs - 1] = new_Z.dot(tmp).dot(L)[:, 0]
+
+    assert_allclose(irfs, desired_irfs)
+    assert_allclose(irfs_anchor, desired_irfs)
+
+    assert_allclose(cirfs, np.cumsum(desired_irfs, axis=0))
+    assert_allclose(oirfs, desired_oirfs)
+    assert_allclose(coirfs, np.cumsum(desired_oirfs, axis=0))
+
+
+def test_time_varying_in_sample_anchored(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+
+    # Compute the max number of in-sample IRFs
+    anchor = 2
+    irfs = mod.impulse_responses(
+        [], steps=mod.nobs - 1 - anchor, anchor=anchor)
+
+    # Cumulative IRFs
+    cirfs = mod.impulse_responses(
+        [], steps=mod.nobs - 1 - anchor, anchor=anchor,
+        cumulative=True)
+    # Orthogonalized IRFs
+    oirfs = mod.impulse_responses(
+        [], steps=mod.nobs - 1 - anchor, anchor=anchor,
+        orthogonalized=True)
+    # Cumulative, orthogonalized IRFs
+    coirfs = mod.impulse_responses(
+        [], steps=mod.nobs - 1 - anchor, anchor=anchor,
+        cumulative=True, orthogonalized=True)
+
+    # Compute IRFs manually
+    Z = mod['design']
+    T = mod['transition']
+    R = mod['selection']
+    Q = mod['state_cov', ..., anchor]
+    L = np.linalg.cholesky(Q)
+
+    desired_irfs = np.zeros((mod.nobs - anchor - 1, 2)) * np.nan
+    desired_oirfs = np.zeros((mod.nobs - anchor - 1, 2)) * np.nan
+    tmp = R[..., anchor]
+    for i in range(1, mod.nobs - anchor):
+        desired_irfs[i - 1] = Z[:, :, i + anchor].dot(tmp)[:, 0]
+        desired_oirfs[i - 1] = Z[:, :, i + anchor].dot(tmp).dot(L)[:, 0]
+        tmp = T[:, :, i + anchor].dot(tmp)
+
+    assert_allclose(irfs, desired_irfs)
+
+    assert_allclose(cirfs, np.cumsum(desired_irfs, axis=0))
+    assert_allclose(oirfs, desired_oirfs)
+    assert_allclose(coirfs, np.cumsum(desired_oirfs, axis=0))
+
+
+def test_time_varying_out_of_sample_anchored(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+
+    # Compute all in-sample IRFs and also one out-of-sample IRF
+    anchor = 2
+
+    new_Z = mod['design', :, :, -1]
+    new_T = mod['transition', :, :, -1]
+    irfs = mod.impulse_responses(
+        [], steps=mod.nobs - anchor, anchor=anchor, design=new_Z[:, :, None],
+        transition=new_T[:, :, None])
+
+    # Cumulative IRFs
+    cirfs = mod.impulse_responses(
+        [], steps=mod.nobs - anchor, anchor=anchor,
+        design=new_Z[:, :, None], transition=new_T[:, :, None],
+        cumulative=True)
+    # Orthogonalized IRFs
+    oirfs = mod.impulse_responses(
+        [], steps=mod.nobs - anchor, anchor=anchor,
+        design=new_Z[:, :, None], transition=new_T[:, :, None],
+        orthogonalized=True)
+    # Cumulative, orthogonalized IRFs
+    coirfs = mod.impulse_responses(
+        [], steps=mod.nobs - anchor, anchor=anchor,
+        design=new_Z[:, :, None], transition=new_T[:, :, None],
+        cumulative=True, orthogonalized=True)
+
+    # Compute IRFs manually
+    Z = mod['design']
+    T = mod['transition']
+    R = mod['selection']
+    Q = mod['state_cov', ..., anchor]
+    L = np.linalg.cholesky(Q)
+
+    desired_irfs = np.zeros((mod.nobs - anchor, 2)) * np.nan
+    desired_oirfs = np.zeros((mod.nobs - anchor, 2)) * np.nan
+    tmp = R[..., anchor]
+    for i in range(1, mod.nobs - anchor):
+        desired_irfs[i - 1] = Z[:, :, i + anchor].dot(tmp)[:, 0]
+        desired_oirfs[i - 1] = Z[:, :, i + anchor].dot(tmp).dot(L)[:, 0]
+        tmp = T[:, :, i + anchor].dot(tmp)
+    desired_irfs[mod.nobs - anchor - 1] = new_Z.dot(tmp)[:, 0]
+    desired_oirfs[mod.nobs - anchor - 1] = new_Z.dot(tmp).dot(L)[:, 0]
+
+    assert_allclose(irfs, desired_irfs)
+
+    assert_allclose(cirfs, np.cumsum(desired_irfs, axis=0))
+    assert_allclose(oirfs, desired_oirfs)
+    assert_allclose(coirfs, np.cumsum(desired_oirfs, axis=0))
+
+
+def test_time_varying_out_of_sample_anchored_end(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+
+    # Cannot compute the any in-sample IRFs when anchoring at the end
+    with pytest.raises(ValueError, match='Model has time-varying'):
+        mod.impulse_responses([], steps=2, anchor='end')
+
+    # Compute two out-of-sample IRFs
+    new_Z = np.random.normal(size=mod['design', :, :, -2:].shape)
+    new_T = np.random.normal(size=mod['transition', :, :, -2:].shape)
+    irfs = mod.impulse_responses([], steps=2, anchor='end',
+                                 design=new_Z, transition=new_T)
+
+    # Cumulative IRFs
+    cirfs = mod.impulse_responses(
+        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        cumulative=True)
+    # Orthogonalized IRFs
+    oirfs = mod.impulse_responses(
+        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        orthogonalized=True)
+    # Cumulative, orthogonalized IRFs
+    coirfs = mod.impulse_responses(
+        [], steps=2, anchor='end', design=new_Z, transition=new_T,
+        cumulative=True, orthogonalized=True)
+
+    # Compute IRFs manually
+    R = mod['selection']
+    Q = mod['state_cov', ..., -1]
+    L = np.linalg.cholesky(Q)
+
+    desired_irfs = np.zeros((2, 2)) * np.nan
+    desired_oirfs = np.zeros((2, 2)) * np.nan
+    # desired[0] = 0
+    # Z_{T+1} R_T
+    tmp = R[..., -1]
+    desired_irfs[0] = new_Z[:, :, 0].dot(tmp)[:, 0]
+    desired_oirfs[0] = new_Z[:, :, 0].dot(tmp).dot(L)[:, 0]
+    # T_{T+1} R_T
+    tmp = new_T[..., 0].dot(tmp)
+    # Z_{T+2} T_{T+1} R_T
+    desired_irfs[1] = new_Z[:, :, 1].dot(tmp)[:, 0]
+    desired_oirfs[1] = new_Z[:, :, 1].dot(tmp).dot(L)[:, 0]
+
+    assert_allclose(irfs, desired_irfs)
+
+    assert_allclose(cirfs, np.cumsum(desired_irfs, axis=0))
+    assert_allclose(oirfs, desired_oirfs)
+    assert_allclose(coirfs, np.cumsum(desired_oirfs, axis=0))
+
+
+def test_pandas_univariate_rangeindex():
+    # Impulse responses have RangeIndex
+    endog = pd.Series(np.zeros(1))
+    mod = sarimax.SARIMAX(endog)
+    res = mod.filter([0.5, 1.])
+
+    actual = res.impulse_responses(2)
+    desired = pd.Series([1., 0.5, 0.25])
+    assert_allclose(res.impulse_responses(2), desired)
+    assert_(actual.index.equals(desired.index))
+
+
+def test_pandas_univariate_dateindex():
+    # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
+    ix = pd.date_range(start='2000', periods=1, freq='M')
+    endog = pd.Series(np.zeros(1), index=ix)
+    mod = sarimax.SARIMAX(endog)
+    res = mod.filter([0.5, 1.])
+
+    actual = res.impulse_responses(2)
+    desired = pd.Series([1., 0.5, 0.25])
+    assert_allclose(res.impulse_responses(2), desired)
+    assert_(actual.index.equals(desired.index))
+
+
+def test_pandas_multivariate_rangeindex():
+    # Impulse responses have RangeIndex
+    endog = pd.DataFrame(np.zeros((1, 2)))
+    mod = varmax.VARMAX(endog, trend='n')
+    res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
+
+    actual = res.impulse_responses(2)
+    desired = pd.DataFrame([[1., 0.5, 0.25], [0., 0., 0.]]).T
+    assert_allclose(actual, desired)
+    assert_(actual.index.equals(desired.index))
+
+
+def test_pandas_multivariate_dateindex():
+    # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
+    ix = pd.date_range(start='2000', periods=1, freq='M')
+    endog = pd.DataFrame(np.zeros((1, 2)), index=ix)
+    mod = varmax.VARMAX(endog, trend='n')
+    res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
+
+    actual = res.impulse_responses(2)
+    desired = pd.DataFrame([[1., 0.5, 0.25], [0., 0., 0.]]).T
+    assert_allclose(actual, desired)
+    assert_(actual.index.equals(desired.index))
+
+
+def test_pandas_anchor():
+    # Test that anchor with dates works
+    ix = pd.date_range(start='2000', periods=10, freq='M')
+    endog = pd.DataFrame(np.zeros((10, 2)), index=ix)
+    mod = TVSS(endog)
+    res = mod.filter([])
+
+    desired = res.impulse_responses(2, anchor=1)
+
+    # Anchor to date
+    actual = res.impulse_responses(2, anchor=ix[1])
+    assert_allclose(actual, desired)
+    assert_(actual.index.equals(desired.index))
+
+    # Anchor to negative index
+    actual = res.impulse_responses(2, anchor=-9)
+    assert_allclose(actual, desired)
+    assert_(actual.index.equals(desired.index))
