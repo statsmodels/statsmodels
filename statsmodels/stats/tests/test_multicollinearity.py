@@ -6,6 +6,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import (
     assert_allclose, assert_array_less, assert_equal, assert_almost_equal)
@@ -49,7 +51,7 @@ class CheckMuLtiCollinear(object):
         ols_results = [OLS(xf[:, k], xf[:, :k]).fit()
                        for k in range(1, xf.shape[1])]
         rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1. / (1. - rsquared0)
+        vif0 = 1. / np.maximum((1. - rsquared0), 1e-20)
 
         mcoll = MultiCollinearitySequential(self.x)
 
@@ -62,7 +64,7 @@ class CheckMuLtiCollinear(object):
         # assert_array_less(1e30, mcoll.vif[mask_inf])
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
-        if not np.isinf(vif0).any():
+        if not (1. - rsquared0 == 0).any():
             # The following requires nonsingular matrix because of Cholesky
             # check moment matrix as input
             x_dm = x - x.mean(0)  # standardize doesn't demean
@@ -100,7 +102,7 @@ class CheckMuLtiCollinear(object):
             ols_results.append(OLS(xf[:, k], xf[:, idx_k]).fit())
 
         rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1. / (1. - rsquared0)
+        vif0 = 1. / np.maximum((1. - rsquared0), 1e-20)
         # for checking singular cases with pdb in pytest
         # if ((1. - rsquared0)<1e-14).any():
         #     raise
@@ -142,9 +144,11 @@ class CheckMuLtiCollinear(object):
         assert_allclose(mcoll2.eigenvalues, evals, rtol=1e-13, atol=1e-14)
         # we shouldn't have tiny negative eigenvalues, those are set to zero
         assert_equal(mcoll2.eigenvalues[mcoll2.eigenvalues < 0], np.array([]))
-        # Note: assert_allclose_large is asymmetric and we need inf in second
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            condn = mcoll2.condition_number
         assert_allclose_large(evals[0] / evals[-1],
-                              mcoll2.condition_number**2,
+                              condn**2,
                               rtol=1e-12, ltol=1e12)
 
         # test if standardize is false, equivalence with constant column
@@ -154,6 +158,13 @@ class CheckMuLtiCollinear(object):
         assert_allclose_large(mcoll.vif, vif_nc, rtol=1e-12, ltol=1e12)
         vif_nc2 = vif(xf, standardize=False)[1:] * xf.var(0)[1:]
         assert_allclose_large(mcoll.vif, vif_nc2, rtol=1e-12, ltol=1e12)
+
+
+class TestMultiCollinearNonSingular(CheckMuLtiCollinear):
+    # Example: with non-singular continuous data
+    @classmethod
+    def setup_class(cls):
+        cls.get_data()
 
 
 class TestMultiCollinearSingular1(CheckMuLtiCollinear):

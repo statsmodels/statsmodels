@@ -12,7 +12,47 @@ from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.decorators import cache_readonly
 
 
-class MultiCollinearity(object):
+class MultiCollinearityBase(object):
+    """base class for multicollinearity measures
+    """
+
+    def __init__(self, data, moment_matrix=None, standardize=True,
+                 ridge_factor=1e-14):
+
+        if hasattr(data, 'columns'):
+            self.columns = data.columns
+        else:
+            self.columns = None
+
+        if data is not None:
+            x = np.asarray(data)
+
+        # TODO: use pandas corrcoef below to have nan handling ?
+
+        if moment_matrix is not None:
+            xm = np.asarray(moment_matrix)
+            if standardize:
+                # check if we have correlation matrix,
+                # we cannot demean but we can scale
+                # (We could demean if const is included in uncentred moment
+                #  matrix)
+                if (np.diag(xm) != 1).any():
+                    xstd = np.sqrt(np.diag(xm))
+                    xm = xm / np.outer(xstd, xstd)
+
+            self._init_moment(xm)
+        else:
+            if standardize:
+                x = (x - x.mean(0)) / x.std(0)
+                if np.any(np.ptp(x, axis=0) == 0):
+                    # TODO: change this? detect from xcorr, drop constant ?
+                    raise ValueError('If standardize is true, then data should'
+                                     ' not include a constant')
+
+            self._init_data(x)
+
+
+class MultiCollinearity(MultiCollinearityBase):
     """class for multicollinearity measures for an array of variables
 
     This treats all variables in a symmetric way, analysing each variable
@@ -57,38 +97,8 @@ class MultiCollinearity(object):
 
     def __init__(self, data, moment_matrix=None, standardize=True,
                  ridge_factor=1e-14):
-
-        if hasattr(data, 'columns'):
-            self.columns = data.columns
-        else:
-            self.columns = None
-
-        if data is not None:
-            x = np.asarray(data)
-
-        # TODO: use pandas corrcoef below to have nan handling ?
-
-        if moment_matrix is not None:
-            xm = np.asarray(moment_matrix)
-            if standardize:
-                # check if we have correlation matrix,
-                # we cannot demean but we can scale
-                # (We could demean if const is included in uncentred moment
-                #  matrix)
-                if (np.diag(xm) != 1).any():
-                    xstd = np.sqrt(np.diag(xm))
-                    xm = xm / np.outer(xstd, xstd)
-
-            self._init_moment(xm)
-        else:
-            if standardize:
-                x = (x - x.mean(0)) / x.std(0)
-                if np.any(np.ptp(x, axis=0) == 0):
-                    # TODO: change this? detect from xcorr, drop constant ?
-                    raise ValueError('If standardize is true, then data should'
-                                     ' not include a constant')
-
-            self._init_data(x)
+        super(MultiCollinearity, self).__init__(
+            data, moment_matrix=moment_matrix, standardize=standardize)
 
         self.k_vars = self.mom.shape[1]
         self.ridge_factor = ridge_factor
@@ -132,18 +142,34 @@ class MultiCollinearity(object):
         return vif_
 
     @property
+    def tss(self):
+        """Total mean sum of squares of squares in sequence of regression
+
+        Note: this is just ones for standardized data
+        """
+        return np.diag(self.mom)
+
+    @property
+    def rss(self):
+        """Residual mean sum of squares of squares in sequence of regression
+
+        This is the residual mean squared error without degrees of freedom
+        correction for the partial regression when standardized data are used.
+        """
+        return 1 / np.diag(self.mom_inv)
+
+    @property
     def rsquared_partial(self):
         """Partial correlation of one variable with all others
 
         This corresponds to R^2 in a linear regression of one variable on all
-        others, including a constant if standarize is true.
-
-        The interpretation as correlation assumes that standardize is true.
+        others, including a constant if standarize is true, i.e. data was
+        demeaned.
 
         not cached
-
-        TODO: rsquared should be scale invariant
         """
+        # direct computation, but vif is cached so use that
+        # r2p = 1 - self.rss / self.tss
         r2p = 1. - 1. / self.vif
         return r2p
 
@@ -177,6 +203,8 @@ class MultiCollinearity(object):
         correlation matrix.
         """
         eigvals = self.eigenvalues
+        # if eigvals[-1] <= 0:
+        #     raise ValueError
         return np.sqrt(eigvals[0] / eigvals[-1])
 
 
@@ -248,9 +276,6 @@ class MultiCollinearitySequential(MultiCollinearity):
         This corresponds to R^2 in a linear regression of one variable on all
         other variables that are before in the sequence, including a constant
         if standarize is true.
-
-        The interpretation as correlation assumes that standardize is true.
-        TODO: rsquared should be scale invariant
 
         not cached
         """
