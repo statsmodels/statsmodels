@@ -13,6 +13,7 @@ from numpy.testing import (
     assert_allclose, assert_array_less, assert_equal, assert_almost_equal)
 # import statsmodels.stats.outliers_influence as smio
 from statsmodels.regression.linear_model import OLS
+import statsmodels.stats.outliers_influence as smoi
 from statsmodels.stats.multicollinearity import (
     vif, vif_selection, vif_ridge, MultiCollinearity,
     MultiCollinearitySequential, collinear_index)
@@ -91,6 +92,11 @@ class CheckMuLtiCollinear(object):
         # subtracting 1 from index to ignore constant column
         assert_equal(collinear_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
 
+        if self.check_pandas:
+            collinear_columns, keep_columns = collinear_index(self.xf_pd)
+            # keep = ['const', 'var0', 'var1', 'var2']
+            assert_equal(self.xf_pd.columns[not_coll], keep_columns)
+
     def test_multicoll(self):
         xf = np.asarray(self.xf)  # convert from pandas DataFrame, for OLS only
         k_vars = self.xf.shape[1]
@@ -112,6 +118,15 @@ class CheckMuLtiCollinear(object):
         assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-13)
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-12, ltol=1e12)
 
+        if mcoll.eigenvalues.min() > 1e-14:
+            # TODO: check what to do in singular case
+            xf0 = self.xf[:, :-2]
+            xf1 = self.xf[:, -2:]
+            # TODO: use projection helper function
+            resid = xf1 - xf0.dot(np.linalg.pinv(xf0).dot(xf1))
+            corrp1 = np.corrcoef(resid, rowvar=0)[0, 1]
+            assert_allclose(mcoll.corr_partial[-1, -2], corrp1, rtol=1e-13)
+
         vif1_ = vif(self.x)
         vif1 = np.asarray(vif1_)   # check values if pandas.Series
         # TODO: why does mcoll.vif have infs but vif1 doesn't?
@@ -128,6 +143,12 @@ class CheckMuLtiCollinear(object):
                         rtol=1e-13)
         # the following has floating point noise, mcoll.vif has inf
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
+
+        # compare with outlier influence function
+        x_dm_arr = np.asarray(x_dm)  # smoi vif does not work with pandas
+        vif_oi = np.array([smoi.variance_inflation_factor(x_dm_arr, ii)
+                           for ii in range(x_dm_arr.shape[1])])
+        assert_allclose_large(mcoll2.vif, vif_oi, rtol=1e-12, ltol=1e12)
 
         # check correlation matrix as input
         corr = np.corrcoef(self.x, rowvar=False)
@@ -201,6 +222,7 @@ class TestMultiCollinearPandas(CheckMuLtiCollinear):
         import pandas
         cls.names = ['var%d' % i for i in range(cls.x.shape[1])]
         cls.x = pandas.DataFrame(cls.x, columns=cls.names)
+        cls.xf_pd = pandas.DataFrame(cls.xf, columns=['const'] + cls.names)
         cls.check_pandas = True
 
 
