@@ -180,7 +180,10 @@ class MultiCollinearity(MultiCollinearityBase):
         Pairwise partial correlation of two variables conditional on remaining
         variables.
         """
-        return cov2corr(self.mom_inv)
+        c = cov2corr(self.mom_inv)
+        # only off diagonal elements should be negated
+        np.fill_diagonal(c, -np.diag(c))
+        return -c
 
     @cache_readonly
     def eigenvalues(self):
