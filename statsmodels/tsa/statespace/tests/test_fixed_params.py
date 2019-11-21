@@ -60,10 +60,12 @@ def test_results_append():
 
     # Check non-refit
     assert_allclose(res2.params, res_full.params)
+    assert_equal(res2._fixed_params, res_full._fixed_params)
     assert_allclose(res2.llf_obs, res_full.llf_obs)
 
     # Check refit results
     assert_allclose(res2_fit.params, res_full_fit.params)
+    assert_equal(res2_fit._fixed_params, res_full_fit._fixed_params)
     assert_allclose(res2_fit.llf_obs, res_full_fit.llf_obs)
 
 
@@ -86,6 +88,7 @@ def test_results_extend():
 
     # Check results
     assert_allclose(res2.params, res_full.params)
+    assert_equal(res2._fixed_params, res_full._fixed_params)
     assert_allclose(res2.llf_obs, res_full.llf_obs)
 
 
@@ -107,10 +110,12 @@ def test_results_apply():
 
     # Check non-refit
     assert_allclose(res2.params, res.params)
+    assert_equal(res2._fixed_params, res._fixed_params)
     assert_allclose(res2.llf_obs, res.llf_obs)
 
     # Check refit results
     assert_allclose(res2_fit.params, res_fit.params)
+    assert_equal(res2_fit._fixed_params, res_fit._fixed_params)
     assert_allclose(res2_fit.llf_obs, res_fit.llf_obs)
 
 
