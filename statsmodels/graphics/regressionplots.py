@@ -151,10 +151,10 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
-    _, iv_l, iv_u = wls_prediction_std(results)
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
     if vlines is True:
+        _, iv_l, iv_u = wls_prediction_std(results)
         ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1,
                   color='k', alpha=.7)
     #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
