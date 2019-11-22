@@ -91,7 +91,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         If given, this subplot is used to plot in instead of a new figure being
         created.
     vlines : bool
-        (optional) If this not True, then the uncertainty of the fot is not
+        (optional) If this not True, then the uncertainty of the fit is not
         plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
