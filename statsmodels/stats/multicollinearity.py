@@ -80,18 +80,31 @@ class MultiCollinearity(MultiCollinearityBase):
 
     Notes
     -----
-
     The default treatment assumes that there is no constant in the data array
     or in the moment matrix. However, VIF is defined under the assumption of a
     constant in the corrsponding regression. Use `standardize=False` if
     demeaning is not desired.
 
-    THe only case I know so far is if we have a categorical factor in the
+    The only case I know so far is if we have a categorical factor in the
     design matrix but no constant, that is the constant is implicit in the full
     dummy set. Using VIF with demeaned data will show that the dummy set is
     perfectly collinear (up to floating point precision).
 
-    This class does not return pandas object if data is a pandas object
+    This class does not return pandas object if data is a pandas object.
+
+    **singular and near-singular cases**
+
+    The computations are based on the matrix inverse of the moment matrix.
+    This might fail or be numerically unstable in singular or near singular
+    cases. `vif` uses a ridge_factor to make the moment matrix invertible
+    which converts infinite vif to numerically very large but finite vif.
+
+    Partial correlation, `corr_partial` is not well defined for some singular
+    cases and might return nans or raise an exception in the matrix inverse.
+
+    **Status:** good test coverage, maybe small future changes in API.
+    The explicit handling of singular cases and of cases with implicit constant
+    is incomplete and the behavior in those cases will likely change.
 
     """
 
@@ -112,9 +125,28 @@ class MultiCollinearity(MultiCollinearityBase):
 
     @cache_readonly
     def mom_inv(self):
+        """inverse of the moment matrix
+
+        cached, behavior in (near) singular cases comes from numpy.linalg.inv
+        """
         return np.linalg.inv(self.mom)
 
     def get_vif(self, ridge_factor=None):
+        """Variance inflation factor based on moment or correlation matrix.
+
+        Parameters
+        ----------
+        ridge_factor : float
+            A ridge factor is added to the moment matrix before inverting it.
+            This can be used to avoid problems with singular moment matrices.
+            By the default the ridge factor of the instance is used, but can
+            be overridden here.
+
+        Returns
+        -------
+        vif : ndarray
+            variance inflation factor
+        """
         if ridge_factor is None:
             ridge_factor = self.ridge_factor
 
@@ -132,7 +164,7 @@ class MultiCollinearity(MultiCollinearityBase):
     def vif(self):
         """Variance inflation factor based on moment or correlation matrix.
 
-        cached attribute
+        cached attribute, uses the ridge_factor in the attribute
         """
         vif_ = self.get_vif()
         # It is possible that singular matrix has slightly negative eigenvalues
@@ -143,7 +175,7 @@ class MultiCollinearity(MultiCollinearityBase):
 
     @property
     def tss(self):
-        """Total mean sum of squares of squares in sequence of regression
+        """Total mean sum of squares in partial regression
 
         Note: this is just ones for standardized data
         """
@@ -151,7 +183,7 @@ class MultiCollinearity(MultiCollinearityBase):
 
     @property
     def rss(self):
-        """Residual mean sum of squares of squares in sequence of regression
+        """Residual mean sum of squares in partial regression
 
         This is the residual mean squared error without degrees of freedom
         correction for the partial regression when standardized data are used.
@@ -168,7 +200,7 @@ class MultiCollinearity(MultiCollinearityBase):
 
         not cached
         """
-        # direct computation, but vif is cached so use that
+        # direct computation, but vif is cached so we use that
         # r2p = 1 - self.rss / self.tss
         r2p = 1. - 1. / self.vif
         return r2p
@@ -179,6 +211,9 @@ class MultiCollinearity(MultiCollinearityBase):
 
         Pairwise partial correlation of two variables conditional on remaining
         variables.
+
+        Warning: This uses the matrix inverse of the moment matrix, which can
+        produce nans or raise exceptions in singular or near-singular cases.
         """
         c = cov2corr(self.mom_inv)
         # only off diagonal elements should be negated
@@ -206,8 +241,6 @@ class MultiCollinearity(MultiCollinearityBase):
         correlation matrix.
         """
         eigvals = self.eigenvalues
-        # if eigvals[-1] <= 0:
-        #     raise ValueError
         return np.sqrt(eigvals[0] / eigvals[-1])
 
 
@@ -264,12 +297,12 @@ class MultiCollinearitySequential(MultiCollinearity):
 
     @property
     def tss(self):
-        """Total sum of squares of squares in sequence of regression"""
+        """Total mean sum of squares in sequence of regression"""
         return self.triu2.sum(0)
 
     @property
     def rss(self):
-        """Residual sum of squares of squares in sequence of regression"""
+        """Residual mean sum of squares in sequence of regression"""
         return np.diag(self.triu2)
 
     @property
