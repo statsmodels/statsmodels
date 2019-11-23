@@ -1,5 +1,5 @@
 from statsmodels.compat.python import (StringIO, urlopen, HTTPError, URLError,
-                                       lrange, cPickle, urljoin, long, PY3)
+                                       lrange, urljoin, long, PY3)
 
 import shutil
 from os import environ, makedirs

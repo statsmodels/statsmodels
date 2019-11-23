@@ -43,11 +43,6 @@ else:
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
                     pandas.WidePanel)
 
-try:
-    from pandas.tseries import offsets as frequencies
-except ImportError:
-    from pandas.tseries import frequencies
-
 data_klasses = (pandas.Series, pandas.DataFrame)
 if pandas_lt_25_0:
     data_klasses += (pandas.Panel,)
