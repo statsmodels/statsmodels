@@ -12,6 +12,7 @@ def save_pickle(obj, fname):
     fname : str
         Filename to pickle to
     """
+
     with get_file_obj(fname, 'wb') as fout:
         cPickle.dump(obj, fout, protocol=-1)
 
@@ -29,5 +30,6 @@ def load_pickle(fname):
     -----
     This method can be used to load *both* models and results.
     """
+
     with get_file_obj(fname, 'rb') as fin:
         return cPickle.load(fin)

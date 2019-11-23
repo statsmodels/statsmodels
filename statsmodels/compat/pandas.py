@@ -17,6 +17,7 @@ version = LooseVersion(pandas.__version__)
 pandas_lte_0_19_2 = version <= LooseVersion('0.19.2')
 pandas_gt_0_19_2 = version > LooseVersion('0.19.2')
 pandas_ge_20_0 = version >= LooseVersion('0.20.0')
+pandas_lt_25_0 = version < LooseVersion('0.25.0')
 pandas_ge_25_0 = version >= LooseVersion('0.25.0')
 
 try:
@@ -41,6 +42,10 @@ else:
 
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
                     pandas.WidePanel)
+
+data_klasses = (pandas.Series, pandas.DataFrame)
+if pandas_lt_25_0:
+    data_klasses += (pandas.Panel,)
 
 try:
     import pandas.testing as testing

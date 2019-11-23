@@ -162,7 +162,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         endog = self.endog.T
 
         # Instantiate the state space object
-        self.ssm = SimulationSmoother(endog.shape[0], self.k_states, **kwargs)
+        self.ssm = SimulationSmoother(endog.shape[0], self.k_states,
+                                      nobs=endog.shape[1], **kwargs)
         # Bind the data to the model
         self.ssm.bind(endog)
 

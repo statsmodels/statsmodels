@@ -45,7 +45,6 @@ jobs:
       pip install numpy
       pip install -r requirements.txt
       pip install -r requirements-dev.txt
-      pip install pytest-xdist
     displayName: 'Install dependencies'
 
   - script: |
