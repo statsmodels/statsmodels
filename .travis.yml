@@ -59,16 +59,20 @@ matrix:
         - SCIPY=0.18
         - PANDAS=0.19
         - MATPLOTLIB=1.5
+        - USE_CVXOPT=false
     # Python 3.7 + cutting edge packages
     - python: 3.7
       env:
         - PYTHON=3.7
         - COVERAGE=true
-        # Documentation build (on Python 3.6 + cutting edge packages)
-    - python: 3.6
+    # Documentation build (on Python 3.6 + cutting edge packages)
+    - python: 3.7
       env:
         - PYTHON=3.7
+        - SCIPY=1.2
+        - PANDAS=0.24
         - DOCBUILD=true
+        - NUMPY=1.16
     # Python 3.6 + legacy blas
     - python: 3.6
       env:
