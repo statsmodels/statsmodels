@@ -57,26 +57,25 @@ class TestSweep(object):
             self.ols_cache[key] = res
         return res
 
-    def t_est_sequence(self):
-        # something wrong here, params_new is 2-dim has several rows
-        # rss_new has values of res.ssr instead of anticipated ssr
-        # maybe something wrong how the test uses params_new
+    def test_sequence(self):
+        # test that params_new and rss_diff correspond to one sweep step
         stols = self.stols
-        for k in range(stols.k_vars_x-1):  # keep one for next test
+        for k in range(stols.k_vars_x-1):  # last index is endog
             # store anticipated results
-            params_new = stols.params_new(k).copy()
-            rss_new = stols.rss + stols.rss_diff(k)
+            params_new = stols.params_new().copy()
+            rss_new = stols.rss - stols.rss_diff()
+            # make next sweep
             stols.sweep(k)
             res = self.cached_ols(stols.is_exog[:-1])  # last col is endog
-            assert_allclose(params_new[k], stols.params[k])
+            assert_allclose(params_new[k, k], stols.params[0, k])
             assert_almost_equal(params_new[k, k], res.params[k], decimal=13)
-            assert_almost_equal(rss_new, stols.rss, decimal=13)
+            assert_almost_equal(rss_new[k], stols.rss, decimal=13)
             assert_almost_equal(stols.rss, res.ssr, decimal=13)
 
     def test_sequence_basic(self):
         # test without anticipated results
         stols = self.stols
-        for k in range(stols.k_vars_x-1):  # keep one for next test
+        for k in range(stols.k_vars_x-1):  # last index is endog
             stols.sweep(k)
             res = self.cached_ols(stols.is_exog[:-1])  # last col is endog
 
