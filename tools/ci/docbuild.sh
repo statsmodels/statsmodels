@@ -40,3 +40,14 @@ else
   echo "docbuild failed. Aborting doctr.";
   exit 1;
 fi;
+
+# Deploy with doctr
+cd "$SRCDIR"
+if [[ -z "$TRAVIS_TAG" ]]; then
+  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io devel;
+else
+  if [[ "$TRAVIS_TAG" != *"dev"* ]]; then  # do not push on dev tags
+    doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";
+    doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+  fi;
+fi;
