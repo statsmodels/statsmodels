@@ -188,6 +188,8 @@ class StepwiseOLSSweep(object):
             ret = np.squeeze(ret)[()]
         return ret
 
+    ssr = rss  # alias consistent with OLS
+
     @property
     def params(self):
         '''current parameter estimates of endog on included exog
@@ -205,6 +207,10 @@ class StepwiseOLSSweep(object):
         return self.nobs - k_incl - self.ddof_model
 
     @property
+    def df_modelwc(self):
+        return self.nobs - self.df_resid
+
+    @property
     def scale2(self):
         return self.rs_current[-1, -1] / self.df_resid
 
@@ -218,10 +224,6 @@ class StepwiseOLSSweep(object):
         ret *= self.scale2
         ret = np.sqrt(ret)
         return ret
-
-    @property
-    def normalized_cov_params(self):
-        return self.rs_current[self.is_exog, self.is_exog]
 
     def sweep(self, k, update=True):
         '''sweep variable k
@@ -254,6 +256,48 @@ class StepwiseOLSSweep(object):
         else:
             return rs_next
 
+    @property
+    def tvalues(self):
+        """
+        Return the t-statistic for a given parameter estimate.
+        """
+        return self.params / self.bse
+
+    @property
+    def pvalues(self):
+        """The two-tailed p values for the t-stats of the params."""
+        from scipy import stats  # lazy for now
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid) * 2
+
+    @property
+    def normalized_cov_params(self):
+        return self.rs_current[self.is_exog, self.is_exog]
+
+    @property
+    def llf(self):
+        llf = loglike_ssr(self.ssr, self.nobs)
+        return llf
+
+    @property
+    def aic(self):
+        r"""
+        Akaike's information criteria.
+
+        For a model with a constant :math:`-2llf + 2(df\_model + 1)`. For a
+        model without a constant :math:`-2llf + 2(df\_model)`.
+        """
+        return -2 * self.llf + 2 * self.df_modelwc
+
+    @property
+    def bic(self):
+        r"""
+        Bayes' information criteria.
+
+        For a model with a constant :math:`-2llf + \log(n)(df\_model+1)`.
+        For a model without a constant :math:`-2llf + \log(n)(df\_model)`.
+        """
+        return -2 * self.llf + np.log(self.nobs) * self.df_modelwc
+
     def rss_diff(self, endog_idx=-1):
         '''change in rss when one of a variable is swept
 
@@ -274,9 +318,10 @@ class StepwiseOLSSweep(object):
         from scipy import stats  # lazy for now
 
         # need to make the following conditional on is_endog, add or drop
-        ssr_diff = self.rss_diff
-        ssr_full = self.rss + ssr_diff
-        df_full = self.df_resid + 1  # add one variable
+        ssr_diff = self.rss_diff()
+        ssr_full = self.rss - ssr_diff
+        # this only works for adding variables, not for sweep to drop
+        df_full = self.df_resid - 1  # add one variable
         df_diff = 1
 
         f_value = ssr_diff / df_diff / ssr_full * df_full
@@ -310,3 +355,79 @@ class StepwiseOLSSweep(object):
         from statsmodels.regression.linear_model import OLS
         res = OLS(self.endog, self.exog[:, self.is_exog[:self.k_vars_x]]).fit()
         return res
+
+
+# all subset regression
+
+
+def get_all_subset_sweeps(k_vars):
+    """get sweeps for all subsets regression
+
+    sweeps by Darlington
+    """
+    k = k_vars
+    all_sweeps = np.ones(2**k, np.int)
+    for i in range(1, k):
+        all_sweeps[::2**i] += 1
+    all_sweeps = np.roll(all_sweeps, -1) - 1
+    return all_sweeps
+
+
+class SelectionResults(object):
+    """class to hold and analyse variable selection results
+    """
+    def __init__(self, res_all, attributes=None):
+        self.isexog = np.array([i[1] for i in res_all])
+        self.aic = np.array([res_i[3] for res_i in res_all])
+        self.exog_idx = [np.nonzero(ii)[0] for ii in self.isexog]
+        self.res_all = res_all
+
+    def sorted_frame(self, by='aic'):
+        if by != 'aic':
+            raise NotImplementedError('`by` is not used yet')
+        sort_idx = np.argsort(self.aic)
+        import pandas as pd
+        res_df = pd.DataFrame()
+        res_df['exog_idx'] = [self.exog_idx[ii] for ii in sort_idx]
+        res_df['aic'] = self.aic[sort_idx]
+        return res_df
+
+
+def all_subset(endog, exog, keep_exog=0, keep_attr=None):
+    """all subset regression
+
+    Parameters
+    ----------
+    endog : ndarray
+        endogenous or dependent variable
+    exog : ndarray
+        exogenous variables, regressors
+    keep_exog : int, default is 0
+        How many exogeous variables to keep in all subset regression.
+        This assumes that the exogenous variables that are of interest are
+        in the first columns of `exog`
+    keep_attr : None
+        not used yet.
+        Which additional attributes to keep for each subset model.
+
+    """
+
+    if keep_attr is not None:
+        raise NotImplementedError('keep_attr is not used yet')
+
+    all_sweeps = get_all_subset_sweeps(exog.shape[1] - keep_exog) + keep_exog
+
+    stols_all = StepwiseOLSSweep(endog, exog)
+    # sweep exog that we want to keep
+    for ii in range(keep_exog):
+        stols_all.sweep(ii)
+
+    res_all = [[[], stols_all.is_exog[:-1].copy(), stols_all.rss,
+                stols_all.aic]]
+
+    for ii in all_sweeps[:-1]:   # last sweep goes back to empty model
+        stols_all.sweep(ii)
+        res_all.append([ii, stols_all.is_exog[:-1].copy(), stols_all.rss,
+                        stols_all.aic])
+
+    return SelectionResults(res_all)

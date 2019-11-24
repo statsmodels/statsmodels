@@ -11,7 +11,7 @@ from numpy.testing import assert_almost_equal, assert_allclose
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression._stepwise import (
-        StepwiseOLSSweep, get_sweep_matrix_data)
+        StepwiseOLSSweep, get_sweep_matrix_data, all_subset)
 
 
 def test_sweep_matrix():
@@ -82,3 +82,23 @@ class TestSweep(object):
             assert_almost_equal(stols.params[0][k], res.params[k], decimal=13)
             assert_almost_equal(stols.params[0], res.params, decimal=13)
             assert_almost_equal(stols.rss, res.ssr, decimal=13)
+
+
+class TestAllSubsetsSweep(object):
+
+    @classmethod
+    def setup_class(cls):
+        nobs, k_vars = 50, 4
+        np.random.seed(85325783)
+        x = np.random.randn(nobs, k_vars)
+        x[:, 0] = 1.
+        beta = 1 / np.arange(1, k_vars + 1)
+        y = x[:, :k_vars].dot(beta) + np.random.randn(nobs)
+        cls.endog, cls.exog = y, x
+
+    def test_simple(self):
+        res_all = all_subset(self.endog, self.exog, keep_exog=1)
+        res_aic = np.array([131.84520748, 126.37159826, 126.64133021,
+                            133.77530407, 135.29444877, 126.44745325,
+                            127.11637884, 133.43356509])
+        assert_allclose(res_all.aic, res_aic, rtol=1e-8)
