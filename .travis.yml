@@ -40,6 +40,13 @@ matrix:
         - BUILD_INIT=tools/ci/travis_pip.sh
         - USE_MATPLOTLIB=false
         - USE_CVXOPT=false
+    - os: linux-ppc64le
+      python: 3.7
+      env:
+        - PPC_LE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
     - python: 3.7
       env:
         - PYTHON=3.7
@@ -81,12 +88,19 @@ matrix:
       env:
         - PYTHON=3.7
 
+
   allow_failures:
     # pre-testing is a little fragile. Make it an FYI.
     - python: 3.7
       env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: linux-ppc64le
+      python: 3.7
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
 
 notifications:
   email:
