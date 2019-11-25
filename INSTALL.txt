@@ -17,7 +17,7 @@ pandas >= 0.21
 
     pandas.pydata.org
 
-patsy >= 0.5.0
+patsy >= 0.5.1
 
     patsy.readthedocs.org
 
