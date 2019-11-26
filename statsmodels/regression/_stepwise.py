@@ -50,6 +50,130 @@ def get_sweep_matrix_data(xy, sweep_idx):
     return sm
 
 
+def sweeps2isexog(sweeps, k=None, isexog0=None):
+    """
+    convert sequence of sweeps to is_exog
+    """
+    if k is None:
+        k = max(sweeps) + 1
+
+    if isexog0 is None:
+        is_exog = np.zeros(k, np.bool)
+    else:
+        is_exog = np.asarray(isexog0, dtype=np.bool)
+
+    is_exog_all = []
+    for idx in sweeps:
+        is_exog[idx] = ~is_exog[idx]
+        is_exog_all.append(is_exog.copy())  # need copy because of inplace
+    return is_exog_all
+
+
+def sweeps2isexog_iter(sweeps, k=None, isexog0=None):
+    """iterator to convert sequence of sweeps to is_exog
+    """
+    if k is None:
+        k = max(sweeps) + 1
+
+    if isexog0 is None:
+        is_exog = np.zeros(k, np.bool)
+    else:
+        is_exog = np.asarray(isexog0, dtype=np.bool)
+
+    for idx in sweeps:
+        is_exog[idx] = ~is_exog[idx]
+        yield is_exog.copy()
+
+
+def isexog2sweeps(isexog):
+    sweeps = []
+    for i in range(len(isexog) - 1):
+        diff = isexog[i + 1] != isexog[i]
+        tosweep = np.nonzero(diff)[0]
+        sweeps.extend(tosweep.tolist())
+    return sweeps
+
+
+def fillsweeps(sweeps, k):
+    """doesn't make sense, we don't know what's missing"""
+
+    ex_iter = sweeps2isexog_iter(sweeps, k)
+    sweeps_new = []
+    previous = ex_iter.next()
+    for _ in range(len(sweeps) - 1):
+        current = ex_iter.next()
+        diff = current != previous  # elementwise
+        tosweep = np.nonzero(diff)[0]
+        sweeps_new.extend(tosweep.tolist())
+    return sweeps_new
+
+
+def binary_sets(k, dtype=np.bool):
+    all_subsets = []
+    a = np.arange(2**k)
+    for i in range(1, k+1):
+        d, a = np.divmod(a, 2**(k-i))
+        all_subsets.append(d)
+
+    return np.array(all_subsets, dtype=dtype).T.tolist()
+
+
+def dist(x, y):
+    """Manhattan (sum abs) distance between two arrays
+    """
+    return np.abs(np.asarray(x) - np.asarray(y)).sum()
+
+
+def swap_li(li, idx0, idx1):
+    """inplace swap of two elements in list
+    """
+    z = li[idx0].copy()
+    li[idx0] = li[idx1]
+    li[idx1] = z
+    return None
+
+
+def swap_sort(li_all, maxiter=2, reverse=True, max_dist=1, max_len=2**3):
+    """rearrange swaps to shorten distance
+
+    This should provide some improvements for a sequence of models to reduce
+    the number of sweeps. Trying to get close to optimal sequence is
+    time consuming and can become more expensive than performing extra
+    sweeps. (travelling salesman problem)
+
+    Warning: this might make the sweep sequence worse than just filling the
+    gaps with extra sweeps
+
+    """
+    # make list of ndarrays with copies
+    # list is better for swapping, need ndarray for dist
+    li = [np.asarray(i).copy() for i in li_all]
+    start_index = 0
+    count_swaps_total = 0
+    for _ in range(maxiter):
+        count_swaps = 0
+        for i in range(start_index, len(li) - 1):
+            x = li[i]
+            d = dist(x, li[i + 1])
+            if d > 1:
+                if count_swaps == 0:
+                    start_index = i
+                candidates = range(i+1, min(i + 1 + max_len, len(li)))
+                if reverse:
+                    candidates = candidates[::-1]
+                for j in candidates:
+                    dc = dist(x, li[j])
+                    if d > dc and dc < (max_dist + 0.5):
+                        swap_li(li, i+1, j)
+                        count_swaps += 1
+                        break
+        if count_swaps == 0:
+            break
+        count_swaps_total += count_swaps
+
+    return li, (count_swaps_total, count_swaps)
+
+
 def loglike_ssr(ssr, nobs):
     '''
     Get likelihood function value from ssr for OLS model.
@@ -373,19 +497,34 @@ def get_all_subset_sweeps(k_vars):
     return all_sweeps
 
 
+def get_max_subset_sweeps(k, k_max, force=False):
+    if k > 20 and not force:
+        raise ValueError("large number of cases 2^k = %d, "
+                         "use force=True to continue" % 2**k)
+
+    sweeps_all = get_all_subset_sweeps(k)
+    isexog_all = sweeps2isexog(sweeps_all, k)
+    isexog_all_arr = np.asarray(isexog_all)
+    count_exog = isexog_all_arr.sum(1)
+    isexog_le5 = isexog_all_arr[count_exog <= k_max]
+    sweeps_filled = isexog2sweeps(isexog_le5)
+    return np.asarray(sweeps_filled)
+
+
 class SelectionResults(object):
     """class to hold and analyse variable selection results
     """
-    def __init__(self, res_all, attributes=None):
+    def __init__(self, res_all, attributes=None, **kwds):
         self.isexog = np.array([i[1] for i in res_all])
         self.aic = np.array([res_i[3] for res_i in res_all])
         self.exog_idx = [np.nonzero(ii)[0] for ii in self.isexog]
         self.res_all = res_all
+        self.__dict__.update(kwds)
 
     def sorted_frame(self, by='aic'):
         if by != 'aic':
             raise NotImplementedError('`by` is not used yet')
-        sort_idx = np.argsort(self.aic)
+        self.sort_idx_aic = sort_idx = np.argsort(self.aic)
         import pandas as pd
         res_df = pd.DataFrame()
         res_df['exog_idx'] = [self.exog_idx[ii] for ii in sort_idx]
@@ -393,7 +532,7 @@ class SelectionResults(object):
         return res_df
 
 
-def all_subset(endog, exog, keep_exog=0, keep_attr=None):
+def all_subset(endog, exog, keep_exog=0, keep_attr=None, k_max=None):
     """all subset regression
 
     Parameters
@@ -410,12 +549,28 @@ def all_subset(endog, exog, keep_exog=0, keep_attr=None):
         not used yet.
         Which additional attributes to keep for each subset model.
 
+    Returns
+    -------
+    res : instance of SelectionResults
+        The instance contains the stored results for each regression and
+        provides additional summary and sorting methods.
+        Note: Currently, the set of models is not unique if k_max is used
+        to limit the number of explanatory variables in the model.
+
+    See Also
+    --------
+    SelectionResults : class for sequence of subset regression
     """
 
     if keep_attr is not None:
         raise NotImplementedError('keep_attr is not used yet')
 
-    all_sweeps = get_all_subset_sweeps(exog.shape[1] - keep_exog) + keep_exog
+    if k_max is None:
+        all_sweeps = (get_all_subset_sweeps(exog.shape[1] - keep_exog) +
+                      keep_exog)
+    else:
+        all_sweeps = (get_max_subset_sweeps(exog.shape[1] - keep_exog, k_max) +
+                      keep_exog)
 
     stols_all = StepwiseOLSSweep(endog, exog)
     # sweep exog that we want to keep
@@ -424,10 +579,33 @@ def all_subset(endog, exog, keep_exog=0, keep_attr=None):
 
     res_all = [[[], stols_all.is_exog[:-1].copy(), stols_all.rss,
                 stols_all.aic]]
+    params_keep_all = []
+    bse_keep_all = []
+    df_resid_all = []
+    if keep_exog > 1:
+        # add results for initial "empty" model
+        # TODO: check params is 2-dim, bse is 1-dim
+        params_keep_all.append(stols_all.params[0, :keep_exog])
+        bse_keep_all.append(stols_all.bse[:keep_exog])
+        df_resid_all.append(stols_all.df_resid)
 
     for ii in all_sweeps[:-1]:   # last sweep goes back to empty model
         stols_all.sweep(ii)
         res_all.append([ii, stols_all.is_exog[:-1].copy(), stols_all.rss,
                         stols_all.aic])
+        if keep_exog > 1:
+            # TODO: check params is 2-dim, bse is 1-dim
+            params_keep_all.append(stols_all.params[0, :keep_exog])
+            bse_keep_all.append(stols_all.bse[:keep_exog])
+            df_resid_all.append(stols_all.df_resid)
 
-    return SelectionResults(res_all)
+    if k_max is not None:
+        # filter out models with more than k_max exog
+        res_all = [res for res in res_all if res[1].sum() <= k_max]
+
+    res = SelectionResults(res_all,
+                           params_keep_all=params_keep_all,
+                           bse_keep_all=bse_keep_all,
+                           df_resid_all=df_resid_all)
+
+    return res
