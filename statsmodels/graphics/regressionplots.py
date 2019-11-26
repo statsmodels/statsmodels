@@ -955,9 +955,8 @@ def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
 def plot_leverage_resid2(results, alpha=.05, ax=None, **kwargs):
 
     infl = results.get_influence()
-    res = _plot_leverage_resid2(results, infl, alpha=.05, ax=None,
-                                **kwargs)
-    return res
+    return _plot_leverage_resid2(results, infl, alpha=alpha, ax=ax, **kwargs)
+
 
 
 @Appender(_plot_added_variable_doc % {
