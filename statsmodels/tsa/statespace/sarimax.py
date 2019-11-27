@@ -949,7 +949,7 @@ class SARIMAX(MLEModel):
             warning_description='ARMA and trend')
 
         # If we have estimated non-stationary start parameters but enforce
-        # stationarity is on, raise an error
+        # stationarity is on, start with 0 parameters and warn
         invalid_ar = (
             self.k_ar > 0 and
             self.enforce_stationarity and
@@ -980,7 +980,7 @@ class SARIMAX(MLEModel):
                 warning_description='seasonal ARMA'))
 
         # If we have estimated non-stationary start parameters but enforce
-        # stationarity is on, raise an error
+        # stationarity is on, warn and set start params to 0
         invalid_seasonal_ar = (
             self.k_seasonal_ar > 0 and
             self.enforce_stationarity and

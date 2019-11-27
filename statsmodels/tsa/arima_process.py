@@ -646,7 +646,8 @@ class ArmaProcess(object):
     ----------
     ar : array_like
         Coefficient for autoregressive lag polynomial, including zero lag.
-        See the notes for some information about the sign.
+        Must be entered using the signs from the lag polynomial representation.
+        See the notes for more information about the sign.
     ma : array_like
         Coefficient for moving-average lag polynomial, including zero lag.
     nobs : int, optional
@@ -674,10 +675,13 @@ class ArmaProcess(object):
     .. math::
 
         \left(1-\phi_{1}L-\ldots-\phi_{p}L^{p}\right)y_{t} =
-            \left(1-\theta_{1}L-\ldots-\theta_{q}L^{q}\right)
+            \left(1+\theta_{1}L+\ldots+\theta_{q}L^{q}\right)\epsilon_{t}
 
     Examples
     --------
+    ARMA(2,2) with AR coefficients 0.75 and -0.25, and MA coefficients 0.65 and 0.35
+
+    >>> import statsmodels.api as sm
     >>> import numpy as np
     >>> np.random.seed(12345)
     >>> arparams = np.array([.75, -.25])
@@ -689,10 +693,18 @@ class ArmaProcess(object):
     True
     >>> arma_process.isinvertible
     True
+    >>> arma_process.arroots
+    array([1.5-1.32287566j, 1.5+1.32287566j])
     >>> y = arma_process.generate_sample(250)
     >>> model = sm.tsa.ARMA(y, (2, 2)).fit(trend='nc', disp=0)
     >>> model.params
     array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
+
+    The same ARMA(2,2) Using the from_coeffs class method
+
+    >>> arma_process = sm.tsa.ArmaProcess.from_coeffs(arparams, maparams)
+    >>> arma_process.arroots
+    array([1.5-1.32287566j, 1.5+1.32287566j])
     """
 
     # TODO: Check unit root behavior
