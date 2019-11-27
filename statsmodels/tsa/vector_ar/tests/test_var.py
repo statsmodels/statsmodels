@@ -378,6 +378,11 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(Exception):
             self.res.test_causality(0, 1, kind='foo')
 
+    def test_causality_no_lags(self):
+        res = VAR(self.data).fit(maxlags=0)
+        with pytest.raises(RuntimeError, match="0 lags"):
+            res.test_causality(0, 1)
+
     @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
