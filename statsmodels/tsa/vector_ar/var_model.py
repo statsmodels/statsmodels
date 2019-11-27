@@ -1800,6 +1800,9 @@ class VARResults(VARProcess):
             causing = [self.names[c] for c in caused_ind]
 
         k, p = self.neqs, self.k_ar
+        if p == 0:
+            err = "Cannot test Granger Causality in a model with 0 lags."
+            raise RuntimeError(err)
 
         # number of restrictions
         num_restr = len(causing) * len(caused) * p
