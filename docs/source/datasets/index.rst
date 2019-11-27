@@ -66,7 +66,8 @@ Load a dataset:
    import statsmodels.api as sm
    data = sm.datasets.longley.load_pandas()
 
-The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`. The full dataset is available in the ``data`` attribute.
+The `Dataset` object follows the bunch pattern. The full dataset is available
+in the ``data`` attribute.
 
 .. ipython:: python
 
