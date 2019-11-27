@@ -603,13 +603,14 @@ class VAR(TimeSeriesModel):
             "nc" - co constant, no trend
             Note that these are prepended to the columns of the dataset.
 
-        Notes
-        -----
-        Lütkepohl pp. 146-153
-
         Returns
         -------
-        est : VARResultsWrapper
+        VARResults
+            Estimation results
+
+        Notes
+        -----
+        See Lütkepohl pp. 146-153 for implementation details.
         """
         lags = maxlags
 
