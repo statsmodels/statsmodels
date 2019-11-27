@@ -10,6 +10,7 @@ License: BSD-3
 
 import numpy as np
 
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tools.eval_measures as evm
 
 
@@ -521,10 +522,15 @@ class SelectionResults(object):
         self.res_all = res_all
         self.__dict__.update(kwds)
 
+    @cache_readonly
+    def idx_sort_aic(self):
+        # do we need option for sort criterion
+        return np.argsort(self.aic)
+
     def sorted_frame(self, by='aic'):
         if by != 'aic':
             raise NotImplementedError('`by` is not used yet')
-        self.sort_idx_aic = sort_idx = np.argsort(self.aic)
+        sort_idx = self.idx_sort_aic
         import pandas as pd
         res_df = pd.DataFrame()
         res_df['exog_idx'] = [self.exog_idx[ii] for ii in sort_idx]
@@ -582,22 +588,22 @@ def all_subset(endog, exog, keep_exog=0, keep_attr=None, k_max=None):
     params_keep_all = []
     bse_keep_all = []
     df_resid_all = []
-    if keep_exog > 1:
+    df_resid_all.append(stols_all.df_resid)
+    if keep_exog > 0:
         # add results for initial "empty" model
         # TODO: check params is 2-dim, bse is 1-dim
         params_keep_all.append(stols_all.params[0, :keep_exog])
         bse_keep_all.append(stols_all.bse[:keep_exog])
-        df_resid_all.append(stols_all.df_resid)
 
     for ii in all_sweeps[:-1]:   # last sweep goes back to empty model
         stols_all.sweep(ii)
         res_all.append([ii, stols_all.is_exog[:-1].copy(), stols_all.rss,
                         stols_all.aic])
-        if keep_exog > 1:
+        df_resid_all.append(stols_all.df_resid)
+        if keep_exog > 0:
             # TODO: check params is 2-dim, bse is 1-dim
             params_keep_all.append(stols_all.params[0, :keep_exog])
             bse_keep_all.append(stols_all.bse[:keep_exog])
-            df_resid_all.append(stols_all.df_resid)
 
     if k_max is not None:
         # filter out models with more than k_max exog

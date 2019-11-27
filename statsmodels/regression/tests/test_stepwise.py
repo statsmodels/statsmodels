@@ -7,7 +7,7 @@ License: BSD-3
 
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression._stepwise import (
@@ -84,7 +84,41 @@ class TestSweep(object):
             assert_almost_equal(stols.rss, res.ssr, decimal=13)
 
 
-class TestAllSubsetsSweep(object):
+class CheckSubsetsSweeps(object):
+
+    def test_compare_OLS(self):
+        # shortcut alias
+        keep_exog = self.keep_exog
+        res_all = self.res_all
+
+        # get arrays TODO: this might change, convert to array in Results class
+        params = np.asarray(res_all.params_keep_all)
+        bse = np.asarray(res_all.bse_keep_all)
+        df_resid = np.asarray(res_all.df_resid_all)
+        idx_sort_aic = res_all.idx_sort_aic
+
+        k_best = 5
+        df_summ = res_all.sorted_frame()
+        df_best = df_summ.iloc[:k_best]
+        df_resid_best = df_resid[idx_sort_aic[:k_best]]
+        if self.keep_exog > 0:
+                params_best = params[idx_sort_aic[:k_best]]
+                bse_best = bse[idx_sort_aic[:k_best]]
+        for i in range(df_best.shape[0]):
+            mod = df_best.iloc[i]
+            ex_idx = mod["exog_idx"]
+            res_all_ssi = OLS(self.endog, self.exog[:, ex_idx]).fit()
+            assert_allclose(mod["aic"], res_all_ssi.aic, rtol=1e-13)
+
+            assert_allclose(df_resid_best[i], res_all_ssi.df_resid, rtol=1e-13)
+            if self.keep_exog > 0:
+                assert_allclose(params_best[i], res_all_ssi.params[:keep_exog],
+                                rtol=1e-13)
+                assert_allclose(bse_best[i], res_all_ssi.bse[:keep_exog],
+                                rtol=1e-13)
+
+
+class TestAllSubsetsSweep(CheckSubsetsSweeps):
 
     @classmethod
     def setup_class(cls):
@@ -95,10 +129,49 @@ class TestAllSubsetsSweep(object):
         beta = 1 / np.arange(1, k_vars + 1)
         y = x[:, :k_vars].dot(beta) + np.random.randn(nobs)
         cls.endog, cls.exog = y, x
+        cls.keep_exog = 1
+        cls.res_all = all_subset(cls.endog, cls.exog, keep_exog=cls.keep_exog)
 
     def test_simple(self):
-        res_all = all_subset(self.endog, self.exog, keep_exog=1)
+        res_all = self.res_all
         res_aic = np.array([131.84520748, 126.37159826, 126.64133021,
                             133.77530407, 135.29444877, 126.44745325,
                             127.11637884, 133.43356509])
         assert_allclose(res_all.aic, res_aic, rtol=1e-8)
+
+
+class TestAllSubsetsSweepkeep(CheckSubsetsSweeps):
+
+    @classmethod
+    def setup_class(cls):
+        nobs, k_vars = 50, 6
+        np.random.seed(85325783)
+        x = np.random.randn(nobs, k_vars)
+        x[:, 0] = 1.
+        beta = 1 / np.arange(1, k_vars + 1)
+        y = x.dot(beta) + np.random.randn(nobs)
+        cls.endog, cls.exog = y, x
+        cls.keep_exog = 2
+        cls.res_all = all_subset(cls.endog, cls.exog, keep_exog=cls.keep_exog)
+
+
+class TestAllSubsetsSweepKMax(CheckSubsetsSweeps):
+
+    @classmethod
+    def setup_class(cls):
+        nobs, k_vars = 50, 6
+        np.random.seed(85325783)
+        x = np.random.randn(nobs, k_vars)
+        x[:, 0] = 1.
+        beta = 1 / np.arange(1, k_vars + 1)
+        y = x.dot(beta) + np.random.randn(nobs)
+        cls.endog, cls.exog = y, x
+        cls.keep_exog = 2
+        cls.k_max = 2
+        cls.res_all = all_subset(cls.endog, cls.exog, keep_exog=cls.keep_exog,
+                                 k_max=cls.k_max)
+
+    def test_kmax(self):
+        res_all = self.res_all
+        k_largest = res_all.isexog.sum(1).max()
+        assert_equal(k_largest, self.k_max)
