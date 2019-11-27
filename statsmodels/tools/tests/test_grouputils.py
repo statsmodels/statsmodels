@@ -66,8 +66,8 @@ class CheckGrouping(object):
                                             level=0)
         grouped = self.data.reset_index().groupby(names[0])
         expected = grouped.apply(lambda x : x.mean())[self.data.columns]
-        np.testing.assert_array_equal(transformed_dataframe,
-                                      expected.values)
+        np.testing.assert_allclose(transformed_dataframe,
+                                   expected.values)
 
         if len(names) > 1:
             transformed_dataframe = self.grouping.transform_dataframe(
@@ -75,8 +75,8 @@ class CheckGrouping(object):
                                             level=1)
             grouped = self.data.reset_index().groupby(names[1])
             expected = grouped.apply(lambda x: x.mean())[self.data.columns]
-            np.testing.assert_array_equal(transformed_dataframe,
-                                          expected.values)
+            np.testing.assert_allclose(transformed_dataframe,
+                                       expected.values)
 
     def test_transform_array(self):
         names = self.data.index.names
@@ -86,8 +86,8 @@ class CheckGrouping(object):
                                             level=0)
         grouped = self.data.reset_index().groupby(names[0])
         expected = grouped.apply(lambda x: x.mean())[self.data.columns]
-        np.testing.assert_array_equal(transformed_array,
-                                      expected.values)
+        np.testing.assert_allclose(transformed_array,
+                                   expected.values)
 
         if len(names) > 1:
             transformed_array = self.grouping.transform_array(
@@ -95,8 +95,8 @@ class CheckGrouping(object):
                                             lambda x : x.mean(), level=1)
             grouped = self.data.reset_index().groupby(names[1])
             expected = grouped.apply(lambda x: x.mean())[self.data.columns]
-            np.testing.assert_array_equal(transformed_array,
-                                          expected.values)
+            np.testing.assert_allclose(transformed_array,
+                                       expected.values)
 
 
     def test_transform_slices(self):
