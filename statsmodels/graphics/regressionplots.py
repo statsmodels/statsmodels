@@ -73,7 +73,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     return ax.figure
 
 
-def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
+def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     """Plot fit against one regressor.
 
     This creates one graph with the scatterplot of observed values compared to
@@ -86,10 +86,13 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     x_var : int or str
         Name or index of regressor in exog matrix.
     y_true : array_like
-        (optional) If this is not None, then the array is added to the plot
+        (optional) If this is not None, then the array is added to the plot.
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+    vlines : bool
+        (optional) If this not True, then the uncertainty of the fit is not
+        plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
         values points.
@@ -148,11 +151,12 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(results)
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
-    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k',
-              alpha=.7)
+    if vlines is True:
+        _, iv_l, iv_u = wls_prediction_std(results)
+        ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1,
+                  color='k', alpha=.7)
     #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
     #                    color='k')
     ax.set_title(title)
