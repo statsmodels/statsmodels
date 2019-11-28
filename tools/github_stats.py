@@ -60,7 +60,7 @@ def is_pull_request(issue):
 
 
 def split_pulls(all_issues, project="statsmodels/statsmodels"):
-    """split a list of closed issues into non-PR Issues and Pull Requests"""
+    """Split a list of closed issues into non-PR issues and Pull Requests"""
     pulls = []
     issues = []
     for i in all_issues:
@@ -75,7 +75,7 @@ def split_pulls(all_issues, project="statsmodels/statsmodels"):
 def issues_closed_since(period=timedelta(days=365),
                         project="statsmodels/statsmodels", pulls=False):
     """
-    Get all issues closed since a particular point in time. period
+    Get all issues closed since a particular point in time. Period
     can either be a datetime object, or a timedelta object. In the
     latter case, it is used as a time before the present.
     """

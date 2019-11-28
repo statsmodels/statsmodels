@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This will generate an API file for formula. in dir/statsmodels/formula/api.py
+This will generate an API file for formula in dir/statsmodels/formula/api.py
 
 It first builds statsmodels in place, then generates the file. It's to be run
 by developers to add files to the formula API without having to maintain this

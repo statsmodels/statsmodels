@@ -1,5 +1,5 @@
 """
-api for empirical likelihood
+API for empirical likelihood
 
 """
 __all__ = [

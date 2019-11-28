@@ -24,7 +24,7 @@ class NAAction(NAAction):
 
 def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     """
-    Returns endog, exog, and the model specification from arrays and formula
+    Returns endog, exog, and the model specification from arrays and formula.
 
     Parameters
     ----------
@@ -37,12 +37,12 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     formula : str or patsy.model_desc
         You can pass a handler by import formula_handler and adding a
         key-value pair where the key is the formula object class and
-        the value is a function that returns endog, exog, formula object
+        the value is a function that returns endog, exog, formula object.
 
     Returns
     -------
     endog : array_like
-        Should preserve the input type of Y,X
+        Should preserve the input type of Y,X.
     exog : array_like
         Should preserve the input type of Y,X. Could be None.
     """
@@ -96,7 +96,7 @@ def _has_intercept(design_info):
 
 def _intercept_idx(design_info):
     """
-    Returns boolean array index indicating which column holds the intercept
+    Returns boolean array index indicating which column holds the intercept.
     """
     from patsy.desc import INTERCEPT
     from numpy import array

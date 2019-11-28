@@ -27,12 +27,12 @@ from statsmodels.regression.linear_model import OLS, RegressionResults
 class ELOriginRegress(object):
     """
     Empirical Likelihood inference and estimation for linear regression
-    through the origin
+    through the origin.
 
     Parameters
     ----------
     endog: nx1 array
-        Array of response variables
+        Array of response variables.
 
     exog: nxk array
         Array of exogenous variables.  Assumes no array of ones
@@ -43,13 +43,13 @@ class ELOriginRegress(object):
         Array of response variables
 
     exog : nxk array
-        Array of exogenous variables.  Assumes no array of ones
+        Array of exogenous variables.  Assumes no array of ones.
 
     nobs : float
-        Number of observations
+        Number of observations.
 
     nvar : float
-        Number of exogenous regressors
+        Number of exogenous regressors.
 
      """
     def __init__(self, endog, exog):
@@ -68,7 +68,7 @@ class ELOriginRegress(object):
         Returns
         -------
         Results : class
-            Empirical likelihood regression class
+            Empirical likelihood regression class.
 
         """
         exog_with = add_constant(self.exog, prepend=True)
@@ -89,15 +89,15 @@ class ELOriginRegress(object):
 
 class OriginResults(RegressionResults):
     """
-    A Results class for empirical likelihood regression through the origin
+    A Results class for empirical likelihood regression through the origin.
 
     Parameters
     ----------
     model : class
-        An OLS model with an intercept
+        An OLS model with an intercept.
 
     params : 1darray
-        Fitted parameters
+        Fitted parameters.
 
     est_llr : float
         The log likelihood ratio of the model with the intercept restricted to
@@ -110,16 +110,16 @@ class OriginResults(RegressionResults):
     Attributes
     ----------
     model : class
-        An OLS model with an intercept
+        An OLS model with an intercept.
 
     params : 1darray
-        Fitted parameter
+        Fitted parameter.
 
     llr : float
-        The log likelihood ratio of the maximum empirical likelihood estimate
+        The log likelihood ratio of the maximum empirical likelihood estimate.
 
     llf_el : float
-        The log likelihood of the fitted model with the intercept restricted to 0
+        The log likelihood of the fitted model with the intercept restricted to 0.
 
     Notes
     -----
@@ -161,12 +161,12 @@ class OriginResults(RegressionResults):
                             stochastic_exog=1, return_weights=0):
         """
         Returns the llr and p-value for a hypothesized parameter value
-        for a regression that goes through the origin
+        for a regression that goes through the origin.
 
         Parameters
         ----------
         b0_vals : 1darray
-            The hypothesized value to be tested
+            The hypothesized value to be tested.
 
         param_num : 1darray
             Which parameters to test.  Note this uses python
@@ -175,24 +175,24 @@ class OriginResults(RegressionResults):
 
         return_weights : bool
             If true, returns the weights that optimize the likelihood
-            ratio at b0_vals.  Default is False
+            ratio at b0_vals.  Default is False.
 
         method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
-            Default is 'nm'
+            Default is 'nm'.
 
         stochastic_exog : bool
             When TRUE, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
-            regressors.  Default is TRUE
+            regressors.  Default is TRUE.
 
         Returns
         -------
         res : tuple
-            pvalue and likelihood ratio
+            pvalue and likelihood ratio.
         """
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
@@ -212,25 +212,25 @@ class OriginResults(RegressionResults):
                        stochastic_exog=1):
         """
         Returns the confidence interval for a regression parameter when the
-        regression is forced through the origin
+        regression is forced through the origin.
 
         Parameters
         ----------
         param_num : int
             The parameter number to be tested.  Note this uses python
-            indexing but the '0' parameter refers to the intercept term
+            indexing but the '0' parameter refers to the intercept term.
 
         upper_bound : float
             The maximum value the upper confidence limit can be.  The
             closer this is to the confidence limit, the quicker the
-            computation.  Default is .00001 confidence limit under normality
+            computation.  Default is .00001 confidence limit under normality.
 
         lower_bound : float
             The minimum value the lower confidence limit can be.
-            Default is .00001 confidence limit under normality
+            Default is .00001 confidence limit under normality.
 
         sig : float, optional
-            The significance level.  Default .05
+            The significance level.  Default .05.
 
         method : str, optional
              Algorithm to optimize of nuisance params.  Can be 'nm' or
@@ -239,7 +239,7 @@ class OriginResults(RegressionResults):
         Returns
         -------
         ci: tuple
-            The confidence interval for the parameter 'param_num'
+            The confidence interval for the parameter 'param_num'.
         """
         r0 = chi2.ppf(1 - sig, 1)
         param_num = np.array([param_num])
