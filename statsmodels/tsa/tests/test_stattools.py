@@ -37,7 +37,7 @@ DECIMAL_1 = 1
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def acovf_data():
     rnd = np.random.RandomState(12345)
     return rnd.randn(250)

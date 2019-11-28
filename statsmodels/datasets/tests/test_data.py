@@ -19,8 +19,7 @@ for dataset_name in dir(statsmodels.datasets):
 @pytest.mark.parametrize('dataset_name', datasets)
 def test_dataset(dataset_name):
     dataset = importlib.import_module('statsmodels.datasets.' + dataset_name)
-    with pytest.warns(FutureWarning):
-        ds = dataset.load()
+    ds = dataset.load()
     assert isinstance(ds, Dataset)
     assert isinstance(ds.data, np.recarray)
     if hasattr(ds, 'exog'):

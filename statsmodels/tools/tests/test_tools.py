@@ -18,7 +18,7 @@ from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def string_var():
     string_var = [string.ascii_lowercase[0:5],
                   string.ascii_lowercase[5:10],

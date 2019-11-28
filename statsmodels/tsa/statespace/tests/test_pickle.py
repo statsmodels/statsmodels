@@ -26,7 +26,7 @@ from statsmodels.tsa.statespace.structural import UnobservedComponents
 from .results import results_kalman_filter
 
 
-@pytest.fixture
+@pytest.fixture()
 def data():
     true = results_kalman_filter.uc_uni
     data_ = pd.DataFrame(
