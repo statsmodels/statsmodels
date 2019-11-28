@@ -114,6 +114,11 @@ class TestKDEUnivariate(KDETestBase):
         npt.assert_allclose(kde_vals0, kde_expected,
                             atol=1e-6)
 
+    def test_all_samples_same_location_bw(self):
+        x = np.ones(100)
+        kde = nparam.KDEUnivariate(x)
+        with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
+            kde.fit()
 
 
 class TestKDEMultivariate(KDETestBase):
