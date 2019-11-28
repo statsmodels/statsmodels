@@ -30,6 +30,7 @@ __all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
            'lpol2index', 'index2lpol']
 
 
+# Remove after 0.11
 @deprecate_kwarg('sigma', 'scale')
 def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=None,
                          axis=0, burnin=0):
@@ -176,6 +177,7 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     return acovf[:nobs]
 
 
+# Remove after 0.11
 @deprecate_kwarg('nobs', 'lags')
 def arma_acf(ar, ma, lags=10):
     """
@@ -205,6 +207,7 @@ def arma_acf(ar, ma, lags=10):
     return acovf / acovf[0]
 
 
+# Remove after 0.11
 @deprecate_kwarg('nobs', 'lags')
 def arma_pacf(ar, ma, lags=10):
     """
@@ -285,6 +288,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     return w, sd
 
 
+# Remove after 0.11
 @deprecate_kwarg('nobs', 'leads')
 def arma_impulse_response(ar, ma, leads=100):
     """
@@ -345,6 +349,7 @@ def arma_impulse_response(ar, ma, leads=100):
     return signal.lfilter(ma, ar, impulse)
 
 
+# Remove after 0.11
 @deprecate_kwarg('nobs', 'lags')
 def arma2ma(ar, ma, lags=100):
     """
@@ -371,6 +376,7 @@ def arma2ma(ar, ma, lags=100):
     return arma_impulse_response(ar, ma, leads=lags)
 
 
+# Remove after 0.11
 @deprecate_kwarg('nobs', 'lags')
 def arma2ar(ar, ma, lags=100):
     """

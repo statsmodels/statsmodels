@@ -4,8 +4,6 @@ Statespace Tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import warnings
-
 import numpy as np
 from scipy.linalg import solve_sylvester
 import pandas as pd
@@ -1794,11 +1792,8 @@ def prepare_exog(exog):
 
 def prepare_trend_spec(trend):
     # Trend
-    if trend is None or trend in ['n', 'nc']:
-        polynomial_trend = np.ones((0))
-        if trend == 'nc':
-            warnings.warn("Argument option trend='nc' is deprecated. Please"
-                          " use option trend='n'.", DeprecationWarning)
+    if trend is None or trend == 'n':
+        polynomial_trend = np.ones(0)
     elif trend == 'c':
         polynomial_trend = np.r_[1]
     elif trend == 't':

@@ -221,8 +221,6 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     Notes
     -----
     Lütkepohl p. 37
-
-    Also used by DynamicVAR class
     """
     p = len(coefs)
     k = len(coefs[0])
@@ -596,11 +594,11 @@ class VAR(TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend : str {"c", "ct", "ctt", "nc"}
+        trend : str {"c", "ct", "ctt", "nc", "n"}
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "nc" - co constant, no trend
+            "n", "nc" - co constant, no trend
             Note that these are prepended to the columns of the dataset.
 
         Returns
@@ -614,7 +612,7 @@ class VAR(TimeSeriesModel):
         """
         lags = maxlags
 
-        if trend not in ['c', 'ct', 'ctt', 'nc']:
+        if trend not in ['c', 'ct', 'ctt', 'nc', 'n']:
             raise ValueError("trend '{}' not supported for VAR".format(trend))
 
         if ic is not None:
@@ -670,7 +668,7 @@ class VAR(TimeSeriesModel):
         if exog is not None:
             # TODO: currently only deterministic terms supported (exoglags==0)
             # and since exoglags==0, x will be an array of size 0.
-            x = util.get_var_endog(exog[-nobs:], 0, trend="nc",
+            x = util.get_var_endog(exog[-nobs:], 0, trend="n",
                                    has_constant="raise")
             x_inst = exog[-nobs:]
             x = np.column_stack((x, x_inst))

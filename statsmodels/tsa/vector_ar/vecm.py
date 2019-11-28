@@ -1840,7 +1840,7 @@ class VECMResults(object):
                                       first_season=self.first_season,
                                       seasons_centered=True, exog=self.exog,
                                       exog_coint=self.exog_coint)
-        var_results = VAR(y.T, exog).fit(maxlags=p, trend="nc")
+        var_results = VAR(y.T, exog).fit(maxlags=p, trend="n")
 
         # num_restr is called N in Lutkepohl
         num_restr = len(causing) * len(caused) * (p - 1)
@@ -1952,7 +1952,7 @@ class VECMResults(object):
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
         # fit with trend "nc" because all trend information is already in exog
-        var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="nc")
+        var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="n")
         var_results._results.names = self.names
         return var_results.test_inst_causality(causing=causing, signif=signif)
 

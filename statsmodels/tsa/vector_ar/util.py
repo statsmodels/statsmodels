@@ -42,7 +42,7 @@ def get_trendorder(trend='c'):
     # Handle constant, etc.
     if trend == 'c':
         trendorder = 1
-    elif trend == 'nc':
+    elif trend in ('n', 'nc'):
         trendorder = 0
     elif trend == 'ct':
         trendorder = 2

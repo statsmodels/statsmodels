@@ -8,7 +8,6 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-import pytest
 
 import statsmodels.base._penalties as smpen
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
@@ -103,16 +102,12 @@ class TestPseudoHuber(CheckPenalty):
 
     def test_backward_compatibility(self):
         wts = [0.5]
-        with pytest.warns(DeprecationWarning, match="`wts` method is deprec"):
-            pen = smpen.PseudoHuber(0.1, wts=wts)
-
+        pen = smpen.PseudoHuber(0.1, weights=wts)
         assert_equal(pen.weights, wts)
 
     def test_deprecated_priority(self):
         weights = [1.0]
-        wts = [0.5]
-        with pytest.warns(DeprecationWarning, match="`wts` method is deprec"):
-            pen = smpen.PseudoHuber(0.1, weights=weights, wts=wts)
+        pen = smpen.PseudoHuber(0.1, weights=weights)
 
         assert_equal(pen.weights, weights)
 
@@ -132,15 +127,12 @@ class TestL2(CheckPenalty):
 
     def test_backward_compatibility(self):
         wts = [0.5]
-        with pytest.warns(DeprecationWarning, match="`wts` method is deprec"):
-            pen = smpen.L2(wts=wts)
+        pen = smpen.L2(weights=wts)
         assert_equal(pen.weights, wts)
 
     def test_deprecated_priority(self):
         weights = [1.0]
-        wts = [0.5]
-        with pytest.warns(DeprecationWarning, match="`wts` method is deprec"):
-            pen = smpen.L2(weights=weights, wts=wts)
+        pen = smpen.L2(weights=weights)
         assert_equal(pen.weights, weights)
 
     def test_weights_assignment(self):
