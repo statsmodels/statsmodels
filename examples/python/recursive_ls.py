@@ -47,7 +47,7 @@ endog = dta['WORLDCONSUMPTION']
 exog = sm.add_constant(
     dta[['COPPERPRICE', 'INCOMEINDEX', 'ALUMPRICE', 'INVENTORYINDEX']])
 
-# First, construct and fir the model, and print a summary. Although the
+# First, construct and fit the model, and print a summary. Although the
 # `RLS` model computes the regression parameters recursively, so there are
 # as many estimates as there are datapoints, the summary table only presents
 # the regression parameters estimated on the entire sample; except for small
