@@ -941,6 +941,10 @@ class StratifiedTable(object):
                 raise ValueError("If an ndarray, argument must be 2x2xn")
             table = tables
         else:
+            if any([np.asarray(x).shape != (2, 2) for x in tables]):
+                m = "If `tables` is a list, all of its elements should be 2x2"
+                raise ValueError(m)
+
             # Create a data cube
             table = np.dstack(tables).astype(np.float64)
 
@@ -1099,9 +1103,9 @@ class StratifiedTable(object):
 
         References
         ----------
-        Robins, James, Norman Breslow, and Sander Greenland. "Estimators of
-            the Mantel-Haenszel Variance Consistent in Both Sparse Data and
-            Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
+        J. Robins, N. Breslow, S. Greenland. "Estimators of the
+        Mantel-Haenszel Variance Consistent in Both Sparse Data and
+        Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
         """
 
         adns = np.sum(self._ad / self._n)
@@ -1205,7 +1209,8 @@ class StratifiedTable(object):
         c = -r * self._apb * self._apc
 
         # Expected value of first cell
-        e11 = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
+        dr = np.sqrt(b**2 - 4*a*c)
+        e11 = (-b + dr) / (2*a)
 
         # Variance of the first cell
         v11 = (1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) +

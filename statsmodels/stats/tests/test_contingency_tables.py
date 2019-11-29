@@ -366,9 +366,13 @@ class CheckStratifiedMixin(object):
         if not hasattr(self, "or_homog"):
             return
 
-        rslt = self.rslt_0.test_equal_odds()
+        rslt = self.rslt.test_equal_odds(adjust=False)
         assert_allclose(rslt.statistic, self.or_homog, rtol=1e-4, atol=1e-4)
         assert_allclose(rslt.pvalue, self.or_homog_p, rtol=1e-4, atol=1e-4)
+
+        rslt = self.rslt.test_equal_odds(adjust=True)
+        assert_allclose(rslt.statistic, self.or_homog_adj, rtol=1e-4, atol=1e-4)
+        assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
 
     def test_pandas(self):
@@ -428,6 +432,7 @@ class TestStratified1(CheckStratifiedMixin):
 
 class TestStratified2(CheckStratifiedMixin):
     """
+    library(DescTools)
     data = array(c(20, 14, 10, 24,
                    15, 12, 3, 15,
                    3, 2, 3, 2,
@@ -435,6 +440,8 @@ class TestStratified2(CheckStratifiedMixin):
                    1, 0, 3, 2),
                    dim=c(2, 2, 5))
     rslt = mantelhaen.test(data)
+    bd1 = BreslowDayTest(data, correct=FALSE)
+    bd2 = BreslowDayTest(data, correct=TRUE)
     """
 
     @classmethod
@@ -457,9 +464,18 @@ class TestStratified2(CheckStratifiedMixin):
         cls.or_lcb = 1.781135
         cls.or_ucb = 7.240633
 
+        # Breslow Day test without Tarone adjustment
+        cls.or_homog = 1.8438
+        cls.or_homog_p = 0.7645
+
+        # Breslow Day test with Tarone adjustment
+        cls.or_homog_adj = 1.8436
+        cls.or_homog_adj_p = 0.7645
+
 
 class TestStratified3(CheckStratifiedMixin):
     """
+    library(DescTools)
     data = array(c(313, 512, 19, 89,
                    207, 353, 8, 17,
                    205, 120, 391, 202,
@@ -468,6 +484,8 @@ class TestStratified3(CheckStratifiedMixin):
                    351, 22, 317, 24),
                    dim=c(2, 2, 6))
     rslt = mantelhaen.test(data)
+    bd1 = BreslowDayTest(data, correct=FALSE)
+    bd2 = BreslowDayTest(data, correct=TRUE)
     """
 
     @classmethod
@@ -491,9 +509,13 @@ class TestStratified3(CheckStratifiedMixin):
         cls.or_lcb = 0.9402012
         cls.or_ucb = 1.2913602
 
+        # Breslow Day test without Tarone adjustment
         cls.or_homog = 18.83297
         cls.or_homog_p = 0.002064786
 
+        # Breslow Day test with Tarone adjustment
+        cls.or_homog_adj = 18.83297
+        cls.or_homog_adj_p = 0.002064786
 
 class Check2x2Mixin(object):
     @classmethod
