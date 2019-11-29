@@ -804,6 +804,26 @@ class TestHoltWintersNoTrendConcentratedInitialization(
         super().setup_class(mod, start_params=start_params, rtol=1e-4)
 
 
+class TestMultiIndex(CheckExponentialSmoothing):
+    @classmethod
+    def setup_class(cls):
+        oildata_copy = oildata.copy()
+        oildata_copy.name = ("oil", "data")
+        mod = ExponentialSmoothing(oildata_copy,
+                                   initialization_method='simple')
+        res = mod.filter([results_params['oil_fpp2']['alpha']])
+
+        super().setup_class('oil_fpp2', res)
+
+    def test_conf_int(self):
+        # Forecast confidence intervals
+        ci_95 = self.forecast.conf_int(alpha=0.05)
+        assert_allclose(ci_95["lower ('oil', 'data')"],
+                        results_predict['%s_lower' % self.name][self.nobs:])
+        assert_allclose(ci_95["upper ('oil', 'data')"],
+                        results_predict['%s_upper' % self.name][self.nobs:])
+
+
 def test_invalid():
     # Tests for invalid model specifications that raise ValueErrors
     with pytest.raises(
