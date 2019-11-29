@@ -17,18 +17,18 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat.python import range, lrange, string_types
+from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import stats
 
 
 # copied from regression/stats.utils
 def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
-    """Calculates power discrepancy, a class of goodness-of-fit tests
+    r"""Calculates power discrepancy, a class of goodness-of-fit tests
     as a measure of discrepancy between observed and expected data.
 
     This contains several goodness-of-fit tests as special cases, see the
-    describtion of lambd, the exponent of the power discrepancy. The pvalue
+    description of lambd, the exponent of the power discrepancy. The pvalue
     is based on the asymptotic chi-square distribution of the test statistic.
 
     freeman_tukey:
@@ -40,7 +40,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         Observed values
     e : Iterable
         Expected values
-    lambd : float or string
+    lambd : {float, str}
         * float : exponent `a` for power discrepancy
         * 'loglikeratio': a = 0
         * 'freeman_tukey': a = -0.5
@@ -117,18 +117,23 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
-    if not isinstance(lambd, string_types):
+    if not isinstance(lambd, str):
         a = lambd
     else:
-        if lambd == 'loglikeratio': a = 0
-        elif lambd == 'freeman_tukey': a = -0.5
-        elif lambd == 'pearson': a = 1
-        elif lambd == 'modified_loglikeratio': a = -1
-        elif lambd == 'cressie_read': a = 2/3.0
+        if lambd == 'loglikeratio':
+            a = 0
+        elif lambd == 'freeman_tukey':
+            a = -0.5
+        elif lambd == 'pearson':
+            a = 1
+        elif lambd == 'modified_loglikeratio':
+            a = -1
+        elif lambd == 'cressie_read':
+            a = 2/3.0
         else:
-            raise ValueError('lambd has to be a number or one of ' + \
-                    'loglikeratio, freeman_tukey, pearson, ' +\
-                    'modified_loglikeratio or cressie_read')
+            raise ValueError('lambd has to be a number or one of '
+                             'loglikeratio, freeman_tukey, pearson, '
+                             'modified_loglikeratio or cressie_read')
 
     n = np.sum(o, axis=axis)
     nt = n
@@ -147,12 +152,12 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         p = e
         e = nt * e
     else:
-        raise ValueError('observed and expected need to have the same ' +\
-                          'number of observations, or e needs to add to 1')
+        raise ValueError('observed and expected need to have the same '
+                         'number of observations, or e needs to add to 1')
     k = o.shape[axis]
     if e.shape[axis] != k:
-        raise ValueError('observed and expected need to have the same ' +\
-                          'number of bins')
+        raise ValueError('observed and expected need to have the same '
+                         'number of bins')
 
     # Note: taken from formulas, to simplify cancel n
     if a == 0:   # log likelihood ratio
@@ -174,7 +179,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
     Parameters
     ----------
-    distname : string
+    distname : str
         name of distribution function
     arg : sequence
         parameters of distribution
@@ -247,11 +252,11 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     ----------
     rvs : array
         sample data
-    distname : string
+    distname : str
         name of distribution function
     arg : sequence
         parameters of distribution
-    nsupp : integer
+    nsupp : int
         number of bins. The algorithm tries to find bins with equal weights.
         depending on the distribution, the actual number of bins can be smaller.
 

@@ -5,20 +5,23 @@ The Stata input tools were originally written by Joe Presbrey as part of PyDTA.
 
 You can find more information here http://presbrey.mit.edu/PyDTA
 
-See also
----------
+See Also
+--------
 numpy.lib.io
 """
-from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
-                                       asbytes, asstr, range, PY3)
+import warnings
+
+from statsmodels.compat.python import (lzip, lmap, lrange,
+                                       lfilter, asbytes, asstr)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
 import sys
+
 import numpy as np
-from numpy.lib._iotools import _is_string_like, easy_dtype
 import statsmodels.tools.data as data_util
 from pandas import isnull
+from pandas.io.stata import StataMissingValue
 from statsmodels.iolib.openfile import get_file_obj
 
 _date_formats = ["%tc", "%tC", "%td", "%tw", "%tm", "%tq", "%th", "%ty"]
@@ -98,14 +101,14 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     date - ty
         years since 0000
 
-    If you don't have pandas with datetime support, then you can't do
+    If you do not have pandas with datetime support, then you cannot do
     milliseconds accurately.
     """
     #NOTE: we could run into overflow / loss of precision situations here
-    # casting to int, but I'm not sure what to do. datetime won't deal with
-    # numpy types and numpy datetime isn't mature enough / we can't rely on
+    # casting to int, but I'm not sure what to do. datetime will not deal with
+    # numpy types and numpy datetime is not mature enough / we cannot rely on
     # pandas version > 0.7.1
-    #TODO: IIRC relative delta doesn't play well with np.datetime?
+    #TODO: IIRC relative delta does not play well with np.datetime?
     date = int(date)
     stata_epoch = datetime.datetime(1960, 1, 1)
     if fmt in ["%tc", "tc"]:
@@ -137,45 +140,13 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     elif fmt in ["%ty", "ty"]:
         if date > 0:
             return datetime.datetime(date, 1, 1)
-        else: # don't do negative years bc can't mix dtypes in column
+        else: # do not do negative years bc cannot mix dtypes in column
             raise ValueError("Year 0 and before not implemented")
     else:
         raise ValueError("Date fmt %s not understood" % fmt)
 
+
 ### Helper classes for StataReader ###
-
-class _StataMissingValue(object):
-    """
-    An observation's missing value.
-
-    Parameters
-    -----------
-    offset
-    value
-
-    Attributes
-    ----------
-    string
-    value
-
-    Notes
-    -----
-    More information: <http://www.stata.com/help.cgi?missing>
-    """
-
-    def __init__(self, offset, value):
-        self._value = value
-        if isinstance(value, (int, long)):
-            self._str = value-offset is 1 and \
-                    '.' or ('.' + chr(value-offset+96))
-        else:
-            self._str = '.'
-    string = property(lambda self: self._str, doc="The Stata representation of \
-the missing value: '.', '.a'..'.z'")
-    value = property(lambda self: self._value, doc='The binary representation \
-of the missing value.')
-    def __str__(self): return self._str
-    __str__.__doc__ = string.__doc__
 
 class _StataVariable(object):
     """
@@ -186,7 +157,7 @@ class _StataVariable(object):
     variable_data
 
     Attributes
-    -----------
+    ----------
     format : str
         Stata variable format.  See notes for more information.
     index : int
@@ -208,23 +179,48 @@ class _StataVariable(object):
         self._data = variable_data
 
     def __int__(self):
+        """the variable's index within an observation"""
         return self.index
 
     def __str__(self):
+        """the name of the variable"""
         return self.name
-    index = property(lambda self: self._data[0], doc='the variable\'s index \
-within an observation')
-    type = property(lambda self: self._data[1], doc='the data type of \
-variable\n\nPossible types are:\n{1..244:string, b:byte, h:int, l:long, \
-f:float, d:double)')
-    name = property(lambda self: self._data[2], doc='the name of the variable')
-    format = property(lambda self: self._data[4], doc='the variable\'s Stata \
-format')
-    value_format = property(lambda self: self._data[5], doc='the variable\'s \
-value format')
-    label = property(lambda self: self._data[6], doc='the variable\'s label')
-    __int__.__doc__ = index.__doc__
-    __str__.__doc__ = name.__doc__
+
+    @property
+    def index(self):
+        """the variable's index within an observation"""
+        return self._data[0]
+
+    @property
+    def type(self):
+        """
+        The data type of variable
+
+        Possible types are:
+        {1..244:string, b:byte, h:int, l:long, f:float, d:double)
+        """
+        return self._data[1]
+
+    @property
+    def name(self):
+        """the name of the variable"""
+        return self._data[2]
+
+    @property
+    def format(self):
+        """the variable's Stata format"""
+        return self._data[4]
+
+    @property
+    def value_format(self):
+        """the variable's value format"""
+        return self._data[5]
+
+    @property
+    def label(self):
+        """The variable's label"""
+        return self._data[6]
+
 
 class StataReader(object):
     """
@@ -240,11 +236,11 @@ class StataReader(object):
     missing_values : bool
         If missing_values is True, parse missing_values and return a
         Missing Values object instead of None.
-    encoding : string, optional
+    encoding : str, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
 
-    See also
+    See Also
     --------
     statsmodels.iolib.foreign.genfromdta
     pandas.read_stata
@@ -294,7 +290,13 @@ class StataReader(object):
             (-1.798e+308, +8.988e+307) }
 
     def __init__(self, fname, missing_values=False, encoding=None):
-        if encoding == None:
+        warnings.warn(
+            "StataReader is deprecated as of 0.10.0 and will be removed in a "
+            "future version.  Use pandas.read_stata or "
+            "pandas.io.stata.StataReader instead.",
+            FutureWarning)
+
+        if encoding is None:
             import locale
             self._encoding = locale.getpreferredencoding()
         else:
@@ -334,7 +336,7 @@ class StataReader(object):
 
         Returns
         -------
-        out: string
+        out: str
         """
         return self._header['data_label']
 
@@ -377,8 +379,8 @@ class StataReader(object):
         Notes
         -----
         If missing_values is True during instantiation of StataReader then
-        observations with _StataMissingValue(s) are not filtered and should
-        be handled by your applcation.
+        observations with StataMissingValue(s) are not filtered and should
+        be handled by your application.
         """
 
         try:
@@ -412,29 +414,22 @@ class StataReader(object):
 
         k is zero-indexed.  Prefer using R.data() for performance.
         """
-        if not (isinstance(k, (int, long))) or k < 0 or k > len(self)-1:
+        if not (isinstance(k, int)) or k < 0 or k > len(self)-1:
             raise IndexError(k)
         loc = self._data_location + sum(self._col_size()) * k
         if self._file.tell() != loc:
             self._file.seek(loc)
         return self._next()
 
-    ### Private methods
+    # Private methods
 
     def _null_terminate(self, s, encoding):
-        if PY3: # have bytes not strings, so must decode
-            null_byte = asbytes('\x00')
-            try:
-                s = s.lstrip(null_byte)[:s.index(null_byte)]
-            except:
-                pass
-            return s.decode(encoding)
-        else:
-            null_byte = asbytes('\x00')
-            try:
-                return s.lstrip(null_byte)[:s.index(null_byte)]
-            except:
-                return s
+        null_byte = asbytes('\x00')
+        try:
+            s = s.lstrip(null_byte)[:s.index(null_byte)]
+        except Exception:
+            pass
+        return s.decode(encoding)
 
     def _parse_header(self, file_object):
         self._file = file_object
@@ -508,7 +503,7 @@ class StataReader(object):
         if len(self._col_sizes) == 0:
             self._col_sizes = lmap(lambda x: self._calcsize(x),
                     self._header['typlist'])
-        if k == None:
+        if k is None:
             return self._col_sizes
         else:
             return self._col_sizes[k]
@@ -519,7 +514,7 @@ class StataReader(object):
             nmin, nmax = self.MISSING_VALUES[fmt[-1]]
             if d < nmin or d > nmax:
                 if self._missing_values:
-                    return _StataMissingValue(nmax, d)
+                    return StataMissingValue(nmax, d)
                 else:
                     return None
         return d
@@ -567,8 +562,9 @@ def _dtype_to_stata_type(dtype):
     #TODO: expand to handle datetime to integer conversion
     if dtype.type == np.string_:
         return chr(dtype.itemsize)
-    elif dtype.type == np.object_: # try to coerce it to the biggest string
-                        # not memory efficient, what else could we do?
+    elif dtype.type == np.object_:
+        # try to coerce it to the biggest string
+        # not memory efficient, what else could we do?
         return chr(244)
     elif dtype == np.float64:
         return chr(255)
@@ -662,7 +658,7 @@ class StataWriter(object):
     ----------
     fname : file path or buffer
         Where to save the dta file.
-    data : array-like
+    data : array_like
         Array-like input to save. Pandas objects are also accepted.
     convert_dates : dict
         Dictionary mapping column of datetime types to the stata internal
@@ -717,6 +713,11 @@ class StataWriter(object):
                        'd': 8.98846567431158e+307}
     def __init__(self, fname, data, convert_dates=None, encoding="latin-1",
                  byteorder=None):
+        warnings.warn(
+            "StataWriter is deprecated as of 0.10.0 and will be removed in a "
+            "future version.  Use pandas.DataFrame.to_stata or "
+            "pandas.io.stata.StatWriter instead.",
+            FutureWarning)
 
         self._convert_dates = convert_dates
         # attach nobs, nvars, data, varlist, typlist
@@ -920,9 +921,11 @@ class StataWriter(object):
                     self._write(var)
                 else:
                     try:
+                        if typ in _type_converters:
+                            var = _type_converters[typ](var)
                         self._write(pack(byteorder+TYPE_MAP[typ], var))
                     except struct_error:
-                        # have to be strict about type pack won't do any
+                        # have to be strict about type pack will not do any
                         # kind of casting
                         self._write(pack(byteorder+TYPE_MAP[typ],
                                     _type_converters[typ](var)))
@@ -954,18 +957,14 @@ class StataWriter(object):
                         var = MISSING_VALUES[typ]
                     self._write(pack(byteorder+TYPE_MAP[typ], var))
 
-
     def _null_terminate(self, s, encoding):
         null_byte = '\x00'
-        if PY3:
-            s += null_byte
-            return s.encode(encoding)
-        else:
-            s += null_byte
-            return s
+        s += null_byte
+        return s.encode(encoding)
+
 
 def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
-                convert_dates=True):
+               convert_dates=True):
     """
     Returns an ndarray or DataFrame from a Stata .dta file.
 
@@ -976,7 +975,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     missing_flt : numeric
         The numeric value to replace missing values with. Will be used for
         any numeric value.
-    encoding : string, optional
+    encoding : str, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
     pandas : bool
@@ -985,7 +984,12 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         If convert_dates is True, then Stata formatted dates will be converted
         to datetime types according to the variable's format.
     """
-    if isinstance(fname, string_types):
+    warnings.warn(
+        "genfromdta is deprecated as of 0.10.0 and will be removed in a "
+        "future version.  Use pandas.read_stata instead.",
+        FutureWarning)
+
+    if isinstance(fname, str):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
                           encoding=encoding)
     elif not hasattr(fname, 'read'):
@@ -1014,7 +1018,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     data = np.zeros((nobs), dtype=dt) # init final array
 
     for rownum,line in enumerate(stata_dta):
-        # doesn't handle missing value objects, just casts
+        # does not handle missing value objects, just casts
         # None will only work without missing value object.
         if None in line:
             for i,val in enumerate(line):
@@ -1033,22 +1037,23 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
                 i = col
                 col = data.columns[col]
                 data[col] = data[col].apply(_stata_elapsed_date_to_datetime,
-                        args=(fmtlist[i],))
+                                            args=(fmtlist[i],))
     elif convert_dates:
-        #date_cols = np.where(map(lambda x : x in _date_formats,
+        # date_cols = np.where(map(lambda x : x in _date_formats,
         #                                                    fmtlist))[0]
         # make the dtype for the datetime types
-        cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
+        cols = np.where(lmap(lambda x: x in _date_formats, fmtlist))[0]
         dtype = data.dtype.descr
-        dtype = [(dt[0], object) if i in cols else dt for i,dt in
-                 enumerate(dtype)]
-        data = data.astype(dtype) # have to copy
+        dtype = [(sub_dtype[0], object) if i in cols else sub_dtype
+                 for i, sub_dtype in enumerate(dtype)]
+        data = data.astype(dtype)  # have to copy
         for col in cols:
             def convert(x):
                 return _stata_elapsed_date_to_datetime(x, fmtlist[col])
             data[data.dtype.names[col]] = lmap(convert,
-                                              data[data.dtype.names[col]])
+                                               data[data.dtype.names[col]])
     return data
+
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     """
@@ -1118,7 +1123,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
         ``o`` : signed octal
 
-        ``s`` : string of characters
+        ``s`` : str of characters
 
         ``u`` : unsigned decimal integer
 
@@ -1163,7 +1168,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
             if len(fmt) != ncol:
                 raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
             format = delimiter.join(fmt)
-        elif isinstance(fmt, string_types):
+        elif isinstance(fmt, str):
             if fmt.count('%') == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)
@@ -1181,8 +1186,3 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
         for row in X:
             fh.write(format % tuple(row) + '\n')
-
-if __name__ == "__main__":
-    import os
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')

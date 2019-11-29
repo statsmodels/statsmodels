@@ -1,9 +1,10 @@
 """
 Holds common functions for l1 solvers.
 """
-from __future__ import print_function
+
 import numpy as np
-from statsmodels.compat.python import range
+
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
@@ -17,20 +18,20 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
 
     Parameters
     ----------
-    params : np.ndarray
+    params : ndarray
         model parameters.  Not including the added variables x_added.
-    alpha : np.ndarray
+    alpha : ndarray
         regularization coefficients
     score : function
         Gradient of unregularized objective function
     qc_tol : float
         Tolerance to hold conditions (i) and (ii) to for QC check.
-    qc_verbose : Boolean
+    qc_verbose : bool
         If true, print out a full QC report upon failure
 
     Returns
     -------
-    passed : Boolean
+    passed : bool
         True if QC check passed
     qc_dict : Dictionary
         Keys are fprime, alpha, params, passed_array
@@ -58,14 +59,16 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
         fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
     passed = passed_array.min()
     if not passed:
-        num_failed = (passed_array == False).sum()
+        num_failed = (~passed_array).sum()
         message = 'QC check did not pass for %d out of %d parameters' % (
             num_failed, k_params)
         message += '\nTry increasing solver accuracy or number of iterations'\
             ', decreasing alpha, or switch solvers'
         if qc_verbose:
             message += _get_verbose_addon(qc_dict)
-        print(message)
+
+        import warnings
+        warnings.warn(message, ConvergenceWarning)
 
     return passed
 
@@ -93,21 +96,21 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     Trims (set to zero) params that are zero at the theoretical minimum.
     Uses heuristics to account for the solver not actually finding the minimum.
 
-    In all cases, if alpha[i] == 0, then don't trim the ith param.
+    In all cases, if alpha[i] == 0, then do not trim the ith param.
     In all cases, do nothing with the added variables.
 
     Parameters
     ----------
-    params : np.ndarray
+    params : ndarray
         model parameters.  Not including added variables.
     k_params : Int
         Number of parameters
-    alpha : np.ndarray
+    alpha : ndarray
         regularization coefficients
     score : Function.
         score(params) should return a 1-d vector of derivatives of the
         unpenalized objective function.
-    passed : Boolean
+    passed : bool
         True if the QC check passed
     trim_mode : 'auto, 'size', or 'off'
         If not 'off', trim (set to zero) parameters that would have been zero
@@ -119,14 +122,14 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     auto_trim_tol : float
         For sue when trim_mode == 'auto'.  Use
     qc_tol : float
-        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        Print warning and do not allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
 
     Returns
     -------
-    params : np.ndarray
+    params : ndarray
         Trimmed model parameters
-    trimmed : np.ndarray of Booleans
+    trimmed : ndarray of booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
     ## Trim the small params
@@ -135,8 +138,10 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     if trim_mode == 'off':
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and not passed:
-        print("Could not trim params automatically due to failed QC "
-              "check.  Trimming using trim_mode == 'size' will still work.")
+        import warnings
+        msg = "Could not trim params automatically due to failed QC check. " \
+              "Trimming using trim_mode == 'size' will still work."
+        warnings.warn(msg, ConvergenceWarning)
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and passed:
         fprime = score(params)

@@ -11,7 +11,6 @@ License: BSD
 
 """
 
-import numpy as np
 
 try:
     import numdifftools as ndt

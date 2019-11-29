@@ -1,7 +1,5 @@
 """Module for functional boxplots."""
-from statsmodels.compat.python import range, zip
-from statsmodels.compat.scipy import factorial
-
+from scipy.special import factorial
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.graphics.utils import _import_mpl
@@ -176,7 +174,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     threshold : float between 0 and 1, optional
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
-    bw: array_like or str, optional
+    bw : array_like or str, optional
         If an array, it is a fixed user-specified bandwidth. If `None`, set to
         `normal_reference`. If a string, should be one of:
 
@@ -452,7 +450,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     handles, labels = ax.get_legend_handles_labels()
 
     # Proxy artist for fill_between legend entry
-    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+    # See https://matplotlib.org/1.3.1/users/legend_guide.html
     plt = _import_mpl()
     for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
         p = plt.Rectangle((0, 0), 1, 1,
@@ -478,7 +476,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     A functional boxplot is the analog of a boxplot for functional data.
     Functional data is any type of data that varies over a continuum, i.e.
-    curves, probabillity distributions, seasonal data, etc.
+    curves, probability distributions, seasonal data, etc.
 
     The data is first ordered, the order statistic used here is `banddepth`.
     Plotted are then the median curve, the envelope of the 50% central region,
@@ -545,7 +543,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     Outliers are defined as curves that fall outside the band created by
     multiplying the central region by `wfactor`.  Note that the range over
-    which they fall outside this band doesn't matter, a single data point
+    which they fall outside this band does not matter, a single data point
     outside the band is enough.  If the data is noisy, smoothing may therefore
     be required.
 

@@ -7,7 +7,6 @@ Created on Sat Apr 16 16:06:11 2011
 Author: Josef Perktold
 License : BSD
 """
-from __future__ import print_function
 import numpy as np
 
 

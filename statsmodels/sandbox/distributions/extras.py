@@ -13,7 +13,7 @@
 
 TODO:
 * Where is Transf_gen for general monotonic transformation ? found and added it
-* write some docstrings, some parts I don't remember
+* write some docstrings, some parts I do not remember
 * add Box-Cox transformation, parameterized ?
 
 
@@ -50,14 +50,19 @@ License: BSD
 
 '''
 
+import numpy as np
+from numpy import poly1d,sqrt, exp
+
+import scipy
+from scipy import stats, special
+from scipy.stats import distributions
+
+from statsmodels.compat.python import iteritems
+from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
+
+
 #note copied from distr_skewnorm_0.py
 
-from __future__ import print_function
-from statsmodels.compat.python import range, iteritems
-from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
-from scipy.stats import distributions
-from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
-import numpy as np
 
 class SkewNorm_gen(distributions.rv_continuous):
     '''univariate Skew-Normal distribution of Azzalini
@@ -208,8 +213,6 @@ appears in J.Roy.Statist.Soc, series B, vol.65, pp.367-389
 ##    return (mc, mc2, mc3, mc4)
 
 
-from numpy import poly1d,sqrt, exp
-import scipy
 def _hermnorm(N):
     # return the negatively normalized hermite polynomials up to order N-1
     #  (inclusive)
@@ -298,7 +301,7 @@ def pdf_mvsk(mvsk):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Edgeworth_series
+    https://en.wikipedia.org/wiki/Edgeworth_series
     Johnson N.L., S. Kotz, N. Balakrishnan: Continuous Univariate
     Distributions, Volume 1, 2nd ed., p.30
     """
@@ -346,7 +349,7 @@ def pdf_moments(cnt):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Edgeworth_series
+    https://en.wikipedia.org/wiki/Edgeworth_series
     Johnson N.L., S. Kotz, N. Balakrishnan: Continuous Univariate
     Distributions, Volume 1, 2nd ed., p.30
     """
@@ -488,11 +491,6 @@ License: BSD
 
 '''
 
-from scipy import integrate # for scipy 0.6.0
-
-from scipy import stats, info
-from scipy.stats import distributions
-
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
@@ -583,9 +581,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy import stats
-from scipy.stats import distributions
-import numpy as np
 
 class ExpTransf_gen(distributions.rv_continuous):
     '''Distribution based on log/exp transformation
@@ -1030,7 +1025,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
 
     '''
     n = len(lower)
-    #don't know if converting to array is necessary,
+    #do not know if converting to array is necessary,
     #but it makes ndim check possible
     lower = np.array(lower)
     upper = np.array(upper)
@@ -1057,7 +1052,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     else:
         raise ValueError('corrcoef has incorrect dimension')
 
-    if not 'maxpts' in kwds:
+    if 'maxpts' not in kwds:
         if n >2:
             kwds['maxpts'] = 10000*n
 

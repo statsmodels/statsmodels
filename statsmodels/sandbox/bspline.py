@@ -15,7 +15,6 @@ General references:
     Numerische Mathematik, 47(1), 99-106.
 '''
 
-from statsmodels.compat.python import range
 import numpy as np
 import numpy.linalg as L
 
@@ -54,14 +53,18 @@ def _band2array(a, lower=0, symmetric=False, hermitian=False):
         for j in range(r):
             _b = np.diag(a[r-1-j],k=j)[j:(n+j),j:(n+j)]
             _a += _b
-            if symmetric and j > 0: _a += _b.T
-            elif hermitian and j > 0: _a += _b.conjugate().T
+            if symmetric and j > 0:
+                _a += _b.T
+            elif hermitian and j > 0:
+                _a += _b.conjugate().T
     else:
         for j in range(r):
             _b = np.diag(a[j],k=j)[0:n,0:n]
             _a += _b
-            if symmetric and j > 0: _a += _b.T
-            elif hermitian and j > 0: _a += _b.conjugate().T
+            if symmetric and j > 0:
+                _a += _b.T
+            elif hermitian and j > 0:
+                _a += _b.conjugate().T
         _a = _a.T
 
     return _a
@@ -125,13 +128,17 @@ def _triangle2unit(tb, lower=0):
 
     """
 
-    if lower: d = tb[0].copy()
-    else: d = tb[-1].copy()
-
-    if lower: return d, (tb / d)
+    if lower:
+        d = tb[0].copy()
     else:
-        l = _upper2lower(tb)
-        return d, _lower2upper(l / d)
+        d = tb[-1].copy()
+
+    if lower:
+        return d, (tb / d)
+    else:
+        lnum = _upper2lower(tb)
+        return d, _lower2upper(lnum / d)
+
 
 def _trace_symbanded(a, b, lower=0):
     """
@@ -168,9 +175,11 @@ def _zero_triband(a, lower=0):
 
     nrow, ncol = a.shape
     if lower:
-        for i in range(nrow): a[i,(ncol-i):] = 0.
+        for i in range(nrow):
+            a[i, (ncol-i):] = 0.
     else:
-        for i in range(nrow): a[i,0:i] = 0.
+        for i in range(nrow):
+            a[i, 0:i] = 0.
     return a
 
 
@@ -460,7 +469,7 @@ class SmoothingSpline(BSpline):
         else:
             bt = self.basis(x)
 
-        if pen == 0.: # can't use cholesky for singular matrices
+        if pen == 0.: # cannot use cholesky for singular matrices
             banded = False
 
         if x.shape != y.shape:
@@ -514,7 +523,9 @@ class SmoothingSpline(BSpline):
         self.resid = y * self.weights - np.dot(self.coef, bt)
         self.pen = pen
 
-        del(bty); del(mask); del(bt)
+        del(bty)
+        del(mask)
+        del(bt)
 
     def smooth(self, y, x=None, weights=None):
 
@@ -661,4 +672,4 @@ class SmoothingSpline(BSpline):
             a = self.gcv()
             return a
 
-        a = golden(_gcv, args=(y,x), brack=bracket, tol=tol)
+        a = golden(_gcv, args=(y,x), brack=brack, tol=tol)

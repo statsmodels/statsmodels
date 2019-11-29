@@ -1,10 +1,9 @@
-from __future__ import division, print_function, absolute_import
 
 import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-from statsmodels.compat.scipy import factorial
+from scipy.special import factorial
 from scipy.stats import rv_continuous
 import scipy.special as special
 
@@ -64,7 +63,7 @@ def cumulant_from_moments(momt, n):
         `momt[j]` contains `(j+1)`-th moment.
         These can be raw moments around zero, or central moments
         (in which case, `momt[0]` == 0).
-    n: integer
+    n: int
         which cumulant to calculate (must be >1)
 
     Returns
@@ -124,7 +123,7 @@ class ExpandedNormal(rv_continuous):
 
     >>> import matplotlib.pyplot as plt
     >>> from scipy import stats
-    >>> from scipy.misc import factorial
+    >>> from scipy.special import factorial
     >>> df = 12
     >>> chi2_c = [2**(j-1) * factorial(j-1) * df for j in range(1, 5)]
     >>> edgw_chi2 = ExpandedNormal(chi2_c, name='edgw_chi2', momtype=0)
@@ -148,7 +147,7 @@ class ExpandedNormal(rv_continuous):
          specification of distributions, Revue de l'Institut Internat.
          de Statistique. 5: 307 (1938), reprinted in
          R.A. Fisher, Contributions to Mathematical Statistics. Wiley, 1950.
-    .. [*] http://en.wikipedia.org/wiki/Edgeworth_series
+    .. [*] https://en.wikipedia.org/wiki/Edgeworth_series
     .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
 
@@ -205,8 +204,3 @@ class ExpandedNormal(rv_continuous):
                 r = sum(k for (m, k) in p)
                 coef[s + 1 + 2*r] += term
         return coef, mu, sigma
-
-
-if __name__ == "__main__":
-    cum =[1, 1, 1, 1]
-    en = ExpandedNormal(cum)

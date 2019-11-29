@@ -7,7 +7,7 @@ Created on Tue May 22 20:27:57 2012
 Author: Josef Perktold
 """
 
-from statsmodels.compat.python import range, lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -17,7 +17,6 @@ import statsmodels.stats.sandwich_covariance as sw
 
 
 def test_panel_robust_cov():
-    import pandas as pa
     import statsmodels.datasets.grunfeld as gr
     from .results.results_panelrobust import results as res_stata
 

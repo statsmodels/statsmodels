@@ -1,8 +1,12 @@
-from statsmodels.compat.python import (StringIO, urlopen, HTTPError, URLError, lrange,
-                                       cPickle, urljoin, long, PY3)
+from statsmodels.compat.python import lrange
+
+from io import StringIO
 import shutil
 from os import environ, makedirs
 from os.path import expanduser, exists, dirname, abspath, join
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+from urllib.parse import urljoin
 
 import numpy as np
 from pandas import read_stata, read_csv, DataFrame, Series, Index
@@ -32,7 +36,7 @@ def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
 
     Notes
     -----
-    Make sure baseurl has trailing forward slash. Doesn't do any
+    Make sure baseurl has trailing forward slash. Does not do any
     error checking in response URLs.
     """
     url = urljoin(baseurl, data+'.dta')
@@ -63,7 +67,7 @@ class Dataset(dict):
 def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     names = data.columns
 
-    if isinstance(endog_idx, (int, long)):
+    if isinstance(endog_idx, int):
         endog_name = names[endog_idx]
         endog = data[endog_name].copy()
         if exog_idx is None:
@@ -75,7 +79,7 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, (int, long)):
+        elif isinstance(exog_idx, int):
             exog = data[names[exog_idx]].copy()
         else:
             exog = data[names[exog_idx]].copy()
@@ -114,28 +118,14 @@ def _get_cache(cache):
 
 
 def _cache_it(data, cache_path):
-    if PY3:
-        # for some reason encode("zip") won't work for me in Python 3?
-        import zlib
-        # use protocol 2 so can open with python 2.x if cached in 3.x
-        data = data.decode('utf-8')
-        open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
-                                                                 protocol=2)))
-    else:
-        open(cache_path, "wb").write(cPickle.dumps(data).encode("zip"))
+    import zlib
+    open(cache_path, "wb").write(zlib.compress(data))
 
 
 def _open_cache(cache_path):
-    if PY3:
-        # NOTE: don't know why but decode('zip') doesn't work on my
-        # Python 3 build
-        import zlib
-        data = zlib.decompress(open(cache_path, 'rb').read())
-        # return as bytes object encoded in utf-8 for cross-compat of cached
-        data = cPickle.loads(data).encode('utf-8')
-    else:
-        data = open(cache_path, 'rb').read().decode('zip')
-        data = cPickle.loads(data)
+    import zlib
+    data = zlib.decompress(open(cache_path, 'rb').read())
+    # return as bytes object encoded in utf-8 for cross-compat of cached
     return data
 
 
@@ -147,15 +137,21 @@ def _urlopen_cached(url, cache):
     """
     from_cache = False
     if cache is not None:
-        cache_path = join(cache,
-                          url.split("://")[-1].replace('/', ',') + ".zip")
+        file_name = url.split("://")[-1].replace('/', ',')
+        file_name = file_name.split('.')
+        if len(file_name) > 1:
+            file_name[-2] += '-v2'
+        else:
+            file_name[0] += '-v2'
+        file_name = '.'.join(file_name) + ".zip"
+        cache_path = join(cache, file_name)
         try:
             data = _open_cache(cache_path)
             from_cache = True
         except:
             pass
 
-    # not using the cache or didn't find it in cache
+    # not using the cache or did not find it in cache
     if not from_cache:
         data = urlopen(url, timeout=3).read()
         if cache is not None:  # then put it in the cache
@@ -180,16 +176,14 @@ def _get_data(base_url, dataname, cache, extension="csv"):
 def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
-    index_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/"
-                 "datasets.csv")
+    index_url = ("https://raw.githubusercontent.com/vincentarelbundock/"
+                 "Rdatasets/master/datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
-    # Python 3
-    if PY3:  # pragma: no cover
-        data = data.decode('utf-8', 'strict')
+    data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
     dataset_meta = index.loc[idx]
-    return dataset_meta["Title"].item()
+    return dataset_meta["Title"].iloc[0]
 
 
 def get_rdataset(dataname, package="datasets", cache=False):
@@ -258,7 +252,7 @@ def get_data_home(data_home=None):
     in the user home folder.
 
     Alternatively, it can be set by the 'STATSMODELS_DATA' environment
-    variable or programatically by giving an explit folder path. The
+    variable or programatically by giving an explicit folder path. The
     '~' symbol is expanded to the user home folder.
 
     If the folder does not already exist, it is automatically created.
@@ -300,7 +294,7 @@ def strip_column_names(df):
     Returns
     -------
     df : DataFrame
-        Dataframe with stripped column names
+        DataFrame with stripped column names
 
     Notes
     -----
@@ -333,15 +327,10 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     return data
 
 
-def as_numpy_dataset(ds, as_pandas=None, retain_index=False):
+def as_numpy_dataset(ds, as_pandas=True, retain_index=False):
     """Convert a pandas dataset to a NumPy dataset"""
     if as_pandas:
         return ds
-    if as_pandas is None:
-        import warnings
-        warnings.warn('load will return datasets containing pandas DataFrames and Series '
-                      'in the Future.  To suppress this message, specify as_pandas=False',
-                      FutureWarning)
     ds.data = ds.data.to_records(index=retain_index)
     for d in dir(ds):
         if d.startswith('_'):

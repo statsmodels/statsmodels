@@ -6,6 +6,7 @@ Created on Mon Oct 28 15:25:14 2013
 Author: Josef Perktold
 """
 
+import pytest
 import numpy as np
 from scipy import stats
 
@@ -21,7 +22,8 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 from .results import results_macro_ols_robust as res
 from .results import results_grunfeld_ols_robust_cluster as res2
-#test_hac_simple():
+# TODO: implement test_hac_simple
+
 
 class CheckOLSRobust(object):
 
@@ -33,7 +35,32 @@ class CheckOLSRobust(object):
         assert_allclose(self.bse_robust, res2.bse, rtol=rtol)
         assert_allclose(self.cov_robust, res2.cov, rtol=rtol)
 
-    def test_tests(self):
+    @pytest.mark.smoke
+    def test_t_test_summary(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        # TODO: if the t_test call is expensive, possibly make it a fixture?
+        tt = res1.t_test(mat, cov_p=self.cov_robust)
+
+        tt.summary()
+
+    @pytest.mark.smoke
+    def test_t_test_summary_frame(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        tt = res1.t_test(mat, cov_p=self.cov_robust)
+
+        tt.summary_frame()
+
+    @pytest.mark.smoke
+    def test_f_test_summary(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
+
+        ft.summary()
+
+    def test_tests(self):  # TODO: break into well-scoped tests
         # Note: differences between small (t-distribution, ddof) and large (normal)
         # F statistic has no ddof correction in large, but uses F distribution (?)
         res1 = self.res1
@@ -72,12 +99,6 @@ class CheckOLSRobust(object):
             # ivreg2
             assert_equal(ft.df_num, res2.Fdf1)
             assert_equal(ft.df_denom, res2.Fdf2)
-
-        # SMOKE
-        tt.summary()
-        ft.summary()
-        tt.summary_frame()
-
 
 
 class TestOLSRobust1(CheckOLSRobust):
@@ -162,15 +183,15 @@ class CheckOLSRobustNewMixin(object):
         assert_allclose(self.cov_robust, self.cov_robust2, rtol=rtol)
         assert_allclose(self.bse_robust, self.bse_robust2, rtol=rtol)
 
-
     def test_fvalue(self):
         if not getattr(self, 'skip_f', False):
             rtol = getattr(self, 'rtol', 1e-10)
             assert_allclose(self.res1.fvalue, self.res2.F, rtol=rtol)
             if hasattr(self.res2, 'Fp'):
-                #only available with ivreg2
+                # only available with ivreg2
                 assert_allclose(self.res1.f_pvalue, self.res2.Fp, rtol=rtol)
-
+        else:
+            raise pytest.skip("TODO: document why this test is skipped")
 
     def test_confint(self):
         rtol = getattr(self, 'rtol', 1e-10)
@@ -238,11 +259,9 @@ class CheckOLSRobustNewMixin(object):
         psum = (res1.resid_pearson**2).sum()
         assert_allclose(psum, df_resid, rtol=1e-13)
 
-
-
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         self.res1.summary()
-
 
 
 class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
@@ -288,7 +307,8 @@ class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 
     def setup(self):
         res_ols = self.res1.get_robustcov_results('HAC', maxlags=4,
-                                            use_correction=True, use_t=True)
+                                                  use_correction=True,
+                                                  use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -316,14 +336,14 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         self.small = False
         self.res2 = res.results_ivhc0_large
 
-
-    # TODO: skipping next two for now, not refactored yet for `large`
+    @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_fvalue(self):
-        pass
+        super(TestOLSRobust2LargeNew, self).test_fvalue()
 
-
+    @pytest.mark.skip(reason="not refactored yet for `large`")
     def test_confint(self):
-        pass
+        super(TestOLSRobust2LargeNew, self).test_confint()
+
 
 #######################################################
 #    cluster robust standard errors
@@ -344,11 +364,11 @@ class CheckOLSRobustCluster(CheckOLSRobust):
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
+        #asserts do not work for pandas
         cls.res1 = OLS(dtapa_endog, exog).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                                        return_inverse=True)
         cls.groups = firm_id
         #time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
@@ -427,10 +447,9 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
 
     def setup(self):
         res_ols = self.res1.model.fit(cov_type='cluster',
-                                      cov_kwds=dict(
-                                                  groups=self.groups,
-                                                  use_correction=True,
-                                                  use_t=True))
+                                      cov_kwds=dict(groups=self.groups,
+                                                    use_correction=True,
+                                                    use_t=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -481,9 +500,9 @@ class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtol = 1e-6
         self.rtolh = 1e-10
 
-    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
+    @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
     def test_f_value(self):
-        pass
+        super(TestOLSRobustCluster2Large, self).test_fvalue()
 
 
 class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
@@ -493,10 +512,10 @@ class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixi
         model = OLS(self.res1.model.endog, self.res1.model.exog)
         #res_ols = self.res1.model.fit(cov_type='cluster',
         res_ols = model.fit(cov_type='cluster',
-                                      cov_kwds=dict(groups=self.groups,
-                                                  use_correction=False,
-                                                  use_t=False,
-                                                  df_correction=True))
+                            cov_kwds=dict(groups=self.groups,
+                                          use_correction=False,
+                                          use_t=False,
+                                          df_correction=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -512,10 +531,9 @@ class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixi
         self.rtol = 1e-6
         self.rtolh = 1e-10
 
-    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
-    def t_est_fvalue(self):
-        pass
-
+    @pytest.mark.skip(reason="GH#1189 issuecomment-29141741")
+    def test_fvalue(self):
+        super(TestOLSRobustCluster2LargeFit, self).test_fvalue()
 
 
 class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
@@ -549,9 +567,9 @@ class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     def setup(self):
         res_ols = self.res1.model.fit(cov_type='nw-groupsum',
                                       cov_kwds=dict(time=self.time,
-                                                  maxlags=4,
-                                                  use_correction=False,
-                                                  use_t=True))
+                                                    maxlags=4,
+                                                    use_correction=False,
+                                                    use_t=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -645,7 +663,7 @@ class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
         cov1 = sw.cov_cluster_2groups(self.res1, self.groups, group2=self.time,
-                                       use_correction=True)[0]
+                                      use_correction=True)[0]
         se1 =  sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -670,7 +688,7 @@ class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin)
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
         cov1 = sw.cov_cluster_2groups(self.res1, self.groups, group2=self.time,
-                                       use_correction=False)[0]
+                                      use_correction=False)[0]
         se1 =  sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -700,11 +718,11 @@ class CheckWLSRobustCluster(CheckOLSRobust):
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
+        #asserts do not work for pandas
         cls.res1 = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                                        return_inverse=True)
         cls.groups = firm_id
         #time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
@@ -791,24 +809,24 @@ class TestWLSOLSRobustSmall(object):
 
     @classmethod
     def setup_class(cls):
-        #import pandas as pa
+        # import pandas as pa
         from statsmodels.datasets import grunfeld
 
         dtapa = grunfeld.data.load_pandas()
-        #Stata example/data seems to miss last firm
+        # Stata example/data seems to miss last firm
         dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
         exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
-        #asserts don't work for pandas
-        cls.res_wls = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
+        # asserts do not work for pandas
+        cls.res_wls = WLS(dtapa_endog, exog,
+                          weights=1/dtapa_exog['value']).fit()
         w_sqrt = 1 / np.sqrt(np.asarray(dtapa_exog['value']))
         cls.res_ols = OLS(dtapa_endog * w_sqrt,
-                          np.asarray(exog) * w_sqrt[:, None]).fit() # hasconst=True ?
-
-        firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                          np.asarray(exog) * w_sqrt[:, None]).fit()
+        ids = np.asarray(dtapa_exog[['firm']], 'S20')
+        firm_names, firm_id = np.unique(ids, return_inverse=True)
         cls.groups = firm_id
-        #time indicator in range(max Ti)
+        # time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
         time -= time.min()
         cls.time = np.squeeze(time).astype(int)
@@ -822,12 +840,6 @@ class TestWLSOLSRobustSmall(object):
                    ('HC2', dict(use_t=True)),
                    ('HC3', dict(use_t=True))]
 
-        # fvalue are not the same, see #1212
-        #res_ols = self.res_ols
-        #res_wls = self.res_wls
-        #assert_allclose(res_ols.fvalue, res_wls.fvalue, rtol=1e-13)
-        #assert_allclose(res_ols.f_pvalue, res_wls.f_pvalue, rtol=1e-13)
-
         for cov_type, kwds in all_cov:
             res1 = self.res_ols.get_robustcov_results(cov_type, **kwds)
             res2 = self.res_wls.get_robustcov_results(cov_type, **kwds)
@@ -835,10 +847,6 @@ class TestWLSOLSRobustSmall(object):
             assert_allclose(res1.cov_params(), res2.cov_params(), rtol=1e-13)
             assert_allclose(res1.bse, res2.bse, rtol=1e-13)
             assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-13)
-            #Note: Fvalue doesn't match up, difference in calculation ?
-            #      The only difference should be in the constant detection
-            #assert_allclose(res1.fvalue, res2.fvalue, rtol=1e-13)
-            #assert_allclose(res1.f_pvalue, res2.f_pvalue, rtol=1e-13)
             mat = np.eye(len(res1.params))
             ft1 = res1.f_test(mat)
             ft2 = res2.f_test(mat)
@@ -898,5 +906,5 @@ def test_cov_type_fixed_scale():
     assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
 
     res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale',
-                                                  cov_kwds={'scale':9})
+                                                 cov_kwds={'scale':9})
     assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)

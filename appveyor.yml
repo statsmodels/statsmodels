@@ -6,21 +6,13 @@ os: Visual Studio 2015
 environment:
   # Undefining will run test from installation
   PYTEST_DIRECTIVES: --skip-slow
+  PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
   matrix:
     # Pip builds
-    - PYTHON: C:\Python27
-      PYTEST_DIRECTIVES:
-    - PYTHON: C:\Python27-x64
     - PYTHON: C:\Python36
-    - PYTHON: C:\Python36-x64
       PYTEST_DIRECTIVES:
-    # Conda builds
-    - PY_MAJOR_VER: 2
+    - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86"
-    - PY_MAJOR_VER: 2
-      PYTHON_ARCH: "x86_64"
-      SCIPY: "0.18"
-      NUMPY: "1.11"
     - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86_64"
       TEST_INSTALL: "true"
@@ -41,7 +33,7 @@ build_script:
   - SET OMP_NUM_THREADS=1
   - SET OPENBLAS_NUM_THREADS=1
   - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
-  - pip install pytest pytest-xdist pytest-randomly
+  - pip install pytest "pytest-xdist!=1.30" pytest-randomly
   - if Defined PYTEST_DIRECTIVES ( python setup.py develop ) else ( python setup.py install )
 
 test_script:

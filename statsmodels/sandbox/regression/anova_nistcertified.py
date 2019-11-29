@@ -2,11 +2,13 @@
 
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
-from __future__ import print_function
 from statsmodels.compat.python import lmap
 import os
 import numpy as np
 from scipy import stats
+
+import statsmodels.api as sm
+from .try_ols_anova import data2dummy
 
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',
               'SmLs04.dat', 'SmLs05.dat', 'SmLs06.dat', 'SmLs07.dat', 'SmLs08.dat',
@@ -20,7 +22,8 @@ filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.d
 
 
 def getnist(filename):
-    fname = os.path.abspath(os.path.join('./data', filename))
+    here = os.path.dirname(__file__)
+    fname = os.path.abspath(os.path.join(here, 'data', filename))
     with open(fname, 'r') as fd:
         content = fd.read().split('\n')
 
@@ -39,7 +42,7 @@ def getnist(filename):
     return y, x, np.array([f, prob, R2, resstd]), certified, caty
 
 
-from .try_catdata import groupsstats_dummy, groupstatsbin
+
 
 
 def anova_oneway(y, x, seq=0):
@@ -49,9 +52,12 @@ def anova_oneway(y, x, seq=0):
     #subracting mean increases numerical accuracy for NIST test data sets
     xrvs = x[:,np.newaxis] - x.mean() #for 1d#- 1e12  trick for 'SmLs09.dat'
 
-    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:,:1], xrvs[:,:1])#, seq=0)
-    #the following does not work as replacement
-    #gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)#, seq=0)
+    from .try_catdata import groupsstats_dummy
+    meang, varg, xdevmeangr, countg = groupsstats_dummy(yrvs[:, :1],
+                                                        xrvs[:, :1])
+    # TODO: the following does not work as replacement
+    #  from .try_catdata import groupsstats_dummy, groupstatsbin
+    #  gcount, gmean , meanarr, withinvar, withinvararr = groupstatsbin(y, x)
     sswn = np.dot(xdevmeangr.T,xdevmeangr)
     ssbn = np.dot((meang-xrvs.mean())**2, countg.T)
     nobs = yrvs.shape[0]
@@ -67,13 +73,13 @@ def anova_oneway(y, x, seq=0):
     #print(f, prob
 
     def _fix2scalar(z): # return number
-        if np.shape(z) == (1, 1): return z[0,0]
-        else: return z
+        if np.shape(z) == (1, 1):
+            return z[0, 0]
+        else:
+            return z
     f, prob, R2, resstd = lmap(_fix2scalar, (f, prob, R2, resstd))
     return f, prob, R2, resstd
 
-import statsmodels.api as sm
-from .try_ols_anova import data2dummy
 
 def anova_ols(y, x):
     X = sm.add_constant(data2dummy(x), prepend=False)
@@ -89,7 +95,14 @@ if __name__ == '__main__':
         print(fn)
         y, x, cert, certified, caty = getnist(fn)
         res = anova_oneway(y, x)
-        print(np.array(res) - cert)
+        # TODO: figure out why these results are less accurate/precise
+        #  than others
+        rtol = {
+            "SmLs08.dat": .027,
+            "SmLs07.dat": 1.7e-3,
+            "SmLs09.dat": 1e-4
+        }.get(fn, 1e-7)
+        np.testing.assert_allclose(np.array(res), cert, rtol=rtol)
 
     print('\n using stats ANOVA f_oneway')
     for fn in filenameli:

@@ -11,9 +11,7 @@ from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 
 from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
                                            to_table, aggregate_raters)
-
-class Holder(object):
-    pass
+from statsmodels.tools.testing import Holder
 
 
 table0 = np.asarray('''\
@@ -124,8 +122,8 @@ class CheckCohens(object):
         assert_equal(str(res), self.res_string)
 
 
-class UnweightedCohens(CheckCohens):
-    #comparison to printout of a SAS example
+class TestUnweightedCohens(CheckCohens):
+    # comparison to printout of a SAS example
     @classmethod
     def setup_class(cls):
         #temporary: res instance is at last position
@@ -152,6 +150,7 @@ class UnweightedCohens(CheckCohens):
     def test_option(self):
         kappa = cohens_kappa(table10, return_results=False)
         assert_almost_equal(kappa, self.res2[0], decimal=4)
+
 
 class TestWeightedCohens(CheckCohens):
     #comparison to printout of a SAS example

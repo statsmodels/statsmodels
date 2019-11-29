@@ -1,9 +1,10 @@
-from __future__ import print_function
-from statsmodels.compat.python import cStringIO, lzip, lrange, StringIO, range
+from statsmodels.compat.python import lzip
+
+from io import StringIO
+
 import numpy as np
 
 from statsmodels.iolib import SimpleTable
-import statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 
@@ -47,14 +48,16 @@ class VARSummary(object):
         fmt = 'txt'
     )
 
-    part1_fmt = dict(default_fmt,
+    part1_fmt = dict(
+        default_fmt,
         data_fmts = ["%s"],
         colwidths = 15,
         colsep=' ',
         table_dec_below='',
         header_dec_below=None,
     )
-    part2_fmt = dict(default_fmt,
+    part2_fmt = dict(
+        default_fmt,
         data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
         colwidths = None,
         colsep='    ',
@@ -101,9 +104,9 @@ class VARSummary(object):
                      [time.strftime("%H:%M:%S", t)]]
         part1header = None
         part1stubs = ('Model:',
-                     'Method:',
-                     'Date:',
-                     'Time:')
+                      'Method:',
+                      'Date:',
+                      'Time:')
         part1 = SimpleTable(part1data, part1header, part1stubs,
                             title=part1title, txt_fmt=self.part1_fmt)
 
@@ -142,18 +145,17 @@ class VARSummary(object):
         Xnames = self.model.exog_names
 
         data = lzip(model.params.T.ravel(),
-                   model.stderr.T.ravel(),
-                   model.tvalues.T.ravel(),
-                   model.pvalues.T.ravel())
+                    model.stderr.T.ravel(),
+                    model.tvalues.T.ravel(),
+                    model.pvalues.T.ravel())
 
         header = ('coefficient','std. error','t-stat','prob')
 
         buf = StringIO()
-        dim = k * model.k_ar + model.k_trend
+        dim = k * model.k_ar + model.k_trend + model.k_exog_user
         for i in range(k):
             section = "Results for equation %s" % model.names[i]
             buf.write(section + '\n')
-            #print >> buf, section
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
                                 Xnames, title=None, txt_fmt = self.default_fmt)

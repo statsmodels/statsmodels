@@ -3,18 +3,14 @@
 Impulse reponse-related code
 """
 
-from __future__ import division
-
 import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-from scipy import stats
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 #from statsmodels.tsa.api import VAR
-from statsmodels.compat.python import range
 import statsmodels.tsa.tsatools as tsa
 import statsmodels.tsa.vector_ar.plotting as plotting
 import statsmodels.tsa.vector_ar.util as util
@@ -104,9 +100,9 @@ class BaseIRAnalysis(object):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        impulse : string or int
+        impulse : {str, int}
             variable providing the impulse
-        response : string or int
+        response : {str, int}
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
@@ -117,7 +113,7 @@ class BaseIRAnalysis(object):
 
         plot_stderr: bool, default True
             Plot standard impulse response error bands
-        stderr_type: string
+        stderr_type: str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
@@ -141,7 +137,7 @@ class BaseIRAnalysis(object):
         else:
             title = 'Impulse responses'
 
-        if plot_stderr == False:
+        if plot_stderr is False:
             stderr = None
 
         elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
@@ -187,9 +183,9 @@ class BaseIRAnalysis(object):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        impulse : string or int
+        impulse : {str, int}
             variable providing the impulse
-        response : string or int
+        response : {str, int}
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
@@ -200,7 +196,7 @@ class BaseIRAnalysis(object):
 
         plot_stderr: bool, default True
             Plot standard impulse response error bands
-        stderr_type: string
+        stderr_type: str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
@@ -226,7 +222,7 @@ class BaseIRAnalysis(object):
                 stderr = self.cum_effect_cov(orth=orth)
             if stderr_type == 'mc':
                 stderr = self.cum_errband_mc(orth=orth, repl=repl,
-                                                signif=signif, seed=seed)
+                                             signif=signif, seed=seed)
         if not plot_stderr:
             stderr = None
 
@@ -295,12 +291,12 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if svar == True:
-            return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
-                                        signif=signif, seed=seed,
-                                        burn=burn, cum=False)
+        if svar:
+            return model.sirf_errband_mc(orth=orth, repl=repl, steps=periods,
+                                         signif=signif, seed=seed,
+                                         burn=burn, cum=False)
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.irf_errband_mc(orth=orth, repl=repl, steps=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
 
@@ -337,13 +333,13 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods,
+                                    seed=seed, burn=burn)
         q = util.norm_signif_level(signif)
 
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)
 
-        if component != None:
+        if component is not None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
@@ -395,11 +391,11 @@ class IRAnalysis(BaseIRAnalysis):
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+                                    burn=100)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
-        if component != None:
+        if component is not None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
@@ -458,7 +454,7 @@ class IRAnalysis(BaseIRAnalysis):
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+                                    burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
         #stack left to right, up and down
@@ -472,7 +468,7 @@ class IRAnalysis(BaseIRAnalysis):
         eigva = np.zeros((neqs, periods*neqs))
         k = np.zeros((neqs))
 
-        if component != None:
+        if component is not None:
             if np.size(component) != (neqs):
                 raise ValueError("Component array must be of length " + str(neqs))
             if np.argmax(component) >= neqs*periods:
@@ -487,12 +483,12 @@ class IRAnalysis(BaseIRAnalysis):
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in range(repl):
-            c=0
+            c = 0
             for j in range(neqs):
                 for i in range(neqs):
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
-                        if i == neqs-1:
-                            gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
+                    gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
+                    if i == neqs-1:
+                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
@@ -593,7 +589,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Parameters
         ----------
-        orth : boolean
+        orth : bool
 
         Notes
         -----
@@ -633,7 +629,7 @@ class IRAnalysis(BaseIRAnalysis):
         return covs
 
     def cum_errband_mc(self, orth=False, repl=1000,
-                          signif=0.05, seed=None, burn=100):
+                       signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands of cumulative effect
         """
@@ -696,4 +692,4 @@ class IRAnalysis(BaseIRAnalysis):
         return np.dot(Lk.T, L.inv(B))
 
     def fevd_table(self):
-        pass
+        raise NotImplementedError

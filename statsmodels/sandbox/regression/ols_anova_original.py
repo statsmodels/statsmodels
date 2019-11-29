@@ -6,9 +6,9 @@ in ANOVA
 
 '''
 
-from __future__ import print_function
 import numpy as np
-#from scipy import stats
+import numpy.lib.recfunctions
+
 from statsmodels.compat.python import lmap
 import statsmodels.api as sm
 
@@ -27,10 +27,14 @@ dta = np.genfromtxt('dftest3.data')
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
-vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((
-                ('breed', int), ('sex', int), ('litter', int),
-               ('pen', int), ('pig', int), ('age', float),
-               ('bage', float), ('y', float))))
+vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((('breed', int),
+                                                         ('sex', int),
+                                                         ('litter', int),
+                                                         ('pen', int),
+                                                         ('pig', int),
+                                                         ('age', float),
+                                                         ('bage', float),
+                                                         ('y', float))))
 
 datavarnames = 'y sex age'.split()
 #possible to avoid temporary array ?
@@ -171,7 +175,7 @@ print(anova_str % anovadict(res3))
 def form2design(ss, data):
     '''convert string formula to data dictionary
 
-    ss : string
+    ss : str
      * I : add constant
      * varname : for simple varnames data is used as is
      * F:varname : create dummy variables for factor varname
@@ -202,7 +206,7 @@ def form2design(ss, data):
     Notes
     -----
 
-    with sorted dict, separate name list wouldn't be necessary
+    with sorted dict, separate name list would not be necessary
     '''
     vars = {}
     names = []
@@ -210,7 +214,7 @@ def form2design(ss, data):
         if item == 'I':
             vars['const'] = np.ones(data.shape[0])
             names.append('const')
-        elif not ':' in item:
+        elif ':' not in item:
             vars[item] = data[item]
             names.append(item)
         elif item[:2] == 'F:':
@@ -232,7 +236,6 @@ def form2design(ss, data):
 nobs = 1000
 testdataint = np.random.randint(3, size=(nobs,4)).view([('a',int),('b',int),('c',int),('d',int)])
 testdatacont = np.random.normal( size=(nobs,2)).view([('e',float), ('f',float)])
-import numpy.lib.recfunctions
 dt2 = numpy.lib.recfunctions.zip_descr((testdataint, testdatacont),flatten=True)
 # concatenate structured arrays
 testdata = np.empty((nobs,1), dt2)
@@ -266,7 +269,7 @@ print(anova_str % anovadict(rest1))
 
 def dropname(ss, li):
     '''drop names from a list of strings,
-    names to drop are in space delimeted list
+    names to drop are in space delimited list
     does not change original list
     '''
     newli = li[:]
@@ -291,7 +294,7 @@ print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
 m = dta.mask.view(bool)
 droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
 # get complete data as plain structured array
-# maybe doesn't work with masked arrays
+# maybe does not work with masked arrays
 dta_use_b1 = dta[~droprows,:].data
 print(dta_use_b1.shape)
 print(dta_use_b1.dtype)

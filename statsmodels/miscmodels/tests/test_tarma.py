@@ -5,15 +5,15 @@ Created on Thu Jul 04 23:44:33 2013
 
 Author: Josef Perktold
 """
+from functools import partial
 
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.miscmodels.tmodel import TArma
 from statsmodels.tsa.arma_mle import Arma
-#from statsmodels.tsa.arima_model import ARMA
-
 
 
 class CheckTArmaMixin(object):
@@ -26,7 +26,8 @@ class CheckTArmaMixin(object):
 
         assert_allclose(self.res.conf_int(), self.res1_conf_int, atol=1e-4, rtol=1e-3)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_smoke(self):  # TODO: break into well-scoped tests
         self.res.summary()
         rmat = np.eye(len(self.res.params))
         self.res.t_test(rmat)
@@ -50,7 +51,7 @@ class TestTArma(CheckTArmaMixin):
         nobs = 500
         ar = [1, -0.5, 0.1]
         ma = [1, 0.7]
-        dist = lambda n: np.random.standard_t(3, size=n)
+        dist = partial(np.random.standard_t, 3)
         np.random.seed(8659567)
         x = arma_generate_sample(ar, ma, nobs, sigma=1, distrvs=dist,
                                  burnin=500)
@@ -89,7 +90,7 @@ class TestArma(CheckTArmaMixin):
         nobs = 500
         ar = [1, -0.5, 0.1]
         ma = [1, 0.7]
-        dist = lambda n: np.random.standard_t(3, size=n)
+        dist = partial(np.random.standard_t, 3)
         np.random.seed(8659567)
         x = arma_generate_sample(ar, ma, nobs, sigma=1, distrvs=dist,
                                  burnin=500)

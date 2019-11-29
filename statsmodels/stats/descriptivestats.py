@@ -1,8 +1,11 @@
 from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
+
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -15,6 +18,7 @@ def _kurtosis(a):
         res = np.nan
     return res
 
+
 def _skew(a):
     '''wrapper for scipy.stats.skew that returns nan instead of raising Error
 
@@ -26,12 +30,15 @@ def _skew(a):
         res = np.nan
     return res
 
-_sign_test_doc = '''
+
+@nottest
+def sign_test(samp, mu0=0):
+    """
     Signs test.
 
     Parameters
     ----------
-    samp : array-like
+    samp : array_like
         1d array. The sample for which you want to perform the signs
         test.
     mu0 : float
@@ -39,8 +46,9 @@ _sign_test_doc = '''
         default, but it is common to set it to the median.
 
     Returns
-    ---------
-    M, p-value
+    -------
+    M
+    p-value
 
     Notes
     -----
@@ -51,25 +59,22 @@ _sign_test_doc = '''
     where N(+) is the number of values above `mu0`, N(-) is the number of
     values below.  Values equal to `mu0` are discarded.
 
-    The p-value for M is calculated using the binomial distrubution
-    and can be intrepreted the same as for a t-test. The test-statistic
+    The p-value for M is calculated using the binomial distribution
+    and can be interpreted the same as for a t-test. The test-statistic
     is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
     equals N(+) + N(-).
 
     See Also
-    ---------
+    --------
     scipy.stats.wilcoxon
-    '''
-
-@nottest
-def sign_test(samp, mu0=0):
+    """
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)
     neg = np.sum(samp < mu0)
     M = (pos-neg)/2.
     p = stats.binom_test(min(pos,neg), pos+neg, .5)
     return M, p
-sign_test.__doc__ = _sign_test_doc
+
 
 class Describe(object):
     '''
@@ -80,7 +85,7 @@ class Describe(object):
 
     Parameters
     ----------
-    dataset : array-like
+    dataset : array_like
         2D dataset for descriptive statistics.
     '''
     def __init__(self, dataset):
@@ -110,19 +115,19 @@ class Describe(object):
             #sign_test_P = [self.sign_test_p, None, None]
         )
 
-        #TODO: Basic stats for strings
-        #self.strings = dict(
-            #unique = [np.unique, None, None],
-            #number_uniq = [len(
-            #most = [
-            #least = [
+        # TODO: Basic stats for strings
+        # self.strings = dict(
+        #    unique = [np.unique, None, None],
+        #    number_uniq = [len(
+        #    most = [
+        #    least = [
 
         #TODO: Multivariate
-        #self.multivariate = dict(
-            #corrcoef(x[, y, rowvar, bias]),
-            #cov(m[, y, rowvar, bias]),
-            #histogram2d(x, y[, bins, range, normed, weights])
-            #)
+        # self.multivariate = dict(
+        #    corrcoef(x[, y, rowvar, bias]),
+        #    cov(m[, y, rowvar, bias]),
+        #    histogram2d(x, y[, bins, range, normed, weights])
+        #    )
         self._arraytype = None
         self._columns_list = None
 
@@ -152,8 +157,8 @@ class Describe(object):
         unknown. `numpy.lib._iotools._is_string_like`
         """
         def string_like():
-        #TODO: not sure what the result is if the first item is some type of
-        #      missing value
+            # TODO: not sure what the result is if the first item is some
+            #   type of missing value
             try:
                 self.dataset[col][0] + ''
             except (TypeError, ValueError):
@@ -166,12 +171,12 @@ class Describe(object):
             except (TypeError, ValueError):
                 return False
             return True
-        if number_like()==True and string_like()==False:
+        if number_like() and not string_like():
             return 'number'
-        elif number_like()==False and string_like()==True:
+        elif not number_like() and string_like():
             return 'string'
         else:
-            assert (number_like()==True or string_like()==True), '\
+            assert (number_like() or string_like()), '\
             Not sure of dtype'+str(self.dataset[col][0])
 
     #@property
@@ -180,7 +185,7 @@ class Describe(object):
         Return a summary of descriptive statistics.
 
         Parameters
-        -----------
+        ----------
         stats: list or str
             The desired statistics, Accepts 'basic' or 'all' or a list.
                'basic' = ('obs', 'mean', 'std', 'min', 'max')
@@ -196,14 +201,14 @@ class Describe(object):
         # standard array: Specifiy column numbers (NEED TO TEST)
         # percentiles currently broken
         # mode requires mode_val and mode_bin separately
-        if self._arraytype == None:
+        if self._arraytype is None:
             self._array_typer()
 
         if stats == 'basic':
             stats = ('obs', 'mean', 'std', 'min', 'max')
         elif stats == 'all':
             #stats = self.univariate.keys()
-            #dict doesn't keep an order, use full list instead
+            #dict does not keep an order, use full list instead
             stats = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var',
                      'mode_val', 'mode_bin', 'median', 'uss', 'skew',
                      'kurtosis', 'percentiles']
@@ -234,7 +239,7 @@ class Describe(object):
 
 
 
-        #JP: this doesn't allow a change in sequence, sequence in stats is
+        #JP: this does not allow a change in sequence, sequence in stats is
         #ignored
         #this is just an if condition
         if any([aitem[1] for aitem in iteritems(self.univariate) if aitem[0] in
@@ -245,7 +250,7 @@ class Describe(object):
                     self._columns_list = self.dataset.dtype.names
                     #self._columns_list = [col for col in
                     #                      self.dataset.dtype.names if
-                            #(self._is_dtype_like(col)=='number')]
+                    #        (self._is_dtype_like(col)=='number')]
                 else:
                     self._columns_list = lrange(self.dataset.shape[1])
             else:
@@ -299,10 +304,10 @@ class Describe(object):
 
         return table
 
-
+    @Appender(sign_test.__doc__)  # i.e. module-level sign_test
     def sign_test(self, samp, mu0=0):
         return sign_test(samp, mu0)
-    sign_test.__doc__ = _sign_test_doc
+
     #TODO: There must be a better way but formating the stats of a fuction that
     #      returns 2 values is a problem.
     #def sign_test_m(samp,mu0=0):
@@ -359,8 +364,8 @@ if __name__ == "__main__":
             t2 = Describe(data2)
             print(t2.summary())
 
-        def test_basic_3(self):
-            print('test_basic_3')
+        def test_describe_summary_float_ndarray(self):
+            print('test_describe_summary_float_ndarray')
             t1 = Describe(data3)
             print(t1.summary())
 

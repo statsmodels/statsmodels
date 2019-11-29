@@ -1,6 +1,6 @@
-from statsmodels.compat.python import lmap, BytesIO
+from statsmodels.compat.python import lmap
 
-from distutils.version import LooseVersion
+from io import BytesIO
 
 import numpy as np
 import pandas as pd
@@ -17,8 +17,6 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
 @pytest.mark.matplotlib
@@ -141,6 +139,33 @@ def test_plot_acf_kwargs(close_figures):
 
 
 @pytest.mark.matplotlib
+def test_plot_acf_missing(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1., -0.9]
+    ma = np.r_[1., 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    acf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    acf[::13] = np.nan
+
+    buff = BytesIO()
+    plot_acf(acf, ax=ax, missing='drop')
+    fig.savefig(buff, format='rgba')
+    buff.seek(0)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    buff_conservative = BytesIO()
+    plot_acf(acf, ax=ax, missing='conservative')
+    fig.savefig(buff_conservative, format='rgba')
+    buff_conservative.seek(0)
+    assert_(buff.read() != buff_conservative.read())
+
+
+@pytest.mark.matplotlib
 def test_plot_pacf_irregular(close_figures):
     # Just test that it runs.
     fig = plt.figure()
@@ -156,7 +181,6 @@ def test_plot_pacf_irregular(close_figures):
     plot_pacf(pacf, ax=ax, alpha=None, zero=False)
 
 
-@pytest.mark.skipif(pandas_lt_0_19_2, reason='pandas too old')
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = sm.datasets.elnino.load_pandas().data
@@ -180,7 +204,6 @@ def test_plot_month(close_figures):
     fig = month_plot(dta)
 
 
-@pytest.mark.skipif(pandas_lt_0_19_2, reason='pandas too old')
 @pytest.mark.matplotlib
 def test_plot_quarter(close_figures):
     dta = sm.datasets.macrodata.load_pandas().data

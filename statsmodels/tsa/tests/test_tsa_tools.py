@@ -1,8 +1,6 @@
 '''tests for some time series analysis functions
 
 '''
-from statsmodels.compat.python import zip
-
 import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_equal,
@@ -64,28 +62,29 @@ def test_ywcoef():
                                                          method='mle')[0], 8)
 
 
+@pytest.mark.smoke
 def test_yule_walker_inter():
     # see 1869
     x = np.array([1, -1, 2, 2, 0, -2, 1, 0, -3, 0, 0])
     # it works
-    result = sm.regression.yule_walker(x, 3)
+    sm.regression.yule_walker(x, 3)
 
 
-def test_duplication_matrix():
+def test_duplication_matrix(reset_randomstate):
     for k in range(2, 10):
         m = tools.unvech(np.random.randn(k * (k + 1) // 2))
         Dk = tools.duplication_matrix(k)
         assert (np.array_equal(vec(m), np.dot(Dk, vech(m))))
 
 
-def test_elimination_matrix():
+def test_elimination_matrix(reset_randomstate):
     for k in range(2, 10):
         m = np.random.randn(k, k)
         Lk = tools.elimination_matrix(k)
         assert (np.array_equal(vech(m), np.dot(Lk, vec(m))))
 
 
-def test_commutation_matrix():
+def test_commutation_matrix(reset_randomstate):
     m = np.random.randn(4, 3)
     K = tools.commutation_matrix(4, 3)
     assert (np.array_equal(vec(m.T), np.dot(K, vec(m))))
@@ -104,6 +103,11 @@ def test_vech():
     assert (np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
 
 
+def test_ar_transparams():
+    arr = np.array([-1000.0, -100.0, -10.0, 1.0, 0.0, 1.0, 10.0, 100.0, 1000.0])
+    assert (not np.isnan(tools._ar_transparams(arr)).any())
+
+
 class TestLagmat(object):
     @classmethod
     def setup_class(cls):
@@ -112,9 +116,8 @@ class TestLagmat(object):
         cols = list(cls.macro_df.columns)
         cls.realgdp_loc = cols.index('realgdp')
         cls.cpi_loc = cols.index('cpi')
+        np.random.seed(12345)
         cls.random_data = np.random.randn(100)
-        year = cls.macro_df['year'].values
-        quarter = cls.macro_df['quarter'].values
 
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]
@@ -543,14 +546,28 @@ class TestAddTrend(object):
         assert_equal(tools.add_trend(self.arr_1d, trend='ct'), base[:, :3])
         assert_equal(tools.add_trend(self.arr_1d, trend='ctt'), base)
 
-        base = np.hstack((self.c[:, None], self.t[:, None], self.t[:, None] ** 2, self.arr_2d))
-        assert_equal(tools.add_trend(self.arr_2d, prepend=True), base[:, [0, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='t', prepend=True), base[:, [1, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='ct', prepend=True), base[:, [0, 1, 3, 4]])
-        assert_equal(tools.add_trend(self.arr_2d, trend='ctt', prepend=True), base)
+        base = np.hstack((self.c[:, None],
+                          self.t[:, None],
+                          self.t[:, None] ** 2,
+                          self.arr_2d))
+        assert_equal(tools.add_trend(self.arr_2d, prepend=True),
+                     base[:, [0, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='t', prepend=True),
+                     base[:, [1, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='ct', prepend=True),
+                     base[:, [0, 1, 3, 4]])
+        assert_equal(tools.add_trend(self.arr_2d, trend='ctt', prepend=True),
+                     base)
 
     def test_unknown_trend(self):
-        assert_raises(ValueError, tools.add_trend, x=self.arr_1d, trend='unknown')
+        assert_raises(ValueError, tools.add_trend, x=self.arr_1d,
+                      trend='unknown')
+
+    def test_trend_n(self):
+        assert_equal(tools.add_trend(self.arr_1d, 'n'), self.arr_1d)
+        assert tools.add_trend(self.arr_1d, 'n') is not self.arr_1d
+        assert_equal(tools.add_trend(self.arr_2d, 'n'), self.arr_2d)
+        assert tools.add_trend(self.arr_2d, 'n') is not self.arr_2d
 
 
 class TestLagmat2DS(object):
@@ -558,6 +575,7 @@ class TestLagmat2DS(object):
     def setup_class(cls):
         data = sm.datasets.macrodata.load_pandas()
         cls.macro_df = data.data[['year', 'quarter', 'realgdp', 'cpi']]
+        np.random.seed(12345)
         cls.random_data = np.random.randn(100)
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]

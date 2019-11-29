@@ -1,5 +1,3 @@
-from __future__ import division
-
 import numpy as np
 from numpy.testing import (assert_,
                            assert_equal, assert_array_equal, assert_allclose)
@@ -7,9 +5,10 @@ import pytest
 
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
+from .test_discrete import CheckModelMixin
 
 
-class CheckGeneric(object):
+class CheckGeneric(CheckModelMixin):
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
 
@@ -45,7 +44,6 @@ class CheckGeneric(object):
 
     def test_init_keys(self):
         init_kwds = self.res1.model._get_init_kwds()
-        #assert_equal(sorted(list(init_kwds.keys())), self.init_keys)
         assert_equal(set(init_kwds.keys()), set(self.init_keys))
         for key, value in self.init_kwds.items():
             assert_equal(init_kwds[key], value)
@@ -61,9 +59,11 @@ class CheckGeneric(object):
         assert_equal(np.ptp(exog_null), 0)
         assert_equal(np.ptp(exog_infl_null), 0)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
-        self.res1.summary()
+        summ = self.res1.summary()
+        # GH 4581
+        assert 'Covariance Type:' in str(summ)
 
 
 class TestZeroInflatedModel_logit(CheckGeneric):
@@ -80,8 +80,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
 class TestZeroInflatedModel_probit(CheckGeneric):
@@ -98,8 +97,7 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'probit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_probit()
+        res2 = RandHIE.zero_inflated_poisson_probit
         cls.res2 = res2
 
 class TestZeroInflatedModel_offset(CheckGeneric):
@@ -117,8 +115,7 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_offset()
+        res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
 
     def test_exposure(self):
@@ -173,7 +170,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         cls.data = data
         exog = sm.add_constant(data.exog.iloc[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog.iloc[:,0], prepend=False)
-        # we don't need to verify convergence here
+        # we do not need to verify convergence here
         start_params = np.asarray([0.10337834587498942, -1.0459825102508549,
                                    -0.08219794475894268, 0.00856917434709146,
                                    -0.026795737379474334, 1.4823632430107334])
@@ -185,8 +182,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
         cls.init_kwds = {'inflation': 'logit'}
-        res2 = RandHIE()
-        res2.zero_inflated_poisson_logit()
+        res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
     def test_names(self):
@@ -251,8 +247,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 1}
-        res2 = RandHIE()
-        res2.zero_inflated_generalized_poisson()
+        res2 = RandHIE.zero_inflated_generalized_poisson
         cls.res2 = res2
 
     def test_bse(self):
@@ -295,12 +290,15 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
                         atol=1e-3, rtol=0.6)
         assert_(res_dog.mle_retvals['converged'] is True)
 
+        # Ser random_state here to improve reproducibility
+        random_state = np.random.RandomState(1)
+        seed = {'seed': random_state}
         res_bh = model.fit(start_params=start_params,
-                           method='basinhopping', maxiter=500,
-                           niter_success=3, disp=0)
+                           method='basinhopping', niter=500, stepsize=0.1,
+                           niter_success=None, disp=0, interval=1, **seed)
 
         assert_allclose(res_bh.params, self.res2.params,
-                        atol=1e-4, rtol=3e-5)
+                        atol=1e-4, rtol=1e-4)
         assert_allclose(res_bh.bse, self.res2.bse,
                         atol=1e-3, rtol=0.6)
         # skip, res_bh reports converged is false but params agree
@@ -355,8 +353,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
         cls.init_kwds = {'inflation': 'logit', 'p': 2}
-        res2 = RandHIE()
-        res2.zero_inflated_negative_binomial()
+        res2 = RandHIE.zero_inflated_negative_binomial
         cls.res2 = res2
 
     def test_params(self):
@@ -463,7 +460,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
         assert_allclose(((prm - freq)**2).mean(), 0, rtol=1e-10, atol=1e-4)
 
     def test_predict_generic_zi(self):
-        # These tests don't use numbers from other packages.
+        # These tests do not use numbers from other packages.
         # Tests are on closeness of estimated to true/DGP values
         # and theoretical relationship between quantities
         res = self.res
@@ -530,30 +527,30 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 
 
 class TestZeroInflatedNegativeBinomialP_predict2(object):
-        @classmethod
-        def setup_class(cls):
-            data = sm.datasets.randhie.load(as_pandas=False)
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load(as_pandas=False)
 
-            cls.endog = data.endog
-            exog = data.exog
-            start_params = np.array(
-                [-2.83983767, -2.31595924, -3.9263248 , -4.01816431, -5.52251843,
-                -2.4351714 , -4.61636366, -4.17959785, -0.12960256, -0.05653484,
-                -0.21206673,  0.08782572, -0.02991995,  0.22901208,  0.0620983 ,
-                 0.06809681,  0.0841814 ,  0.185506  ,  1.36527888])
-            mod = sm.ZeroInflatedNegativeBinomialP(
-                cls.endog, exog, exog_infl=exog, p=2)
-            res = mod.fit(start_params=start_params, method="bfgs",
-                          maxiter=1000, disp=0)
+        cls.endog = data.endog
+        exog = data.exog
+        start_params = np.array([
+            -2.83983767, -2.31595924, -3.9263248,  -4.01816431, -5.52251843,
+            -2.4351714,  -4.61636366, -4.17959785, -0.12960256, -0.05653484,
+            -0.21206673,  0.08782572, -0.02991995,  0.22901208,  0.0620983,
+            0.06809681,  0.0841814,   0.185506,    1.36527888])
+        mod = sm.ZeroInflatedNegativeBinomialP(
+            cls.endog, exog, exog_infl=exog, p=2)
+        res = mod.fit(start_params=start_params, method="bfgs",
+                      maxiter=1000, disp=0)
 
-            cls.res = res
+        cls.res = res
 
-        def test_mean(self):
-            assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                            atol=0.02)
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=0.02)
 
-        def test_zero_nonzero_mean(self):
-            mean1 = self.endog.mean()
-            mean2 = ((1 - self.res.predict(which='prob-zero').mean()) *
-                     self.res.predict(which='mean-nonzero').mean())
-            assert_allclose(mean1, mean2, atol=0.2)
+    def test_zero_nonzero_mean(self):
+        mean1 = self.endog.mean()
+        mean2 = ((1 - self.res.predict(which='prob-zero').mean()) *
+                 self.res.predict(which='mean-nonzero').mean())
+        assert_allclose(mean1, mean2, atol=0.2)

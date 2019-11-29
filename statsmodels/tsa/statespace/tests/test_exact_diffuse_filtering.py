@@ -9,7 +9,7 @@ These tests are against four sources:
 - Koopman (1997)
 - The R package KFAS (v1.3.1): test_exact_diffuse_filtering.R
 - Stata: test_exact_diffuse_filtering_stata.do
-- Statsmodels state space models using approximate diffuse filtering
+- statsmodels state space models using approximate diffuse filtering
 
 Koopman (1997) provides analytic results for a few cases that we can test
 against. More comprehensive tests are available against the R package KFAS,
@@ -40,29 +40,25 @@ the diffuse observations.
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
 import pytest
 import os
 
-from statsmodels.tools.tools import Bunch
 from statsmodels import datasets
 from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
-from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from numpy.testing import assert_equal, assert_allclose
-import pytest
 
 from . import kfas_helpers
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
-macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+macrodata.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
 
 
 # - Model definitions --------------------------------------------------------
@@ -181,8 +177,8 @@ def model_common_level(endog=None, params=None, restricted=False):
 
 def model_var1(endog=None, params=None, measurement_error=False, init=None):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
         if measurement_error:
@@ -202,8 +198,8 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
 
 def model_dfm(endog=None, params=None, factor_order=2):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
 
@@ -357,7 +353,7 @@ def test_common_level_analytic():
     # Output of the exact diffuse initialization, see Koopman (1997)
 
     # Note: since Koopman (1997) did not apply the univariate method,
-    # forecast errors and covariances, and the Kalman gain won't match
+    # forecast errors and covariances, and the Kalman gain will not match
     # assert_allclose(res.forecasts_error[:, 0], [y11, y21])
     # assert_allclose(res.forecasts_error_cov[:, :, 0], np.eye(2))
     # F_inf1 = np.array([[1, theta],
@@ -394,7 +390,7 @@ def test_common_level_restricted_analytic():
     # Output of the exact diffuse initialization, see Koopman (1997)
     phi = 1 / (1 + theta**2)
     # Note: since Koopman (1997) did not apply the univariate method,
-    # forecast errors and covariances, and the Kalman gain won't match
+    # forecast errors and covariances, and the Kalman gain will not match
     # assert_allclose(res.forecasts_error[:, 0], [y11, y21])
     # assert_allclose(res.forecasts_error_cov[0, 0, 0], np.eye(2))
     # F_inf1 = np.array([[1, theta],
@@ -540,11 +536,12 @@ class CheckSSMResults(object):
 
     # - Smoothed intermediate tests ------------------------------------------
 
-    # This isn't computed in the univariate method or by KFAS
-    # def test_smoothing_error(self, rtol_diffuse=None):
-    #     actual = self.results_a.smoothing_error
-    #     desired = self.results_b.smoothing_error
-    #     self.check_object(actual, desired, rtol_diffuse)
+    @pytest.mark.skip("This is not computed in the univariate method or "
+                      "by KFAS.")
+    def test_smoothing_error(self, rtol_diffuse=None):
+        actual = self.results_a.smoothing_error
+        desired = self.results_b.smoothing_error
+        self.check_object(actual, desired, rtol_diffuse)
 
     def test_scaled_smoothed_estimator(self, rtol_diffuse=1e-5):
         actual = self.results_a.scaled_smoothed_estimator
@@ -557,7 +554,7 @@ class CheckSSMResults(object):
         self.check_object(actual, desired, rtol_diffuse)
 
     # - Diffuse objects tests ------------------------------------------------
-    # Note: these can't be checked against the approximate diffuse method.
+    # Note: these cannot be checked against the approximate diffuse method.
 
     def test_forecasts_error_diffuse_cov(self, rtol_diffuse=None):
         actual = self.results_a.forecasts_error_diffuse_cov
@@ -569,7 +566,8 @@ class CheckSSMResults(object):
         desired = self.results_b.predicted_diffuse_state_cov
         self.check_object(actual, desired, rtol_diffuse)
 
-    # We don't currently store this array
+    # TODO: do something with this other than commenting it out?
+    # We do not currently store this array
     # def test_kalman_gain_diffuse(self, rtol_diffuse=None):
     #     actual = self.results_a.
     #     desired = self.results_b.
@@ -592,20 +590,26 @@ class CheckSSMResults(object):
 
     # - Simulation smoother results tests ------------------------------------
 
-    # def test_simulation_smoothed_state(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_state,
-    #         self.sim_a.simulated_state)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_state(self):
+        assert_allclose(
+            self.sim_a.simulated_state,
+            self.sim_a.simulated_state)
 
-    # def test_simulation_smoothed_measurement_disturbance(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_measurement_disturbance,
-    #         self.sim_a.simulated_measurement_disturbance)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_measurement_disturbance(self):
+        assert_allclose(
+            self.sim_a.simulated_measurement_disturbance,
+            self.sim_a.simulated_measurement_disturbance)
 
-    # def test_simulation_smoothed_state_disturbance(self):
-    #     assert_allclose(
-    #         self.sim_a.simulated_state_disturbance,
-    #         self.sim_a.simulated_state_disturbance)
+    @pytest.mark.xfail(reason="No sim_a attribute",
+                       raises=AttributeError, strict=True)
+    def test_simulation_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.sim_a.simulated_state_disturbance,
+            self.sim_a.simulated_state_disturbance)
 
 
 class CheckApproximateDiffuseMixin(object):
@@ -626,8 +630,10 @@ class CheckApproximateDiffuseMixin(object):
         # Get the approximate diffuse results
         kappa = cls.approximate_diffuse_variance
         if init_approx is None:
-            init_approx = Initialization(cls.ssm.k_states,
-                'approximate_diffuse', approximate_diffuse_variance=kappa)
+            init_approx = Initialization(
+                cls.ssm.k_states,
+                'approximate_diffuse',
+                approximate_diffuse_variance=kappa)
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
 
@@ -719,8 +725,8 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
                                       CheckVAR1MeasurementError):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e9 for the tests to pass at the appropriate level of precision, but
-    # we can't increase too much more than this because then we start get
-    # numerical errors (e.g. 1e10 is fine but 1e11 doesn't pass)
+    # we cannot increase too much more than this because then we start get
+    # numerical errors (e.g. 1e10 is fine but 1e11 does not pass)
     approximate_diffuse_variance = 1e9
 
     def test_smoothed_measurement_disturbance_cov(self, rtol_diffuse=None):
@@ -738,7 +744,8 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(current_path, 'results',
+    results_path = os.path.join(
+        current_path, 'results',
         'results_exact_initial_var1_measurement_error_R.csv')
 
 
@@ -748,8 +755,8 @@ class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
 class CheckVAR1Missing(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        levels = macrodata[['realgdp', 'realcons']]
+        endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
         kwargs['endog'] = endog
@@ -763,8 +770,8 @@ class CheckVAR1Missing(CheckVAR1):
 class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e10 for the tests to pass at the appropriate level of precision, but
-    # we can't increase it any more than this because then we start get
-    # numerical errors (e.g. 1e11 doesn't pass)
+    # we cannot increase it any more than this because then we start get
+    # numerical errors (e.g. 1e11 does not pass)
     approximate_diffuse_variance = 1e10
 
     def test_smoothed_state_cov(self, rtol_diffuse=None):
@@ -893,8 +900,8 @@ class CheckDFM(CheckSSMResults):
 class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 5e10 for the tests to pass at the appropriate level of precision, but
-    # we can't increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e11 works but 1e12 doesn't pass)
+    # we cannot increase it too much more than this because then we start get
+    # numerical errors (e.g. 1e11 works but 1e12 does not pass)
     approximate_diffuse_variance = 5e10
 
 
@@ -940,11 +947,13 @@ class CheckDFMCollapsed(CheckSSMResults):
 class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e9 for the tests to pass at the appropriate level of precision, but
-    # we can't increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e10 doesn't pass)
+    # we cannot increase it too much more than this because then we start get
+    # numerical errors (e.g. 1e10 does not pass)
     approximate_diffuse_variance = 1e9
 
-# Note: we cannot test against KFAS, since it doesn't support collapsed
+
+# FIXME: do not leave this commented-out
+# Note: we cannot test against KFAS, since it does not support collapsed
 # filtering
 # class TestDFMCollapsed_KFAS(CheckKFASMixin, TestDFMCollapsed):
 #     results_path = os.path.join(
@@ -961,19 +970,20 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
 @pytest.mark.xfail
 def test_irrelevant_state():
     # This test records a case in which exact diffuse initialization leads to
-    # numerical problems, becuase the existence of an irrelevant state
+    # numerical problems, because the existence of an irrelevant state
     # initialized as diffuse means that there is never a transition to the
     # usual Kalman filter.
     endog = macrodata.infl
 
     spec = {
-        'freq_seasonal': [{'period':8, 'harmonics': 6},
+        'freq_seasonal': [{'period': 8, 'harmonics': 6},
                           {'period': 36, 'harmonics': 6}]
     }
 
     # Approximate diffuse version
     mod = UnobservedComponents(endog, 'llevel', **spec)
-    mod.ssm.initialization = Initialization(mod.k_states,'approximate_diffuse')
+    mod.ssm.initialization = Initialization(mod.k_states,
+                                            'approximate_diffuse')
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version

@@ -22,34 +22,27 @@ open issues
 
 
 there is something fishy with the result instance, some things, e.g.
-normalized_cov_params, don't look like they update correctly as we
+normalized_cov_params, do not look like they update correctly as we
 search over lambda -> some stale state again ?
 
 I added df_model to result class using the hatmatrix, but df_model is defined
 in model instance not in result instance. -> not clear where refactoring should
-occur. df_resid doesn't get updated correctly.
+occur. df_resid does not get updated correctly.
 problem with definition of df_model, it has 1 subtracted for constant
 
 
 
 """
-from __future__ import print_function
-from statsmodels.compat.python import range, lrange
+from statsmodels.compat.python import lrange
 import numpy as np
-from statsmodels.tools.decorators import (cache_readonly)
-import statsmodels.base.model as base
+
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
-
-
-def atleast_2dcols(x):
-    x = np.asarray(x)
-    if x.ndim == 1:
-        x = x[:,None]
-    return x
+from statsmodels.regression.feasible_gls import atleast_2dcols
 
 
 class TheilGLS(GLS):
-    """GLS with stochastic restrictions
+    r"""GLS with stochastic restrictions
 
     TheilGLS estimates the following linear model
 
@@ -76,13 +69,13 @@ class TheilGLS(GLS):
 
     The parameter estimates solves the moment equation:
 
-    .. math:: (X' \\Sigma X + \\lambda R' \\sigma^2 \\Simga_p^{-1} R) b = X' \\Sigma y + \\lambda R' \\Simga_p^{-1} q
+    .. math:: (X' \Sigma X + \lambda R' \sigma^2 \Sigma_p^{-1} R) b = X' \Sigma y + \lambda R' \Sigma_p^{-1} q
 
-    :math:`\\lambda` is the penalization weight similar to Ridge regression.
+    :math:`\lambda` is the penalization weight similar to Ridge regression.
 
     If lambda is zero, then the parameter estimate is the same as OLS. If
     lambda goes to infinity, then the restriction is imposed with equality.
-    In the model `pen_weight` is used as name instead of $\\lambda$
+    In the model `pen_weight` is used as name instead of $\lambda$
 
     R does not have to be square. The number of rows of R can be smaller
     than the number of parameters. In this case not all linear combination
@@ -105,7 +98,7 @@ class TheilGLS(GLS):
 
     Baum, Christopher slides for tgmixed in Stata
 
-    (I don't remember what I used when I first wrote the code.)
+    (I do not remember what I used when I first wrote the code.)
 
     Parameters
     ----------
@@ -160,7 +153,7 @@ class TheilGLS(GLS):
         else:
             self.q_matrix = np.zeros(k_constraints)[:, None]
         if self.q_matrix.shape != (k_constraints, 1):
-                raise ValueError('q_matrix has wrong shape')
+            raise ValueError('q_matrix has wrong shape')
 
         if sigma_prior is not None:
             sigma_prior = np.asarray(sigma_prior)
@@ -178,14 +171,14 @@ class TheilGLS(GLS):
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
 
-    def fit(self, pen_weight=1., cov_type='sandwich'):
+    def fit(self, pen_weight=1., cov_type='sandwich', use_t=True):
         """Estimate parameters and return results instance
 
         Parameters
         ----------
         pen_weight : float
             penalization factor for the restriction, default is 1.
-        cov_type : string, 'data-prior' or 'sandwich'
+        cov_type : str, 'data-prior' or 'sandwich'
             'data-prior' assumes that the stochastic restriction reflects a
             previous sample. The covariance matrix of the parameter estimate
             is in this case the same form as the one of GLS.
@@ -256,7 +249,7 @@ class TheilGLS(GLS):
         self.xpxi = xpxi
         self.sigma2_e = sigma2_e
         lfit = TheilRegressionResults(self, params,
-                       normalized_cov_params=normalized_cov_params)
+                       normalized_cov_params=normalized_cov_params, use_t=use_t)
 
         lfit.penalization_factor = lambd
         return lfit
@@ -266,7 +259,7 @@ class TheilGLS(GLS):
 
         Parameters
         ----------
-        method : string
+        method : str
             the name of an attribute of the results class. Currently the following
             are available aic, aicc, bic, gc and gcv.
         start_params : float
@@ -290,7 +283,7 @@ class TheilGLS(GLS):
         if optim_args is None:
             optim_args = {}
 
-        #this doesn't make sense, since number of parameters stays unchanged
+        #this does not make sense, since number of parameters stays unchanged
         # information criteria changes if we use df_model based on trace(hat_matrix)
         #need leave-one-out, gcv; or some penalization for weak priors
         #added extra penalization for lambd
@@ -343,7 +336,7 @@ class TheilRegressionResults(RegressionResults):
         '''
         # TODO is this still correct with sandwich normalized_cov_params, I guess not
         xpxi = self.model.normalized_cov_params
-        #something fishy with self.normalized_cov_params in result, doesn't update
+        #something fishy with self.normalized_cov_params in result, does not update
         #print(self.model.wexog.shape, np.dot(xpxi, self.model.wexog.T).shape
         return (self.model.wexog * np.dot(xpxi, self.model.wexog.T).T).sum(1)
 
@@ -353,7 +346,7 @@ class TheilRegressionResults(RegressionResults):
         """
         return self.hatmatrix_diag.sum()
 
-##    #this doesn't update df_resid
+##    #this does not update df_resid
 ##    @property   #needs to be property or attribute (no call)
 ##    def df_model(self):
 ##        return self.hatmatrix_trace()

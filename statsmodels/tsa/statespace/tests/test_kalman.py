@@ -16,11 +16,8 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
-from __future__ import division, absolute_import, print_function
-from statsmodels.compat import cPickle
-
-from distutils.version import LooseVersion
 import copy
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -29,8 +26,9 @@ import pytest
 
 from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
+from statsmodels.tsa.statespace.kalman_filter import (
+    MEMORY_NO_FORECAST, MEMORY_NO_PREDICTED, MEMORY_CONSERVE)
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _representation, _kalman_filter
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
@@ -91,23 +89,23 @@ class Clark1987(object):
         cls.k_states = k_states = 4  # dimension of state space
         # transition matrix
         cls.transition = np.zeros((k_states, k_states, 1),
-                                   dtype=dtype, order="F")
+                                  dtype=dtype, order="F")
         cls.transition[([0, 0, 1, 1, 2, 3],
-                         [0, 3, 1, 2, 1, 3],
-                         [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+                        [0, 3, 1, 2, 1, 3],
+                        [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
         cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                           dtype=dtype)
+                                          dtype=dtype)
         # state covariance matrix
         cls.state_cov = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
+                                 dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype, order="F")
         cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                   dtype=dtype)
+                                                  dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
@@ -184,7 +182,7 @@ class Clark1987(object):
         )
 
     def test_pickled_filter(self):
-        pickled = cPickle.loads(cPickle.dumps(self.filter))
+        pickled = pickle.loads(pickle.dumps(self.filter))
         #  Run the filters
         self.filter()
         pickled()
@@ -215,6 +213,7 @@ class TestClark1987Single(Clark1987):
     """
     @classmethod
     def setup_class(cls):
+        # TODO: Can we be more specific?  How can a contributor help?
         pytest.skip('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
@@ -266,6 +265,7 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
+        # TODO: Can we be more specific?  How can a contributor help?
         pytest.skip('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
@@ -318,7 +318,8 @@ class TestClark1987Conserve(Clark1987):
     @classmethod
     def setup_class(cls):
         super(TestClark1987Conserve, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02
+            dtype=float,
+            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -338,7 +339,7 @@ class Clark1987Forecast(Clark1987):
         # Add missing observations to the end (to forecast)
         cls._obs = cls.obs
         cls.obs = np.array(np.r_[cls.obs[0, :], [np.nan]*nforecast],
-                            ndmin=2, dtype=dtype, order="F")
+                           ndmin=2, dtype=dtype, order="F")
 
     def test_filtered_state(self):
         assert_almost_equal(
@@ -388,7 +389,8 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
     @classmethod
     def setup_class(cls):
         super(TestClark1987ForecastConserve, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02
+            dtype=float,
+            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -402,7 +404,7 @@ class TestClark1987ConserveAll(Clark1987):
     @classmethod
     def setup_class(cls):
         super(TestClark1987ConserveAll, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
+            dtype=float, conserve_memory=MEMORY_CONSERVE
         )
         cls.loglikelihood_burn = cls.true['start']
         cls.model, cls.filter = cls.init_filter()
@@ -474,23 +476,23 @@ class Clark1989(object):
 
         # transition matrix
         cls.transition = np.zeros((k_states, k_states, 1),
-                                   dtype=dtype, order="F")
+                                  dtype=dtype, order="F")
         cls.transition[([0, 0, 1, 1, 2, 3, 4, 5],
-                         [0, 4, 1, 2, 1, 2, 4, 5],
-                         [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
+                        [0, 4, 1, 2, 1, 2, 4, 5],
+                        [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
         cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                           dtype=dtype)
+                                          dtype=dtype)
         # state covariance matrix
         cls.state_cov = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
+                                 dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype)
         cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                   dtype=dtype)
+                                                  dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
@@ -598,7 +600,8 @@ class TestClark1989Conserve(Clark1989):
     @classmethod
     def setup_class(cls):
         super(TestClark1989Conserve, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02
+            dtype=float,
+            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -679,7 +682,8 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
     @classmethod
     def setup_class(cls):
         super(TestClark1989ForecastConserve, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02
+            dtype=float,
+            conserve_memory=MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED
         )
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
@@ -693,7 +697,7 @@ class TestClark1989ConserveAll(Clark1989):
     @classmethod
     def setup_class(cls):
         super(TestClark1989ConserveAll, cls).setup_class(
-            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08,
+            dtype=float, conserve_memory=MEMORY_CONSERVE,
         )
         # cls.loglikelihood_burn = cls.true['start']
         cls.loglikelihood_burn = 0

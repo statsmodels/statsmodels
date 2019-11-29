@@ -34,4 +34,4 @@ for (dtype in c("binomial", "poisson")) {
     }
 }
 
-R2nparray(rslt, fname="../glmnet_r_results.py")
+R2nparray(rslt, fname="glmnet_r_results.py")

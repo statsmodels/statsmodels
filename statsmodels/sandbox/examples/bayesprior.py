@@ -9,12 +9,12 @@ try:
 except:
     print("pymc not imported")
     pymc_installed = 0
-from scipy.stats import gamma, beta, invgamma
+
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import stats, integrate
 from scipy.stats import rv_continuous
-from scipy.special import gammaln, gammaincinv, gamma, gammainc
+from scipy.special import gammaln, gammaincinv, gammainc
 from numpy import log,exp
 
 #np.random.seed(12345)
@@ -53,8 +53,7 @@ Inverted gamma distribution
 
 invgamma.pdf(x,a,b) = b**a*x**(-a-1)/gamma(a) * exp(-b/x)
 for x > 0, a > 0, b>0.
-"""
-)
+""")
 
 
 #NOTE: the above is unnecessary.  B takes the same role as the scale parameter
@@ -115,7 +114,7 @@ for draw in range(draws):
     theta1 = np.random.uniform(0,1)
     theta2 = np.random.normal(mu_, lambda_**2)
 #    mu = theta2/(1-theta1)
-#don't do this to maintain independence theta2 is the _location_
+#do not do this to maintain independence theta2 is the _location_
 #    y1 = np.random.normal(mu_, lambda_**2)
     y1 = theta2
 #    pmu_pairsp1[draw] = mu, theta1
@@ -181,7 +180,7 @@ fsp.axis([-20,20,-20,20])
 
 #plt.show()
 
-#TODO: this doesn't look the same as the working paper?
+#TODO: this does not look the same as the working paper?
 #NOTE: but it matches the language?  I think mine is right!
 
 # Contour plots.

@@ -2,16 +2,13 @@
 This script contains empirical likelihood ANOVA.
 
 Currently the script only contains one feature that allows the user to compare
-means of multiple groups
+means of multiple groups.
 
 General References
 ------------------
 
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
-from __future__ import division
-
-from statsmodels.compat.python import range
 import numpy as np
 from .descriptive import _OptFuncts
 from scipy import optimize
@@ -22,23 +19,23 @@ class _ANOVAOpt(_OptFuncts):
     """
 
     Class containing functions that are optimized over when
-    conducting ANOVA
+    conducting ANOVA.
 
     """
     def _opt_common_mu(self, mu):
         """
         Optimizes the likelihood under the null hypothesis that all groups have
-        mean mu
+        mean mu.
 
         Parameters
         ----------
         mu : float
-            The common mean
+            The common mean.
 
         Returns
         -------
         llr : float
-            -2 times the llr ratio, which is the test statistic
+            -2 times the llr ratio, which is the test statistic.
         """
         nobs = self.nobs
         endog = self.endog
@@ -95,11 +92,11 @@ class ANOVA(_ANOVAOpt):
 
         mu_start : float
             Starting value for commean mean if specific mu is not specified.
-            Default = 0
+            Default = 0.
 
         return_weights : bool
             if TRUE, returns the weights on observations that maximize the
-            likelihood.  Default is FALSE
+            likelihood.  Default is FALSE.
 
         Returns
         -------

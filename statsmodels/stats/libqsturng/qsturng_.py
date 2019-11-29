@@ -22,8 +22,7 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
-from __future__ import print_function
-from statsmodels.compat.python import lrange, map
+from statsmodels.compat.python import lrange
 import math
 import scipy.stats
 import numpy as np
@@ -49,7 +48,7 @@ __version__ = '0.2.3'
 # r values for combinations of p and v. In total there are 206
 # estimates over p-values of .5, .75, .9, .95, .975, .99, .995,
 # and .999, and over v (degrees of freedom) of (1) - 20, 24, 30, 40,
-# 60, 120, and inf. combinations with p < .95 don't have coefficients
+# 60, 120, and inf. combinations with p < .95 do not have coefficients
 # for v = 1. Hence the parentheses. These coefficients allow us to
 # form f-hat. f-hat with the inverse t transform of tinv(p,v) yields
 # a fairly accurate estimate of the studentized range distribution
@@ -392,7 +391,7 @@ def _isfloat(x):
 
 def _phi( p ):
     # this function is faster than using scipy.stats.norm.isf(p)
-    # but the permissity of the license isn't explicitly listed.
+    # but the permissity of the license is not explicitly listed.
     # using scipy.stats.norm.isf(p) is an acceptable alternative
 
     """
@@ -531,6 +530,7 @@ def _interpolate_p(p, r, v):
         y0 = _func(A[(p0, v)], p0, r, v) + 1.
     except:
         print(p,r,v)
+        raise
     y1 = _func(A[(p1, v)], p1, r, v) + 1.
     y2 = _func(A[(p2, v)], p2, r, v) + 1.
 
@@ -648,7 +648,8 @@ def _interpolate_v(p, r, v):
 
     # if v2 is inf set to a big number so interpolation
     # calculations will work
-    if v2 > 1e38: v2 = 1e38
+    if v2 > 1e38:
+        v2 = 1e38
 
     # transform v
     v_, v0_, v1_, v2_ = 1./v, 1./v0, 1./v1, 1./v2

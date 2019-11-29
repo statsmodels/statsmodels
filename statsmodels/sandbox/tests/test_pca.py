@@ -9,11 +9,10 @@ TODO:
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from statsmodels.sandbox import tools
 from statsmodels.sandbox.tools import pca, pcasvd
-from statsmodels.tsa.arima_process import arma_impulse_response
 
-from .datamlw import princomp1, princomp2, princomp3, data
+from statsmodels.multivariate.tests.results.datamlw import (
+    princomp1, princomp2, princomp3, data)
 
 
 def check_pca_princomp(pcares, princomp):

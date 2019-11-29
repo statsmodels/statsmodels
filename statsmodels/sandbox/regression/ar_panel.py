@@ -21,7 +21,6 @@ Could be extended to AR(p) errors, but then requires panel with larger T
 '''
 
 
-from __future__ import print_function
 import numpy as np
 from scipy import optimize
 
@@ -33,7 +32,7 @@ class PanelAR1(object):
         #take this from a super class, no checking is done here
         nobs = endog.shape[0]
         self.endog = endog
-        if not exog is None:
+        if exog is not None:
             self.exog = exog
 
         self.groups_start = (np.diff(groups)!=0)
@@ -65,7 +64,7 @@ class PanelAR1(object):
 
 if __name__ == '__main__':
 
-    #------------ developement code for groupar1filter and example
+    #------------ development code for groupar1filter and example
     groups = np.array([0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,
                        2,2,2,2,2,2,2,2])
     nobs = len(groups)
@@ -75,7 +74,7 @@ if __name__ == '__main__':
 
     y00 = 0.5*np.random.randn(nobs+1)
 
-    # I don't think a trend is handled yet
+    # I do not think a trend is handled yet
     data = np.arange(nobs) + y00[1:] + 0.2*y00[:-1] + 0.1*np.random.randn(nobs)
     #Are these AR(1) or MA(1) errors ???
     data = y00[1:] + 0.6*y00[:-1] #+ 0.1*np.random.randn(nobs)
@@ -107,7 +106,7 @@ if __name__ == '__main__':
     exog = np.ones(nobs)
     exog = group_dummy
     mod = PanelAR1(y, exog, groups=groups)
-    #mod = PanelAR1(data, exog, groups=groups) #data doesn't contain different means
+    #mod = PanelAR1(data, exog, groups=groups) #data does not contain different means
     #print(mod.ar1filter(mod.endog, 1))
     resa, reso = mod.fit()
     print(resa[0], reso.params)

@@ -11,7 +11,7 @@ multigroup:
     more significant than outside the group.
 """
 
-from statsmodels.compat.python import iteritems, string_types
+from statsmodels.compat.python import iteritems
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
@@ -53,18 +53,18 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
 
     Parameters
     ----------
-    model : string
+    model : str
         formula description of the model
     dataframe : pandas.dataframe
         dataframe where the model will be evaluated
-    column_list : list of strings, optional
+    column_list : list[str], optional
         Names of the columns to analyze with the model.
         If None (Default) it will perform the function on all the
         eligible columns (numerical type and not in the model definition)
     model_type : model class, optional
         The type of model to be used. The default is the linear model.
         Can be any linear model (OLS, WLS, GLS, etc..)
-    method: string, optional
+    method: str, optional
         the method used to perform the pvalue correction for multiple testing.
         default is the Benjamini/Hochberg, other available methods are:
 
@@ -90,7 +90,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         a dataframe containing an extract from the summary of the model
         obtained for each columns. It will give the model complexive f test
         result and p-value, and the regression value and standard deviarion
-        for each of the regressors. The Dataframe has a hierachical column
+        for each of the regressors. The DataFrame has a hierachical column
         structure, divided as:
 
             - params: contains the parameters resulting from the models. Has
@@ -142,13 +142,13 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     >>> multiOLS('GNP + 0', df, 'GNPDEFL')
     """
     # data normalization
-    # if None take all the numerical columns that aren't present in the model
+    # if None take all the numerical columns that are not present in the model
     # it's not waterproof but is a good enough criterion for everyday use
     if column_list is None:
         column_list = [name for name in dataframe.columns
                       if dataframe[name].dtype != object and name not in model]
     # if it's a single string transform it in a single element list
-    if isinstance(column_list, string_types):
+    if isinstance(column_list, str):
         column_list = [column_list]
     if subset is not None:
         dataframe = dataframe.loc[subset]
@@ -237,12 +237,12 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     groups: dict of list
         the name of each category of variables under exam.
         each one is a list of the variables included
-    exact: boolean, optional
+    exact: bool, optional
         If True (default) use the fisher exact test, otherwise
         use the chi squared test for contingencies tables.
         For high number of elements in the array the fisher test can
         be significantly slower than the chi squared.
-    keep_all: boolean, optional
+    keep_all: bool, optional
         if False it will drop those groups where the fraction
         of positive is below the expected result. If True (default)
          it will keep all the significant results.

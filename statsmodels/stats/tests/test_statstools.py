@@ -208,11 +208,15 @@ class TestStattools(object):
         mcn = medcouple(-x)
         assert_almost_equal(mcp + mcn, 0)
 
+    def test_medcouple_ties(self, reset_randomstate):
+        x = np.array([1, 2, 2, 3, 4])
+        mc = medcouple(x)
+        assert_almost_equal(mc, 1.0 / 6.0)
+
     def test_durbin_watson(self, reset_randomstate):
         x = np.random.standard_normal(100)
         dw = sum(np.diff(x)**2.0) / np.dot(x, x)
         assert_almost_equal(dw, durbin_watson(x))
-
 
     def test_durbin_watson_2d(self, reset_randomstate):
         shape = (1, 10)

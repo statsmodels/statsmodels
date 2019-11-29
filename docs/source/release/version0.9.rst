@@ -1,16 +1,13 @@
 :orphan:
 
-===========
-0.9 Release
-===========
-
+=============
 Release 0.9.0
 =============
 
 Release summary
 ---------------
 
-Statsmodels is using github to store the updated documentation which
+statsmodels is using github to store the updated documentation which
 is available under
 https://www.statsmodels.org/stable for the last release, and
 https://www.statsmodels.org/devel/ for the development version.
@@ -248,8 +245,8 @@ Improved time series index support
 
 Handling of indexes for time series models has been overhauled (#3272) to
 take advantage of recent improvements in Pandas and to shift to Pandas much of
-the special case handling (espcially for date indexes) that had previously been
-done in Statsmodels. Benefits include more consistent behavior, a reduced
+the special case handling (especially for date indexes) that had previously been
+done in statsmodels. Benefits include more consistent behavior, a reduced
 number of bugs from corner cases, and a reduction in the maintenance burden.
 
 Although an effort was made to maintain backwards compatibility with this

@@ -9,24 +9,24 @@ License: BSD-3
 currently all tests are against R
 
 """
+import json
 import os
 
 import numpy as np
 import pandas as pd
-
+import pytest
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_allclose, assert_array_equal)
-import pytest
 
-from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
-from statsmodels.datasets import macrodata
-
-import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
-import json
-
 import statsmodels.stats.outliers_influence as oi
+import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.datasets import macrodata
+from statsmodels.datasets import sunspots
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import add_constant
+from statsmodels.tsa.ar_model import AR
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -38,7 +38,7 @@ def compare_t_est(sp, sp_dict, decimal=(14, 14)):
                     rtol=10 ** -decimal[0])
 
 
-def notyet_atst():
+def notyet_atst():  # FIXME: make this a test or move/remove
     d = macrodata.load(as_pandas=False).data
 
     realinv = d['realinv']
@@ -305,6 +305,11 @@ class TestDiagnosticG(object):
         bg3 = smsdia.acorr_breusch_godfrey(res, nlags=14)
         assert_almost_equal(bg2, bg3, decimal=13)
 
+    def test_acorr_breusch_godfrey_multidim(self):
+        res = Bunch(resid=np.empty((100,2)))
+        with pytest.raises(ValueError, match='Model resid must be a 1d array'):
+            smsdia.acorr_breusch_godfrey(res)
+
     def test_acorr_ljung_box(self):
 
         #unit-test which may be useful later
@@ -470,7 +475,7 @@ class TestDiagnosticG(object):
         assert_almost_equal(jt1, jtest[0][3:5], decimal=13)
 
         jt2 = smsdia.compare_j(res, res2)
-        assert_almost_equal(jt2, jtest[1][3:5], decimal=14)
+        assert_almost_equal(jt2, jtest[1][3:5], decimal=13)
 
         #Estimate        Std. Error  z value   Pr(>|z|)
         coxtest = [('fitted(M1) ~ M2', -0.782030488930356, 0.599696502782265,
@@ -479,7 +484,7 @@ class TestDiagnosticG(object):
                     -5.727181590258883, 1.021128495098556e-08, '***')]
 
         ct1 = smsdia.compare_cox(res, res2)
-        assert_almost_equal(ct1, coxtest[0][3:5], decimal=13)
+        assert_almost_equal(ct1, coxtest[0][3:5], decimal=12)
 
         ct2 = smsdia.compare_cox(res2, res)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
@@ -519,7 +524,7 @@ class TestDiagnosticG(object):
         bh = smsdia.breaks_hansen(self.res)
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
                             decimal=13)
-        #TODO: breaks_hansen doesn't return pvalues
+        #TODO: breaks_hansen does not return pvalues
 
 
     def test_recursive_residuals(self):
@@ -596,11 +601,11 @@ class TestDiagnosticG(object):
         #> lt = lillie.test(residuals(fm)[1:20])
         #> mkhtest(lt, "lilliefors", "-")
         lilliefors3 = dict(statistic=0.1333956004203103,
-                          pvalue=0.20, parameters=(), distr='-')
+                           pvalue=0.455683, parameters=(), distr='-')
 
-        lf1 = smsdia.lilliefors(res.resid)
-        lf2 = smsdia.lilliefors(res.resid**2)
-        lf3 = smsdia.lilliefors(res.resid[:20])
+        lf1 = smsdia.lilliefors(res.resid, pvalmethod='approx')
+        lf2 = smsdia.lilliefors(res.resid**2, pvalmethod='approx')
+        lf3 = smsdia.lilliefors(res.resid[:20], pvalmethod='approx')
 
         compare_t_est(lf1, lilliefors1, decimal=(14, 14))
         compare_t_est(lf2, lilliefors2, decimal=(14, 14))  # pvalue very small
@@ -721,6 +726,34 @@ class TestDiagnosticGPandas(TestDiagnosticG):
         cls.exog = cls.res.model.exog
 
 
+def test_spec_white():
+    resdir = os.path.join(cur_dir, "results")
+    wsfiles = ['wspec1.csv', 'wspec2.csv', 'wspec3.csv', 'wspec4.csv']
+    for file in wsfiles:
+        mdlfile = os.path.join(resdir, file)
+        mdl = np.asarray(pd.read_csv(mdlfile))
+        # DV is in last column
+        lastcol = mdl.shape[1] - 1
+        dv = mdl[:,lastcol]
+        # create design matrix
+        design = np.concatenate((np.ones((mdl.shape[0], 1)), \
+            np.delete(mdl, lastcol, 1)), axis=1)
+        # perform OLS and generate residuals
+        resids = dv - np.dot(design, np.linalg.lstsq(design, dv, rcond=-1)[0])
+        # perform White spec test. wspec3/wspec4 contain dummies.
+        wsres = smsdia.spec_white(resids, design)
+        # compare results to SAS 9.3 output
+        if file == 'wspec1.csv':
+            assert_almost_equal(wsres, [3.251, 0.661, 5], decimal=3)
+        elif file == 'wspec2.csv':
+            assert_almost_equal(wsres, [6.070, 0.733, 9], decimal=3)
+        elif file == 'wspec3.csv':
+            assert_almost_equal(wsres, [6.767, 0.454, 7], decimal=3)
+        else:
+            assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
+
+
+# FIXME: make this a test or move/remove
 def grangertest():
     #> gt = grangertest(ginv, ggdp, order=4)
     #> gt
@@ -733,8 +766,8 @@ def grangertest():
                        df=(198,193))
 
 
+@pytest.mark.smoke
 def test_outlier_influence_funcs(reset_randomstate):
-    #smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
     res = OLS(y, x).fit()
@@ -752,7 +785,6 @@ def test_outlier_influence_funcs(reset_randomstate):
 
 def test_influence_wrapped():
     from pandas import DataFrame
-    from pandas.util.testing import assert_series_equal
 
     d = macrodata.load_pandas().data
     #growth rates
@@ -760,7 +792,7 @@ def test_influence_wrapped():
     gs_l_realgdp = 400 * np.log(d['realgdp']).diff().dropna()
     lint = d['realint'][:-1]
 
-    # re-index these because they won't conform to lint
+    # re-index these because they will not conform to lint
     gs_l_realgdp.index = lint.index
     gs_l_realinv.index = lint.index
 
@@ -1029,3 +1061,14 @@ if __name__ == '__main__':
     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
     '''
+
+
+def test_ljungbox_dof_adj():
+    data = sunspots.load_pandas().data['SUNACTIVITY']
+    res = AR(data).fit(maxlag=4)
+    resid = res.resid
+    res1 = smsdia.acorr_ljungbox(resid, lags=10)
+    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=res.k_ar)
+    assert_allclose(res1[0], res2[0])
+    assert np.all(np.isnan(res2[1][:4]))
+    assert np.all(res2[1][4:] <= res1[1][4:])

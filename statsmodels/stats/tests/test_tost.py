@@ -7,9 +7,14 @@ Author: Josef Perktold
 """
 
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_equal, assert_
+import pytest
+
 import statsmodels.stats.weightstats as smws
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_
+
+from statsmodels.tools.testing import Holder
+
 
 def assert_almost_equal_inf(x, y, decimal=6, msg=None):
     x = np.atleast_1d(x)
@@ -19,10 +24,6 @@ def assert_almost_equal_inf(x, y, decimal=6, msg=None):
     assert_equal(np.isnan(x), np.isnan(y))
     assert_almost_equal(x[np.isfinite(x)], y[np.isfinite(y)])
 
-
-
-class Holder(object):
-    pass
 
 raw_clinic = '''\
 1     1 2.84 4.00 3.45 2.55 2.46
@@ -543,7 +544,10 @@ def test_ttest():
     assert_(cm.d1 is cm2.d1)
     assert_(cm.d1 is cm3.d1)
 
-def tost_transform_paired():
+
+@pytest.mark.xfail(reason="shape mismatch between res1[1:] and res_sas[1:]",
+                   raises=AssertionError, strict=True)
+def test_tost_transform_paired():
     raw = np.array('''\
        103.4 90.11  59.92 77.71  68.17 77.71  94.54 97.51
        69.48 58.21  72.17 101.3  74.37 79.84  84.44 96.06

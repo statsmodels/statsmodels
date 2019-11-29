@@ -15,13 +15,12 @@ Warning: The algorithm does not converge.  Roundoff error is detected
   the best which can be obtained.
 array(2981.0032380193438)
 """
-from __future__ import print_function
 import warnings # for silencing, see above...
 import numpy as np
 from numpy.testing import assert_almost_equal
 from scipy import stats, special
 from statsmodels.sandbox.distributions.extras import (
-    lognormalg, squarenormalg, absnormalg, negsquarenormalg, squaretg)
+    squarenormalg, absnormalg, negsquarenormalg, squaretg)
 
 
 # some patches to scipy.stats.distributions so tests work and pass
@@ -88,12 +87,12 @@ class Test_Transf2(object):
             #The below fails on the SPARC box with scipy 10.1
             #(lognormalg, stats.lognorm(1)),
             #transf2
-           (squarenormalg, stats.chi2(1)),
-           (absnormalg, stats.halfnorm),
-           (absnormalg, stats.foldnorm(1e-5)),  #try frozen
-           #(negsquarenormalg, 1-stats.chi2),  # won't work as distribution
-           (squaretg(10), stats.f(1, 10))
-            ]      #try both frozen
+            (squarenormalg, stats.chi2(1)),
+            (absnormalg, stats.halfnorm),
+            (absnormalg, stats.foldnorm(1e-5)),  #try frozen
+            #(negsquarenormalg, 1-stats.chi2),  # will not work as distribution
+            (squaretg(10), stats.f(1, 10))
+        ]      #try both frozen
 
         l,s = 0.0, 1.0
         cls.ppfq = [0.1,0.5,0.9]

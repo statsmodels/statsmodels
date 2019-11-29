@@ -4,12 +4,12 @@ Recursive least squares model
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat import unicode
+from statsmodels.compat.pandas import Appender
+
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
@@ -37,7 +37,7 @@ class RecursiveLS(MLEModel):
         The observed time-series process :math:`y`
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
-    constraints : array-like, str, or tuple
+    constraints : array_like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
               test and k is the number of regressors. It is assumed that the
               linear combination is equal to zero.
@@ -223,7 +223,7 @@ class RecursiveLS(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : boolean, optional
+        transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True..
 
@@ -261,7 +261,7 @@ class RecursiveLSResults(MLEResults):
         super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
-        # Since we are overriding params with things that aren't MLE params,
+        # Since we are overriding params with things that are not MLE params,
         # need to adjust df's
         q = max(self.loglikelihood_burn, self.k_diffuse_states)
         self.df_model = q - self.model.k_constraints
@@ -451,20 +451,24 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def ssr(self):
+        """ssr"""
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (self.nobs - d) * self.filter_results.obs_cov[0, 0, 0]
 
     @cache_readonly
     def centered_tss(self):
+        """Centered tss"""
         return np.sum((self.filter_results.endog[0] -
                        np.mean(self.filter_results.endog))**2)
 
     @cache_readonly
     def uncentered_tss(self):
+        """uncentered tss"""
         return np.sum((self.filter_results.endog[0])**2)
 
     @cache_readonly
     def ess(self):
+        """ess"""
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
@@ -472,6 +476,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def rsquared(self):
+        """rsquared"""
         if self.k_constant:
             return 1 - self.ssr / self.centered_tss
         else:
@@ -479,22 +484,26 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def mse_model(self):
+        """mse_model"""
         return self.ess / self.df_model
 
     @cache_readonly
     def mse_resid(self):
+        """mse_resid"""
         return self.ssr / self.df_resid
 
     @cache_readonly
     def mse_total(self):
+        """mse_total"""
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
             return self.uncentered_tss / (self.df_resid + self.df_model)
 
+    @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        index=None, **kwargs):
-        # Note: need to override this, because we currently don't support
+        # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
         if start is None:
             start = self.model._index[0]
@@ -504,7 +513,7 @@ class RecursiveLSResults(MLEResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, unicode)):
+        if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):
@@ -513,15 +522,15 @@ class RecursiveLSResults(MLEResults):
                                       ' constraints.')
 
         # Perform the prediction
-        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # This is a (k_endog x npredictions) array; do not want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)
 
         # Return a new mlemodel.PredictionResults object
-        return PredictionResultsWrapper(PredictionResults(
-            self, prediction_results, row_labels=prediction_index))
-    get_prediction.__doc__ = MLEResults.get_prediction.__doc__
+        res_obj = PredictionResults(self, prediction_results,
+                                    row_labels=prediction_index)
+        return PredictionResultsWrapper(res_obj)
 
     def plot_recursive_coefficient(self, variables=0, alpha=0.05,
                                    legend_loc='upper left', fig=None,
@@ -531,15 +540,15 @@ class RecursiveLSResults(MLEResults):
 
         Parameters
         ----------
-        variables : int or str or iterable of int or string, optional
+        variables : {int, str, list[int], list[str]}, optional
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
         alpha : float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.
@@ -607,7 +616,7 @@ class RecursiveLSResults(MLEResults):
                 # Only add CI to legend for the first plot
                 if i == 0:
                     # Proxy artist for fill_between legend entry
-                    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+                    # See https://matplotlib.org/1.3.1/users/legend_guide.html
                     p = plt.Rectangle((0, 0), 1, 1,
                                       fc=ci_poly.get_facecolor()[0])
 
@@ -682,7 +691,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float, optional
             The plotted significance bounds are alpha %.
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new
@@ -775,7 +784,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float, optional
             The plotted significance bounds are alpha %.
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new

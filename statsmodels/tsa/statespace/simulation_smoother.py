@@ -4,7 +4,6 @@ State Space Representation, Kalman Filter, Smoother, and Simulation Smoother
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .kalman_smoother import KalmanSmoother
@@ -24,7 +23,7 @@ class SimulationSmoother(KalmanSmoother):
 
     Parameters
     ----------
-    k_endog : array_like or integer
+    k_endog : {array_like, int}
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -83,21 +82,21 @@ class SimulationSmoother(KalmanSmoother):
 
         Parameters
         ----------
-        simulation_output : integer, optional
+        simulation_output : int, optional
             Simulation output bitmask. If this is specified, it is simply
             returned and the other arguments are ignored.
-        simulate_state : boolean, optional
+        simulate_state : bool, optional
             Whether or not to include the state in the simulation output.
-        simulate_disturbance : boolean, optional
+        simulate_disturbance : bool, optional
             Whether or not to include the state and observation disturbances
             in the simulation output.
-        simulate_all : boolean, optional
+        simulate_all : bool, optional
             Whether or not to include all simulation output.
         \*\*kwargs
             Additional keyword arguments. Present so that calls to this method
             can use \*\*kwargs without clearing out additional arguments.
         """
-        # If we don't explicitly have simulation_output, try to get it from
+        # If we do not explicitly have simulation_output, try to get it from
         # kwargs
         if simulation_output is None:
             simulation_output = 0
@@ -112,7 +111,7 @@ class SimulationSmoother(KalmanSmoother):
             # Handle case of no information in kwargs
             if simulation_output == 0:
 
-                # If some arguments were passed, but we still don't have any
+                # If some arguments were passed, but we still do not have any
                 # simulation output, raise an exception
                 argument_set = not all([
                     simulate_state is None, simulate_disturbance is None,
@@ -205,7 +204,7 @@ class SimulationSmoother(KalmanSmoother):
             Default results class to use to save output of simulation
             smoothing. Default is `SimulationSmoothResults`. If specified,
             class must extend from `SimulationSmoothResults`.
-        prefix : string
+        prefix : str
             The prefix of the datatype. Usually only used internally.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
@@ -284,14 +283,14 @@ class SimulationSmoothResults(object):
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    simulation_output : integer
+    simulation_output : int
         Bitmask controlling simulation output.
-    simulate_state : boolean
+    simulate_state : bool
         Flag for if the state is included in simulation output.
-    simulate_disturbance : boolean
+    simulate_disturbance : bool
         Flag for if the state and observation disturbances are included in
         simulation output.
-    simulate_all : boolean
+    simulate_all : bool
         Flag for if simulation output should include everything.
     generated_measurement_disturbance : array
         Measurement disturbance variates used to genereate the observation
@@ -396,7 +395,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_state_disturbance(self):
-        """
+        r"""
         Randomly drawn state disturbance variates, used to construct
         `generated_state` and `generated_obs`.
 
@@ -404,6 +403,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \eta_t^+ ~ N(0, Q_t)
 
         If `disturbance_variates` were provided to the `simulate()` method,
@@ -420,7 +420,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_obs(self):
-        """
+        r"""
         Generated vector of observations by iterating on the observation and
         transition equations, given a random initial state draw and random
         disturbance draws.
@@ -429,6 +429,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
 
         """
@@ -440,7 +441,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_state(self):
-        """
+        r"""
         Generated vector of states by iterating on the transition equation,
         given a random initial state draw and random disturbance draws.
 
@@ -448,6 +449,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
 
         """
@@ -459,13 +461,14 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state(self):
-        """
+        r"""
         Random draw of the state vector from its conditional distribution.
 
         Notes
         -----
 
         .. math::
+
             \alpha ~ p(\alpha \mid Y_n)
 
         """
@@ -477,7 +480,7 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_measurement_disturbance(self):
-        """
+        r"""
         Random draw of the measurement disturbance vector from its conditional
         distribution.
 
@@ -485,6 +488,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
 
         """
@@ -497,7 +501,7 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state_disturbance(self):
-        """
+        r"""
         Random draw of the state disturbance vector from its conditional
         distribution.
 
@@ -505,6 +509,7 @@ class SimulationSmoothResults(object):
         -----
 
         .. math::
+
             \eta ~ N(\hat \eta, Var(\hat \eta \mid Y_n))
 
         """
@@ -525,7 +530,7 @@ class SimulationSmoothResults(object):
 
         Parameters
         ----------
-        simulation_output : integer, optional
+        simulation_output : int, optional
             Bitmask controlling simulation output. Default is to use the
             simulation output defined in object initialization.
         disturbance_variates : array_likes, optional

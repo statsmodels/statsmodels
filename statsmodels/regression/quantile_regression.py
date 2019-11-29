@@ -17,14 +17,12 @@ code written by James P. Lesage in Applied Econometrics Using MATLAB(1999).PP.
 Prinoth (christian at prinoth dot name).
 '''
 
-from statsmodels.compat.python import range
 import numpy as np
 import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
 from statsmodels.tools.tools import chain_dot
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
@@ -88,20 +86,21 @@ class QuantReg(RegressionModel):
 
     def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather',
             max_iter=1000, p_tol=1e-6, **kwargs):
-        '''Solve by Iterative Weighted Least Squares
+        """
+        Solve by Iterative Weighted Least Squares
 
         Parameters
         ----------
         q : float
             Quantile must be between 0 and 1
-        vcov : string, method used to calculate the variance-covariance matrix
+        vcov : str, method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
             - robust : heteroskedasticity robust standard errors (as suggested
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : string, kernel to use in the kernel density estimation for the
+        kernel : str, kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
             - epa: Epanechnikov
@@ -109,14 +108,14 @@ class QuantReg(RegressionModel):
             - gau: Gaussian
             - par: Parzene
 
-        bandwidth: string, Bandwidth selection method in kernel density
+        bandwidth : str, Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
 
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        '''
+        """
 
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
@@ -139,7 +138,7 @@ class QuantReg(RegressionModel):
         endog = self.endog
         exog = self.exog
         nobs = self.nobs
-        exog_rank = np_matrix_rank(self.exog)
+        exog_rank = np.linalg.matrix_rank(self.exog)
         self.rank = exog_rank
         self.df_model = float(self.rank - self.k_constant)
         self.df_resid = self.nobs - self.rank
@@ -149,15 +148,15 @@ class QuantReg(RegressionModel):
         beta = np.ones(exog_rank)
         # TODO: better start, initial beta is used only for convergence check
 
-        # Note the following doesn't work yet,
+        # Note the following does not work yet,
         # the iteration loop always starts with OLS as initial beta
-#        if start_params is not None:
-#            if len(start_params) != rank:
-#                raise ValueError('start_params has wrong length')
-#            beta = start_params
-#        else:
-#            # start with OLS
-#            beta = np.dot(np.linalg.pinv(exog), endog)
+        # if start_params is not None:
+        #    if len(start_params) != rank:
+        #       raise ValueError('start_params has wrong length')
+        #       beta = start_params
+        #    else:
+        #       # start with OLS
+        #       beta = np.dot(np.linalg.pinv(exog), endog)
 
         diff = 10
         cycle = False
@@ -181,7 +180,7 @@ class QuantReg(RegressionModel):
             history['mse'].append(np.mean(resid*resid))
 
             if (n_iter >= 300) and (n_iter % 100 == 0):
-                # check for convergence circle, shouldn't happen
+                # check for convergence circle, should not happen
                 for ii in range(2, 10):
                     if np.all(beta == history['params'][-ii]):
                         cycle = True
@@ -342,12 +341,14 @@ class QuantRegResults(RegressionResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
-        yname : string, optional
+        ----------
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        xname : list[str], optional
+            Names for the exogenous variables. Default is `var_##` for ## in
+            the number of regressors. Must match the number of parameters
+            in the model
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
@@ -361,23 +362,10 @@ class QuantRegResults(RegressionResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
-
-        # #TODO: import where we need it (for now), add as cached attributes
-        # from statsmodels.stats.stattools import (jarque_bera,
-        #         omni_normtest, durbin_watson)
-        # jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
-        # omni, omnipv = omni_normtest(self.wresid)
-        #
         eigvals = self.eigenvals
         condno = self.condition_number
-        #
-        # self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
-        #                   omni=omni, omnipv=omnipv, condno=condno,
-        #                   mineigval=eigvals[0])
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -390,39 +378,22 @@ class QuantRegResults(RegressionResults):
                      ('Bandwidth:', ["%#8.4g" % self.bandwidth]),
                      ('Sparsity:', ["%#8.4g" % self.sparsity]),
                      ('No. Observations:', None),
-                     ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
-                     ('Df Model:', None) #[self.df_model])
-                    ]
-
-        # diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-        #               ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-        #               ('Skew:', ["%#6.3f" % skew]),
-        #               ('Kurtosis:', ["%#6.3f" % kurtosis])
-        #               ]
-        #
-        # diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
-        #                ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-        #                ('Prob(JB):', ["%#8.3g" % jbpv]),
-        #                ('Cond. No.', ["%#8.3g" % condno])
-        #                ]
-
+                     ('Df Residuals:', None),
+                     ('Df Model:', None)
+                     ]
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+                             yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                              use_t=self.use_t)
 
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
-
-        #add warnings/notes, added to text format only
+        # add warnings/notes, added to text format only
         etext = []
         if eigvals[-1] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
@@ -431,7 +402,7 @@ class QuantRegResults(RegressionResults):
             wstr += "matrix is singular."
             wstr = wstr % eigvals[-1]
             etext.append(wstr)
-        elif condno > 1000:  #TODO: what is recommended
+        elif condno > 1000:  # TODO: what is recommended
             wstr = "The condition number is large, %6.3g. This might "
             wstr += "indicate that there are\n"
             wstr += "strong multicollinearity or other numerical "

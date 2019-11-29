@@ -31,7 +31,7 @@ class CorrelationEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -39,7 +39,7 @@ class CorrelationEffects(RegressionEffects):
     -----
     This class implements the marginal correlation approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (1) in section 2.2 of the Barber and Candes
+    described under (1) in section 2.2 of the Barber and Candes
     paper.
     """
 
@@ -55,7 +55,7 @@ class ForwardEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
     pursuit : bool
@@ -70,7 +70,7 @@ class ForwardEffects(RegressionEffects):
     -----
     This class implements the forward selection approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (5) in section 2.2 of the Barber and Candes
+    described under (5) in section 2.2 of the Barber and Candes
     paper.
     """
 
@@ -106,7 +106,7 @@ class OLSEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -132,7 +132,7 @@ class RegModelEffects(RegressionEffects):
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
     model_cls : class
@@ -146,7 +146,8 @@ class RegModelEffects(RegressionEffects):
         Dictionary of keyword arguments for fit or fit_regularized
     """
 
-    def __init__(self, model_cls, regularized=False, model_kws=None, fit_kws=None):
+    def __init__(self, model_cls, regularized=False, model_kws=None,
+                 fit_kws=None):
         self.model_cls = model_cls
         self.regularized = regularized
         self.model_kws = model_kws if model_kws is not None else {}

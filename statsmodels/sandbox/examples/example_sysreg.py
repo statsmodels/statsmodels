@@ -5,6 +5,7 @@ from statsmodels.compat.python import lmap, asbytes
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.sysreg import SUR, Sem2SLS
+from statsmodels.sandbox.regression.gmm import IV2SLS
 
 #for Python 3 compatibility
 
@@ -131,7 +132,6 @@ print(correct_params)
 print("Compare to output of R script statsmodels/sandbox/tests/macrodata.s")
 
 print('\nUsing IV2SLS')
-from statsmodels.sandbox.regression.gmm import IV2SLS
 miv = IV2SLS(macro_sys[0], macro_sys[1], instruments)
 resiv = miv.fit()
 print("equation 1")

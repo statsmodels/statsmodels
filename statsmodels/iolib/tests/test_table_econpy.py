@@ -5,15 +5,12 @@ Unit tests table.py.
 :see: http://agiletesting.blogspot.com/2005/01/python-unit-testing-part-1-unittest.html
 :see: http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/305292
 '''
-from __future__ import absolute_import
-from statsmodels.compat.python import zip
-
 import numpy as np
 from numpy.testing import assert_equal
 
 __docformat__ = "restructuredtext en"
 
-from statsmodels.iolib.table import Cell, Row, SimpleTable
+from statsmodels.iolib.table import Cell, SimpleTable
 from statsmodels.iolib.table import default_latex_fmt
 from statsmodels.iolib.table import default_html_fmt
 

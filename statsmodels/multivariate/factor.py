@@ -1,24 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
-from statsmodels.base.model import Model
-from .factor_rotation import rotate_factors, promax
+import warnings
+
 import numpy as np
 from numpy.linalg import eigh, inv, norm, matrix_rank
 import pandas as pd
-from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import minimize
+
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
-import warnings
+from statsmodels.graphics.utils import _import_mpl
 
-try:
-    import matplotlib.pyplot
-    missing_matplotlib = False
-except ImportError:
-    missing_matplotlib = True
+from .factor_rotation import rotate_factors, promax
 
-if not missing_matplotlib:
-    from .plots import plot_scree, plot_loadings
 
 _opt_defaults = {'gtol': 1e-7}
 
@@ -61,12 +56,12 @@ class Factor(Model):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Variables in columns, observations in rows.  May be `None` if
         `corr` is not `None`.
     n_factor : int
         The number of factors to extract
-    corr : array-like
+    corr : array_like
         Directly specify the correlation matrix instead of estimating
         it from `endog`.  If provided, `endog` is not used for the
         factor analysis, it may be used in post-estimation.
@@ -76,8 +71,8 @@ class Factor(Model):
         likelihood estimation.
     smc : True or False
         Whether or not to apply squared multiple correlations (method='pa')
-    endog_names: str
-        Names of endogeous variables.  If specified, it will be used
+    endog_names : str
+        Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
     nobs : int
         The number of observations, not used if endog is present. Needs to
@@ -185,11 +180,11 @@ class Factor(Model):
         maxiter : int
             Maximum number of iterations for iterative estimation algorithms
         tol : float
-            Stopping critera (error tolerance) for iterative estimation
+            Stopping criteria (error tolerance) for iterative estimation
             algorithms
-        start : array-like
+        start : array_like
             Starting values, currently only used for ML estimation
-        opt_method : string
+        opt_method : str
             Optimization method for ML estimation
         opt : dict-like
             Keyword arguments passed to optimizer, only used for ML estimation
@@ -387,7 +382,7 @@ class Factor(Model):
         dl += 2*luz
         dl -= 2*np.dot(lud, luz)
 
-        # Can't use _pack because we are working with the square root
+        # Cannot use _pack because we are working with the square root
         # uniquenesses directly.
         return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
@@ -514,7 +509,7 @@ class FactorResults(object):
         Each column is the loading vector for one factor
     loadings_no_rot : ndarray
         Unrotated loadings, not available under maximum likelihood
-        analyis.
+        analysis.
     eigenvalues : ndarray
         The eigenvalues for a factor analysis obtained using
         principal components; not available under ML estimation.
@@ -522,7 +517,7 @@ class FactorResults(object):
         Number of components (factors)
     nbs : int
         Number of observations
-    fa_method : string
+    fa_method : str
         The method used to obtain the decomposition, either 'pa' for
         'principal axes' or 'ml' for maximum likelihood.
     df : int
@@ -575,7 +570,7 @@ class FactorResults(object):
 
         Parameters
         ----------
-        method : string
+        method : str
             Rotation to be applied.  Allowed methods are varimax,
             quartimax, biquartimax, equamax, oblimin, parsimax,
             parsimony, biquartimin, promax.
@@ -632,7 +627,8 @@ class FactorResults(object):
         return corr_f
 
     def factor_score_params(self, method='bartlett'):
-        """compute factor scoring coefficient matrix
+        """
+        Compute factor scoring coefficient matrix
 
         The coefficient matrix is not cached.
 
@@ -652,13 +648,12 @@ class FactorResults(object):
         -----
         The `regression` method follows the Stata definition.
         Method bartlett and regression are verified against Stats.
-        Two inofficial methods, 'ols' and 'gls', produce similar factor scores
+        Two unofficial methods, 'ols' and 'gls', produce similar factor scores
         but are not verified.
-
 
         See Also
         --------
-        `factor_scoring` : compute factor scores using scoring matrix
+        statsmodels.multivariate.factor.FactorResults.factor_scoring
         """
         L = self.loadings
         T = self.rotation_matrix.T
@@ -690,7 +685,8 @@ class FactorResults(object):
         return s_mat
 
     def factor_scoring(self, endog=None, method='bartlett', transform=True):
-        """factor scoring: compute factors for endog
+        """
+        factor scoring: compute factors for endog
 
         If endog was not provided when creating the factor class, then
         a standarized endog needs to be provided here.
@@ -720,7 +716,7 @@ class FactorResults(object):
 
         See Also
         --------
-        `factor_score_params` : scoring matrix
+        statsmodels.multivariate.factor.FactorResults.factor_score_params
         """
 
         if transform is False and endog is not None:
@@ -746,6 +742,7 @@ class FactorResults(object):
         return factors
 
     def summary(self):
+        """Summary"""
         summ = summary2.Summary()
         summ.add_title('Factor analysis results')
         loadings_no_rot = pd.DataFrame(
@@ -794,16 +791,16 @@ class FactorResults(object):
                applied
             * 'display' add sorting and styling as defined by other keywords
             * 'strings' returns a DataFrame with string elements with optional sorting
-               and surpressing small loading coefficients.
+               and suppressing small loading coefficients.
 
-        sort_ : boolean
+        sort_ : bool
             If True, then the rows of the DataFrame is sorted by contribution of each
             factor. applies if style is either 'display' or 'strings'
         threshold : float
             If the threshold is larger than zero, then loading coefficients are
             either colored white (if style is 'display') or replace by empty
             string (if style is 'strings').
-        highlight_max : boolean
+        highlight_max : bool
             This add a background color to the largest coefficient in each row.
         color_max : html color
             default is 'yellow'. color for background of row maximum
@@ -927,8 +924,8 @@ class FactorResults(object):
         fig : figure
             Handle to the figure
         """
-        if missing_matplotlib:
-            raise ImportError("Matplotlib missing")
+        _import_mpl()
+        from .plots import plot_scree
         return plot_scree(self.eigenvals, self.n_comp, ncomp)
 
     def plot_loadings(self, loading_pairs=None, plot_prerotated=False):
@@ -950,8 +947,8 @@ class FactorResults(object):
         figs : a list of figure handles
 
         """
-        if missing_matplotlib:
-            raise ImportError("Matplotlib missing")
+        _import_mpl()
+        from .plots import plot_loadings
 
         if self.rotation_method is None:
             plot_prerotated = True

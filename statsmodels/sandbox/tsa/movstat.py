@@ -12,7 +12,7 @@ I thought I saw moving stats somewhere in python, maybe not)
 TODO
 
 moving statistics
-- filters don't handle boundary conditions nicely (correctly ?)
+- filters do not handle boundary conditions nicely (correctly ?)
 e.g. minimum order filter uses 0 for out of bounds value
 -> append and prepend with last resp. first value
 - enhance for nd arrays, with axis = 0
@@ -42,13 +42,10 @@ update
 2009-09-06: cosmetic changes, rearrangements
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import signal
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
-
-import statsmodels.api as sm
 
 
 def expandarr(x,k):
@@ -88,7 +85,7 @@ def movorder(x, order = 'med', windsize=3, lag='lagged'):
         lead = -windsize//2 +1
     else:
         raise ValueError
-    if np.isfinite(order) == True: #if np.isnumber(order):
+    if np.isfinite(order): #if np.isnumber(order):
         ord = order   # note: ord is a builtin function
     elif order == 'med':
         ord = (windsize - 1)/2

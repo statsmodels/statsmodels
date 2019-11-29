@@ -1,0 +1,12 @@
+# build
+cython>=0.29
+
+# run
+matplotlib>=2.2
+cvxopt
+
+# test
+pytest
+pytest-randomly
+pytest-xdist!=1.30
+flake8

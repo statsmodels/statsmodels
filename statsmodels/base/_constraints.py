@@ -39,7 +39,7 @@ class TransformRestriction(object):
         b1 + b2 = 0 and b1 + 2*b2 = 0, implies that b2 = 0.
 
     The transformation applied from full to reduced parameter space does not
-    raise and exception if the constraint doesn't hold.
+    raise and exception if the constraint does not hold.
     TODO: maybe change this, what's the behavior in this case?
 
 
@@ -129,14 +129,14 @@ class TransformRestriction(object):
 
 
 def transform_params_constraint(params, Sinv, R, q):
-    """find the parameters that statisfy linear constraint from unconstraint
+    """find the parameters that statisfy linear constraint from unconstrained
 
     The linear constraint R params = q is imposed.
 
     Parameters
     ----------
     params : array_like
-        unconstraint parameters
+        unconstrained parameters
     Sinv : ndarray, 2d, symmetric
         covariance matrix of the parameter estimate
     R : ndarray, 2d
@@ -246,7 +246,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     if start_params is not None:
         start_params =  transf.reduce(start_params)
 
-    #need copy, because we don't want to change it, we don't need deepcopy
+    #need copy, because we do not want to change it, we do not need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
 
@@ -299,14 +299,14 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
                                               fit_kwds=fit_kwds)
     #create dummy results Instance, TODO: wire up properly
     res = self.fit(start_params=params, maxiter=0,
-                   warn_convergence=False) # we get a wrapper back
+                   warn_convergence=False)  # we get a wrapper back
     res._results.params = params
     res._results.cov_params_default = cov
     cov_type = fit_kwds.get('cov_type', 'nonrobust')
     if cov_type == 'nonrobust':
-            res._results.normalized_cov_params = cov / res_constr.scale
+        res._results.normalized_cov_params = cov / res_constr.scale
     else:
-            res._results.normalized_cov_params = None
+        res._results.normalized_cov_params = None
 
     k_constr = len(q)
     res._results.df_resid += k_constr

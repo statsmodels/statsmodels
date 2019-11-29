@@ -1,15 +1,12 @@
-from statsmodels.compat.python import range
-
-from distutils.version import LooseVersion
 
 from statsmodels.tsa.arima_model import ARMA
 from unittest import TestCase
 
-import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
                            assert_allclose,
                            assert_equal, assert_raises, assert_)
+import pytest
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
@@ -17,6 +14,7 @@ from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
 
 from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
+from statsmodels.tsa.tests.results import results_arma_acf
 
 arlist = [[1.],
           [1, -0.9],  # ma representation will need many terms to get high precision
@@ -40,7 +38,7 @@ def test_arma_acovf():
     rep1 = arma_acovf([1, -phi], [1], N)
     # rep 2: manually
     rep2 = [1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)]
-    assert_almost_equal(rep1, rep2, 7)  # 7 is max precision here
+    assert_allclose(rep1, rep2)
 
 
 def test_arma_acovf_persistent():
@@ -59,8 +57,7 @@ def test_arma_acovf_persistent():
     corrs = .9995**np.arange(10)
     expected = sig2*corrs
     assert_equal(res.ndim, 1)
-    assert_allclose(res, expected, atol=1e-6)
-    # atol=7 breaks at .999, worked at .995
+    assert_allclose(res, expected)
 
 
 def test_arma_acf():
@@ -73,7 +70,56 @@ def test_arma_acf():
     # rep 2: manually
     acovf = np.array([1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)])
     rep2 = acovf / (1. / (1 - phi ** 2))
-    assert_almost_equal(rep1, rep2, 8)  # 8 is max precision here
+    assert_allclose(rep1, rep2)
+
+
+def test_arma_acf_compare_R_ARMAacf():
+    # Test specific cases against output from R's ARMAacf
+    bd_example_3_3_2 = arma_acf([1, -1, 0.25], [1, 1])
+    assert_allclose(bd_example_3_3_2, results_arma_acf.bd_example_3_3_2)
+    example_1 = arma_acf([1, -1, 0.25], [1, 1, 0.2])
+    assert_allclose(example_1, results_arma_acf.custom_example_1)
+    example_2 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3])
+    assert_allclose(example_2, results_arma_acf.custom_example_2)
+    example_3 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35])
+    assert_allclose(example_3, results_arma_acf.custom_example_3)
+    example_4 = arma_acf([1, -1, 0.25], [1, 1, 0.2, 0.3, -0.35, -0.1])
+    assert_allclose(example_4, results_arma_acf.custom_example_4)
+    example_5 = arma_acf([1, -1, 0.25, -0.1], [1, 1, 0.2])
+    assert_allclose(example_5, results_arma_acf.custom_example_5)
+    example_6 = arma_acf([1, -1, 0.25, -0.1, 0.05], [1, 1, 0.2])
+    assert_allclose(example_6, results_arma_acf.custom_example_6)
+    example_7 = arma_acf([1, -1, 0.25, -0.1, 0.05, -0.02], [1, 1, 0.2])
+    assert_allclose(example_7, results_arma_acf.custom_example_7)
+
+
+def test_arma_acov_compare_theoretical_arma_acov():
+    # Test against the older version of this function, which used a different
+    # approach that nicely shows the theoretical relationship
+    # See GH:5324 when this was removed for full version of the function
+    # including documentation and inline comments
+
+    def arma_acovf_historical(ar, ma, nobs=10):
+        if np.abs(np.sum(ar) - 1) > 0.9:
+            nobs_ir = max(1000, 2 * nobs)
+        else:
+            nobs_ir = max(100, 2 * nobs)
+        ir = arma_impulse_response(ar, ma, leads=nobs_ir)
+        while ir[-1] > 5 * 1e-5:
+            nobs_ir *= 10
+            ir = arma_impulse_response(ar, ma, leads=nobs_ir)
+        if nobs_ir > 50000 and nobs < 1001:
+            end = len(ir)
+            acovf = np.array([np.dot(ir[:end-nobs-t], ir[t:end-nobs])
+                              for t in range(nobs)])
+        else:
+            acovf = np.correlate(ir, ir, 'full')[len(ir) - 1:]
+        return acovf[:nobs]
+
+    assert_allclose(arma_acovf([1, -0.5], [1, 0.2]),
+                    arma_acovf_historical([1, -0.5], [1, 0.2]))
+    assert_allclose(arma_acovf([1, -0.99], [1, 0.2]),
+                    arma_acovf_historical([1, -0.99], [1, 0.2]))
 
 
 def _manual_arma_generate_sample(ar, ma, eta):
@@ -93,24 +139,24 @@ def _manual_arma_generate_sample(ar, ma, eta):
     return np.array(rep2[max(p, q):])
 
 
-def test_arma_generate_sample():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+@pytest.mark.parametrize('dist', [np.random.standard_normal])
+def test_arma_generate_sample(dist, ar, ma):
     # Test that this generates a true ARMA process
     # (amounts to just a test that scipy.signal.lfilter does what we want)
     T = 100
-    dists = [np.random.randn]
-    for dist in dists:
-        np.random.seed(1234)
-        eta = dist(T)
-        for ar in arlist:
-            for ma in malist:
-                # rep1: from module function
-                np.random.seed(1234)
-                rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
-                # rep2: "manually" create the ARMA process
-                ar_params = -1 * np.array(ar[1:])
-                ma_params = np.array(ma[1:])
-                rep2 = _manual_arma_generate_sample(ar_params, ma_params, eta)
-                assert_array_almost_equal(rep1, rep2, 13)
+    np.random.seed(1234)
+    eta = dist(T)
+
+    # rep1: from module function
+    np.random.seed(1234)
+    rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
+    # rep2: "manually" create the ARMA process
+    ar_params = -1 * np.array(ar[1:])
+    ma_params = np.array(ma[1:])
+    rep2 = _manual_arma_generate_sample(ar_params, ma_params, eta)
+    assert_array_almost_equal(rep1, rep2, 13)
 
 
 def test_fi():
@@ -128,35 +174,37 @@ def test_arma_impulse_response():
     assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
 
 
-def test_spectrum():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+def test_spectrum(ar, ma):
     nfreq = 20
     w = np.linspace(0, np.pi, nfreq, endpoint=False)
-    for ar in arlist:
-        for ma in malist:
-            arma = ArmaFft(ar, ma, 20)
-            spdr, wr = arma.spdroots(w)
-            spdp, wp = arma.spdpoly(w, 200)
-            spdd, wd = arma.spddirect(nfreq * 2)
-            assert_equal(w, wr)
-            assert_equal(w, wp)
-            assert_almost_equal(w, wd[:nfreq], decimal=14)
-            assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
-                                err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
-            assert_almost_equal(spdr, spdp, decimal=7,
-                                err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
+
+    arma = ArmaFft(ar, ma, 20)
+    spdr, wr = arma.spdroots(w)
+    spdp, wp = arma.spdpoly(w, 200)
+    spdd, wd = arma.spddirect(nfreq * 2)
+    assert_equal(w, wr)
+    assert_equal(w, wp)
+    assert_almost_equal(w, wd[:nfreq], decimal=14)
+    assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
+                        err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
+    assert_almost_equal(spdr, spdp, decimal=7,
+                        err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
 
 
-def test_armafft():
+@pytest.mark.parametrize('ar', arlist)
+@pytest.mark.parametrize('ma', malist)
+def test_armafft(ar, ma):
     # test other methods
     nfreq = 20
     w = np.linspace(0, np.pi, nfreq, endpoint=False)
-    for ar in arlist:
-        for ma in malist:
-            arma = ArmaFft(ar, ma, 20)
-            ac1 = arma.invpowerspd(1024)[:10]
-            ac2 = arma.acovf(10)[:10]
-            assert_almost_equal(ac1, ac2, decimal=7,
-                                err_msg='acovf not equal for %s, %s' % (ar, ma))
+
+    arma = ArmaFft(ar, ma, 20)
+    ac1 = arma.invpowerspd(1024)[:10]
+    ac2 = arma.acovf(10)[:10]
+    assert_allclose(ac1, ac2, atol=1e-15,
+                    err_msg='acovf not equal for %s, %s' % (ar, ma))
 
 
 def test_lpol2index_index2lpol():

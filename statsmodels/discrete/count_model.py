@@ -1,5 +1,3 @@
-from __future__ import division
-
 __all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
            "ZeroInflatedNegativeBinomialP"]
 
@@ -12,13 +10,14 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
                                                  _discrete_results_docs,
+                                                 _validate_l1_method,
                                                  GeneralizedPoisson,
                                                  NegativeBinomialP)
 from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.compat.pandas import Appender
 
 
 _doc_zi_params = """
@@ -30,20 +29,20 @@ _doc_zi_params = """
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    inflation : string, 'logit' or 'probit'
+    inflation : {'logit', 'probit'}
         The model for the zero inflation, either Logit (default) or Probit
     """
 
 
 class GenericZeroInflated(CountModel):
     __doc__ = """
-    Generiz Zero Inflated model for count data
+    Generic Zero Inflated Model
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -102,11 +101,11 @@ class GenericZeroInflated(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model
+        Loglikelihood of Generic Zero Inflated model.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
@@ -120,24 +119,23 @@ class GenericZeroInflated(CountModel):
         .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
             \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
             where P - pdf of main model, L - loglike function of main model.
-
         """
         return np.sum(self.loglikeobs(params))
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model
+        Loglikelihood for observations of Generic Zero Inflated model.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : ndarray
             The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
+            at `params`. See Notes for definition.
 
         Notes
         --------
@@ -146,7 +144,6 @@ class GenericZeroInflated(CountModel):
             where P - pdf of main model, L - loglike function of main model.
 
         for observations :math:`i=1,...,n`
-
         """
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
@@ -166,6 +163,7 @@ class GenericZeroInflated(CountModel):
 
         return llf
 
+    @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -194,12 +192,13 @@ class GenericZeroInflated(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
+    @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        _validate_l1_method(method)
 
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.k_exog + self.k_inflate
@@ -224,15 +223,8 @@ class GenericZeroInflated(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = self.result_class_reg(self, cntfit)
-        else:
-            raise ValueError(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score_obs(self, params):
         """
@@ -240,7 +232,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -336,7 +328,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -373,7 +365,7 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
         exog : array, optional
             A reference to the exogenous design.
@@ -387,7 +379,7 @@ class GenericZeroInflated(CountModel):
             Log(exposure) is added to the linear prediction with coefficient
             equal to 1. If exposure is specified, then it will be logged by the method.
             The user does not need to log it first.
-        which : string, optional
+        which : str, optional
             Define values that will be predicted.
             'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob', 'prob-main'
             Default is 'mean'.
@@ -463,13 +455,13 @@ class GenericZeroInflated(CountModel):
 
 class ZeroInflatedPoisson(GenericZeroInflated):
     __doc__ = """
-    Poisson Zero Inflated model for count data
+    Poisson Zero Inflated Model
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -551,7 +543,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Poisson model for count data
+    Zero Inflated Generalized Poisson Model
 
     %(params)s
     %(extra_params)s
@@ -629,13 +621,13 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Negative Binomial model for count data
+    Zero Inflated Generalized Negative Binomial Model
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -707,8 +699,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Poisson",
-                    "extra_attr" : ""}
+    "one_line_description": "A results class for Zero Inflated Poisson",
+    "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -717,7 +709,7 @@ class ZeroInflatedPoissonResults(CountResults):
         return (1 + w * np.exp(mu))
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -743,8 +735,8 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 
 class ZeroInflatedGeneralizedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Generalized Poisson",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Generalized Poisson",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -755,7 +747,7 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
         return ((1 + alpha * mu**p)**2 + w * mu)
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Not yet implemented for Zero Inflated Models
@@ -784,8 +776,8 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Genaralized Negative Binomial",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):

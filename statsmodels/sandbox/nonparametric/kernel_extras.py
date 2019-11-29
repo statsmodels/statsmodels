@@ -29,8 +29,6 @@ References
 """
 
 # TODO: make default behavior efficient=True above a certain n_obs
-
-from statsmodels.compat.python import range, next
 import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
@@ -49,24 +47,24 @@ class TestFForm(object):
 
     Parameters
     ----------
-    endog: list
+    endog : list
         Dependent variable (training set)
-    exog: list of array_like objects
+    exog : list of array_like objects
         The independent (right-hand-side) variables
-    bw: array_like, str
+    bw : array_like, str
         Bandwidths for exog or specify method for bandwidth selection
-    fform: function
+    fform : function
         The functional form ``y = g(b, x)`` to be tested. Takes as inputs
         the RHS variables `exog` and the coefficients ``b`` (betas)
         and returns a fitted ``y_hat``.
-    var_type: str
+    var_type : str
         The type of the independent `exog` variables:
 
             - c: continuous
             - o: ordered
             - u: unordered
 
-    estimator: function
+    estimator : function
         Must return the estimated coefficients b (betas). Takes as inputs
         ``(endog, exog)``.  E.g. least square estimator::
 
@@ -75,10 +73,9 @@ class TestFForm(object):
     References
     ----------
     See Racine, J.: "Consistent Significance Testing for Nonparametric
-    Regression" Journal of Business \& Economics Statistics.
+    Regression" Journal of Business & Economics Statistics.
 
     See chapter 12 in [1]  pp. 355-357.
-
     """
     def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
@@ -132,7 +129,7 @@ class TestFForm(object):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
         uLOO = LeaveOneOut(u[:,None]).__iter__()
-        I = 0
+        ival = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = next(uLOO)
@@ -142,16 +139,16 @@ class TestFForm(object):
                      var_type=self.var_type, tosum=False)
             f_i = (u[i] * u_j * K)
             assert u_j.shape == K.shape
-            I += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
+            ival += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
             S2 += (f_i**2).sum()  # See Theorem 12.1 on p.356 in [1]
-            assert np.size(I) == 1
+            assert np.size(ival) == 1
             assert np.size(S2) == 1
 
-        I *= 1. / (n * (n - 1))
+        ival *= 1. / (n * (n - 1))
         ix_cont = _get_type_pos(self.var_type)[0]
         hp = self.bw[ix_cont].prod()
         S2 *= 2 * hp / (n * (n - 1))
-        T = n * I * np.sqrt(hp / S2)
+        T = n * ival * np.sqrt(hp / S2)
         return T
 
 
@@ -161,11 +158,11 @@ class SingleIndexModel(KernelReg):
 
     Parameters
     ----------
-    endog: array_like
+    endog : array_like
         The dependent variable
-    exog: array_like
+    exog : array_like
         The independent variable(s)
-    var_type: str
+    var_type : str
         The type of variables in X:
 
             - c: continuous
@@ -174,9 +171,9 @@ class SingleIndexModel(KernelReg):
 
     Attributes
     ----------
-    b: array_like
+    b : array_like
         The linear coefficients b (betas)
-    bw: array_like
+    bw : array_like
         Bandwidths
 
     Methods
@@ -272,13 +269,13 @@ class SemiLinear(KernelReg):
 
     Parameters
     ----------
-    endog: array_like
+    endog : array_like
         The dependent variable
-    exog: array_like
+    exog : array_like
         The linear component in the regression
-    exog_nonparametric: array_like
+    exog_nonparametric : array_like
         The nonparametric component in the regression
-    var_type: str
+    var_type : str
         The type of the variables in the nonparametric component;
 
             - c: continuous
@@ -290,9 +287,9 @@ class SemiLinear(KernelReg):
 
     Attributes
     ----------
-    bw: array_like
+    bw : array_like
         Bandwidths for the nonparametric component exog_nonparametric
-    b: array_like
+    b : array_like
         Coefficients in the linear component
     nobs : int
         The number of observations.
@@ -301,7 +298,8 @@ class SemiLinear(KernelReg):
 
     Methods
     -------
-    fit(): Returns the fitted mean and marginal effects dy/dz
+    fit
+        Returns the fitted mean and marginal effects dy/dz
 
     Notes
     -----
@@ -346,13 +344,13 @@ class SemiLinear(KernelReg):
 
         Parameters
         ----------
-        params: array_like
+        params : array_like
             Vector consisting of the coefficients (b) and the bandwidths (bw).
             The first ``k_linear`` elements are the coefficients.
 
         Returns
         -------
-        L: float
+        L : float
             The value of the objective function
 
         References

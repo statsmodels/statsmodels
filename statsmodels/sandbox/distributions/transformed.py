@@ -38,13 +38,12 @@ Author: josef-pktd
 License: BSD
 
 '''
-from __future__ import print_function
 from statsmodels.compat.python import iteritems
-from scipy import integrate # for scipy 0.6.0
 
-from scipy import stats, info
+from scipy import stats
 from scipy.stats import distributions
 import numpy as np
+
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
@@ -132,9 +131,6 @@ loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 random variable
 
 '''
-from scipy import stats
-from scipy.stats import distributions
-import numpy as np
 
 class ExpTransf_gen(distributions.rv_continuous):
     '''Distribution based on log/exp transformation

@@ -74,7 +74,7 @@ TODO
   (? check transformation) to sample frequencies and zeros for slope
   coefficient as starting values for (non-nested) MNL
 * associated test statistics
-  - (I don't think I will fight with the gradient or hessian of the log-like.)
+  - (I do not think I will fight with the gradient or hessian of the log-like.)
   - basic MLE statistics can be generic
   - tests specific to the model (?)
 * nice printouts since I'm currently collecting a lot of information in the tree
@@ -101,8 +101,7 @@ still todo:
 Author: Josef Perktold
 License : BSD (3-clause)
 '''
-from __future__ import print_function
-from statsmodels.compat.python import lzip, iteritems, itervalues, lrange, zip
+from statsmodels.compat.python import iteritems, itervalues, lrange
 import numpy as np
 from pprint import pprint
 
@@ -354,7 +353,7 @@ class RU2NMNL(object):
                 if DEBUG:
                     print(b)
                 bv = self.calc_prob(b, name)
-                bv = np.exp(bv/tau)  #this shouldn't be here, when adding branch data
+                bv = np.exp(bv/tau)  #this should not be here, when adding branch data
                 branchvalue.append(bv)
                 branchsum = branchsum + bv
             self.branchvalues[name] = branchvalue #keep track what was returned
@@ -481,14 +480,13 @@ if __name__ == '__main__':
     ##############  Example similar to Greene
 
     #get pickled data
-    #endog3, xifloat3 = cPickle.load(open('xifloat2.pickle','rb'))
+    #endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
 
 
     tree0 = ('top',
                 [('Fly',['Air']),
                  ('Ground', ['Train', 'Car', 'Bus'])
-                 ]
-            )
+                 ])
 
     ''' this is with real data from Greene's clogit example
     datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
@@ -540,9 +538,7 @@ if __name__ == '__main__':
                         ('B22',['e', 'f', 'g'])
                         ]
                   ),
-                 ('B3',['h'])
-                ]
-             )
+                 ('B3',['h'])])
 
     #Note: dict looses ordering
     paramsind2 = {

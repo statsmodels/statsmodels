@@ -4,7 +4,6 @@ Tests for miscellaneous models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 class Intercepts(mlemodel.MLEModel):
     """
-    Test class for observation and state intercepts (which usually don't
+    Test class for observation and state intercepts (which usually do not
     get tested in other models).
     """
     def __init__(self, endog, **kwargs):
@@ -196,7 +195,7 @@ class TestIntercepts(object):
 
 class LargeStateCovAR1(mlemodel.MLEModel):
     """
-    Test class for k_posdef > k_states (which usually don't get tested in
+    Test class for k_posdef > k_states (which usually do not get tested in
     other models).
 
     This is just an AR(1) model with an extra unused state innovation
@@ -233,10 +232,11 @@ def test_large_kposdef():
 class TestLargeStateCovAR1(object):
     @classmethod
     def setup_class(cls):
-        # TODO This test is skipped since an exception is currently raised if
-        # k_posdef > k_states. However, this test could be used if models of
-        # those types were allowed.
-        pytest.skip('Not implemented')
+        pytest.skip(
+            'TODO: This test is skipped since an exception is currently '
+            'raised if k_posdef > k_states. However, this test could be '
+            'used if models of those types were allowed'
+        )
 
         # Data: just some sample data
         endog = [0.2, -1.5, -.3, -.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]

@@ -26,7 +26,7 @@ rpath = os.path.join(curdir, 'results')
 class TestLowess(object):
 
     def test_import(self):
-        #this doesn't work
+        #this does not work
         #from statsmodels.api.nonparametric import lowess as lowess1
         import statsmodels.api as sm
         lowess1 = sm.nonparametric.lowess
@@ -78,7 +78,7 @@ class TestLowess(object):
 
     def test_delta_rdef(self):
         self.generate('test_delta_Rdef', 'test_lowess_delta.csv', out='out_Rdef',
-                      kwargs=lambda data: {'frac': .1, 'delta': .01 * data['x'].ptp()})
+                      kwargs=lambda data: {'frac': .1, 'delta': .01 * np.ptp(data['x'])})
 
     def test_delta_1(self):
         self.generate('test_delta_1', 'test_lowess_delta.csv', out='out_1',

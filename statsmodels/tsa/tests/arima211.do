@@ -20,7 +20,7 @@ mat k_ma=e(ma_max)
 mat params=e(b)
 mat cov_params=e(V)
 
-// don't append because you'll rewrite the bunch class
+// do not append because you'll rewrite the bunch class
 // mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima_results.py") format("%16.0g") replace
 
 predict xb
@@ -66,7 +66,7 @@ mat k_ma=e(ma_max)
 mat params=e(b)
 mat cov_params=e(V)
 
-// don't append because you'll rewrite the bunch class
+// do not append because you'll rewrite the bunch class
 // mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima_results.py") format("%16.0g") replace
 
 predict xb
@@ -74,7 +74,7 @@ predict y, y
 predict resid, resid
 predict yr, yr
 predict mse, mse
-/* can't do stdp without a constant
+/* cannot do stdp without a constant
 predict stdp, stdp */
 estat ic
 
@@ -116,7 +116,7 @@ mat k_ma=e(ma_max)
 mat params=e(b)
 mat cov_params=e(V)
 
-// don't append because you'll rewrite the bunch class
+// do not append because you'll rewrite the bunch class
 // mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima_results.py") format("%16.0g") replace
 
 predict xb
@@ -162,7 +162,7 @@ mat k_ma=e(ma_max)
 mat params=e(b)
 mat cov_params=e(V)
 
-// don't append because you'll rewrite the bunch class
+// do not append because you'll rewrite the bunch class
 // mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima_results.py") format("%16.0g") replace
 
 predict xb

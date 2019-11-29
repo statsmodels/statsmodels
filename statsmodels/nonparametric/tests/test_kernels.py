@@ -5,12 +5,13 @@ Created on Sat Dec 14 17:23:25 2013
 
 Author: Josef Perktold
 """
-from __future__ import print_function
 import os
 import numpy as np
+from numpy.testing import assert_allclose, assert_array_less
+import pytest
+
 from statsmodels.sandbox.nonparametric import kernels
 
-from numpy.testing import assert_allclose, assert_array_less
 
 DEBUG = 0
 
@@ -25,6 +26,8 @@ x = np.log(x[positive])
 y = y[positive]
 xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 
+
+# FIXME: do not leave this commented-out; use or move/remove
 #kern_name = 'gau'
 #kern = kernels.Gaussian()
 #kern_name = 'epan2'
@@ -34,9 +37,10 @@ xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 #kern_name = 'tri'
 #kern = kernels.Triangular()
 #kern_name = 'cos'
-#kern = kernels.Cosine()  #doesn't match up, nan in Stata results ?
+#kern = kernels.Cosine()  #does not match up, nan in Stata results ?
 #kern_name = 'bi'
 #kern = kernels.Biweight()
+
 
 class CheckKernelMixin(object):
 
@@ -85,7 +89,7 @@ class CheckKernelMixin(object):
             # raises: RuntimeWarning: invalid value encountered in divide
             print(fitted / res_fitted - 1)
             print(se / res_se - 1)
-        # Stata only displays ci, doesn't save it
+        # Stata only displays ci, does not save it
         res_upp = res_fitted + crit * res_se
         res_low = res_fitted - crit * res_se
         self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))
@@ -101,7 +105,9 @@ class CheckKernelMixin(object):
 
         #assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
 
-    def t_est_smoothconf_data(self):
+    @pytest.mark.slow
+    @pytest.mark.smoke  # TOOD: make this an actual test?
+    def test_smoothconf_data(self):
         kern = self.kern
         crit = 1.9599639845400545  # norm.isf(0.05 / 2)
         # no reference results saved to csv yet
@@ -109,13 +115,16 @@ class CheckKernelMixin(object):
         if DEBUG:
             print(fitted_x[:, 2] - fitted_x[:, 1]) / crit
 
+
 class TestEpan(CheckKernelMixin):
     kern_name = 'epan2'
     kern = kernels.Epanechnikov()
 
+
 class TestGau(CheckKernelMixin):
     kern_name = 'gau'
     kern = kernels.Gaussian()
+
 
 class TestUniform(CheckKernelMixin):
     kern_name = 'rec'
@@ -126,6 +135,7 @@ class TestUniform(CheckKernelMixin):
     low_rtol = 0.2
     low_atol = 0.8
 
+
 class TestTriangular(CheckKernelMixin):
     kern_name = 'tri'
     kern = kernels.Triangular()
@@ -133,10 +143,17 @@ class TestTriangular(CheckKernelMixin):
     upp_rtol = 0.15
     low_rtol = 0.3
 
-class T_estCosine(CheckKernelMixin):
+
+class TestCosine(CheckKernelMixin):
     # Stata results for Cosine look strange, has nans
     kern_name = 'cos'
     kern = kernels.Cosine2()
+
+    @pytest.mark.xfail(reason="NaN mismatch",
+                       raises=AssertionError, strict=True)
+    def test_smoothconf(self):
+        super(TestCosine, self).test_smoothconf()
+
 
 class TestBiweight(CheckKernelMixin):
     kern_name = 'bi'

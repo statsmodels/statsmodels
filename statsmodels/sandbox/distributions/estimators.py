@@ -4,7 +4,7 @@ based on binned data and Maximum Product-of-Spacings
 
 Warning: I'm still finding cut-and-paste and refactoring errors, e.g.
     hardcoded variables from outer scope in functions
-    some results don't seem to make sense for Pareto case,
+    some results do not seem to make sense for Pareto case,
     looks better now after correcting some name errors
 
 initially loosely based on a paper and blog for quantile matching
@@ -32,10 +32,10 @@ binned estimator
 
 example: t-distribution
 * works with quantiles if they contain tail quantiles
-* results with momentcondquant don't look as good as mle estimate
+* results with momentcondquant do not look as good as mle estimate
 
 TODOs
-* rearange and make sure I don't use module globals (as I did initially) DONE
+* rearange and make sure I do not use module globals (as I did initially) DONE
   make two version exactly identified method of moments with fsolve
   and GMM (?) version with fmin
   and maybe the special cases of JD Cook
@@ -87,7 +87,6 @@ added Maximum Product-of-Spacings 2010-05-12
 
 '''
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats, optimize, special
 
@@ -137,7 +136,7 @@ def gammamomentcond2(distfn, params, mom2, quantile=None):
 
 
 
-######### fsolve doesn't move in small samples, fmin not very accurate
+######### fsolve does not move in small samples, fmin not very accurate
 def momentcondunbound(distfn, params, mom2, quantile=None):
     '''moment conditions for estimating distribution parameters using method
     of moments, uses mean, variance and one quantile for distributions
@@ -151,7 +150,7 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
     '''
     shape, loc, scale = params
     mom2diff = np.array(distfn.stats(shape, loc,scale)) - mom2
-    if not quantile is None:
+    if quantile is not None:
         pq, xq = quantile
         #ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = distfn.cdf(xq, shape, loc, scale) - pq
@@ -172,7 +171,7 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
     '''
     loc, scale = params
     mom2diff = np.array(distfn.stats(shape, loc, scale)) - mom2
-    if not quantile is None:
+    if quantile is not None:
         pq, xq = quantile
         #ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = distfn.cdf(xq, shape, loc, scale) - pq
@@ -261,7 +260,7 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
     added factorial
 
     '''
-    if not fixed is None:
+    if fixed is not None:
         raise NotImplementedError
     nobs = np.sum(freq)
     lnnobsfact = special.gammaln(nobs+1)
@@ -291,7 +290,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         starting values, needs to have correct length
     fixed : None
         not used yet
-    weightsoptimal : boolean
+    weightsoptimal : bool
         If true, then the optimal weighting matrix for GMM is used. If false,
         then the identity matrix is used
 
@@ -307,7 +306,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
     added factorial
 
     '''
-    if not fixed is None:
+    if fixed is not None:
         raise NotImplementedError
     nobs = np.sum(freq)
     if weightsoptimal:
@@ -578,7 +577,7 @@ if __name__ == '__main__':
 
     ''' example results:
     standard error for df estimate looks large
-    note: iI don't impose that df is an integer, (b/c not necessary)
+    note: iI do not impose that df is an integer, (b/c not necessary)
     need Monte Carlo to check variance of estimators
 
 
@@ -634,15 +633,12 @@ if __name__ == '__main__':
     #example Maximum Product of Spacings Estimation
 
     # current results:
-    # doesn't look very good yet sensitivity to starting values
+    # does not look very good yet sensitivity to starting values
     # Pareto and Generalized Pareto look like a tough estimation problemprint('\n\nExample: Lognormal Distribution'
 
     print('\n\nExample: Lomax, Pareto, Generalized Pareto Distributions')
     print(    '--------------------------------------------------------')
 
-
-
-    #p2rvs = np.random.pareto(2,size=500)# + 1
     p2rvs = stats.genpareto.rvs(2, size=500)
     #Note: is Lomax without +1; and classical Pareto with +1
     p2rvssorted = np.sort(p2rvs)
@@ -668,29 +664,14 @@ if __name__ == '__main__':
     gpdparest_gmmbinelidentity = fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
     print('gpdparest_mlebinel', gpdparest_mlebinel)
     print('gpdparest_gmmbinelidentity', gpdparest_gmmbinelidentity)
-    gpdparest_gmmquantile2 = fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
+    gpdparest_gmmquantile2 = fitquantilesgmm(
+        stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
     print('gpdparest_gmmquantile2', gpdparest_gmmquantile2)
-    #something wrong : something hard coded ?
-    '''
-    >>> fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
-    Traceback (most recent call last):
-      File "<pyshell#6>", line 1, in <module>
-        fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in fitquantilesgmm
-        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
-      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 183, in fmin
-        fsim[0] = func(x0)
-      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 103, in function_wrapper
-        return function(x, *args)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in <lambda>
-        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
-      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 210, in momentcondquant
-        cdfdiff = distfn.cdf(xq, *params) - pq
-    ValueError: shape mismatch: objects cannot be broadcast to a single shape
-    '''
+
     print(fitquantilesgmm(stats.genpareto, p2rvs, start=x0p,
                           pquant=np.linspace(0.01,0.99,10), frozen=None))
-    fp2, bp2 = np.histogram(p2rvs,
-                    bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
+    fp2, bp2 = np.histogram(
+        p2rvs,
+        bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
     print('fitbinnedgmm equal weight bins')
     print(fitbinnedgmm(stats.genpareto, fp2, bp2, x0p))

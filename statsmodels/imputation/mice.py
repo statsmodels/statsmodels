@@ -84,7 +84,7 @@ There are two main classes in the module:
   specification.  It runs the multiple imputation, fits the analysis
   models, and combines the results to produce a `MICEResults` object.
   The summary method of this results object can be used to see the key
-  estimands and inferential quantities..
+  estimands and inferential quantities.
 
 Notes
 -----
@@ -154,8 +154,8 @@ class MICEData(object):
     Parameters
     ----------
     data : Pandas data frame
-        The data set, whch is copied internally.
-    perturbation_method : string
+        The data set, which is copied internally.
+    perturbation_method : str
         The default perturbation method
     k_pmm : int
         The number of nearest neighbors to use during predictive mean
@@ -172,7 +172,7 @@ class MICEData(object):
     separate files with filename pattern `dataXX.csv`.  The variables
     other than `x1` are imputed using linear models fit with OLS, with
     mean structures containing main effects of all other variables in
-    `data`.  The variable named `x1` has a condtional mean structure
+    `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     %(_mice_data_example_1)s
 
@@ -211,7 +211,7 @@ class MICEData(object):
         self.predict_kwds = {}
 
         # Assign the same perturbation method for all variables.
-        # Can be overriden when calling 'set_imputer'.
+        # Can be overridden when calling 'set_imputer'.
         self.perturbation_method = defaultdict(lambda:
                                                perturbation_method)
 
@@ -265,7 +265,7 @@ class MICEData(object):
 
         Returns
         -------
-        data : array-like
+        data : array_like
             An imputed dataset from the MICE chain.
 
         Notes
@@ -293,7 +293,7 @@ class MICEData(object):
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
             ix = di.idxmin()
-            imp = di.loc[ix]
+            imp = self.data[col].loc[ix]
             self.data[col].fillna(imp, inplace=True)
 
     def _split_indices(self, vec):
@@ -312,9 +312,9 @@ class MICEData(object):
 
         Parameters
         ----------
-        endog_name : string
+        endog_name : str
             Name of the variable to be imputed.
-        formula : string
+        formula : str
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
             formula should only include an expression for the mean
@@ -331,7 +331,7 @@ class MICEData(object):
         k_pmm : int
             Determines number of neighboring observations from which
             to randomly sample when using predictive mean matching.
-        perturbation_method : string
+        perturbation_method : str
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
@@ -339,7 +339,7 @@ class MICEData(object):
             If regularized[name]=True, `fit_regularized` rather than
             `fit` is called when fitting imputation models for this
             variable.  When regularized[name]=True for any variable,
-            pertrurbation_method must be set to boot.
+            perturbation_method must be set to boot.
 
         Notes
         -----
@@ -387,7 +387,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        col : string
+        col : str
             Name of variable to be filled in.
         vals : array
             Array of imputed values to use for filling-in missing values.
@@ -395,7 +395,7 @@ class MICEData(object):
 
         ix = self.ix_miss[col]
         if len(ix) > 0:
-            self.data[col].iloc[ix] = np.atleast_1d(vals)
+            self.data.iloc[ix, self.data.columns.get_loc(col)] = np.atleast_1d(vals)
 
     def update_all(self, n_iter=1):
         """
@@ -426,7 +426,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
            The variable for which the split data is returned.
 
         Returns
@@ -499,7 +499,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
            The variable for which the fitting data is returned.
 
         Returns
@@ -543,17 +543,17 @@ class MICEData(object):
         ----------
         ax : matplotlib axes
             Axes on which to draw the plot.
-        row_order : string
+        row_order : str
             The method for ordering the rows.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        column_order : string
+        column_order : str
             The method for ordering the columns.  Must be one of 'pattern',
             'proportion', or 'raw'.
-        hide_complete_rows : boolean
+        hide_complete_rows : bool
             If True, rows with no missing values are not drawn.
-        hide_complete_columns : boolean
+        hide_complete_columns : bool
             If True, columns with no missing values are not drawn.
-        color_row_patterns : boolean
+        color_row_patterns : bool
             If True, color the unique row patterns, otherwise use grey
             and white as colors.
 
@@ -646,15 +646,15 @@ class MICEData(object):
 
         Parameters
         ----------
-        col1_name : string
+        col1_name : str
             The variable to be plotted on the horizontal axis.
-        col2_name : string
+        col2_name : str
             The variable to be plotted on the vertical axis.
         lowess_args : dictionary
             A dictionary of dictionaries, keys are 'ii', 'io', 'oi'
             and 'oo', where 'o' denotes 'observed' and 'i' denotes
             imputed.  See Notes for details.
-        lowess_min_n : integer
+        lowess_min_n : int
             Minimum sample size to plot a lowess fit
         jitter : float or tuple
             Standard deviation for jittering points in the plot.
@@ -753,13 +753,13 @@ class MICEData(object):
 
         Parameters
         ----------
-        col_name : string
+        col_name : str
             The variable to be plotted on the horizontal axis.
         lowess_args : dict-like
             Keyword arguments passed to lowess fit.  A dictionary of
             dictionaries, keys are 'o' and 'i' denoting 'observed' and
             'imputed', respectively.
-        lowess_min_n : integer
+        lowess_min_n : int
             Minimum sample size to plot a lowess fit
         jitter : float or tuple
             Standard deviation for jittering points in the plot.
@@ -848,7 +848,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        col_name : string
+        col_name : str
             The name of the variable to be plotted.
         ax : matplotlib axes
             An axes on which to draw the histograms.  If not provided,
@@ -1001,7 +1001,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        vname : string
+        vname : str
             The name of the variable to be updated.
         """
 
@@ -1086,79 +1086,64 @@ class MICEData(object):
 
 
 _mice_example_1 = """
->>> imp = mice.MICEData(data)
->>> fml = 'y ~ x1 + x2 + x3 + x4'
->>> mice = mice.MICE(fml, sm.OLS, imp)
->>> results = mice.fit(10, 10)
->>> print(results.summary())
+    >>> imp = mice.MICEData(data)
+    >>> fml = 'y ~ x1 + x2 + x3 + x4'
+    >>> mice = mice.MICE(fml, sm.OLS, imp)
+    >>> results = mice.fit(10, 10)
+    >>> print(results.summary())
 
-::
-
-                              Results: MICE
-    =================================================================
-    Method:                    MICE       Sample size:           1000
-    Model:                     OLS        Scale                  1.00
-    Dependent variable:        y          Num. imputations       10
-    -----------------------------------------------------------------
-               Coef.  Std.Err.    t     P>|t|   [0.025  0.975]  FMI
-    -----------------------------------------------------------------
-    Intercept -0.0234   0.0318  -0.7345 0.4626 -0.0858  0.0390 0.0128
-    x1         1.0305   0.0578  17.8342 0.0000  0.9172  1.1437 0.0309
-    x2        -0.0134   0.0162  -0.8282 0.4076 -0.0451  0.0183 0.0236
-    x3        -1.0260   0.0328 -31.2706 0.0000 -1.0903 -0.9617 0.0169
-    x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
-    =================================================================
-"""
+    .. literalinclude:: ../plots/mice_example_1.txt
+    """
 
 _mice_example_2 = """
->>> imp = mice.MICEData(data)
->>> fml = 'y ~ x1 + x2 + x3 + x4'
->>> mice = mice.MICE(fml, sm.OLS, imp)
->>> results = []
->>> for k in range(10):
->>>     x = mice.next_sample()
->>>     results.append(x)
-"""
+    >>> imp = mice.MICEData(data)
+    >>> fml = 'y ~ x1 + x2 + x3 + x4'
+    >>> mice = mice.MICE(fml, sm.OLS, imp)
+    >>> results = []
+    >>> for k in range(10):
+    >>>     x = mice.next_sample()
+    >>>     results.append(x)
+    """
 
 
 class MICE(object):
 
     __doc__ = """\
-Multiple Imputation with Chained Equations.
+    Multiple Imputation with Chained Equations.
 
-This class can be used to fit most Statsmodels models to data sets
-with missing values using the 'multiple imputation with chained
-equations' (MICE) approach..
+    This class can be used to fit most statsmodels models to data sets
+    with missing values using the 'multiple imputation with chained
+    equations' (MICE) approach..
 
-Parameters
-----------
-model_formula : string
-    The model formula to be fit to the imputed data sets.  This
-    formula is for the 'analysis model'.
-model_class : statsmodels model
-    The model to be fit to the imputed data sets.  This model
-    class if for the 'analysis model'.
-data : MICEData instance
-    MICEData object containing the data set for which
-    missing values will be imputed
-n_skip : int
-    The number of imputed datasets to skip between consecutive
-    imputed datasets that are used for analysis.
-init_kwds : dict-like
-    Dictionary of keyword arguments passed to the init method
-    of the analysis model.
-fit_kwds : dict-like
-    Dictionary of keyword arguments passed to the fit method
-    of the analysis model.
+    Parameters
+    ----------
+    model_formula : str
+        The model formula to be fit to the imputed data sets.  This
+        formula is for the 'analysis model'.
+    model_class : statsmodels model
+        The model to be fit to the imputed data sets.  This model
+        class if for the 'analysis model'.
+    data : MICEData instance
+        MICEData object containing the data set for which
+        missing values will be imputed
+    n_skip : int
+        The number of imputed datasets to skip between consecutive
+        imputed datasets that are used for analysis.
+    init_kwds : dict-like
+        Dictionary of keyword arguments passed to the init method
+        of the analysis model.
+    fit_kwds : dict-like
+        Dictionary of keyword arguments passed to the fit method
+        of the analysis model.
 
-Examples
---------
-Run all MICE steps and obtain results:
-%(mice_example_1)s
+    Examples
+    --------
+    Run all MICE steps and obtain results:
+    %(mice_example_1)s
 
-Obtain a sequence of fitted analysis models without combining
-to obtain summary:
-%(mice_example_2)s
+    Obtain a sequence of fitted analysis models without combining
+    to obtain summary::
+    %(mice_example_2)s
     """ % {'mice_example_1': _mice_example_1,
            'mice_example_2': _mice_example_2}
 
@@ -1184,7 +1169,7 @@ to obtain summary:
 
         Returns
         -------
-        params : array-like
+        params : array_like
             The model parameters for the analysis model.
 
         Notes
@@ -1303,8 +1288,8 @@ class MICEResults(LikelihoodModelResults):
         Summarize the results of running MICE.
 
         Parameters
-        -----------
-        title : string, optional
+        ----------
+        title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
         alpha : float

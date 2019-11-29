@@ -4,10 +4,11 @@ import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose
+import warnings
 
 try:
     import matplotlib.pyplot as plt
-except:
+except ImportError:
     pass
 
 pdf_output = False
@@ -81,12 +82,16 @@ class TestMICEData(object):
                         np.concatenate((np.arange(10),
                                         np.arange(11, 30, 2),
                                         np.arange(30, 200))))
+        assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                     [set(df[col].dropna()) for col in df])
 
         for k in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
             assert_equal(imp_data.data.shape[1], ncol)
             assert_allclose(orig[mx], imp_data.data[mx])
+            assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                         [set(df[col].dropna()) for col in df])
 
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
@@ -102,6 +107,22 @@ class TestMICEData(object):
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
+    def test_settingwithcopywarning(self):
+        "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
+
+        df = gendat()
+        # There need to be some ints in here for the error to be thrown
+        df['intcol'] = np.arange(len(df))
+        df['intcol'] = df.intcol.astype('int32')
+
+        miceData = mice.MICEData(df)
+
+        with pd.option_context('mode.chained_assignment', 'warn'):
+            with warnings.catch_warnings(record=True) as ws:
+                warnings.simplefilter('always')
+                miceData.update_all()
+
+                assert len(ws) == 0
 
     def test_next_sample(self):
 
@@ -174,7 +195,7 @@ class TestMICEData(object):
             x = idata.next_sample()
             assert(isinstance(x, pd.DataFrame))
 
-        assert(all([x == (299, 4) for x in hist]))
+        assert(all([val == (299, 4) for val in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
@@ -327,7 +348,7 @@ class TestMICE(object):
             assert(isinstance(x, GLMResultsWrapper))
             assert(isinstance(x.family, sm.families.Binomial))
 
-
+    @pytest.mark.slow
     def test_combine(self):
 
         np.random.seed(3897)
@@ -341,13 +362,13 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
         result = mi.fit(10, 20)
 
-        fmi = np.asarray([ 0.1920533 ,  0.1587287 ,  0.33174032])
+        fmi = np.asarray([0.1778143, 0.11057262, 0.29626521])
         assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
 
-        params = np.asarray([-0.05397474,  0.97273307,  1.01652293])
+        params = np.asarray([-0.03486102, 0.96236808, 0.9970371])
         assert_allclose(result.params, params, atol=1e-5)
 
-        tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
+        tvalues = np.asarray([-0.54674776, 15.28091069, 13.61359403])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 

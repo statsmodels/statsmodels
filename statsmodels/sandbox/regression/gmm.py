@@ -18,7 +18,7 @@ Issues
      but not tested yet.
   DONE `fitonce` in DistQuantilesGMM, params are the same as in direct call to fitgmm
       move it to GMM class (once it's clearer for which cases I need this.)
-* GMM doesn't know anything about the underlying model, e.g. y = X beta + u or panel
+* GMM does not know anything about the underlying model, e.g. y = X beta + u or panel
   data model. It would be good if we can reuse methods from regressions, e.g.
   predict, fitted values, calculating the error term, and some result statistics.
   What's the best way to do this, multiple inheritance, outsourcing the functions,
@@ -37,7 +37,7 @@ Unclear
     jval in jtest looks to large in example, but I have no idea about the size
 * bse for fitonce look too large (no time for checking now)
     formula for calc_cov_params for the case without optimal weighting matrix
-    is wrong. I don't have an estimate for omega in that case. And I'm confusing
+    is wrong. I do not have an estimate for omega in that case. And I'm confusing
     between weights and omega, which are *not* the same in this case.
 
 
@@ -48,23 +48,22 @@ License: BSD (3-clause)
 '''
 
 
-from __future__ import print_function
 from statsmodels.compat.python import lrange
-from statsmodels.compat.numpy import np_matrix_rank
 
 import numpy as np
 from scipy import optimize, stats
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
+
 
 def maxabs(x):
     '''just a shortcut to np.abs(x).max()
@@ -79,7 +78,7 @@ class IV2SLS(LikelihoodModel):
 
     Parameters
     ----------
-    endog: array
+    endog : array
        Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
     exog : array
        Explanatory variables, 1-dimensional or 2-dimensional array nobs by k
@@ -113,6 +112,7 @@ class IV2SLS(LikelihoodModel):
         self.wexog = self.exog
 
     def whiten(self, X):
+        """Not implemented"""
         pass
 
     def fit(self):
@@ -129,7 +129,7 @@ class IV2SLS(LikelihoodModel):
         linear models.
 
         Parameter estimates and covariance are correct, but other results
-        haven't been tested yet, to seee whether they apply without changes.
+        have not been tested yet, to see whether they apply without changes.
 
         '''
         #Greene 5th edt., p.78 section 5.4
@@ -165,9 +165,9 @@ class IV2SLS(LikelihoodModel):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
             Design / exogenous data
-        params : array-like, optional after fit has been called
+        params : array_like, optional after fit has been called
             Parameters of a linear model
 
         Returns
@@ -230,7 +230,7 @@ class IVRegressionResults(RegressionResults):
         endog, exog = self.model.endog, self.model.exog
         resols = OLS(endog, exog).fit()
         normalized_cov_params_ols = resols.model.normalized_cov_params
-        # Stata `ivendog` doesn't use df correction for se
+        # Stata `ivendog` does not use df correction for se
         #se2 = resols.mse_resid #* resols.df_resid * 1. / len(endog)
         se2 = resols.ssr / len(endog)
 
@@ -241,7 +241,7 @@ class IVRegressionResults(RegressionResults):
         #use linalg.lstsq or svd directly
         #cov_diff will very often be in-definite (singular)
         if not dof:
-            dof = np_matrix_rank(cov_diff)
+            dof = np.linalg.matrix_rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
         H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
         pval = stats.chi2.sf(H, dof)
@@ -254,12 +254,12 @@ class IVRegressionResults(RegressionResults):
         """Summarize the Regression Results
 
         Parameters
-        -----------
-        yname : string, optional
+        ----------
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
+        xname : list[str], optional
             Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
@@ -304,7 +304,7 @@ class IVRegressionResults(RegressionResults):
 
         #TODO: requiring list/iterable is a bit annoying
         #need more control over formatting
-        #TODO: default don't work if it's not identically spelled
+        #TODO: default do not work if it's not identically spelled
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -378,7 +378,7 @@ Type of GMM
 weight matrix
 ~~~~~~~~~~~~~
 
- - `weights_method` : string, defines method for robust
+ - `weights_method` : str, defines method for robust
    Options here are similar to :mod:`statsmodels.stats.robust_covariance`
    default is heteroscedasticity consistent, HC0
 
@@ -436,15 +436,14 @@ class GMM(Model):
         array of instruments, see notes
     nmoms : None or int
         number of moment conditions, if None then it is set equal to the
-        number of columns of instruments. Mainly needed to determin the shape
+        number of columns of instruments. Mainly needed to determine the shape
         or size of start parameters and starting weighting matrix.
     kwds : anything
         this is mainly if additional variables need to be stored for the
         calculations of the moment conditions
 
-    Returns
-    -------
-    *Attributes*
+    Attributes
+    ----------
     results : instance of GMMResults
         currently just a storage class for params and cov_params without it's
         own methods
@@ -480,7 +479,7 @@ class GMM(Model):
         '''
         maybe drop and use mixin instead
 
-        TODO: GMM doesn't really care about the data, just the moment conditions
+        TODO: GMM does not really care about the data, just the moment conditions
         '''
         instrument = self._check_inputs(instrument, endog) # attaches if needed
         super(GMM, self).__init__(endog, exog, missing=missing,
@@ -517,7 +516,7 @@ class GMM(Model):
         # TODO: this is a temporary fix, need
         xnames = self.data.xnames
 
-        if not param_names is None:
+        if param_names is not None:
             if len(params) == len(param_names):
                 self.data.xnames = param_names
             else:
@@ -536,7 +535,7 @@ class GMM(Model):
 
         Parameters
         ----------
-        param_names : list of strings
+        param_names : list[str]
             param_names should have the same length as the number of params
         k_params : None or int
             If k_params is None, then the k_params attribute is used, unless
@@ -585,7 +584,7 @@ class GMM(Model):
             given then the method `start_weights` is used which depends on
             the subclass, for IV subclasses `inv_weights = z'z` where `z` are
             the instruments, otherwise an identity matrix is used.
-        weights_method : string, defines method for robust
+        weights_method : str, defines method for robust
             Options here are similar to :mod:`statsmodels.stats.robust_covariance`
             default is heteroscedasticity consistent, HC0
 
@@ -614,7 +613,7 @@ class GMM(Model):
               matrix assumes that we have optimal GMM with :math:`W = S^{-1}`.
               Default is True.
               TODO: do we want to have a different default after `onestep`?
-        optim_method : string, default is 'bfgs'
+        optim_method : str, default is 'bfgs'
             numerical optimization method. Currently not all optimizers that
             are available in LikelihoodModels are connected.
         optim_args : dict
@@ -656,7 +655,7 @@ class GMM(Model):
 
         if optim_args is None:
             optim_args = {}
-        if not 'disp' in optim_args:
+        if 'disp' not in optim_args:
             optim_args['disp'] = 1
 
         if maxiter == 0 or maxiter == 'cue':
@@ -812,6 +811,7 @@ class GMM(Model):
         return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
     def start_weights(self, inv=True):
+        """Create identity matrix for starting weights"""
         return np.eye(self.nmoms)
 
     def gmmobjective(self, params, weights):
@@ -943,7 +943,7 @@ class GMM(Model):
         moms : array
             moment conditions (nobs x nmoms) for all observations evaluated at
             a parameter value
-        weights_method : string 'cov'
+        weights_method : str 'cov'
             If method='cov' is cov then the matrix is calculated as simple
             covariance of the moment conditions.
             see fit method for available aoptions for the weight and covariance
@@ -982,7 +982,7 @@ class GMM(Model):
 
         centered = not ('centered' in wargs and not wargs['centered'])
         if not centered:
-            # caller doesn't want centered moment conditions
+            # caller does not want centered moment conditions
             moms_ = moms
         else:
             moms_ = moms - moms.mean()
@@ -990,7 +990,7 @@ class GMM(Model):
         # TODO: store this outside to avoid doing this inside optimization loop
         # TODO: subclasses need to be able to add weights_methods, and remove
         #       IVGMM can have homoscedastic (OLS),
-        #       some options won't make sense in some cases
+        #       some options will not make sense in some cases
         #       possible add all here and allow subclasses to define a list
         # TODO: should other weights_methods also have `ddof`
         if weights_method == 'cov':
@@ -1010,7 +1010,7 @@ class GMM(Model):
         elif weights_method == 'flatkernel':
             #uniform cut-off window
             # This was a trial version, can use HAC with flatkernel
-            if not 'maxlag' in wargs:
+            if 'maxlag' not in wargs:
                 raise ValueError('flatkernel requires maxlag')
 
             maxlag = wargs['maxlag']
@@ -1033,14 +1033,14 @@ class GMM(Model):
 
         elif weights_method == 'iid':
             # only when we have instruments and residual mom = Z * u
-            # TODO: problem we don't have params in argument
+            # TODO: problem we do not have params in argument
             #       I cannot keep everything in here w/o params as argument
             u = self.get_error(params)
 
             if centered:
                 # Note: I'm not centering instruments,
-                #    shouldn't we always center u? Ok, with centered as default
-                u -= u.mean(0)  #demean inplace, we don't need original u
+                #    should not we always center u? Ok, with centered as default
+                u -= u.mean(0)  #demean inplace, we do not need original u
 
             instrument = self.instrument
             w = np.dot(instrument.T, instrument).dot(np.dot(u.T, u)) / nobs
@@ -1105,14 +1105,14 @@ class GMM(Model):
         return gradmoms
 
     def score(self, params, weights, epsilon=None, centered=True):
-
+        """Score"""
         deriv = approx_fprime(params, self.gmmobjective, args=(weights,),
                               centered=centered, epsilon=epsilon)
 
         return deriv
 
     def score_cu(self, params, epsilon=None, centered=True):
-
+        """Score cu"""
         deriv = approx_fprime(params, self.gmmobjective_cu, args=(),
                               centered=centered, epsilon=epsilon)
 
@@ -1133,36 +1133,33 @@ class GMMResults(LikelihoodModelResults):
 
         self.cov_params_default = self._cov_params()
 
-
     @cache_readonly
     def q(self):
+        """Objective function at params"""
         return self.model.gmmobjective(self.params, self.weights)
-
 
     @cache_readonly
     def jval(self):
-        # nobs_moms attached by momcond_mean
+        """nobs_moms attached by momcond_mean"""
         return self.q * self.model.nobs_moms
 
-
     def _cov_params(self, **kwds):
-
         #TODO add options ???)
         # this should use by default whatever options have been specified in
         # fit
 
-        # TODO: don't do this when we want to change options
+        # TODO: do not do this when we want to change options
 #         if hasattr(self, '_cov_params'):
 #             #replace with decorator later
 #             return self._cov_params
 
         # set defaults based on fit arguments
-        if not 'wargs' in kwds:
-            # Note: we don't check the keys in wargs, use either all or nothing
+        if 'wargs' not in kwds:
+            # Note: we do not check the keys in wargs, use either all or nothing
             kwds['wargs'] = self.wargs
-        if not 'weights_method' in kwds:
+        if 'weights_method' not in kwds:
             kwds['weights_method'] = self.options_other['weights_method']
-        if not 'has_optimal_weights' in kwds:
+        if 'has_optimal_weights' not in kwds:
             kwds['has_optimal_weights'] = self.options_other['has_optimal_weights']
 
         gradmoms = self.model.gradient_momcond(self.params)
@@ -1287,17 +1284,16 @@ class GMMResults(LikelihoodModelResults):
             jdiff = - jdiff
         return jdiff, stats.chi2.sf(jdiff, df), df
 
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
         Parameters
-        -----------
-        yname : string, optional
+        ----------
+        yname : str, optional
             Default is `y`
-        xname : list of strings, optional
+        xname : list[str], optional
             Default is `var_##` for ## in p the number of regressors
-        title : string, optional
+        title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
@@ -1343,13 +1339,13 @@ class GMMResults(LikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
+                             yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=False)
+                              use_t=self.use_t)
 
         return smry
 
@@ -1373,10 +1369,11 @@ class IVGMM(GMM):
     results_class = 'IVGMMResults'
 
     def fitstart(self):
+        """Create array of zeros"""
         return np.zeros(self.exog.shape[1])
 
-
     def start_weights(self, inv=True):
+        """Starting weights"""
         zz = np.dot(self.instrument.T, self.instrument)
         nobs = self.instrument.shape[0]
         if inv:
@@ -1384,21 +1381,21 @@ class IVGMM(GMM):
         else:
             return np.linalg.pinv(zz / nobs)
 
-
     def get_error(self, params):
+        """Get error at params"""
         return self.endog - self.predict(params)
 
-
     def predict(self, params, exog=None):
-
+        """Get prediction at params"""
         if exog is None:
             exog = self.exog
 
         return np.dot(exog, params)
 
     def momcond(self, params):
+        """Error times instrument"""
         instrument = self.instrument
-        return instrument * self.get_error(params)[:,None]
+        return instrument * self.get_error(params)[:, None]
 
 
 class LinearIVGMM(IVGMM):
@@ -1613,22 +1610,24 @@ class NonlinearIVGMM(IVGMM):
 
 
 class IVGMMResults(GMMResults):
-
-
+    """Results class of IVGMM"""
     # this assumes that we have an additive error model `(y - f(x, params))`
 
     @cache_readonly
     def fittedvalues(self):
+        """Fitted values"""
         return self.model.predict(self.params)
 
 
     @cache_readonly
     def resid(self):
+        """Residuals"""
         return self.model.endog - self.fittedvalues
 
 
     @cache_readonly
     def ssr(self):
+        """Sum of square errors"""
         return (self.resid * self.resid).sum(0)
 
 
@@ -1673,7 +1672,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     #use linalg.lstsq or svd directly
     #cov_diff will very often be in-definite (singular)
     if not dof:
-        dof = np_matrix_rank(cov_diff)
+        dof = np.linalg.matrix_rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)
@@ -1703,12 +1702,12 @@ class DistQuantilesGMM(GMM):
         self.epsilon_iter = 1e-5
 
         self.distfn = kwds['distfn']
-        #done by super doesn't work yet
+        #done by super does not work yet
         #TypeError: super does not take keyword arguments
         self.endog = endog
 
         #make this optional for fit
-        if not 'pquant' in kwds:
+        if 'pquant' not in kwds:
             self.pquant = pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
         else:
             self.pquant = pquant = kwds['pquant']
@@ -1803,7 +1802,7 @@ class DistQuantilesGMM(GMM):
         self.results.params = params  #required before call to self.cov_params
         self.results.wargs = {} #required before call to self.cov_params
         self.results.options_other = {'weights_method':'cov'}
-        # TODO: which weights_method?  There shouldn't be any needed ?
+        # TODO: which weights_method?  There should not be any needed ?
         _cov_params = self.results.cov_params(weights=weights,
                                       has_optimal_weights=has_optimal_weights)
 

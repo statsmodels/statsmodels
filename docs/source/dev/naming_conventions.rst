@@ -41,7 +41,7 @@ Our directory tree stripped down looks something like::
 The submodules are arranged by topic, `discrete` for discrete choice models, or `tsa` for time series
 analysis. The submodules that can be import heavy contain an empty __init__.py, except for some testing
 code for running tests for the submodules. The namespace to be imported is in `api.py`. That way, we
-can import selectively and do not have to import a lot of code that we don't need. Helper functions are
+can import selectively and do not have to import a lot of code that we do not need. Helper functions are
 usually put in files named `tools.py` and statistical functions, such as statistical tests are placed
 in `stattools.py`. Everything has directories for :ref:`tests <testing>`.
 
@@ -83,7 +83,7 @@ time-series ARMA model we have::
 Options
 ~~~~~~~
 We are using similar options in many classes, methods and functions. They
-should follow a standardized pattern if they recurr frequently. ::
+should follow a standardized pattern if they recur frequently. ::
 
     `missing` ['none', 'drop', 'raise'] define whether inputs are checked for
         nans, and how they are treated

@@ -27,7 +27,7 @@ since the estimates for the standard deviation will be based on the ddof that
 the user chooses.
 - fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
 
-Note: scipy has now a separate, pooled variance option in ttest, but I haven't
+Note: scipy has now a separate, pooled variance option in ttest, but I have not
 compared yet.
 
 '''
@@ -36,7 +36,7 @@ compared yet.
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.tools.decorators import cache_readonly
 
 
 class DescrStatsW(object):
@@ -91,7 +91,7 @@ class DescrStatsW(object):
     array([  1.58414212e-12,   3.87842808e-02,   6.02752170e-01])
     44.0
 
-    #if weiqhts are integers, then asrepeats can be used
+    #if weights are integers, then asrepeats can be used
 
     >>> x1r = d1.asrepeats()
     >>> x1r.shape
@@ -106,37 +106,38 @@ class DescrStatsW(object):
         if weights is None:
             self.weights = np.ones(self.data.shape[0])
         else:
-            #why squeeze?
+            # TODO: why squeeze?
             self.weights = np.asarray(weights).squeeze().astype(float)
         self.ddof = ddof
 
 
-    @OneTimeProperty
+    @cache_readonly
     def sum_weights(self):
+        """Sum of weights"""
         return self.weights.sum(0)
 
-    @OneTimeProperty
+    @cache_readonly
     def nobs(self):
         '''alias for number of observations/cases, equal to sum of weights
         '''
         return self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def sum(self):
         '''weighted sum of data'''
         return np.dot(self.data.T, self.weights)
 
-    @OneTimeProperty
+    @cache_readonly
     def mean(self):
         '''weighted mean of data'''
         return self.sum / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def demeaned(self):
         '''data with weighted mean subtracted'''
         return self.data - self.mean
 
-    @OneTimeProperty
+    @cache_readonly
     def sumsquares(self):
         '''weighted sum of squares of demeaned data'''
         return np.dot((self.demeaned**2).T, self.weights)
@@ -172,13 +173,13 @@ class DescrStatsW(object):
         '''
         return np.sqrt(self.var_ddof(ddof=ddof))
 
-    @OneTimeProperty
+    @cache_readonly
     def var(self):
         '''variance with default degrees of freedom correction
         '''
         return self.sumsquares / (self.sum_weights - self.ddof)
 
-    @OneTimeProperty
+    @cache_readonly
     def _var(self):
         '''variance without degrees of freedom correction
 
@@ -186,13 +187,13 @@ class DescrStatsW(object):
         '''
         return self.sumsquares / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def std(self):
         '''standard deviation with default degrees of freedom correction
         '''
         return np.sqrt(self.var)
 
-    @OneTimeProperty
+    @cache_readonly
     def cov(self):
         '''weighted covariance of data if data is 2 dimensional
 
@@ -203,7 +204,7 @@ class DescrStatsW(object):
         cov_ /= (self.sum_weights - self.ddof)
         return cov_
 
-    @OneTimeProperty
+    @cache_readonly
     def corrcoef(self):
         '''weighted correlation with default ddof
 
@@ -211,7 +212,7 @@ class DescrStatsW(object):
         '''
         return self.cov / self.std / self.std[:,None]
 
-    @OneTimeProperty
+    @cache_readonly
     def std_mean(self):
         '''standard deviation of weighted mean
         '''
@@ -230,7 +231,7 @@ class DescrStatsW(object):
 
         Parameters
         ----------
-        probs : array-like
+        probs : array_like
             A vector of probability points at which to calculate the
             quantiles.  Each element of `probs` should fall in [0, 1].
         return_pandas : bool
@@ -333,7 +334,7 @@ class DescrStatsW(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following
@@ -371,7 +372,7 @@ class DescrStatsW(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following
@@ -406,7 +407,7 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
 
               'two-sided': H1: mean not equal to value (default)
@@ -416,7 +417,7 @@ class DescrStatsW(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
         df : int or float
@@ -483,7 +484,7 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
-        alternative : string
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
 
               'two-sided': H1: mean not equal to value (default)
@@ -493,7 +494,7 @@ class DescrStatsW(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
 
@@ -738,7 +739,7 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        data1, data2 : array-like, 1-D or 2-D
+        data1, data2 : array_like, 1-D or 2-D
             compared datasets
         weights1, weights2 : None or 1-D ndarray
             weights for each observation of data1 and data2 respectively,
@@ -766,7 +767,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is
             assumed to be the same. If ``unequal``, then the variance of
             Welsh ttest will be used, and the degrees of freedom are those
@@ -814,14 +815,14 @@ class CompareMeans(object):
                 alpha=alpha, use_t=use_t, yname=yname, xname=xname,
                 title=title)
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_separatevar(self):
         #this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
         return np.sqrt(d1._var / (d1.nobs-1) + d2._var / (d2.nobs-1))
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_pooledvar(self):
         '''variance assuming equal variance in both data sets
 
@@ -858,15 +859,17 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
-        alternative : string
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -877,7 +880,7 @@ class CompareMeans(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the t-test
         df : int or float
@@ -910,15 +913,17 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        x1, x2 : array_like, 1-D or 2-D
-            two independent samples, see notes for 2-D case
-        alternative : string
+        x1 : array_like, 1-D or 2-D
+            first of the two independent samples, see notes for 2-D case
+        x2 : array_like, 1-D or 2-D
+            second of the two independent samples, see notes for 2-D case
+        alternative : str
             The alternative hypothesis, H1, has to be one of the following
             'two-sided': H1: difference in means not equal to value (default)
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then the standard deviations of the samples may
             be different.
@@ -928,7 +933,7 @@ class CompareMeans(object):
         Returns
         -------
         tstat : float
-            test statisic
+            test statistic
         pvalue : float
             pvalue of the z-test
 
@@ -957,7 +962,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
@@ -966,7 +971,7 @@ class CompareMeans(object):
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1006,7 +1011,7 @@ class CompareMeans(object):
         alpha : float
             significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : string
+        alternative : str
             This specifies the alternative hypothesis for the test that
             corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
@@ -1015,7 +1020,7 @@ class CompareMeans(object):
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
 
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1052,7 +1057,7 @@ class CompareMeans(object):
         ----------
         low, upp : float
             equivalence interval low < m1 - m2 < upp
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1079,7 +1084,7 @@ class CompareMeans(object):
         ----------
         low, upp : float
             equivalence interval low < m1 - m2 < upp
-        usevar : string, 'pooled' or 'unequal'
+        usevar : str, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
@@ -1100,7 +1105,7 @@ class CompareMeans(object):
 
     #tost.__doc__ = tost_ind.__doc__
 
-#doesn't work for 2d, doesn't take weights into account
+#does not work for 2d, does not take weights into account
 ##    def test_equal_var(self):
 ##        '''Levene test for independence
 ##
@@ -1115,23 +1120,25 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
                       weights=(None, None), value=0):
     '''ttest independent sample
 
-    convenience function that uses the classes and throws away the intermediate
+    Convenience function that uses the classes and throws away the intermediate
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    weights option.
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
-    alternative : string
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
+    alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: difference in means not equal to value (default)
-           'larger' :   H1: difference in means larger than value
-           'smaller' :  H1: difference in means smaller than value
+           * 'two-sided' (default): H1: difference in means not equal to value
+           * 'larger' :   H1: difference in means larger than value
+           * 'smaller' :  H1: difference in means smaller than value
 
-    usevar : string, 'pooled' or 'unequal'
+    usevar : str, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
         of freedom is used
@@ -1145,7 +1152,7 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     Returns
     -------
     tstat : float
-        test statisic
+        test statistic
     pvalue : float
         pvalue of the t-test
     df : int or float
@@ -1177,11 +1184,13 @@ def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     low, upp : float
         equivalence interval low < m1 - m2 < upp
-    usevar : string, 'pooled' or 'unequal'
+    usevar : str, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
         of freedom is used
@@ -1250,8 +1259,10 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
     Parameters
     ----------
-    x1, x2 : array_like
-        two dependent samples
+    x1 : array_like
+        first of the two independent samples
+    x2 : array_like
+        second of the two independent samples
     low, upp : float
         equivalence interval low < mean of difference < upp
     weights : None or ndarray
@@ -1299,22 +1310,24 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    alternative : string
+    alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
            'two-sided': H1: difference in means not equal to value (default)
            'larger' :   H1: difference in means larger than value
            'smaller' :  H1: difference in means smaller than value
 
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
@@ -1326,7 +1339,7 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
     Returns
     -------
     tstat : float
-        test statisic
+        test statistic
     pvalue : float
         pvalue of the t-test
 
@@ -1370,15 +1383,17 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
 
     Parameters
     ----------
-    x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+    x1 : array_like, 1-D or 2-D
+        first of the two independent samples, see notes for 2-D case
+    x2 : array_like, 1-D or 2-D
+        second of the two independent samples, see notes for 2-D case
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
@@ -1439,7 +1454,7 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     x1 : array_like or None
         second sample for 2 independent samples test. If None, then a
         one-sample test is performed.
-    usevar : string, 'pooled'
+    usevar : str, 'pooled'
         If `pooled`, then the standard deviation of the samples is assumed to be
         the same. Only `pooled` is currently implemented.
 

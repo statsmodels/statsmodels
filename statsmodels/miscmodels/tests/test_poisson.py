@@ -2,8 +2,11 @@
 
 
 '''
+import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
+from scipy import stats
+
 import statsmodels.api as sm
 from statsmodels.miscmodels.count import PoissonGMLE, PoissonOffsetGMLE, \
                         PoissonZiGMLE
@@ -42,8 +45,8 @@ class CompareMixin(object):
         assert_almost_equal(tt.tvalue, self.res.tvalues, DEC)
         assert_almost_equal(pvalue, self.res.pvalues, DEC)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
         self.res.summary()
 
 
@@ -72,7 +75,24 @@ class TestPoissonMLE(CompareMixin):
         cls.res = cls.mod.fit(start_params=0.9 * cls.res_discrete.params,
                                 method='bfgs', disp=0)
 
+    def test_predict_distribution(self):
+        res = self.res
+        model = self.mod
 
+        with pytest.raises(ValueError):
+            # No "result" attribute
+            model.predict_distribution(model.exog)
+
+        try:
+            model.result = res
+            dist = model.predict_distribution(model.exog)
+            assert isinstance(dist, stats._distn_infrastructure.rv_frozen)
+            assert_almost_equal(dist.mean(),
+                                np.exp(model.exog.dot(res.params)),
+                                15)
+        finally:
+            # leave the model object how we found it
+            model.__delattr__("result")
 
 
 class TestPoissonOffset(CompareMixin):

@@ -119,7 +119,7 @@ def load(as_pandas=None):
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'anes96.csv', sep='\s')
+    data = du.load_csv(__file__, 'anes96.csv', sep=r'\s')
     data = du.strip_column_names(data)
     data['logpopul'] = log(data['popul'] + .1)
     return data.astype(float)

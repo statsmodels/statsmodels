@@ -1,4 +1,14 @@
-from statsmodels.compat.python import iterkeys, itervalues, zip, range
+"""
+Covariance models and estimators for GEE.
+
+Some details for the covariance calculations can be found in the Stata
+docs:
+
+http://www.stata.com/manuals13/xtxtgee.pdf
+"""
+from statsmodels.compat.python import iterkeys, itervalues
+from statsmodels.compat.pandas import Appender
+
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
 import pandas as pd
@@ -8,28 +18,21 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning, OutputWarning,
                                              NotImplementedWarning)
 import warnings
 
-"""
-Some details for the covariance calculations can be found in the Stata
-docs:
-
-http://www.stata.com/manuals13/xtxtgee.pdf
-"""
-
 
 class CovStruct(object):
     """
-    A base class for correlation and covariance structures of grouped
-    data.
+    Base class for correlation and covariance structures.
 
-    Each implementation of this class takes the residuals from a
-    regression model that has been fitted to grouped data, and uses
+    An implementation of this class takes the residuals from a
+    regression model that has been fit to grouped data, and uses
     them to estimate the within-group dependence structure of the
     random errors in the model.
 
-    The state of the covariance structure is represented through the
-    value of the class variable `dep_params`.  The default state of a
-    newly-created instance should correspond to the identity
-    correlation matrix.
+    The current state of the covariance structure is represented
+    through the value of the `dep_params`  attribute.
+
+    The default state of a newly-created instance should always be
+    the identity correlation matrix.
     """
 
     def __init__(self, cov_nearest_method="clipped"):
@@ -41,7 +44,8 @@ class CovStruct(object):
         # adjusted.
         self.cov_adjust = []
 
-        # Method for projecting the covariance matrix if it not SPD.
+        # Method for projecting the covariance matrix if it is not
+        # PSD.
         self.cov_nearest_method = cov_nearest_method
 
     def initialize(self, model):
@@ -58,12 +62,12 @@ class CovStruct(object):
 
     def update(self, params):
         """
-        Updates the association parameter values based on the current
+        Update the association parameter values based on the current
         regression coefficients.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             Working values for the regression parameters.
         """
         raise NotImplementedError
@@ -75,11 +79,11 @@ class CovStruct(object):
 
         Parameters
         ----------
-        endog_expval: array-like
+        endog_expval: array_like
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
-        index: integer
-           The index of the cluster for which the covariane or
+        index: int
+           The index of the cluster for which the covariance or
            correlation matrix will be returned
 
         Returns
@@ -100,21 +104,21 @@ class CovStruct(object):
 
         Parameters
         ----------
-        expval: array-like
+        expval: array_like
            The expected value of endog for each observed value in the
            group.
-        index: integer
+        index: int
            The group index.
-        stdev : array-like
+        stdev : array_like
             The standard deviation of endog for each observation in
             the group.
-        rhs : list/tuple of array-like
+        rhs : list/tuple of array_like
             A set of right-hand sides; each defines a matrix equation
             to be solved.
 
         Returns
         -------
-        soln : list/tuple of array-like
+        soln : list/tuple of array_like
             The solutions to the matrix equations.
 
         Notes
@@ -128,7 +132,7 @@ class CovStruct(object):
 
         If the covariance matrix is singular or not SPD, it is
         projected to the nearest such matrix.  These projection events
-        are recorded in the fit_history member of the GEE model.
+        are recorded in the fit_history attribute of the GEE model.
 
         Systems of linear equations with the covariance matrix as the
         left hand side (LHS) are solved for different right hand sides
@@ -136,7 +140,7 @@ class CovStruct(object):
 
         This is a default implementation, it can be reimplemented in
         subclasses to optimize the linear algebra according to the
-        struture of the covariance matrix.
+        structure of the covariance matrix.
         """
 
         vmat, is_cor = self.covariance_matrix(expval, index)
@@ -158,10 +162,13 @@ class CovStruct(object):
                                    threshold=threshold)
                 threshold *= 2
                 cov_adjust += 1
+                msg = "At least one covariance matrix was not PSD "
+                msg += "and required projection."
+                warnings.warn(msg)
 
         self.cov_adjust.append(cov_adjust)
 
-        # Last resort if we still can't factor the covariance matrix.
+        # Last resort if we still cannot factor the covariance matrix.
         if not success:
             warnings.warn(
                 "Unable to condition covariance matrix to an SPD "
@@ -185,14 +192,17 @@ class Independence(CovStruct):
     An independence working dependence structure.
     """
 
-    # Nothing to update
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
+        # Nothing to update
         return
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         return np.eye(dim, dtype=np.float64), True
 
+    @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
         v = stdev ** 2
         rslt = []
@@ -202,10 +212,6 @@ class Independence(CovStruct):
             else:
                 rslt.append(x / v[:, None])
         return rslt
-
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
         return ("Observations within a cluster are modeled "
@@ -224,6 +230,7 @@ class Exchangeable(CovStruct):
         # The correlation between any two values in the same cluster
         self.dep_params = 0.
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         endog = self.model.endog_li
@@ -261,12 +268,14 @@ class Exchangeable(CovStruct):
         self.dep_params = residsq_sum / \
             (fsum2 * (n_pairs - ddof) / float(n_pairs))
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
         np.fill_diagonal(dp, 1)
         return dp, True
 
+    @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         k = len(expval)
@@ -289,10 +298,6 @@ class Exchangeable(CovStruct):
 
         return rslt
 
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
-
     def summary(self):
         return ("The correlation between two observations in the " +
                 "same cluster is %.3f" % self.dep_params)
@@ -303,8 +308,8 @@ class Nested(CovStruct):
     A nested working dependence structure.
 
     A working dependence structure that captures a nested hierarchy of
-    groups, each level of which contributes to the random error term
-    of the model.
+    groups.  Each level of grouping contributes to the random error
+    structure of the model.
 
     When using this working covariance structure, `dep_data` of the
     GEE instance should contain a n_obs x k matrix of 0/1 indicators,
@@ -345,7 +350,7 @@ class Nested(CovStruct):
 
     The variance components are estimated using least squares
     regression of the products r*r', for standardized residuals r and
-    r' in the same group, on a vector of indicators defining which
+    r' in the same group, on a matrix of indicators defining which
     variance components are shared by r and r'.
     """
 
@@ -396,8 +401,8 @@ class Nested(CovStruct):
             # This is used to construct the working correlation
             # matrix.
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            ilabel[ix1, ix2] = ncm + 1
-            ilabel[ix2, ix1] = ncm + 1
+            ilabel[(ix1, ix2)] = ncm + 1
+            ilabel[(ix2, ix1)] = ncm + 1
             ilabels.append(ilabel)
 
             # This is used to estimate the variance components.
@@ -416,6 +421,7 @@ class Nested(CovStruct):
         self.designx_s = svd[1]
         self.designx_v = svd[2].T
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         endog = self.model.endog_li
@@ -457,6 +463,7 @@ class Nested(CovStruct):
 
         self.dep_params = self.vcomp_coeff.copy()
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expval, index):
 
         dim = len(expval)
@@ -472,21 +479,27 @@ class Nested(CovStruct):
         vmat /= self.scale
         return vmat, True
 
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-
     def summary(self):
         """
         Returns a summary string describing the state of the
         dependence structure.
         """
 
-        msg = "Variance estimates\n------------------\n"
-        for k in range(len(self.vcomp_coeff)):
-            msg += "Component %d: %.3f\n" % (k + 1, self.vcomp_coeff[k])
-        msg += "Residual: %.3f\n" % (self.scale -
-                                     np.sum(self.vcomp_coeff))
-        return msg
+        dep_names = ["Groups"]
+        if hasattr(self.model, "_dep_data_names"):
+            dep_names.extend(self.model._dep_data_names)
+        else:
+            dep_names.extend(["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)])
+        if hasattr(self.model, "_groups_name"):
+            dep_names[0] = self.model._groups_name
+        dep_names.append("Residual")
+
+        vc = self.vcomp_coeff.tolist()
+        vc.append(self.scale - np.sum(vc))
+
+        smry = pd.DataFrame({"Variance": vc}, index=dep_names)
+
+        return smry
 
 
 class Stationary(CovStruct):
@@ -512,7 +525,7 @@ class Stationary(CovStruct):
         super(Stationary, self).__init__()
         self.max_lag = max_lag
         self.grid = grid
-        self.dep_params = np.zeros(max_lag)
+        self.dep_params = np.zeros(max_lag + 1)
 
     def initialize(self, model):
 
@@ -523,6 +536,7 @@ class Stationary(CovStruct):
             time = self.model.time[:, 0].astype(np.int32)
             self.time = self.model.cluster_list(time)
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         if self.grid:
@@ -545,10 +559,11 @@ class Stationary(CovStruct):
 
             dep_params[0] += np.sum(resid * resid) / len(resid)
             for j in range(1, self.max_lag + 1):
-                dep_params[j] += np.sum(resid[0:-j] *
-                                        resid[j:]) / len(resid[j:])
+                v = resid[j:]
+                dep_params[j] += np.sum(resid[0:-j] * v) / len(v)
 
-        self.dep_params = dep_params[1:] / dep_params[0]
+        dep_params /= dep_params[0]
+        self.dep_params = dep_params
 
     def update_nogrid(self, params):
 
@@ -558,46 +573,56 @@ class Stationary(CovStruct):
 
         dep_params = np.zeros(self.max_lag + 1)
         dn = np.zeros(self.max_lag + 1)
+        resid_ssq = 0
+        resid_ssq_n = 0
         for i in range(self.model.num_group):
 
             expval, _ = cached_means[i]
             stdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / stdev
 
-            j1, j2 = np.tril_indices(len(expval))
+            j1, j2 = np.tril_indices(len(expval), -1)
             dx = np.abs(self.time[i][j1] - self.time[i][j2])
             ii = np.flatnonzero(dx <= self.max_lag)
             j1 = j1[ii]
             j2 = j2[ii]
             dx = dx[ii]
 
-            vs = np.bincount(dx, weights=resid[
-                             j1] * resid[j2], minlength=self.max_lag + 1)
+            vs = np.bincount(dx, weights=resid[j1] * resid[j2],
+                             minlength=self.max_lag + 1)
             vd = np.bincount(dx, minlength=self.max_lag + 1)
 
+            resid_ssq += np.sum(resid**2)
+            resid_ssq_n += len(resid)
+
             ii = np.flatnonzero(vd > 0)
-            dn[ii] += 1
             if len(ii) > 0:
+                dn[ii] += 1
                 dep_params[ii] += vs[ii] / vd[ii]
 
-        dep_params /= dn
-        self.dep_params = dep_params[1:] / dep_params[0]
+        i0 = np.flatnonzero(dn > 0)
+        dep_params[i0] /= dn[i0]
+        resid_msq = resid_ssq / resid_ssq_n
+        dep_params /= resid_msq
+        self.dep_params = dep_params
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, endog_expval, index):
 
         if self.grid:
             return self.covariance_matrix_grid(endog_expval, index)
 
-        j1, j2 = np.tril_indices(len(endog_expval))
+        j1, j2 = np.tril_indices(len(endog_expval), -1)
         dx = np.abs(self.time[index][j1] - self.time[index][j2])
-        ii = np.flatnonzero((0 < dx) & (dx <= self.max_lag))
+        ii = np.flatnonzero(dx <= self.max_lag)
         j1 = j1[ii]
         j2 = j2[ii]
         dx = dx[ii]
 
         cmat = np.eye(len(endog_expval))
-        cmat[j1, j2] = self.dep_params[dx - 1]
-        cmat[j2, j1] = self.dep_params[dx - 1]
+        cmat[j1, j2] = self.dep_params[dx]
+        cmat[j2, j1] = self.dep_params[dx]
+
         return cmat, True
 
     def covariance_matrix_grid(self, endog_expval, index):
@@ -605,9 +630,10 @@ class Stationary(CovStruct):
         from scipy.linalg import toeplitz
         r = np.zeros(len(endog_expval))
         r[0] = 1
-        r[1:self.max_lag + 1] = self.dep_params
+        r[1:self.max_lag + 1] = self.dep_params[1:]
         return toeplitz(r), True
 
+    @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         if not self.grid:
@@ -616,17 +642,13 @@ class Stationary(CovStruct):
 
         from statsmodels.tools.linalg import stationary_solve
         r = np.zeros(len(expval))
-        r[0:self.max_lag] = self.dep_params
+        r[0:self.max_lag] = self.dep_params[1:]
         return [stationary_solve(r, x) for x in rhs]
-
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
 
-        return ("Stationary dependence parameters\n",
-                self.dep_params)
+        lag = np.arange(self.max_lag + 1)
+        return pd.DataFrame({"Lag": lag, "Cov": self.dep_params})
 
 
 class Autoregressive(CovStruct):
@@ -650,11 +672,11 @@ class Autoregressive(CovStruct):
 
     The autocorrelation parameter is estimated using weighted
     nonlinear least squares, regressing each value within a cluster on
-    each preceeding value in the same cluster.
+    each preceding value in the same cluster.
 
     Parameters
     ----------
-    dist_func: function from R^k x R^k to R^+, optional
+    dist_func : function from R^k x R^k to R^+, optional
         A function that computes the distance between the two
         observations based on their `time` values.
 
@@ -680,6 +702,7 @@ class Autoregressive(CovStruct):
         # The autocorrelation parameter
         self.dep_params = 0.
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         if self.model.weights is not None:
@@ -763,6 +786,7 @@ class Autoregressive(CovStruct):
         from scipy.optimize import brent
         self.dep_params = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, endog_expval, index):
         ngrp = len(endog_expval)
         if self.dep_params == 0:
@@ -771,6 +795,7 @@ class Autoregressive(CovStruct):
         cmat = self.dep_params ** np.abs(idx[:, None] - idx[None, :])
         return cmat, True
 
+    @Appender(CovStruct.covariance_matrix_solve.__doc__)
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
         # The inverse of an AR(1) covariance matrix is tri-diagonal.
 
@@ -829,10 +854,6 @@ class Autoregressive(CovStruct):
             soln.append(y)
 
         return soln
-
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
 
@@ -969,6 +990,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         return np.exp(log_pooled_or)
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expected_value, index):
 
         vmat = self.get_eyy(expected_value, index)
@@ -1045,6 +1067,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         return vmat
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
         """
         Update the global odds ratio based on the current value of
@@ -1088,11 +1111,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             warnings.warn("dep_params became inf, resetting to 1",
                           ConvergenceWarning)
 
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
-
     def summary(self):
-
         return "Global odds ratio: %.3f\n" % self.dep_params
 
 
@@ -1176,14 +1195,14 @@ class Equivalence(CovStruct):
       one triangle of each covariance matrix should be included.
       Positions where j1 and j2 have the same value are variance
       parameters.
-    labels : array-like
+    labels : array_like
       An array of labels such that every distinct pair of labels
       defines an equivalence class.  Either `labels` or `pairs` must
       be provided.  When the two labels in a pair are equal two
       equivalence classes are defined: one for the diagonal elements
       (corresponding to variances) and one for the off-diagonal
       elements (corresponding to covariances).
-    return_cov : boolean
+    return_cov : bool
       If True, `covariance_matrix` returns an estimate of the
       covariance matrix, otherwise returns an estimate of the
       correlation matrix.
@@ -1264,7 +1283,7 @@ class Equivalence(CovStruct):
             bmat = np.ascontiguousarray(mat).view(dtype)
             _, idx = np.unique(bmat, return_index=True)
         except TypeError:
-            # workaround for old numpy that can't call unique with complex
+            # workaround for old numpy that cannot call unique with complex
             # dtypes
             rs = np.random.RandomState(4234)
             bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))
@@ -1359,6 +1378,7 @@ class Equivalence(CovStruct):
                 a, b = self.pairs[gp][lb]
                 self.pairs[gp][lb] = (rx[a], rx[b])
 
+    @Appender(CovStruct.update.__doc__)
     def update(self, params):
 
         endog = self.model.endog_li
@@ -1395,6 +1415,7 @@ class Equivalence(CovStruct):
         self.dep_params = dep_params
         self.n_pairs = n_pairs
 
+    @Appender(CovStruct.covariance_matrix.__doc__)
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         cmat = np.zeros((dim, dim))
@@ -1408,6 +1429,3 @@ class Equivalence(CovStruct):
         np.fill_diagonal(cmat, cmat.diagonal() / 2)
 
         return cmat, not self.return_cov
-
-    update.__doc__ = CovStruct.update.__doc__
-    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__

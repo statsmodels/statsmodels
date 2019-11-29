@@ -25,13 +25,8 @@ TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X               
 TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  bfgs
 TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
-"""
-from __future__ import division
-from statsmodels.compat.python import PY3
-
+"""  # noqa: E501
 import warnings
-from warnings import catch_warnings
-import sys
 
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
@@ -79,7 +74,7 @@ class CheckWeight(object):
             # Binomial ll and deviance are different for 1d vs. counts...
             return None
         if isinstance(self, TestGlmGaussianWLS):
-            # This won't work right now either
+            # This will not work right now either
             return None
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
@@ -92,7 +87,7 @@ class CheckWeight(object):
                              TestTweedieRepeatedvsAverage,
                              TestBinomial0RepeatedvsAverage,
                              TestBinomial0RepeatedvsDuplicated)):
-            # This won't match as different number of records
+            # This will not match as different number of records
             return None
         res1 = self.res1
         res2 = self.res2
@@ -106,7 +101,7 @@ class CheckWeight(object):
         assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
-        # Stata doesn't use var_weights in anscombe residuals, it seems.
+        # Stata does not use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
@@ -205,11 +200,12 @@ class TestGlmPoissonPwNr(CheckWeight):
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
-    @pytest.mark.xfail(reason='Known to fail')
+    # TODO: find more informative reasons why these fail
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_basic(self):
         super(TestGlmPoissonPwNr, self).test_basic()
 
-    @pytest.mark.xfail(reason='Known to fail')
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_compare_optimizers(self):
         super(TestGlmPoissonPwNr, self).test_compare_optimizers()
 
@@ -225,9 +221,10 @@ class TestGlmPoissonFwHC(CheckWeight):
         aweights = fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
 
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=fweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  freq_weights=fweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_hc1
@@ -249,9 +246,10 @@ class TestGlmPoissonAwHC(CheckWeight):
         # manually. Its *possible* lowering the IRLS convergence criterion
         # in stata and here will make this less sketchy.
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), var_weights=aweights
-                        ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
+        mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                  family=sm.families.Poisson(),
+                  var_weights=aweights)
+        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         # modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_aweight_hc1
@@ -274,9 +272,11 @@ class TestGlmPoissonFwClu(CheckWeight):
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
         with pytest.warns(None):
-            cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                            family=sm.families.Poisson(), freq_weights=fweights
-                            ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+            mod = GLM(cpunish_data.endog, cpunish_data.exog,
+                      family=sm.families.Poisson(),
+                      freq_weights=fweights)
+            cls.res1 = mod.fit(cov_type='cluster', cov_kwds=cov_kwds)
+
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1
@@ -371,7 +371,7 @@ class TestGlmGaussianAwNr(CheckWeight):
         # SM uses (essentially) stat's loglike formula... first term is
         # (endog - mu) ** 2 / scale
         adj_sm = -1 / 2 * ((model.endog - res1.mu) ** 2).sum() / scale
-        # R has these 2 terms that stata/sm don't
+        # R has these 2 terms that stata/sm do not
         adj_r = -model.wnobs / 2 + np.sum(np.log(model.var_weights)) / 2
         llf_adj = llf - adj_sm + adj_r
         assert_allclose(llf_adj, res2.ll, atol=1e-6, rtol=1e-7)
@@ -450,10 +450,10 @@ def test_wtd_gradient_irls():
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
                 elif family_class == fam.Binomial and link == lnk.cloglog:
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif family_class == fam.Binomial and link == lnk.log:
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Poisson, lnk.identity):
                     lin_pred = 20 + exog.sum(1)
@@ -462,27 +462,27 @@ def test_wtd_gradient_irls():
                 elif (family_class, link) == (fam.Poisson, lnk.sqrt):
                     lin_pred = -2 + exog.sum(1)
                 elif (family_class, link) == (fam.Gamma, lnk.log):
-                    # Can't get gradient to converge with var_weights here
+                    # Cannot get gradient to converge with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gamma, lnk.identity):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gamma, lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gaussian, lnk.log):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     continue
                 elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = -1 + exog.sum(1)
                     continue
                 elif (family_class, link) == (fam.InverseGaussian,
                                               lnk.identity):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = 20 + 5*exog.sum(1)
                     lin_pred = np.clip(lin_pred, 1e-4, np.inf)
                     continue
@@ -505,7 +505,7 @@ def test_wtd_gradient_irls():
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (fam.NegativeBinomial,
                                               lnk.inverse_power):
-                    # Can't get gradient to converage with var_weights here
+                    # Cannot get gradient to converage with var_weights here
                     lin_pred = 1 + exog.sum(1) / 5
                     continue
 
@@ -596,7 +596,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -606,7 +606,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         agg_endog = agg_endog['endog']
-        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link()),
                       exposure=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -627,7 +627,7 @@ class TestRepeatedvsAverage(CheckWeight):
         family = sm.families.Poisson
         link = sm.families.links.log
         endog = gen_endog(lin_pred, family, link)
-        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
 
         agg = pd.DataFrame(exog)
@@ -637,7 +637,7 @@ class TestRepeatedvsAverage(CheckWeight):
         agg_exog = np.array(agg_endog.index.tolist())
         agg_wt = agg_wt['endog']
         avg_endog = agg_endog['endog'] / agg_wt
-        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link),
+        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link()),
                       var_weights=agg_wt)
         cls.res2 = mod2.fit()
 
@@ -757,12 +757,12 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
-        mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
+        mod1 = sm.GLM(endog, exog, family=family(link=link()), freq_weights=wt)
         cls.res1 = mod1.fit()
 
         exog_dup = np.repeat(exog, wt, axis=0)
         endog_dup = np.repeat(endog, wt)
-        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link))
+        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link()))
         cls.res2 = mod2.fit()
 
 
@@ -775,15 +775,13 @@ def test_warnings_raised():
 
     cov_kwds = {'groups': gid, 'use_correction': False}
 
-    # Work around for buggy pytest repeated warning capture on Python 2.7
-    warning_type = SpecificationWarning if PY3 else None
-    with pytest.warns(warning_type):
+    with pytest.warns(SpecificationWarning):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), freq_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         res1.summary()
 
-    with pytest.warns(warning_type):
+    with pytest.warns(SpecificationWarning):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), var_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)

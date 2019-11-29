@@ -5,7 +5,6 @@ it also generates plots.
 
 """
 
-from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 print('Welcome to El')
@@ -45,7 +44,7 @@ print(eldescriptive.test_kurt(0))
 # Note that the skewness and Kurtosis take longer.  This is because
 # we have to optimize over the nuisance parameters (mean, variance).
 
-# We can also test for the joint skewness and kurtoses
+# We can also test for the joint skewness and kurtosis
 print(' Joint Skewness-Kurtosis test')
 eldescriptive.test_joint_skew_kurt(0, 0)
 

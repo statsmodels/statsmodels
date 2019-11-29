@@ -9,7 +9,7 @@ Created on Sat May 28 15:38:23 2011
 
 TODO:
 * renaming,
-    - after adding t distribution, cov doesn't make sense for Sigma    DONE
+    - after adding t distribution, cov does not make sense for Sigma    DONE
     - should mean also be renamed to mu, if there will be distributions
       with mean != mu
 * not sure about corner cases
@@ -144,11 +144,12 @@ What's currently there?
 'standardize', 'standardized', 'std', 'std_sigma', 'whiten']
 
 """
-from __future__ import print_function
 import numpy as np
+from scipy import special
 
-from statsmodels.sandbox.distributions.multivariate import (
-                mvstdtprob, mvstdnormcdf, mvnormcdf)
+from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+from .extras import mvnormcdf
+
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
     '''calculate expected value of function by Monte Carlo integration
@@ -166,7 +167,7 @@ def expect_mc(dist, func=lambda x: 1, size=50000):
 
     Notes
     -----
-    this doesn't batch
+    this does not batch
 
     Returns
     -------
@@ -230,7 +231,7 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
 
     Notes
     -----
-    this doesn't batch
+    this does not batch
 
     Returns
     -------
@@ -289,7 +290,8 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
 
         rvsli.append(rvsok)   #[:remain]) use extras instead
         print(used)
-        if used >= size: break
+        if used >= size:
+            break
     rvs = np.vstack(rvsli)
     print(rvs.shape)
     assert used == rvs.shape[0] #saftey check
@@ -468,7 +470,7 @@ class MVElliptical(object):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
 
@@ -506,8 +508,8 @@ class MVElliptical(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
-        x : array-like, 1d or 2d
+        ----------
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -517,7 +519,7 @@ class MVElliptical(object):
 
         Notes
         -----
-        This only does rescaling, it doesn't subtract the mean, use standardize
+        This only does rescaling, it does not subtract the mean, use standardize
         for this instead
 
         See Also
@@ -549,8 +551,8 @@ class MVElliptical(object):
         '''standardize the random variable, i.e. subtract mean and whiten
 
         Parameters
-        -----------
-        x : array-like, 1d or 2d
+        ----------
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -582,8 +584,8 @@ class MVElliptical(object):
         The distribution will have zero mean and sigma equal to correlation
 
         Parameters
-        -----------
-        x : array-like, 1d or 2d
+        ----------
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -726,8 +728,8 @@ class MVNormal0(object):
         whiten the data by linear transformation
 
         Parameters
-        -----------
-        X : array-like, 1d or 2d
+        ----------
+        X : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -737,7 +739,7 @@ class MVNormal0(object):
 
         Notes
         -----
-        This only does rescaling, it doesn't subtract the mean, use standardize
+        This only does rescaling, it does not subtract the mean, use standardize
         for this instead
 
         See Also
@@ -809,7 +811,7 @@ class MVNormal0(object):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
         x = np.asarray(x)
@@ -873,7 +875,7 @@ class MVNormal(MVElliptical):
 
         this should be made to work with 2d x,
         with multivariate normal vector in each row and iid across rows
-        doesn't work now because of dot in whiten
+        does not work now because of dot in whiten
 
         '''
         x = np.asarray(x)
@@ -925,10 +927,9 @@ class MVNormal(MVElliptical):
 
         Returns
         -------
-        mvt : instance of MVT
-            instance of multivariate t distribution given by affine
+        mvt : instance of MVNormal
+            instance of multivariate normal distribution given by affine
             transformation
-
 
         Notes
         -----
@@ -982,7 +983,7 @@ class MVNormal(MVElliptical):
         '''
         #indices need to be nd arrays for broadcasting
         keep = np.asarray(indices)
-        given = np.asarray([i for i in range(self.nvars) if not i in keep])
+        given = np.asarray([i for i in range(self.nvars) if i not in keep])
         sigmakk = self.sigma[keep[:, None], keep]
         sigmagg = self.sigma[given[:, None], given]
         sigmakg = self.sigma[keep[:, None], given]
@@ -1000,8 +1001,6 @@ class MVNormal(MVElliptical):
         return MVNormal(mean_new, sigma_new)
 
 
-
-from scipy import special
 #redefine some shortcuts
 np_log = np.log
 np_pi = np.pi
@@ -1112,7 +1111,7 @@ class MVT(MVElliptical):
         #std_sigma = np.sqrt(np.diag(self.sigma))
         upper = (x - self.mean)/self.std_sigma
         return mvstdtprob(lower, upper, self.corr, self.df, **kwds)
-        #mvstdtcdf doesn't exist yet
+        #mvstdtcdf does not exist yet
         #return mvstdtcdf(lower, x, self.corr, df, **kwds)
 
     @property

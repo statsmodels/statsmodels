@@ -207,7 +207,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
 
         # ?potri only fills in the upper triangle of the symmetric array, and
         # since the ?symm and ?symv routines are not available as of scipy
-        # 0.11.0, we can't use them, so we must fill in the lower triangle
+        # 0.11.0, we cannot use them, so we must fill in the lower triangle
         # by hand
         for i in range(model._k_endog): # columns
             for j in range(i): # rows

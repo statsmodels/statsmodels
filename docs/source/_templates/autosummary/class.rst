@@ -1,32 +1,33 @@
-{{ fullname }}
-{{ underline }}
+{{ fullname | escape | underline}}
 
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
+   :exclude-members:
 
    {% block methods %}
-
    {% if methods %}
    .. rubric:: Methods
 
    .. autosummary::
-      :toctree:
+      :toctree: generated/
+
    {% for item in methods %}
-    {% if item != '__init__' %}
-      ~{{ name }}.{{ item }}
-    {% endif %}
+   {%- if not item.startswith('_') or item in ['__call__'] %}   ~{{ name }}.{{ item }}
+   {% endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
-
    {% block attributes %}
    {% if attributes %}
-   .. rubric:: Attributes
+   .. rubric:: Properties
 
    .. autosummary::
+      :toctree: generated/
+
    {% for item in attributes %}
-      ~{{ name }}.{{ item }}
+   {%- if not item.startswith('_') or item in ['__call__'] %}   ~{{ name }}.{{ item }}
+   {% endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}

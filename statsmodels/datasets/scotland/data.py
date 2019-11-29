@@ -5,7 +5,7 @@ __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = "Taxation Powers Vote for the Scottish Parliamant 1997"
+TITLE       = "Taxation Powers Vote for the Scottish Parliament 1997"
 SOURCE      = """
 Jeff Gill's `Generalized Linear Models: A Unified Approach`
 

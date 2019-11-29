@@ -5,7 +5,7 @@ Created on Mon Jan 11 11:04:23 2010
 Author: josef-pktd
 License: BSD
 
-This is a new version, I didn't look at the old version again, but similar
+This is a new version, I did not look at the old version again, but similar
 ideas.
 
 not copied/cleaned yet:
@@ -28,12 +28,8 @@ Extensions
 see also VAR section in Notes.txt
 
 """
-from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_equal
 from scipy import signal
-#might not (yet) need the following
-from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.tsatools import lagmat
 
@@ -41,8 +37,8 @@ from statsmodels.tsa.tsatools import lagmat
 def varfilter(x, a):
     '''apply an autoregressive filter to a series x
 
-    Warning: I just found out that convolve doesn't work as I
-       thought, this likely doesn't work correctly for
+    Warning: I just found out that convolve does not work as I
+       thought, this likely does not work correctly for
        nvars>3
 
 
@@ -127,9 +123,7 @@ def varfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-#        #not necessary:
-#        if np.any(a.shape[1:] != nvar):
-#            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
+        # Note: we must have shape[1] == shape[2] == nvar
         yf = signal.convolve(x[:,:,None], a)
         yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
         return yvalid
@@ -353,7 +347,7 @@ class _Var(object):
 
         Parameters
         ----------
-        nlags : integer
+        nlags : int
             number of lags to include in regression, same for all variables
 
         Returns
@@ -485,7 +479,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -500,7 +494,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial horizontally in 2d array
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -515,7 +509,7 @@ class VarmaPoly(object):
         '''stack lagpolynomial vertically in 2d square array with eye
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         elif name == 'ar':
             a = self.ar
@@ -551,7 +545,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isstationary : boolean
+        isstationary : bool
 
         *attaches*
 
@@ -563,7 +557,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isstructured:
@@ -580,7 +574,7 @@ class VarmaPoly(object):
 
         Returns
         -------
-        isinvertible : boolean
+        isinvertible : bool
 
         *attaches*
 
@@ -592,7 +586,7 @@ class VarmaPoly(object):
         formula taken from NAG manual
 
         '''
-        if not a is None:
+        if a is not None:
             a = a
         else:
             if self.isindependent:

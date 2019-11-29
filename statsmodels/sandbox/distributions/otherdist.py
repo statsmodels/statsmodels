@@ -8,7 +8,7 @@ Author: Josef Perktold
 Notes:
 
 Compound Poisson has mass point at zero
-http://en.wikipedia.org/wiki/Compound_Poisson_distribution
+https://en.wikipedia.org/wiki/Compound_Poisson_distribution
 and would need special treatment
 
 need a distribution that has discrete mass points and contiuous range, e.g.
@@ -21,7 +21,6 @@ existing distributions by transformation, mixing, compounding
 '''
 
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 
@@ -160,7 +159,7 @@ class ClippedContinuous(object):
         '''helper method to get clip_lower from kwds or attribute
 
         '''
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             clip_lower = kwds.pop('clip_lower')
@@ -177,7 +176,7 @@ class ClippedContinuous(object):
 
     def pdf(self, x, *args, **kwds):
         x = np.atleast_1d(x)
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter
@@ -194,7 +193,7 @@ class ClippedContinuous(object):
         return pdf_raw
 
     def cdf(self, x, *args, **kwds):
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter
@@ -214,7 +213,7 @@ class ClippedContinuous(object):
         return cdf_raw
 
     def sf(self, x, *args, **kwds):
-        if not 'clip_lower' in kwds:
+        if 'clip_lower' not in kwds:
             clip_lower = self.clip_lower
         else:
             #allow clip_lower to be a possible parameter

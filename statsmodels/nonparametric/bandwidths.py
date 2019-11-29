@@ -1,7 +1,7 @@
-from __future__ import division
-
 import numpy as np
 from scipy.stats import scoreatpercentile as sap
+
+from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
 def _select_sigma(X):
@@ -27,7 +27,7 @@ def bw_scott(x, kernel=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Unused
@@ -60,7 +60,7 @@ def bw_silverman(x, kernel=None):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Unused
@@ -97,7 +97,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Used to calculate the constant for the plug-in bandwidth.
@@ -143,6 +143,7 @@ bandwidth_funcs = {
 }
 
 
+@Substitution(", ".join(sorted(bandwidth_funcs.keys())))
 def select_bandwidth(x, bw, kernel):
     """
     Selects bandwidth for a selection rule bw
@@ -151,9 +152,9 @@ def select_bandwidth(x, bw, kernel):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Array for which to get the bandwidth
-    bw : string
+    bw : str
         name of bandwidth selection rule, currently supported are:
         %s
     kernel : not used yet
@@ -167,11 +168,10 @@ def select_bandwidth(x, bw, kernel):
     bw = bw.lower()
     if bw not in bandwidth_funcs:
         raise ValueError("Bandwidth %s not understood" % bw)
-#TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
-#    if kernel == "gauss":
-    return bandwidth_funcs[bw](x, kernel)
-#    else:
-#        raise ValueError("Only Gaussian Kernels are currently supported")
-
-# Interpolate docstring to plugin supported bandwidths
-select_bandwidth.__doc__ %=  (", ".join(sorted(bandwidth_funcs.keys())),)
+    bandwidth = bandwidth_funcs[bw](x, kernel)
+    if bandwidth == 0:
+        # eventually this can fall back on another selection criterion.
+        err = "Selected KDE bandwidth is 0. Cannot estiamte density."
+        raise RuntimeError(err)
+    else:
+        return bandwidth

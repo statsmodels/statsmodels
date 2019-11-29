@@ -17,12 +17,9 @@ The standard l1 solver is fmin_slsqp and is included with scipy.  It
 The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
-from __future__ import print_function
-from statsmodels.compat.python import range
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
-import pdb  # pdb.set_trace()
 
 
 ## Load the data from Spector and Mazzeo (1980)
@@ -66,7 +63,7 @@ mlogit_res = mlogit_mod.fit()
 ## Set the regularization parameter.
 alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 
-# Don't regularize the constant
+# Do not regularize the constant
 alpha[-1,:] = 0
 mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha)
 print(mlogit_l1_res.params)
@@ -96,9 +93,9 @@ coeff = np.zeros((N, K))  # Holds the coefficients
 alphas = 1 / np.logspace(-0.5, 2, N)
 
 ## Sweep alpha and store the coefficients
-# QC check doesn't always pass with the default options.
+# QC check does not always pass with the default options.
 # Use the options QC_verbose=True and disp=True
-# to to see what is happening.  It just barely doesn't pass, so I decreased
+# to to see what is happening.  It just barely does not pass, so I decreased
 # acc and increased QC_tol to make it pass
 for n, alpha in enumerate(alphas):
     logit_res = logit_mod.fit_regularized(
@@ -107,10 +104,12 @@ for n, alpha in enumerate(alphas):
     coeff[n,:] = logit_res.params
 
 ## Plot
-plt.figure(1);plt.clf();plt.grid()
-plt.title('Regularization Path');
-plt.xlabel('alpha');
-plt.ylabel('Parameter value');
+plt.figure(1)
+plt.clf()
+plt.grid()
+plt.title('Regularization Path')
+plt.xlabel('alpha')
+plt.ylabel('Parameter value')
 for i in range(K):
     plt.plot(alphas, coeff[:,i], label='X'+str(i), lw=3)
 plt.legend(loc='best')

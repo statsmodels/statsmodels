@@ -7,16 +7,14 @@ Racine, Jeff. (2008) "Nonparametric Econometrics: A Primer," Foundation and
     Trends in Econometrics: Vol 3: No 1, pp1-88.
     http://dx.doi.org/10.1561/0800000009
 
-http://en.wikipedia.org/wiki/Kernel_%28statistics%29
+https://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
-from __future__ import absolute_import, print_function, division
-from statsmodels.compat.python import range
 import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import (cache_readonly, resettable_cache)
+from statsmodels.tools.decorators import cache_readonly
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
@@ -44,7 +42,7 @@ class KDEUnivariate(object):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The variable for which the density estimate is desired.
 
     Notes
@@ -153,7 +151,7 @@ class KDEUnivariate(object):
         self.kernel.weights = weights
         if weights is not None:
             self.kernel.weights /= weights.sum()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     @cache_readonly
     def cdf(self):
@@ -267,7 +265,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         The variable for which the density estimate is desired.
     kernel : str
         The Kernel to be used. Choices are
@@ -319,8 +317,8 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     nobs = len(X) # after trim
 
-    if gridsize == None:
-        gridsize = max(nobs,50) # don't need to resize if no FFT
+    if gridsize is None:
+        gridsize = max(nobs,50) # do not need to resize if no FFT
 
         # handle weights
     if weights is None:
@@ -329,7 +327,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     else:
         # ensure weights is a numpy array
         weights = np.asarray(weights)
-        
+
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)
@@ -356,7 +354,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     kern.seth(bw)
 
     # truncate to domain
-    if kern.domain is not None: # won't work for piecewise kernels like parzen
+    if kern.domain is not None: # will not work for piecewise kernels like parzen
         z_lo, z_high = kern.domain
         domain_mask = (k < z_lo) | (k > z_high)
         k = kern(k) # estimate density
@@ -380,7 +378,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         The variable for which the density estimate is desired.
     kernel : str
         ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.
@@ -424,7 +422,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Notes
     -----
-    Only the default kernel is implemented. Weights aren't implemented yet.
+    Only the default kernel is implemented. Weights are not implemented yet.
     This follows Silverman (1982) with changes suggested by Jones and Lotwick
     (1984). However, the discretization step is replaced by linear binning
     of Fan and Marron (1994). This should be extended to accept the parts
@@ -432,8 +430,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     cross-validation.
 
     References
-    ---------- ::
-
+    ----------
     Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
         curve estimators`. Journal of Computational and Graphical Statistics.
         3.1, 35-56.
@@ -445,7 +442,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         Series C. 31.2, 93-9.
     """
     X = np.asarray(X)
-    X = X[np.logical_and(X > clip[0], X < clip[1])] # won't work for two columns.
+    X = X[np.logical_and(X > clip[0], X < clip[1])] # will not work for two columns.
                                                 # will affect underlying data?
 
     # Get kernel object corresponding to selection
@@ -460,7 +457,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     nobs = len(X) # after trim
 
     # 1 Make grid and discretize the data
-    if gridsize == None:
+    if gridsize is None:
         gridsize = np.max((nobs, 512.))
     gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
 
@@ -491,7 +488,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     y = forrt(binned)
 
     # step 3 and 4 for optimal bw compute zstar and the density estimate f
-    # don't have to redo the above if just changing bw, ie., for cross val
+    # do not have to redo the above if just changing bw, ie., for cross val
 
 #NOTE: silverman_transform is the closed form solution of the FFT of the
 #gaussian kernel. Not yet sure how to generalize it.
@@ -547,4 +544,4 @@ if __name__ == "__main__":
     except:
 #        ft = np.loadtxt('./ft_silver.csv')
 #        smooth = np.loadtxt('./smooth_silver.csv')
-        print("Didn't get the estimates from the Silverman algorithm")
+        print("Did not get the estimates from the Silverman algorithm")

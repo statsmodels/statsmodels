@@ -4,7 +4,6 @@ Tests for simulation smoothing
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 import os
 
 import numpy as np
@@ -396,7 +395,7 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     """
     Notes
     -----
-    Can't test against KFAS because they have a different behavior for
+    Cannot test against KFAS because they have a different behavior for
     missing entries. When an entry is missing, KFAS does not draw a simulation
     smoothed value for that entry, whereas we draw from the unconditional
     distribution. It appears there is nothing to definitively recommend one
@@ -631,6 +630,35 @@ def test_simulation_smoothing_state_intercept():
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
                           measurement_error=True)
     mod.initialize_known([100], [[0]])
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)
+
+
+def test_simulation_smoothing_state_intercept_diffuse():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+
+    # Test without missing values
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)
+
+    # Test with missing values
+    endog[5] = np.nan
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()

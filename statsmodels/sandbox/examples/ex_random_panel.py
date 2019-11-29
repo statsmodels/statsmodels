@@ -16,7 +16,7 @@ import statsmodels.sandbox.panel.correlation_structures as cs
 import statsmodels.stats.sandwich_covariance as sw
 #from statsmodels.stats.sandwich_covariance import (
 #                   S_hac_groupsum, weights_bartlett, _HCCM2)
-from statsmodels.stats.moment_helpers import cov2corr, se_cov
+from statsmodels.stats.moment_helpers import se_cov
 cov_nw_panel2 = sw.cov_nw_groupsum
 
 
@@ -57,7 +57,7 @@ if 'ex1' in examples:
     #OLS standard errors are too small
     mod.res_pooled.params
     mod.res_pooled.bse
-    #heteroscedasticity robust doesn't help
+    #heteroscedasticity robust does not help
     mod.res_pooled.HC1_se
     #compare with cluster robust se
 
@@ -131,7 +131,7 @@ if 'ex1' in examples:
 
 
     import pandas as pa
-    #pandas.DataFrame doesn't do inplace append
+    #pandas.DataFrame does not do inplace append
     se = pa.DataFrame(res_ols.bse[None,:], index=['OLS'])
     se = se.append(pa.DataFrame(res5.bse[None,:], index=['PGLSit5']))
     clbse = sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))

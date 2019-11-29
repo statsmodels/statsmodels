@@ -9,22 +9,18 @@ Created on Fri Nov 04 13:45:43 2011
 
 Author: Josef Perktold
 """
-from __future__ import print_function
-from statsmodels.compat.python import lrange, zip
+from statsmodels.compat.python import lrange
 import time
 
 import numpy as np
-#import matplotlib.pyplot as plt
-
-np.seterr(all='raise')
 
 from scipy import stats
 
-from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
+from statsmodels.sandbox.gam import Model as GAM
 from statsmodels.genmod.families import family
 from statsmodels.genmod.generalized_linear_model import GLM
 
+np.seterr(all='raise')
 np.random.seed(8765993)
 #seed is chosen for nice result, not randomly
 #other seeds are pretty off in the prediction or end in overflow
@@ -71,8 +67,8 @@ if example == 3:
     f = family.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
-    #p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)], float)
-    p = np.asarray([stats.poisson.rvs(p) for p in f.link.inverse(z)], float)
+    p = np.asarray([stats.poisson.rvs(val) for val in f.link.inverse(z)],
+                   float)
     p.shape = y.shape
     m = GAM(p, d, family=f)
     toc = time.time()
@@ -86,7 +82,8 @@ for ss in m.smoothers:
 if example > 1:
     import matplotlib.pyplot as plt
     plt.figure()
-    for i in np.array(m.history[2:15:3]): plt.plot(i.T)
+    for i in np.array(m.history[2:15:3]):
+        plt.plot(i.T)
 
     plt.figure()
     plt.plot(exog)

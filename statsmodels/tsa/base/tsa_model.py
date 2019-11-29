@@ -1,4 +1,3 @@
-from statsmodels.compat.python import long
 from statsmodels.compat.pandas import is_numeric_dtype
 
 import numbers
@@ -7,7 +6,7 @@ import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
                     PeriodIndex, RangeIndex, Timestamp, Series, Index,
-                    Float64Index)
+                    Float64Index, date_range, period_range)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -21,15 +20,14 @@ _tsa_doc = """
     Parameters
     ----------
     %(params)s
-    dates : array-like of datetime, optional
+    dates : array_like, optional
         An array-like object of datetime objects. If a pandas object is given
         for endog or exog, it is assumed to have a DateIndex.
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
     %(extra_params)s
-    %(extra_sections)s
-"""
+    %(extra_sections)s"""
 
 _model_doc = "Timeseries model base class"
 
@@ -99,12 +97,12 @@ class TimeSeriesModel(base.LikelihoodModel):
         else:
             index = self.data.row_labels
 
-        # Sanity check that we don't have a `freq` without an index
+        # Sanity check that we do not have a `freq` without an index
         if index is None and freq is not None:
             raise ValueError('Frequency provided without associated index.')
 
         # If an index is available, see if it is a date-based index or if it
-        # can be coerced to one. (If it can't we'll fall back, below, to an
+        # can be coerced to one. (If it cannot we'll fall back, below, to an
         # internal, 0, 1, ... nobs-1 integer index for modeling purposes)
         inferred_freq = False
         if index is not None:
@@ -117,8 +115,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # object dtype array in earlier versions of Pandas (and so
                     # will not have is_numeric_dtype == True), so explicitly
                     # check for it here. But note also that in very early
-                    # Pandas (~0.12), Float64Index doesn't exist (and so the
-                    # Statsmodels compat makes it an empty tuple, so in that
+                    # Pandas (~0.12), Float64Index does not exist (and so the
+                    # statsmodels compat makes it an empty tuple, so in that
                     # case also check if the first element is a float.
                     _index = np.asarray(index)
                     if (is_numeric_dtype(_index) or
@@ -143,7 +141,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     index = _index
                 except:
                     # Only want to actually raise an exception if `dates` was
-                    # provided but can't be coerced. If we got the index from
+                    # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
                     # index below
                     if dates is not None:
@@ -181,7 +179,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
-                    resampled_index = type(index)(
+                    resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq)
                     if not inferred_freq and not resampled_index.equals(index):
                         raise ValueError('The given frequency argument could'
@@ -203,11 +201,13 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
+        period_index = isinstance(index, PeriodIndex)
         int_index = isinstance(index, Int64Index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
+        is_monotonic = index.is_monotonic if date_index else None
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
@@ -217,12 +217,17 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn('A date index has been provided, but it has no'
                           ' associated frequency information and so will be'
                           ' ignored when e.g. forecasting.', ValueWarning)
+        if date_index and not is_monotonic:
+            warnings.warn('A date index has been provided, but it is not'
+                          ' monotonic and so will be ignored when e.g.'
+                          ' forecasting.', ValueWarning)
 
         # Construct the internal index
         index_generated = False
+        valid_index = ((date_index and has_freq and is_monotonic) or
+                       (int_index and is_increment) or range_index)
 
-        if ((date_index and has_freq) or (int_index and is_increment) or
-                range_index):
+        if valid_index:
             _index = index
         else:
             _index = increment
@@ -230,6 +235,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self._index = _index
         self._index_generated = index_generated
         self._index_none = index is None
+        self._index_int64 = int_index and not range_index and not date_index
         self._index_dates = date_index and not index_generated
         self._index_freq = self._index.freq if self._index_dates else None
         self._index_inferred_freq = inferred_freq
@@ -258,9 +264,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             The location of the key
         index : pd.Index
             The index including the key; this is a copy of the original index
-            unless the index had to be expanded to accomodate `key`.
+            unless the index had to be expanded to accommodate `key`.
         index_was_expanded : bool
-            Whether or not the index was expanded to accomodate `key`.
+            Whether or not the index was expanded to accommodate `key`.
 
         Notes
         -----
@@ -280,20 +286,27 @@ class TimeSeriesModel(base.LikelihoodModel):
         nobs = len(index)
 
         # Special handling for RangeIndex
-        if range_index and isinstance(key, (int, long, np.integer)):
+        if range_index and isinstance(key, (int, np.integer)):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
                 key = nobs + key
             # Out-of-sample (note that we include key itself in the new index)
             elif key > nobs - 1:
-                stop = base_index._start + (key + 1) * base_index._step
-                index = RangeIndex(start=base_index._start,
+                # See gh5835. Remove the except after pandas 0.25 required.
+                try:
+                    base_index_start = base_index.start
+                    base_index_step = base_index.step
+                except AttributeError:
+                    base_index_start = base_index._start
+                    base_index_step = base_index._step
+                stop = base_index_start + (key + 1) * base_index_step
+                index = RangeIndex(start=base_index_start,
                                    stop=stop,
-                                   step=base_index._step)
+                                   step=base_index_step)
 
         # Special handling for Int64Index
         if (not range_index and int_index and not date_index and
-                isinstance(key, (int, long, np.integer))):
+                isinstance(key, (int, np.integer))):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
                 key = nobs + key
@@ -303,17 +316,22 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Special handling for date indexes
         if date_index:
+            # Use index type to choose creation function
+            if index_class is DatetimeIndex:
+                index_fn = date_range
+            else:
+                index_fn = period_range
             # Integer key (i.e. already given a location)
-            if isinstance(key, (int, long, np.integer)):
+            if isinstance(key, (int, np.integer)):
                 # Negative indices (that lie in the Index)
                 if key < 0 and -key < nobs:
                     key = index[nobs + key]
                 # Out-of-sample (note that we include key itself in the new
                 # index)
                 elif key > len(base_index) - 1:
-                    index = index_class(start=base_index[0],
-                                        periods=int(key + 1),
-                                        freq=base_index.freq)
+                    index = index_fn(start=base_index[0],
+                                     periods=int(key + 1),
+                                     freq=base_index.freq)
                     key = index[-1]
                 else:
                     key = index[key]
@@ -328,14 +346,14 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # Out-of-sample
                 if date_key > base_index[-1]:
                     # First create an index that may not always include `key`
-                    index = index_class(start=base_index[0], end=date_key,
-                                        freq=base_index.freq)
+                    index = index_fn(start=base_index[0], end=date_key,
+                                     freq=base_index.freq)
 
                     # Now make sure we include `key`
                     if not index[-1] == date_key:
-                        index = index_class(start=base_index[0],
-                                            periods=len(index) + 1,
-                                            freq=base_index.freq)
+                        index = index_fn(start=base_index[0],
+                                         periods=len(index) + 1,
+                                         freq=base_index.freq)
 
         # Get the location
         if date_index:
@@ -367,7 +385,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Return the index through the end of the loc / slice
         if isinstance(loc, slice):
-            end = loc.stop
+            end = loc.stop - 1
         else:
             end = loc
 
@@ -393,9 +411,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             The location of the key
         index : pd.Index
             The index including the key; this is a copy of the original index
-            unless the index had to be expanded to accomodate `key`.
+            unless the index had to be expanded to accommodate `key`.
         index_was_expanded : bool
-            Whether or not the index was expanded to accomodate `key`.
+            Whether or not the index was expanded to accommodate `key`.
 
         Notes
         -----
@@ -410,7 +428,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 self._get_index_loc(key, base_index))
         except KeyError as e:
             try:
-                if not isinstance(key, (int, long, np.integer)):
+                if not isinstance(key, (int, np.integer)):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
@@ -472,7 +490,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Returns
         -------
-        start : integer
+        start : int
             The index / observation location at which to begin prediction.
         end : int
             The index / observation location at which to end in-sample
@@ -591,7 +609,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         self.data.xnames = vals
 
     # overwrite with writable property for (V)AR models
-    exog_names = property(_get_exog_names, _set_exog_names)
+    exog_names = property(_get_exog_names, _set_exog_names, None,
+                          'The names of the exogenous variables.')
 
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
@@ -616,12 +635,12 @@ if __name__ == "__main__":
     import statsmodels.api as sm
     import pandas
 
-    data = sm.datasets.macrodata.load(as_pandas=False)
+    mdata = sm.datasets.macrodata.load(as_pandas=False)
 
     #make a DataFrame
     #TODO: attach a DataFrame to some of the datasets, for quicker use
     dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in data.data[['year','quarter']]]
+             for x in mdata.data[['year','quarter']]]
 
-    df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
+    df = pandas.DataFrame(mdata.data[['realgdp','realinv','realcons']], index=dates)
     ex_mod = TimeSeriesModel(df)

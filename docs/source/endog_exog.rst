@@ -3,7 +3,7 @@
 ``endog``, ``exog``, what's that?
 =================================
 
-Statsmodels is using ``endog`` and ``exog`` as names for the data, the
+statsmodels is using ``endog`` and ``exog`` as names for the data, the
 observed variables that are used in an estimation problem. Other names that
 are often used in different statistical packages or text books are, for
 example,
@@ -21,8 +21,8 @@ response variable     explanatory variable
 ===================== ======================
 
 The usage is quite often domain and model specific; however, we have chosen
-to use `endog` and `exog` almost exclusively. A mnenomic hint to keep the two
-terms apart is that exogenous has an "x", as in x-variable, in it's name.
+to use `endog` and `exog` almost exclusively. A mnemonic hint to keep the two
+terms apart is that exogenous has an "x", as in x-variable, in its name.
 
 `x` and `y` are one letter names that are sometimes used for temporary
 variables and are not informative in itself. To avoid one letter names we

@@ -25,8 +25,7 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
-from __future__ import division
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -79,50 +78,18 @@ class Table(object):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A contingency table.
-    shift_zeros : boolean
+    shift_zeros : bool
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
     Attributes
     ----------
-    table_orig : array-like
+    table_orig : array_like
         The original table is cached as `table_orig`.
-    marginal_probabilities : tuple of two ndarrays
-        The estimated row and column marginal distributions.
-    independence_probabilities : ndarray
-        Estimated cell probabilities under row/column independence.
-    fittedvalues : ndarray
-        Fitted values under independence.
-    resid_pearson : ndarray
-        The Pearson residuals under row/column independence.
-    standardized_resids : ndarray
-        Residuals for the independent row/column model with approximate
-        unit variance.
-    chi2_contribs : ndarray
-        The contribution of each cell to the chi^2 statistic.
-    local_logodds_ratios : ndarray
-        The local log odds ratios are calculated for each 2x2 subtable
-        formed from adjacent rows and columns.
-    local_oddsratios : ndarray
-        The local odds ratios are calculated from each 2x2 subtable
-        formed from adjacent rows and columns.
-    cumulative_log_oddsratios : ndarray
-        The cumulative log odds ratio at a given pair of thresholds is
-        calculated by reducing the table to a 2x2 table based on
-        dichotomizing the rows and columns at the given thresholds.
-        The table of cumulative log odds ratios presents all possible
-        cumulative log odds ratios that can be formed from a given
-        table.
-    cumulative_oddsratios : ndarray
-        The cumulative odds ratios are calculated by reducing the
-        table to a 2x2 table based on cutting the rows and columns at
-        a given point.  The table of cumulative odds ratios presents
-        all possible cumulative odds ratios that can be formed from a
-        given table.
 
-    See also
+    See Also
     --------
     statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency
@@ -146,7 +113,7 @@ class Table(object):
         self.table = np.asarray(table, dtype=np.float64)
 
         if shift_zeros and (self.table.min() == 0):
-            self.table = self.table + 0.5
+            self.table[self.table == 0] = 0.5
 
     def __str__(self):
         s = ("A %dx%d contingency table with counts:\n" %
@@ -161,10 +128,10 @@ class Table(object):
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             The raw data, from which a contingency table is constructed
             using the first two columns.
-        shift_zeros : boolean
+        shift_zeros : bool
             If True and any cell count is zero, add 0.5 to all values
             in the table.
 
@@ -194,7 +161,7 @@ class Table(object):
 
         statistic : float
             The chi^2 test statistic.
-        df : integer
+        df : int
             The degrees of freedom of the reference distribution
         pvalue : float
             The p-value for the test.
@@ -219,9 +186,9 @@ class Table(object):
 
         Parameters
         ----------
-        row_scores : array-like
+        row_scores : array_like
             An array of numeric row scores
-        col_scores : array-like
+        col_scores : array_like
             An array of numeric column scores
 
         Returns
@@ -465,10 +432,10 @@ class SquareTable(Table):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A square contingency table, or DataFrame that is converted
         to a square form.
-    shift_zeros : boolean
+    shift_zeros : bool
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
@@ -555,7 +522,7 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        method : string
+        method : str
             Either 'stuart_maxwell' or 'bhapkar', leading to two different
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
@@ -566,7 +533,7 @@ class SquareTable(Table):
             The chi^2 test statistic
         pvalue : float
             The p-value of the test statistic
-        df : integer
+        df : int
             The degrees of freedom of the reference distribution
 
         Notes
@@ -644,9 +611,9 @@ class SquareTable(Table):
         ----------
         alpha : float
             `1 - alpha` is the nominal coverage probability of the interval.
-        float_format : string
+        float_format : str
             Used to format numeric values in the table.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -671,29 +638,11 @@ class Table2x2(SquareTable):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A 2x2 contingency table
-    shift_zeros : boolean
+    shift_zeros : bool
         If true, 0.5 is added to all cells of the table if any cell is
         equal to zero.
-
-    Attributes
-    ----------
-    log_oddsratio : float
-        The log odds ratio of the table.
-    log_oddsratio_se : float
-        The asymptotic standard error of the estimated log odds ratio.
-    oddsratio : float
-        The odds ratio of the table.
-    riskratio : float
-        The ratio between the risk in the first row and the risk in
-        the second row.  Column 0 is interpreted as containing the
-        number of occurences of the event of interest.
-    log_riskratio : float
-        The estimated log risk ratio for the table.
-    log_riskratio_se : float
-        The standard error of the estimated log risk ratio for the
-        table.
 
     Notes
     -----
@@ -725,10 +674,10 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             The raw data, the first column defines the rows and the
             second column defines the columns.
-        shift_zeros : boolean
+        shift_zeros : bool
             If True, and if there are any zeros in the contingency
             table, add 0.5 to all four cells of the table.
         """
@@ -800,7 +749,7 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -821,7 +770,7 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -833,7 +782,7 @@ class Table2x2(SquareTable):
         """
         Returns the risk ratio for a 2x2 table.
 
-        The risk ratio is calcuoated with respec to the rows.
+        The risk ratio is calculated with respect to the rows.
         """
 
         p = self.table[:, 0] / self.table.sum(1)
@@ -842,7 +791,7 @@ class Table2x2(SquareTable):
     @cache_readonly
     def log_riskratio(self):
         """
-        Returns the log od the risk ratio.
+        Returns the log of the risk ratio.
         """
 
         return np.log(self.riskratio)
@@ -893,7 +842,7 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -913,7 +862,7 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -929,15 +878,15 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the confidence
             intervals.
-        float_format : string
+        float_format : str
             Used to format the numeric values in the table.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 
@@ -978,26 +927,6 @@ class StratifiedTable(object):
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
 
-    Attributes
-    ----------
-    logodds_pooled : float
-        An estimate of the pooled log odds ratio.  This is the
-        Mantel-Haenszel estimate of an odds ratio that is common to
-        all the tables.
-    logodds_pooled_se : float
-        The estimated standard error of the pooled log odds ratio,
-        following Robins, Breslow and Greenland (Biometrics
-        42:311-323).
-    oddsratio_pooled : float
-        An estimate of the pooled odds ratio.  This is the
-        Mantel-Haenszel estimate of an odds ratio that is common to
-        all tables.
-    riskratio_pooled : float
-        An estimate of the pooled risk ratio.  This is an estimate of
-        a risk ratio that is common to all the tables.
-    risk_pooled : float
-        Same as riskratio_pooled, deprecated.
-
     Notes
     -----
     This results are based on a sampling model in which the units are
@@ -1012,6 +941,10 @@ class StratifiedTable(object):
                 raise ValueError("If an ndarray, argument must be 2x2xn")
             table = tables
         else:
+            if any([np.asarray(x).shape != (2, 2) for x in tables]):
+                m = "If `tables` is a list, all of its elements should be 2x2"
+                raise ValueError(m)
+
             # Create a data cube
             table = np.dstack(tables).astype(np.float64)
 
@@ -1024,7 +957,7 @@ class StratifiedTable(object):
 
         self.table = table
 
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Quantities to precompute.  Table entries are [[a, b], [c,
         # d]], 'ad' is 'a * d', 'apb' is 'a + b', 'dma' is 'd - a',
@@ -1057,7 +990,7 @@ class StratifiedTable(object):
         strata : int or string
             The column index or name of `data` specifying the variable
             defining the strata.
-        data : array-like
+        data : array_like
             The raw data.  A cross-table for analysis is constructed
             from the first two columns.
 
@@ -1095,7 +1028,7 @@ class StratifiedTable(object):
 
         Parameters
         ----------
-        correction : boolean
+        correction : bool
             If True, use the continuity correction when calculating the
             test statistic.
 
@@ -1146,6 +1079,9 @@ class StratifiedTable(object):
 
     @cache_readonly
     def riskratio_pooled(self):
+        """
+        Estimate of the pooled risk ratio.
+        """
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1162,6 +1098,15 @@ class StratifiedTable(object):
 
     @cache_readonly
     def logodds_pooled_se(self):
+        """
+        Estimated standard error of the pooled log odds ratio
+
+        References
+        ----------
+        J. Robins, N. Breslow, S. Greenland. "Estimators of the
+        Mantel-Haenszel Variance Consistent in Both Sparse Data and
+        Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
+        """
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
@@ -1186,7 +1131,7 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1217,7 +1162,7 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1242,7 +1187,7 @@ class StratifiedTable(object):
 
         Parameters
         ----------
-        adjust : boolean
+        adjust : bool
             Use the 'Tarone' adjustment to achieve the chi^2
             asymptotic distribution.
 
@@ -1264,7 +1209,8 @@ class StratifiedTable(object):
         c = -r * self._apb * self._apc
 
         # Expected value of first cell
-        e11 = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
+        dr = np.sqrt(b**2 - 4*a*c)
+        e11 = (-b + dr) / (2*a)
 
         # Variance of the first cell
         v11 = (1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) +
@@ -1296,15 +1242,15 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence intervals.
-        float_format : string
+        float_format : str
             Used for formatting numeric values in the summary.
-        method : string
+        method : str
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 
@@ -1350,7 +1296,7 @@ def mcnemar(table, exact=True, correction=True):
 
     Parameters
     ----------
-    table : array-like
+    table : array_like
         A square contingency table.
     exact : bool
         If exact is true, then the binomial distribution will be used.
@@ -1409,7 +1355,7 @@ def cochrans_q(x, return_object=True):
     ----------
     x : array_like, 2d (N, k)
         data with N cases and k variables
-    return_object : boolean
+    return_object : bool
         Return values as bunch instead of as individual values.
 
     Returns
@@ -1441,7 +1387,7 @@ def cochrans_q(x, return_object=True):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Cochran_test
+    https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
     """
 

@@ -64,7 +64,7 @@ West or similar are on the covariance matrix of the moment conditions
 
 quasi-MLE: MLE with mis-specified model where parameter estimates are
 fine (consistent ?) but cov_params needs to be adjusted similar or
-same as in sandwiches. (I didn't go through any details yet.)
+same as in sandwiches. (I did not go through any details yet.)
 
 TODO
 ----
@@ -101,11 +101,9 @@ for inference with clustered errors,” The Review of Economics and
 Statistics 90, no. 3 (2008): 414–427.
 
 """
-from statsmodels.compat.python import range
-import pandas as pd
 import numpy as np
 
-from statsmodels.tools.grouputils import Group, group_sums
+from statsmodels.tools.grouputils import combine_indices, group_sums
 from statsmodels.stats.moment_helpers import se_cov
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
@@ -248,7 +246,7 @@ def _get_sandwich_arrays(results, cov_type=''):
 
         # experimental support for freq_weights
         if hasattr(results.model, 'freq_weights') and not cov_type == 'clu':
-            # we don't want to square the weights in the covariance calculations
+            # we do not want to square the weights in the covariance calculations
             # assumes that freq_weights are incorporated in score_obs or equivalent
             # assumes xu/score_obs is 2D
             # temporary asarray
@@ -589,10 +587,9 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     #[0] because we get still also returns bse
     cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
-    group_intersection = Group(group)
-    #cov of cluster formed by intersection of two groups
+    # cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
-                        group_intersection.group_int,
+                        combine_indices(group)[0],
                         use_correction=use_correction)
 
     #robust cov matrix for union of groups

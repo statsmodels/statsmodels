@@ -1,11 +1,11 @@
-"""
+r"""
 Bayesian inference for generalized linear mixed models.
 
 Currently only families without additional scale or shape parameters
 are supported (binomial and Poisson).
 
 Two estimation approaches are supported: Laplace approximation
-("maximum a posteriori"), and variational Bayes (mean field
+('maximum a posteriori'), and variational Bayes (mean field
 approximation to the posterior distribution).
 
 All realizations of random effects are modeled to be mutually
@@ -15,10 +15,13 @@ The `exog_vc` matrix is the design matrix for the random effects.
 Every column of `exog_vc` corresponds to an independent realization of
 a random effect.  These random effects have mean zero and an unknown
 standard deviation.  The standard deviation parameters are constrained
-to be equal within subsets of the columns. These subsets are specified
-through the parameer `ident` when not using formulas.  When formulas
-are used, the columns of `exog_vc` derived from a common formula are
-constrained to have the same standard deviation.
+to be equal within subsets of the columns. When not using formulas,
+these subsets are specified through the parameter `ident`.  `ident`
+must have the same length as the number of columns of `exog_vc`, and
+two columns whose `ident` values are equal have the same standard
+deviation.  When formulas are used, the columns of `exog_vc` derived
+from a common formula are constrained to have the same standard
+deviation.
 
 In many applications, `exog_vc` will be sparse.  A sparse matrix may
 be passed when constructing a model class.  If a dense matrix is
@@ -30,18 +33,19 @@ Model and parameterization
 --------------------------
 The joint density of data and parameters factors as:
 
-  p(y | vc, fep) p(vc | vcp) p(vcp) p(fe)
+.. math::
 
-The terms p(vcp) and p(fe) are prior distributions that are taken to
-be Gaussian (the vcp parameters are log standard deviations so the
-standard deviations have log-normal distributions).  The random
-effects distribution p(vc | vcp) is independent Gaussian (random
-effect realizations are independent within and between values of the
-`ident` array).  The model p(y | vc, fep) depends on the specific GLM
-being fit.
+    p(y | vc, fep) p(vc | vcp) p(vcp) p(fe)
+
+The terms :math:`p(vcp)` and :math:`p(fe)` are prior distributions
+that are taken to be Gaussian (the :math:`vcp` parameters are log
+standard deviations so the standard deviations have log-normal
+distributions).  The random effects distribution :math:`p(vc | vcp)`
+is independent Gaussian (random effect realizations are independent
+within and between values of the `ident` array).  The model
+:math:`p(y | vc, fep)` depends on the specific GLM being fit.
 """
 
-from __future__ import division
 import numpy as np
 from scipy.optimize import minimize
 from scipy import sparse
@@ -67,7 +71,7 @@ glw = [
 ]
 
 _init_doc = r"""
-    Fit a generalized linear mixed model using Bayesian methods.
+    Generalized Linear Mixed Model with Bayesian estimation
 
     The class implements the Laplace approximation to the posterior
     distribution (`fit_map`) and a variational Bayes approximation to
@@ -76,18 +80,18 @@ _init_doc = r"""
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Vector of response values.
-    exog : array-like
+    exog : array_like
         Array of covariates for the fixed effects part of the mean
         structure.
-    exog_vc : array-like
+    exog_vc : array_like
         Array of covariates for the random part of the model.  A
         scipy.sparse array may be provided, or else the passed
         array will be converted to sparse internally.
-    ident : array-like
-        Array of labels showing which random terms (columns of
-        `exog_vc`) have a common variance.
+    ident : array_like
+        Array of integer labels showing which random terms (columns
+        of `exog_vc`) have a common variance.
     vcp_p : float
         Prior standard deviation for variance component parameters
         (the prior standard deviation of log(s) is vcp_p, where s is
@@ -96,14 +100,14 @@ _init_doc = r"""
         Prior standard deviation for fixed effects parameters.
     family : statsmodels.genmod.families instance
         The GLM family.
-    fep_names : list of strings
+    fep_names : list[str]
         The names of the fixed effects parameters (corresponding to
         columns of exog).  If None, default names are constructed.
-    vcp_names : list of strings
+    vcp_names : list[str]
         The names of the variance component parameters (corresponding
         to distinct labels in ident).  If None, default names are
         constructed.
-    vc_names : list of strings
+    vc_names : list[str]
         The names of the random effect realizations.
 
     Returns
@@ -116,20 +120,20 @@ _init_doc = r"""
     fixed effects parameters (fep), corresponding to the columns of
     `exog`, random effects realizations (vc), corresponding to the
     columns of `exog_vc`, and the standard deviations of the random
-    effects realizations (vcp), corresponding to the unique labels in
-    `ident`.
+    effects realizations (vcp), corresponding to the unique integer
+    labels in `ident`.
 
     All random effects are modeled as being independent Gaussian
-    values (given the variance parameters).  Every column of `exog_vc`
-    has a distinct realized random effect that is used to form the
-    linear predictors.  The elements of `ident` determine the distinct
-    random effect variance parameters.  Two random effect realizations
-    that have the same value in `ident` are constrained to have the
-    same variance.  When fitting with a formula, `ident` is
-    constructed internally (each element of `vc_formulas` yields a
-    distinct label in `ident`).
+    values (given the variance structure parameters).  Every column of
+    `exog_vc` has a distinct realized random effect that is used to
+    form the linear predictors.  The elements of `ident` determine the
+    distinct variance structure parameters.  Two random effect
+    realizations that have the same value in `ident` have the same
+    variance.  When fitting with a formula, `ident` is constructed
+    internally (each element of `vc_formulas` yields a distinct label
+    in `ident`).
 
-    The random effect standard deviation parameters (vcp) have
+    The random effect standard deviation parameters (`vcp`) have
     log-normal prior distributions with mean 0 and standard deviation
     `vcp_p`.
 
@@ -157,26 +161,28 @@ _init_doc = r"""
     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
     """
 
+# The code in the example should be identical to what appears in
+# the test_doc_examples unit test
 _logit_example = """
     A binomial (logistic) random effects model with random intercepts
     for villages and random slopes for each year within each village:
 
-    >>> data['year_cen'] = data['Year'] - data.Year.mean()
-    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
-    >>> model = BinomialBayesMixedGLM.from_formula('y ~ year_cen',
-                   random, data)
-    >>> result = model.fit()
+    >>> random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    >>> model = BinomialBayesMixedGLM.from_formula(
+                   'y ~ year_cen', random, data)
+    >>> result = model.fit_vb()
 """
 
+# The code in the example should be identical to what appears in
+# the test_doc_examples unit test
 _poisson_example = """
     A Poisson random effects model with random intercepts for villages
     and random slopes for each year within each village:
 
-    >>> data['year_cen'] = data['Year'] - data.Year.mean()
-    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
-    >>> model = PoissonBayesMixedGLM.from_formula('y ~ year_cen',
-                    random, data)
-    >>> result = model.fit()
+    >>> random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
+    >>> model = PoissonBayesMixedGLM.from_formula(
+                    'y ~ year_cen', random, data)
+    >>> result = model.fit_vb()
 """
 
 
@@ -194,8 +200,37 @@ class _BayesMixedGLM(base.Model):
                  vc_names=None,
                  **kwargs):
 
+        if exog.ndim == 1:
+            if isinstance(exog, np.ndarray):
+                exog = exog[:, None]
+            else:
+                exog = pd.DataFrame(exog)
+
+        if exog.ndim != 2:
+            msg = "'exog' must have one or two columns"
+            raise ValueError(msg)
+
+        if exog_vc.ndim == 1:
+            if isinstance(exog_vc, np.ndarray):
+                exog_vc = exog_vc[:, None]
+            else:
+                exog_vc = pd.DataFrame(exog_vc)
+
+        if exog_vc.ndim != 2:
+            msg = "'exog_vc' must have one or two columns"
+            raise ValueError(msg)
+
+        ident = np.asarray(ident)
+        if ident.ndim != 1:
+            msg = "ident must be a one-dimensional array"
+            raise ValueError(msg)
+
         if len(ident) != exog_vc.shape[1]:
             msg = "len(ident) should match the number of columns of exog_vc"
+            raise ValueError(msg)
+
+        if not np.issubdtype(ident.dtype, np.integer):
+            msg = "ident must have an integer dtype"
             raise ValueError(msg)
 
         # Get the fixed effects parameter names
@@ -235,7 +270,7 @@ class _BayesMixedGLM(base.Model):
             k_vc = exog_vc.shape[1]
             k_vcp = max(ident) + 1
 
-        # power would be better but not available in older scipy
+        # power might be better but not available in older scipy
         exog_vc2 = exog_vc.multiply(exog_vc)
 
         super(_BayesMixedGLM, self).__init__(endog, exog, **kwargs)
@@ -380,15 +415,15 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        formula : string
-            Formula for the endog and fixed effects terms (use ~ to separate
-            dependent and independent expressions).
+        formula : str
+            Formula for the endog and fixed effects terms (use ~ to
+            separate dependent and independent expressions).
         vc_formulas : dictionary
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
-            prameter.  If using a categorical expression to produce
-            variance components, note that generally `0 + ...` should
-            be used so that an intercept is not included.
+            parameter.  If using categorical (factor) variables to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
         data : data frame
             The data to which the formulas are applied.
         family : genmod.families instance
@@ -408,7 +443,7 @@ class _BayesMixedGLM(base.Model):
             mat = patsy.dmatrix(fml, data, return_type='dataframe')
             exog_vc.append(mat)
             vcp_names.append(na)
-            ident.append(j * np.ones(mat.shape[1]))
+            ident.append(j * np.ones(mat.shape[1], dtype=np.integer))
             j += 1
         exog_vc = pd.concat(exog_vc, axis=1)
         vc_names = exog_vc.columns.tolist()
@@ -431,25 +466,26 @@ class _BayesMixedGLM(base.Model):
 
     def fit(self, method="BFGS", minim_opts=None):
         """
-        fit is equivalent to fit_map for this class.
+        fit is equivalent to fit_map.
 
         See fit_map for parameter information.
+
+        Use `fit_vb` to fit the model using variational Bayes.
         """
         self.fit_map(method, minim_opts)
 
     def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
         """
-        Construct the Laplace approximation to the posterior
-        distribution.
+        Construct the Laplace approximation to the posterior distribution.
 
         Parameters
         ----------
-        method : string
+        method : str
             Optimization method for finding the posterior mode.
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize.
         scale_fe : bool
-            If true, the columns of the fixed effects design matrix
+            If True, the columns of the fixed effects design matrix
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
@@ -502,18 +538,18 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameter vector, may be the full parameter vector, or may
             be truncated to include only the mean parameters.
-        exog : array-like
+        exog : array_like
             The design matrix for the mean structure.  If omitted, use the
             model's design matrix.
         linear : bool
             If True, return the linear predictor without passing through the
             link function.
 
-        Result
-        ------
+        Returns
+        -------
         A 1-dimensional array of predicted values
         """
 
@@ -567,7 +603,7 @@ class _VariationalBayesMixedGLM(object):
             The contribution of the model to the ELBO function can be
             expressed as y_i*lp_i + Eh_i(z), where y_i and lp_i are
             the response and linear predictor for observation i, and z
-            is a standard normal rangom variable.  This formulation
+            is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
         """
@@ -662,13 +698,13 @@ class _VariationalBayesMixedGLM(object):
 
         Parameters
         ----------
-        mean : array-like
+        mean : array_like
             Starting value for VB mean vector
-        sd : array-like
+        sd : array_like
             Starting value for VB standard deviation vector
-        fit_method : string
+        fit_method : str
             Algorithm for scipy.minimize
-        minim_opts : dict-like
+        minim_opts : dict
             Options passed to scipy.minimize
         scale_fe : bool
             If true, the columns of the fixed effects design matrix
@@ -730,12 +766,12 @@ class _VariationalBayesMixedGLM(object):
             # caller)
             s = np.log(sd)
 
-        # Don't allow the variance parameter starting mean values to
+        # Do not allow the variance parameter starting mean values to
         # be too small.
         i1, i2 = self.k_fep, self.k_fep + self.k_vcp
         m[i1:i2] = np.where(m[i1:i2] < -1, -1, m[i1:i2])
 
-        # Don't allow the posterior standard deviation starting values
+        # Do not allow the posterior standard deviation starting values
         # to be too small.
         s = np.where(s < -1, -1, s)
 
@@ -816,21 +852,23 @@ class _VariationalBayesMixedGLM(object):
 
 class BayesMixedGLMResults(object):
     """
+    Class to hold results from a Bayesian estimation of a Mixed GLM model.
+
     Attributes
     ----------
-    fe_mean : array-like
+    fe_mean : array_like
         Posterior mean of the fixed effects coefficients.
-    fe_sd : array-like
+    fe_sd : array_like
         Posterior standard deviation of the fixed effects coefficients
-    vcp_mean : array-like
+    vcp_mean : array_like
         Posterior mean of the logged variance component standard
         deviations.
-    vcp_sd : array-like
+    vcp_sd : array_like
         Posterior standard deviation of the logged variance component
         standard deviations.
-    vc_mean : array-like
+    vc_mean : array_like
         Posterior mean of the random coefficients
-    vc_sd : array-like
+    vc_sd : array_like
         Posterior standard deviation of the random coefficients
     """
 
@@ -899,8 +937,10 @@ class BayesMixedGLMResults(object):
                        " Mixed GLM Results")
         summ.add_df(df)
 
-        summ.add_text("Parameter types are mean structure (M) and variance structure (V)")
-        summ.add_text("Variance parameters are modeled as log standard deviations")
+        summ.add_text("Parameter types are mean structure (M) and "
+                      "variance structure (V)")
+        summ.add_text("Variance parameters are modeled as log "
+                      "standard deviations")
 
         return summ
 
@@ -947,7 +987,7 @@ class BayesMixedGLMResults(object):
 
         Parameters
         ----------
-        exog : array-like
+        exog : array_like
             The design matrix for the mean structure.  If None,
             use the model's design matrix.
         linear : bool
@@ -988,6 +1028,10 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             fep_names=fep_names,
             vcp_names=vcp_names,
             vc_names=vc_names)
+
+        if not np.all(np.unique(endog) == np.r_[0, 1]):
+            msg = "endog values must be 0 and 1, and not all identical"
+            raise ValueError(msg)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):

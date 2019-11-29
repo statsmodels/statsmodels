@@ -14,17 +14,17 @@ Examples
 --------
 
 .. ipython:: python
-    :okwarning:
+   :okwarning:
 
-    # Load modules and data
-    import statsmodels.api as sm
-    data = sm.datasets.scotland.load(as_pandas=False)
-    data.exog = sm.add_constant(data.exog)
+   # Load modules and data
+   import statsmodels.api as sm
+   data = sm.datasets.scotland.load(as_pandas=False)
+   data.exog = sm.add_constant(data.exog)
 
-    # Instantiate a gamma family model with the default link function.
-    gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
-    gamma_results = gamma_model.fit()
-    print(gamma_results.summary())
+   # Instantiate a gamma family model with the default link function.
+   gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
+   gamma_results = gamma_model.fit()
+   print(gamma_results.summary())
 
 Detailed examples can be found here:
 
@@ -146,7 +146,6 @@ The distribution families currently implemented are
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/glmfamilies.rst
 
    Family
    Binomial
@@ -212,13 +211,13 @@ the variance functions here:
 .. autosummary::
    :toctree: generated/
 
-  VarianceFunction
-  constant
-  Power
-  mu
-  mu_squared
-  mu_cubed
-  Binomial
-  binary
-  NegativeBinomial
-  nbinom
+   VarianceFunction
+   constant
+   Power
+   mu
+   mu_squared
+   mu_cubed
+   Binomial
+   binary
+   NegativeBinomial
+   nbinom

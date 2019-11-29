@@ -43,7 +43,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     else:
         n = np.cumsum(n[::-1])[::-1]
 
-    # Only retain times where an event occured.
+    # Only retain times where an event occurred.
     if compress:
         ii = np.flatnonzero(d > 0)
         d = d[ii]
@@ -171,22 +171,22 @@ class CumIncidenceRight(object):
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         An array of times (censoring times or event times)
-    status : array-like
-        If status >= 1 indicates which event occured at time t.  If
+    status : array_like
+        If status >= 1 indicates which event occurred at time t.  If
         status = 0, the subject was censored at time t.
-    title : string
+    title : str
         Optional title used for plots and summary output.
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
-    exog : array-like
+    exog : array_like
         Optional, if present used to account for violation of
         independent censoring.
     bw_factor : float
         Band-width multiplier for kernel-based estimation.  Only
         used if exog is provided.
-    dimred : boolean
+    dimred : bool
         If True, proportional hazards regression models are used to
         reduce exog to two columns by predicting overall events and
         censoring in two separate models.  If False, exog is used
@@ -195,7 +195,7 @@ class CumIncidenceRight(object):
 
     Attributes
     ----------
-    times : array-like
+    times : array_like
         The distinct times at which the incidence rates are estimated
     cinc : list of arrays
         cinc[k-1] contains the estimated cumulative incidence rates
@@ -229,7 +229,7 @@ class CumIncidenceRight(object):
     D. Zeng (2004).  Estimating marginal survival function by
     adjusting for dependent censoring using many covariates.  Annals
     of Statistics 32:4.
-    http://arxiv.org/pdf/math/0409180.pdf
+    https://arxiv.org/pdf/math/0409180.pdf
     """
 
     def __init__(self, time, status, title=None, freq_weights=None,
@@ -271,22 +271,22 @@ class SurvfuncRight(object):
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         An array of times (censoring times or event times)
-    status : array-like
+    status : array_like
         Status at the event time, status==1 is the 'event'
         (e.g. death, failure), meaning that the event
         occurs at the given value in `time`; status==0
-        indicates that censoring has occured, meaning that
+        indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
-    entry : array-like, optional An array of entry times for handling
+    entry : array_like, optional An array of entry times for handling
         left truncation (the subject is not in the risk set on or
         before the entry time)
-    title : string
+    title : str
         Optional title used for plots and summary output.
-    freq_weights : array-like
+    freq_weights : array_like
         Optional frequency weights
-    exog : array-like
+    exog : array_like
         Optional, if present used to account for violation of
         independent censoring.
     bw_factor : float
@@ -295,18 +295,18 @@ class SurvfuncRight(object):
 
     Attributes
     ----------
-    surv_prob : array-like
+    surv_prob : array_like
         The estimated value of the survivor function at each time
         point in `surv_times`.
-    surv_prob_se : array-like
+    surv_prob_se : array_like
         The standard errors for the values in `surv_prob`.  Not available
         if exog is provided.
-    surv_times : array-like
+    surv_times : array_like
         The points where the survival function changes.
-    n_risk : array-like
+    n_risk : array_like
         The number of subjects at risk just before each time value in
         `surv_times`.  Not available if exog is provided.
-    n_events : array-like
+    n_events : array_like
         The number of events (e.g. deaths) that occur at each point
         in `surv_times`.  Not available if exog is provided.
 
@@ -325,7 +325,7 @@ class SurvfuncRight(object):
     D. Zeng (2004).  Estimating marginal survival function by
     adjusting for dependent censoring using many covariates.  Annals
     of Statistics 32:4.
-    http://arxiv.org/pdf/math/0409180.pdf
+    https://arxiv.org/pdf/math/0409180.pdf
     """
 
     def __init__(self, time, status, entry=None, title=None,
@@ -381,7 +381,7 @@ class SurvfuncRight(object):
         >>> li[0].set_color('purple')
         >>> li[1].set_color('purple')
 
-        Don't show the censoring points:
+        Do not show the censoring points:
 
         >>> fig = sf.plot()
         >>> ax = fig.get_axes()[0]
@@ -424,7 +424,7 @@ class SurvfuncRight(object):
         alpha : float
             The confidence interval has nominal coverage probability
             1 - `alpha`.
-        method : string
+        method : str
             Function to use for g-transformation, must be ...
 
         Returns
@@ -488,7 +488,7 @@ class SurvfuncRight(object):
         """
         Return a summary of the estimated survival function.
 
-        The summary is a datafram containing the unique event times,
+        The summary is a dataframe containing the unique event times,
         estimated survival function values, and related quantities.
         """
 
@@ -511,11 +511,11 @@ class SurvfuncRight(object):
             `1 - alpha` is the desired simultaneous coverage
             probability for the confidence region.  Currently alpha
             must be set to 0.05, giving 95% simultaneous intervals.
-        method : string
+        method : str
             The method used to produce the simultaneous confidence
             band.  Only the Hall-Wellner (hw) method is currently
             implemented.
-        transform : string
+        transform : str
             The used to produce the interval (note that the returned
             interval is on the survival probability scale regardless
             of which transform is used).  Only `log` and `arcsin` are
@@ -523,10 +523,10 @@ class SurvfuncRight(object):
 
         Returns
         -------
-        lcb : array-like
+        lcb : array_like
             The lower confidence limits corresponding to the points
             in `surv_times`.
-        ucb : array-like
+        ucb : array_like
             The upper confidence limits corresponding to the points
             in `surv_times`.
         """
@@ -570,15 +570,15 @@ def survdiff(time, status, group, weight_type=None, strata=None,
 
     Parameters
     ----------
-    time : array-like
+    time : array_like
         The event or censoring times.
-    status : array-like
+    status : array_like
         The censoring status variable, status=1 indicates that the
-        event occured, status=0 indicates that the observation was
+        event occurred, status=0 indicates that the observation was
         censored.
-    group : array-like
+    group : array_like
         Indicators of the two groups
-    weight_type : string
+    weight_type : str
         The following weight types are implemented:
             None (default) : logrank test
             fh : Fleming-Harrington, weights by S^(fh_p),
@@ -589,14 +589,14 @@ def survdiff(time, status, group, weight_type=None, strata=None,
             gb : Gehan-Breslow, weights by the number at risk
             tw : Tarone-Ware, weights by the square root of the number
                  at risk
-    strata : array-like
+    strata : array_like
         Optional stratum indicators for a stratified test
-    entry : array-like
+    entry : array_like
         Entry times to handle left truncation. The subject is not in
         the risk set on or before the entry time.
 
     Returns
-    --------
+    -------
     chisq : The chi-square (1 degree of freedom) distributed test
             statistic value
     pvalue : The p-value for the chi^2 test
@@ -734,7 +734,7 @@ def plot_survfunc(survfuncs, ax=None):
 
     Parameters
     ----------
-    survfuncs : object or array-like
+    survfuncs : object or array_like
         A single SurvfuncRight object, or a list or SurvfuncRight
         objects that are plotted together.
 
@@ -798,7 +798,7 @@ def plot_survfunc(survfuncs, ax=None):
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))
-        ti = sf.time[ii]
+        ti = np.unique(sf.time[ii])
         jj = np.searchsorted(surv_times, ti) - 1
         sp = surv_prob[jj]
         ax.plot(ti, sp, '+', ms=12, color=li.get_color(),

@@ -17,7 +17,6 @@ TODO
 * refactor to store intermediate results
 * how easy is it to attach a test that is a class to a result instance,
   for example CompareCox as a method compare_cox(self, other) ?
-* StatTestMC has been moved and should be deleted
 
 missing:
 
@@ -29,17 +28,17 @@ missing:
 
 
 """
-from __future__ import print_function
-from statsmodels.compat.python import iteritems, lrange, map, long
+from statsmodels.compat.python import iteritems
+from collections.abc import Iterable
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.tools.validation import array_like, int_like
 
-#get the old signature back so the examples work
+
+# get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
                     store=store, regresults=False)
@@ -140,7 +139,6 @@ class CompareCox(object):
 
 
 compare_cox = CompareCox()
-compare_cox.__doc__ = CompareCox.__doc__
 
 
 class CompareJ(object):
@@ -158,7 +156,7 @@ class CompareJ(object):
     From description in Greene, section 8.3.3
 
     produces correct results for Example 8.3, Greene - not checked yet
-    #currently an exception, but I don't have clean reload in python session
+    #currently an exception, but I do not have clean reload in python session
 
     check what results should be attached
 
@@ -223,89 +221,106 @@ class CompareJ(object):
 
 
 compare_j = CompareJ()
-compare_j.__doc__ = CompareJ.__doc__
 
 
-def acorr_ljungbox(x, lags=None, boxpierce=False):
+def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
     """
     Ljung-Box test for no autocorrelation
 
     Parameters
     ----------
-    x : array_like, 1d
-        data series, regression residuals when used as diagnostic test
-    lags : None, int or array_like
+    x : array_like
+        The data series, assumed to have mean zero, .e.g, regression residuals
+        when used as diagnostic test.
+    lags : {None, int, array_like}
         If lags is an integer then this is taken to be the largest lag
-        that is included, the test result is reported for all smaller lag length.
-        If lags is a list or array, then all lags are included up to the largest
-        lag in the list, however only the tests for the lags in the list are
-        reported.
-        If lags is None, then the default maxlag is 'min((nobs // 2 - 2), 40)'
+        that is included, the test result is reported for all smaller lag
+        length. If lags is a list or array, then all lags are included up to
+        the largest lag in the list, however only the tests for the lags in
+        the list are reported. If lags is None, then the default maxlag is
+        min((nobs // 2 - 2), 40).
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
+    model_df : int
+        Number of degrees of freedom consumed by the model. In an ARMA model,
+        this value is usually p+q where p is the AR order and q is the MA
+        order. This value is subtracted from the degrees-of-freedom used in
+        the test so that the adjusted dof for the statistics are
+        lags - model_df. If lags - model_df <= 0, then NaN is returned.
 
     Returns
     -------
     lbvalue : float or array
-        test statistic
+        The Ljung-Box test statistic.
     pvalue : float or array
-        p-value based on chi-square distribution
-    bpvalue : (optionsal), float or array
-        test statistic for Box-Pierce test
+        The p-value based on chi-square distribution. The p-value is computed
+        as 1.0 - chi2.cdf(lbvalue, dof) where dof is lag - model_df. If
+        lag - model_df < 0, then NaN is returned for the pvalue.
+    bpvalue : (optional), float or array
+        The test statistic for Box-Pierce test.
     bppvalue : (optional), float or array
-        p-value based for Box-Pierce test on chi-square distribution
+        The p-value based for Box-Pierce test on chi-square distribution.
+        The p-value is computed as 1.0 - chi2.cdf(bpvalue, dof) where dof is
+        lag - model_df. If lag - model_df < 0, then NaN is returned for the
+        pvalue.
 
     Notes
     -----
     Ljung-Box and Box-Pierce statistic differ in their scaling of the
-    autocorrelation function. Ljung-Box test is reported to have better
-    small sample properties.
-
-    TODO: could be extended to work with more than one series
-    1d or nd ? axis ? ravel ?
-    needs more testing
+    autocorrelation function. Ljung-Box test is has better finite-sample
+    properties.
 
     *Verification*
 
+    needs more testing
     Looks correctly sized in Monte Carlo studies.
     not yet compared to verified values
 
     Examples
     --------
-    see example script
+    >>> data = sm.datasets.sunspots.load_pandas().data
+    >>> res = sm.tsa.ARMA(data['SUNACTIVITY'], (1,1)).fit(disp=-1)
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
+    (array([214.10699875]), array([1.82736777e-40]))
 
     References
     ----------
     Greene
     Wikipedia
     """
-    x = np.asarray(x)
+    # TODO: Need a reasonable results class
+    x = array_like(x, 'x')
     nobs = x.shape[0]
     if lags is None:
-        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1)
-    elif isinstance(lags, (int, long)):
+        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=np.int)
+    elif not isinstance(lags, Iterable):
+        lags = int_like(lags, 'lags')
         lags = np.arange(1, lags + 1)
-    lags = np.asarray(lags)
-    maxlag = max(lags)
+    lags = array_like(lags, 'lags', dtype=np.int)
+    maxlag = lags.max()
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
-    acfx = acf(x, nlags=maxlag, fft=False)
-    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-    qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
-    pval = stats.chi2.sf(qljungbox, lags)
+    sacf = acf(x, nlags=maxlag, fft=False)
+    sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+    qljungbox = nobs * (nobs + 2) * np.cumsum(sacf2)[lags - 1]
+    adj_lags = lags - model_df
+    pval = np.full_like(qljungbox, np.nan)
+    loc = adj_lags > 0
+    pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
     if not boxpierce:
         return qljungbox, pval
-    else:
-        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
-        pvalbp = stats.chi2.sf(qboxpierce, lags)
-        return qljungbox, pval, qboxpierce, pvalbp
+
+    qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
+    pvalbp = np.full_like(qljungbox, np.nan)
+    pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
+    return qljungbox, pval, qboxpierce, pvalbp
 
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
 
-    This is a generic Lagrange Multiplier test for autocorrelation. I don't
+    This is a generic Lagrange Multiplier test for autocorrelation. I do not
     have a reference for it, but it returns Engle's ARCH test if x is the
     squared residual array. A variation on it with additional exogenous
     variables is the Breusch-Godfrey autocorrelation test.
@@ -361,7 +376,8 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     xdall = np.c_[np.ones((nobs,1)), xdall]
     xshort = x[-nobs:]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = ResultsStore()
 
     if autolag:
         #search for lag length with highest information criteria
@@ -441,7 +457,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
 
     Notes
     -----
-    verified agains R:FinTS::ArchTest
+    verified against R:FinTS::ArchTest
 
     '''
 
@@ -491,7 +507,10 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
     '''
 
-    x = np.asarray(results.resid)
+    x = np.asarray(results.resid).squeeze()
+    if x.ndim != 1:
+        raise ValueError('Model resid must be a 1d array. Cannot be used on'
+                         ' multivariate models.')
     exog_old = results.model.exog
     nobs = x.shape[0]
     if nlags is None:
@@ -510,7 +529,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     exog = np.column_stack((exog_old, xdall))
     k_vars = exog.shape[1]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = ResultsStore()
 
     resols = OLS(xshort, exog).fit()
     ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
@@ -531,28 +551,20 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
-msg = "Use acorr_breusch_godfrey, acorr_breush_godfrey will be removed " \
-      "in 0.9 \n (Note: misspelling missing 'c'),"
-
-acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
-                               'acorr_breusch_godfrey',
-                               msg)
-
-
 def het_breuschpagan(resid, exog_het):
-    '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
+    r'''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+    :math: \sigma_i = \sigma * f(\alpha_0 + \alpha z_i)
 
-    Homoscedasticity implies that $\\alpha=0$
+    Homoscedasticity implies that $\alpha=0$
 
 
     Parameters
     ----------
-    resid : array-like
+    resid : array_like
         For the Breusch-Pagan test, this should be the residual of a regression.
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should
@@ -579,7 +591,7 @@ def het_breuschpagan(resid, exog_het):
     Assumes x contains constant (for counting dof and calculation of R^2).
     In the general description of LM test, Greene mentions that this test
     exaggerates the significance of results in small or moderately large
-    samples. In this case the F-statistic is preferrable.
+    samples. In this case the F-statistic is preferable.
 
     *Verification*
 
@@ -594,7 +606,7 @@ def het_breuschpagan(resid, exog_het):
 
     References
     ----------
-    http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
+    https://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
     Greene 5th edition
     Breusch, Pagan article
 
@@ -610,9 +622,6 @@ def het_breuschpagan(resid, exog_het):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
 
-het_breushpagan = np.deprecate(het_breuschpagan, 'het_breushpagan', 'het_breuschpagan',
-                               "Use het_breuschpagan, het_breushpagan will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'c')")
 
 def het_white(resid, exog, retres=False):
     '''White's Lagrange Multiplier Test for Heteroscedasticity
@@ -623,7 +632,7 @@ def het_white(resid, exog, retres=False):
         residuals, square of it is used as endogenous variable
     exog : array_like
         possible explanatory variables for variance, squares and interaction
-        terms are included in the auxilliary regression.
+        terms are included in the auxiliary regression.
     resstore : instance (optional)
         a class instance that holds intermediate results. Only returned if
         store=True
@@ -669,7 +678,7 @@ def het_white(resid, exog, retres=False):
     #degrees of freedom take possible reduced rank in exog into account
     #df_model checks the rank to determine df
     #extra calculation that can be removed:
-    assert resols.df_model == np_matrix_rank(exog) - 1
+    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
@@ -682,14 +691,14 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
-    split : None or integer or float in intervall (0,1)
-        index at which sample is split.
-        If 0<split<1 then split is interpreted as fraction of the observations
-        in the first sample
-    retres : boolean
+    split : {None, int, float}
+        If an int, the index at which sample is split.
+        If a float 0<split<1 then split is interpreted as fraction of the
+        observations in the first sample
+    retres : bool
         if true, then an instance of a result class is returned,
         otherwise 2 numbers, fvalue and p-value, are returned
 
@@ -738,7 +747,7 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = 'larger'
     else:
-        fval = 1./fval;
+        fval = 1./fval
         fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = 'smaller'
 
@@ -771,7 +780,7 @@ class HetGoldfeldQuandt(object):
         endogenous variable
     x : array_like
         exogenous variable, regressors
-    idx : integer
+    idx : int
         column index of variable according to which observations are
         sorted for the split
     split : None or integer or float in intervall (0,1)
@@ -786,7 +795,7 @@ class HetGoldfeldQuandt(object):
         split+drop, where split and drop are the indices (given by rounding if
         specified as fraction). The first sample is [0:split], the second
         sample is [split+drop:]
-    alternative : string, 'increasing', 'decreasing' or 'two-sided'
+    alternative : str, 'increasing', 'decreasing' or 'two-sided'
         default is increasing. This specifies the alternative for the p-value
         calculation.
 
@@ -830,7 +839,7 @@ class HetGoldfeldQuandt(object):
         else:
             start2 = split + drop
 
-        if not idx is None:
+        if idx is not None:
             xsortind = np.argsort(x[:,idx])
             y = y[xsortind]
             x = x[xsortind,:]
@@ -843,7 +852,7 @@ class HetGoldfeldQuandt(object):
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
-            fval = fval;
+            fval = fval
             fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
@@ -885,8 +894,9 @@ class HetGoldfeldQuandt(object):
         return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
                         alternative=alternative)
 
+
 het_goldfeldquandt = HetGoldfeldQuandt()
-het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
+
 
 def linear_harvey_collier(res):
     '''Harvey Collier test for linearity
@@ -958,7 +968,7 @@ def linear_lm(resid, exog, func=None):
     '''Lagrange multiplier test for linearity against functional alternative
 
     limitations: Assumes currently that the first column is integer.
-    Currently it doesn't check whether the transformed variables contain NaNs,
+    Currently it does not check whether the transformed variables contain NaNs,
     for example log of negative number.
 
     Parameters
@@ -983,7 +993,7 @@ def linear_lm(resid, exog, func=None):
     Notes
     -----
     written to match Gretl's linearity test.
-    The test runs an auxilliary regression of the residuals on the combined
+    The test runs an auxiliary regression of the residuals on the combined
     original and transformed regressors.
     The Null hypothesis is that the linear specification is correct.
 
@@ -1001,6 +1011,86 @@ def linear_lm(resid, exog, func=None):
     lm = nobs * ls.rsquared
     lm_pval = stats.chi2.sf(lm, k_vars - 1)
     return lm, lm_pval, ftest
+
+
+def spec_white(resid, exog):
+    '''
+    White's Two-Moment Specification Test
+
+    Parameters
+    ----------
+    resid : array_like
+        OLS residuals
+    exog : array_like
+        OLS design matrix
+
+    Returns
+    -------
+    stat : float
+        test statistic
+    pval : float
+        chi-square p-value for test statistic
+    dof : int
+        degrees of freedom
+
+    Notes
+    -----
+    Implements the two-moment specification test described by White's
+    Theorem 2 (1980, p. 823) which compares the standard OLS covariance
+    estimator with White's heteroscedasticity-consistent estimator. The
+    test statistic is shown to be chi-square distributed.
+
+    Null hypothesis is homoscedastic and correctly specified.
+
+    Assumes the OLS design matrix contains an intercept term and at least
+    one variable. The intercept is removed to calculate the test statistic.
+
+    Interaction terms (squares and crosses of OLS regressors) are added to
+    the design matrix to calculate the test statistic.
+
+    Degrees-of-freedom (full rank) = nvar + nvar * (nvar + 1) / 2
+
+    Linearly dependent columns are removed to avoid singular matrix error.
+
+    Reference
+    ---------
+    White, H. (1980). A heteroskedasticity-consistent covariance matrix
+    estimator and a direct test for heteroscedasticity. Econometrica,
+    48: 817-838.
+
+    See also het_white.
+    '''
+    x = np.asarray(exog)
+    e = np.asarray(resid)
+    if x.ndim == 1:
+        raise ValueError('X should have a constant and at least one variable')
+
+    # add interaction terms
+    i0, i1 = np.triu_indices(x.shape[1])
+    exog = np.delete(x[:,i0] * x[:,i1], 0, 1)
+
+    # collinearity check - see _fit_collinear
+    atol=1e-14
+    rtol=1e-13
+    tol = atol + rtol * exog.var(0)
+    r = np.linalg.qr(exog, mode='r')
+    mask = np.abs(r.diagonal()) < np.sqrt(tol)
+    exog = exog[:,np.where(~mask)[0]]
+
+    # calculate test statistic
+    sqe = e * e
+    sqmndevs = sqe - np.mean(sqe)
+    d = np.dot(exog.T, sqmndevs)
+    devx = exog - np.mean(exog, axis=0)
+    devx *= sqmndevs[:, None]
+    b = devx.T.dot(devx)
+    stat = d.dot(np.linalg.solve(b, d))
+
+    # chi-square test
+    dof = devx.shape[1]
+    pval = stats.chi2.sf(stat, dof)
+    return stat, pval, dof
+
 
 def _neweywestcov(resid, x):
     '''
@@ -1222,8 +1312,8 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
     nrr = nobs-skip
     #sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
-            #Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
-    #Gretl uses: by reverse engineering matching their numbers
+    # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
+    # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
     rcusum = rresid_standardized[skip-1:].cumsum()
@@ -1322,11 +1412,11 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     Notes
     -----
-    tested agains R:strucchange
+    tested against R:strucchange
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
-    Is this really necessary? I don't see how it can affect the test statistic
+    Is this really necessary? I do not see how it can affect the test statistic
     under the null. It does make a difference under the alternative.
     Also, the asymptotic distribution of test statistic depends on this.
 
@@ -1335,7 +1425,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
     References
     ----------
-    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
 
     '''
@@ -1366,7 +1456,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 #
 #    References
 #    ----------
-#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
 #    Econometrica 60, no. 2 (March 1992): 271-285.
 #
 #    '''
@@ -1411,99 +1501,6 @@ def breaks_AP(endog, exog, skip):
     '''
     pass
 
-
-#delete when testing is finished
-class StatTestMC(object):
-    """class to run Monte Carlo study on a statistical test'''
-
-    TODO
-    print(summary, for quantiles and for histogram
-    draft in trying out script log
-
-
-    this has been copied to tools/mctools.py, with improvements
-
-    """
-
-    def __init__(self, dgp, statistic):
-        self.dgp = dgp #staticmethod(dgp)  #no self
-        self.statistic = statistic # staticmethod(statistic)  #no self
-
-    def run(self, nrepl, statindices=None, dgpargs=[], statsargs=[]):
-        '''run the actual Monte Carlo and save results
-
-
-        '''
-        self.nrepl = nrepl
-        self.statindices = statindices
-        self.dgpargs = dgpargs
-        self.statsargs = statsargs
-
-        dgp = self.dgp
-        statfun = self.statistic # name ?
-
-        #single return statistic
-        if statindices is None:
-            self.nreturn = nreturns = 1
-            mcres = np.zeros(nrepl)
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
-        #more than one return statistic
-        else:
-            self.nreturn = nreturns = len(statindices)
-            self.mcres = mcres = np.zeros((nrepl, nreturns))
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                ret = statfun(x, *statsargs)
-                mcres[ii] = [ret[i] for i in statindices]
-
-        self.mcres = mcres
-
-    def histogram(self, idx=None, critval=None):
-        '''calculate histogram values
-
-        does not do any plotting
-        '''
-        if self.mcres.ndim == 2:
-            if idx is not None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        if critval is None:
-            histo = np.histogram(mcres, bins=10)
-        else:
-            if not critval[0] == -np.inf:
-                bins=np.r_[-np.inf, critval, np.inf]
-            if not critval[0] == -np.inf:
-                bins=np.r_[bins, np.inf]
-            histo = np.histogram(mcres,
-                                 bins=np.r_[-np.inf, critval, np.inf])
-
-        self.histo = histo
-        self.cumhisto = np.cumsum(histo[0])*1./self.nrepl
-        self.cumhistoreversed = np.cumsum(histo[0][::-1])[::-1]*1./self.nrepl
-        return histo, self.cumhisto, self.cumhistoreversed
-
-    def quantiles(self, idx=None, frac=[0.01, 0.025, 0.05, 0.1, 0.975]):
-        '''calculate quantiles of Monte Carlo results
-
-        '''
-
-        if self.mcres.ndim == 2:
-            if not idx is None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        self.frac = frac = np.asarray(frac)
-        self.mcressort = mcressort = np.sort(self.mcres)
-        return frac, mcressort[(self.nrepl*frac).astype(int)]
 
 if __name__ == '__main__':
 
@@ -1557,40 +1554,6 @@ if __name__ == '__main__':
         print(np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf]))
 
         print(mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)])
-
-
-        def randwalksim(nobs=100, drift=0.0):
-            return (drift+np.random.randn(nobs)).cumsum()
-
-        def normalnoisesim(nobs=500, loc=0.0):
-            return (loc+np.random.randn(nobs))
-
-        def adf20(x):
-            return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
-
-        print('\nResults with MC class')
-        mc1 = StatTestMC(randwalksim, adf20)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26]))
-        print(mc1.quantiles(0))
-
-        print('\nLjung Box')
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=4)
-            return s[-1], p[-1]
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=1)
-            return s[0], p[0]
-
-        print('Results with MC class')
-        mc1 = StatTestMC(normalnoisesim, lb4)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
-        print(mc1.quantiles(1))
-        print(mc1.quantiles(0))
-        print(mc1.histogram(0))
 
     nobs = 100
     x = np.ones((nobs,2))

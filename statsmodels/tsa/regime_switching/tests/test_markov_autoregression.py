@@ -4,7 +4,6 @@ Tests for Markov Autoregression models
 Author: Chad Fulton
 License: BSD-3
 """
-from __future__ import division, absolute_import, print_function
 
 import warnings
 import os
@@ -168,7 +167,7 @@ def test_predict():
     assert_allclose(mod_resid[1, 1, :], resids[1, 1, :])
 
 
-def test_conditional_likelihoods():
+def test_conditional_loglikelihoods():
     # AR(1) without mean, k_regimes=2, non-switching variance
     endog = np.ones(10)
     mod = markov_autoregression.MarkovAutoregression(
@@ -180,7 +179,8 @@ def test_conditional_likelihoods():
     resid = mod._resid(params)
     conditional_likelihoods = (
         np.exp(-0.5 * resid**2 / 2) / np.sqrt(2 * np.pi * 2))
-    assert_equal(mod._conditional_likelihoods(params), conditional_likelihoods)
+    assert_allclose(mod._conditional_loglikelihoods(params),
+                    np.log(conditional_likelihoods))
 
     # AR(1) without mean, k_regimes=3, switching variance
     endog = np.ones(10)
@@ -190,27 +190,27 @@ def test_conditional_likelihoods():
     assert_equal(mod.endog, np.ones(9))
 
     params = np.r_[[0.3]*6, 2., 3., 4., 1.5, 3., 4.5, 0.1, 0.5, 0.8]
-    mod_conditional_likelihoods = mod._conditional_likelihoods(params)
+    mod_conditional_loglikelihoods = mod._conditional_loglikelihoods(params)
     conditional_likelihoods = mod._resid(params)
 
     # S_t = 0
     conditional_likelihoods[0, :, :] = (
         np.exp(-0.5 * conditional_likelihoods[0, :, :]**2 / 1.5) /
         np.sqrt(2 * np.pi * 1.5))
-    assert_allclose(mod_conditional_likelihoods[0, :, :],
-                    conditional_likelihoods[0, :, :])
+    assert_allclose(mod_conditional_loglikelihoods[0, :, :],
+                    np.log(conditional_likelihoods[0, :, :]))
     # S_t = 1
     conditional_likelihoods[1, :, :] = (
         np.exp(-0.5 * conditional_likelihoods[1, :, :]**2 / 3.) /
         np.sqrt(2 * np.pi * 3.))
-    assert_allclose(mod_conditional_likelihoods[1, :, :],
-                    conditional_likelihoods[1, :, :])
+    assert_allclose(mod_conditional_loglikelihoods[1, :, :],
+                    np.log(conditional_likelihoods[1, :, :]))
     # S_t = 2
     conditional_likelihoods[2, :, :] = (
         np.exp(-0.5 * conditional_likelihoods[2, :, :]**2 / 4.5) /
         np.sqrt(2 * np.pi * 4.5))
-    assert_allclose(mod_conditional_likelihoods[2, :, :],
-                    conditional_likelihoods[2, :, :])
+    assert_allclose(mod_conditional_loglikelihoods[2, :, :],
+                    np.log(conditional_likelihoods[2, :, :]))
 
 
 class MarkovAutoregression(object):
@@ -234,6 +234,7 @@ class MarkovAutoregression(object):
         assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
                         rtol=self.rtol)
 
+    @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
         res_em = self.model._fit_em(**kwargs)
@@ -517,7 +518,7 @@ class TestHamiltonAR4(MarkovAutoregression):
                         hamilton_ar4_smoothed, atol=1e-5)
 
     def test_bse(self):
-        # Can't compare middle element of bse because we estimate sigma^2
+        # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-6)
@@ -573,7 +574,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
         assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
 
     def test_bse(self):
-        # Can't compare middle element of bse because we estimate sigma^2
+        # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
         assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-7)
@@ -793,7 +794,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 
@@ -831,11 +832,11 @@ class TestFilardo(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit(self, **kwargs):
         pass
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 
@@ -876,11 +877,11 @@ class TestFilardoPandas(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit(self, **kwargs):
         pass
 
-    @pytest.mark.skip
+    @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
     def test_fit_em(self):
         pass
 

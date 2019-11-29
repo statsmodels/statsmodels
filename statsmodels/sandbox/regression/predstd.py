@@ -68,7 +68,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
 
     '''
     # work around current bug:
-    #    fit doesn't attach results to model, predict broken
+    #    fit does not attach results to model, predict broken
     #res.model.results
 
     covb = res.cov_params()

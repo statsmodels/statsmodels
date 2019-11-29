@@ -201,6 +201,7 @@ def test_plots(close_figures):
     assert_equal(3, len(fig_loadings))
 
 
+@pytest.mark.smoke
 def test_getframe_smoke():
     #  mostly smoke tests for now
     mod = Factor(X.iloc[:, 1:-1], 2, smc=True)
@@ -208,16 +209,16 @@ def test_getframe_smoke():
 
     df = res.get_loadings_frame(style='raw')
     assert_(isinstance(df, pd.DataFrame))
-    if pd.__version__ < '0.17':
-        return
+
     lds = res.get_loadings_frame(style='strings', decimals=3, threshold=0.3)
     lds.to_latex()
 
     # The Styler option require jinja2, skip if not available
     try:
-        from jinja2 import Template
+        from jinja2 import Template  # noqa:F401
     except ImportError:
         return
+        # TODO: separate this and do pytest.skip?
 
     try:
         from pandas.io import formats as pd_formats
@@ -250,6 +251,7 @@ def _zscore(x):
     return (x - x.mean(0)) / x.std(0)
 
 
+@pytest.mark.smoke
 def test_factor_scoring():
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)

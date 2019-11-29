@@ -4,18 +4,15 @@ explicit functions for autocovariance functions of ARIMA(1,1), MA(1), MA(2)
 plus 3 functions from nitime.utils
 
 '''
-from __future__ import print_function
-from statsmodels.compat.python import range
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import matplotlib.pyplot as plt
 
-import matplotlib.mlab as mlab
-
+import statsmodels.api as sm
 from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
 from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
-#from movstat import acf, acovf
-#from statsmodels.sandbox.tsa import acf, acovf, pacf
-from statsmodels.tsa.stattools import acf, acovf, pacf
+from statsmodels.tsa.stattools import acf, acovf
+from statsmodels.graphics.tsaplots import plotacf
 
 ar = [1., -0.6]
 #ar = [1., 0.]
@@ -192,7 +189,7 @@ definition r(k) = E{s(n)s*(n-k)} where E{} is the expectation operator.
 
 #JP: with valid this returns a single value, if x and y have same length
 #   e.g. norm_corr(x, x)
-#   using std subtracts mean, but correlate doesn't, requires means are exactly 0
+#   using std subtracts mean, but correlate does not, requires means are exactly 0
 #   biased, no n-k correction for laglength
 #from nitime.utils
 def norm_corr(x,y,mode = 'valid'):
@@ -208,7 +205,7 @@ their lengths. This results in a correlation = 1 for an auto-correlation"""
 # from matplotlib axes.py
 # note: self is axis
 def pltacorr(self, x, **kwargs):
-    """
+    r"""
     call signature::
 
         acorr(x, normed=True, detrend=detrend_none, usevlines=True,
@@ -334,9 +331,11 @@ def pltxcorr(self, x, y, normed=True, detrend=detrend_none,
 
     c = np.correlate(x, y, mode=2)
 
-    if normed: c/= np.sqrt(np.dot(x,x) * np.dot(y,y))
+    if normed:
+        c /= np.sqrt(np.dot(x, x) * np.dot(y, y))
 
-    if maxlags is None: maxlags = Nx - 1
+    if maxlags is None:
+        maxlags = Nx - 1
 
     if maxlags >= Nx or maxlags < 1:
         raise ValueError('maxlags must be None or strictly '
@@ -385,10 +384,8 @@ print(acf2m[:10])
 
 x = arma_generate_sample([1.0, -0.8], [1.0], 500)
 print(acf(x)[:20])
-import statsmodels.api as sm
 print(sm.regression.yule_walker(x, 10))
 
-import matplotlib.pyplot as plt
 #ax = plt.axes()
 plt.plot(x)
 #plt.show()

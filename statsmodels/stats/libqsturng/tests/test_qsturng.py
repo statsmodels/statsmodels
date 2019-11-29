@@ -77,6 +77,7 @@ class TestQsturng(object):
         for p,r,v,q in cases:
             assert_almost_equal(q, qsturng(p,r,v), 5)
 
+    # TODO: do something with this?
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
     @pytest.mark.skip
@@ -186,15 +187,13 @@ class TestPsturng(object):
     @pytest.mark.slow
     def test_100_random_values(self, reset_randomstate):
         n = 100
-        ps = np.random.random(n)*(.999 - .1) + .1
-        rs = np.random.randint(2, 101, n)
-        vs = np.random.random(n)*998. + 2.
+        random_state = np.random.RandomState(12345)
+        ps = random_state.random_sample(n)*(.999 - .1) + .1
+        rs = random_state.randint(2, 101, n)
+        vs = random_state.random_sample(n)*998. + 2.
         qs = qsturng(ps, rs, vs)
         estimates = psturng(qs, rs, vs)
         actuals = 1. - ps
         errors = estimates - actuals
 
         assert_equal(np.array([]), np.where(errors > 1e-5)[0])
-
-##     def test_more_exotic_stuff(self, level=3):
-##         something_obscure_and_expensive()

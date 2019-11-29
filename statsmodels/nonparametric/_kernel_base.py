@@ -2,7 +2,6 @@
 Module containing the base object for multivariate kernel density and
 regression, plus some utilities.
 """
-from statsmodels.compat.python import range, string_types
 import copy
 
 import numpy as np
@@ -107,7 +106,7 @@ class GenericKDE (object):
 
         Parameters
         ----------
-        bw: array_like or str
+        bw : {array_like, str}
             If array_like: user-specified bandwidth.
             If a string, should be one of:
 
@@ -122,7 +121,7 @@ class GenericKDE (object):
         if bw is None:
             bw = 'normal_reference'
 
-        if not isinstance(bw, string_types):
+        if not isinstance(bw, str):
             self._bw_method = "user-specified"
             res = np.asarray(bw)
         else:
@@ -178,7 +177,7 @@ class GenericKDE (object):
 
         if bw is None:
             self._bw_method = 'normal_reference'
-        if isinstance(bw, string_types):
+        if isinstance(bw, str):
             self._bw_method = bw
         else:
             self._bw_method = "user-specified"
@@ -212,7 +211,7 @@ class GenericKDE (object):
                 joblib.delayed(_compute_subset)(
                     class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
                     n_sub, class_vars, self.randomize, bounds[i]) \
-                    for i in range(n_blocks))
+                for i in range(n_blocks))
         else:
             res = []
             for i in range(n_blocks):
@@ -340,34 +339,34 @@ class EstimatorSettings(object):
     """
     Object to specify settings for density estimation or regression.
 
-    `EstimatorSettings` has several proporties related to how bandwidth
+    `EstimatorSettings` has several properties related to how bandwidth
     estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
     `KernelReg` and `CensoredKernelReg` classes behaves.
 
     Parameters
     ----------
-    efficient: bool, optional
+    efficient : bool, optional
         If True, the bandwidth estimation is to be performed
         efficiently -- by taking smaller sub-samples and estimating
         the scaling factor of each subsample.  This is useful for large
         samples (nobs >> 300) and/or multiple variables (k_vars > 3).
         If False (default), all data is used at the same time.
-    randomize: bool, optional
+    randomize : bool, optional
         If True, the bandwidth estimation is to be performed by
         taking `n_res` random resamples (with replacement) of size `n_sub` from
         the full sample.  If set to False (default), the estimation is
         performed by slicing the full sample in sub-samples of size `n_sub` so
         that all samples are used once.
-    n_sub: int, optional
+    n_sub : int, optional
         Size of the sub-samples.  Default is 50.
-    n_res: int, optional
+    n_res : int, optional
         The number of random re-samples used to estimate the bandwidth.
         Only has an effect if ``randomize == True``.  Default value is 25.
-    return_median: bool, optional
+    return_median : bool, optional
         If True (default), the estimator uses the median of all scaling factors
         for each sub-sample to estimate the bandwidth of the full sample.
         If False, the estimator uses the mean.
-    return_only_bw: bool, optional
+    return_only_bw : bool, optional
         If True, the estimator is to use the bandwidth and not the
         scaling factor.  This is *not* theoretically justified.
         Should be used only for experimenting.
@@ -401,7 +400,7 @@ class LeaveOneOut(object):
 
     Parameters
     ----------
-    X : array-like
+    X : array_like
         2-D array.
 
     Examples
@@ -413,7 +412,7 @@ class LeaveOneOut(object):
 
     Notes
     -----
-    A little lighter weight than sklearn LOO. We don't need test index.
+    A little lighter weight than sklearn LOO. We do not need test index.
     Also passes views on X, not the index.
     """
     def __init__(self, X):
@@ -462,19 +461,19 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
 
     Parameters
     ----------
-    bw: 1-D ndarray
+    bw : 1-D ndarray
         The user-specified bandwidth parameters.
-    data: 1D or 2-D ndarray
+    data : 1D or 2-D ndarray
         The training data.
-    data_predict: 1-D ndarray
+    data_predict : 1-D ndarray
         The evaluation points at which the kernel estimation is performed.
-    var_type: str, optional
+    var_type : str, optional
         The variable type (continuous, ordered, unordered).
-    ckertype: str, optional
+    ckertype : str, optional
         The kernel used for the continuous variables.
-    okertype: str, optional
+    okertype : str, optional
         The kernel used for the ordered discrete variables.
-    ukertype: str, optional
+    ukertype : str, optional
         The kernel used for the unordered discrete variables.
     tosum : bool, optional
         Whether or not to sum the calculated array of densities.  Default is
@@ -482,7 +481,7 @@ def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
 
     Returns
     -------
-    dens: array-like
+    dens : array_like
         The generalized product kernel density estimator.
 
     Notes

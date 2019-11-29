@@ -18,8 +18,8 @@ License: BSD-3
 References
 ----------
 Wikipedia: kappa's initially based on these two pages
-    http://en.wikipedia.org/wiki/Fleiss%27_kappa
-    http://en.wikipedia.org/wiki/Cohen's_kappa
+    https://en.wikipedia.org/wiki/Fleiss%27_kappa
+    https://en.wikipedia.org/wiki/Cohen's_kappa
 SAS-Manual : formulas for cohens_kappa, especially variances
 see also R package irr
 
@@ -35,7 +35,6 @@ convenience functions to create required data format from raw data
 
 """
 
-from __future__ import division
 import numpy as np
 from scipy import stats  #get rid of this? need only norm.sf
 
@@ -46,7 +45,7 @@ class ResultsBunch(dict):
 
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
-        self.__dict__  = self
+        self.__dict__ = self
         self._initialize()
 
     def _initialize(self):
@@ -199,7 +198,7 @@ def fleiss_kappa(table, method='fleiss'):
     ----------
     table : array_like, 2-D
         assumes subjects in rows, and categories in columns
-    method : string
+    method : str
         Method 'fleiss' returns Fleiss' kappa which uses the sample margin
         to define the chance outcome.
         Method 'randolph' or 'uniform' (only first 4 letters are needed)
@@ -226,7 +225,7 @@ def fleiss_kappa(table, method='fleiss'):
 
     References
     ----------
-    Wikipedia http://en.wikipedia.org/wiki/Fleiss%27_kappa
+    Wikipedia https://en.wikipedia.org/wiki/Fleiss%27_kappa
 
     Fleiss, Joseph L. 1971. "Measuring Nominal Scale Agreement among Many
     Raters." Psychological Bulletin 76 (5): 378-82.
@@ -283,7 +282,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for
-    wt : None or string
+    wt : {None, str}
         If wt and weights are None, then the simple kappa is computed.
         If wt is given, but weights is None, then the weights are set to
         be [0, 1, 2, ..., k].
@@ -328,7 +327,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
     are zero distance apart and the same for the last two levels. This is
-    the sampe as forming two aggregated levels by merging the first two and
+    the sample as forming two aggregated levels by merging the first two and
     the last two levels, respectively.
 
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
@@ -427,8 +426,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                     kappa_max=kappa_max,
                     weights=weights,
                     var_kappa=var_kappa,
-                    var_kappa0=var_kappa0
-                    )
+                    var_kappa0=var_kappa0)
         return res
     else:
         return kappa
@@ -495,7 +493,7 @@ class KappaResults(ResultsBunch):
     template = _kappa_template
 
     def _initialize(self):
-        if not 'alpha' in self:
+        if 'alpha' not in self:
             self['alpha'] = 0.025
             self['alpha_ci'] = _int_ifclose(100 - 0.025 * 200)[1]
 
