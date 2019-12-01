@@ -3704,8 +3704,8 @@ class PredictionResults(pred.PredictionResults):
             ynames = self.model.data.ynames
             if not type(ynames) == list:
                 ynames = [ynames]
-            names = (['lower %s' % name for name in ynames] +
-                     ['upper %s' % name for name in ynames])
+            names = (['lower {0}'.format(name) for name in ynames] +
+                     ['upper {0}'.format(name) for name in ynames])
             conf_int.columns = names
 
         return conf_int
