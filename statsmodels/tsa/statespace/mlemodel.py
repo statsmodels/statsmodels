@@ -250,6 +250,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         # for subclasses to make _get_init_kwds useful.
         use_kwargs = self._get_init_kwds()
         use_kwargs.update(kwargs)
+
+        # Check for `exog`
+        if getattr(self, 'k_exog', 0) > 0 and kwargs.get('exog', None) is None:
+            raise ValueError('Cloning a model with an exogenous component'
+                             ' requires specifying a new exogenous array using'
+                             ' the `exog` argument.')
+
         return self.__class__(endog, **use_kwargs)
 
     def set_filter_method(self, filter_method=None, **kwargs):

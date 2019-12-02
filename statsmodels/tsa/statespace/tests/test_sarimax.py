@@ -2535,6 +2535,10 @@ def test_append_results():
     assert_allclose(res3.forecast(10, exog=np.ones(10)),
                     res1.forecast(10, exog=np.ones(10)))
 
+    # Check that we get an error if we try to append without exog
+    with pytest.raises(ValueError, match='Cloning a model with an exogenous'):
+        res2.append(endog[50:])
+
 
 def test_extend_results():
     endog = np.arange(100)
@@ -2572,6 +2576,10 @@ def test_extend_results():
 
     assert_allclose(res3.forecast(10, exog=np.ones(10)),
                     res1.forecast(10, exog=np.ones(10)))
+
+    # Check that we get an error if we try to extend without exog
+    with pytest.raises(ValueError, match='Cloning a model with an exogenous'):
+        res2.extend(endog[50:])
 
 
 def test_apply_results():
@@ -2612,6 +2620,10 @@ def test_apply_results():
 
     assert_allclose(res3.forecast(10, exog=np.ones(10)),
                     res1.forecast(10, exog=np.ones(10)))
+
+    # Check that we get an error if we try to apply without exog
+    with pytest.raises(ValueError, match='Cloning a model with an exogenous'):
+        res2.apply(endog[50:])
 
 
 def test_start_params_small_nobs():
