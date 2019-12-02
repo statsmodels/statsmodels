@@ -1,4 +1,4 @@
-__all__ = ['AR', 'arima', 'ARMA', 'ARIMA',
+__all__ = ['AR', 'arima', 'AutoReg', 'ARMA', 'ARIMA',
            'var', 'VAR', 'VECM', 'SVAR',
            'filters',
            'innovations',
@@ -20,7 +20,7 @@ __all__ = ['AR', 'arima', 'ARMA', 'ARIMA',
            'arma_generate_sample', 'ArmaProcess', 'STL',
            'bk_filter', 'cf_filter', 'hp_filter']
 
-from .ar_model import AR
+from .ar_model import AR, AutoReg
 from .arima import api as arima
 from .arima_model import ARMA, ARIMA
 from . import vector_ar as var

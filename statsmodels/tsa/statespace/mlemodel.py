@@ -2554,7 +2554,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
-
         """
         if method is None:
             method = 'jarquebera'
@@ -2740,7 +2739,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def test_serial_correlation(self, method, lags=None):
         """
-        Ljung-box test for no serial correlation of standardized residuals
+        Ljung-Box test for no serial correlation of standardized residuals
 
         Null hypothesis is no serial correlation.
 
@@ -2779,7 +2778,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.diagnostic.acorr_ljungbox
-
         """
         if method is None:
             method = 'ljungbox'
@@ -2931,7 +2929,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
+        forecast : array_like
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """

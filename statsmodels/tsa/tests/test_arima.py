@@ -20,7 +20,8 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning, HessianInversionWarning, SpecificationWarning,
     MissingDataError)
 from statsmodels.tools.testing import assert_equal
-from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
+from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.tests.results import results_arma, results_arima
@@ -2519,8 +2520,8 @@ def test_endog_int():
     y = np.random.randint(0, 16, size=100)
     yf = y.astype(np.float64)
 
-    res = AR(y).fit(5)
-    resf = AR(yf).fit(5)
+    res = AutoReg(y, 5).fit()
+    resf = AutoReg(yf, 5).fit()
     assert_allclose(res.params, resf.params, atol=1e-5)
     assert_allclose(res.bse, resf.bse, atol=1e-5)
 

@@ -153,6 +153,11 @@
       "id":"stats",
       "links":[
         {
+            "text": "Autoregressions",
+            "target": "notebooks/generated/autoregressions.html",
+            "img": "../_static/images/autoregressions.png"
+        },
+        {
             "text": "ARMA: Sunspots Data",
             "target": "notebooks/generated/tsa_arma_0.html",
             "img": "../_static/images/tsa_arma0.png"

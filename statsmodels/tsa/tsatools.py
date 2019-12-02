@@ -148,7 +148,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
 
     Parameters
     ----------
-    x : array
+    x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
     col : 'string', int, or None
@@ -676,7 +676,7 @@ def _ma_transparams(params):
 
     Parameters
     ----------
-    params : array
+    params : ndarray
         The ma coeffecients of an (AR)MA model.
 
     Reference
@@ -701,7 +701,7 @@ def _ma_invtransparams(macoefs):
 
     Parameters
     ----------
-    params : array
+    params : ndarray
         The transformed MA coefficients
     """
     tmp = macoefs.copy()

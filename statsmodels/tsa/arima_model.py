@@ -22,7 +22,7 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.validation import array_like, string_like
-from statsmodels.tsa.ar_model import AR
+from statsmodels.tsa.ar_model import AutoReg, ar_select_order
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.kalmanf import KalmanFilter
@@ -509,13 +509,14 @@ class ARMA(tsa_model.TimeSeriesModel):
                     maxlag = int(round(12 * (nobs / 100.) ** (1 / 4.)))
                     if maxlag >= nobs:
                         maxlag = nobs - 1
-                    armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                    mod = ar_select_order(endog, maxlag, trend='n').model
+                    armod = mod.fit()
                 else:
                     if start_ar_lags >= nobs:
                         start_ar_lags = nobs - 1
-                    armod = AR(endog).fit(trend='nc', maxlag=start_ar_lags)
+                    armod = AutoReg(endog, start_ar_lags, trend='n').fit()
                 arcoefs_tmp = armod.params
-                p_tmp = armod.k_ar
+                p_tmp = len(armod.ar_lags)
                 # it's possible in small samples that optimal lag-order
                 # does not leave enough obs. No consistent way to fix.
                 if p_tmp + q >= len(endog):
