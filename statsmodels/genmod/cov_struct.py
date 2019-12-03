@@ -307,39 +307,34 @@ class Nested(CovStruct):
     """
     A nested working dependence structure.
 
-    A working dependence structure that captures a nested hierarchy of
-    groups.  Each level of grouping contributes to the random error
-    structure of the model.
+    A nested working dependence structure captures unique variance
+    associated with each level in a hierarchy of partitions of the
+    cases.  For each level of the hierarchy, there is a set of iid
+    random effects with mean zero, and with variance that is specific
+    to the level.  These variance parameters are estimated from the
+    data using the method of moments.
 
-    When using this working covariance structure, `dep_data` of the
-    GEE instance should contain a n_obs x k matrix of 0/1 indicators,
-    corresponding to the k subgroups nested under the top-level
-    `groups` of the GEE instance.  These subgroups should be nested
-    from left to right, so that two observations with the same value
-    for column j of `dep_data` should also have the same value for all
-    columns j' < j (this only applies to observations in the same
-    top-level cluster given by the `groups` argument to GEE).
+    The top level of the hierarchy is always defined by the required
+    `groups` argument to GEE.
 
-    Examples
-    --------
-    Suppose our data are student test scores, and the students are in
-    classrooms, nested in schools, nested in school districts.  The
-    school district is the highest level of grouping, so the school
-    district id would be provided to GEE as `groups`, and the school
-    and classroom id's would be provided to the Nested class as the
-    `dep_data` argument, e.g.
+    The `dep_data` argument used to create the GEE defines the
+    remaining levels of the hierarchy.  it should be either an array,
+    or if using the formula interface, a string that contains a
+    formula.  If an array, it should contain a `n_obs x k` matrix of
+    labels, corresponding to the k levels of partitioning that are
+    nested under the top-level `groups` of the GEE instance.  These
+    subgroups should be nested from left to right, so that two
+    observations with the same label for column j of `dep_data` should
+    also have the same label for all columns j' < j (this only applies
+    to observations in the same top-level cluster given by the
+    `groups` argument to GEE).
 
-        0 0  # School 0, classroom 0, student 0
-        0 0  # School 0, classroom 0, student 1
-        0 1  # School 0, classroom 1, student 0
-        0 1  # School 0, classroom 1, student 1
-        1 0  # School 1, classroom 0, student 0
-        1 0  # School 1, classroom 0, student 1
-        1 1  # School 1, classroom 1, student 0
-        1 1  # School 1, classroom 1, student 1
-
-    Labels lower in the hierarchy are recycled, so that student 0 in
-    classroom 0 is different fro student 0 in classroom 1, etc.
+    If `dep_data` is a formula, it should usually be of the form `0 +
+    a + b + ...`, where `a`, `b`, etc. contain labels defining group
+    membership.  The `0 + ` should be included to prevent creation of
+    an intercept.  The variable values are interpreted as labels for
+    group membership, but the variables should not be explicitly coded
+    as categorical, i.e. use `0 + a` not `0 + C(a)`.
 
     Notes
     -----
@@ -347,11 +342,6 @@ class Nested(CovStruct):
     of observations within a group (that is, within the top level
     `group` structure passed to GEE).  Large group sizes will result
     in slow iterations.
-
-    The variance components are estimated using least squares
-    regression of the products r*r', for standardized residuals r and
-    r' in the same group, on a matrix of indicators defining which
-    variance components are shared by r and r'.
     """
 
     def initialize(self, model):
