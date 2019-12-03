@@ -16,7 +16,6 @@ set SPHINXOPTS=
 set TOOLSPATH=../tools
 set DATASETBUILD=dataset_rst.py
 set NOTEBOOKBUILD=nbgenerate.py
-set FOLDTOC=fold_toc.py
 
 if "%1" == "" goto help
 
