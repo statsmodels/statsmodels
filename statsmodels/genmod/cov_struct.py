@@ -338,10 +338,9 @@ class Nested(CovStruct):
 
     Notes
     -----
-    The calculations for this dependence structure involve all pairs
-    of observations within a group (that is, within the top level
-    `group` structure passed to GEE).  Large group sizes will result
-    in slow iterations.
+    The calculations for the nested structure involve all pairs of
+    observations within the top level `group` passed to GEE.  Large
+    group sizes will result in slow iterations.
     """
 
     def initialize(self, model):
