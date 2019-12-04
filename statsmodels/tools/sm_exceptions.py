@@ -127,6 +127,17 @@ class CollinearityWarning(ModelWarning):
     pass
 
 
+recarray_warning = """\
+recarray support has been deprecated and will be removed after 0.12.  Please \
+use pandas DataFrames and Series for structured data.
+
+You can suppress this warning using
+
+from warnings import filterwarnings
+filterwarnings("ignore", message="recarray support", category=FutureWarning)
+"""
+
+
 warnings.simplefilter('always', category=ModelWarning)
 warnings.simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
                                  IterationLimitWarning, InvalidTestWarning))

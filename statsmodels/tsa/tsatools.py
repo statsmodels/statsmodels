@@ -79,6 +79,11 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     is_pandas = _is_using_pandas(x, None) or is_recarray
     if is_pandas or is_recarray:
         if is_recarray:
+            # deprecated: remove recarray support after 0.12
+            import warnings
+            from statsmodels.tools.sm_exceptions import recarray_warning
+            warnings.warn(recarray_warning, FutureWarning)
+
             descr = x.dtype.descr
             x = pd.DataFrame.from_records(x)
         elif isinstance(x, pd.Series):

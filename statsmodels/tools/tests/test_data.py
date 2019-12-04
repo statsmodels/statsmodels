@@ -1,7 +1,9 @@
 import pandas
 import numpy as np
+import pytest
 
 from statsmodels.tools import data
+
 
 def test_missing_data_pandas():
     """
@@ -17,7 +19,8 @@ def test_structarray():
     X = np.random.random((9,)).view([('var1', 'f8'),
                                         ('var2', 'f8'),
                                         ('var3', 'f8')])
-    vals, cnames, rnames = data.interpret_data(X)
+    with pytest.warns(FutureWarning, match="recarray support"):
+        vals, cnames, rnames = data.interpret_data(X)
     np.testing.assert_equal(cnames, X.dtype.names)
     np.testing.assert_equal(vals, X.view((float,3)))
     np.testing.assert_equal(rnames, None)
@@ -26,7 +29,8 @@ def test_recarray():
     X = np.random.random((9,)).view([('var1', 'f8'),
                                         ('var2', 'f8'),
                                         ('var3', 'f8')])
-    vals, cnames, rnames = data.interpret_data(X.view(np.recarray))
+    with pytest.warns(FutureWarning, match="recarray support"):
+        vals, cnames, rnames = data.interpret_data(X.view(np.recarray))
     np.testing.assert_equal(cnames, X.dtype.names)
     np.testing.assert_equal(vals, X.view((float,3)))
     np.testing.assert_equal(rnames, None)

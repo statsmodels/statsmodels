@@ -188,6 +188,10 @@ def categorical(data, col=None, dictnames=False, drop=False):
         return dummies
     # catch recarrays and structured arrays
     elif data.dtype.names or data.__class__ is np.recarray:
+        # deprecated: remove path after 0.12
+        import warnings
+        from statsmodels.tools.sm_exceptions import recarray_warning
+        warnings.warn(recarray_warning, FutureWarning)
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
         if isinstance(col, int):
@@ -305,6 +309,11 @@ def add_constant(data, prepend=True, has_constant='skip'):
     column's name is 'const'.
     """
     if _is_using_pandas(data, None) or _is_recarray(data):
+        if _is_recarray(data):
+            # deprecated: remove recarray support after 0.12
+            import warnings
+            from statsmodels.tools.sm_exceptions import recarray_warning
+            warnings.warn(recarray_warning, FutureWarning)
         from statsmodels.tsa.tsatools import add_trend
         return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
 
