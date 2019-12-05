@@ -7,6 +7,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose, assert_, assert_array_less)
 import pandas as pd
+from pandas.testing import assert_series_equal
 import pytest
 from scipy import stats
 
@@ -168,8 +169,10 @@ class CheckModelResultsMixin(object):
         pvalues = stats.norm.sf(np.abs(tvalues)) * 2
         half_width = stats.norm.isf(0.025) * self.res1.bse
         conf_int = np.column_stack((params - half_width, params + half_width))
-
-        assert_almost_equal(self.res1.tvalues, tvalues)
+        if isinstance(tvalues, pd.Series):
+            assert_series_equal(self.res1.tvalues, tvalues)
+        else:
+            assert_almost_equal(self.res1.tvalues, tvalues)
         assert_almost_equal(self.res1.pvalues, pvalues)
         assert_almost_equal(self.res1.conf_int(), conf_int)
 
@@ -453,7 +456,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         from .results.results_glm import Lbw
         cls.res2 = Lbw()
         cls.res1 = GLM(cls.res2.endog, cls.res2.exog,
-                family=sm.families.Binomial()).fit()
+                       family=sm.families.Binomial()).fit()
 
         modd = discrete.Logit(cls.res2.endog, cls.res2.exog)
         cls.resd = modd.fit(start_params=cls.res1.params * 0.9, disp=False)
@@ -475,7 +478,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         select = list(range(9))
         select.pop(7)
 
-        res1b = GLM(res2.endog, res2.exog[:, select],
+        res1b = GLM(res2.endog, res2.exog.iloc[:, select],
                     family=sm.families.Binomial()).fit()
         tres = res1b.model.score_test(res1b.params,
                                       exog_extra=res1.model.exog[:, -2])

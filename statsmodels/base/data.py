@@ -59,6 +59,10 @@ class ModelData(object):
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
+        if data_util._is_recarray(endog) or data_util._is_recarray(exog):
+            import warnings
+            from statsmodels.tools.sm_exceptions import recarray_warning
+            warnings.warn(recarray_warning, FutureWarning)
         if 'design_info' in kwargs:
             self.design_info = kwargs.pop('design_info')
         if 'formula' in kwargs:

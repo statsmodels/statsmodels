@@ -187,7 +187,8 @@ class TestRecarrays(TestArrays):
                                            ('x_2', 'f8')]).view(np.recarray)
         exog['const'] = 1
         cls.exog = exog
-        cls.data = sm_data.handle_data(cls.endog, cls.exog)
+        with pytest.warns(FutureWarning, match="recarray support"):
+            cls.data = sm_data.handle_data(cls.endog, cls.exog)
         cls.xnames = ['const', 'x_1', 'x_2']
         cls.ynames = 'y_1'
 
@@ -207,7 +208,8 @@ class TestStructarrays(TestArrays):
                                            ('x_2', 'f8')]).view(np.recarray)
         exog['const'] = 1
         cls.exog = exog
-        cls.data = sm_data.handle_data(cls.endog, cls.exog)
+        with pytest.warns(FutureWarning, match="recarray support"):
+            cls.data = sm_data.handle_data(cls.endog, cls.exog)
         cls.xnames = ['const', 'x_1', 'x_2']
         cls.ynames = 'y_1'
 
