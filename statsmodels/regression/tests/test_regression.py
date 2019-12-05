@@ -1344,3 +1344,11 @@ def test_sqrt_lasso():
         # Regression test the parameters
         assert_allclose(rslt.params[0:5], expected_params[refit],
                 rtol=1e-5, atol=1e-5)
+
+
+def test_bool_regressor(reset_randomstate):
+    exog = np.random.randint(0, 2, size=(100, 2)).astype(bool)
+    endog = np.random.standard_normal(100)
+    bool_res = OLS(endog, exog).fit()
+    res = OLS(endog, exog.astype(np.double)).fit()
+    assert_allclose(bool_res.params, res.params)
