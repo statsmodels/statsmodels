@@ -6,16 +6,18 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 import pickle
-import warnings
 from io import BytesIO
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_
+from pandas.util.testing import assert_series_equal
 # we need log in module namespace for TestPickleFormula5
 from numpy import log  # noqa:F401
 
 import statsmodels.api as sm
+import statsmodels.genmod.generalized_linear_model as glm
 from statsmodels.compat.python import iterkeys
 
 
@@ -42,8 +44,6 @@ class RemoveDataPickle(object):
         cls.predict_kwds = {}
 
     def test_remove_data_pickle(self):
-        import pandas as pd
-        from pandas.util.testing import assert_series_equal
 
         results = self.results
         xf = self.xf
@@ -61,7 +61,10 @@ class RemoveDataPickle(object):
         res, orig_nbytes = check_pickle(results._results)
 
         # remove data arrays, check predict still works
-        with warnings.catch_warnings(record=True):
+        if isinstance(results, glm.GLMResultsWrapper):
+            with pytest.warns(FutureWarning, match="Anscombe residuals"):
+                results.remove_data()
+        else:
             results.remove_data()
 
         pred2 = results.predict(xf, **pred_kwds)
@@ -226,8 +229,9 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         # fill data-like members of the cache
         names = ['resid_response', 'resid_deviance',
                  'resid_pearson', 'resid_anscombe']
-        for name in names:
-            getattr(res, name)
+        with pytest.warns(FutureWarning, match="Anscombe residuals"):
+            for name in names:
+                getattr(res, name)
         # check that the attributes are present before calling remove_data
         for name in names:
             assert name in res._cache
@@ -242,7 +246,8 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         # is removed
         res = self.results
         assert res._cache == {}
-        res.remove_data()
+        with pytest.warns(FutureWarning, match="Anscombe residuals"):
+            res.remove_data()
         assert 'bic' in res._cache
 
 

@@ -162,7 +162,6 @@ class BaseAM(object):
         cls.y_true, cls.x, cls.exog = y_true, x, exog_reduced
 
 
-
 class TestAdditiveModel(BaseAM, CheckAM):
 
     @classmethod
@@ -291,7 +290,7 @@ class TestGAMGaussianLogLink(BaseGAM):
     def setup_class(cls):
         super(TestGAMGaussianLogLink, cls).setup_class()  # initialize DGP
 
-        cls.family = family.Gaussian(links.log)
+        cls.family = family.Gaussian(links.log())
         cls.rvs = stats.norm.rvs
         cls.scale = 5
 

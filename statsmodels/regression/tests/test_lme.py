@@ -122,13 +122,14 @@ class TestMixedLM(object):
             vc["a"][i] = exog_vc[ix, 0:2]
             vc["b"][i] = exog_vc[ix, 2:3]
 
-        model = MixedLM(
-            endog,
-            exog_fe,
-            groups,
-            exog_re,
-            exog_vc=vc,
-            use_sqrt=use_sqrt)
+        with pytest.warns(UserWarning, match="Using deprecated variance"):
+            model = MixedLM(
+                endog,
+                exog_fe,
+                groups,
+                exog_re,
+                exog_vc=vc,
+                use_sqrt=use_sqrt)
         rslt = model.fit(reml=reml)
 
         loglike = loglike_function(
@@ -221,17 +222,13 @@ class TestMixedLM(object):
             ii = np.flatnonzero(groups == k)
             vc["a"][k] = vca[ii][:, None]
             vc["b"][k] = vcb[ii][:, None]
-        rslt = MixedLM(
-            endog, exog, groups=groups, exog_re=exog_re, exog_vc=vc).fit()
-        rslt.profile_re(
-            0, vtype='re', dist_low=1, num_low=3, dist_high=1, num_high=3)
-        rslt.profile_re(
-            'b',
-            vtype='vc',
-            dist_low=0.5,
-            num_low=3,
-            dist_high=0.5,
-            num_high=3)
+        with pytest.warns(UserWarning, match="Using deprecated variance"):
+            rslt = MixedLM(endog, exog, groups=groups,
+                           exog_re=exog_re, exog_vc=vc).fit()
+        rslt.profile_re(0, vtype='re', dist_low=1, num_low=3,
+                        dist_high=1, num_high=3)
+        rslt.profile_re('b', vtype='vc', dist_low=0.5, num_low=3,
+                        dist_high=0.5, num_high=3)
 
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
@@ -260,7 +257,8 @@ class TestMixedLM(object):
             ix = model1.row_indices[group]
             exog_vc["a"][group] = exog_re[ix, 0:1]
             exog_vc["b"][group] = exog_re[ix, 1:2]
-        model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+        with pytest.warns(UserWarning, match="Using deprecated variance"):
+            model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
         result2 = model2.fit()
         result2.summary()
 
@@ -629,7 +627,9 @@ class TestMixedLM(object):
             ix = np.flatnonzero(groups == group)
             exog_vc["a"][group] = ex_vc[ix, 0:2]
             exog_vc["b"][group] = ex_vc[ix, 2:]
-        model1 = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+        with pytest.warns(UserWarning, match="Using deprecated variance"):
+            model1 = MixedLM(endog, exog, groups, exog_re=exog_re,
+                             exog_vc=exog_vc)
         result1 = model1.fit()
 
         df = pd.DataFrame(exog[:, 1:], columns=["x1"])

@@ -53,6 +53,11 @@ def pytest_configure(config):
     try:
         import matplotlib
         matplotlib.use('agg')
+        try:
+            from pandas.plotting import register_matplotlib_converters
+            register_matplotlib_converters()
+        except ImportError:
+            pass
     except ImportError:
         pass
 
