@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Various Statistical Tests
-
+"""
+Various Statistical Tests
 
 Author: josef-pktd
 License: BSD-3
@@ -11,7 +11,6 @@ Almost fully verified against R or Gretl, not all options are the same.
 In many cases of Lagrange multiplier tests both the LM test and the F test is
 returned. In some but not all cases, R has the option to choose the test
 statistic. Some alternative test statistic results have not been verified.
-
 
 TODO
 * refactor to store intermediate results
@@ -25,10 +24,9 @@ missing:
 * new tests:
   - breaks_ap, more recent breaks tests
   - specification tests against nonparametric alternatives
-
-
 """
 from statsmodels.compat.python import iteritems
+
 from collections.abc import Iterable
 
 import numpy as np
@@ -47,15 +45,15 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
                     store=store, regresults=False)
 
 
-#TODO: I like the bunch pattern for this too.
+# TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str
 
 
-
 class CompareCox(object):
-    '''Cox Test for non-nested models
+    """
+    Cox Test for non-nested models
 
     Parameters
     ----------
@@ -69,13 +67,10 @@ class CompareCox(object):
     Formulas from Greene, section 8.3.4 translated to code
 
     produces correct results for Example 8.3, Greene
-
-
-    '''
-
+    """
 
     def run(self, results_x, results_z, attach=True):
-        '''run Cox test for non-nested models
+        """run Cox test for non-nested models
 
         Parameters
         ----------
@@ -104,15 +99,15 @@ class CompareCox(object):
         ----------
         ???
 
-        '''
+        """
 
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
         x = results_x.model.exog
         z = results_z.model.exog
-        sigma2_x = results_x.ssr/nobs
-        sigma2_z = results_z.ssr/nobs
+        sigma2_x = results_x.ssr / nobs
+        sigma2_z = results_z.ssr / nobs
         yhat_x = results_x.fittedvalues
         yhat_z = results_z.fittedvalues
         res_dx = OLS(yhat_x, z).fit()
@@ -120,11 +115,11 @@ class CompareCox(object):
         res_xzx = OLS(err_zx, x).fit()
         err_xzx = res_xzx.resid
 
-        sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx)/nobs
-        c01 = nobs/2. * (np.log(sigma2_z) - np.log(sigma2_zx))
-        v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx**2
+        sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx) / nobs
+        c01 = nobs / 2. * (np.log(sigma2_z) - np.log(sigma2_zx))
+        v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx ** 2
         q = c01 / np.sqrt(v01)
-        pval = 2*stats.norm.sf(np.abs(q))
+        pval = 2 * stats.norm.sf(np.abs(q))
 
         if attach:
             self.res_dx = res_dx
@@ -145,7 +140,7 @@ compare_cox = CompareCox()
 
 
 class CompareJ(object):
-    '''J-Test for comparing non-nested models
+    """J-Test for comparing non-nested models
 
     Parameters
     ----------
@@ -163,11 +158,10 @@ class CompareJ(object):
 
     check what results should be attached
 
-    '''
-
+    """
 
     def run(self, results_x, results_z, attach=True):
-        '''run J-test for non-nested models
+        """run J-test for non-nested models
 
         Parameters
         ----------
@@ -196,19 +190,19 @@ class CompareJ(object):
         ----------
         ???
 
-        '''
+        """
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
         y = results_x.model.endog
         x = results_x.model.exog
         z = results_z.model.exog
-        #sigma2_x = results_x.ssr/nobs
-        #sigma2_z = results_z.ssr/nobs
+        # sigma2_x = results_x.ssr/nobs
+        # sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
-        #yhat_z = results_z.fittedvalues
+        # yhat_z = results_z.fittedvalues
         res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
-        self.res_zx = res_zx  #for testing
+        self.res_zx = res_zx  # for testing
         tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
         if attach:
@@ -408,38 +402,38 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     x = np.asarray(x)
     nobs = x.shape[0]
     if maxlag is None:
-        #for adf from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
-
+        # for adf from Greene referencing Schwert 1989
+        maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        # nobs//4  #TODO: check default, or do AIC/BIC
 
     xdiff = np.diff(x)
     #
-    xdall = lagmat(x[:,None], maxlag, trim='both')
+    xdall = lagmat(x[:, None], maxlag, trim='both')
     nobs = xdall.shape[0]
-    xdall = np.c_[np.ones((nobs,1)), xdall]
+    xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
 
     if store:
         resstore = ResultsStore()
 
     if autolag:
-        #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
+        # search for lag length with highest information criteria
+        # Note: I use the same number of observations to have comparable IC
         results = {}
-        for mlag in range(1, maxlag+1):
-            results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
+        for mlag in range(1, maxlag + 1):
+            results[mlag] = OLS(xshort, xdall[:, :mlag + 1]).fit()
 
         if autolag.lower() == 'aic':
-            bestic, icbestlag = min((v.aic,k) for k,v in iteritems(results))
+            bestic, icbestlag = min((v.aic, k) for k, v in iteritems(results))
         elif autolag.lower() == 'bic':
-            icbest, icbestlag = min((v.bic,k) for k,v in iteritems(results))
+            icbest, icbestlag = min((v.bic, k) for k, v in iteritems(results))
         else:
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
-        #rerun ols with best ic
-        xdall = lagmat(x[:,None], icbestlag, trim='both')
+        # rerun ols with best ic
+        xdall = lagmat(x[:, None], icbestlag, trim='both')
         nobs = xdall.shape[0]
-        xdall = np.c_[np.ones((nobs,1)), xdall]
+        xdall = np.c_[np.ones((nobs, 1)), xdall]
         xshort = x[-nobs:]
         usedlag = icbestlag
         if regresults:
@@ -447,13 +441,13 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     else:
         usedlag = maxlag
 
-    resols = OLS(xshort, xdall[:,:usedlag+1]).fit()
+    resols = OLS(xshort, xdall[:, :usedlag + 1]).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, usedlag)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    #return fval, fpval, lm, lmpval
+    # return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
@@ -505,12 +499,12 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
     -----
     verified against R:FinTS::ArchTest
     """
-    return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=store,
+    return acorr_lm(resid ** 2, maxlag=maxlag, autolag=autolag, store=store,
                     regresults=regresults)
 
 
 def acorr_breusch_godfrey(results, nlags=None, store=False):
-    '''Breusch Godfrey Lagrange Multiplier tests for residual autocorrelation
+    """Breusch Godfrey Lagrange Multiplier tests for residual autocorrelation
 
     Parameters
     ----------
@@ -549,7 +543,7 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     ----------
     Greene Econometrics, 5th edition
 
-    '''
+    """
 
     x = np.asarray(results.resid).squeeze()
     if x.ndim != 1:
@@ -558,17 +552,18 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     exog_old = results.model.exog
     nobs = x.shape[0]
     if nlags is None:
-        #for adf from Greene referencing Schwert 1989
-        nlags = np.trunc(12. * np.power(nobs/100., 1/4.))#nobs//4  #TODO: check default, or do AIC/BIC
+        # for adf from Greene referencing Schwert 1989
+        nlags = np.trunc(12. * np.power(nobs / 100.,
+                                        1 / 4.))  # nobs//4  #TODO: check default, or do AIC/BIC
         nlags = int(nlags)
 
     x = np.concatenate((np.zeros(nlags), x))
 
-    #xdiff = np.diff(x)
+    # xdiff = np.diff(x)
     #
-    xdall = lagmat(x[:,None], nlags, trim='both')
+    xdall = lagmat(x[:, None], nlags, trim='both')
     nobs = xdall.shape[0]
-    xdall = np.c_[np.ones((nobs,1)), xdall]
+    xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
     exog = np.column_stack((exog_old, xdall))
     k_vars = exog.shape[1]
@@ -580,12 +575,12 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
     fval = ft.fvalue
     fpval = ft.pvalue
-    fval = np.squeeze(fval)[()]   #TODO: fix this in ContrastResults
+    fval = np.squeeze(fval)[()]  # TODO: fix this in ContrastResults
     fpval = np.squeeze(fpval)[()]
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, nlags)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    #return fval, fpval, lm, lmpval
+    # return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
@@ -596,7 +591,7 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
 
 def het_breuschpagan(resid, exog_het):
-    r'''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
+    r"""Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
@@ -654,21 +649,21 @@ def het_breuschpagan(resid, exog_het):
     Greene 5th edition
     Breusch, Pagan article
 
-    '''
+    """
 
     x = np.asarray(exog_het)
-    y = np.asarray(resid)**2
+    y = np.asarray(resid) ** 2
     nobs, nvars = x.shape
     resols = OLS(y, x).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
-    return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
+    return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
 
 def het_white(resid, exog, retres=False):
-    '''White's Lagrange Multiplier Test for Heteroscedasticity
+    """White's Lagrange Multiplier Test for Heteroscedasticity
 
     Parameters
     ----------
@@ -704,30 +699,32 @@ def het_white(resid, exog, retres=False):
     Greene section 11.4.1 5th edition p. 222
     now test statistic reproduces Greene 5th, example 11.3
 
-    '''
+    """
     x = np.asarray(exog)
     y = np.asarray(resid)
     if x.ndim == 1:
-        raise ValueError('x should have constant and at least one more variable')
+        raise ValueError(
+            'x should have constant and at least one more variable')
     nobs, nvars0 = x.shape
-    i0,i1 = np.triu_indices(nvars0)
-    exog = x[:,i0]*x[:,i1]
+    i0, i1 = np.triu_indices(nvars0)
+    exog = x[:, i0] * x[:, i1]
     nobs, nvars = exog.shape
-    assert nvars == nvars0*(nvars0-1)/2. + nvars0
-    resols = OLS(y**2, exog).fit()
+    assert nvars == nvars0 * (nvars0 - 1) / 2. + nvars0
+    resols = OLS(y ** 2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
-    #degrees of freedom take possible reduced rank in exog into account
-    #df_model checks the rank to determine df
-    #extra calculation that can be removed:
+    # degrees of freedom take possible reduced rank in exog into account
+    # df_model checks the rank to determine df
+    # extra calculation that can be removed:
     assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
+
 def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
-    '''test whether variance is the same in 2 subsamples
+    """test whether variance is the same in 2 subsamples
 
     Parameters
     ----------
@@ -772,26 +769,26 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
     can do Chow test for structural break in same way
 
     ran sanity check
-    '''
+    """
     x = np.asarray(x)
     y = np.asarray(y)
     nobs, nvars = x.shape
     if split is None:
-        split = nobs//2
-    elif (0<split) and (split<1):
-        split = int(nobs*split)
+        split = nobs // 2
+    elif (0 < split) and (split < 1):
+        split = int(nobs * split)
 
-    xsortind = np.argsort(x[:,idx])
+    xsortind = np.argsort(x[:, idx])
     y = y[xsortind]
-    x = x[xsortind,:]
+    x = x[xsortind, :]
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[split:], x[split:]).fit()
-    fval = resols1.mse_resid/resols2.mse_resid
-    if fval>1:
+    fval = resols1.mse_resid / resols2.mse_resid
+    if fval > 1:
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = 'larger'
     else:
-        fval = 1./fval
+        fval = 1. / fval
         fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = 'smaller'
 
@@ -805,10 +802,10 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
         res.resols2 = resols2
         res.ordering = ordering
         res.split = split
-        #res.__str__
-        res._str = '''The Goldfeld-Quandt test for null hypothesis that the
+        # res.__str__
+        res._str = """The Goldfeld-Quandt test for null hypothesis that the
 variance in the second subsample is %s than in the first subsample:
-    F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
+    F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
 
         return res
     else:
@@ -816,7 +813,8 @@ variance in the second subsample is %s than in the first subsample:
 
 
 class HetGoldfeldQuandt(object):
-    '''test whether variance is the same in 2 subsamples
+    """
+    Test whether variance is the same in 2 subsamples
 
     Parameters
     ----------
@@ -863,46 +861,47 @@ class HetGoldfeldQuandt(object):
 
     Results are identical R, but the drop option is defined differently.
     (sorting by idx not tested yet)
-    '''
-    #TODO: can do Chow test for structural break in same way
+    """
+
+    # TODO: can do Chow test for structural break in same way
     def run(self, y, x, idx=None, split=None, drop=None,
             alternative='increasing', attach=True):
-        '''see class docstring'''
+        """see class docstring"""
         x = np.asarray(x)
-        y = np.asarray(y)#**2
+        y = np.asarray(y)  # **2
         nobs, nvars = x.shape
         if split is None:
-            split = nobs//2
-        elif (0<split) and (split<1):
-            split = int(nobs*split)
+            split = nobs // 2
+        elif (0 < split) and (split < 1):
+            split = int(nobs * split)
 
         if drop is None:
             start2 = split
-        elif (0<drop) and (drop<1):
-            start2 = split + int(nobs*drop)
+        elif (0 < drop) and (drop < 1):
+            start2 = split + int(nobs * drop)
         else:
             start2 = split + drop
 
         if idx is not None:
-            xsortind = np.argsort(x[:,idx])
+            xsortind = np.argsort(x[:, idx])
             y = y[xsortind]
-            x = x[xsortind,:]
+            x = x[xsortind, :]
 
         resols1 = OLS(y[:split], x[:split]).fit()
         resols2 = OLS(y[start2:], x[start2:]).fit()
-        fval = resols2.mse_resid/resols1.mse_resid
-        #if fval>1:
+        fval = resols2.mse_resid / resols1.mse_resid
+        # if fval>1:
         if alternative.lower() in ['i', 'inc', 'increasing']:
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
             fval = fval
-            fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
+            fpval = stats.f.sf(1. / fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
             fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
             fpval_la = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
-            fpval = 2*min(fpval_sm, fpval_la)
+            fpval = 2 * min(fpval_sm, fpval_la)
             ordering = 'two-sided'
         else:
             raise ValueError('invalid alternative')
@@ -917,14 +916,14 @@ class HetGoldfeldQuandt(object):
             res.resols2 = resols2
             res.ordering = ordering
             res.split = split
-            #res.__str__
-            #TODO: check if string works
-            res._str = '''The Goldfeld-Quandt test for null hypothesis that the
+            # res.__str__
+            # TODO: check if string works
+            res._str = """The Goldfeld-Quandt test for null hypothesis that the
     variance in the second subsample is %s than in the first subsample:
-        F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
+        F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
 
         return fval, fpval, ordering
-        #return self
+        # return self
 
     def __str__(self):
         try:
@@ -932,7 +931,7 @@ class HetGoldfeldQuandt(object):
         except AttributeError:
             return repr(self)
 
-    #TODO: missing the alternative option in call
+    # TODO: missing the alternative option in call
     def __call__(self, y, x, idx=None, split=None, drop=None,
                  alternative='increasing'):
         return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
@@ -942,14 +941,16 @@ class HetGoldfeldQuandt(object):
 het_goldfeldquandt = HetGoldfeldQuandt()
 
 
-def linear_harvey_collier(res):
-    '''Harvey Collier test for linearity
+def linear_harvey_collier(res, order_by=None):
+    """
+    Harvey Collier test for linearity
 
     The Null hypothesis is that the regression is correctly modeled as linear.
 
     Parameters
     ----------
     res : Result instance
+    order_by :
 
     Returns
     -------
@@ -965,24 +966,42 @@ def linear_harvey_collier(res):
     This test is a t-test that the mean of the recursive ols residuals is zero.
     Calculating the recursive residuals might take some time for large samples.
 
-    '''
-    #I think this has different ddof than
-    #B.H. Baltagi, Econometrics, 2011, chapter 8
-    #but it matches Gretl and R:lmtest, pvalue at decimal=13
+    """
+    # I think this has different ddof than
+    # B.H. Baltagi, Econometrics, 2011, chapter 8
+    # but it matches Gretl and R:lmtest, pvalue at decimal=13
     rr = recursive_olsresiduals(res, skip=3, alpha=0.95)
-    from scipy import stats
 
     return stats.ttest_1samp(rr[3][3:], 0)
 
-def linear_rainbow(res, frac = 0.5):
-    '''Rainbow test for linearity
 
-    The Null hypothesis is that the regression is correctly modelled as linear.
-    The alternative for which the power might be large are convex, check
+def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
+                   center=None):
+    """
+    Rainbow test for linearity
+
+    The null hypothesis is the fit of the model using full sample is the same
+    as using a central subset. The alternative is that the fits are difference.
+    The rainbow test has power against many different forms of nonlinearity.
 
     Parameters
     ----------
-    res : Result instance
+    res : RegressionResults instance
+        A results instance from a linear regresson.
+    frac : float
+        The fraction of the data to include in the center model.
+    order_by : ndarray, str, List[str]
+        If an ndarray, the values in the array are used to sort the
+        observations.  If a string or a list of strings, these are interprted
+        as column name(s) which are then used to lexigographically sort the
+        data.
+    use_distance : bool
+        Flag indicating whether data should be ordered by the Mahalanobis
+        distance to the center.
+    center : float, int
+        If a float, the center is center * nobs of the ordered data.  If an
+        integer, must be in [0, nobs) and is interpreted as the observation
+        of the ordered data to use.
 
     Returns
     -------
@@ -991,11 +1010,16 @@ def linear_rainbow(res, frac = 0.5):
     pvalue : float
         pvalue of the test
 
-    '''
+    Notes
+    -----
+    This test assumes residuals are homoskedastic and may reject a correct
+    linear specification if the residuals are heteroskedastic.
+    """
 
     nobs = res.nobs
     endog = res.model.endog
     exog = res.model.exog
+    # TODO: Add centering here
     lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
     mi_sl = slice(lowidx, uppidx)
@@ -1003,13 +1027,14 @@ def linear_rainbow(res, frac = 0.5):
     nobs_mi = res_mi.model.endog.shape[0]
     ss_mi = res_mi.ssr
     ss = res.ssr
-    fstat = (ss - ss_mi) / (nobs-nobs_mi) / ss_mi  * res_mi.df_resid
-    from scipy import stats
+    fstat = (ss - ss_mi) / (nobs - nobs_mi) / ss_mi * res_mi.df_resid
     pval = stats.f.sf(fstat, nobs - nobs_mi, res_mi.df_resid)
     return fstat, pval
 
+
 def linear_lm(resid, exog, func=None):
-    '''Lagrange multiplier test for linearity against functional alternative
+    """
+    Lagrange multiplier test for linearity against functional alternative
 
     limitations: Assumes currently that the first column is integer.
     Currently it does not check whether the transformed variables contain NaNs,
@@ -1040,14 +1065,12 @@ def linear_lm(resid, exog, func=None):
     The test runs an auxiliary regression of the residuals on the combined
     original and transformed regressors.
     The Null hypothesis is that the linear specification is correct.
-
-    '''
-    from scipy import stats
+    """
 
     if func is None:
         func = lambda x: np.power(x, 2)
 
-    exog_aux = np.column_stack((exog, func(exog[:,1:])))
+    exog_aux = np.column_stack((exog, func(exog[:, 1:])))
 
     nobs, k_vars = exog.shape
     ls = OLS(resid, exog_aux).fit()
@@ -1058,7 +1081,7 @@ def linear_lm(resid, exog, func=None):
 
 
 def spec_white(resid, exog):
-    '''
+    """
     White's Two-Moment Specification Test
 
     Parameters
@@ -1103,7 +1126,7 @@ def spec_white(resid, exog):
     48: 817-838.
 
     See also het_white.
-    '''
+    """
     x = np.asarray(exog)
     e = np.asarray(resid)
     if x.ndim == 1:
@@ -1111,15 +1134,15 @@ def spec_white(resid, exog):
 
     # add interaction terms
     i0, i1 = np.triu_indices(x.shape[1])
-    exog = np.delete(x[:,i0] * x[:,i1], 0, 1)
+    exog = np.delete(x[:, i0] * x[:, i1], 0, 1)
 
     # collinearity check - see _fit_collinear
-    atol=1e-14
-    rtol=1e-13
+    atol = 1e-14
+    rtol = 1e-13
     tol = atol + rtol * exog.var(0)
     r = np.linalg.qr(exog, mode='r')
     mask = np.abs(r.diagonal()) < np.sqrt(tol)
-    exog = exog[:,np.where(~mask)[0]]
+    exog = exog[:, np.where(~mask)[0]]
 
     # calculate test statistic
     sqe = e * e
@@ -1137,7 +1160,7 @@ def spec_white(resid, exog):
 
 
 def _neweywestcov(resid, x):
-    '''
+    """
     Did not run yet
 
     from regstats2 ::
@@ -1154,88 +1177,91 @@ def _neweywestcov(resid, x):
         end
         d = struct;
         d.covb = xtxi*xuux*xtxi;
-    '''
-    nobs = resid.shape[0]   #TODO: check this can only be 1d
-    nlags = int(round(4*(nobs/100.)**(2/9.)))
+    """
+    nobs = resid.shape[0]  # TODO: check this can only be 1d
+    nlags = int(round(4 * (nobs / 100.) ** (2 / 9.)))
     hhat = resid * x.T
     xuux = np.dot(hhat, hhat.T)
     for lag in range(nlags):
-        za = np.dot(hhat[:,lag:nobs], hhat[:,:nobs-lag].T)
-        w = 1 - lag/(nobs + 1.)
-        xuux = xuux + np.dot(w, za+za.T)
-    xtxi = np.linalg.inv(np.dot(x.T, x))  #QR instead?
+        za = np.dot(hhat[:, lag:nobs], hhat[:, :nobs - lag].T)
+        w = 1 - lag / (nobs + 1.)
+        xuux = xuux + np.dot(w, za + za.T)
+    xtxi = np.linalg.inv(np.dot(x.T, x))  # QR instead?
     covbNW = np.dot(xtxi, np.dot(xuux, xtxi))
 
     return covbNW
 
 
-
 def _recursive_olsresiduals2(olsresults, skip):
-    '''this is my original version based on Greene and references
+    """this is my original version based on Greene and references
 
     keep for now for comparison and benchmarking
-    '''
+    """
     y = olsresults.model.endog
     x = olsresults.model.exog
     nobs, nvars = x.shape
-    rparams = np.nan * np.zeros((nobs,nvars))
+    rparams = np.nan * np.zeros((nobs, nvars))
     rresid = np.nan * np.zeros((nobs))
     rypred = np.nan * np.zeros((nobs))
     rvarraw = np.nan * np.zeros((nobs))
 
-    #XTX = np.zeros((nvars,nvars))
-    #XTY = np.zeros((nvars))
+    # XTX = np.zeros((nvars,nvars))
+    # XTY = np.zeros((nvars))
 
     x0 = x[:skip]
     y0 = y[:skip]
     XTX = np.dot(x0.T, x0)
-    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
+    XTY = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
     beta = np.linalg.solve(XTX, XTY)
-    rparams[skip-1] = beta
-    yipred = np.dot(x[skip-1], beta)
-    rypred[skip-1] = yipred
-    rresid[skip-1] = y[skip-1] - yipred
-    rvarraw[skip-1] = 1+np.dot(x[skip-1],np.dot(np.linalg.inv(XTX),x[skip-1]))
-    for i in range(skip,nobs):
-        xi = x[i:i+1,:]
+    rparams[skip - 1] = beta
+    yipred = np.dot(x[skip - 1], beta)
+    rypred[skip - 1] = yipred
+    rresid[skip - 1] = y[skip - 1] - yipred
+    rvarraw[skip - 1] = 1 + np.dot(x[skip - 1],
+                                   np.dot(np.linalg.inv(XTX), x[skip - 1]))
+    for i in range(skip, nobs):
+        xi = x[i:i + 1, :]
         yi = y[i]
-        xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+        xxT = np.dot(xi.T, xi)  # xi is 2d 1 row
+        xy = (xi * yi).ravel()  # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
         print(xy.shape, XTY.shape)
         print(XTX)
         print(XTY)
         beta = np.linalg.solve(XTX, XTY)
-        rparams[i-1] = beta  #this is beta based on info up to t-1
+        rparams[i - 1] = beta  # this is beta based on info up to t-1
         yipred = np.dot(xi, beta)
         rypred[i] = yipred
         rresid[i] = yi - yipred
-        rvarraw[i] = 1 + np.dot(xi,np.dot(np.linalg.inv(XTX),xi.T))
+        rvarraw[i] = 1 + np.dot(xi, np.dot(np.linalg.inv(XTX), xi.T))
         XTX += xxT
         XTY += xy
 
     i = nobs
     beta = np.linalg.solve(XTX, XTY)
-    rparams[i-1] = beta
+    rparams[i - 1] = beta
 
-    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-    nrr = nobs-skip
-    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
-    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-    rcusum = rresid_standardized[skip-1:].cumsum()
-    #confidence interval points in Greene p136 looks strange?
-    #this assumes sum of independent standard normal
-    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
-    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
-    #following taken from Ploberger,
-    crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
-                  * np.array([[-1.],[+1.]])
+    rresid_scaled = rresid / np.sqrt(
+        rvarraw)  # this is N(0,sigma2) distributed
+    nrr = nobs - skip
+    sigma2 = rresid_scaled[skip - 1:].var(ddof=1)
+    rresid_standardized = rresid_scaled / np.sqrt(sigma2)  # N(0,1) distributed
+    rcusum = rresid_standardized[skip - 1:].cumsum()
+    # confidence interval points in Greene p136 looks strange?
+    # this assumes sum of independent standard normal
+    # rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+    a = 1.143  # for alpha=0.99  =0.948 for alpha=0.95
+    # following taken from Ploberger,
+    crit = a * np.sqrt(nrr)
+    rcusumci = (a * np.sqrt(nrr) + a * np.arange(0, nobs - skip) / np.sqrt(
+        nrr)) \
+               * np.array([[-1.], [+1.]])
     return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
             rcusum, rcusumci)
 
 
 def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
-    '''calculate recursive ols with residuals and cusum test statistic
+    """
+    Calculate recursive ols with residuals and Cusum test statistic
 
     Parameters
     ----------
@@ -1289,41 +1315,40 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     Journal of the Royal Statistical Society. Series B (Methodological) 37,
     no. 2 (1975): 149-192.
 
-    '''
+    """
 
     y = olsresults.model.endog
     x = olsresults.model.exog
     nobs, nvars = x.shape
     if skip is None:
         skip = nvars
-    rparams = np.nan * np.zeros((nobs,nvars))
+    rparams = np.nan * np.zeros((nobs, nvars))
     rresid = np.nan * np.zeros((nobs))
     rypred = np.nan * np.zeros((nobs))
     rvarraw = np.nan * np.zeros((nobs))
 
-
-    #intialize with skip observations
+    # intialize with skip observations
     x0 = x[:skip]
     y0 = y[:skip]
-    #add Ridge to start (not in jplv
-    XTXi = np.linalg.inv(np.dot(x0.T, x0)+lamda*np.eye(nvars))
-    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
-    #beta = np.linalg.solve(XTX, XTY)
+    # add Ridge to start (not in jplv
+    XTXi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
+    XTY = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
+    # beta = np.linalg.solve(XTX, XTY)
     beta = np.dot(XTXi, XTY)
-    #print('beta', beta
-    rparams[skip-1] = beta
-    yipred = np.dot(x[skip-1], beta)
-    rypred[skip-1] = yipred
-    rresid[skip-1] = y[skip-1] - yipred
-    rvarraw[skip-1] = 1 + np.dot(x[skip-1],np.dot(XTXi, x[skip-1]))
-    for i in range(skip,nobs):
-        xi = x[i:i+1,:]
+    # print('beta', beta
+    rparams[skip - 1] = beta
+    yipred = np.dot(x[skip - 1], beta)
+    rypred[skip - 1] = yipred
+    rresid[skip - 1] = y[skip - 1] - yipred
+    rvarraw[skip - 1] = 1 + np.dot(x[skip - 1], np.dot(XTXi, x[skip - 1]))
+    for i in range(skip, nobs):
+        xi = x[i:i + 1, :]
         yi = y[i]
-        #xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-        #print(xy.shape, XTY.shape
-        #print(XTX
-        #print(XTY
+        # xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
+        xy = (xi * yi).ravel()  # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+        # print(xy.shape, XTY.shape
+        # print(XTX
+        # print(XTY
 
         # get prediction error with previous beta
         yipred = np.dot(xi, beta)
@@ -1331,59 +1356,60 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
         residi = yi - yipred
         rresid[i] = residi
 
-        #update beta and inverse(X'X)
+        # update beta and inverse(X'X)
         tmp = np.dot(XTXi, xi.T)
         ft = 1 + np.dot(xi, tmp)
 
-        XTXi = XTXi - np.dot(tmp,tmp.T) / ft  #BigJudge equ 5.5.15
+        XTXi = XTXi - np.dot(tmp, tmp.T) / ft  # BigJudge equ 5.5.15
 
-        #print('beta', beta
-        beta = beta + (tmp*residi / ft).ravel()  #BigJudge equ 5.5.14
-#        #version for testing
-#        XTY += xy
-#        beta = np.dot(XTXi, XTY)
-#        print((tmp*yipred / ft).shape
-#        print('tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
+        # print('beta', beta
+        beta = beta + (tmp * residi / ft).ravel()  # BigJudge equ 5.5.14
+        #        #version for testing
+        #        XTY += xy
+        #        beta = np.dot(XTXi, XTY)
+        #        print((tmp*yipred / ft).shape
+        #        print('tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
         rparams[i] = beta
         rvarraw[i] = ft
 
-
-
     i = nobs
-    #beta = np.linalg.solve(XTX, XTY)
-    #rparams[i] = beta
+    # beta = np.linalg.solve(XTX, XTY)
+    # rparams[i] = beta
 
-    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-    nrr = nobs-skip
-    #sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    rresid_scaled = rresid / np.sqrt(
+        rvarraw)  # this is N(0,sigma2) distributed
+    nrr = nobs - skip
+    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
     # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
     # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
-    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-    rcusum = rresid_standardized[skip-1:].cumsum()
-    #confidence interval points in Greene p136 looks strange. Cleared up
-    #this assumes sum of independent standard normal, which does not take into
-    #account that we make many tests at the same time
-    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+    rresid_standardized = rresid_scaled / np.sqrt(sigma2)  # N(0,1) distributed
+    rcusum = rresid_standardized[skip - 1:].cumsum()
+    # confidence interval points in Greene p136 looks strange. Cleared up
+    # this assumes sum of independent standard normal, which does not take into
+    # account that we make many tests at the same time
+    # rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
     if alpha == 0.95:
-        a = 0.948 #for alpha=0.95
+        a = 0.948  # for alpha=0.95
     elif alpha == 0.99:
-        a = 1.143 #for alpha=0.99
+        a = 1.143  # for alpha=0.99
     elif alpha == 0.90:
         a = 0.850
     else:
         raise ValueError('alpha can only be 0.9, 0.95 or 0.99')
 
-    #following taken from Ploberger,
-    crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + 2*a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
-                 * np.array([[-1.],[+1.]])
+    # following taken from Ploberger,
+    crit = a * np.sqrt(nrr)
+    rcusumci = (a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(
+        nrr)) \
+               * np.array([[-1.], [+1.]])
     return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
             rcusum, rcusumci)
 
 
 def breaks_hansen(olsresults):
-    '''test for model stability, breaks in parameters for ols, Hansen 1992
+    """
+    Test for model stability, breaks in parameters for ols, Hansen 1992
 
     Parameters
     ----------
@@ -1413,26 +1439,27 @@ def breaks_hansen(olsresults):
     References
     ----------
     Greene section 7.5.1, notation follows Greene
-
-    '''
+    """
     y = olsresults.model.endog
     x = olsresults.model.exog
     resid = olsresults.resid
     nobs, nvars = x.shape
-    resid2 = resid**2
-    ft = np.c_[x*resid[:,None], (resid2 - resid2.mean())]
+    resid2 = resid ** 2
+    ft = np.c_[x * resid[:, None], (resid2 - resid2.mean())]
     s = ft.cumsum(0)
-    assert (np.abs(s[-1]) < 1e10).all()  #can be optimized away
-    F = nobs*(ft[:,:,None]*ft[:,None,:]).sum(0)
-    S = (s[:,:,None]*s[:,None,:]).sum(0)
+    assert (np.abs(s[-1]) < 1e10).all()  # can be optimized away
+    F = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
+    S = (s[:, :, None] * s[:, None, :]).sum(0)
     H = np.trace(np.dot(np.linalg.inv(F), S))
-    crit95 = np.array([(2,1.9),(6,3.75),(15,3.75),(19,4.52)],
-                      dtype = [('nobs',int), ('crit', float)])
-    #TODO: get critical values from Bruce Hansens' 1992 paper
+    crit95 = np.array([(2, 1.9), (6, 3.75), (15, 3.75), (19, 4.52)],
+                      dtype=[('nobs', int), ('crit', float)])
+    # TODO: get critical values from Bruce Hansens' 1992 paper
     return H, crit95, ft, s
 
+
 def breaks_cusumolsresid(olsresidual, ddof=0):
-    '''cusum test for parameter stability based on ols residuals
+    """
+    Cusum test for parameter stability based on ols residuals
 
     Parameters
     ----------
@@ -1471,26 +1498,27 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
     ----------
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
-
-    '''
+    """
     resid = olsresidual.ravel()
     nobs = len(resid)
-    nobssigma2 = (resid**2).sum()
+    nobssigma2 = (resid ** 2).sum()
     if ddof > 0:
-        #print('ddof', ddof, 1. / (nobs - ddof) * nobs
+        # print('ddof', ddof, 1. / (nobs - ddof) * nobs
         nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
-    #B is asymptotically a Brownian Bridge
-    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
-    sup_b = np.abs(B).max() #asymptotically distributed as standard Brownian Bridge
-    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
-    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
-    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
-    #array([ 1.62762361,  1.35809864,  1.22384787])
+    # B is asymptotically a Brownian Bridge
+    B = resid.cumsum() / np.sqrt(nobssigma2)  # use T*sigma directly
+    sup_b = np.abs(
+        B).max()  # asymptotically distributed as standard Brownian Bridge
+    crit = [(1, 1.63), (5, 1.36), (10, 1.22)]
+    # Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
+    # >>> stats.kstwobign.isf([0.01,0.05,0.1])
+    # array([ 1.62762361,  1.35809864,  1.22384787])
     pval = stats.kstwobign.sf(sup_b)
     return sup_b, pval, crit
 
-#def breaks_cusum(recolsresid):
-#    '''renormalized cusum test for parameter stability based on recursive residuals
+
+# def breaks_cusum(recolsresid):
+#    """renormalized cusum test for parameter stability based on recursive residuals
 #
 #
 #    still incorrect: in PK, the normalization for sigma is by T not T-K
@@ -1503,7 +1531,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 #    Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
 #    Econometrica 60, no. 2 (March 1992): 271-285.
 #
-#    '''
+#    """
 #    resid = recolsresid.ravel()
 #    nobssigma2 = (resid**2).sum()
 #    #B is asymptotically a Brownian Bridge
@@ -1521,7 +1549,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 
 
 def breaks_AP(endog, exog, skip):
-    '''supLM, expLM and aveLM by Andrews, and Andrews,Ploberger
+    """supLM, expLM and aveLM by Andrews, and Andrews,Ploberger
 
     p-values by B Hansen
 
@@ -1542,7 +1570,7 @@ def breaks_AP(endog, exog, skip):
 
     for testing loop over single breakpoint Chow test function
 
-    '''
+    """
     pass
 
 
