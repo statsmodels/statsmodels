@@ -854,6 +854,7 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.sunspots.load(as_pandas=True)
+        data.endog.index = list(range(len(data.endog)))
         cls.res1 = AutoReg(data.endog, lags=9).fit()
         cls.res2 = results_ar.ARResultsOLS(constant=True)
 

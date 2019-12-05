@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import pytest
+
 from statsmodels.regression.dimred import (
      SlicedInverseReg, SAVE, PHD, CORE)
 from numpy.testing import (assert_equal, assert_allclose)
@@ -81,7 +83,8 @@ def test_sir_regularized_numdiff():
     for i in range(p-2):
         fmat[i, i:i+3] = [1, -2, 1]
 
-    _ = model.fit_regularized(2, 3*fmat)
+    with pytest.warns(UserWarning, match="SIR.fit_regularized did not"):
+        _ = model.fit_regularized(2, 3*fmat)
 
     # Compare the gradients to the numerical derivatives
     for _ in range(5):
@@ -153,7 +156,11 @@ def test_sir_regularized_2d():
     fmat = np.zeros((1, p))
 
     for d in 1, 2, 3, 4:
-        rslt2 = model.fit_regularized(d, fmat)
+        if d < 3:
+            rslt2 = model.fit_regularized(d, fmat)
+        else:
+            with pytest.warns(UserWarning, match="SIR.fit_regularized did"):
+                rslt2 = model.fit_regularized(d, fmat)
         pa1 = rslt1.params[:, 0:d]
         pa1, _, _ = np.linalg.svd(pa1, 0)
         pa2 = rslt2.params

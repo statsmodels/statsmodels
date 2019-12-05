@@ -461,7 +461,6 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         modd = discrete.Logit(cls.res2.endog, cls.res2.exog)
         cls.resd = modd.fit(start_params=cls.res1.params * 0.9, disp=False)
 
-
     def test_score_r(self):
         res1 = self.res1
         res2 = self.res2
@@ -502,26 +501,27 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         s**2
         """
 
-#class TestGlmBernoulliIdentity(CheckModelResultsMixin):
+# class TestGlmBernoulliIdentity(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliLog(CheckModelResultsMixin):
+# class TestGlmBernoulliLog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliProbit(CheckModelResultsMixin):
+# class TestGlmBernoulliProbit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliCloglog(CheckModelResultsMixin):
+# class TestGlmBernoulliCloglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliPower(CheckModelResultsMixin):
+# class TestGlmBernoulliPower(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliLoglog(CheckModelResultsMixin):
+# class TestGlmBernoulliLoglog(CheckModelResultsMixin):
 #    pass
 
-#class test_glm_bernoulli_logc(CheckModelResultsMixin):
+# class test_glm_bernoulli_logc(CheckModelResultsMixin):
 #    pass
+
 
 class TestGlmGamma(CheckModelResultsMixin):
 
@@ -548,6 +548,7 @@ class TestGlmGamma(CheckModelResultsMixin):
         res2.aic_R += 2 # R does not count degree of freedom for scale with gamma
         cls.res2 = res2
 
+
 class TestGlmGammaLog(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
@@ -570,6 +571,7 @@ class TestGlmGammaLog(CheckModelResultsMixin):
 #            family=r.Gamma(link="log"))
 #        cls.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
 #        cls.res2.bic = -154.1582089453923 # from Stata
+
 
 class TestGlmGammaIdentity(CheckModelResultsMixin):
     @classmethod
@@ -621,6 +623,7 @@ class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
 #class TestGlmPoissonPower(CheckModelResultsMixin):
 #    pass
 
+
 class TestGlmInvgauss(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
@@ -644,6 +647,7 @@ class TestGlmInvgauss(CheckModelResultsMixin):
         cls.res1 = res1
         cls.res2 = res2
 
+
 class TestGlmInvgaussLog(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
@@ -666,6 +670,7 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
 #            family=r.inverse_gaussian(link="log"))
 #        cls.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        cls.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
+
 
 class TestGlmInvgaussIdentity(CheckModelResultsMixin):
     @classmethod
@@ -693,6 +698,7 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
 #            family=r.inverse_gaussian(link="identity"))
 #        cls.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        cls.res2.llf = -12163.25545    # from Stata, big diff with R
+
 
 class TestGlmNegbinomial(CheckModelResultsMixin):
     @classmethod
@@ -854,7 +860,7 @@ def test_perfect_pred():
         assert_raises(PerfectSeparationError, glm.fit)
 
 
-def test_score_test_OLS():
+def test_score_test_ols():
     # nicer example than Longley
     from statsmodels.regression.linear_model import OLS
     np.random.seed(5)
@@ -887,7 +893,7 @@ def test_attribute_writable_resettable():
     assert_equal(glm_model2.family.link.power, 1.0)
 
 
-class Test_start_params(CheckModelResultsMixin):
+class TestStartParams(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         '''

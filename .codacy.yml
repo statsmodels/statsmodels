@@ -1,5 +1,8 @@
 ---
+engines:
+ pylint:
+   enabled: true
+   python_version: 2
 exclude_paths:
   - '**/_version.py'
   - 'versioneer.py'
-
