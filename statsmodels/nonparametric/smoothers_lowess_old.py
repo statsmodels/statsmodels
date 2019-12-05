@@ -8,7 +8,7 @@ Hastie, Tibshirani, Friedman. (2009) The Elements of Statistical Learning: Data 
 Cleveland, W.S. (1979) "Robust Locally Weighted Regression and Smoothing Scatterplots". Journal of the American Statistical Association 74 (368): 829-836.
 """
 import numpy as np
-from scipy.linalg import lstsq
+from numpy.linalg import lstsq
 
 
 def lowess(endog, exog, frac=2./3, it=3):

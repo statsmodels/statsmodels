@@ -14,7 +14,6 @@ from io import StringIO
 
 import numpy as np
 import pandas as pd
-import scipy.linalg
 import scipy.stats as stats
 
 import statsmodels.base.wrapper as wrap
@@ -159,7 +158,7 @@ def _var_acf(coefs, sig_u):
     SigU[:k, :k] = sig_u
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
-    vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
+    vecACF = np.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
     acf = [acf[:k, k * i:k * (i + 1)] for i in range(p)]
@@ -965,7 +964,7 @@ class VARProcess(object):
             \Psi_\infty = \sum_{i=0}^\infty \Phi_i
 
         """
-        return scipy.linalg.inv(self._char_mat)
+        return np.linalg.inv(self._char_mat)
 
     @cache_readonly
     def _chol_sigma_u(self):
@@ -1356,7 +1355,7 @@ class VARResults(VARProcess):
         Ref: Lütkepohl p.74-75
         """
         z = self.endog_lagged
-        return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
+        return np.kron(np.linalg.inv(z.T @ z), self.sigma_u)
 
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
@@ -1373,7 +1372,7 @@ class VARResults(VARProcess):
         Lütkepohl Proposition 3.3
         """
 
-        Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
+        Ainv = np.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
         return Ainv @ self.sigma_u @ Ainv.T
 
     # ------------------------------------------------------------
@@ -1618,7 +1617,7 @@ class VARResults(VARProcess):
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
-        Ginv = scipy.linalg.inv(G)
+        Ginv = np.linalg.inv(G)
 
         # memoize powers of B for speedup
         # TODO: see if can memoize better
@@ -1818,7 +1817,7 @@ class VARResults(VARProcess):
 
         # Lütkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(C @ self.cov_params() @ C.T)
+        middle = np.linalg.inv(C @ self.cov_params() @ C.T)
 
         # wald statistic
         lam_wald = statistic = Cb @ middle @ Cb
@@ -1939,7 +1938,7 @@ class VARResults(VARProcess):
         Cs = np.dot(C, vech_sigma_u)
         d = np.linalg.pinv(duplication_matrix(k))
         Cd = np.dot(C, d)
-        middle = scipy.linalg.inv(Cd @ np.kron(sigma_u, sigma_u) @ Cd.T) / 2
+        middle = np.linalg.inv(Cd @ np.kron(sigma_u, sigma_u) @ Cd.T) / 2
 
         wald_statistic = t * (Cs.T @ middle @ Cs)
         df = num_restr
@@ -1978,7 +1977,7 @@ class VARResults(VARProcess):
         statistic = 0
         u = np.asarray(self.resid)
         acov_list = _compute_acov(u, nlags)
-        cov0_inv = scipy.linalg.inv(acov_list[0])
+        cov0_inv = np.linalg.inv(acov_list[0])
         for t in range(1, nlags+1):
             ct = acov_list[t]
             to_add = np.trace(ct.T @ cov0_inv @ ct @ cov0_inv)
@@ -2060,7 +2059,7 @@ class VARResults(VARProcess):
 
             \hat \Omega = \frac{T}{T - Kp - 1} \hat \Omega_{\mathrm{MLE}}
         """
-        return scipy.linalg.det(self.sigma_u)
+        return np.linalg.det(self.sigma_u)
 
     @cache_readonly
     def info_criteria(self):
