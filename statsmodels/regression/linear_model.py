@@ -40,7 +40,7 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
-from statsmodels.tools.tools import chain_dot, pinv_extended
+from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.decorators import (cache_readonly,
                                           cache_writable)
 import statsmodels.base.model as base
@@ -1855,9 +1855,8 @@ class RegressionResults(base.LikelihoodModelResults):
         Heteroscedasticity robust covariance matrix. See HC2_se.
         """
         # probably could be optimized
-        h = np.diag(chain_dot(self.model.wexog,
-                              self.normalized_cov_params,
-                              self.model.wexog.T))
+        wexog = self.model.wexog
+        h = np.diag(wexog @ self.normalized_cov_params @ wexog.T)
         self.het_scale = self.wresid**2/(1-h)
         cov_HC2 = self._HCCM(self.het_scale)
         return cov_HC2
@@ -1867,8 +1866,8 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Heteroscedasticity robust covariance matrix. See HC3_se.
         """
-        h = np.diag(chain_dot(
-            self.model.wexog, self.normalized_cov_params, self.model.wexog.T))
+        wexog = self.model.wexog
+        h = np.diag(wexog @ self.normalized_cov_params @ wexog.T)
         self.het_scale = (self.wresid / (1 - h))**2
         cov_HC3 = self._HCCM(self.het_scale)
         return cov_HC3
@@ -2084,7 +2083,7 @@ class RegressionResults(base.LikelihoodModelResults):
             raise ValueError('Only nonrobust, HC, HAC and cluster are ' +
                              'currently connected')
 
-        lm_value = n * chain_dot(s, s_inv, s.T)
+        lm_value = n * (s @ s_inv @ s.T)
         p_value = stats.chi2.sf(lm_value, df_diff)
         return lm_value, p_value, df_diff
 

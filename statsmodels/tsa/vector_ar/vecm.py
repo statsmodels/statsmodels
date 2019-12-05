@@ -12,7 +12,6 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -401,7 +400,7 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
     s11_ = inv(_mat_sqrt(s11))
     # p. 295:
     s01_s11_ = np.dot(s01, s11_)
-    eig = np.linalg.eig(chain_dot(s01_s11_.T, inv(s00), s01_s11_))
+    eig = np.linalg.eig(s01_s11_.T @ inv(s00) @ s01_s11_)
     lambd = eig[0]
     v = eig[1]
     # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
@@ -1323,7 +1322,7 @@ class VECMResults(object):
         d = duplication_matrix(self.neqs)
         d_K_plus = np.linalg.pinv(d)
         # compare p. 93, 297 Lutkepohl (2005)
-        return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
+        return 2 * (d_K_plus @ np.kron(sigma_u, sigma_u) @ d_K_plus.T)
 
     @cache_readonly
     def cov_params_default(self):  # p.296 (7.2.21)
@@ -1409,8 +1408,7 @@ class VECMResults(object):
         mat1 = np.kron(mat1.T, np.identity(r))
         det = self.det_coef_coint.shape[0]
         mat2 = np.kron(np.identity(self.neqs-r+det),
-                       inv(chain_dot(
-                               self.alpha.T, inv(self.sigma_u), self.alpha)))
+                       inv(self.alpha.T @ inv(self.sigma_u) @ self.alpha))
         first_rows = np.zeros((r, r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
         last_rows = last_rows_1d.reshape((self.neqs-r+det, r),
@@ -1575,7 +1573,7 @@ class VECMResults(object):
         #
         # w_eye = np.kron(w, np.identity(K))
         #
-        # return chain_dot(w_eye.T, self.cov_params_default, w_eye)
+        # return w_eye.T @ self.cov_params_default @ w_eye
 
         if self.k_ar - 1 == 0:
             return self.cov_params_wo_det
@@ -1594,8 +1592,8 @@ class VECMResults(object):
                                     start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
         # for A_p:
         vecm_var_transformation[-self.neqs**2:, -self.neqs**2:] = -eye
-        return chain_dot(vecm_var_transformation, self.cov_params_wo_det,
-                         vecm_var_transformation.T)
+        vvt = vecm_var_transformation
+        return vvt @ self.cov_params_wo_det @ vvt.T
 
     def ma_rep(self, maxn=10):
         return ma_rep(self.var_rep, maxn)
@@ -1885,9 +1883,9 @@ class VECMResults(object):
         # same results as the reference software JMulTi.
         sigma_u = var_results.sigma_u * (t-k*p-num_det_terms) / t
         sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1)xk**2*(p-1)
-        middle = inv(chain_dot(C, sig_alpha_min_p, C.T))
+        middle = inv(C @ sig_alpha_min_p @ C.T)
 
-        wald_statistic = t * chain_dot(Ca.T, middle, Ca)
+        wald_statistic = t * (Ca.T @ middle @ Ca)
         f_statistic = wald_statistic / num_restr
         df = (num_restr, k * var_results.df_resid)
         f_distribution = scipy.stats.f(*df)
@@ -2050,7 +2048,7 @@ class VECMResults(object):
             c0_inv = np.real(c0_inv)
         for t in range(1, nlags+1):
             ct = acov_list[t]
-            to_add = np.trace(chain_dot(ct.T, c0_inv, ct, c0_inv))
+            to_add = np.trace(ct.T @ c0_inv @ ct @ c0_inv)
             if adjusted:
                 to_add /= (self.nobs - t)
             statistic += to_add

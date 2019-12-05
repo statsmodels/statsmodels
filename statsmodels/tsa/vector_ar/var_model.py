@@ -25,7 +25,6 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
@@ -193,7 +192,7 @@ def forecast_cov(ma_coefs, sigma_u, steps):
     for h in range(steps):
         # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
         phi = ma_coefs[h]
-        var = chain_dot(phi, sigma_u, phi.T)
+        var = phi @ sigma_u @ phi.T
         forc_covs[h] = prior = prior + var
 
     return forc_covs
@@ -1079,7 +1078,7 @@ class VARProcess(object):
         for h in range(steps):
             # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
             phi = ma_coefs[h]
-            var = chain_dot(phi, self.sigma_u, phi.T)
+            var = phi @ self.sigma_u @ phi.T
             forc_covs[h] = prior = prior + var
 
         return forc_covs
@@ -1375,7 +1374,7 @@ class VARResults(VARProcess):
         """
 
         Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
-        return chain_dot(Ainv, self.sigma_u, Ainv.T)
+        return Ainv @ self.sigma_u @ Ainv.T
 
     # ------------------------------------------------------------
     # Estimation-related things
@@ -1403,7 +1402,7 @@ class VARResults(VARProcess):
         D_Kinv = np.linalg.pinv(D_K)
 
         sigxsig = np.kron(self.sigma_u, self.sigma_u)
-        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
+        return 2 * D_Kinv @ sigxsig @ D_Kinv.T
 
     @cache_readonly
     def llf(self):
@@ -1623,7 +1622,7 @@ class VARResults(VARProcess):
 
         # memoize powers of B for speedup
         # TODO: see if can memoize better
-        # TODO: much lower-hanging fruit in caching `np.trace` and `chain_dot` below.
+        # TODO: much lower-hanging fruit in caching `np.trace` below.
         B = self._bmat_forc_cov()
         _B = {}
 
@@ -1647,8 +1646,8 @@ class VARResults(VARProcess):
                 for j in range(h):
                     Bi = bpow(h - 1 - i)
                     Bj = bpow(h - 1 - j)
-                    mult = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
-                    om += mult * chain_dot(phis[i], sig_u, phis[j].T)
+                    mult = np.trace(Bi.T @ Ginv @ Bj @ G)
+                    om += mult * phis[i] @ sig_u @ phis[j].T
             omegas[h-1] = om
 
         return omegas
@@ -1819,10 +1818,10 @@ class VARResults(VARProcess):
 
         # Lütkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self.cov_params(), C.T))
+        middle = scipy.linalg.inv(C @ self.cov_params() @ C.T)
 
         # wald statistic
-        lam_wald = statistic = chain_dot(Cb, middle, Cb)
+        lam_wald = statistic = Cb @ middle @ Cb
 
         if kind.lower() == 'wald':
             df = num_restr
@@ -1940,9 +1939,9 @@ class VARResults(VARProcess):
         Cs = np.dot(C, vech_sigma_u)
         d = np.linalg.pinv(duplication_matrix(k))
         Cd = np.dot(C, d)
-        middle = scipy.linalg.inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
+        middle = scipy.linalg.inv(Cd @ np.kron(sigma_u, sigma_u) @ Cd.T) / 2
 
-        wald_statistic = t * chain_dot(Cs.T, middle, Cs)
+        wald_statistic = t * (Cs.T @ middle @ Cs)
         df = num_restr
         dist = stats.chi2(df)
 
@@ -1982,7 +1981,7 @@ class VARResults(VARProcess):
         cov0_inv = scipy.linalg.inv(acov_list[0])
         for t in range(1, nlags+1):
             ct = acov_list[t]
-            to_add = np.trace(chain_dot(ct.T, cov0_inv, ct, cov0_inv))
+            to_add = np.trace(ct.T @ cov0_inv @ ct @ cov0_inv)
             if adjusted:
                 to_add /= (self.nobs - t)
             statistic += to_add

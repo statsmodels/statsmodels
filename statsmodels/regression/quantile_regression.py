@@ -22,7 +22,6 @@ import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
-from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
@@ -206,7 +205,7 @@ class QuantReg(RegressionModel):
             d = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
             xtxi = pinv(np.dot(exog.T, exog))
             xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
-            vcov = chain_dot(xtxi, xtdx, xtxi)
+            vcov = xtxi @ xtdx @ xtxi
         elif vcov == 'iid':
             vcov = (1. / fhat0)**2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
         else:

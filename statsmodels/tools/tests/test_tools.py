@@ -551,13 +551,6 @@ def test_pandas_const_df_prepend():
     assert_equal(dta.var(0)[0], 0)
 
 
-def test_chain_dot():
-    A = np.arange(1,13).reshape(3,4)
-    B = np.arange(3,15).reshape(4,3)
-    C = np.arange(5,8).reshape(3,1)
-    assert_equal(tools.chain_dot(A,B,C), np.array([[1820],[4300],[6780]]))
-
-
 class TestNanDot(object):
     @classmethod
     def setup_class(cls):

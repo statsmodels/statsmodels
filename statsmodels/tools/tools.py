@@ -1,8 +1,6 @@
 """
 Utility functions models code
 """
-from functools import reduce
-
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import pandas as pd
@@ -537,33 +535,6 @@ def unsqueeze(data, axis, oldshape):
     newshape = list(oldshape)
     newshape[axis] = 1
     return data.reshape(newshape)
-
-
-def chain_dot(*arrs):
-    """
-    Returns the dot product of the given matrices.
-
-    Parameters
-    ----------
-    arrs: argument list of ndarray
-
-    Returns
-    -------
-    Dot product of all arguments.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from statsmodels.tools import chain_dot
-    >>> A = np.arange(1,13).reshape(3,4)
-    >>> B = np.arange(3,15).reshape(4,3)
-    >>> C = np.arange(5,8).reshape(3,1)
-    >>> chain_dot(A,B,C)
-    array([[1820],
-       [4300],
-       [6780]])
-    """
-    return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
 
 def nan_dot(A, B):
