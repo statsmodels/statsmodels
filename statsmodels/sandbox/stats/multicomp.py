@@ -61,6 +61,7 @@ TODO
 
 
 '''
+from statsmodels.compat.python import lzip, lrange
 
 import copy
 import math
@@ -68,10 +69,10 @@ import math
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats, interpolate
-from statsmodels.compat.python import lzip, lrange
+
 from statsmodels.iolib.table import SimpleTable
 #temporary circular import
-from statsmodels.stats.multitest import multipletests, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
+from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
 
@@ -289,6 +290,158 @@ def catstack(args):
 
 
 
+
+def maxzero(x):
+    '''find all up zero crossings and return the index of the highest
+
+    Not used anymore
+
+
+    >>> np.random.seed(12345)
+    >>> x = np.random.randn(8)
+    >>> x
+    array([-0.20470766,  0.47894334, -0.51943872, -0.5557303 ,  1.96578057,
+            1.39340583,  0.09290788,  0.28174615])
+    >>> maxzero(x)
+    (4, array([1, 4]))
+
+
+    no up-zero-crossing at end
+
+    >>> np.random.seed(0)
+    >>> x = np.random.randn(8)
+    >>> x
+    array([ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
+           -0.97727788,  0.95008842, -0.15135721])
+    >>> maxzero(x)
+    (None, array([6]))
+    '''
+    x = np.asarray(x)
+    cond1 = x[:-1] < 0
+    cond2 = x[1:] > 0
+    #allzeros = np.nonzero(np.sign(x[:-1])*np.sign(x[1:]) <= 0)[0] + 1
+    allzeros = np.nonzero((cond1 & cond2) | (x[1:]==0))[0] + 1
+    if x[-1] >=0:
+        maxz = max(allzeros)
+    else:
+        maxz = None
+    return maxz, allzeros
+
+def maxzerodown(x):
+    '''find all up zero crossings and return the index of the highest
+
+    Not used anymore
+
+    >>> np.random.seed(12345)
+    >>> x = np.random.randn(8)
+    >>> x
+    array([-0.20470766,  0.47894334, -0.51943872, -0.5557303 ,  1.96578057,
+            1.39340583,  0.09290788,  0.28174615])
+    >>> maxzero(x)
+    (4, array([1, 4]))
+
+
+    no up-zero-crossing at end
+
+    >>> np.random.seed(0)
+    >>> x = np.random.randn(8)
+    >>> x
+    array([ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
+           -0.97727788,  0.95008842, -0.15135721])
+    >>> maxzero(x)
+    (None, array([6]))
+'''
+    x = np.asarray(x)
+    cond1 = x[:-1] > 0
+    cond2 = x[1:] < 0
+    #allzeros = np.nonzero(np.sign(x[:-1])*np.sign(x[1:]) <= 0)[0] + 1
+    allzeros = np.nonzero((cond1 & cond2) | (x[1:]==0))[0] + 1
+    if x[-1] <=0:
+        maxz = max(allzeros)
+    else:
+        maxz = None
+    return maxz, allzeros
+
+
+
+def rejectionline(n, alpha=0.5):
+    '''reference line for rejection in multiple tests
+
+    Not used anymore
+
+    from: section 3.2, page 60
+    '''
+    t = np.arange(n)/float(n)
+    frej = t/( t * (1-alpha) + alpha)
+    return frej
+
+
+
+
+
+
+#I do not remember what I changed or why 2 versions,
+#this follows german diss ???  with rline
+#this might be useful if the null hypothesis is not "all effects are zero"
+#rename to _bak and working again on fdrcorrection0
+def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
+    '''Reject False discovery rate correction for pvalues
+
+    Old version, to be deleted
+
+
+    missing: methods that estimate fraction of true hypotheses
+
+    '''
+    pvals = np.asarray(pvals)
+
+
+    pvals_sortind = np.argsort(pvals)
+    pvals_sorted = pvals[pvals_sortind]
+    pecdf = ecdf(pvals_sorted)
+    if method in ['i', 'indep', 'p', 'poscorr']:
+        rline = pvals_sorted / alpha
+    elif method in ['n', 'negcorr']:
+        cm = np.sum(1./np.arange(1, len(pvals)))
+        rline = pvals_sorted / alpha * cm
+    elif method in ['g', 'onegcorr']:  #what's this ? german diss
+        rline = pvals_sorted / (pvals_sorted*(1-alpha) + alpha)
+    elif method in ['oth', 'o2negcorr']: # other invalid, cut-paste
+        cm = np.sum(np.arange(len(pvals)))
+        rline = pvals_sorted / alpha /cm
+    else:
+        raise ValueError('method not available')
+
+    reject = pecdf >= rline
+    if reject.any():
+        rejectmax = max(np.nonzero(reject)[0])
+    else:
+        rejectmax = 0
+    reject[:rejectmax] = True
+    return reject[pvals_sortind.argsort()]
+
+def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
+    '''MonteCarlo to test fdrcorrection
+    '''
+    nfalse = ntests - ntrue
+    locs = np.array([0.]*ntrue + [mu]*(ntests - ntrue))
+    results = []
+    for i in range(nrepl):
+        #rvs = locs + stats.norm.rvs(size=(nobs, ntests))
+        rvs = locs + randmvn(rho, size=(nobs, ntests))
+        tt, tpval = stats.ttest_1samp(rvs, 0)
+        res = fdrcorrection_bak(np.abs(tpval), alpha=alpha, method='i')
+        res0 = fdrcorrection0(np.abs(tpval), alpha=alpha)
+        #res and res0 give the same results
+        results.append([np.sum(res[:ntrue]), np.sum(res[ntrue:])] +
+                       [np.sum(res0[:ntrue]), np.sum(res0[ntrue:])] +
+                       res.tolist() +
+                       np.sort(tpval).tolist() +
+                       [np.sum(tpval[:ntrue]<alpha),
+                        np.sum(tpval[ntrue:]<alpha)] +
+                       [np.sum(tpval[:ntrue]<alpha/ntests),
+                        np.sum(tpval[ntrue:]<alpha/ntests)])
+    return np.array(results)
 
 def randmvn(rho, size=(1, 2), standardize=False):
     '''create random draws from equi-correlated multivariate normal distribution
@@ -1641,6 +1794,14 @@ if __name__ == '__main__':
     if ('fdr' in examples) or ('bonf' in examples):
         from .ex_multicomp import example_fdr_bonferroni
         example_fdr_bonferroni()
+
+    if 'fdrmc' in examples:
+        mcres = mcfdr(nobs=100, nrepl=1000, ntests=30, ntrue=30, mu=0.1, alpha=0.05, rho=0.3)
+        mcmeans = np.array(mcres).mean(0)
+        print(mcmeans)
+        print(mcmeans[0]/6., 1-mcmeans[1]/4.)
+        print(mcmeans[:4], mcmeans[-4:])
+
 
     if 'randmvn' in examples:
         rvsmvn = randmvn(0.8, (5000,5))
