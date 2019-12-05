@@ -27,7 +27,6 @@ Backups of documentation are available at https://statsmodels.github.io/stable/
 and https://statsmodels.github.io/dev/.
 
 
-
 Main Features
 =============
 
@@ -139,6 +138,19 @@ See INSTALL.txt for requirements or see the documentation
 
 https://statsmodels.github.io/dev/install.html
 
+Contributing
+============
+Contributions in any form are welcome, including:
+
+* Documentation improvements
+* Additional tests
+* New features to existing models
+* New models
+
+https://statsmodels.github.io/dev/test_notes.html
+
+for instructions on installing statsmodels in *editable* mode.
+
 License
 =======
 
@@ -147,12 +159,12 @@ Modified BSD (3-clause)
 Discussion and Development
 ==========================
 
-Discussions take place on our mailing list.
+Discussions take place on the mailing list
 
 https://groups.google.com/group/pystatsmodels
 
-We are very interested in feedback about usability and suggestions for
-improvements.
+and in the issue tracker. We are very interested in feedback
+about usability and suggestions for improvements.
 
 Bug Reports
 ===========

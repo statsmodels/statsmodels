@@ -7,14 +7,20 @@ Setting up development environment locally
 ------------------------------------------
 Follow our :ref:`installation instructions <install>` and set up a suitable
 environment to build statsmodels from source. We recommend that you develop
-using a development install of statsmodels::
+using a development install of statsmodels by running:
 
-    python setup.py develop
+.. code-block:: bash
 
-This will compile the C code and add statsmodels to your activate python
+   pip install -e .
+
+from the root directory of the git repository. The flag ``-e`` is for editable.
+
+This command compiles the C code and add statsmodels to your activate python
 environment by creating links from your python environment's libraries
 to the statsmodels source code. Therefore, changes to pure python code will
-be immediately available to the user without a re-install.
+be immediately available to the user without a re-install. Changes to C code or
+Cython code require rerunning ``pip install -e .`` before these changes are
+available.
 
 Test Driven Development
 -----------------------
@@ -28,27 +34,13 @@ Like many packages, statsmodels uses the `pytest testing system <https://docs.py
 
 .. _run-tests:
 
-Running the Test Suite
-----------------------
+Running Tests
+-------------
+Test are run from the command line by calling ``pytest``. Directly running tests using
+pytest requires that statsmodels is installed using ``pip install -e .`` as described
+above.
 
-You can run all the tests by::
-
-    >>> import statsmodels.api as sm
-    >>> sm.test()
-
-You can test submodules by::
-
-    >>> sm.discrete.test()
-
-.. autosummary::
-   :toctree: generated/
-
-   ~statsmodels.__init__.test
-
-Running Tests using the command line
-------------------------------------
-Test can also be run from the command line by calling ``pytest``.  Tests can be run
-at different levels:
+Tests can be run at different levels of granularity:
 
 * Project level, which runs all tests.  Running the entire test suite is slow
   and normally this would only be needed if making deep changes to statsmodels.
@@ -162,3 +154,42 @@ It is up to you how best to structure the results. In the discrete model example
 that there are result classes based around particular datasets with a method for loading different
 model results for that dataset. You can also include text files that hold results to be loaded by
 results classes if it is easier than putting them in the class itself.
+
+Speeding up full runs
+---------------------
+Running the full test suite is slow. Fortunately it is only necessary to run the full suite when
+making low-level changes (e.g., to ``statsmodels.base``) There are two methods available to
+speed up runs of the full test suite when needed.
+
+* Use the pytest-xdist package
+
+.. code-block:: bash
+
+   pip install pytest-xdist
+   export MKL_NUM_THREADS=1
+   export OMP_NUM_THREADS=1
+   pytest -n auto statsmodels
+
+* Skip slow tests using ``--skip-slow``
+
+.. code-block:: bash
+
+   pytest --skip-slow statsmodels
+
+
+You can combine these two approaches for faster runs.
+
+.. code-block:: bash
+
+   export MKL_NUM_THREADS=1 && export OMP_NUM_THREADS=1
+   pytest -n auto --skip-slow statsmodels
+
+
+The ``test()`` method
+---------------------
+The root of statsmodels and all submodules expose a ``test()`` method which can
+be used to run all tests either in the package (``statsmodels.test()``) or in
+a module (``statsmodels.regression.test()``).  This method allows tests to be
+run from an install copy of statsmodels even it is was not installed using the
+*editable* flag as described above. This method is required for testing wheels in
+release builds and is **not** recommended for development.
