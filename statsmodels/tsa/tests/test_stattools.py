@@ -463,9 +463,17 @@ class TestGrangerCausality(object):
 
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
-        X = np.random.rand(10, 2)
-        grangercausalitytests(X, 2, verbose=False)  # This should pass.
-        assert_raises(ValueError, grangercausalitytests, X, 3, verbose=False)
+        x = np.random.rand(10, 2)
+        grangercausalitytests(x, 2, verbose=False)  # This should pass.
+        with pytest.raises(ValueError):
+            grangercausalitytests(x, 3, verbose=False)
+
+    def test_granger_fails_on_finite_check(self, reset_randomstate):
+        x = np.random.rand(1000, 2)
+        x[500, 0] = np.nan
+        x[750, 1] = np.inf
+        with pytest.raises(ValueError, match="x contains NaN"):
+            grangercausalitytests(x, 2)
 
 
 class SetupKPSS(object):
