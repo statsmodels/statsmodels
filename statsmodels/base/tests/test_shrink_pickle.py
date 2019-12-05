@@ -33,7 +33,7 @@ class RemoveDataPickle(object):
 
     @classmethod
     def setup_class(cls):
-        nobs = 10000
+        nobs = 1000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
