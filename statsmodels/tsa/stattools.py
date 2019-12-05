@@ -1127,7 +1127,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     ----------
     x : array_like
         The data for test whether the time series in the second column Granger
-        causes the time series in the first column.
+        causes the time series in the first column. Missing values are not
+        supported.
     maxlag : {int, Iterable[int]}
         If an integer, computes the test for all lags up to maxlag. If an
         iterable, computes the tests only for the lags in maxlag.
@@ -1185,6 +1186,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, 'x', ndim=2)
+    if not np.isfinite(x).all():
+        raise ValueError('x contains NaN or inf values.')
     addconst = bool_like(addconst, 'addconst')
     verbose = bool_like(verbose, 'verbose')
     try:
