@@ -15,6 +15,7 @@ import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.validation import array_like
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
@@ -75,7 +76,7 @@ class KDEUnivariate(object):
     """
 
     def __init__(self, endog):
-        self.endog = np.asarray(endog)
+        self.endog = array_like(endog, "endog", ndim=1, contiguous=True)
 
     def fit(self, kernel="gau", bw="normal_reference", fft=True, weights=None,
             gridsize=None, adjust=1, cut=3, clip=(-np.inf, np.inf)):

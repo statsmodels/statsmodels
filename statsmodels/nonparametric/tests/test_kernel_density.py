@@ -120,6 +120,16 @@ class TestKDEUnivariate(KDETestBase):
         with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
             kde.fit()
 
+    def test_int(self, reset_randomstate):
+        x = np.random.randint(0, 100, size=1000)
+        kde = nparam.KDEUnivariate(x)
+        kde.fit()
+
+        kde_double = nparam.KDEUnivariate(x.astype("double"))
+        kde_double.fit()
+
+        assert_allclose(kde.bw, kde_double.bw)
+
 
 class TestKDEMultivariate(KDETestBase):
     @pytest.mark.slow
