@@ -193,3 +193,21 @@ a module (``statsmodels.regression.test()``).  This method allows tests to be
 run from an install copy of statsmodels even it is was not installed using the
 *editable* flag as described above. This method is required for testing wheels in
 release builds and is **not** recommended for development.
+
+Using this method, all tests are run using:
+
+.. code-block:: python
+
+   import statsmodels.api as sm
+   sm.test()
+
+Submodules tests are run using:
+
+.. code-block:: python
+
+    sm.discrete.test()
+
+.. autosummary::
+   :toctree: generated/
+
+   ~statsmodels.__init__.test
