@@ -486,9 +486,9 @@ class GLMGam(PenalizedMixin, GLM):
         case is a partial linear model.
     smoother : instance of additive smoother class
         Examples of smoother instances include Bsplines or CyclicCubicSplines.
-    alpha : list of floats
+    alpha : float or list of floats
         Penalization weights for smooth terms. The length of the list needs
-        to be the same as the number of smooth terms in the ``smoother``
+        to be the same as the number of smooth terms in the ``smoother``.
     family : instance of GLM family
         See GLM.
     offset : None or array_like
