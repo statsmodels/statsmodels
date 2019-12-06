@@ -17,6 +17,7 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_allclose, assert_array_equal)
+from pandas.testing import assert_frame_equal
 
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
@@ -26,7 +27,7 @@ from statsmodels.datasets import sunspots
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.tools import add_constant
-from statsmodels.tsa.ar_model import AR
+from statsmodels.tsa.ar_model import AutoReg
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -312,82 +313,128 @@ class TestDiagnosticG(object):
 
     def test_acorr_ljung_box(self):
 
-        #unit-test which may be useful later
-        #ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
-        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
-        #> mkhtest(bt, "ljung_box_4df2", "chi2")
+        # unit-test which may be useful later
+        # ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
+        # bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
+        # mkhtest(bt, "ljung_box_4df2", "chi2")
         # ljung_box_4df2 = dict(statistic=5.23587172795227,
         #                       pvalue=0.0729532930400377,
         #                       parameters=(2,), distr='chi2')
 
-        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
-        #> mkhtest(bt, "ljung_box_bp_4df2", "chi2")
+        # bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
+        # mkhtest(bt, "ljung_box_bp_4df2", "chi2")
         # ljung_box_bp_4df2 = dict(statistic=5.12462932741681,
         #                          pvalue=0.0771260128929921,
         #                          parameters=(2,), distr='chi2')
 
-
         res = self.res
-
-        #general test
-
-        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
-        #> mkhtest(bt, "ljung_box_4", "chi2")
+        # general test
+        # bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
+        # mkhtest(bt, "ljung_box_4", "chi2")
         ljung_box_4 = dict(statistic=5.23587172795227, pvalue=0.263940335284713,
                            parameters=(4,), distr='chi2')
 
-        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce")
-        #> mkhtest(bt, "ljung_box_bp_4", "chi2")
+        # bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce")
+        # mkhtest(bt, "ljung_box_bp_4", "chi2")
         ljung_box_bp_4 = dict(statistic=5.12462932741681,
                               pvalue=0.2747471266820692,
                               parameters=(4,), distr='chi2')
 
 
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, 4,
-                                                       boxpierce=True)
+                                                       boxpierce=True,
+                                                       return_df=False)
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 13))
         compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 13))
 
     def test_acorr_ljung_box_big_default(self):
         res = self.res
-        #test with big dataset and default lag
-
-        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
-        #> mkhtest(bt, "ljung_box_none", "chi2")
-        ljung_box_none = dict(statistic=51.03724531797195, pvalue=0.11334744923390,
+        # R test with big dataset and default lag
+        # bt = Box.test(residuals(fm), type = "Ljung-Box")
+        # mkhtest(bt, "ljung_box_none", "chi2")
+        ljung_box_none = dict(statistic=51.03724531797195,
+                              pvalue=0.11334744923390,
                               distr='chi2')
 
-        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
-        #> mkhtest(bt, "ljung_box_bp_none", "chi2")
+        # bt = Box.test(residuals(fm), type = "Box-Pierce")
+        # mkhtest(bt, "ljung_box_bp_none", "chi2")
         ljung_box_bp_none = dict(statistic=45.12238537034000,
                               pvalue=0.26638168491464,
                               distr='chi2')
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, boxpierce=True)
+        lags = min(40, res.resid.shape[0] // 2 - 2)
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid,
+                                                       boxpierce=True,
+                                                       lags=lags,
+                                                       return_df=False)
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_none, decimal=(13, 13))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none,
+                      decimal=(13, 13))
 
     def test_acorr_ljung_box_small_default(self):
         res = self.res
-        #test with small dataset and default lag
+        # R test with small dataset and default lag
+        # bt = Box.test(residuals(fm), type = "Ljung-Box")
+        # mkhtest(bt, "ljung_box_small", "chi2")
+        ljung_box_small = dict(statistic=9.61503968281915,
+                               pvalue=0.72507000996945,
+                               parameters=(0,), distr='chi2')
 
-        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
-        #> mkhtest(bt, "ljung_box_small", "chi2")
-        ljung_box_small = dict(statistic=9.61503968281915, pvalue=0.72507000996945,
-                           parameters=(0,), distr='chi2')
-
-        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
-        #> mkhtest(bt, "ljung_box_bp_small", "chi2")
+        # bt = Box.test(residuals(fm), type = "Box-Pierce")
+        # mkhtest(bt, "ljung_box_bp_small", "chi2")
         ljung_box_bp_small = dict(statistic=7.41692150864936,
-                              pvalue=0.87940785887006,
-                              parameters=(0,), distr='chi2')
+                                  pvalue=0.87940785887006,
+                                  parameters=(0,),
+                                  distr='chi2')
 
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid[:30], boxpierce=True)
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid[:30],
+                                                       boxpierce=True,
+                                                       lags=13,
+                                                       return_df=False)
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 13))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small,
+                      decimal=(13, 13))
 
+    def test_acorr_ljung_box_against_r(self, reset_randomstate):
+        rs = np.random.RandomState(9876543)
+        y1 = rs.standard_normal(100)
+        e = rs.standard_normal(201)
+        y2 = np.zeros_like(e)
+        y2[0] = e[0]
+        for i in range(1, 201):
+            y2[i] = 0.5 * y2[i-1] - 0.4 * e[i-1] + e[i]
+        y2 = y2[-100:]
+
+        r_results_y1_lb = [[0.15685, 1, 0.6921],
+                           [5.4737, 5, 0.3608],
+                           [10.508, 10, 0.3971]]
+
+        r_results_y2_lb = [[2.8764, 1,0.08989],
+                           [3.8104, 5,0.577],
+                           [8.4779, 10, 0.5823]]
+        res_y1 = smsdia.acorr_ljungbox(y1, 10, return_df=True)
+        res_y2 = smsdia.acorr_ljungbox(y2, 10, return_df=True)
+        for i, loc in enumerate((1, 5, 10)):
+            row = res_y1.loc[loc]
+            assert_allclose(r_results_y1_lb[i][0], row.loc["lb_stat"],
+                            rtol=1e-3)
+            assert_allclose(r_results_y1_lb[i][2], row.loc["lb_pvalue"],
+                            rtol=1e-3)
+
+            row = res_y2.loc[loc]
+            assert_allclose(r_results_y2_lb[i][0], row.loc["lb_stat"],
+                            rtol=1e-3)
+            assert_allclose(r_results_y2_lb[i][2], row.loc["lb_pvalue"],
+                            rtol=1e-3)
+
+        res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True, return_df=True)
+        assert_allclose(res.loc[10,"bp_stat"], 7.8935, rtol=1e-3)
+        assert_allclose(res.loc[10, "bp_pvalue"], 0.639, rtol=1e-3)
+
+        res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True, return_df=True,
+                                    model_df=1)
+        assert_allclose(res.loc[10, "bp_pvalue"], 0.5449, rtol=1e-3)
 
     def test_harvey_collier(self):
-
         #> hc = harvtest(fm, order.by = NULL, data = list())
         #> mkhtest_f(hc, 'harvey_collier', 't')
         harvey_collier = dict(statistic=0.494432160939874,
@@ -666,9 +713,8 @@ class TestDiagnosticG(object):
         assert_almost_equal(infl.resid_studentized_external,
                             lsdiag['stud.res'], decimal=14)
 
-        import pandas
         fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
-        infl_r = pandas.read_csv(fn, index_col=0)
+        infl_r = pd.read_csv(fn, index_col=0)
         conv = lambda s: 1 if s=='TRUE' else 0
         fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
         #not used yet:
@@ -835,9 +881,8 @@ def test_influence_wrapped():
     assert_almost_equal(infl.resid_studentized_external,
                         lsdiag['stud.res'], 14)
 
-    import pandas
     fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
-    infl_r = pandas.read_csv(fn, index_col=0)
+    infl_r = pd.read_csv(fn, index_col=0)
     conv = lambda s: 1 if s=='TRUE' else 0
     fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
     #not used yet:
@@ -1065,10 +1110,30 @@ if __name__ == '__main__':
 
 def test_ljungbox_dof_adj():
     data = sunspots.load_pandas().data['SUNACTIVITY']
-    res = AR(data).fit(maxlag=4)
+    res = AutoReg(data, 4).fit()
     resid = res.resid
-    res1 = smsdia.acorr_ljungbox(resid, lags=10)
-    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=res.k_ar)
+    res1 = smsdia.acorr_ljungbox(resid, lags=10, return_df=False)
+    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=4, return_df=False)
     assert_allclose(res1[0], res2[0])
     assert np.all(np.isnan(res2[1][:4]))
     assert np.all(res2[1][4:] <= res1[1][4:])
+
+
+def test_ljungbox_errors():
+    data = sunspots.load_pandas().data['SUNACTIVITY']
+    with pytest.raises(ValueError, match="model_df must"):
+        smsdia.acorr_ljungbox(data, model_df=-1)
+    with pytest.raises(ValueError, match="period must"):
+        smsdia.acorr_ljungbox(data, model_df=-1, period=1)
+    with pytest.raises(ValueError, match="period must"):
+        smsdia.acorr_ljungbox(data, model_df=-1, period=-2)
+    with pytest.warns(FutureWarning, match="The default value of lags"):
+        smsdia.acorr_ljungbox(data, return_df=False)
+
+
+def test_ljungbox_period():
+    data = sunspots.load_pandas().data['SUNACTIVITY']
+    ar_res = AutoReg(data, 4).fit()
+    res = smsdia.acorr_ljungbox(ar_res.resid, period=13, return_df=True)
+    res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26, return_df=True)
+    assert_frame_equal(res, res2)

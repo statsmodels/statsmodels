@@ -292,8 +292,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
     has_constant : str {'raise', 'add', 'skip'}
         Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
-        error if a constant is present. Using 'add' will duplicate the
-        constant, if one is present.
+        error if any column has a constant value. Using 'add' will add a
+        column of 1s if a constant column is present.
 
     Returns
     -------
@@ -318,9 +318,9 @@ def add_constant(data, prepend=True, has_constant='skip'):
     # Special case for NumPy
     x = np.asanyarray(data)
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     elif x.ndim > 2:
-        raise ValueError('Only implementd 2-dimensional arrays')
+        raise ValueError('Only implemented for 2-dimensional arrays')
 
     is_nonzero_const = np.ptp(x, axis=0) == 0
     is_nonzero_const &= np.all(x != 0.0, axis=0)

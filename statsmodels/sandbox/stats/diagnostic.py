@@ -30,12 +30,15 @@ missing:
 """
 from statsmodels.compat.python import iteritems
 from collections.abc import Iterable
+
 import numpy as np
+import pandas as pd
 from scipy import stats
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, int_like, bool_like
 
 
 # get the old signature back so the examples work
@@ -223,14 +226,15 @@ class CompareJ(object):
 compare_j = CompareJ()
 
 
-def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
+def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
+                   return_df=None):
     """
-    Ljung-Box test for no autocorrelation
+    Ljung-Box test of autocorrelation in residuals.
 
     Parameters
     ----------
     x : array_like
-        The data series, assumed to have mean zero, .e.g, regression residuals
+        The data series. Assumed to have mean zero, e.g., regression residuals
         when used as diagnostic test.
     lags : {None, int, array_like}
         If lags is an integer then this is taken to be the largest lag
@@ -238,7 +242,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
         length. If lags is a list or array, then all lags are included up to
         the largest lag in the list, however only the tests for the lags in
         the list are reported. If lags is None, then the default maxlag is
-        min((nobs // 2 - 2), 40).
+        currently min((nobs // 2 - 2), 40). After 0.12 this will change to
+        min(10, nobs // 5). The default number of lags changes if period
+        is set.
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
@@ -248,6 +254,17 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
         order. This value is subtracted from the degrees-of-freedom used in
         the test so that the adjusted dof for the statistics are
         lags - model_df. If lags - model_df <= 0, then NaN is returned.
+    period : {int, None}
+        The period of a Seasonal time series.  Used to compute the max lag
+        for seasonal data which uses min(2*period, nobs // 5) if set. If None,
+        then the default rule is used to set the number of lags. When set, must
+        be >= 2.
+    return_df : bool
+        Flag indicating whether to return the result as a single DataFrame
+        with columns lb_stat, lb_pvalue, and optionally bp_stat and bp_pvalue.
+        After 0.12, this will become the only return method.  Set to True
+        to return the DataFrame or False to continue returning the 2 - 4
+        output. If not set, a warning is raised.
 
     Returns
     -------
@@ -256,13 +273,13 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
     pvalue : float or array
         The p-value based on chi-square distribution. The p-value is computed
         as 1.0 - chi2.cdf(lbvalue, dof) where dof is lag - model_df. If
-        lag - model_df < 0, then NaN is returned for the pvalue.
+        lag - model_df <= 0, then NaN is returned for the pvalue.
     bpvalue : (optional), float or array
         The test statistic for Box-Pierce test.
     bppvalue : (optional), float or array
         The p-value based for Box-Pierce test on chi-square distribution.
         The p-value is computed as 1.0 - chi2.cdf(bpvalue, dof) where dof is
-        lag - model_df. If lag - model_df < 0, then NaN is returned for the
+        lag - model_df. If lag - model_df <= 0, then NaN is returned for the
         pvalue.
 
     Notes
@@ -271,28 +288,37 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
     autocorrelation function. Ljung-Box test is has better finite-sample
     properties.
 
-    *Verification*
-
-    needs more testing
-    Looks correctly sized in Monte Carlo studies.
-    not yet compared to verified values
-
     Examples
     --------
     >>> data = sm.datasets.sunspots.load_pandas().data
     >>> res = sm.tsa.ARMA(data['SUNACTIVITY'], (1,1)).fit(disp=-1)
-    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
-    (array([214.10699875]), array([1.82736777e-40]))
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10], return_df=True)
+           lb_stat     lb_pvalue
+    10  214.106992  1.827374e-40
 
     References
     ----------
-    Greene
-    Wikipedia
+    .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
     """
-    # TODO: Need a reasonable results class
     x = array_like(x, 'x')
+    period = int_like(period, 'period', optional=True)
+    return_df = bool_like(return_df, 'return_df', optional=True)
+    model_df = int_like(model_df, 'model_df', optional=False)
+    if period is not None and period <= 1:
+        raise ValueError('period must be >= 2')
+    if model_df < 0:
+        raise ValueError('model_df must be >= 0')
     nobs = x.shape[0]
-    if lags is None:
+    if period is not None:
+        lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=np.int)
+    elif lags is None:
+        # TODO: Switch to min(10, nobs//5) after 0.12
+        import warnings
+        warnings.warn("The default value of lags is changing.  After 0.12, "
+                      "this value will become min(10, nobs//5). Directly set"
+                      "lags to silence this warning.", FutureWarning)
+        # Future
+        # lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=np.int)
         lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=np.int)
     elif not isinstance(lags, Iterable):
         lags = int_like(lags, 'lags')
@@ -308,12 +334,29 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0):
     pval = np.full_like(qljungbox, np.nan)
     loc = adj_lags > 0
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
+
+    if return_df is None:
+        msg = ("The value returned will change to a single DataFrame after "
+               "0.12 is released.  Set return_df to True to use to return a "
+               "DataFrame now.  Set return_df to False to silence this "
+               "warning.")
+        import warnings
+        warnings.warn(msg, FutureWarning)
+
     if not boxpierce:
+        if return_df:
+            return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
+                                index=lags)
         return qljungbox, pval
 
     qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
     pvalbp = np.full_like(qljungbox, np.nan)
     pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
+    if return_df:
+        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
+                             "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
+                            index=lags)
+
     return qljungbox, pval, qboxpierce, pvalbp
 
 
@@ -1509,7 +1552,7 @@ if __name__ == '__main__':
     if 'adf' in examples:
 
         x = np.random.randn(20)
-        print(acorr_ljungbox(x,4))
+        print(acorr_ljungbox(x, 4, return_df=True))
         print(unitroot_adf(x))
 
         nrepl = 100

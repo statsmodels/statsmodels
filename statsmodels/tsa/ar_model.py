@@ -1842,7 +1842,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = int(min(12 * (nobs_effective / 100) ** (1 / 4),
                            nobs_effective - 1))
         test_stats = acorr_ljungbox(self.resid, lags=lags, boxpierce=False,
-                                    model_df=model_df)
+                                    model_df=model_df, return_df=False)
         cols = ['Ljung-Box', 'LB P-value', 'DF']
         if lags == 1:
             test_stats = [list(test_stats) + [max(0, 1 - model_df)]]
