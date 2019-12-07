@@ -8,7 +8,6 @@ from .diagnostic import (
     het_breuschpagan, het_white, het_arch,
     linear_harvey_collier, linear_rainbow, linear_lm,
     breaks_cusumolsresid, breaks_hansen, recursive_olsresiduals,
-    unitroot_adf,
     normal_ad, lilliefors
 )
 

@@ -39,13 +39,6 @@ from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.validation import array_like, int_like, bool_like
 
 
-# get the old signature back so the examples work
-def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
-    return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
-                    store=store, regresults=False)
-
-
-# TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str
@@ -58,19 +51,28 @@ class CompareCox(object):
     Parameters
     ----------
     results_x : Result instance
-        result instance of first model
+        Result instance of first model
     results_z : Result instance
-        result instance of second model
+        Result instance of second model
     attach : bool
+        Flag indicating whether intermediate results are attached to the
+        instance.
 
+    Notes
+    -----
+    Formulas from [1]_, section 8.3.4 translated to code
 
-    Formulas from Greene, section 8.3.4 translated to code
+    Matches results for Example 8.3 in Greene
 
-    produces correct results for Example 8.3, Greene
+    References
+    ----------
+    .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
+       5th edition. (2002).
     """
 
     def run(self, results_x, results_z, attach=True):
-        """run Cox test for non-nested models
+        """
+        Compute the Cox test for non-nested models
 
         Parameters
         ----------
@@ -79,7 +81,8 @@ class CompareCox(object):
         results_z : Result instance
             result instance of second model
         attach : bool
-            If true, then the intermediate results are attached to the instance.
+            If true, then the intermediate results are attached to the
+            instance.
 
         Returns
         -------
@@ -93,12 +96,15 @@ class CompareCox(object):
         -----
         Tests of non-nested hypothesis might not provide unambiguous answers.
         The test should be performed in both directions and it is possible
-        that both or neither test rejects. see ??? for more information.
+        that both or neither test rejects. see [1]_ for more information.
 
         References
         ----------
-        ???
 
+        References
+        ----------
+        .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
+           5th edition. (2002).
         """
 
         if not np.allclose(results_x.model.endog, results_z.model.endog):
@@ -109,7 +115,6 @@ class CompareCox(object):
         sigma2_x = results_x.ssr / nobs
         sigma2_z = results_z.ssr / nobs
         yhat_x = results_x.fittedvalues
-        yhat_z = results_z.fittedvalues
         res_dx = OLS(yhat_x, z).fit()
         err_zx = res_dx.resid
         res_xzx = OLS(err_zx, x).fit()
@@ -140,28 +145,28 @@ compare_cox = CompareCox()
 
 
 class CompareJ(object):
-    """J-Test for comparing non-nested models
+    """
+    J-Test for comparing non-nested models
 
     Parameters
     ----------
     results_x : Result instance
-        result instance of first model
+        Result instance of first model
     results_z : Result instance
-        result instance of second model
+        Result instance of second model
     attach : bool
+        Flag indicating whether intermediate results are attached to the
+        instance.
 
-
-    From description in Greene, section 8.3.3
-
-    produces correct results for Example 8.3, Greene - not checked yet
-    #currently an exception, but I do not have clean reload in python session
-
-    check what results should be attached
-
+    Notes
+    -----
+    From description in Greene, section 8.3.3. Matches results for Example
+    8.3, Greene.
     """
 
     def run(self, results_x, results_z, attach=True):
-        """run J-test for non-nested models
+        """
+        Compute the J-test for non-nested models
 
         Parameters
         ----------
@@ -170,7 +175,8 @@ class CompareJ(object):
         results_z : Result instance
             result instance of second model
         attach : bool
-            If true, then the intermediate results are attached to the instance.
+            If true, then the intermediate results are attached to the
+            instance.
 
         Returns
         -------
@@ -188,19 +194,14 @@ class CompareJ(object):
 
         References
         ----------
-        ???
-
+        .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
+           5th edition. (2002).
         """
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
-        nobs = results_x.model.endog.shape[0]
         y = results_x.model.endog
-        x = results_x.model.exog
         z = results_z.model.exog
-        # sigma2_x = results_x.ssr/nobs
-        # sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
-        # yhat_z = results_z.fittedvalues
         res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  # for testing
         tstat = res_zx.tvalues[0]
@@ -1572,89 +1573,3 @@ def breaks_AP(endog, exog, skip):
 
     """
     pass
-
-
-if __name__ == '__main__':
-
-    examples = ['adf']
-    if 'adf' in examples:
-
-        x = np.random.randn(20)
-        print(acorr_ljungbox(x, 4, return_df=True))
-        print(unitroot_adf(x))
-
-        nrepl = 100
-        nobs = 100
-        mcres = np.zeros(nrepl)
-        for ii in range(nrepl-1):
-            x = (1e-4+np.random.randn(nobs)).cumsum()
-            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)[0]
-
-        print((mcres<-2.57).sum())
-        print(np.histogram(mcres))
-        mcressort = np.sort(mcres)
-        for ratio in [0.01, 0.025, 0.05, 0.1]:
-            print(ratio, mcressort[int(nrepl*ratio)])
-
-        print('critical values in Green table 20.5')
-        print('sample size = 100')
-        print('with constant')
-        print('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47')
-
-        print('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26')
-        crvdg = dict([map(float,s.split(':')) for s in ('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'.split(','))])
-        crvd = dict([map(float,s.split(':')) for s in ('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'.split(','))])
-        '''
-        >>> crvd
-        {0.050000000000000003: -13.699999999999999, 0.97499999999999998: 0.46999999999999997, 0.025000000000000001: -16.300000000000001, 0.01: -11.0}
-        >>> sorted(crvd.values())
-        [-16.300000000000001, -13.699999999999999, -11.0, 0.46999999999999997]
-        '''
-
-        #for trend = 0
-        crit_5lags0p05 =-4.41519 + (-14.0406)/nobs + (-12.575)/nobs**2
-        print(crit_5lags0p05)
-
-
-        adfstat, _,_,resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
-
-        print((mcres>crit_5lags0p05).sum())
-
-        print(resstore.resols.model.exog[-5:])
-        print(x[-5:])
-
-        print(np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf]))
-
-        print(mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)])
-
-    nobs = 100
-    x = np.ones((nobs,2))
-    x[:,1] = np.arange(nobs)/20.
-    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(nobs)
-    print(het_goldfeldquandt(y,x, 1))
-
-    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print(het_goldfeldquandt(y,x, 1))
-
-    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print(het_goldfeldquandt(y,x, 1))
-
-    print(het_breuschpagan(y,x))
-    print(het_white(y,x))
-
-    f, fp, fo = het_goldfeldquandt(y,x, 1)
-    print(f, fp)
-    resgq = het_goldfeldquandt(y,x, 1, retres=True)
-    print(resgq)
-
-    #this is just a syntax check:
-    print(_neweywestcov(y, x))
-
-    resols1 = OLS(y, x).fit()
-    print(_neweywestcov(resols1.resid, x))
-    print(resols1.cov_params())
-    print(resols1.HC0_se)
-    print(resols1.cov_HC0)
-
-    y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print(HetGoldfeldQuandt().run(y,x, 1, alternative='dec'))

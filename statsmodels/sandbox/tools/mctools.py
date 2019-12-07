@@ -144,7 +144,7 @@ class StatTestMC(object):
             for ii in range(1, nrepl-1, nreturns):
                 x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
                 #should I ravel?
-                mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
+                mcres[ii] = statfun(x, *statsargs)
         #more than one return statistic
         else:
             self.nreturn = nreturns = len(statindices)
@@ -448,8 +448,7 @@ class StatTestMC(object):
 if __name__ == '__main__':
     from scipy import stats
 
-    from statsmodels.sandbox.stats.diagnostic import (
-                    acorr_ljungbox, unitroot_adf)
+    from statsmodels.sandbox.stats.diagnostic import (acorr_ljungbox)
 
 
     def randwalksim(nobs=100, drift=0.0):
@@ -457,9 +456,6 @@ if __name__ == '__main__':
 
     def normalnoisesim(nobs=500, loc=0.0):
         return (loc+np.random.randn(nobs))
-
-    def adf20(x):
-        return unitroot_adf(x, 2,trendorder=0, autolag=None)
 
 #    print('\nResults with MC class'
 #    mc1 = StatTestMC(randwalksim, adf20)
