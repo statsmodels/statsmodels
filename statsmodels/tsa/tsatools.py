@@ -33,10 +33,9 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     prepend : bool
         If True, prepends the new data to the columns of X.
     has_constant : str {'raise', 'add', 'skip'}
-        Controls what happens when trend is 'c' and a constant already
-        exists in x. 'raise' will raise an error. 'add' will duplicate a
-        constant. 'skip' will return the data without change. 'skip' is the
-        default.
+        Controls what happens when trend is 'c' and a constant column already
+        exists in x. 'raise' will raise an error. 'add' will add a column of
+        1s. 'skip' will return the data without change. 'skip' is the default.
 
     Returns
     -------

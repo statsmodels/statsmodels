@@ -472,15 +472,15 @@ if __name__ == '__main__':
     print('\nLjung Box')
 
     def lb4(x):
-        s,p = acorr_ljungbox(x, lags=4)
+        s,p = acorr_ljungbox(x, lags=4, return_df=True)
         return s[-1], p[-1]
 
     def lb1(x):
-        s,p = acorr_ljungbox(x, lags=1)
+        s,p = acorr_ljungbox(x, lags=1, return_df=True)
         return s[0], p[0]
 
     def lb(x):
-        s,p = acorr_ljungbox(x, lags=4)
+        s,p = acorr_ljungbox(x, lags=4, return_df=True)
         return np.r_[s, p]
 
     print('Results with MC class')

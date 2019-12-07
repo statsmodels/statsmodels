@@ -2803,7 +2803,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
-                    lags=lags, boxpierce=(method == 'boxpierce'))
+                    lags=lags, boxpierce=(method == 'boxpierce'),
+                    return_df=False)
                 if method == 'ljungbox':
                     output.append(results[0:2])
                 else:
