@@ -448,7 +448,7 @@ class StatTestMC(object):
 if __name__ == '__main__':
     from scipy import stats
 
-    from statsmodels.sandbox.stats.diagnostic import (acorr_ljungbox)
+    from statsmodels.stats.diagnostic import (acorr_ljungbox)
 
 
     def randwalksim(nobs=100, drift=0.0):

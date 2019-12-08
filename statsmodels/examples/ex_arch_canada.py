@@ -7,7 +7,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
-import statsmodels.sandbox.stats.diagnostic as dia
+import statsmodels.stats.diagnostic as dia
 
 canada_raw = '''\
      405.36646642737	    929.610513893698	    7.52999999999884	    386.136109062605

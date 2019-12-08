@@ -54,22 +54,35 @@ class ResultsStore(object):
         return self._str
 
 
-class CompareCox(object):
+def compare_cox(results_x, results_z, store=False):
     """
-    Cox Test for non-nested models
+    Compute the Cox test for non-nested models
 
     Parameters
     ----------
     results_x : Result instance
-        Result instance of first model
+        result instance of first model
     results_z : Result instance
-        Result instance of second model
-    attach : bool
-        Flag indicating whether intermediate results are attached to the
-        instance.
+        result instance of second model
+    store : bool
+        If true, then the intermediate results are returned.
+
+    Returns
+    -------
+    tstat : float
+        t statistic for the test that including the fitted values of the
+        first model in the second model has no effect.
+    pvalue : float
+        two-sided pvalue for the t statistic
+    res_store : ResultsStore, optional
+        Intermediate results. Returned if store is True.
 
     Notes
     -----
+    Tests of non-nested hypothesis might not provide unambiguous answers.
+    The test should be performed in both directions and it is possible
+    that both or neither test rejects. see [1]_ for more information.
+
     Formulas from [1]_, section 8.3.4 translated to code
 
     Matches results for Example 8.3 in Greene
@@ -80,155 +93,154 @@ class CompareCox(object):
        5th edition. (2002).
     """
 
-    def run(self, results_x, results_z, attach=True):
-        """
-        Compute the Cox test for non-nested models
+    if not np.allclose(results_x.model.endog, results_z.model.endog):
+        raise ValueError('endogenous variables in models are not the same')
+    nobs = results_x.model.endog.shape[0]
+    x = results_x.model.exog
+    z = results_z.model.exog
+    sigma2_x = results_x.ssr / nobs
+    sigma2_z = results_z.ssr / nobs
+    yhat_x = results_x.fittedvalues
+    res_dx = OLS(yhat_x, z).fit()
+    err_zx = res_dx.resid
+    res_xzx = OLS(err_zx, x).fit()
+    err_xzx = res_xzx.resid
 
-        Parameters
-        ----------
-        results_x : Result instance
-            result instance of first model
-        results_z : Result instance
-            result instance of second model
-        attach : bool
-            If true, then the intermediate results are attached to the
-            instance.
+    sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx) / nobs
+    c01 = nobs / 2. * (np.log(sigma2_z) - np.log(sigma2_zx))
+    v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx ** 2
+    q = c01 / np.sqrt(v01)
+    pval = 2 * stats.norm.sf(np.abs(q))
 
-        Returns
-        -------
-        tstat : float
-            t statistic for the test that including the fitted values of the
-            first model in the second model has no effect.
-        pvalue : float
-            two-sided pvalue for the t statistic
+    if store:
+        res = ResultsStore()
+        res.res_dx = res_dx
+        res.res_xzx = res_xzx
+        res.c01 = c01
+        res.v01 = v01
+        res.q = q
+        res.pvalue = pval
+        res.dist = stats.norm
+        return q, pval, res
 
-        Notes
-        -----
-        Tests of non-nested hypothesis might not provide unambiguous answers.
-        The test should be performed in both directions and it is possible
-        that both or neither test rejects. see [1]_ for more information.
+    return q, pval
 
-        References
-        ----------
 
-        References
-        ----------
-        .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
-           5th edition. (2002).
-        """
+class CompareCox(object):
+    """
+    Cox Test for non-nested models
 
-        if not np.allclose(results_x.model.endog, results_z.model.endog):
-            raise ValueError('endogenous variables in models are not the same')
-        nobs = results_x.model.endog.shape[0]
-        x = results_x.model.exog
-        z = results_z.model.exog
-        sigma2_x = results_x.ssr / nobs
-        sigma2_z = results_z.ssr / nobs
-        yhat_x = results_x.fittedvalues
-        res_dx = OLS(yhat_x, z).fit()
-        err_zx = res_dx.resid
-        res_xzx = OLS(err_zx, x).fit()
-        err_xzx = res_xzx.resid
+    .. deprecated::
 
-        sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx) / nobs
-        c01 = nobs / 2. * (np.log(sigma2_z) - np.log(sigma2_zx))
-        v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx ** 2
-        q = c01 / np.sqrt(v01)
-        pval = 2 * stats.norm.sf(np.abs(q))
+       CompareCox is deprecated in favor of compare_cox.
+       CompareCox will be removed after 0.12.
+    """
 
+    def __init__(self):
+        import warnings
+        warnings.warn("CompareCox is deprecated in favor of compare_cox and "
+                      "will be removed after 0.12.", FutureWarning)
+
+    def run(self, results_x, results_z, attach=False):
+        res = compare_cox(results_x, results_z, store=attach)
         if attach:
-            self.res_dx = res_dx
-            self.res_xzx = res_xzx
-            self.c01 = c01
-            self.v01 = v01
-            self.q = q
-            self.pvalue = pval
-            self.dist = stats.norm
+            self.res_dx = res.res_dx
+            self.res_xzx = res.res_xzx
+            self.c01 = res.c01
+            self.v01 = res.v01
+            self.q = res.q
+            self.pvalue = res.pvalue
+            self.dist = res.dist
 
-        return q, pval
+        return
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
 
 
-compare_cox = CompareCox()
+def compare_j(results_x, results_z, store=True):
+    """
+    Compute the J-test for non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    store : bool
+        If true, then the intermediate results are returned.
+
+    Returns
+    -------
+    tstat : float
+        t statistic for the test that including the fitted values of the
+        first model in the second model has no effect.
+    pvalue : float
+        two-sided pvalue for the t statistic
+    res_store : ResultsStore, optional
+        Intermediate results. Returned if store is True.
+
+    Notes
+    -----
+    From description in Greene, section 8.3.3. Matches results for Example
+    8.3, Greene.
+
+    Tests of non-nested hypothesis might not provide unambiguous answers.
+    The test should be performed in both directions and it is possible
+    that both or neither test rejects. see Greene for more information.
+
+    References
+    ----------
+    .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
+       5th edition. (2002).
+    """
+    if not np.allclose(results_x.model.endog, results_z.model.endog):
+        raise ValueError('endogenous variables in models are not the same')
+    y = results_x.model.endog
+    z = results_z.model.exog
+    yhat_x = results_x.fittedvalues
+    res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
+    tstat = res_zx.tvalues[0]
+    pval = res_zx.pvalues[0]
+    if store:
+        res = ResultsStore()
+        res.res_zx = res_zx
+        res.dist = stats.t(res_zx.df_resid)
+        res.teststat = tstat
+        res.pvalue = pval
+
+    return tstat, pval
 
 
 class CompareJ(object):
     """
     J-Test for comparing non-nested models
 
-    Parameters
-    ----------
-    results_x : Result instance
-        Result instance of first model
-    results_z : Result instance
-        Result instance of second model
-    attach : bool
-        Flag indicating whether intermediate results are attached to the
-        instance.
+    .. deprecated::
 
-    Notes
-    -----
-    From description in Greene, section 8.3.3. Matches results for Example
-    8.3, Greene.
+       CompareJ is deprecated in favor of compare_j.
+       CompareJ will be removed after 0.12.
     """
 
+    def __init__(self):
+        import warnings
+        warnings.warn("CompareJ is deprecated in favor of compare_j and will "
+                      "be removed after 0.12.", FutureWarning)
+
     def run(self, results_x, results_z, attach=True):
-        """
-        Compute the J-test for non-nested models
-
-        Parameters
-        ----------
-        results_x : Result instance
-            result instance of first model
-        results_z : Result instance
-            result instance of second model
-        attach : bool
-            If true, then the intermediate results are attached to the
-            instance.
-
-        Returns
-        -------
-        tstat : float
-            t statistic for the test that including the fitted values of the
-            first model in the second model has no effect.
-        pvalue : float
-            two-sided pvalue for the t statistic
-
-        Notes
-        -----
-        Tests of non-nested hypothesis might not provide unambiguous answers.
-        The test should be performed in both directions and it is possible
-        that both or neither test rejects. see ??? for more information.
-
-        References
-        ----------
-        .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
-           5th edition. (2002).
-        """
-        if not np.allclose(results_x.model.endog, results_z.model.endog):
-            raise ValueError('endogenous variables in models are not the same')
-        y = results_x.model.endog
-        z = results_z.model.exog
-        yhat_x = results_x.fittedvalues
-        res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
-        self.res_zx = res_zx  # for testing
-        tstat = res_zx.tvalues[0]
-        pval = res_zx.pvalues[0]
+        res = compare_j(results_x, results_z, store=attach)
+        tstat, pval = res[:2]
         if attach:
-            self.res_zx = res_zx
-            self.dist = stats.t(res_zx.df_resid)
-            self.teststat = tstat
-            self.pvalue = pval
+            self.res_zx = res[-1].res_zx
+            self.dist = res[-1].dist
+            self.teststat = res[-1].teststat
+            self.pvalue = res[-1].pvalue
 
         return tstat, pval
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
-
-
-compare_j = CompareJ()
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
@@ -724,7 +736,7 @@ def het_white(resid, exog):
 
 
 def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
-                       alternative='increasing', store=True):
+                       alternative='increasing', store=False):
     """
     Goldfeld-Quandt homoskedasticity test
 
@@ -852,6 +864,7 @@ class HetGoldfeldQuandt(object):
     --------
     het_goldfeldquant
     """
+
     def __init__(self):
         import warnings
         warnings.warn("HetGoldfeldQuandt is deprecated in favor of"
@@ -871,8 +884,8 @@ class HetGoldfeldQuandt(object):
         --------
         het_goldfeldquant
         """
-        res = het_goldfeldquant(y, x, idx=idx, split=split, drop=drop,
-                                alternative=alternative, store=attach)
+        res = het_goldfeldquandt(y, x, idx=idx, split=split, drop=drop,
+                                 alternative=alternative, store=attach)
         if attach:
             store = res[-1]
             self.__doc__ = store.__doc__
@@ -889,8 +902,8 @@ class HetGoldfeldQuandt(object):
 
     def __call__(self, y, x, idx=None, split=None, drop=None,
                  alternative='increasing'):
-        return HetGoldfeldQuandt.run(y, x, idx=idx, split=split, drop=drop,
-                                     attach=False, alternative=alternative)
+        return self.run(y, x, idx=idx, split=split, drop=drop,
+                        attach=False, alternative=alternative)
 
 
 def linear_harvey_collier(res, order_by=None):

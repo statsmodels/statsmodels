@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import recursive_olsresiduals
-from statsmodels.sandbox.stats.diagnostic import (
+from statsmodels.stats.diagnostic import (
     breaks_hansen, breaks_cusumolsresid)
 
 
