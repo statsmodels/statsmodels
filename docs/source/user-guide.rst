@@ -8,6 +8,7 @@ Background
    :maxdepth: 1
 
    endog_exog
+   api-structure
    example_formulas
    pitfalls
 
