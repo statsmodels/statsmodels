@@ -35,10 +35,12 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.contrast import ContrastResults
+from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
 from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.validation import array_like, int_like, bool_like
+from statsmodels.tools.validation import (array_like, int_like, bool_like,
+                                          string_like, dict_like)
 from statsmodels.stats._lilliefors import (kstest_fit, lilliefors,
                                            kstest_normal, kstest_exponential)
 from statsmodels.stats._adnorm import normal_ad
@@ -65,13 +67,10 @@ def check_nested(small, large):
     -------
     bool
         True if small is nested by large
-
-    Notes
-    -----
-    It must be the case that small.shape[1] <= large.shape[1]. This is not
-    verified.
     """
 
+    if small.shape[1] > large.shape[1]:
+        return False
     coef = np.linalg.lstsq(large, small, rcond=None)[0]
     err = small - large @ coef
     return np.linalg.matrix_rank(np.c_[large, err]) == large.shape[1]
@@ -310,8 +309,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     Parameters
     ----------
     x : array_like
-        The data series. Assumed to have mean zero, e.g., regression residuals
-        when used as diagnostic test.
+        The data series. The data is demeaned before the test statistic is
+        computed.
     lags : {None, int, array_like}
         If lags is an integer then this is taken to be the largest lag
         that is included, the test result is reported for all smaller lag
@@ -375,6 +374,11 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     References
     ----------
     .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
+
+    See Also
+    --------
+    statsmodels.regression.linear_model.OLS.fit
+    statsmodels.regression.linear_model.RegressionResults
     """
     x = array_like(x, 'x')
     period = int_like(period, 'period', optional=True)
@@ -437,13 +441,14 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 
 
 @deprecate_kwarg('maxlag', 'nlag')
-def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
+def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
+             ddof=0, cov_type='nonrobust', cov_kwds=None):
     """
     Lagrange Multiplier tests for autocorrelation
 
     This is a generic Lagrange Multiplier test for autocorrelation. Returns
-    Engle's ARCH test if x is the squared residual array. Breusch-Godfrey is a
-    variation on this test with additional exogenous variables.
+    Engle's ARCH test if resid is the squared residual array. Breusch-Godfrey
+    is a variation on this test with additional exogenous variables.
 
     Parameters
     ----------
@@ -463,6 +468,9 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
+    ddof : int
+        The number of degrees of freedom consumed by the model used to
+        produce resid. The default value is 0.
 
     Returns
     -------
@@ -475,8 +483,22 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : ResultsStore
+    res_store : ResultsStore, optional
         Intermediate results. Only returned if store=True
+    cov_type : str
+        Covariance type. The default is 'nonrobust` which uses the classic
+        OLS covariance estimator. Specify one of 'HC0', 'HC1', 'HC2', 'HC3'
+        to use White's covariance estimator. All covariance types supported
+        by ``OLS.fit`` are accepted.
+    cov_kwds : dict
+        Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
+        more details.
+
+    Notes
+    -----
+    The test statistic is computed as (nobs - ddof) * r2 where r2 is the
+    R-squared from a regression on the residual on nlag lags of the
+    residual.
 
     See Also
     --------
@@ -484,10 +506,9 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
     acorr_breusch_godfrey
     acorr_ljung_box
     """
-    # TODO: Add het robust option
-    # TODO: Add dof correction
-    # TODO: Deprecate store maybe
     resid = array_like(resid, "resid", ndim=1)
+    cov_type = string_like(cov_type, 'cov_type')
+    cov_kwds = dict_like(cov_kwds, 'cov_kwds')
     nobs = resid.shape[0]
     if period is not None and nlag is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -511,7 +532,7 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
     xshort = resid[-nobs:]
 
     if store:
-        resstore = ResultsStore()
+        res_store = ResultsStore()
 
     if autolag:
         # TODO: Deprecate this
@@ -540,27 +561,33 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
         xshort = resid[-nobs:]
         usedlag = icbestlag
         if store:
-            resstore.results = results
+            res_store.results = results
     else:
         usedlag = maxlag
 
-    resols = OLS(xshort, xdall[:, :usedlag + 1]).fit()
+    resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
+                                                     cov_kwds=cov_kwds)
     fval = resols.fvalue
     fpval = resols.f_pvalue
-    lm = nobs * resols.rsquared
-    lmpval = stats.chi2.sf(lm, usedlag)
-    # Note: degrees of freedom for LM test is nvars minus constant = usedlags
+    if cov_type == "nonrobust":
+        lm = (nobs - ddof) * resols.rsquared
+        lmpval = stats.chi2.sf(lm, usedlag)
+        # Note: degrees of freedom for LM test is nvars minus constant = usedlags
+    else:
+        r_matrix = np.hstack((np.ones((usedlag,1)), np.eye(usedlag)))
+        test_stat = resols.wald_test(r_matrix, use_f=False)
+        lm = test_stat.fvalue
+        lmpval = test_stat.pvalue
 
     if store:
-        resstore.resols = resols
-        resstore.usedlag = usedlag
-        return lm, lmpval, fval, fpval, resstore
+        res_store.resols = resols
+        res_store.usedlag = usedlag
+        return lm, lmpval, fval, fpval, res_store
     else:
         return lm, lmpval, fval, fpval
 
 
-def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
-             ddof=0):
+def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
 
@@ -575,12 +602,10 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
     store : bool
         If true then the intermediate results are also returned
     ddof : int
-        Not Implemented Yet
         If the residuals are from a regression, or ARMA estimation, then there
         are recommendations to correct the degrees of freedom by the number
         of parameters that have been estimated, for example ddof=p+q for an
-        ARMA(p,q) (need reference, based on discussion on R finance
-        mailinglist)
+        ARMA(p,q).
 
     Returns
     -------
@@ -593,21 +618,20 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : instance (optional)
-        a class instance that holds intermediate results. Only returned if
-        store=True
+    res_store : ResultsStore, optional
+        Intermediate results. Returned if store is True.
 
     Notes
     -----
     verified against R:FinTS::ArchTest
     """
-    # TODO: implement dof adjustment
-    return acorr_lm(resid ** 2, maxlag=maxlag, autolag=autolag, store=store)
+    return acorr_lm(resid ** 2, maxlag=maxlag, autolag=autolag, store=store,
+                    ddof=ddof)
 
 
 def acorr_breusch_godfrey(results, nlags=None, store=False):
     """
-    Breusch Godfrey Lagrange Multiplier tests for residual autocorrelation
+    Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation.
 
     Parameters
     ----------
@@ -632,7 +656,7 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : ResultsStore
+    res_store : ResultsStore
         a class instance that holds intermediate results. Only returned if
         store=True
 
@@ -679,10 +703,10 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
 
     if store:
-        resstore = ResultsStore()
-        resstore.resols = resols
-        resstore.usedlag = nlags
-        return lm, lmpval, fval, fpval, resstore
+        res_store = ResultsStore()
+        res_store.resols = resols
+        res_store.usedlag = nlags
+        return lm, lmpval, fval, fpval, res_store
     else:
         return lm, lmpval, fval, fpval
 
@@ -696,7 +720,7 @@ def het_breuschpagan(resid, exog_het):
 
     :math: \sigma_i = \sigma * f(\alpha_0 + \alpha z_i)
 
-    Homoscedasticity implies that $\alpha=0$
+    Homoscedasticity implies that :math:`\alpha=0`.
 
     Parameters
     ----------
@@ -728,11 +752,13 @@ def het_breuschpagan(resid, exog_het):
     exaggerates the significance of results in small or moderately large
     samples. In this case the F-statistic is preferable.
 
-    *Verification*
+    **Verification**
+
     Chisquare test statistic is exactly (<1e-13) the same result as bptest
     in R-stats with defaults (studentize=True).
 
-    Implementation
+    **Implementation**
+
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
     (Greene, section 11.4.3).
@@ -782,14 +808,14 @@ def het_white(resid, exog):
 
     Notes
     -----
-    assumes x contains constant (for counting dof)
+    Assumes x contains constant (for counting dof).
 
     question: does f-statistic make sense? constant ?
 
     References
     ----------
-    Greene section 11.4.1 5th edition p. 222
-    now test statistic reproduces Greene 5th, example 11.3
+    Greene section 11.4.1 5th edition p. 222. Test statistic reproduces
+    Greene 5th, example 11.3.
     """
     x = np.asarray(exog)
     y = np.asarray(resid)
@@ -817,7 +843,7 @@ def het_white(resid, exog):
 def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
                        alternative='increasing', store=False):
     """
-    Goldfeld-Quandt homoskedasticity test
+    Goldfeld-Quandt homoskedasticity test.
 
     This test examines whether the residual variance is the same in 2
     subsamples.
@@ -831,11 +857,11 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     idx : int
         column index of variable according to which observations are
         sorted for the split
-    split : None or integer or float in intervall (0,1)
-        index at which sample is split.
-        If 0<split<1 then split is interpreted as fraction of the
-        observations in the first sample
-    drop : None, float or int
+    split : {None, int, float}
+        If an integer, this is the index at which sample is split.
+        If a float in 0<split<1 then split is interpreted as fraction
+        of the observations in the first sample. If None, uses nobs//2.
+    drop : {None, int, float}
         If this is not None, then observation are dropped from the middle
         part of the sorted series. If 0<split<1 then split is interpreted
         as fraction of the number of observations to be dropped.
@@ -843,21 +869,22 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         split+drop, where split and drop are the indices (given by rounding
         if specified as fraction). The first sample is [0:split], the
         second sample is [split+drop:]
-    alternative : str, 'increasing', 'decreasing' or 'two-sided'
-        default is increasing. This specifies the alternative for the
+    alternative : {'increasing', 'decreasing', 'two-sided'}
+        The default is increasing. This specifies the alternative for the
         p-value calculation.
     store : bool
-        Flag indicating to reurn the regression results
+        Flag indicating to return the regression results
 
     Returns
     -------
-    (fval, pval) or res
     fval : float
         value of the F-statistic
     pval : float
         p-value of the hypothesis that the variance in one subsample is
         larger than in the other subsample
-    res : ResultsStore
+    ordering : str
+        The ordering used in the alternative.
+    res_store : ResultsStore, optional
         Storage for the intermediate and final results that are calculated
 
     Notes
@@ -951,7 +978,6 @@ class HetGoldfeldQuandt(object):
                       "after 0.12.",
                       FutureWarning)
 
-    # TODO: can do Chow test for structural break in same way
     def run(self, y, x, idx=None, split=None, drop=None,
             alternative='increasing', attach=True):
         """
@@ -985,7 +1011,8 @@ class HetGoldfeldQuandt(object):
                         attach=False, alternative=alternative)
 
 
-def linear_reset(result, power=3, test_type="fitted"):
+def linear_reset(result, power=3, test_type="fitted", use_f=False,
+                 cov_type="nonrobust", cov_kwargs=None):
     """
     Ramsey's RESET test for neglected nonlinearity
 
@@ -1004,8 +1031,67 @@ def linear_reset(result, power=3, test_type="fitted"):
           regressors.
         * "princomp": Augment exog with powers of first principal component of
           exog.
+    use_f : bool
+    cov_type : str
+    cov_kwargs : {dict, None}
+
+    Returns
+    -------
+    ContrastResults
+        Test results for Ramsey's Reset test. See notes for implementation
+        details.
+
+    Notes
+    -----
     """
-    raise NotImplementedError
+    if not isinstance(result, RegressionResultsWrapper):
+        raise TypeError("result must come from a linear regression model")
+    test_type = string_like(test_type, "test_type",
+                            options=("fitted", "exog", "princomp"))
+    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs", optional=True)
+    use_f = bool_like(use_f, "use_f")
+    if isinstance(power, int):
+        if power < 2:
+            raise ValueError("power must be >= 2")
+        power = np.arange(2, power + 1, dtype=np.int)
+    else:
+        try:
+            power = np.array(power, dtype=np.int)
+        except Exception:
+            raise ValueError("power must be an integer or list of integers")
+        if power.ndim != 1 or len(set(power)) != power.shape[0] or \
+                (power < 2).any():
+            raise ValueError("power must contains distinct integers all >= 2")
+    exog = result.model.exog
+    if test_type == "fitted":
+        aug = result.fittedvalues[:, None]
+    elif test_type == "exog":
+        # Remove constant and binary
+        aug = result.model.exog
+        non_min_max = ((exog != exog.max(1)) & (exog != exog.min(1)))
+        non_binary = non_min_max.any(axis=1)
+        if not non_binary.any():
+            raise ValueError("Model contains only constant or binary data")
+        aug = aug[:, non_binary]
+    else:
+        from statsmodels.multivariate.pca import PCA
+        aug = exog
+        pca = PCA(aug, ncomp=1, standardize=False, demean=result.k_constant,
+                  method="nipls")
+        aug = pca.factors[:, :1]
+    aug_exog = np.hstack([exog] + [aug ** p for p in power])
+    mod_class = result.model.__class__
+    mod = mod_class(result.data.endog, aug_exog)
+    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
+    res = mod.fit(cov_type=cov_type, cov_kwargs=cov_kwargs)
+    nrestr = aug_exog.shape[1] - exog.shape[1]
+    nparams = aug_exog.shape[1]
+    r_mat = np.c_[np.zeros(nrestr, nparams - nrestr), np.eye(nrestr)]
+    test = res.wald_test(r_mat)
+    if use_f:
+        test = ContrastResults(F=test.stat, df_num=nrestr,
+                               df_denom=exog.shape[0] - aug_exog.shape[1])
+    return test
 
 
 def linear_harvey_collier(res, order_by=None):
@@ -1239,7 +1325,7 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     lamda : float
         weight for Ridge correction to initial (X'X)^{-1}
     alpha : {0.95, 0.99}
-        confidence level of test, currently only two values supported,
+        Confidence level of test, currently only two values supported,
         used for confidence interval in cusum graph
 
     Returns
