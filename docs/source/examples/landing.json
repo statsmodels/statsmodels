@@ -137,6 +137,23 @@
         }
           ]
   },
+ {
+      "header":"Generalized Estimating Equations",
+      "id":"robust",
+      "links":[
+        {
+          "text": "GEE Nested Covariance Structure ",
+          "target": "notebooks/generated/gee_nested_simulation.html",
+          "img": "../_static/images/gee-cov-struct.png"
+        },
+        {
+          "text": "GEE Score Tests",
+          "target": "notebooks/generated/gee_score_test_simulation.html",
+          "img": "../_static/images/gee-score-tests.png"
+        }
+          ]
+  },
+
   {
       "header":"Statistics",
       "id":"stats",
