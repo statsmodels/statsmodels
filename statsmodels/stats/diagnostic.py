@@ -26,6 +26,7 @@ missing:
   - specification tests against nonparametric alternatives
 """
 # TODO: Check all input
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import iteritems
 
 from collections.abc import Iterable
@@ -49,9 +50,39 @@ __all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
            "linear_rainbow", "linear_harvey_collier"]
 
 
+def check_nested(small, large):
+    """
+    Check if a larger exog nests a smaller exog
+
+    Parameters
+    ----------
+    small : ndarray
+        exog from smaller model
+    large : ndarray
+        exog from larger model
+
+    Returns
+    -------
+    bool
+        True if small is nested by large
+
+    Notes
+    -----
+    It must be the case that small.shape[1] <= large.shape[1]. This is not
+    verified.
+    """
+
+    coef = np.linalg.lstsq(large, small, rcond=None)[0]
+    err = small - large @ coef
+    return np.linalg.matrix_rank(np.c_[large, err]) == large.shape[1]
+
+
 class ResultsStore(object):
     def __str__(self):
-        return self._str
+        try:
+            return self._str
+        except AttributeError:
+            return self.__class__.__name__
 
 
 def compare_cox(results_x, results_z, store=False):
@@ -92,12 +123,20 @@ def compare_cox(results_x, results_z, store=False):
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
        5th edition. (2002).
     """
-
     if not np.allclose(results_x.model.endog, results_z.model.endog):
         raise ValueError('endogenous variables in models are not the same')
     nobs = results_x.model.endog.shape[0]
     x = results_x.model.exog
     z = results_z.model.exog
+
+    nested = False
+    if x.shape[1] <= z.shape[1]:
+        nested = nested or check_nested(x, z)
+    else:
+        nested = nested or check_nested(z, x)
+    if nested:
+        raise ValueError("The exog in results_x and in results_z are nested."
+                         "Cox comparison requires that models are non-nested.")
     sigma2_x = results_x.ssr / nobs
     sigma2_z = results_z.ssr / nobs
     yhat_x = results_x.fittedvalues
@@ -142,8 +181,9 @@ class CompareCox(object):
                       "will be removed after 0.12.", FutureWarning)
 
     def run(self, results_x, results_z, attach=False):
-        res = compare_cox(results_x, results_z, store=attach)
+        results = compare_cox(results_x, results_z, store=attach)
         if attach:
+            res = results[-1]
             self.res_dx = res.res_dx
             self.res_xzx = res.res_xzx
             self.c01 = res.c01
@@ -152,13 +192,13 @@ class CompareCox(object):
             self.pvalue = res.pvalue
             self.dist = res.dist
 
-        return
+        return results
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
 
 
-def compare_j(results_x, results_z, store=True):
+def compare_j(results_x, results_z, store=False):
     """
     Compute the J-test for non-nested models
 
@@ -195,10 +235,20 @@ def compare_j(results_x, results_z, store=True):
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
        5th edition. (2002).
     """
+    # TODO: Allow cov to be specified
     if not np.allclose(results_x.model.endog, results_z.model.endog):
         raise ValueError('endogenous variables in models are not the same')
     y = results_x.model.endog
+    x = results_x.model.exog
     z = results_z.model.exog
+    nested = False
+    if x.shape[1] <= z.shape[1]:
+        nested = nested or check_nested(x, z)
+    else:
+        nested = nested or check_nested(z, x)
+    if nested:
+        raise ValueError("The exog in results_x and in results_z are nested."
+                         "J comparison requires that models are non-nested.")
     yhat_x = results_x.fittedvalues
     res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
     tstat = res_zx.tvalues[0]
@@ -209,6 +259,7 @@ def compare_j(results_x, results_z, store=True):
         res.dist = stats.t(res_zx.df_resid)
         res.teststat = tstat
         res.pvalue = pval
+        return tstat, pval, res
 
     return tstat, pval
 
@@ -241,6 +292,14 @@ class CompareJ(object):
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
+
+
+def compare_encompassing(results_x, results_z, cov_type="nonrobust",
+                         cov_kwargs=None):
+    """
+    Davidson-MacKinnon encompassing test for comparing non-nested models
+    """
+    raise NotImplementedError
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
@@ -377,7 +436,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     return qljungbox, pval, qboxpierce, pvalbp
 
 
-def acorr_lm(resid, maxlag=None, autolag='AIC', store=False, regresults=False):
+@deprecate_kwarg('maxlag', 'nlag')
+def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None):
     """
     Lagrange Multiplier tests for autocorrelation
 
@@ -389,12 +449,20 @@ def acorr_lm(resid, maxlag=None, autolag='AIC', store=False, regresults=False):
     ----------
     resid : array_like
         residuals from an estimation, or time series
-    maxlag : int
-        highest lag to use
+    nlag : int
+        Highest lag to use. The behavior of this parameter will change
+        after 0.12.
     autolag : {None, str}
-        If None, then a fixed number of lags given by maxlag is used.
+        If None, then a fixed number of lags given by maxlag is used. This
+        parameter is deprecated and will be removed after 0.12.  Searching
+        for model specification cannot control test siez.
     store : bool
         If true then the intermediate results are also returned
+    period : {int, None}
+        The period of a Seasonal time series.  Used to compute the max lag
+        for seasonal data which uses min(2*period, nobs // 5) if set. If None,
+        then the default rule is used to set the number of lags. When set, must
+        be >= 2.
 
     Returns
     -------
@@ -419,15 +487,23 @@ def acorr_lm(resid, maxlag=None, autolag='AIC', store=False, regresults=False):
     # TODO: Add het robust option
     # TODO: Add dof correction
     # TODO: Deprecate store maybe
-    # TODO: Change behavior to match autocorr w.r.t. lags
-    if regresults:
-        store = True
-
     resid = array_like(resid, "resid", ndim=1)
     nobs = resid.shape[0]
-    if maxlag is None:
-        # for adf from Greene referencing Schwert 1989
+    if period is not None and nlag is None:
+        maxlag = min(nobs // 5, 2 * period)
+    elif nlag is None:
+        # TODO: Switch to min(10, nobs//5) after 0.12
+        import warnings
+        warnings.warn("The default value of lags is changing.  After 0.12, "
+                      "this value will become min(10, nobs//5). Directly set"
+                      "maxlags or period to silence this warning.",
+                      FutureWarning)
+        # Future
+        # maxlag = min(nobs // 5, 10)
+        # Old: for adf from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+    else:
+        maxlag = nlag
 
     xdall = lagmat(resid[:, None], maxlag, trim='both')
     nobs = xdall.shape[0]
@@ -442,6 +518,10 @@ def acorr_lm(resid, maxlag=None, autolag='AIC', store=False, regresults=False):
         #   Use same rules as autocorr
         # search for lag length with highest information criteria
         # Note: I use the same number of observations to have comparable IC
+        import warnings
+        warnings.warn("autolag is deprecated and will be removed after 0.12. "
+                      "Model selection before testing fails to control test"
+                      "size. Set autolag to False to silence this warning")
         results = {}
         for mlag in range(1, maxlag + 1):
             results[mlag] = OLS(xshort, xdall[:, :mlag + 1]).fit()
@@ -459,7 +539,7 @@ def acorr_lm(resid, maxlag=None, autolag='AIC', store=False, regresults=False):
         xdall = np.c_[np.ones((nobs, 1)), xdall]
         xshort = resid[-nobs:]
         usedlag = icbestlag
-        if regresults:
+        if store:
             resstore.results = results
     else:
         usedlag = maxlag
@@ -522,8 +602,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
     verified against R:FinTS::ArchTest
     """
     # TODO: implement dof adjustment
-    return acorr_lm(resid ** 2, maxlag=maxlag, autolag=autolag, store=store,
-                    regresults=regresults)
+    return acorr_lm(resid ** 2, maxlag=maxlag, autolag=autolag, store=store)
 
 
 def acorr_breusch_godfrey(results, nlags=None, store=False):
@@ -576,8 +655,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     nobs = x.shape[0]
     if nlags is None:
         # for adf from Greene referencing Schwert 1989
-        nlags = np.trunc(12. * np.power(nobs / 100.,
-                                        1 / 4.))  # nobs//4  #TODO: check default, or do AIC/BIC
+        # nobs//4  #TODO: check default, or do AIC/BIC
+        nlags = np.trunc(12. * np.power(nobs / 100., 1 / 4.))
         nlags = int(nlags)
 
     x = np.concatenate((np.zeros(nlags), x))
@@ -904,6 +983,29 @@ class HetGoldfeldQuandt(object):
                  alternative='increasing'):
         return self.run(y, x, idx=idx, split=split, drop=drop,
                         attach=False, alternative=alternative)
+
+
+def linear_reset(result, power=3, test_type="fitted"):
+    """
+    Ramsey's RESET test for neglected nonlinearity
+
+    Parameters
+    ----------
+    result : Result instance
+    power : {int, List[int]}
+        The maximum power to include in the model, if an integer. Includes
+        powers 2, 3, ..., power. If an list of integers, includes all powers
+        in the list.
+    test_type : str
+        The type of augmentation to use:
+
+        * "fitted" : (default) Augment regressors with powers of fitted values.
+        * "exog" : Augment exog with powers of exog. Excludes binary
+          regressors.
+        * "princomp": Augment exog with powers of first principal component of
+          exog.
+    """
+    raise NotImplementedError
 
 
 def linear_harvey_collier(res, order_by=None):
@@ -1243,10 +1345,9 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
         raise ValueError('alpha can only be 0.9, 0.95 or 0.99')
 
     # following taken from Ploberger,
-    crit = a * np.sqrt(nrr)
+    # crit = a * np.sqrt(nrr)
     rcusumci = (a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(
-        nrr)) \
-               * np.array([[-1.], [+1.]])
+        nrr)) * np.array([[-1.], [+1.]])
     return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
             rcusum, rcusumci)
 
@@ -1281,14 +1382,12 @@ def breaks_hansen(olsresults):
     ----------
     Greene section 7.5.1, notation follows Greene
     """
-    y = olsresults.model.endog
     x = olsresults.model.exog
     resid = olsresults.resid
     nobs, nvars = x.shape
     resid2 = resid ** 2
     ft = np.c_[x * resid[:, None], (resid2 - resid2.mean())]
     score = ft.cumsum(0)
-    assert (np.abs(score[-1]) < 1e10).all()  # can be optimized away
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
@@ -1298,13 +1397,13 @@ def breaks_hansen(olsresults):
     return h, crit95
 
 
-def breaks_cusumolsresid(olsresidual, ddof=0):
+def breaks_cusumolsresid(resid, ddof=0):
     """
     Cusum test for parameter stability based on ols residuals
 
     Parameters
     ----------
-    olsresiduals : ndarray
+    resid : ndarray
         array of residuals from an OLS estimation
     ddof : int
         number of parameters in the OLS estimation, used as degrees of freedom
@@ -1340,15 +1439,15 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
     """
-    resid = olsresidual.ravel()
+    resid = resid.ravel()
     nobs = len(resid)
     nobssigma2 = (resid ** 2).sum()
     if ddof > 0:
         nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
-    # B is asymptotically a Brownian Bridge
-    B = resid.cumsum() / np.sqrt(nobssigma2)  # use T*sigma directly
-    sup_b = np.abs(
-        B).max()  # asymptotically distributed as standard Brownian Bridge
+    # b is asymptotically a Brownian Bridge
+    b = resid.cumsum() / np.sqrt(nobssigma2)  # use T*sigma directly
+    # asymptotically distributed as standard Brownian Bridge
+    sup_b = np.abs(b).max()
     crit = [(1, 1.63), (5, 1.36), (10, 1.22)]
     # Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
     # Bridge
