@@ -10,10 +10,8 @@ from warnings import warn
 
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
-from .tools import (validate_vector_shape, validate_matrix_shape,
-                    reorder_missing_matrix, reorder_missing_vector)
+from .tools import reorder_missing_matrix, reorder_missing_vector
 from . import tools
-from .initialization import Initialization
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 # Define constants
@@ -407,6 +405,21 @@ class KalmanFilter(Representation):
         # This value should always be None, except within the fixed_scale
         # context, and should not be modified by users or anywhere else.
         self._scale = None
+
+    def _clone_kwargs(self, endog, **kwargs):
+        # See Representation._clone_kwargs for docstring
+        kwargs = super(KalmanFilter, self)._clone_kwargs(endog, **kwargs)
+
+        # Get defaults for options
+        kwargs.setdefault('filter_method', self.filter_method)
+        kwargs.setdefault('inversion_method', self.inversion_method)
+        kwargs.setdefault('stability_method', self.stability_method)
+        kwargs.setdefault('conserve_memory', self.conserve_memory)
+        kwargs.setdefault('filter_timing', self.filter_timing)
+        kwargs.setdefault('tolerance', self.tolerance)
+        kwargs.setdefault('loglikelihood_burn', self.loglikelihood_burn)
+
+        return kwargs
 
     @property
     def _kalman_filter(self):
@@ -1127,14 +1140,24 @@ class KalmanFilter(Representation):
                 measurement_shocks = measurement_shocks[np.newaxis, np.newaxis]
             elif measurement_shocks.ndim == 1:
                 measurement_shocks = measurement_shocks[:, np.newaxis]
-            if not measurement_shocks.shape == (nsimulations, self.k_endog):
-                raise ValueError('Invalid shape of provided measurement'
-                                 ' shocks. Required (%d, %d)'
-                                 % (nsimulations, self.k_endog))
+            required_shape = (nsimulations, self.k_endog)
+            try:
+                measurement_shocks = measurement_shocks.reshape(required_shape)
+            except ValueError:
+                raise ValueError('Provided measurement shocks are not of the'
+                                 ' appropriate shape. Required %s, got %s.'
+                                 % (str(required_shape),
+                                    str(measurement_shocks.shape)))
         elif self.shapes['obs_cov'][-1] == 1:
             measurement_shocks = np.random.multivariate_normal(
                 mean=np.zeros(self.k_endog), cov=self['obs_cov'],
                 size=nsimulations)
+        elif state_shocks is not None:
+            measurement_shocks = np.zeros((nsimulations, self.k_endog))
+            for i in range(nsimulations):
+                measurement_shocks[i] = np.random.multivariate_normal(
+                    mean=np.zeros(self.k_endog),
+                    cov=self['obs_cov', ..., i], size=nsimulations)
 
         # Check / generate state shocks
         if state_shocks is not None:
@@ -1143,14 +1166,24 @@ class KalmanFilter(Representation):
                 state_shocks = state_shocks[np.newaxis, np.newaxis]
             elif state_shocks.ndim == 1:
                 state_shocks = state_shocks[:, np.newaxis]
-            if not state_shocks.shape == (nsimulations, self.k_posdef):
-                raise ValueError('Invalid shape of provided state shocks.'
-                                 ' Required (%d, %d).'
-                                 % (nsimulations, self.k_posdef))
+            required_shape = (nsimulations, self.k_posdef)
+            try:
+                state_shocks = state_shocks.reshape(required_shape)
+            except ValueError:
+                raise ValueError('Provided state shocks are not of the'
+                                 ' appropriate shape. Required %s, got %s.'
+                                 % (str(required_shape),
+                                    str(state_shocks.shape)))
         elif self.shapes['state_cov'][-1] == 1:
             state_shocks = np.random.multivariate_normal(
                 mean=np.zeros(self.k_posdef), cov=self['state_cov'],
                 size=nsimulations)
+        elif measurement_shocks is not None:
+            state_shocks = np.zeros((nsimulations, self.k_posdef))
+            for i in range(nsimulations):
+                state_shocks[i] = np.random.multivariate_normal(
+                    mean=np.zeros(self.k_posdef),
+                    cov=self['state_cov', ..., i], size=nsimulations)
 
         # Get the initial states
         if initial_state is not None:
@@ -1161,29 +1194,13 @@ class KalmanFilter(Representation):
                   not initial_state.shape == (self.k_states, 1)):
                 raise ValueError('Invalid shape of provided initial state'
                                  ' vector. Required (%d, 1)' % self.k_states)
-        elif self.initialization == 'known':
-            initial_state = np.random.multivariate_normal(
-                self._initial_state, self._initial_state_cov)
-        elif self.initialization == 'stationary':
-            from scipy.linalg import solve_discrete_lyapunov
-            # (I - T)^{-1} c = x => (I - T) x = c
-            initial_state_mean = np.linalg.solve(
-                np.eye(self.k_states) - self['transition', :, :, 0],
-                self['state_intercept', :, 0])
-            R = self['selection', :, :, 0]
-            Q = self['state_cov', :, :, 0]
-            selected_state_cov = R.dot(Q).dot(R.T)
-            initial_state_cov = solve_discrete_lyapunov(
-                self['transition', :, :, 0], selected_state_cov)
-            initial_state = np.random.multivariate_normal(
-                initial_state_mean, initial_state_cov)
-        elif self.initialization == 'approximate_diffuse':
-            initial_state = np.zeros(self.k_states)
         elif self.initialization is not None:
             out = self.initialization(model=self)
             initial_state = out[0] + np.random.multivariate_normal(
                 np.zeros_like(out[0]), out[2])
         else:
+            # TODO: deprecate this, since we really should not be simulating
+            # unless we have an initialization.
             initial_state = np.zeros(self.k_states)
 
         return self._simulate(nsimulations, measurement_shocks, state_shocks,
@@ -1191,65 +1208,11 @@ class KalmanFilter(Representation):
 
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
-        time_invariant = self.time_invariant
-
-        # Holding variables for the simulations
-        simulated_obs = np.zeros((nsimulations, self.k_endog),
-                                 dtype=self.dtype)
-        simulated_states = np.zeros((nsimulations+1, self.k_states),
-                                    dtype=self.dtype)
-        simulated_states[0] = initial_state
-
-        # Perform iterations to create the new time series
-        obs_intercept_t = 0
-        design_t = 0
-        state_intercept_t = 0
-        transition_t = 0
-        selection_t = 0
-        for t in range(nsimulations):
-            # Get the current shocks (this accomodates time-varying matrices)
-            if measurement_shocks is None:
-                measurement_shock = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_endog), cov=self['obs_cov', :, :, t])
-            else:
-                measurement_shock = measurement_shocks[t]
-
-            if state_shocks is None:
-                state_shock = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_posdef),
-                    cov=self['state_cov', :, :, t])
-            else:
-                state_shock = state_shocks[t]
-
-            # Get current-iteration matrices
-            if not time_invariant:
-                obs_intercept_t = 0 if self.obs_intercept.shape[-1] == 1 else t
-                design_t = 0 if self.design.shape[-1] == 1 else t
-                state_intercept_t = (
-                    0 if self.state_intercept.shape[-1] == 1 else t)
-                transition_t = 0 if self.transition.shape[-1] == 1 else t
-                selection_t = 0 if self.selection.shape[-1] == 1 else t
-
-            obs_intercept = self['obs_intercept', :, obs_intercept_t]
-            design = self['design', :, :, design_t]
-            state_intercept = self['state_intercept', :, state_intercept_t]
-            transition = self['transition', :, :, transition_t]
-            selection = self['selection', :, :, selection_t]
-
-            # Iterate the measurement equation
-            simulated_obs[t] = (
-                obs_intercept + np.dot(design, simulated_states[t]) +
-                measurement_shock)
-
-            # Iterate the state equation
-            simulated_states[t+1] = (
-                state_intercept + np.dot(transition, simulated_states[t]) +
-                np.dot(selection, state_shock))
-
-        return simulated_obs, simulated_states[:-1]
+        raise NotImplementedError('Simulation only available through'
+                                  ' the simulation smoother.')
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
-                          cumulative=False, **kwargs):
+                          cumulative=False, direct=False):
         r"""
         Impulse response function
 
@@ -1271,14 +1234,6 @@ class KalmanFilter(Representation):
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
-        **kwargs
-            If the model is time-varying and `steps` is greater than the number
-            of observations, any of the state space representation matrices
-            that are time-varying must have updated values provided for the
-            out-of-sample steps.
-            For example, if `design` is a time-varying component, `nobs` is 10,
-            and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
-            provided with the new design matrix values.
 
         Returns
         -------
@@ -1291,9 +1246,25 @@ class KalmanFilter(Representation):
         Intercepts in the measurement and state equation are ignored when
         calculating impulse responses.
 
+        TODO: add note about how for time-varying systems this is - perhaps
+        counter-intuitively - returning the impulse response within the given
+        model (i.e. starting at period 0 defined by the model) and it is *not*
+        doing impulse responses after the end of the model. To compute impulse
+        responses from arbitrary time points, it is necessary to clone a new
+        model with the appropriate system matrices.
+
         """
-        # Since the first step is the impulse itself, we actually want steps+1
+        # We need to add an additional step, since the first simulated value
+        # will always be zeros (note that we take this value out at the end).
         steps += 1
+
+        # For time-invariant models, add an additional `step`. This is the
+        # default for time-invariant models based on the expected behavior for
+        # ARIMA and VAR models: we want to record the initial impulse and also
+        # `steps` values of the responses afterwards.
+        if (self._design.shape[2] == 1 and self._transition.shape[2] == 1 and
+                self._selection.shape[2] == 1):
+            steps += 1
 
         # Check for what kind of impulse we want
         if type(impulse) == int:
@@ -1319,98 +1290,53 @@ class KalmanFilter(Representation):
             state_chol = np.linalg.cholesky(self.state_cov[:, :, 0])
             impulse = np.dot(state_chol, impulse)
 
-        # If we have a time-invariant system, we can solve for the IRF directly
-        # Note that it does not matter if we have time-invariant intercepts,
-        # since those do not affect the IRF anyway
-        time_invariant = (
-            self._design.shape[2] == self._obs_cov.shape[2] ==
-            self._transition.shape[2] == self._selection.shape[2] ==
-            self._state_cov.shape[2])
-        if time_invariant:
-            # Get the state space matrices
-            design = self.design[:, :, 0]
-            transition = self.transition[:, :, 0]
-            selection = self.selection[:, :, 0]
+        # If we have time-varying design, transition, or selection matrices,
+        # then we can't produce more IRFs than we have time points
+        time_invariant_irf = (
+            self._design.shape[2] == self._transition.shape[2] ==
+            self._selection.shape[2] == 1)
 
-            # Holding arrays
-            irf = np.zeros((steps, self.k_endog), dtype=self.dtype)
-            states = np.zeros((steps, self.k_states), dtype=self.dtype)
+        # Note: to generate impulse responses following the end of a
+        # time-varying model, one should `clone` the state space model with the
+        # new time-varying model, and then compute the IRFs using the cloned
+        # model
+        if not time_invariant_irf and steps > self.nobs:
+            raise ValueError('In a time-varying model, cannot create more'
+                             ' impulse responses than there are'
+                             ' observations')
 
-            # First iteration
-            states[0] = np.dot(selection, impulse)
-            irf[0] = np.dot(design, states[0])
+        # Impulse responses only depend on the design, transition, and
+        # selection matrices. We set the others to zeros because they must be
+        # set in the call to `clone`.
+        # Note: we don't even need selection after the first point, because
+        # the state shocks will be zeros in every period except the first.
+        sim_model = self.clone(
+            endog=np.empty((steps, self.k_endog), dtype=self.dtype),
+            obs_intercept=np.zeros(self.k_endog),
+            design=self['design', :, :, :steps],
+            obs_cov=np.zeros((self.k_endog, self.k_endog)),
+            state_intercept=np.zeros(self.k_states),
+            transition=self['transition', :, :, :steps],
+            selection=self['selection', :, :, :steps],
+            state_cov=np.zeros((self.k_posdef, self.k_posdef)))
 
-            # Iterations
-            for t in range(1, steps):
-                states[t] = np.dot(transition, states[t-1])
-                irf[t] = np.dot(design, states[t])
-
-        # Otherwise, create a new model
-        else:
-            # Get the basic model components
-            representation = {}
-            for name, shape in self.shapes.items():
-                if name in ['obs', 'obs_intercept', 'state_intercept']:
-                    continue
-                representation[name] = getattr(self, name)
-
-            # Allow additional specification
-            warning = ('Model has time-invariant %s matrix, so the %s'
-                       ' argument to `irf` has been ignored.')
-            exception = ('Impulse response functions for models with'
-                         ' time-varying %s matrix requires an updated'
-                         ' time-varying matrix for any periods beyond those in'
-                         ' the original model.')
-            for name, shape in self.shapes.items():
-                if name in ['obs', 'obs_intercept', 'state_intercept']:
-                    continue
-                if representation[name].shape[-1] == 1:
-                    if name in kwargs:
-                        warn(warning % (name, name), ValueWarning)
-                elif name not in kwargs:
-                    raise ValueError(exception % name)
-                else:
-                    mat = np.asarray(kwargs[name])
-                    validate_matrix_shape(name, mat.shape, shape[0],
-                                          shape[1], steps)
-                    if mat.ndim < 3 or not mat.shape[2] == steps:
-                        raise ValueError(exception % name)
-                    representation[name] = np.c_[representation[name], mat]
-
-            # Setup the new statespace representation
-            model_kwargs = {
-                'filter_method': self.filter_method,
-                'inversion_method': self.inversion_method,
-                'stability_method': self.stability_method,
-                'conserve_memory': self.conserve_memory,
-                'tolerance': self.tolerance,
-                'loglikelihood_burn': self.loglikelihood_burn
-            }
-            model_kwargs.update(representation)
-            model = self.__class__(np.zeros(self.endog.T.shape), self.k_states,
-                                   self.k_posdef, **model_kwargs)
-            model.initialize_approximate_diffuse()
-            model._initialize_filter()
-            model._initialize_state()
-
-            # Get the impulse response function via simulation of the state
-            # space model, but with other shocks set to zero
-            # Since simulate returns the zero-th period, we need to simulate
-            # steps + 1 periods and exclude the zero-th observation.
-            steps += 1
-            measurement_shocks = np.zeros((steps, self.k_endog))
-            state_shocks = np.zeros((steps, self.k_posdef))
-            state_shocks[0] = impulse
-            irf, _ = model.simulate(
-                steps, measurement_shocks=measurement_shocks,
-                state_shocks=state_shocks)
-            irf = irf[1:]
+        # Get the impulse response function via simulation of the state
+        # space model, but with other shocks set to zero
+        measurement_shocks = np.zeros((steps, self.k_endog))
+        state_shocks = np.zeros((steps, self.k_posdef))
+        state_shocks[0] = impulse
+        initial_state = np.zeros((self.k_states,))
+        irf, _ = sim_model.simulate(
+            steps, measurement_shocks=measurement_shocks,
+            state_shocks=state_shocks, initial_state=initial_state)
 
         # Get the cumulative response if requested
         if cumulative:
             irf = np.cumsum(irf, axis=0)
 
-        return irf
+        # Here we ignore the first value, because it is always zeros (we added
+        # an additional `step` at the top to account for this).
+        return irf[1:]
 
 
 class FilterResults(FrozenRepresentation):
@@ -2118,47 +2044,6 @@ class FilterResults(FrozenRepresentation):
                              ' storing forecasted or predicted state means'
                              ' or covariances.')
 
-        # Construct the design and observation intercept and covariance
-        # matrices for start-npadded:end. If not time-varying in the original
-        # model, then they will be copied over if none are provided in
-        # `kwargs`. Otherwise additional matrices must be provided in `kwargs`.
-        representation = {}
-        for name, shape in self.shapes.items():
-            if name == 'obs':
-                continue
-            representation[name] = getattr(self, name)
-
-        # Update the matrices from kwargs for forecasts
-        warning = ('Model has time-invariant %s matrix, so the %s'
-                   ' argument to `predict` has been ignored.')
-        exception = ('Forecasting for models with time-varying %s matrix'
-                     ' requires an updated time-varying matrix for the'
-                     ' period to be forecasted.')
-        if nforecast > 0:
-            for name, shape in self.shapes.items():
-                if name == 'obs':
-                    continue
-                if representation[name].shape[-1] == 1 and self.nobs > 1:
-                    if name in kwargs:
-                        warn(warning % (name, name), ValueWarning)
-                elif name not in kwargs:
-                    if self.nobs > 1:
-                        raise ValueError(exception % name)
-                else:
-                    mat = np.asarray(kwargs[name])
-                    if len(shape) == 2:
-                        validate_vector_shape(name, mat.shape,
-                                              shape[0], nforecast)
-                        if mat.ndim < 2 or not mat.shape[1] == nforecast:
-                            raise ValueError(exception % name)
-                        representation[name] = np.c_[representation[name], mat]
-                    else:
-                        validate_matrix_shape(name, mat.shape, shape[0],
-                                              shape[1], nforecast)
-                        if mat.ndim < 3 or not mat.shape[2] == nforecast:
-                            raise ValueError(exception % name)
-                        representation[name] = np.c_[representation[name], mat]
-
         # Construct the predicted state and covariance matrix for each time
         # period depending on whether that time period corresponds to
         # one-step-ahead prediction, dynamic prediction, or out-of-sample
@@ -2182,45 +2067,10 @@ class FilterResults(FrozenRepresentation):
             start = max(start - kf_start, 0)
             end = kf_end - kf_start
 
-            # Subset time-varying system matrices to the appropriate time range
-            for name, shape in self.shapes.items():
-                if not name == 'obs' and representation[name].shape[-1] > 1:
-                    representation[name] = (
-                        representation[name][..., kf_start:kf_end])
-
-            # Construct the new endogenous array.
-            endog = np.empty((self.k_endog, ndynamic + nforecast))
-            endog.fill(np.nan)
-            if nstatic > 0:
-                endog = np.c_[self.endog[:, kf_start:kf_start + nstatic],
-                              endog]
-            endog = np.asfortranarray(endog)
-
-            # Do not propagate through FILTER_CONCENTRATED, because we want
-            # to perform prediction based on the estimated values, and one of
-            # the estimated values is the scale (and in any case, the
-            # obs_cov and state_cov have been updated to reflect the scale
-            # estimate already)
-            filter_method = self.filter_method & ~FILTER_CONCENTRATED
-
             # We must at least store forecasts and predictions
-            conserve_memory = (self.conserve_memory & ~MEMORY_NO_FORECAST
-                               & ~MEMORY_NO_PREDICTED)
-
-            # Setup the new statespace representation
-            model_kwargs = {
-                'filter_method': filter_method,
-                'inversion_method': self.inversion_method,
-                'stability_method': self.stability_method,
-                'conserve_memory': conserve_memory,
-                'filter_timing': self.filter_timing,
-                'tolerance': self.tolerance,
-                'loglikelihood_burn': self.loglikelihood_burn
-            }
-            model_kwargs.update(representation)
-            model = KalmanFilter(self.k_endog, self.k_states, self.k_posdef,
-                                 nobs=endog.shape[1], **model_kwargs)
-            model.bind(endog)
+            kwargs['conserve_memory'] = (
+                self.conserve_memory & ~MEMORY_NO_FORECAST &
+                ~MEMORY_NO_PREDICTED)
 
             # Even if we have not stored all predicted values (means and covs),
             # we can still do pure out-of-sample forecasting because we will
@@ -2238,11 +2088,21 @@ class FilterResults(FrozenRepresentation):
             else:
                 constant = self.predicted_state[..., kf_start]
                 stationary_cov = self.predicted_state_cov[..., kf_start]
-            model.initialization = Initialization(
-                self.k_states, 'known', constant=constant,
-                stationary_cov=stationary_cov)
 
-            results = model.filter()
+            kwargs.update({'initialization': 'known',
+                           'constant': constant,
+                           'stationary_cov': stationary_cov})
+
+            # Construct the new endogenous array.
+            endog = np.empty((nforecast, self.k_endog)) * np.nan
+            model = self.model.extend(
+                endog, start=kf_start, end=kf_end - nforecast, **kwargs)
+            # Have to retroactively modify the model's endog
+            if ndynamic > 0:
+                model.endog[:, -(ndynamic + nforecast):] = np.nan
+
+            with model.fixed_scale(self.scale):
+                results = model.filter()
 
         return PredictionResults(results, start, end, nstatic, ndynamic,
                                  nforecast)

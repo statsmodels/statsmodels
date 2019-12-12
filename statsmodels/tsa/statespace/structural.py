@@ -14,8 +14,7 @@ import numpy as np
 
 from statsmodels.compat.pandas import Appender
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
-                                             SpecificationWarning)
+from statsmodels.tools.sm_exceptions import OutputWarning, SpecificationWarning
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -25,9 +24,7 @@ from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .initialization import Initialization
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
-    unconstrain_stationary_univariate,
-    prepare_exog
-)
+    unconstrain_stationary_univariate, prepare_exog)
 
 _mask_map = {
     1: 'irregular',
@@ -1744,104 +1741,6 @@ class UnobservedComponentsResults(MLEResults):
             fig.text(0.1, 0.01, text % llb, fontsize='large')
 
         return fig
-
-    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
-                       exog=None, **kwargs):
-        """
-        In-sample prediction and out-of-sample forecasting
-
-        Parameters
-        ----------
-        start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
-        end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. However, if the dates index does not
-            have a fixed frequency, end must be an integer index if you
-            want out of sample prediction. Default is the last observation in
-            the sample.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables if
-            end is beyond the last observation in the sample.
-        dynamic : bool, int, str, or datetime, optional
-            Integer offset relative to `start` at which to begin dynamic
-            prediction. Can also be an absolute date string to parse or a
-            datetime type (these are not interpreted as offsets).
-            Prior to this observation, true endogenous values will be used for
-            prediction; starting with this observation and continuing through
-            the end of prediction, forecasted endogenous values will be used
-            instead.
-        full_results : bool, optional
-            If True, returns a FilterResults instance; if False returns a
-            tuple with forecasts, the forecast errors, and the forecast error
-            covariance matrices. Default is False.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
-        """
-        if start is None:
-            start = self.model._index[0]
-
-        # Handle end (e.g. date)
-        _start, _end, _out_of_sample, prediction_index = (
-            self.model._get_prediction_index(start, end, index, silent=True))
-
-        # Handle exogenous parameters
-        if _out_of_sample and self.model.k_exog > 0:
-            # Create a new faux model for the extended dataset
-            nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
-            endog = np.zeros((nobs, self.model.k_endog))
-
-            if self.model.k_exog > 0:
-                if exog is None:
-                    raise ValueError('Out-of-sample forecasting in a model'
-                                     ' with a regression component requires'
-                                     ' additional exogenous values via the'
-                                     ' `exog` argument.')
-                exog = np.array(exog)
-                required_exog_shape = (_out_of_sample, self.model.k_exog)
-                try:
-                    exog = exog.reshape(required_exog_shape)
-                except ValueError:
-                    raise ValueError('Provided exogenous values are not of the'
-                                     ' appropriate shape. Required %s, got %s.'
-                                     % (str(required_exog_shape),
-                                        str(exog.shape)))
-                exog = np.c_[self.model.data.orig_exog.T, exog.T].T
-
-            model_kwargs = self._init_kwds.copy()
-            model_kwargs['exog'] = exog
-            model = UnobservedComponents(endog, **model_kwargs)
-            model.update(self.params, transformed=True, includes_fixed=True)
-
-            # Set the kwargs with the update time-varying state space
-            # representation matrices
-            for name in self.filter_results.shapes.keys():
-                if name == 'obs':
-                    continue
-                mat = getattr(model.ssm, name)
-                if mat.shape[-1] > 1:
-                    if len(mat.shape) == 2:
-                        kwargs[name] = mat[:, -_out_of_sample:]
-                    else:
-                        kwargs[name] = mat[:, :, -_out_of_sample:]
-        elif self.model.k_exog == 0 and exog is not None:
-            # TODO: UserWarning
-            warn('Exogenous array provided to predict, but additional data not'
-                 ' required. `exog` argument ignored.', ValueWarning)
-
-        return super(UnobservedComponentsResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
-            **kwargs)
 
     @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):

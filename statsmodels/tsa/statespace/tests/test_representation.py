@@ -23,6 +23,7 @@ import pytest
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.kalman_filter import (
     KalmanFilter, FilterResults, PredictionResults)
+from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import (
@@ -916,21 +917,13 @@ def test_predict():
         assert_equal(str(w[0].message), message)
 
     # Check for a warning when providing a non-used statespace matrix
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.raises(ValueError):
         res.predict(end=res.nobs+1, design=True,
                     obs_intercept=np.zeros((1, 1)))
-        message = ('Model has time-invariant design matrix, so the design'
-                   ' argument to `predict` has been ignored.')
-        assert_equal(str(w[0].message), message)
 
     # Check that an error is raised when a new time-varying matrix is not
     # provided
     assert_raises(ValueError, res.predict, end=res.nobs+1)
-
-    # Check that an error is raised when a non-two-dimensional obs_intercept
-    # is given
-    assert_raises(ValueError, res.predict, end=res.nobs+1,
-                  obs_intercept=np.zeros(1))
 
     # Check that an error is raised when an obs_intercept with incorrect length
     # is given
@@ -1045,7 +1038,7 @@ def test_simulate():
 
     # Random walk model, so simulated series is just the cumulative sum of
     # the shocks
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(np.r_[0], k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1059,7 +1052,7 @@ def test_simulate():
 
     # Local level model, so simulated series is just the cumulative sum of
     # the shocks plus the measurement shock
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(np.r_[0], k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1074,7 +1067,8 @@ def test_simulate():
     # Local level-like model with observation and state intercepts, so
     # simulated series is just the cumulative sum of the shocks minus the state
     # intercept, plus the observation intercept and the measurement shock
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(np.zeros((1, 10)), k_states=1,
+                             initialization='diffuse')
     mod['obs_intercept', 0, 0] = 5.
     mod['design', 0, 0] = 1.
     mod['state_intercept', 0, 0] = -2.
@@ -1089,7 +1083,8 @@ def test_simulate():
     assert_allclose(actual, desired)
 
     # Model with time-varying observation intercept
-    mod = KalmanFilter(k_endog=1, k_states=1, nobs=10)
+    mod = SimulationSmoother(np.zeros((1, 10)), k_states=1, nobs=10,
+                             initialization='diffuse')
     mod['obs_intercept'] = (np.arange(10)*1.).reshape(1, 10)
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
@@ -1104,7 +1099,8 @@ def test_simulate():
 
     # Model with time-varying observation intercept, check that error is raised
     # if more simulations are requested than are nobs.
-    mod = KalmanFilter(k_endog=1, k_states=1, nobs=10)
+    mod = SimulationSmoother(np.zeros((1, 10)), k_states=1, nobs=10,
+                             initialization='diffuse')
     mod['obs_intercept'] = (np.arange(10)*1.).reshape(1, 10)
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
@@ -1146,7 +1142,7 @@ def test_impulse_responses():
 
     # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
     # for all periods
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1159,7 +1155,7 @@ def test_impulse_responses():
 
     # Random walk: 2-unit impulse response (i.e. non-orthogonalized irf) is 2
     # for all periods
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1172,7 +1168,7 @@ def test_impulse_responses():
 
     # Random walk: 1-standard-deviation response (i.e. orthogonalized irf) is
     # sigma for all periods (here sigma^2 = 2)
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1185,7 +1181,7 @@ def test_impulse_responses():
 
     # Random walk: 1-standard-deviation cumulative response (i.e. cumulative
     # orthogonalized irf)
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     mod['design', 0, 0] = 1.
     mod['transition', 0, 0] = 1.
     mod['selection', 0, 0] = 1.
@@ -1203,7 +1199,7 @@ def test_impulse_responses():
 
     # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
     # for all periods, even when intercepts are present
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     mod['state_intercept', 0] = 100.
     mod['design', 0, 0] = 1.
     mod['obs_intercept', 0] = -1000.
@@ -1218,13 +1214,13 @@ def test_impulse_responses():
 
     # Univariate model (random walk): test that an error is thrown when
     # a multivariate or empty "impulse" is sent
-    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod = SimulationSmoother(k_endog=1, k_states=1, initialization='diffuse')
     assert_raises(ValueError, mod.impulse_responses, impulse=1)
     assert_raises(ValueError, mod.impulse_responses, impulse=[1, 1])
     assert_raises(ValueError, mod.impulse_responses, impulse=[])
 
     # Univariate model with two uncorrelated shocks
-    mod = KalmanFilter(k_endog=1, k_states=2)
+    mod = SimulationSmoother(k_endog=1, k_states=2, initialization='diffuse')
     mod['design', 0, 0:2] = 1.
     mod['transition', :, :] = np.eye(2)
     mod['selection', :, :] = np.eye(2)
@@ -1257,7 +1253,7 @@ def test_impulse_responses():
     assert_allclose(actual, desired)
 
     # Univariate model with two correlated shocks
-    mod = KalmanFilter(k_endog=1, k_states=2)
+    mod = SimulationSmoother(k_endog=1, k_states=2, initialization='diffuse')
     mod['design', 0, 0:2] = 1.
     mod['transition', :, :] = np.eye(2)
     mod['selection', :, :] = np.eye(2)
@@ -1280,7 +1276,7 @@ def test_impulse_responses():
     assert_allclose(actual, desired)
 
     # Multivariate model with two correlated shocks
-    mod = KalmanFilter(k_endog=2, k_states=2)
+    mod = SimulationSmoother(k_endog=2, k_states=2, initialization='diffuse')
     mod['design', :, :] = np.eye(2)
     mod['transition', :, :] = np.eye(2)
     mod['selection', :, :] = np.eye(2)

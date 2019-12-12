@@ -451,6 +451,196 @@ class Representation(object):
             raise IndexError('First index must the name of a valid state space'
                              ' matrix.')
 
+    def _clone_kwargs(self, endog, **kwargs):
+        """
+        Construct keyword arguments for cloning a state space model
+
+        Parameters
+        ----------
+        endog : array_like
+            An observed time-series process :math:`y`.
+        **kwargs
+            Keyword arguments to pass to the new state space representation
+            model constructor. Those that are not specified are copied from
+            the specification of the current state space model.
+        """
+
+        # We always need the base dimensions, but they cannot change from
+        # the base model when cloning (the idea is: if these need to change,
+        # need to make a new instance manually, since it's not really cloning).
+        kwargs['nobs'] = len(endog)
+        kwargs['k_endog'] = self.k_endog
+        for key in ['k_states', 'k_posdef']:
+            val = getattr(self, key)
+            if key not in kwargs or kwargs[key] is None:
+                kwargs[key] = val
+            if kwargs[key] != val:
+                raise ValueError('Cannot change the dimension of %s when'
+                                 ' cloning.' % key)
+
+        # Get defaults for time-invariant system matrices, if not otherwise
+        # provided
+        # Time-varying matrices must be replaced.
+        for name in self.shapes.keys():
+            if name == 'obs':
+                continue
+
+            if name not in kwargs:
+                mat = getattr(self, name)
+                if mat.shape[-1] != 1:
+                    raise ValueError('The `%s` matrix is time-varying. Cloning'
+                                     ' this model requires specifying an'
+                                     ' updated matrix.' % name)
+                kwargs[name] = mat
+
+        # Default is to use the same initialization
+        kwargs.setdefault('initialization', self.initialization)
+
+        return kwargs
+
+    def clone(self, endog, **kwargs):
+        """
+        Clone a state space representation while overriding some elements
+
+        Parameters
+        ----------
+        endog : array_like
+            An observed time-series process :math:`y`.
+        **kwargs
+            Keyword arguments to pass to the new state space representation
+            model constructor. Those that are not specified are copied from
+            the specification of the current state space model.
+
+        Returns
+        -------
+        Representation
+
+        Notes
+        -----
+        If some system matrices are time-varying, then new time-varying
+        matrices *must* be provided.
+        """
+        kwargs = self._clone_kwargs(endog, **kwargs)
+        mod = self.__class__(**kwargs)
+        mod.bind(endog)
+        return mod
+
+    def extend(self, endog, start=None, end=None, **kwargs):
+        """
+        Extend the current state space model, or a specific (time) subset
+
+        Parameters
+        ----------
+        endog : array_like
+            An observed time-series process :math:`y`.
+        start : int, optional
+            The first period of a time-varying state space model to include in
+            the new model. Has no effect if the state space model is
+            time-invariant. Default is the initial period.
+        end : int, optional
+            The last period of a time-varying state space model to include in
+            the new model. Has no effect if the state space model is
+            time-invariant. Default is the final period.
+        **kwargs
+            Keyword arguments to pass to the new state space representation
+            model constructor. Those that are not specified are copied from
+            the specification of the current state space model.
+
+        Returns
+        -------
+        Representation
+
+        Notes
+        -----
+        This method does not allow replacing a time-varying system matrix with
+        a time-invariant one (or vice-versa). If that is required, use `clone`.
+        """
+        endog = np.atleast_1d(endog)
+        if endog.ndim == 1:
+            endog = endog[:, np.newaxis]
+        nobs = len(endog)
+
+        if start is None:
+            start = 0
+        if end is None:
+            end = self.nobs
+
+        if start < 0:
+            start = self.nobs + start
+        if end < 0:
+            end = self.nobs + end
+        if start > self.nobs:
+            raise ValueError('The `start` argument of the extension within the'
+                             ' base model cannot be after the end of the'
+                             ' base model.')
+        if end > self.nobs:
+            raise ValueError('The `end` argument of the extension within the'
+                             ' base model cannot be after the end of the'
+                             ' base model.')
+        if start > end:
+            raise ValueError('The `start` argument of the extension within the'
+                             ' base model cannot be after the `end` argument.')
+
+        # Note: if start == end or if end < self.nobs, then we're just cloning
+        # (no extension)
+        endog = tools.concat([self.endog[:, start:end].T, endog])
+
+        # Extend any time-varying arrays
+        error_ti = ('Model has time-invariant %s matrix, so cannot provide'
+                    ' an extended matrix.')
+        error_tv = ('Model has time-varying %s matrix, so an updated'
+                    ' time-varying matrix for the extension period'
+                    ' is required.')
+        for name, shape in self.shapes.items():
+            if name == 'obs':
+                continue
+
+            mat = getattr(self, name)
+
+            # If we were *not* given an extended value for this matrix...
+            if name not in kwargs:
+                # If this is a time-varying matrix in the existing model
+                if mat.shape[-1] > 1:
+                    # If we have an extension period, then raise an error
+                    # because we should have been given an extended value
+                    if end + nobs > self.nobs:
+                        raise ValueError(error_tv % name)
+                    # If we do not have an extension period, then set the new
+                    # time-varying matrix to be the portion of the existing
+                    # time-varying matrix that corresponds to the period of
+                    # interest
+                    else:
+                        kwargs[name] = mat[..., start:end + nobs]
+            elif nobs == 0:
+                raise ValueError('Extension is being performed within-sample'
+                                 ' so cannot provide an extended matrix')
+            # If we were given an extended value for this matrix
+            else:
+                # TODO: Need to add a check for ndim, and if the matrix has
+                # one fewer dimensions than the existing matrix, add a new axis
+
+                # If this is a time-invariant matrix in the existing model,
+                # raise an error
+                if mat.shape[-1] == 1 and self.nobs > 1:
+                    raise ValueError(error_ti % name)
+
+                # Otherwise, validate the shape of the given extended value
+                updated_mat = np.asarray(kwargs[name])
+                if len(shape) == 2:
+                    validate_vector_shape(name, updated_mat.shape,
+                                          shape[0], nobs)
+                else:
+                    validate_matrix_shape(name, updated_mat.shape,
+                                          shape[0], shape[1], nobs)
+
+                if updated_mat.shape[-1] != nobs:
+                    raise ValueError(error_tv % name)
+
+                # Concatenate to get the new time-varying matrix
+                kwargs[name] = np.c_[mat[..., start:end], updated_mat]
+
+        return self.clone(endog, **kwargs)
+
     @property
     def prefix(self):
         """

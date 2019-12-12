@@ -6,6 +6,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import contextlib
 from warnings import warn
 from collections import OrderedDict
 
@@ -17,15 +18,13 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning
 
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
-from .mlemodel import (
-    MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
-    PredictionResultsWrapper)
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .initialization import Initialization
 from .tools import (
-    is_invertible, prepare_exog,
+    is_invertible, concat, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate,
     prepare_trend_spec, prepare_trend_data
 )
@@ -224,10 +223,14 @@ class VARMAX(MLEModel):
         self.parameters['obs_cov'] = self.k_endog * self.measurement_error
         self.k_params = sum(self.parameters.values())
 
-        # Initialize trend data
-        self._trend_data = prepare_trend_data(
-            self.polynomial_trend, self.k_trend, self.nobs,
+        # Initialize trend data: we create trend data with one more observation
+        # than we actually have, to make it easier to insert the appropriate
+        # trend component into the final state intercept.
+        trend_data = prepare_trend_data(
+            self.polynomial_trend, self.k_trend, self.nobs + 1,
             offset=self.trend_offset)
+        self._trend_data = trend_data[:-1]
+        self._final_trend = trend_data[-1:]
 
         # Initialize known elements of the state space matrices
 
@@ -297,6 +300,10 @@ class VARMAX(MLEModel):
         self._params_regression, offset = _slice('regression', offset)
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
+
+        # Variable holding optional final `exog`
+        # (note: self._final_trend was set earlier)
+        self._final_exog = None
 
         # Update _init_keys attached by super
         self._init_keys += ['order', 'trend', 'error_cov_type',
@@ -708,6 +715,10 @@ class VARMAX(MLEModel):
             intercept = np.dot(self.exog[1:], exog_params)
             self.ssm[self._idx_state_intercept] = intercept.T
 
+            if self._final_exog is not None:
+                self.ssm['state_intercept', :self.k_endog, -1] = np.dot(
+                    self._final_exog, exog_params)
+
         # - Trend
         if self.k_trend > 0:
             # If we did not set the intercept above, zero it out so we can
@@ -724,9 +735,13 @@ class VARMAX(MLEModel):
                 intercept = np.dot(self._trend_data[1:], trend_params)
             self.ssm[self._idx_state_intercept] += intercept.T
 
+            if self._final_trend is not None and not self._trend_is_const:
+                self.ssm['state_intercept', :self.k_endog, -1:] += np.dot(
+                    self._final_trend, trend_params).T
+
         # Need to set the last state intercept to np.nan (with appropriate
-        # dtype)
-        if self.mle_regression:
+        # dtype) if we don't have the final exog
+        if self.mle_regression and self._final_exog is None:
             nan = np.array(np.nan, dtype=params.dtype)
             self.ssm['state_intercept', :self.k_endog, -1] = nan
 
@@ -752,6 +767,63 @@ class VARMAX(MLEModel):
         # 4. Observation covariance
         if self.measurement_error:
             self.ssm[self._idx_obs_cov] = params[self._params_obs_cov]
+
+    @contextlib.contextmanager
+    def _set_final_exog(self, exog):
+        """
+        Set the final state intercept value using out-of-sample `exog` / trend
+
+        Parameters
+        ----------
+        exog : ndarray
+            Out-of-sample `exog` values, usually produced by
+            `_validate_out_of_sample_exog` to ensure the correct shape (this
+            method does not do any additional validation of its own).
+        out_of_sample : int
+            Number of out-of-sample periods.
+
+        Notes
+        -----
+        We need special handling for simulating or forecasting with `exog` or
+        trend, because if we had these then the last predicted_state has been
+        set to NaN since we did not have the appropriate `exog` to create it.
+        Since we handle trend in the same way as `exog`, we still have this
+        issue when only trend is used without `exog`.
+        """
+        cache_value = self._final_exog
+        if self.k_exog > 0:
+            if exog is not None:
+                exog = np.atleast_1d(exog)
+                if exog.ndim == 2:
+                    exog = exog[:1]
+                try:
+                    exog = np.reshape(exog[:1], (self.k_exog,))
+                except ValueError:
+                    raise ValueError('Provided exogenous values are not of the'
+                                     ' appropriate shape. Required %s, got %s.'
+                                     % (str((self.k_exog,)),
+                                        str(exog.shape)))
+            self._final_exog = exog
+        try:
+            yield
+        finally:
+            self._final_exog = cache_value
+
+    @Appender(MLEModel.simulate.__doc__)
+    def simulate(self, params, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None, anchor=None,
+                 repetitions=None, exog=None, extend_model=None,
+                 extend_kwargs=None, transformed=True, includes_fixed=False,
+                 **kwargs):
+        with self._set_final_exog(exog):
+            out = super(VARMAX, self).simulate(
+                params, nsimulations, measurement_shocks=measurement_shocks,
+                state_shocks=state_shocks, initial_state=initial_state,
+                anchor=anchor, repetitions=repetitions, exog=exog,
+                extend_model=extend_model, extend_kwargs=extend_kwargs,
+                transformed=transformed, includes_fixed=includes_fixed,
+                **kwargs)
+        return out
 
 
 class VARMAXResults(MLEResults):
@@ -835,7 +907,7 @@ class VARMAXResults(MLEResults):
             initial_state = self.predicted_state[..., -1]
             initial_state_cov = self.predicted_state_cov[..., -1]
 
-        kwargs.setdefault('trend_offset', self.nobs + 1)
+        kwargs.setdefault('trend_offset', self.nobs + self.model.trend_offset)
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
         mod.ssm.initialization = Initialization(
@@ -849,148 +921,117 @@ class VARMAXResults(MLEResults):
 
         return res
 
-    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
-                       exog=None, **kwargs):
+    @contextlib.contextmanager
+    def _set_final_predicted_state(self, exog, out_of_sample):
         """
-        In-sample prediction and out-of-sample forecasting
+        Set the final predicted state value using out-of-sample `exog` / trend
 
         Parameters
         ----------
-        start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
-        end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. However, if the dates index does not
-            have a fixed frequency, end must be an integer index if you
-            want out of sample prediction. Default is the last observation in
-            the sample.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables if
-            end is beyond the last observation in the sample.
-        dynamic : bool, int, str, or datetime, optional
-            Integer offset relative to `start` at which to begin dynamic
-            prediction. Can also be an absolute date string to parse or a
-            datetime type (these are not interpreted as offsets).
-            Prior to this observation, true endogenous values will be used for
-            prediction; starting with this observation and continuing through
-            the end of prediction, forecasted endogenous values will be used
-            instead.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
+        exog : ndarray
+            Out-of-sample `exog` values, usually produced by
+            `_validate_out_of_sample_exog` to ensure the correct shape (this
+            method does not do any additional validation of its own).
+        out_of_sample : int
+            Number of out-of-sample periods.
 
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
+        Notes
+        -----
+        We need special handling for forecasting with `exog` or trend, because
+        if we had these then the last predicted_state has been set to NaN since
+        we did not have the appropriate `exog` to create it. Since we handle
+        trend in the same way as `exog`, we still have this issue when only
+        trend is used without `exog`.
         """
+        flag = out_of_sample and (
+            self.model.k_exog > 0 or self.model.k_trend > 0)
+
+        if flag:
+            tmp_endog = concat([
+                self.model.endog[-1:], np.zeros((1, self.model.k_endog))])
+            if self.model.k_exog > 0:
+                tmp_exog = concat([self.model.exog[-1:], exog[:1]])
+            else:
+                tmp_exog = None
+
+            tmp_trend_offset = self.model.trend_offset + self.nobs - 1
+            tmp_mod = self.model.clone(tmp_endog, exog=tmp_exog,
+                                       trend_offset=tmp_trend_offset)
+            constant = self.filter_results.predicted_state[:, -2]
+            stationary_cov = self.filter_results.predicted_state_cov[:, :, -2]
+            tmp_mod.ssm.initialize_known(constant=constant,
+                                         stationary_cov=stationary_cov)
+            tmp_res = tmp_mod.filter(self.params, transformed=True,
+                                     includes_fixed=True, return_ssm=True)
+
+            # Patch up `predicted_state`
+            self.filter_results.predicted_state[:, -1] = (
+                tmp_res.predicted_state[:, -2])
+        try:
+            yield
+        finally:
+            if flag:
+                self.filter_results.predicted_state[:, -1] = np.nan
+
+    @Appender(MLEResults.get_prediction.__doc__)
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         if start is None:
-            start = self.model._index[0]
+            start = 0
 
         # Handle end (e.g. date)
-        _start, _end, _out_of_sample, prediction_index = (
+        _start, _end, out_of_sample, _ = (
             self.model._get_prediction_index(start, end, index, silent=True))
 
-        # Handle exogenous parameters
-        last_intercept = None
-        if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
-            # Create a new faux VARMAX model for the extended dataset
-            nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
-            endog = np.zeros((nobs, self.model.k_endog))
+        # Normalize `exog`
+        exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
-            if self.model.k_exog > 0:
-                if exog is None:
-                    raise ValueError('Out-of-sample forecasting in a model'
-                                     ' with a regression component requires'
-                                     ' additional exogenous values via the'
-                                     ' `exog` argument.')
-                exog = np.array(exog)
-                required_exog_shape = (_out_of_sample, self.model.k_exog)
-                try:
-                    exog = exog.reshape(required_exog_shape)
-                except ValueError:
-                    raise ValueError('Provided exogenous values are not of the'
-                                     ' appropriate shape. Required %s, got %s.'
-                                     % (str(required_exog_shape),
-                                        str(exog.shape)))
-                exog = np.c_[self.model.data.orig_exog.T, exog.T].T
+        # Handle trend offset for extended model
+        extend_kwargs = {}
+        if self.model.k_trend > 0:
+            extend_kwargs['trend_offset'] = (
+                self.model.trend_offset + self.nobs)
 
-            # TODO replace with init_kwds or specification or similar
-            model = VARMAX(
-                endog,
-                exog=exog,
-                order=self.model.order,
-                trend=self.model.trend,
-                error_cov_type=self.model.error_cov_type,
-                measurement_error=self.model.measurement_error,
-                enforce_stationarity=self.model.enforce_stationarity,
-                enforce_invertibility=self.model.enforce_invertibility,
-                trend_offset=self.model.trend_offset
-            )
-            model.update(self.params, transformed=True, includes_fixed=True)
-            if model['state_intercept'].ndim > 1:
-                last_intercept = model['state_intercept', :, self.nobs - 1]
-            else:
-                last_intercept = model['state_intercept', :, 0]
+        # Get the prediction
+        with self.model._set_final_exog(exog):
+            with self._set_final_predicted_state(exog, out_of_sample):
+                out = super(VARMAXResults, self).get_prediction(
+                    start=start, end=end, dynamic=dynamic, index=index,
+                    exog=exog, extend_kwargs=extend_kwargs, **kwargs)
+        return out
 
-            # Set the kwargs with the update time-varying state space
-            # representation matrices
-            for name in self.filter_results.shapes.keys():
-                if name == 'obs':
-                    continue
-                mat = getattr(model.ssm, name)
-                if mat.shape[-1] > 1:
-                    if len(mat.shape) == 2:
-                        kwargs[name] = mat[:, -_out_of_sample:]
-                    else:
-                        kwargs[name] = mat[:, :, -_out_of_sample:]
-        elif self.model.k_exog == 0 and exog is not None:
-            warn('Exogenous array provided to predict, but additional data not'
-                 ' required. `exog` argument ignored.', ValueWarning)
+    @Appender(MLEResults.simulate.__doc__)
+    def simulate(self, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None, anchor=None,
+                 repetitions=None, exog=None, extend_model=None,
+                 extend_kwargs=None, **kwargs):
+        if anchor is None or anchor == 'start':
+            iloc = 0
+        elif anchor == 'end':
+            iloc = self.nobs
+        else:
+            iloc, _, _ = self.model._get_index_loc(anchor)
 
-        # If we had exog, then the last predicted_state has been set to NaN
-        # since we did not have the appropriate exog to create it. Then, if
-        # we are forecasting, we now have new exog that we need to put into
-        # the existing state_intercept array (and we will take it out, below)
-        if last_intercept is not None:
-            self.filter_results.state_intercept[:, -1] = last_intercept
+        if iloc < 0:
+            iloc = self.nobs + iloc
+        if iloc > self.nobs:
+            raise ValueError('Cannot anchor simulation after the estimated'
+                             ' sample.')
 
-            # Since we do not have the last predicted state / cov, we need at
-            # least one in-sample value. Here we override start, and then we
-            # need to patch the results (see below) so that we only return
-            # the requested predictions
-            if _start >= self.nobs:
-                start = self.nobs - 1
+        out_of_sample = max(iloc + nsimulations - self.nobs, 0)
 
-        res = super(VARMAXResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
-            **kwargs)
+        # Normalize `exog`
+        exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
-        if last_intercept is not None:
-            self.filter_results.state_intercept[:, -1] = np.nan
+        with self._set_final_predicted_state(exog, out_of_sample):
+            out = super(VARMAXResults, self).simulate(
+                nsimulations, measurement_shocks=measurement_shocks,
+                state_shocks=state_shocks, initial_state=initial_state,
+                anchor=anchor, repetitions=repetitions, exog=exog,
+                extend_model=extend_model, extend_kwargs=extend_kwargs,
+                **kwargs)
 
-            # Here we correct for the additional in-sample value that we
-            # needed to add
-            if _start >= self.nobs:
-                # First, reset the start value in the results
-                prediction_results = res.prediction_results
-                prediction_results.start = _start - start
-                prediction_results.clear()
-
-                # Since the super(...).get_prediction call reset the
-                # prediction index to be too long, the dates used in the attach
-                # wrapper will be wrong. Here reset them to the correct values
-                self.model._get_prediction_index(_start, end, index,
-                                                 silent=True)
-
-                res = PredictionResultsWrapper(PredictionResults(
-                    self, prediction_results, row_labels=prediction_index))
-
-        return res
+        return out
 
     @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None, separate_params=True):

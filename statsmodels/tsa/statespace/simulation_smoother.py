@@ -164,12 +164,21 @@ class SimulationSmoother(KalmanSmoother):
         simulator = self._simulators[prefix]
 
         # Set the disturbance variates
-        disturbance_variates = np.atleast_1d(np.array(
-            np.r_[measurement_shocks.ravel(), state_shocks.ravel()],
-            dtype=self.dtype
-        ).squeeze())
-        simulator.set_disturbance_variates(disturbance_variates,
-                                           pretransformed=True)
+        if measurement_shocks is not None and state_shocks is not None:
+            disturbance_variates = np.atleast_1d(np.array(
+                np.r_[measurement_shocks.ravel(), state_shocks.ravel()],
+                dtype=self.dtype
+            ).squeeze())
+            simulator.set_disturbance_variates(disturbance_variates,
+                                               pretransformed=True)
+        elif measurement_shocks is None and state_shocks is None:
+            pass
+        elif measurement_shocks is not None:
+            raise ValueError('Must set `state_shocks` if `measurement_shocks`'
+                             ' is set.')
+        elif state_shocks is not None:
+            raise ValueError('Must set `measurement_shocks` if `state_shocks`'
+                             ' is set.')
 
         # Set the intial state vector
         initial_state = np.atleast_1d(np.array(
