@@ -382,6 +382,7 @@ class SARIMAXSpecification(object):
         # constant) and the zero polynomial (i.e. not even a constant). The
         # former has `trend_order = 0`, while the latter has
         # `trend_order = None`.
+        self.k_trend = len(self.trend_terms)
         if len(self.trend_terms) == 0:
             self.trend_order = None
             self.trend_degree = None
@@ -394,7 +395,7 @@ class SARIMAXSpecification(object):
 
         # Handle endog / exog
         # Standardize exog
-        _, exog = prepare_exog(exog)
+        self.k_exog, exog = prepare_exog(exog)
 
         # Standardize endog (including creating a faux endog if necessary)
         faux_endog = endog is None
