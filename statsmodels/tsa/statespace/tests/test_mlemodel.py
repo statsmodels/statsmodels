@@ -1102,7 +1102,7 @@ def test_append_extend_apply_invalid():
 
 
 def test_integer_params():
-    # See GH#....
+    # See GH#6335
     mod = sarimax.SARIMAX([1, 1, 1], order=(1, 0, 0), exog=[2, 2, 2],
                           concentrate_scale=True)
     res = mod.filter([1, 0])
