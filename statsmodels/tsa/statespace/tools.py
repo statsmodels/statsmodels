@@ -306,6 +306,22 @@ def concat(series, axis=0, allow_mix=False):
     is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
 
     if np.all(is_pandas):
+        if isinstance(series[0], pd.DataFrame):
+            base_columns = series[0].columns
+        else:
+            base_columns = pd.Index([series[0].name])
+        for s in series[1:]:
+            if isinstance(s, pd.DataFrame):
+                s_columns = s.columns
+            else:
+                s_columns = pd.Index([s.name])
+
+            if axis == 0 and not base_columns.equals(s_columns):
+                raise ValueError('Columns must match to concatenate along'
+                                 ' rows.')
+            elif axis == 1 and not series[0].index.equals(s.index):
+                raise ValueError('Index must match to concatenate along'
+                                 ' columns.')
         concatenated = pd.concat(series, axis=axis)
     elif np.all(~is_pandas) or allow_mix:
         concatenated = np.concatenate(series, axis=axis)
