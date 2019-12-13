@@ -575,11 +575,16 @@ class TimeSeriesModel(base.LikelihoodModel):
             if self.data.row_labels is not None and not (start_oos or end_oos):
                 prediction_index = self.data.row_labels[start:end + 1]
             # Otherwise, warn the user that they will get an Int64Index
-            elif not silent:
-                warnings.warn('No supported index is available.'
-                              ' Prediction results will be given with'
-                              ' an integer index beginning at `start`.',
-                              ValueWarning)
+            else:
+                if not silent:
+                    warnings.warn('No supported index is available.'
+                                  ' Prediction results will be given with'
+                                  ' an integer index beginning at `start`.',
+                                  ValueWarning)
+                warnings.warn('No supported index is available. In the next'
+                              ' version, calling this method in a model'
+                              ' without a supported index will result in an'
+                              ' exception.', DeprecationWarning)
         elif self._index_none:
             prediction_index = None
 
