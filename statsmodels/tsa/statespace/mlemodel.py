@@ -1634,6 +1634,10 @@ class MLEModel(tsbase.TimeSeriesModel):
                       return_jacobian=False):
         params = np.array(params, ndmin=1)
 
+        # Never want integer dtype, so convert to floats
+        if np.issubdtype(params.dtype, np.integer):
+            params = params.astype(np.float64)
+
         if not includes_fixed and self._has_fixed_params:
             k_params = len(self.param_names)
             new_params = np.zeros(k_params, dtype=params.dtype) * np.nan

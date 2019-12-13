@@ -1099,3 +1099,12 @@ def test_append_extend_apply_invalid():
     message = 'The indices for endog and exog are not aligned'
     with pytest.raises(ValueError, match=message):
         res2.extend(endog4, exog=not_cts)
+
+
+def test_integer_params():
+    # See GH#6335
+    mod = sarimax.SARIMAX([1, 1, 1], order=(1, 0, 0), exog=[2, 2, 2],
+                          concentrate_scale=True)
+    res = mod.filter([1, 0])
+    p = res.predict(end=5, dynamic=True, exog=[3, 3, 4])
+    assert_equal(p.dtype, np.float64)
