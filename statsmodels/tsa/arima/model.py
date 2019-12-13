@@ -142,6 +142,12 @@ class ARIMA(sarimax.SARIMAX):
             missing=missing)
         self.trend = trend
 
+        # Override the public attributes for k_exog and k_trend to reflect the
+        # distinction here (for the purpose of the superclass, these are both
+        # combined as `k_exog`)
+        self.k_exog = self._spec_arima.k_exog
+        self.k_trend = self._spec_arima.k_trend
+
         # Remove some init kwargs that aren't used in this model
         unused = ['measurement_error', 'time_varying_regression',
                   'mle_regression', 'simple_differencing',

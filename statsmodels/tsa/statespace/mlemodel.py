@@ -250,6 +250,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         # for subclasses to make _get_init_kwds useful.
         use_kwargs = self._get_init_kwds()
         use_kwargs.update(kwargs)
+
+        # Check for `exog`
+        if getattr(self, 'k_exog', 0) > 0 and kwargs.get('exog', None) is None:
+            raise ValueError('Cloning a model with an exogenous component'
+                             ' requires specifying a new exogenous array using'
+                             ' the `exog` argument.')
+
         return self.__class__(endog, **use_kwargs)
 
     def set_filter_method(self, filter_method=None, **kwargs):
@@ -1706,7 +1713,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             A numpy array of shape (out_of_sample, k_exog) if the model
             contains an `exog` component, or None if it doesn't.
         """
-        if out_of_sample and self.exog is not None:
+        if out_of_sample and self.k_exog > 0:
             if exog is None:
                 raise ValueError('Out-of-sample operations in a model'
                                  ' with a regression component require'
@@ -1721,7 +1728,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                  ' appropriate shape. Required %s, got %s.'
                                  % (str(required_exog_shape),
                                     str(exog.shape)))
-        elif exog is not None:
+        elif self.k_exog > 0:
             exog = None
             warnings.warn('Exogenous array provided, but additional data'
                           ' is not required. `exog` argument ignored.',
