@@ -61,6 +61,26 @@ def _handle_args(names, defaults, *args, **kwargs):
     return tuple(output_args) + (kwargs,)
 
 
+def _check_index(desired_index, dta, title='data'):
+    given_index = None
+    if isinstance(dta, (pd.Series, pd.DataFrame)):
+        given_index = dta.index
+    if given_index is not None and not desired_index.equals(given_index):
+        desired_freq = getattr(desired_index, 'freq', None)
+        given_freq = getattr(given_index, 'freq', None)
+        if ((desired_freq is not None or given_freq is not None) and
+                desired_freq != given_freq):
+            raise ValueError('Given %s does not have an index'
+                             ' that extends the index of the'
+                             ' model. Expected index frequency is'
+                             ' "%s", but got "%s".'
+                             % (title, desired_freq, given_freq))
+        else:
+            raise ValueError('Given %s does not have an index'
+                             ' that extends the index of the'
+                             ' model.' % title)
+
+
 class MLEModel(tsbase.TimeSeriesModel):
     r"""
     State space model for maximum likelihood estimation
@@ -3607,16 +3627,37 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.tsa.statespace.mlemodel.MLEResults.extend
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
+        start = self.nobs
+        end = self.nobs + len(endog) - 1
+        _, _, _, append_ix = self.model._get_prediction_index(start, end)
+
+        # Check the index of the new data
+        if isinstance(self.model.data, PandasData):
+            _check_index(append_ix, endog, '`endog`')
+
+        # Concatenate the new data to original data
         new_endog = concat([self.model.data.orig_endog, endog], axis=0,
                            allow_mix=True)
+
+        # Create a continuous index for the combined data
         if isinstance(self.model.data, PandasData):
             start = 0
             end = len(new_endog) - 1
             _, _, _, new_index = self.model._get_prediction_index(start, end)
-            new_endog = pd.Series(new_endog, index=new_index)
+            # Standardize `endog` to have the right index and columns
+            columns = self.model.endog_names
+            if not isinstance(columns, list):
+                columns = [columns]
+            new_endog = pd.DataFrame(new_endog, index=new_index,
+                                     columns=columns)
+
+        # Handle `exog`
         if exog is not None:
             _, exog = prepare_exog(exog)
-            new_exog = concat([self.model.data.orig_exog, exog], axis=0)
+            _check_index(append_ix, exog, '`exog`')
+
+            new_exog = concat([self.model.data.orig_exog, exog], axis=0,
+                              allow_mix=True)
         else:
             new_exog = None
 
@@ -3700,6 +3741,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.tsa.statespace.mlemodel.MLEResults.append
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
+        start = self.nobs
+        end = self.nobs + len(endog) - 1
+        _, _, _, extend_ix = self.model._get_prediction_index(start, end)
+
+        if isinstance(self.model.data, PandasData):
+            _check_index(extend_ix, endog, '`endog`')
+
+            # Standardize `endog` to have the right index and columns
+            columns = self.model.endog_names
+            if not isinstance(columns, list):
+                columns = [columns]
+            endog = pd.DataFrame(endog, index=extend_ix, columns=columns)
         # Extend the current fit result to additional data
         mod = self.model.clone(endog, exog=exog, **kwargs)
         mod.ssm.initialization = Initialization(
