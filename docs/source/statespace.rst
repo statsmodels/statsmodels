@@ -275,6 +275,77 @@ For an example of the use of this model, see the `Dynamic Factor example noteboo
    # individual estimated factors on endogenous variables.
    fig_dfm = res_ll.plot_coefficients_of_determination()
 
+Linear Exponential Smoothing Models
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `ExponentialSmoothing` class is an implementation of linear exponential
+smoothing models using a state space approach.
+
+**Note**: this model is available at `sm.tsa.statespace.ExponentialSmoothing`;
+it is not the same as the model available at `sm.tsa.ExponentialSmoothing`.
+See below for details of the differences between these classes.
+
+.. autosummary::
+   :toctree: generated/
+
+   exponential_smoothing.ExponentialSmoothing
+   exponential_smoothing.ExponentialSmoothingResults
+
+A very brief code snippet follows:
+
+.. code-block:: python
+
+   # Load the statsmodels api
+   import statsmodels.api as sm
+
+   # Load your dataset
+   endog = pd.read_csv('your/dataset/here.csv')
+
+   # Simple exponential smoothing, denoted (A,N,N)
+   mod_ses = sm.tsa.statespace.ExponentialSmoothing(endog)
+   res_ses = mod_ses.fit()
+
+   # Holt's linear method, denoted (A,A,N)
+   mod_h = sm.tsa.statespace.ExponentialSmoothing(endog, trend=True)
+   res_h = mod_h.fit()
+
+   # Damped trend model, denoted (A,Ad,N)
+   mod_dt = sm.tsa.statespace.ExponentialSmoothing(endog, trend=True,
+                                                   damped_trend=True)
+   res_dt = mod_dt.fit()
+
+   # Holt-Winters' trend and seasonality method, denoted (A,A,A)
+   # (assuming that `endog` has a seasonal periodicity of 4, for example if it
+   # is quarterly data).
+   mod_hw = sm.tsa.statespace.ExponentialSmoothing(endog, trend=True,
+                                                   seasonal=4)
+   res_hw = mod_hw.fit()
+
+**Differences between Statsmodels' exponential smoothing model classes**
+
+There are several differences between this model class, available at
+`sm.tsa.statespace.ExponentialSmoothing`, and the model class available at
+`sm.tsa.ExponentialSmoothing`.
+
+- This model class only supports *linear* exponential smoothing models, while
+  `sm.tsa.ExponentialSmoothing` also supports multiplicative models.
+- This model class puts the exponential smoothing models into state space form
+  and then applies the Kalman filter to estimate the states, while
+  `sm.tsa.ExponentialSmoothing` is based on exponential smoothing recurisions.
+  In some cases, this can mean that estimating parameters with this model class
+  will be somewhat slower than with `sm.tsa.ExponentialSmoothing`.
+- This model class can produce confidence intervals for forecasts, based on an
+  assumption of Gaussian errors, while `sm.tsa.ExponentialSmoothing` does not
+  support confidence intervals.
+- This model class supports concentrating initial values out of the objective
+  function, which can improve performance when there are many initial states to
+  estimate (for example when the seasonal periodicity is large).
+- This model class supports many advanced features available to state space
+  models, such as diagnostics and fixed parameters.
+
+**Note**: this class is based on a "multiple sources of error" (MSOE) state
+space formulation and not a "single source of error" (SSOE) formulation.
+
 Custom state space models
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
