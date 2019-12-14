@@ -1137,3 +1137,14 @@ def test_nonfull_periodindex():
                ' forecasting.')
     with pytest.warns(ValueWarning, match=message):
         tsa_model.TimeSeriesModel(endog)
+
+
+def test_get_index_loc_quarterly():
+    # See GH#6339
+
+    ix = pd.date_range('2000Q1', periods=8, freq='QS')
+    endog = pd.Series(np.zeros(8), index=ix)
+
+    mod = tsa_model.TimeSeriesModel(endog)
+    loc, index, _ = mod._get_index_loc('2003Q2')
+    assert_equal(index[loc], pd.Timestamp('2003Q2'))
