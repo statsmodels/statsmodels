@@ -341,7 +341,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 if index_class is PeriodIndex:
                     date_key = Period(key, freq=base_index.freq)
                 else:
-                    date_key = Timestamp(key)
+                    date_key = Timestamp(key, freq=base_index.freq)
 
                 # Out-of-sample
                 if date_key > base_index[-1]:
@@ -354,6 +354,10 @@ class TimeSeriesModel(base.LikelihoodModel):
                         index = index_fn(start=base_index[0],
                                          periods=len(index) + 1,
                                          freq=base_index.freq)
+
+                    # To avoid possible inconsistencies with `get_loc` below,
+                    # set the key directly equal to the last index location
+                    key = index[-1]
 
         # Get the location
         if date_index:
