@@ -142,7 +142,7 @@ Basic ARIMA model and results classes are as follows:
 
 However, beginning in version 0.11, Statsmodels has introduced a new class
 dedicated to ARIMA models. While this class is still in a testing phase, it
-should by the starting point for for most users going forwards:
+should be the starting point for for most users going forwards:
 
 .. currentmodule:: statsmodels.tsa
 
