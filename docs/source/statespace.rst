@@ -18,7 +18,7 @@ A general state space model is of the form
 .. math::
 
   y_t & = Z_t \alpha_t + d_t + \varepsilon_t \\
-  \alpha_t & = T_t \alpha_{t-1} + c_t + R_t \eta_t \\
+  \alpha_{t+1} & = T_t \alpha_t + c_t + R_t \eta_t \\
 
 where :math:`y_t` refers to the observation vector at time :math:`t`,
 :math:`\alpha_t` refers to the (unobserved) state vector at time
@@ -62,17 +62,18 @@ state space form. Recall that an AR(2) model is often written as:
 
 .. math::
 
-   y_t = \phi_1 y_{t-1} + \phi_2 y_{t-2} + \epsilon_t
+   y_t = \phi_1 y_{t-1} + \phi_2 y_{t-2} + \epsilon_t,
+   \quad \epsilon_t \sim N(0, \sigma^2)
 
 This can be put into state space form in the following way:
 
 .. math::
 
    y_t & = \begin{bmatrix} 1 & 0 \end{bmatrix} \alpha_t \\
-   \alpha_t & = \begin{bmatrix}
+   \alpha_{t+1} & = \begin{bmatrix}
       \phi_1 & \phi_2 \\
            1 &      0
-   \end{bmatrix} \alpha_{t-1} + \begin{bmatrix} 1 \\ 0 \end{bmatrix} \eta_t
+   \end{bmatrix} \alpha_t + \begin{bmatrix} 1 \\ 0 \end{bmatrix} \eta_t
 
 Where
 
@@ -89,7 +90,7 @@ and
            1 &      0
    \end{bmatrix} \\
    R_t \equiv R & = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \\
-   \eta_t & \sim N(0, \sigma^2)
+   \eta_t \equiv \epsilon_{t+1} & \sim N(0, \sigma^2)
 
 There are three unknown parameters in this model:
 :math:`\phi_1, \phi_2, \sigma^2`.
