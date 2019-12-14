@@ -103,7 +103,86 @@ Submodules
 ~~~~~~~
 
 
+New AR model
+""""""""""""
 
+- Model class: `sm.tsa.AutoReg`
+- Estimates parameters using conditional MLE (OLS)
+- Adds the ability to specify exogenous variables, include time trends,
+  and add seasonal dummies.
+- The function `sm.tsa.ar_model.ar_select_order` performs lag length selection
+  for AutoReg models.
+
+New ARIMA model
+"""""""""""""""
+
+- Model class: `sm.tsa.arima.ARIMA`
+- Incorporates a variety of SARIMA estimators
+    - MLE via state space methods (SARIMA models)
+    - MLE via innovations algorithm (SARIMA models)
+    - Hannan-Rissanen (ARIMA models)
+    - Burg's method (AR models)
+    - Innovations algorithm (MA models)
+    - Yule-Walker (AR models)
+- Handles exogenous regressors via GLS or by MLE with state space methods.
+- Is part of the class of state space models and so inherits some additional
+  functionality.
+
+More robust regime switching models
+"""""""""""""""""""""""""""""""""""
+
+- Implementation of the Hamilton filter and Kim smoother in log space avoids
+  underflow errors.
+
+``tsa.statespace``
+~~~~~~~~~~~~~~~~~~
+
+Linear exponential smoothing models
+"""""""""""""""""""""""""""""""""""
+
+- Model class: `sm.tsa.statespace.ExponentialSmoothing`
+- Alternative to `sm.tsa.ExponentialSmoothing`
+- Only supports linear models
+- Is part of the class of state space models and so inherits some additional
+  functionality.
+
+Methods to apply parameters fitted on one dataset to another dataset
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+- Methods: `extend`, `append`, and `apply`, for state space results classes
+- These methods allow applying fitted parameters from a training dataset to a
+  test dataset in various ways
+- Useful for conveniently performing cross-validation exercises
+
+Method to hold some parameters fixed at known values
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+- Methods: `fix_params` and `fit_constrained`, for state space model classes
+- These methods allow setting some parameters to known values and then
+  estimating the remaining parameters
+
+Option for low memory operations
+""""""""""""""""""""""""""""""""
+
+- Argument: `low_memory=True`, for `fit`, `filter`, and `smooth`
+- Only a subset of results are available when using this option, but it does
+  allow for prediction, diagnostics, and forecasting
+- Useful to speed up cross-validation exercises
+
+Improved access to state estimates
+""""""""""""""""""""""""""""""""""
+
+- Attribute: `states`, for state space results classes
+- Wraps estimated states (predicted, filtered, smoothed) as Pandas objects with
+  the appropriate index.
+- Adds human-readable names for states, where possible.
+
+Improved simulation and impulse responses for time-varying models
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+- Argument: `anchor' allows specifying the period after which to begin the
+  simulation.
+- Example: to simulate data following the sample period, use `anchor='end'`
 
 ``maintenance``
 ~~~~~~~~~~~~~~~

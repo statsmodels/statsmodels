@@ -100,25 +100,37 @@ statsmodels.tsa.api and their result classes
 Univariate Autoregressive Processes (AR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Beginning in version 0.11, Statsmodels has introduced a new class dedicated to
+autoregressive models.
+
 .. currentmodule:: statsmodels.tsa
 
 .. autosummary::
    :toctree: generated/
 
-   ar_model.AR
    ar_model.AutoReg
-   ar_model.ARResults
    ar_model.AutoRegResults
    ar_model.ar_select_order
 
+The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
+and supports exogenous regressors (an AR-X model) and seasonal effects.
+
+AR-X and related models can also be fitted with the `arima.ARIMA` class and the
+`SARIMAX` class (using full MLE via the Kalman Filter).
+
+Finally, the old class, `ar_model.AR`, is still available but it has been
+deprecated.
+
+.. autosummary::
+   :toctree: generated/
+
+   ar_model.AR
+   ar_model.ARResults
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: statsmodels.tsa
-
-The basic ARIMA model and results classes that should be the starting point for
-for most users are:
+Basic ARIMA model and results classes are as follows:
 
 .. autosummary::
    :toctree: generated/
@@ -128,23 +140,29 @@ for most users are:
    arima_model.ARIMA
    arima_model.ARIMAResults
 
-Some advanced underlying low-level classes and functions that can be used to
-compute the log-likelihood function for ARMA-type models include (note that
-these are rarely needed by end-users):
+However, beginning in version 0.11, Statsmodels has introduced a new class
+dedicated to ARIMA models. While this class is still in a testing phase, it
+should be the starting point for for most users going forwards:
+
+.. currentmodule:: statsmodels.tsa
 
 .. autosummary::
    :toctree: generated/
 
-   kalmanf.kalmanfilter.KalmanFilter
-   innovations.arma_innovations.arma_innovations
-   innovations.arma_innovations.arma_loglike
-   innovations.arma_innovations.arma_loglikeobs
-   innovations.arma_innovations.arma_score
-   innovations.arma_innovations.arma_scoreobs
+   arima.model.ARIMA
+   arima.model.ARIMAResults
 
+The `arima.model.ARIMA` model allows estimating parameters by various methods
+(including conditional MLE via the Hannan-Rissanen method and full MLE via the
+Kalman filter). Since it is a special case of the `SARIMAX` model, it includes
+all features of :ref:`state space <statespace>` models (including
+preciction / forecasting, residual diagnostics, simulation and impulse
+responses, etc.).
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
+
+Linear and non-linear exponential smoothing models are available:
 
 .. currentmodule:: statsmodels.tsa
 
@@ -155,6 +173,21 @@ Exponential Smoothing
    holtwinters.SimpleExpSmoothing
    holtwinters.Holt
    holtwinters.HoltWintersResults
+
+Linear exponential smoothing models have also been separately implemented as a
+special case of the state space framework. Although this approach does not
+allow for the non-linear (multiplicative) exponential smoothing models, it
+includes all features of :ref:`state space <statespace>` models (including
+preciction / forecasting, residual diagnostics, simulation and impulse
+responses, etc.).
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   statespace.exponential_smoothing.ExponentialSmoothing
+   statespace.exponential_smoothing.ExponentialSmoothingResults
 
 
 ARMA Process
