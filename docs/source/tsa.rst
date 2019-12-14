@@ -130,8 +130,19 @@ deprecated.
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Beginning in version 0.11, Statsmodels has introduced a new class dedicated to
-ARIMA models that should be the starting point for for most users:
+Basic ARIMA model and results classes are as follows:
+
+.. autosummary::
+   :toctree: generated/
+
+   arima_model.ARMA
+   arima_model.ARMAResults
+   arima_model.ARIMA
+   arima_model.ARIMAResults
+
+However, beginning in version 0.11, Statsmodels has introduced a new class
+dedicated to ARIMA models. While this class is still in a testing phase, it
+should by the starting point for for most users going forwards:
 
 .. currentmodule:: statsmodels.tsa
 
@@ -147,16 +158,6 @@ Kalman filter). Since it is a special case of the `SARIMAX` model, it includes
 all features of :ref:`state space <statespace>` models (including
 preciction / forecasting, residual diagnostics, simulation and impulse
 responses, etc.).
-
-The old ARIMA model and results classes are still available:
-
-.. autosummary::
-   :toctree: generated/
-
-   arima_model.ARMA
-   arima_model.ARMAResults
-   arima_model.ARIMA
-   arima_model.ARIMAResults
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
