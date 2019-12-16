@@ -2289,3 +2289,8 @@ cvxopt
 SimulationSmoother
 SimulationSmoothResults
 ExponentialSmoothingResults
+overdispersion
+rissanen
+cp
+bp
+sirf

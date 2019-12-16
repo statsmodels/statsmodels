@@ -216,7 +216,7 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
 
     where :math:`T` is a normal matrix.
 
-    The oblimin family is parameterized by the parameter :math:`\gamma`. For
+    The oblimin family is parametrized by the parameter :math:`\gamma`. For
     orthogonal rotations:
 
     * :math:`\gamma=0` corresponds to quartimax,
@@ -286,7 +286,7 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
 
     where :math:`T` is an orthogonal matrix.
 
-    The orthomax family is parameterized by the parameter :math:`\gamma`:
+    The orthomax family is parametrized by the parameter :math:`\gamma`:
 
     * :math:`\gamma=0` corresponds to quartimax,
     * :math:`\gamma=\frac{1}{2}` corresponds to biquartimax,

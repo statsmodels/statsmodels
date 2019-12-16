@@ -259,7 +259,7 @@ class TestHoltFPPFixed(CheckExponentialSmoothing):
 
     def test_conf_int(self):
         # Note: cannot test against the output of the `holt` command in this
-        # case, as `holt` seems to have a bug: while it is parameterized in
+        # case, as `holt` seems to have a bug: while it is parametrized in
         # terms of `beta_star`, its confidence intervals are computed as though
         # beta_star was actually beta = alpha * beta_star.
         # Instead, we'll compare against a direct computation as in

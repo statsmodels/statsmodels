@@ -1998,7 +1998,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             An existing figure handle. If not provided, a new figure is
             created.
         figsize: tuple[float, float]
-            Tuple contatining the figure size values.
+            Tuple containing the figure size values.
         Returns
         -------
         Figure

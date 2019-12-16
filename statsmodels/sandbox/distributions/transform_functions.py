@@ -24,7 +24,7 @@ class SquareFunc(TransformFunction):
     '''class to hold quadratic function with inverse function and derivative
 
     using instance methods instead of class methods, if we want extension
-    to parameterized function
+    to parametrized function
     '''
 
     def func(self, x):

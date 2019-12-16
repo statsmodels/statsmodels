@@ -188,11 +188,11 @@ class ARIMA(sarimax.SARIMAX):
             Arguments to pass to the fit function for the parameter estimator
             described by the `method` argument.
         gls : bool, optional
-            Whether or not to use generalied least squares (GLS) to estimate
+            Whether or not to use generalized least squares (GLS) to estimate
             regression effects. The default is False if `method='statespace'`
             and is True otherwise.
         gls_kwargs : dict, optional
-            Arguments to pass to the GLS etimation fit method. Only applicable
+            Arguments to pass to the GLS estimation fit method. Only applicable
             if GLS estimation is used (see `gls` argument for details).
         cov_type : str, optional
             The `cov_type` keyword governs the method for calculating the

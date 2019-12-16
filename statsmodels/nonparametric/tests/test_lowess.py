@@ -57,7 +57,7 @@ class TestLowess(object):
         expect = np.array([data[x], data[out]]).T
         assert_almost_equal(result, expect, decimal)
 
-    # TODO: Refactor as parameterized test once nose is permanently dropped
+    # TODO: Refactor as parametrized test once nose is permanently dropped
     def test_simple(self):
         self.generate('test_simple', 'test_lowess_simple.csv')
 

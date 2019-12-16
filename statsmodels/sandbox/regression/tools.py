@@ -132,7 +132,7 @@ def tstd_lls(y, params, df):
 
     Notes
     -----
-    parameterized for garch
+    parametrized for garch
     '''
 
     mu, sigma2 = params.T
@@ -179,7 +179,7 @@ def ts_lls(y, params, df):
 
     Notes
     -----
-    parameterized for garch
+    parametrized for garch
     normalized/rescaled so that sigma2 is the variance
 
     >>> df = 10; sigma = 1.
@@ -246,7 +246,7 @@ def tstd_dlldy(y, df):
 
     Notes
     -----
-    parameterized for garch, standardized to variance=1
+    parametrized for garch, standardized to variance=1
     '''
     #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
     return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
