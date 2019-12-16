@@ -380,7 +380,7 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_measurement_disturbance(self):
-        """
+        r"""
         Randomly drawn measurement disturbance variates
 
         Used to construct `generated_obs`.
@@ -390,7 +390,7 @@ class SimulationSmoothResults(object):
 
         .. math::
 
-            \varepsilon_t^+ ~ N(0, H_t)
+           \varepsilon_t^+ ~ N(0, H_t)
 
         If `disturbance_variates` were provided to the `simulate()` method,
         then this returns those variates (which were N(0,1)) transformed to the
