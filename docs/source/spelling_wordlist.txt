@@ -2286,3 +2286,6 @@ OrdinalGEE
 sse
 mae
 cvxopt
+SimulationSmoother
+SimulationSmoothResults
+ExponentialSmoothingResults
