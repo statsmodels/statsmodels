@@ -23,8 +23,8 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 277
-**Pull Requests Merged**: 236
+**Issues Closed**: 320
+**Pull Requests Merged**: 260
 
 
 The Highlights
@@ -257,6 +257,7 @@ Sandu Ursu
 Tim Staley
 Yasine Gangat
 comatrion
+luxiform
 partev
 vegcev
 郭飞
@@ -494,6 +495,7 @@ The following Pull Requests were merged since the last release:
 * :pr:`6266`: ENH: and vlines option to plot_fit
 * :pr:`6275`: MAINT/DOC: Clarify patsy 0.5.1 is required
 * :pr:`6279`: DOC: Fix notebook
+* :pr:`6280`: ENH: State space: Improve simulate, IRF, prediction
 * :pr:`6281`: BUG: Pass arguments through in plot_leverage_resid2
 * :pr:`6283`: Close issues
 * :pr:`6285`: BUG: Raise in GC test for VAR(0)
@@ -506,3 +508,26 @@ The following Pull Requests were merged since the last release:
 * :pr:`6294`: ENH: better argument checking for StratifiedTable
 * :pr:`6297`: BUG: Fix conf interval with MI
 * :pr:`6298`: Correct spells
+* :pr:`6299`: DOC: Add example notebook for GEE score tests
+* :pr:`6303`: DOC/MAINT: Add simple, documented script to get github info
+* :pr:`6310`: MAINT: Deprecate recarray support
+* :pr:`6311`: TST: Reduce test size to prevent 32-bit crash
+* :pr:`6312`: MAINT: Remove chain dot
+* :pr:`6313`: MAINT: Catch and fix warnings
+* :pr:`6314`: BUG: Check dtype in KDEUnivariate
+* :pr:`6315`: MAINT: Use NumPy's linalg when available
+* :pr:`6316`: MAINT: Workaround NumPy ptp issue
+* :pr:`6317`: DOC: Update test running instructions
+* :pr:`6318`: BUG: Ensure inputs are finite in granger causalty test
+* :pr:`6319`: DOC: Restore test() autosummary
+* :pr:`6320`: BUG: Restore multicomp
+* :pr:`6321`: BUG: Fix trend due to recent changes
+* :pr:`6322`: DOC: fix alpha description for GLMGam
+* :pr:`6324`: Improve ljung box
+* :pr:`6327`: Move api docs
+* :pr:`6332`: DEPR: state space: deprecate out-of-sample w/ unsupported index
+* :pr:`6333`: BUG: state space: integer params can cause imaginary output
+* :pr:`6334`: ENH: append, extend check that index matches model
+* :pr:`6337`: BUG: fix k_exog, k_trend in arima.ARIMA; raise error when cloning a model with exog if no new exog given
+* :pr:`6338`: DOC: Documentation for release v0.11
+* :pr:`6340`: BUG: fix _get_index_loc with date strings
