@@ -180,8 +180,7 @@ Improved access to state estimates
 Improved simulation and impulse responses for time-varying models
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-- Argument: `anchor' allows specifying the period after which to begin the
-  simulation.
+- Argument: `anchor' allows specifying the period after which to begin the simulation.
 - Example: to simulate data following the sample period, use `anchor='end'`
 
 ``maintenance``

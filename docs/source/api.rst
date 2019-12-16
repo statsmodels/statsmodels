@@ -12,7 +12,7 @@ The main statsmodels API is split into models:
   ``import statsmodels.formula.api as smf``
 
 The API focuses on models and the most frequently used statistical test, and tools.
-`Import Paths and Structure`_ explains the design of the two API modules and how
+:ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how
 importing from the API differs from directly importing from the module where the
 model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
 list of available models, statistics, and tools.
@@ -158,8 +158,8 @@ Exponential Smoothing
    ~statsmodels.tsa.holtwinters.SimpleExpSmoothing
 
 
-Multivariate Models
-~~~~~~~~~~~~~~~~~~~
+Multivariate Time Series Models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 

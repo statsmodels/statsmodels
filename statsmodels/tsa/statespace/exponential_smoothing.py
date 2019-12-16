@@ -45,11 +45,17 @@ class ExponentialSmoothing(MLEModel):
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Default is
         no seasonal effects.
-    initialization_method: {'estimated', 'concentrated',
-                            'heuristic', 'known'}, optional
-        Method for initialize the recursions. If 'known' initialization is
-        used, then `initial_level` must be passed, as well as `initial_slope`
-        and `initial_seasonal` if applicable. Default is 'estimated'.
+    initialization_method: str, optional
+        Method for initialize the recursions. One of:
+
+        * 'estimated'
+        * 'concentrated'
+        * 'heuristic'
+        * 'known'
+
+        If 'known' initialization is used, then `initial_level` must be
+        passed, as well as `initial_slope` and `initial_seasonal` if
+        applicable. Default is 'estimated'.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -59,7 +65,7 @@ class ExponentialSmoothing(MLEModel):
         or length `seasonal - 1` (in which case the last initial value
         is computed to make the average effect zero). Only used if
         initialization is 'known'.
-    bounds : iterable of tuple, optional
+    bounds : iterable[tuple], optional
         An iterable containing bounds for the parameters. Must contain four
         elements, where each element is a tuple of the form (lower, upper).
         Default is (0.0001, 0.9999) for the level, trend, and seasonal

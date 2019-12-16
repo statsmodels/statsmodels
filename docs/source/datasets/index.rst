@@ -146,5 +146,5 @@ following, again using the Longley dataset as an example ::
 Additional information
 ----------------------
 
-* The idea for a datasets package was originally proposed by David Cournapeau and can be found :ref:`here <dataset_proposal>` with updates by Skipper Seabold.
+* The idea for a datasets package was originally proposed by David Cournapeau.
 * To add datasets, see the :ref:`notes on adding a dataset <add_data>`.
