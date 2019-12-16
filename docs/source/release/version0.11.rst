@@ -24,6 +24,7 @@ are mentioned in the docstrings.
 Stats
 -----
 **Issues Closed**: 320
+
 **Pull Requests Merged**: 260
 
 

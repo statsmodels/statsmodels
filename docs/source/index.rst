@@ -81,10 +81,10 @@ Bibtex entry::
    gettingstarted
    user-guide
    examples/index
-   release/index
    api
    about
    dev/index
+   release/index
 
 
 Index
