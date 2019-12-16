@@ -28,7 +28,7 @@ class ParametricMixtureD(object):
     '''mixtures with a discrete distribution
 
     The mixing distribution is a discrete distribution like scipy.stats.poisson.
-    All distribution in the mixture of the same type and parameterized
+    All distribution in the mixture of the same type and parametrized
     by the outcome of the mixing distribution and have to be a continuous
     distribution (or have a pdf method).
     As an example, a mixture of normal distributed random variables with
@@ -52,7 +52,7 @@ class ParametricMixtureD(object):
         mixing_dist : discrete frozen distribution
             mixing distribution
         base_dist : continuous distribution
-            parameterized distributions in the mixture
+            parametrized distributions in the mixture
         bd_args_func : callable
             function that builds the tuple of args for the base_dist.
             The function obtains as argument the values in the support of

@@ -1867,7 +1867,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             (nsimulations x k_endog x repetitions). If the model was given
             Pandas input then the output will be a Pandas object. If
             `k_endog > 1` and `repetitions` is not None, then the output will
-            be a Pandas DataFrame that hasa MultiIndex for the columns, with
+            be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
         """
@@ -3397,7 +3397,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             (nsimulations x k_endog x repetitions). If the model was given
             Pandas input then the output will be a Pandas object. If
             `k_endog > 1` and `repetitions` is not None, then the output will
-            be a Pandas DataFrame that hasa MultiIndex for the columns, with
+            be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
         """

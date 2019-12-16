@@ -133,7 +133,7 @@ class ShortPanelGLS(GLS):
         nobs_i = len(endog) / self.n_groups #endog might later not be an ndarray
         #balanced only for now,
         #which is a requirement anyway in this case (full cov)
-        #needs to change for parameterized sigma_i
+        #needs to change for parametrized sigma_i
 
         #
         if sigma_i is None:

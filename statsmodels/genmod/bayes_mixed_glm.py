@@ -761,7 +761,7 @@ class _VariationalBayesMixedGLM(object):
                 raise ValueError(
                     "sd has incorrect length, %d != %d" % (len(sd), ml))
 
-            # s is parameterized on the log-scale internally when
+            # s is parametrized on the log-scale internally when
             # optimizing the ELBO function (this is transparent to the
             # caller)
             s = np.log(sd)

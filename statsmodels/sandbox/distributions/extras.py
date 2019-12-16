@@ -14,7 +14,7 @@
 TODO:
 * Where is Transf_gen for general monotonic transformation ? found and added it
 * write some docstrings, some parts I do not remember
-* add Box-Cox transformation, parameterized ?
+* add Box-Cox transformation, parametrized ?
 
 
 this is only partially cleaned, still includes test examples as functions
@@ -414,7 +414,7 @@ class NormExpan_gen(distributions.rv_continuous):
         where xc = (x-mu)/sig is the standardized value of the random variable
         and H(xc,3) and H(xc,4) are Hermite polynomials
 
-        Note: This distribution has to be parameterized during
+        Note: This distribution has to be parametrized during
         initialization and instantiation, and does not have a shape
         parameter after instantiation (similar to frozen distribution
         except for location and scale.) Location and scale can be used
@@ -794,7 +794,7 @@ class SquareFunc(object):
     '''class to hold quadratic function with inverse function and derivative
 
     using instance methods instead of class methods, if we want extension
-    to parameterized function
+    to parametrized function
     '''
     def inverseplus(self, x):
         return np.sqrt(x)
