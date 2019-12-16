@@ -458,7 +458,7 @@ Overview of usage
 All state space models follow the typical Statsmodels pattern:
 
 1. Construct a **model instance** with an input dataset
-2. Apply parameters to the model (for example by `fit`ting) to construct a **results instance**
+2. Apply parameters to the model (for example, using `fit`) to construct a **results instance**
 3. Interact with the results instance to examine the estimated parameters, explore residual diagnostics, and produce forecasts, simulations, or impulse responses.
 
 An example of this pattern is as follows:
