@@ -173,7 +173,6 @@ def companion_matrix(polynomial):
     The coefficients from this form are defined to be :math:`c_i = - a_i`, and
     it is the :math:`c_i` coefficients that this function expects to be
     provided.
-
     """
     identity_matrix = False
     if isinstance(polynomial, (int, np.integer)):
@@ -534,7 +533,6 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
     There is a Cython implementation of this function that can be much faster,
     but which requires SciPy 0.14.0 or greater. See
     `constrain_stationary_multivariate` for details.
-
     """
 
     from scipy import linalg
@@ -794,7 +792,6 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        "Multivariate Partial Autocorrelations."
        In Proceedings of the Business and Economic Statistics Section, 349-53.
        American Statistical Association
-
     """
 
     use_list = type(unconstrained) == list
@@ -902,7 +899,6 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     -----
     Corresponds to the inverse of Lemma 2.2 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
-
     """
     from scipy import linalg
 
@@ -1029,7 +1025,6 @@ def _compute_multivariate_acovf_from_coefficients(
 
     Autocovariances are calculated by solving the associated discrete Lyapunov
     equation of the state space representation of the VAR process.
-
     """
     from scipy import linalg
 
@@ -1102,7 +1097,6 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
     sample_pacf : list
         A list of the first `maxlag` sample partial autocorrelation matrices.
         Each matrix is shaped `k_endog` x `k_endog`.
-
     """
     sample_autocovariances = _compute_multivariate_sample_acovf(endog, maxlag)
 
@@ -1141,7 +1135,6 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     -----
     Computes sample partial autocorrelations if sample autocovariances are
     given.
-
     """
     from scipy import linalg
 
@@ -1367,7 +1360,6 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
-
     """
     use_list = type(constrained) == list
     if not use_list:
@@ -1532,7 +1524,6 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     -------
     reordered_matrix : array_like
         The reordered matrix.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((matrix,))[0]
@@ -1568,7 +1559,6 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     -------
     reordered_vector : array_like
         The reordered vector.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((vector,))[0]
@@ -1617,7 +1607,6 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     -------
     copied_matrix : array_like
         The matrix B with the non-missing submatrix of A copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((A, B))[0]
@@ -1663,7 +1652,6 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     -------
     copied_vector : array_like
         The vector b with the non-missing subvector of b copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1720,7 +1708,6 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     -------
     copied_matrix : array_like
         The matrix B with the non-index submatrix of A copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((A, B))[0]
@@ -1766,7 +1753,6 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     -------
     copied_vector : array_like
         The vector b with the non-index subvector of b copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]

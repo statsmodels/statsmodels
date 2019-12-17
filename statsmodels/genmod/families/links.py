@@ -44,8 +44,6 @@ class Link(object):
         -------
         g^(-1)(z) : array
             The value of the inverse of the link function g^(-1)(z) = p
-
-
         """
         return NotImplementedError
 
@@ -191,7 +189,6 @@ class Logit(Link):
         return 1. / (1. + t)
 
     def deriv(self, p):
-
         """
         Derivative of the logit transform
 
@@ -228,7 +225,6 @@ class Logit(Link):
         -------
         g'^(-1)(z) : array
             The value of the derivative of the inverse of the logit function
-
         """
         t = np.exp(z)
         return t/(1 + t)**2

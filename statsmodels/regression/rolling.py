@@ -658,7 +658,7 @@ class RollingRegressionResults(object):
         alpha : float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
-        legend_loc : string, optional
+        legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new

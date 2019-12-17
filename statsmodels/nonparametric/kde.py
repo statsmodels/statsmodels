@@ -72,7 +72,6 @@ class KDEUnivariate(object):
     >>> dens.fit()
     >>> plt.plot(dens.cdf)
     >>> plt.show()
-
     """
 
     def __init__(self, endog):
@@ -187,7 +186,6 @@ class KDEUnivariate(object):
         Notes
         -----
         Will not work if fit has not been called.
-
         """
         _checkisfit(self)
         return -np.log(self.sf)

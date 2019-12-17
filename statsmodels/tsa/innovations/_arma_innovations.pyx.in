@@ -73,7 +73,6 @@ cdef {{prefix}}toeplitz(int n, int offset0, int offset1,
     -----
     This function constructs the Toeplitz block in-place and does not return
     any output.
-
     """
     cdef Py_ssize_t i, j
 
@@ -152,7 +151,6 @@ cpdef {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
        Time Series: Theory and Methods. 2nd ed. 1991.
        New York, NY: Springer.
-
     """
     cdef Py_ssize_t nobs, p, q, m, m2, n, i, j, r, tmp_ix
     cdef cnp.npy_intp dim1[1]
@@ -243,7 +241,6 @@ cpdef {{prefix}}arma_innovations_algo_fast(int nobs,
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
        Time Series: Theory and Methods. 2nd ed. 1991.
        New York, NY: Springer.
-
     """
     cdef Py_ssize_t i, j, k, n, _n, m, m2, p, q, start, start2
     cdef cnp.npy_intp dim1[1]
@@ -340,7 +337,6 @@ cpdef {{prefix}}arma_innovations_filter({{cython_type}} [:] endog,
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
        Time Series: Theory and Methods. 2nd ed. 1991.
        New York, NY: Springer.
-
     """
     cdef Py_ssize_t nobs, i, k, j, m, p, q
     cdef cnp.npy_intp dim1[1]
@@ -410,7 +406,6 @@ cpdef {{prefix}}arma_innovations({{cython_type}} [:] endog,
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
        Time Series: Theory and Methods. 2nd ed. 1991.
        New York, NY: Springer.
-
     """
     cdef Py_ssize_t nobs = len(endog), i
     cdef {{cython_type}} const
@@ -472,7 +467,6 @@ cpdef {{prefix}}arma_loglikeobs_fast({{cython_type}} [:] endog,
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2009.
        Time Series: Theory and Methods. 2nd ed. 1991.
        New York, NY: Springer.
-
     """
 
     cdef Py_ssize_t nobs = len(endog), i

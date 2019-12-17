@@ -635,7 +635,6 @@ class DistributedModel(object):
 
 
 class DistributedResults(LikelihoodModelResults):
-
     """
     Class to contain model results
 
@@ -673,7 +672,6 @@ class DistributedResults(LikelihoodModelResults):
         -------
             prediction : ndarray, pandas.Series or pandas.DataFrame
             See self.model.predict
-
         """
 
         return self.model.predict(self.params, exog, *args, **kwargs)

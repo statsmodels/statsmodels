@@ -126,7 +126,6 @@ def whiten_ar(x, ar_coefs, order):
     -------
     x_new : ndarray
         transformed array
-
     """
 
     rho = ar_coefs
@@ -165,7 +164,6 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
         TODO
     Rinv : ndarray
         inverse of the Toepliz matrix
-
     """
     return yule_walker(acov, order=order, method=method, df=df, inv=inv,
                        demean=False)

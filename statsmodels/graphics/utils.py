@@ -49,7 +49,6 @@ def create_mpl_ax(ax=None):
 
     >>> from statsmodels.graphics import utils
     >>> fig, ax = utils.create_mpl_ax(ax)
-
     """
     if ax is None:
         plt = _import_mpl()
@@ -82,7 +81,6 @@ def create_mpl_fig(fig=None, figsize=None):
     See Also
     --------
     create_mpl_ax
-
     """
     if fig is None:
         plt = _import_mpl()

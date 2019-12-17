@@ -30,7 +30,6 @@ class UnivariateGamPenalty(Penalty):
     Parameters are stored, additionally
     nob s: The number of samples used during the estimation
     n_columns : number of columns in smoother basis
-
     """
 
     def __init__(self, univariate_smoother, alpha=1, weights=1):
@@ -157,7 +156,6 @@ class MultivariateGamPenalty(Penalty):
         in all smoothers.
     k_variables : number of smooth terms
     k_params : total number of parameters in the regression model
-
     """
 
     def __init__(self, multivariate_smoother, alpha, weights=None,

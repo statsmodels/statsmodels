@@ -8,7 +8,6 @@ import numpy as np
 class GenRes(object):
     """
     Loads data and creates class instance ot be tested.
-
     """
     @classmethod
     def setup_class(cls):

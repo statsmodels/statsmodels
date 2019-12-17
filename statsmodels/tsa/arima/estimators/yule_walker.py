@@ -52,7 +52,6 @@ def yule_walker(endog, ar_order=0, demean=True, unbiased=False):
     ----------
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
-
     """
     spec = SARIMAXSpecification(endog, ar_order=ar_order)
     endog = spec.endog

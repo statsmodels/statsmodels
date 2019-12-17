@@ -28,7 +28,6 @@ class PenalizedMixin(object):
 
     TODO: do we adjust the inherited docstrings?
     We would need templating to add the penalization parameters
-
     """
 
     def __init__(self, *args, **kwds):
@@ -98,7 +97,6 @@ class PenalizedMixin(object):
 
     def score_numdiff(self, params, pen_weight=None, method='fd', **kwds):
         """score based on finite difference derivative
-
         """
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -143,7 +141,6 @@ class PenalizedMixin(object):
 
     def hessian_numdiff(self, params, pen_weight=None, **kwds):
         """hessian based on finite difference derivative
-
         """
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -189,7 +186,6 @@ class PenalizedMixin(object):
             fit method of the underlying model class.
             Specifically, additional optimizer keywords and cov_type related
             keywords can be added.
-
         """
         # If method is None, then we choose a default method ourselves
 

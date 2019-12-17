@@ -41,7 +41,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
     - still needs consistent order options.
     - Currently assumes that the mean is zero, no mean or effect of exogenous
       variables are included in the estimation.
-
     """
 
     def __init__(self, endog, exog=None):

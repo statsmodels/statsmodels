@@ -1593,6 +1593,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         Reference to the model that is fit.
     params : ndarray
         The fitted parameters from the AR Model.
+    cov_params : ndarray
+        The estimated covariance matrix of the model parameters.
     normalized_cov_params : ndarray
         The array inv(dot(x.T,x)) where x contains the regressors in the
         model.

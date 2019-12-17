@@ -46,7 +46,6 @@ def _ros_sort(df, observations, censorship, warn=False):
     sorted_df : pandas.DataFrame
         The sorted dataframe with all columns dropped except the
         observation and censorship columns.
-
     """
 
     # separate uncensored data from censored data
@@ -99,7 +98,6 @@ def cohn_numbers(df, observations, censorship):
     Returns
     -------
     cohn : pandas.DataFrame
-
     """
 
     def nuncen_above(row):
@@ -223,7 +221,6 @@ def _detection_limit_index(obs, cohn):
     See Also
     --------
     cohn_numbers
-
     """
 
     if cohn.shape[0] > 0:
@@ -260,7 +257,6 @@ def _ros_group_rank(df, dl_idx, censorship):
     -------
     ranks : numpy.array
         Array of ranks for the dataset.
-
     """
 
     # (editted for pandas 0.14 compatibility; see commit 63f162e
@@ -302,7 +298,6 @@ def _ros_plot_pos(row, censorship, cohn):
     See Also
     --------
     cohn_numbers
-
     """
 
     DL_index = row['det_limit_index']
@@ -330,7 +325,6 @@ def _norm_plot_pos(observations):
     Returns
     -------
     plotting_position : array of floats
-
     """
     ppos, sorted_res = stats.probplot(observations, fit=False)
     return stats.norm.cdf(ppos)
@@ -362,7 +356,6 @@ def plotting_positions(df, censorship, cohn):
     See Also
     --------
     cohn_numbers
-
     """
 
     plot_pos = df.apply(lambda r: _ros_plot_pos(r, censorship, cohn), axis=1)
@@ -406,7 +399,6 @@ def _impute(df, observations, censorship, transform_in, transform_out):
         best-fit line. The "final" column contains the estimated values
         only where the original observations were censored, and the original
         observations everwhere else.
-
     """
 
     # detect/non-detect selectors
@@ -465,7 +457,6 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
         best-fit line. The "final" column contains the estimated values
         only where the original observations were censored, and the original
         observations everwhere else.
-
     """
 
     # compute the Cohn numbers

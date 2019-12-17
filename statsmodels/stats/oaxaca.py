@@ -56,28 +56,28 @@ class OaxacaBlinder(object):
 
     Parameters
     ----------
-    endog: array_like
-        'endog' is the endogenous variable or the dependent variable
-        that you are trying to explain.
-    exog: array_like
-        'exog' is the exogenous variable(s) or the independent variable(s)
-        that you are using to explain the endogenous variable.
-    bifurcate: int or string
-        'bifurcate' is the column of the exogenous variable(s) that you
-        wish to split on. This would generally be the group that you wish
-        to explain the two means for. Int of the column for a NumPy array
-        or int/string for the name of the column in Pandas
-    hasconst: bool, optional
+    endog : array_like
+        The endogenous variable or the dependent variable that you are trying
+        to explain.
+    exog : array_like
+        The exogenous variable(s) or the independent variable(s) that you are
+        using to explain the endogenous variable.
+    bifurcate : {int, str}
+        The column of the exogenous variable(s) on which to split. This would
+        generally be the group that you wish to explain the two means for.
+        Int of the column for a NumPy array or int/string for the name of
+        the column in Pandas.
+    hasconst : bool, optional
         Indicates whether the two exogenous variables include a user-supplied
         constant. If True, a constant is assumed. If False, a constant is added
         at the start. If nothing is supplied, then True is assumed.
-    swap: bool, optional
+    swap : bool, optional
         Imitates the STATA Oaxaca command by allowing users to choose to swap
         groups. Unlike STATA, this is assumed to be True instead of False
-    cov_type: string, optional
+    cov_type : str, optional
         See regression.linear_model.RegressionResults for a description of the
         available covariance estimators
-    cov_kwdslist or None, optional
+    cov_kwds : dict, optional
         See linear_model.RegressionResults.get_robustcov_results for a
         description required keywords for alternative covariance estimators
 

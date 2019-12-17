@@ -111,7 +111,6 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     In contrast to scipy.stats.kstest, this function only calculates the
     statistic which can be used either as distance measure or to implement
     case specific p-values.
-
     """
     nobs = float(len(x))
 

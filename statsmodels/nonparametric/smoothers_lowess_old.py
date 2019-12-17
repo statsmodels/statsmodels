@@ -90,7 +90,6 @@ def lowess(endog, exog, frac=2./3, it=3):
     >>> y = np.sin(x) + stats.cauchy.rvs(size=len(x))
     >>> z = lowess(y, x, frac= 1./3, it=0)
     >>> w = lowess(y, x, frac=1./3)
-
     """
     x = exog
 
@@ -196,7 +195,6 @@ def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
     Returns
     -------
     Nothing. The modifications are made to weight in place.
-
     """
     weights[:] = new_entries
     weights -= x_copy_i
@@ -230,7 +228,6 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
    Returns
     -------
     Nothing. The fitted values are modified in place.
-
     """
     nn_indices = [0,k]
     X = np.ones((k,2))
@@ -281,7 +278,6 @@ def _lowess_update_nn(x, cur_nn,i):
     Returns
     -------
     Nothing. It modifies cur_nn in place.
-
     """
     while True:
         if cur_nn[1]<x.size:
@@ -331,7 +327,6 @@ def _lowess_mycube(t):
     Returns
     -------
     Nothing
-
     """
     #t **= 3
     t2 = t*t
@@ -351,7 +346,6 @@ def _lowess_bisquare(t):
     Returns
     -------
     Nothing
-
     """
     #t = (1-t**2)**2
     t *= t

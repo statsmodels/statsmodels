@@ -68,15 +68,15 @@ class SARIMAXSpecification(object):
     seasonal_periods : int
         Number of periods in a season. May not be used in combination with
         `seasonal_order`.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process. This is only possible in estimation by
         numerical maximum likelihood.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to require the moving average parameters to correspond
         to an invertible process. This is only possible in estimation by
         numerical maximum likelihood.
-    concentrate_scale : boolean, optional
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
@@ -167,15 +167,15 @@ class SARIMAXSpecification(object):
     max_reduced_ma_order : int
         Largest lag in the reduced moving average polynomial. Equal to
         `max_ma_order + max_seasonal_ma_order * seasonal_periods`.
-    enforce_stationarity : boolean
+    enforce_stationarity : bool
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. This is only possible
         in estimation by numerical maximum likelihood.
-    enforce_invertibility : boolean
+    enforce_invertibility : bool
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. This is only possible
         in estimation by numerical maximum likelihood.
-    concentrate_scale : boolean
+    concentrate_scale : bool
         Whether or not to concentrate the variance (scale term) out of the
         log-likelihood function. This is only applicable when considering
         estimation by numerical maximum likelihood.
@@ -206,7 +206,6 @@ class SARIMAXSpecification(object):
 
     >>> spec = SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
     SARIMAXSpecification(endog=y, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
-
     """
 
     def __init__(self, endog=None, exog=None, order=None,
@@ -630,7 +629,6 @@ class SARIMAXSpecification(object):
 
         >>> spec.validate_estimator('not_an_estimator')
         ValueError: "not_an_estimator" is not a valid estimator.
-
         """
         has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
@@ -735,7 +733,6 @@ class SARIMAXSpecification(object):
          'seasonal_ar_params': array([], dtype=float64),
          'seasonal_ma_params': array([], dtype=float64),
          'sigma2': 4.0}
-
         """
         params = validate_basic(params, self.k_params,
                                 allow_infnan=allow_infnan,
@@ -793,7 +790,6 @@ class SARIMAXSpecification(object):
         >>> spec = SARIMAXSpecification(ar_order=1)
         >>> spec.join_params(ar_params=0.5, sigma2=4)
         array([0.5, 4. ])
-
         """
         definitions = [
             ('exogenous variables', self.k_exog_params, exog_params),
@@ -849,7 +845,6 @@ class SARIMAXSpecification(object):
         ValueError: Non-positive variance term.
         >>> spec.validate_params([-1.5, 4.])
         ValueError: Non-stationary autoregressive polynomial.
-
         """
         # Note: split_params includes basic validation
         params = self.split_params(params)
@@ -910,7 +905,6 @@ class SARIMAXSpecification(object):
         >>> spec = SARIMAXSpecification(ar_order=1)
         >>> spec.constrain_params([10, -2])
         array([-0.99504,  4.     ])
-
         """
         unconstrained = self.split_params(unconstrained)
         params = {}
@@ -971,7 +965,6 @@ class SARIMAXSpecification(object):
         >>> spec = SARIMAXSpecification(ar_order=1)
         >>> spec.unconstrain_params([-0.5, 4.])
         array([0.57735, 2.     ])
-
         """
         constrained = self.split_params(constrained)
         params = {}

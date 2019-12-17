@@ -28,7 +28,6 @@ def discrepancy(sample, bounds=None):
     [1] Fang et al. "Design and modeling for computer experiments",
       Computer Science and Data Analysis Series Science and Data Analysis
       Series, 2006.
-
     """
     sample = np.asarray(sample)
     n_sample, dim = sample.shape
@@ -72,7 +71,6 @@ def primes_from_2_to(n):
     References
     ----------
     [1] `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
-
     """
     sieve = np.ones(n // 3 + (n % 6 == 2), dtype=np.bool)
     for i in range(1, int(n ** 0.5) // 3 + 1):
@@ -95,7 +93,6 @@ def n_primes(n):
     -------
     primes : list(int)
         List of primes.
-
     """
     primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59,
               61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127,
@@ -140,7 +137,6 @@ def van_der_corput(n_sample, base=2, start_index=0):
     -------
     sequence : list (n_samples,)
         Sequence of Van der Corput.
-
     """
     sequence = []
     for i in range(start_index, start_index + n_sample):
@@ -200,7 +196,6 @@ def halton(dim, n_sample, bounds=None, start_index=0):
     If some wants to continue an existing design, extra points can be obtained.
 
     >>> sample_continued = sequences.halton(dim=2, n_sample=5, start_index=5)
-
     """
     base = n_primes(dim)
 

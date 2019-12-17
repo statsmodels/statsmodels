@@ -164,8 +164,6 @@ def score_test(self, exog_extra=None, params_constrained=None,
 
     The covariance matrix of the score is the simple empirical covariance of
     score_obs without degrees of freedom correction.
-
-
     """
     # TODO: we are computing unnecessary things for cov_type nonrobust
     model = self.model

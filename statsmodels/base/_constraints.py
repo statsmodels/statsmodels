@@ -45,7 +45,6 @@ class TransformRestriction(object):
 
     The `reduce` transform is applied to the array of explanatory variables,
     `exog`, when transforming a linear model to impose the constraints.
-
     """
 
     def __init__(self, R, q=None):
@@ -102,7 +101,6 @@ class TransformRestriction(object):
         -----
         If the restriction is not homogeneous, i.e. q is not equal to zero,
         then this is an affine transform.
-
         """
         params_reduced = np.asarray(params_reduced)
         return self.transf_mat.dot(params_reduced.T).T + self.constant
@@ -122,7 +120,6 @@ class TransformRestriction(object):
 
         This transform can be applied to the original parameters as well
         as to the data. If params is 2-d, then each row is transformed.
-
         """
         params = np.asarray(params)
         return params.dot(self.transf_mat)
@@ -159,7 +156,6 @@ def transform_params_constraint(params, Sinv, R, q):
 
     My guess is that this is the point in the subspace that satisfies
     the constraint that has minimum Mahalanobis distance. Proof ?
-
     """
 
     rsr = R.dot(Sinv).dot(R.T)
@@ -225,8 +221,6 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     columns of exog are not yet supported.
 
     Requires a model that implement an offset option.
-
-
     """
     self = model   # internal alias, used for methods
     if fit_kwds is None:
@@ -275,7 +269,6 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
 
     This is the prototype for the fit_constrained method that has been added
     to Poisson and GLM.
-
     """
 
     self = model  # alias for use as method

@@ -176,7 +176,6 @@ class Initialization(object):
     >>> init1 = Initialization(k_states=2, 'known', constant=[0, 1])
     >>> init2 = Initialization(k_states=3)
     >>> init2.set((1, 2), init1)
-
     """
 
     def __init__(self, k_states, initialization_type=None,

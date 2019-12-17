@@ -90,7 +90,6 @@ class PolySmoother(object):
 
     This is a 3 liner with OLS or WLS, see test.
     It's here as a test smoother for GAM
-
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
     #   smoother in gam.py  initialized by function default_smoother

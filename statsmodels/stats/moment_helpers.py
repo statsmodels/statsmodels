@@ -36,7 +36,6 @@ def _convert_from_multidim(x, totype=list):
 def mc2mnc(mc):
     """convert central to non-central moments, uses recursive formula
     optionally adjusts first moment to return mean
-
     """
     x = _convert_to_multidim(mc)
 
@@ -60,7 +59,6 @@ def mc2mnc(mc):
 def mnc2mc(mnc, wmean=True):
     """convert non-central to central moments, uses recursive formula
     optionally adjusts first moment to return mean
-
     """
     X = _convert_to_multidim(mnc)
 
@@ -279,7 +277,6 @@ def corr2cov(corr, std):
     This function does not convert subclasses of ndarrays. This requires
     that multiplication is defined elementwise. np.ma.array are allowed, but
     not matrices.
-
     """
     corr = np.asanyarray(corr)
     std_ = np.asanyarray(std)

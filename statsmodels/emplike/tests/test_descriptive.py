@@ -8,7 +8,6 @@ from .results.el_results import DescStatRes
 class GenRes(object):
     """
     Reads in the data and creates class instance to be tested
-
     """
     @classmethod
     def setup_class(cls):

@@ -32,7 +32,6 @@ def mse(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -61,7 +60,6 @@ def rmse(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -89,7 +87,6 @@ def maxabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -117,7 +114,6 @@ def meanabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -145,7 +141,6 @@ def medianabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -173,7 +168,6 @@ def bias(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -201,7 +195,6 @@ def medianbias(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -229,7 +222,6 @@ def vare(x1, x2, ddof=0, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -257,7 +249,6 @@ def stde(x1, x2, ddof=0, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
-
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -290,7 +281,6 @@ def iqr(x1, x2, axis=0):
 
     This uses ``numpy.asarray`` to convert the input, in contrast to the other
     functions in this category.
-
     """
     x1 = np.asarray(x1)
     x2 = np.asarray(x2)
@@ -331,7 +321,6 @@ def aic(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion
-
     """
     return -2. * llf + 2. * df_modelwc
 
@@ -356,7 +345,6 @@ def aicc(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
-
     """
     return -2. * llf + 2. * df_modelwc * nobs / (nobs - df_modelwc - 1.)
 
@@ -381,7 +369,6 @@ def bic(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Bayesian_information_criterion
-
     """
     return -2. * llf + np.log(nobs) * df_modelwc
 
@@ -406,7 +393,6 @@ def hqic(llf, nobs, df_modelwc):
     References
     ----------
     Wikipedia does not say much
-
     """
     return -2. * llf + 2 * np.log(np.log(nobs)) * df_modelwc
 
@@ -463,7 +449,6 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion
-
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -498,7 +483,6 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
-
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -533,7 +517,6 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     https://en.wikipedia.org/wiki/Bayesian_information_criterion
-
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -568,7 +551,6 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     xxx
-
     """
     if not islog:
         sigma2 = np.log(sigma2)

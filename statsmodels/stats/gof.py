@@ -111,8 +111,6 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     (array([[ 2.89714546,  5.79429093]]), array([[ 0.57518277,  0.21504648]]))
     >>> powerdiscrepancy(np.column_stack((observed,2*observed)), np.column_stack((10*expected,20*expected)), lambd=-1, axis=0)
     (array([[ 2.77258872,  5.54517744]]), array([[ 0.59657359,  0.2357868 ]]))
-
-
     """
     o = np.array(observed)
     e = np.array(expected)

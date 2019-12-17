@@ -267,7 +267,6 @@ def _forecast_vars(steps, ma_coefs, sig_u):
 
     Returns
     -------
-
     """
     covs = mse(ma_coefs, sig_u, steps)
     # Take diagonal for each cov
@@ -773,7 +772,6 @@ class VARProcess(object):
         exog variables provided by the user).
         If it is None, then coefs_exog are assumed to be for the intercept and
         trend.
-
     """
     def __init__(self, coefs, coefs_exog, sigma_u, names=None, _params_info=None):
         self.k_ar = len(coefs)
@@ -857,7 +855,6 @@ class VARProcess(object):
         -------
         endog_simulated : nd_array
             Endog of the simulated VAR process
-
         """
         steps_ = None
         if offset is None:
@@ -962,7 +959,6 @@ class VARProcess(object):
         .. math::
 
             \Psi_\infty = \sum_{i=0}^\infty \Phi_i
-
         """
         return np.linalg.inv(self._char_mat)
 
@@ -2013,7 +2009,6 @@ class VARResults(VARProcess):
         Returns
         -------
         fig : matplotlib figure instance
-
         """
         if resid:
             acorrs = self.resid_acorr(nlags)

@@ -312,7 +312,6 @@ class SCADSmoothed(SCAD):
     -----
     TODO: Use delegation instead of subclassing, so smoothing can be added to
     all penalty classes.
-
     """
 
     def __init__(self, tau, c=3.7, c0=None, weights=1., restriction=None):
@@ -427,7 +426,6 @@ class ConstraintsPenalty(object):
     constraints of the original parameters.
     Examples for these contrast are difference penalities or all pairs
     penalties.
-
     """
 
     def __init__(self, penalty, weights=None, restriction=None):
@@ -522,7 +520,6 @@ class ConstraintsPenalty(object):
 
 class L2ContraintsPenalty(ConstraintsPenalty):
     """convenience class of ConstraintsPenalty with L2 penalization
-
     """
 
     def __init__(self, weights=None, restriction=None, sigma_prior=None):

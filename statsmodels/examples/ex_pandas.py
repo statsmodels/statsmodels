@@ -46,7 +46,6 @@ print(hub_results.summary())
 
 def plot_acf_multiple(ys, lags=20):
     """
-
     """
     from statsmodels.tsa.stattools import acf
     # hack

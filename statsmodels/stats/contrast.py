@@ -16,7 +16,6 @@ class ContrastResults(object):
 
     The attributes depend on the statistical test and are either based on the
     normal, the t, the F or the chisquare distribution.
-
     """
 
     def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
@@ -81,7 +80,6 @@ class ContrastResults(object):
         ci : ndarray, (k_constraints, 2)
             The array has the lower and the upper limit of the confidence
             interval in the columns.
-
         """
         if self.effect is not None:
             # confidence intervals
@@ -119,7 +117,6 @@ class ContrastResults(object):
             in the same form as the parameter results table in the model
             results summary.
             For F or Wald test, the return is a string.
-
         """
         if self.effect is not None:
             # TODO: should also add some extra information, e.g. robust cov ?
@@ -245,7 +242,6 @@ class Contrast(object):
     >>> test2 = [0]*2 + [1] + [0]*7
     >>> np.allclose(c3.contrast_matrix, test2)
     True
-
     """
     def _get_matrix(self):
         """
@@ -444,7 +440,6 @@ def _contrast_pairs(k_params, k_level, idx_start):
     contrasts : ndarray
         restriction matrix with k_params columns and number of rows equal to
         the number of restrictions.
-
     """
     k_level_m1 = k_level - 1
     idx_pairs = np.triu_indices(k_level_m1, 1)

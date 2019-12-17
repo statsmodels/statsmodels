@@ -102,7 +102,6 @@ class CanCorr(Model):
         Returns
         -------
         CanCorrTestResults instance
-
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape

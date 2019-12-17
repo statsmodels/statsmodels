@@ -201,7 +201,6 @@ class BaseIRAnalysis(object):
             Number of replications for monte carlo standard errors
         seed: int
             np.random.seed for Monte Carlo replications
-
         """
 
         if orth:
@@ -507,7 +506,6 @@ class IRAnalysis(BaseIRAnalysis):
         W: array of eigenvectors
         eigva: list of eigenvalues
         k: matrix indicating column # of largest eigenvalue for each c_i,j
-
         """
         neqs = self.neqs
         periods = self.periods
@@ -595,7 +593,6 @@ class IRAnalysis(BaseIRAnalysis):
 
         Returns
         -------
-
         """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
@@ -640,7 +637,6 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Returns
         -------
-
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)

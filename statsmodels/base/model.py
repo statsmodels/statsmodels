@@ -603,7 +603,6 @@ class LikelihoodModel(Model):
         Returns
         -------
         results : Results instance
-
         """
         # we need to append index of extra params to keep_index as in
         # NegativeBinomial
@@ -778,7 +777,6 @@ class GenericLikelihoodModel(LikelihoodModel):
     res = mod.fit(method="nm", maxiter = 500)
     import numpy as np
     np.allclose(res.params, probit_res.params)
-
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
                  hessian=None, missing='none', extra_params_names=None,
@@ -870,7 +868,6 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         this could also be replaced by a more general parameter
         transformation.
-
         """
         paramsfull = self.fixed_params.copy()
         paramsfull[self.fixed_paramsmask] = params
@@ -2465,7 +2462,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-
     """
 
     def __init__(self, model, mlefit):

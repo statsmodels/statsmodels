@@ -62,7 +62,6 @@ def _inverse_transform(pca, data):
     -------
     projection : array
         nobs by nvar array of the projection onto ncomp factors
-
     """
     factors = pca.factors
     pca.factors = data.reshape(-1, factors.shape[1])
@@ -95,7 +94,6 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
     -------
     value : float
         Curve value at `idx`.
-
     """
     x = x.reshape(1, -1)
     pdf = ks_gaussian.pdf(x)
@@ -131,7 +129,6 @@ def _min_max_band(args):
     -------
     band : tuple of float
         ``(max, min)`` curve values at `idx`
-
     """
     idx, (band, pca, bounds, ks_gaussian, use_brute, seed) = args
     if have_de_optim and not use_brute:
@@ -379,7 +376,6 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         -------
         band_quantiles : list of 1-D array
             ``(max_quantile, min_quantile)`` (2, n_features)
-
         """
         min_pdf = pvalues[alpha.index(band[0])]
         try:
@@ -586,7 +582,6 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     >>> plt.show()
 
     .. plot:: plots/graphics_functional_fboxplot.py
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -736,7 +731,6 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     >>> plt.show()
 
     .. plot:: plots/graphics_functional_rainbowplot.py
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -819,7 +813,6 @@ def banddepth(data, method='MBD'):
            vol.  104, pp. 718-734, 2009.
     .. [2] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of
            Computational and Graphical Statistics, vol. 20, pp. 1-19, 2011.
-
     """
     def _band2(x1, x2, curve):
         xb = np.vstack([x1, x2])

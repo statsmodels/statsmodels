@@ -50,7 +50,7 @@ _plot_ceres_residuals_doc = """\
 
     Parameters
     ----------
-    %(extra_params_doc)sfocus_exog : integer or string
+    %(extra_params_doc)sfocus_exog : {int, str}
         The column index of results.model.exog, or the variable name,
         indicating the variable whose role in the regression is to be
         assessed.
@@ -172,7 +172,6 @@ _plot_influence_doc = """\
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_influence.py
-
     """
 
 

@@ -530,7 +530,6 @@ def lpol_fima(d, n=20):
     -------
     ma : array
         coefficients of lag polynomial
-
     """
     # hide import inside function until we use this heavily
     from scipy.special import gammaln
@@ -582,7 +581,6 @@ def lpol_sdiff(s):
     Returns
     -------
     sdiff : list, length s+1
-
     """
     return [1] + [0] * (s - 1) + [-1]
 
@@ -616,7 +614,6 @@ def deconvolve(num, den, n=None):
 
     This is copied from scipy.signal.signaltools and added n as optional
     parameter.
-
     """
     num = np.atleast_1d(num)
     den = np.atleast_1d(den)

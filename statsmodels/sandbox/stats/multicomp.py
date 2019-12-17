@@ -620,7 +620,6 @@ class TukeyHSDResults(object):
 
     Other attributes contain information about the data from the
     MultiComparison instance: data, df_total, groups, groupsunique, variance.
-
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None,
                  meandiffs=None, std_pairs=None, confint=None, df_total=None,
@@ -722,7 +721,6 @@ class TukeyHSDResults(object):
 
         Optionally provide one of the group names to color code the plot to
         highlight group means different from comparison_name.
-
         """
         fig, ax1 = utils.create_mpl_ax(ax)
         if figsize is not None:

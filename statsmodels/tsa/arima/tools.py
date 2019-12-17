@@ -44,7 +44,6 @@ def standardize_lag_order(order, title=None):
     3
     >>> standardize_lag_order([1, 3])
     [1, 3]
-
     """
     order = np.array(order)
     title = 'order' if title is None else '%s order' % title
@@ -135,7 +134,6 @@ def validate_basic(params, length, allow_infnan=False, title=None):
     -----
     Basic check that the parameters are numeric and that they are the right
     shape. Optionally checks for NaN / infinite values.
-
     """
     title = '' if title is None else ' for %s' % title
 

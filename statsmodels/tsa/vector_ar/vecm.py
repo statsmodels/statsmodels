@@ -279,7 +279,6 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
     References
     ----------
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
-
     """
     # p. 286:
     p = diff_lags+1
@@ -848,7 +847,6 @@ class VECM(tsbase.TimeSeriesModel):
 
     .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
            *Vector Autoregressive Models*. Oxford University Press.
-
     """
 
     def __init__(self, endog, exog=None, exog_coint=None, dates=None,
@@ -1013,7 +1011,6 @@ class VECM(tsbase.TimeSeriesModel):
             Returns a list of parameter names for the cointegration matrix
             as well as deterministic terms inside the cointegration relation
             (if present in the model).
-
         """
         # 1. cointegration matrix/vector
         param_names = []
@@ -1555,7 +1552,6 @@ class VECMResults(object):
         Returns
         -------
         cov : array (neqs**2 * k_ar x neqs**2 * k_ar)
-
         """
         # This implementation is using the fact that for a random variable x
         # with covariance matrix Sigma_x the following holds:

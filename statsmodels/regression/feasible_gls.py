@@ -131,7 +131,6 @@ class GLSHet(WLS):
     Usage : see example ....
 
     TODO: test link option
-
     """
     def __init__(self, endog, exog, exog_var=None, weights=None, link=None):
         self.exog_var = atleast_2dcols(exog_var)
@@ -174,7 +173,6 @@ class GLSHet(WLS):
         Repeated calls to fit_iterative, will do one redundant pinv_wexog
         calculation. Calling fit_iterative(maxiter) ones does not do any
         redundant recalculations (whitening or calculating pinv_wexog).
-
         """
 
         import collections

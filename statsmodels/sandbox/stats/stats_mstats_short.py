@@ -119,7 +119,6 @@ def quantiles(a, prob=list([.25,.5,.75]), alphap=.4, betap=.4, axis=None,
       [False False  True]
       [False False  True]],
            fill_value = 1e+20)
-
     """
 
     if isinstance(a, np.ma.MaskedArray):
@@ -179,7 +178,6 @@ def scoreatpercentile(data, per, limit=(), alphap=.4, betap=.4, axis=0, masknan=
     sequence a.  For example, the score at per=50 is the median.
 
     This function is a shortcut to mquantile
-
     """
     per = np.asarray(per, float)
     if (per < 0).any() or (per > 100.).any():

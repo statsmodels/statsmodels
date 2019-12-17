@@ -576,7 +576,6 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     -----
     Depends on matplotlib. If `fit` is True then the parameters are fit using
     the distribution's fit() method.
-
     """
     probplot = ProbPlot(data, dist=dist, distargs=distargs,
                          fit=fit, a=a, loc=loc, scale=scale)
@@ -650,7 +649,6 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
        created using the default parameters. Therefore, it is recommended to use
        `ProbPlot` instance if fine-grained control is needed in the computation
        of the quantiles.
-
     """
     if not isinstance(data1, ProbPlot):
         data1 = ProbPlot(data1)
@@ -716,7 +714,6 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     >>> plt.show()
 
     .. plot:: plots/graphics_gofplots_qqplot_qqline.py
-
     """
     if line == '45':
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())
@@ -842,7 +839,6 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
     -------
     fig : Matplotlib Figure instance
     ax : Matplotlib AxesSubplot instance (see Parameters)
-
     """
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)

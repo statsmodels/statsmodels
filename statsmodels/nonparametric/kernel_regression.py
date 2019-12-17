@@ -150,7 +150,6 @@ class KernelReg(GenericKDE):
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas.
         Unlike other methods, this one requires that `data_predict` be 1D.
-
         """
         nobs, k_vars = exog.shape
         ker = gpke(bw, data=exog, data_predict=data_predict,
@@ -208,7 +207,6 @@ class KernelReg(GenericKDE):
             The value of the conditional mean at `data_predict`.
         B_x : ndarray
             The marginal effects.
-
         """
         ker_x = gpke(bw, data=exog, data_predict=data_predict,
                      var_type=self.var_type,
@@ -254,7 +252,6 @@ class KernelReg(GenericKDE):
         References
         ----------
         See ch.2 in [1] and p.35 in [2].
-
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
@@ -305,7 +302,6 @@ class KernelReg(GenericKDE):
 
         where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
         and :math:`h` is the vector of bandwidths
-
         """
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()
@@ -334,7 +330,6 @@ class KernelReg(GenericKDE):
 
         where :math:`\hat{Y_{i}}` is the mean calculated in `fit` at the exog
         points.
-
         """
         Y = np.squeeze(self.endog)
         Yhat = self.fit()[0]
@@ -360,7 +355,6 @@ class KernelReg(GenericKDE):
             The regression result for the mean (i.e. the actual curve).
         mfx : ndarray
             The marginal effects, i.e. the partial derivatives of the mean.
-
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -398,7 +392,6 @@ class KernelReg(GenericKDE):
                 - `**` : at 95% confidence level
                 - `***` : at 99* confidence level
                 - "Not Significant" : if not significant
-
         """
         var_pos = np.asarray(var_pos)
         ix_cont, ix_ord, ix_unord = _get_type_pos(self.var_type)
@@ -561,7 +554,6 @@ class KernelCensoredReg(KernelReg):
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas
         Unlike other methods, this one requires that data_predict be 1D
-
         """
         nobs, k_vars = exog.shape
         ker = gpke(bw, data=exog, data_predict=data_predict,
@@ -625,7 +617,6 @@ class KernelCensoredReg(KernelReg):
 
         where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
         and :math:`h` is the vector of bandwidths
-
         """
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()

@@ -409,7 +409,6 @@ def _ssr_reduced_model(y, x, term_slices, params, keys):
         residual sum of squares
     df : int
         degrees of freedom
-
     """
     ind = _not_slice(term_slices, keys, x.shape[1])
     params1 = params[ind]
@@ -473,7 +472,6 @@ class AnovaRM(object):
     References
     ----------
     .. [*] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
-
     """
 
     def __init__(self, data, depvar, subject, within=None, between=None,
@@ -519,7 +517,6 @@ class AnovaRM(object):
         returns None if it is balance
 
         Return might change
-
         """
         factor_levels = 1
         for wi in self.within:
@@ -552,7 +549,6 @@ class AnovaRM(object):
         Returns
         -------
         AnovaResults instance
-
         """
         y = self.data[self.depvar].values
 
@@ -634,7 +630,6 @@ class AnovaResults(object):
         Returns
         -------
         summary : summary2.Summary instance
-
         """
         summ = summary2.Summary()
         summ.add_title('Anova')

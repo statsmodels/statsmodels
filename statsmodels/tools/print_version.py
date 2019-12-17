@@ -143,7 +143,7 @@ def show_versions(show_dirs=True):
 
     Parameters
     ----------
-    show_dirs: bool
+    show_dirs : bool
         Flag indicating to show module locations
     """
     if not show_dirs:

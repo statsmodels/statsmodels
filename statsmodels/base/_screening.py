@@ -60,7 +60,6 @@ class ScreeningResults(object):
         batch during the first round screening
         'idx_nonzero' is based ond the array that includes exog_keep, while
         'idx_exog' is the index based on the exog of the batch.
-
     """
     def __init__(self, screener, **kwds):
         self.screener = screener
@@ -140,7 +139,6 @@ class VariableScreening(object):
     currently only supports numpy arrays, no exog type check or conversion
 
     currently only single columns are selected, no terms (multi column exog)
-
     """
 
     def __init__(self, model, pen_weight=None, use_weights=True, k_add=30,
@@ -182,7 +180,6 @@ class VariableScreening(object):
 
     def ranking_measure(self, res_pen, exog, keep=None):
         """compute measure for ranking exog candidates for inclusion
-
         """
         endog = self.endog
 
@@ -244,7 +241,6 @@ class VariableScreening(object):
             `idx_nonzero` contains the index of the selected exog in the full
             exog, combined exog that are always kept plust exog_candidates.
             see ScreeningResults for a full description
-
         """
         model_class = self.model_class
         if endog is None:
@@ -402,7 +398,6 @@ class VariableScreening(object):
             second column. They can be used jointly as index for the data
             in the exog_iterator.
             see ScreeningResults for a full description
-
         """
         k_keep = self.k_keep
         # res_batches = []

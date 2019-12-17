@@ -128,7 +128,6 @@ class VARMAX(MLEModel):
     .. [1] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
-
     """
 
     def __init__(self, endog, exog=None, order=(1, 0), trend='c',

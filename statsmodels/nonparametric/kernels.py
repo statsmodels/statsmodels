@@ -121,7 +121,6 @@ def gaussian(h, Xi, x):
     -------
     kernel_value : ndarray, shape (nobs, K)
         The value of the kernel function at each training point for each var.
-
     """
     return (1. / np.sqrt(2 * np.pi)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
 

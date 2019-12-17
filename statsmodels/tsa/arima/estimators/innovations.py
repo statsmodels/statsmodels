@@ -52,7 +52,6 @@ def innovations(endog, ma_order=0, demean=True):
     ----------
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
-
     """
     max_spec = SARIMAXSpecification(endog, ma_order=ma_order)
     endog = max_spec.endog
@@ -107,7 +106,7 @@ def innovations_mle(endog, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the SARIMA coefficients. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
     start_params : array_like, optional
@@ -148,7 +147,6 @@ def innovations_mle(endog, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
     ----------
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
-
     """
     spec = SARIMAXSpecification(
         endog, order=order, seasonal_order=seasonal_order,

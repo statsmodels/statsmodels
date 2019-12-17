@@ -18,7 +18,6 @@ class KDE(object):
         N-dimensional array from which the density is to be estimated
     kernel : Kernel Class
         Should be a class from *
-
     """
     #TODO: amend docs for Nd case?
     def __init__(self, x, kernel=None):

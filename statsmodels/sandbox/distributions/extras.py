@@ -231,7 +231,6 @@ def pdf_moments_st(cnt):
 
     version of scipy.stats, any changes ?
     the scipy.stats version has a bug and returns normal distribution
-
     """
 
     N = len(cnt)
