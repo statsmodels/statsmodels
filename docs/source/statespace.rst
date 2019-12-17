@@ -332,7 +332,7 @@ There are several differences between this model class, available at
   `sm.tsa.ExponentialSmoothing` also supports multiplicative models.
 - This model class puts the exponential smoothing models into state space form
   and then applies the Kalman filter to estimate the states, while
-  `sm.tsa.ExponentialSmoothing` is based on exponential smoothing recurisions.
+  `sm.tsa.ExponentialSmoothing` is based on exponential smoothing recursions.
   In some cases, this can mean that estimating parameters with this model class
   will be somewhat slower than with `sm.tsa.ExponentialSmoothing`.
 - This model class can produce confidence intervals for forecasts, based on an
@@ -529,7 +529,7 @@ The most-used methods for a state space model are:
 
 - :py:meth:`fit <mlemodel.MLEModel.fit>` - estimate parameters via maximum
   likelihood and return a results object (this object will have also performed
-  Kalman filtering and smoothing at the estimted parameters). This is the most
+  Kalman filtering and smoothing at the estimated parameters). This is the most
   commonly used method.
 - :py:meth:`smooth <mlemodel.MLEModel.smooth>` - return a results object
   associated with a given vector of parameters after performing Kalman

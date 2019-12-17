@@ -156,7 +156,7 @@ The `arima.model.ARIMA` model allows estimating parameters by various methods
 (including conditional MLE via the Hannan-Rissanen method and full MLE via the
 Kalman filter). Since it is a special case of the `SARIMAX` model, it includes
 all features of :ref:`state space <statespace>` models (including
-preciction / forecasting, residual diagnostics, simulation and impulse
+prediction / forecasting, residual diagnostics, simulation and impulse
 responses, etc.).
 
 Exponential Smoothing
@@ -178,7 +178,7 @@ Linear exponential smoothing models have also been separately implemented as a
 special case of the state space framework. Although this approach does not
 allow for the non-linear (multiplicative) exponential smoothing models, it
 includes all features of :ref:`state space <statespace>` models (including
-preciction / forecasting, residual diagnostics, simulation and impulse
+prediction / forecasting, residual diagnostics, simulation and impulse
 responses, etc.).
 
 .. currentmodule:: statsmodels.tsa
