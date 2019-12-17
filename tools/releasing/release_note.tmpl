@@ -12,8 +12,8 @@ Release summary
 
 statsmodels is using github to store the updated documentation. Two version are available:
 
-* `Stable <https://www.statsmodels.org/stable/>`_, the latest release
-* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
+- `Stable <https://www.statsmodels.org/>`_, the latest release
+- `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
 
 **Warning**
 
@@ -27,6 +27,7 @@ are mentioned in the docstrings.
 Stats
 -----
 **Issues Closed**: {{ issues_closed }}
+
 **Pull Requests Merged**: {{ pulls_merged }}
 
 
@@ -43,75 +44,16 @@ release 0.10 includes bug fixes, refactorings and improvements in many areas.
 Submodules
 ----------
 
-``base``
-~~~~~~~~
+{% for comp in whats_new %}
+{% set pull_requests = whats_new[comp] %}
+{%- set comp_marker = "~" * (comp|length + 4) -%}
+``{{comp}}``
+{{comp_marker}}
+{% for number in pull_requests -%}
+- {{ pull_requests[number] }}  (:pr:`{{ number }}`)
+{% endfor %}
 
-
-
-``discrete``
-~~~~~~~~~~~~
-
-
-
-``genmod``
-~~~~~~~~~~
-
-
-``graphics``
-~~~~~~~~~~~~
-
-
-
-``imputation``
-~~~~~~~~~~~~~~
-
-
-
-``iolib``
-~~~~~~~~~
-
-
-
-``multivariate``
-~~~~~~~~~~~~~~~~
-
-
-
-``nonparametric``
-~~~~~~~~~~~~~~~~~
-
-
-
-``regression``
-~~~~~~~~~~~~~~
-
-
-
-``sandbox``
-~~~~~~~~~~~
-
-
-
-``stats``
-~~~~~~~~~
-
-
-
-``tools``
-~~~~~~~~~
-
-
-
-``tsa``
-~~~~~~~
-
-
-
-
-``maintenance``
-~~~~~~~~~~~~~~~
-
-
+{% endfor %}
 
 
 bug-wrong
@@ -139,15 +81,15 @@ Development summary and credits
 Besides receiving contributions for new and improved features and for bugfixes,
 important contributions to general maintenance for this release came from
 
-* Chad Fulton
-* Brock Mendel
-* Peter Quackenbush
-* Kerby Shedden
-* Kevin Sheppard
+- Chad Fulton
+- Brock Mendel
+- Peter Quackenbush
+- Kerby Shedden
+- Kevin Sheppard
 
 and the general maintainer and code reviewer
 
-* Josef Perktold
+- Josef Perktold
 
 Additionally, many users contributed by participation in github issues and
 providing feedback.
@@ -155,7 +97,7 @@ providing feedback.
 Thanks to all of the contributors for the 0.10 release (based on git log):
 
 {% for contributor in contributors -%}
-{{ contributor }}
+- {{ contributor }}
 {% endfor %}
 
 These lists of names are automatically generated based on git log, and may not
@@ -167,5 +109,5 @@ Merged Pull Requests
 The following Pull Requests were merged since the last release:
 
 {% for pull in pulls -%}
-* :pr:`{{ pull.number }}`: {{ pull.title }}
+- :pr:`{{ pull.number }}`: {{ pull.title }}
 {% endfor %}
