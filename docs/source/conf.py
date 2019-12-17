@@ -183,7 +183,9 @@ html_theme_options = {
     'heroes': {'index': 'statistical models, hypothesis tests, and data '
                         'exploration',
                'examples/index': 'examples and tutorials to get started with '
-                                 'statsmodels'}
+                                 'statsmodels'},
+    "version_dropdown": True,
+    "version_json": "_static/versions.json",
 }
 
 language = 'en'
