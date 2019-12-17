@@ -18,7 +18,7 @@ Submitting a Bug Report
 Making Changes to the Code
 --------------------------
 
-First, review the :ref:git_notes section for an intro to the git version
+First, review the :ref:`git_notes` section for an intro to the git version
 control system.
 
 For a pull request to be accepted, you must meet the below requirements. This
