@@ -54,7 +54,8 @@ merged_pulls = g.search_issues(query)
 for pull in merged_pulls:
     merged_pull_data.append({"number": pull.number,
                              "title": pull.title,
-                             "login": pull.user.login}
+                             "login": pull.user.login,
+                             "labels": pull.labels}
                             )
 merged_pull_data = sorted(merged_pull_data, key=lambda x: x["number"])
 
@@ -62,7 +63,7 @@ merged_pull_data = sorted(merged_pull_data, key=lambda x: x["number"])
 names = defaultdict(set)
 extra_names = set()
 for pull in merged_pull_data:
-    print("Reading commit data for PR#{}".format(pull['number']))
+    print("Reading commit data for PR#{}".format(pull["number"]))
     pr = statsmodels.get_pull(pull["number"])
     for commit in pr.get_commits():
         name = commit.commit.author.name
@@ -102,6 +103,26 @@ query = " ".join(query_parts)
 closed_issues = g.search_issues(query)
 issues_closed = closed_issues.totalCount
 
+whats_new = defaultdict(dict)
+for pull in merged_pull_data:
+    if pull["labels"]:
+        labels = [lab.name for lab in pull["labels"] if
+                  not lab.name.startswith("type")]
+        if "maintenance" in labels and len(labels) > 1:
+            labels.remove("maintenance")
+        elif "comp-docs" in labels and len(labels) > 1:
+            labels.remove("comp-docs")
+        for label in labels:
+            label = label.split("comp-")[-1].replace("-", ".")
+            number = pull["number"]
+            title = pull["title"]
+            if ": " in title:
+                title = ": ".join(title.split(": ")[1:])
+            title = title[:1].upper() + title[1:]
+            whats_new[label][number] = title
+
+whats_new = {key: whats_new[key] for key in sorted(whats_new)}
+
 # Variables for the template
 variables = {"milestone": MILESTONE,
              "release": RELEASE,
@@ -109,8 +130,10 @@ variables = {"milestone": MILESTONE,
              "issues_closed": issues_closed,
              "pulls_merged": len(merged_pull_data),
              "contributors": contributors,
-             "pulls": merged_pull_data
+             "pulls": merged_pull_data,
+             "whats_new": whats_new,
              }
+
 # Read the template and generate the output
 with open("release_note.tmpl", encoding="utf-8") as tmpl:
     tmpl_data = tmpl.read()
