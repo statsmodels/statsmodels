@@ -163,7 +163,6 @@ def select_bandwidth(x, bw, kernel):
     -------
     bw : float
         The estimate of the bandwidth
-
     """
     bw = bw.lower()
     if bw not in bandwidth_funcs:

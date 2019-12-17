@@ -702,7 +702,6 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     """
     Test for a seemingly unrelated regression model (i.e. no factors) where
     the errors are vector autocorrelated, but innovations are uncorrelated.
-
     """
     @classmethod
     def setup_class(cls):

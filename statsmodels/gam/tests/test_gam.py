@@ -47,7 +47,6 @@ def polynomial_sample_data():
     poly : smoother instance
     y : ndarray
         generated function values, demeaned
-
     """
     n = 10000
     x = np.linspace(-1, 1, n)

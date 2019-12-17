@@ -181,7 +181,6 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     TODO: Currently there is no check for extra or misspelled keywords,
     except in the case of cov_type `HCx`
-
     """
 
     import statsmodels.stats.sandwich_covariance as sw

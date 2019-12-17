@@ -168,7 +168,6 @@ def _recode(x, levels):
     Returns
     -------
     out : instance numpy.ndarray
-
     """
     from pandas import Series
     name = None

@@ -430,7 +430,6 @@ def gencrossentropy(px,py,pxpy,alpha=1,logbase=2, measure='T'):
         The measure is the type of generalized cross-entropy desired. 'T' is
         the cross-entropy version of the Tsallis measure.  'CR' is Cressie-Read
         measure.
-
     """
 
 

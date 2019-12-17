@@ -66,7 +66,9 @@ if [[ -z "$TRAVIS_TAG" ]]; then
 else
   if [[ "$TRAVIS_TAG" != *"dev"* ]]; then  # do not push on dev tags
     doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";
-    doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+    if [[ "$TRAVIS_TAG" != *"rc"* ]]; then  # do not push on main on rc
+      doctr deploy --build-tags --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+    fi;
   fi;
 fi;
 

@@ -95,8 +95,6 @@ class StatTestMC(object):
     the results should be presented, e.g.
 
     print(mc1.cdf(crit, [1,2,3])[1]
-
-
     """
 
     def __init__(self, dgp, statistic):

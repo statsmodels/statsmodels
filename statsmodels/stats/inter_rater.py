@@ -239,7 +239,6 @@ def fleiss_kappa(table, method='fleiss'):
     Warrens, Matthijs J. 2010. "Inequalities between Multi-Rater Kappas."
     Advances in Data Analysis and Classification 4 (4): 271-86.
     https://doi.org/10.1007/s11634-010-0073-4.
-
     """
 
     table = 1.0 * np.asarray(table)   #avoid integer division

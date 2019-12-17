@@ -20,7 +20,6 @@ class _ANOVAOpt(_OptFuncts):
 
     Class containing functions that are optimized over when
     conducting ANOVA.
-
     """
     def _opt_common_mu(self, mu):
         """
@@ -76,7 +75,6 @@ class ANOVA(_ANOVAOpt):
             self.nobs = self.nobs + len(i)
 
     def compute_ANOVA(self, mu=None, mu_start=0, return_weights=0):
-
         """
         Returns -2 log likelihood, the pvalue and the maximum likelihood
         estimate for a common mean.

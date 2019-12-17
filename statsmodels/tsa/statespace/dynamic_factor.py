@@ -138,7 +138,6 @@ class DynamicFactor(MLEModel):
     .. [*] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
-
     """
 
     def __init__(self, endog, k_factors, factor_order, exog=None,
@@ -915,7 +914,6 @@ class DynamicFactor(MLEModel):
           we assume that the first :math:`m^2` parameters fill the first
           coefficient matrix (starting at [0,0] and filling along rows), the
           second :math:`m^2` parameters fill the second matrix, etc.
-
         """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
@@ -1107,7 +1105,6 @@ class DynamicFactorResults(MLEResults):
         See Also
         --------
         plot_coefficients_of_determination
-
         """
         from statsmodels.tools import add_constant
         spec = self.specification
@@ -1152,7 +1149,6 @@ class DynamicFactorResults(MLEResults):
         See Also
         --------
         coefficients_of_determination
-
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()

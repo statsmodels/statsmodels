@@ -256,7 +256,6 @@ class CustomKernel(object):
         This uses the asymptotic normal approximation to the distribution of
         the density estimate. The lower bound can be negative for density
         values close to zero.
-
         """
         from scipy import stats
         crit = stats.norm.isf(alpha / 2.)

@@ -58,7 +58,7 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
         Tolerance for determining convergence of feasible GSL iterations. If
         `iter` is set, this argument has no effect.
         Default is 1e-8.
-    arma_estimator : string, optional
+    arma_estimator : str, optional
         The estimator used for estimating the ARMA model. This option should
         not generally be used, unless the default method is failing or is
         otherwise unsuitable. Not all values will be valid, depending on the
@@ -101,7 +101,6 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
     ----------
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
-
     """
     # Handle n_iter
     if n_iter is not None:

@@ -419,7 +419,6 @@ class SimulationSmoothResults(object):
         If `disturbance_variates` were provided to the `simulate()` method,
         then this returns those variates (which were N(0,1)) transformed to the
         distribution above.
-
         """
         if self._generated_state_disturbance is None:
             start = self.model.nobs * self.model.k_endog
@@ -441,7 +440,6 @@ class SimulationSmoothResults(object):
         .. math::
 
             y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
-
         """
         if self._generated_obs is None:
             self._generated_obs = np.array(
@@ -461,7 +459,6 @@ class SimulationSmoothResults(object):
         .. math::
 
             \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
-
         """
         if self._generated_state is None:
             self._generated_state = np.array(
@@ -480,7 +477,6 @@ class SimulationSmoothResults(object):
         .. math::
 
             \alpha ~ p(\alpha \mid Y_n)
-
         """
         if self._simulated_state is None:
             self._simulated_state = np.array(
@@ -500,7 +496,6 @@ class SimulationSmoothResults(object):
         .. math::
 
             \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
-
         """
         if self._simulated_measurement_disturbance is None:
             self._simulated_measurement_disturbance = np.array(
@@ -521,7 +516,6 @@ class SimulationSmoothResults(object):
         .. math::
 
             \eta ~ N(\hat \eta, Var(\hat \eta \mid Y_n))
-
         """
         if self._simulated_state_disturbance is None:
             self._simulated_state_disturbance = np.array(

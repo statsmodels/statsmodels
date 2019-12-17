@@ -59,7 +59,6 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
     --------
     >>> make_lag_names(['foo', 'bar'], 2, 1)
     ['const', 'L1.foo', 'L1.bar', 'L2.foo', 'L2.bar']
-
     """
     lag_names = []
     if isinstance(names, str):
@@ -212,7 +211,6 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     -------
     endog_simulated : nd_array
         Endog of the simulated VAR process
-
     """
     rs = np.random.RandomState(seed=seed)
     rmvnorm = rs.multivariate_normal

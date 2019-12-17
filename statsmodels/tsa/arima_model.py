@@ -925,7 +925,6 @@ matches the number of out-of-sample forecasts ({1})'
         unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
-
         """
         trend = string_like(trend, 'trend', options=('nc', 'c'))
         if self._fit_params is not None:
@@ -1194,7 +1193,6 @@ class ARIMA(ARMA):
         unknown state is zero, and that the initial variance is
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
-
         """
         mlefit = super(ARIMA, self).fit(start_params, trend,
                                         method, transparams, solver,
@@ -1734,7 +1732,6 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         --------
         statsmodels.iolib.summary2.Summary : class to hold summary
             results
-
         """
         from pandas import DataFrame
         # get sample TODO: make better sample machinery for estimation

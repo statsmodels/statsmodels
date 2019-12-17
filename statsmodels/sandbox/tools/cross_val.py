@@ -75,7 +75,6 @@ class LeavePOut(object):
     """
     Leave-P-Out cross validation iterator:
     Provides train/test indexes to split data in train test sets
-
     """
 
     def __init__(self, n, p):
@@ -232,7 +231,6 @@ class LeaveOneLabelOut(object):
         [[1 2]
         [3 4]] [[5 6]
         [7 8]] [1 2] [1 2]
-
         """
         self.labels = labels
 

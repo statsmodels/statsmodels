@@ -79,7 +79,6 @@ class RobustNorm(object):
 
 
 class LeastSquares(RobustNorm):
-
     """
     Least squares rho for M-estimation and its derived functions.
 
@@ -356,7 +355,6 @@ class RamsayE(RobustNorm):
 
 
 class AndrewWave(RobustNorm):
-
     """
     Andrew's wave for M estimation.
 
@@ -537,7 +535,6 @@ class TrimmedMean(RobustNorm):
             psi(z) = z              for \|z\| <= c
 
             psi(z) = 0              for \|z\| > c
-
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -560,7 +557,6 @@ class TrimmedMean(RobustNorm):
             weights(z) = 1             for \|z\| <= c
 
             weights(z) = 0             for \|z\| > c
-
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -698,7 +694,6 @@ class Hampel(RobustNorm):
             weights(z) = a*(c - \|z\|)/(\|z\|*(c-b))      for b < \|z\| <= c
 
             weights(z) = 0                            for \|z\| > c
-
         """
         z = np.asarray(z)
         a = self.a

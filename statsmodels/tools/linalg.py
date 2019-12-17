@@ -103,7 +103,6 @@ def transf_constraints(constraints):
     --------
     statsmodels.base._constraints.TransformRestriction : class to impose
         constraints by reparameterization used by `_fit_constrained`.
-
     """
 
     from scipy import linalg
@@ -150,7 +149,6 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
     -------
     msqrt : ndarray
         matrix square root or square root of inverse matrix.
-
     """
     # see also scipy.linalg null_space
     u, s, v = np.linalg.svd(mat)

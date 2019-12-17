@@ -195,7 +195,6 @@ class Factor(Model):
         Returns
         -------
         results: FactorResults
-
         """
         method = self.method.lower()
         if method == 'pa':
@@ -221,7 +220,6 @@ class Factor(Model):
         Returns
         -------
         results : FactorResults instance
-
         """
 
         R = self.corr.copy()  # inplace modification below
@@ -534,7 +532,6 @@ class FactorResults(object):
 
     Status: experimental, Some refactoring will be necessary when new
         features are added.
-
     """
     def __init__(self, factor):
         self.model = factor
@@ -945,7 +942,6 @@ class FactorResults(object):
         Returns
         -------
         figs : a list of figure handles
-
         """
         _import_mpl()
         from .plots import plot_loadings

@@ -42,7 +42,6 @@ def _faa_di_bruno_partitions(n):
     [[(1, 2)], [(2, 1)]]
     >>> for p in _faa_di_bruno_partitions(4):
     ...     assert 4 == sum(m * k for (m, k) in p)
-
     """
     if n < 1:
         raise ValueError("Expected a positive integer; got %s instead" % n)
@@ -70,7 +69,6 @@ def cumulant_from_moments(momt, n):
     -------
     kappa: float
         n-th cumulant.
-
     """
     if n < 1:
         raise ValueError("Expected a positive integer. Got %s instead." % n)
@@ -150,7 +148,6 @@ class ExpandedNormal(rv_continuous):
     .. [*] https://en.wikipedia.org/wiki/Edgeworth_series
     .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
-
     """
     def __init__(self, cum, name='Edgeworth expanded normal', **kwds):
         if len(cum) < 2:

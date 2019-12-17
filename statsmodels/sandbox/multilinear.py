@@ -79,7 +79,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
 
     alpha: float, optional
         the significance level used for the pvalue correction (default 0.05)
-    subset: boolean array
+    subset: bool array
         the selected rows to be used in the regression
 
     all the other parameters will be directed to the model creation.

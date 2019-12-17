@@ -98,7 +98,6 @@ def ks_2samp(data1, data2):
     >>> rvs4 = stats.norm.rvs(size=n2,loc=0.0,scale=1.0)
     >>> ks_2samp(rvs1,rvs4)
     (0.07999999999999996, 0.41126949729859719)
-
     """
     data1, data2 = lmap(np.asarray, (data1, data2))
     n1 = data1.shape[0]
@@ -237,7 +236,6 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
     >>> np.random.seed(987654321)
     >>> stats.kstest(stats.t.rvs(3,size=100),'norm')
     (0.131016895759829, 0.058826222555312224)
-
     """
     if isinstance(rvs, str):
         #cdf = getattr(stats, rvs).cdf

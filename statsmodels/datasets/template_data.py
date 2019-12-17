@@ -41,7 +41,6 @@ def load(as_pandas=None):
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
-
     """
     return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 

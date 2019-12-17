@@ -4,6 +4,7 @@ ARIMA model class.
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -60,17 +61,21 @@ class ARIMA(sarimax.SARIMAX):
         an iterable defining a polynomial, as in `numpy.poly1d`, where
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is 'c' for
         models without integration, and no trend for models with integration.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to require the moving average parameters to correspond
         to an invertible process.
-    concentrate_scale : boolean, optional
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
         maximum likelihood.
+    trend_offset : int, optional
+        The offset at which to start time trend values. Default is 1, so that
+        if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
+        set when the model created by extending a previous dataset.
     dates : array-like of datetime, optional
         If no index is given by `endog` or `exog`, an array-like object of
         datetime objects can be provided.
@@ -99,7 +104,6 @@ class ARIMA(sarimax.SARIMAX):
     >>> mod = sm.tsa.arima.ARIMA(endog, order=(1, 0, 0))
     >>> res = mod.fit()
     >>> print(res.summary())
-
     """
     def __init__(self, endog, exog=None, order=(0, 0, 0),
                  seasonal_order=(0, 0, 0, 0), trend=None,
@@ -125,8 +129,8 @@ class ARIMA(sarimax.SARIMAX):
         self._spec_arima = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
-            concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing)
+            concentrate_scale=concentrate_scale, trend_offset=trend_offset,
+            dates=dates, freq=freq, missing=missing)
         exog = self._spec_arima._model.data.orig_exog
 
         # Initialize the base SARIMAX class
@@ -245,7 +249,6 @@ class ARIMA(sarimax.SARIMAX):
         >>> mod = sm.tsa.arima.ARIMA(endog, order=(1, 0, 0))
         >>> res = mod.fit()
         >>> print(res.summary())
-
         """
         # Determine which method to use
         # 1. If method is specified, make sure it is valid
@@ -420,6 +423,7 @@ class ARIMA(sarimax.SARIMAX):
         return res
 
 
+@Appender(sarimax.SARIMAXResults.__doc__)
 class ARIMAResults(sarimax.SARIMAXResults):
     pass
 

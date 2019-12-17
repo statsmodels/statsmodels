@@ -268,7 +268,6 @@ class TableDist(object):
         ppf : array_like
             critical values with same shape as prob, returns nan for arguments
             that are outside of the table bounds
-
         """
         prob = np.asarray(prob)
         alpha = self.alpha

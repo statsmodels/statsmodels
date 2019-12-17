@@ -50,7 +50,6 @@ def _combine_bins(edge_index, x):
 
     >>> dia.combine_bins([0,1,3], np.arange(4))
     (array([0, 3]), array([1, 2]))
-
     """
     x = np.asarray(x)
     if x.ndim == 1:
@@ -99,7 +98,6 @@ def plot_probs(freq, probs_predicted, label='predicted', upp_xlim=None,
     fig : matplotlib figure instance
         The figure contains 3 subplot with probabilities, cumulative
         probabilities and a PP-plot
-
     """
 
     if isinstance(label, list):
@@ -246,7 +244,6 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     References
     ----------
     Jansakul and Hinde 2009
-
     """
     if not isinstance(results_poisson.model, Poisson):
         # GLM Poisson would be also valid, not tried
@@ -291,7 +288,6 @@ def test_poisson_zeroinflation_brock(results_poisson):
 
     The test reports two sided and one sided alternatives based on
     the normal distribution of the test statistic.
-
     """
 
     mu = results_poisson.predict()

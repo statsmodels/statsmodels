@@ -87,7 +87,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         it is possible to extend them in a reasonable way. Thus every model
         must have an underlying supported index, even if it is just a generated
         Int64Index.
-
         """
 
         # Get our index from `dates` if available, otherwise from whatever
@@ -273,7 +272,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         If `key` is past the end of of the given index, and the index is either
         an Int64Index or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
-
         """
         if base_index is None:
             base_index = self._index
@@ -425,7 +423,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         base index (or the model's index if the base index was not given) and
         then falling back to try again with the model row labels as the base
         index.
-
         """
         try:
             loc, index, index_was_expanded = (
@@ -523,7 +520,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         is because integers for a RangeIndex could refer either to index values
         or to index locations in an ambiguous way (while for `Int64Index`,
         since we have required them to be full indexes, there is no ambiguity).
-
         """
 
         # Convert index keys (start, end) to index locations and get associated

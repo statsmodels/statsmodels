@@ -38,7 +38,6 @@ class StandardizeTransform(object):
     which is required in some discrete models when the endog cannot be rescaled
     or demeaned.
     The transformation is full rank and does not drop the constant.
-
     """
 
     def __init__(self, data, ddof=1, const_idx=None, demean=True):
@@ -65,7 +64,6 @@ class StandardizeTransform(object):
 
     def transform(self, data):
         """standardize the data using the stored transformation
-
         """
         # could use scipy.stats.zscore instead
         if self.mean is None:
@@ -86,7 +84,6 @@ class StandardizeTransform(object):
         params_new : ndarray
             parameters transformed to the parameterization of the original
             model
-
         """
 
         params_new = params / self.scale

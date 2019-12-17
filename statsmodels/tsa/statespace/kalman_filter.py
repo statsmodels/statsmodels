@@ -857,7 +857,6 @@ class KalmanFilter(Representation):
         This context manager is most useful in models which are explicitly
         concentrating out the scale, so that the set of parameters they are
         estimating does not include the scale.
-
         """
         # If a scale was provided, use it and do not concentrate it out of the
         # loglikelihood
@@ -1252,7 +1251,6 @@ class KalmanFilter(Representation):
         doing impulse responses after the end of the model. To compute impulse
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
-
         """
         # We need to add an additional step, since the first simulated value
         # will always be zeros (note that we take this value out at the end).
@@ -2191,7 +2189,6 @@ class PredictionResults(FilterResults):
 
     This class is essentially a view to the FilterResults object, but
     returning the appropriate ranges for everything.
-
     """
     representation_attributes = [
         'endog', 'design', 'design', 'obs_intercept',

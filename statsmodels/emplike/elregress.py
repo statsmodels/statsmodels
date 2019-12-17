@@ -28,7 +28,6 @@ class _ELRegOpts(_OptFuncts):
 
     OLSResults : Results instance
         A fitted OLS result.
-
     """
     def __init__(self):
         pass

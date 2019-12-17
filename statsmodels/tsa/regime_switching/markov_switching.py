@@ -377,7 +377,6 @@ class MarkovSwitchingParams(object):
     4
     >>> parameters.k_parameters['exog']
     3
-
     """
     def __init__(self, k_regimes):
         self.k_regimes = k_regimes
@@ -487,7 +486,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
     "State-Space Models with Regime Switching:
     Classical and Gibbs-Sampling Approaches with Applications".
     MIT Press Books. The MIT Press.
-
     """
 
     def __init__(self, endog, k_regimes, order=0, exog_tvtp=None, exog=None,
@@ -546,7 +544,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         Notes
         -----
         Only valid if there are not time-varying transition probabilities.
-
         """
         if self.tvtp:
             raise ValueError('Cannot use steady-state initialization when'
@@ -641,7 +638,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         It is left-stochastic, meaning that each column sums to one (because
         it is certain that from one regime (j) you will transition to *some
         other regime*).
-
         """
         params = np.array(params, ndmin=1)
         if not self.tvtp:
@@ -1090,7 +1086,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         Returns
         -------
         MarkovSwitchingResults
-
         """
 
         if start_params is None:
@@ -1320,7 +1315,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         -----
         This is a private method for finding good starting parameters for MLE
         by scoring, where the defaults have been set heuristically.
-
         """
         if start_params is None:
             start_params = self.start_params
@@ -1671,7 +1665,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         The parameters of the model.
     scale : float
         This is currently set to 1.0 and not used by the model or its results.
-
     """
     use_t = False
 

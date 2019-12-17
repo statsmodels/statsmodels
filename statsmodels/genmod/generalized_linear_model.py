@@ -259,7 +259,6 @@ class GLM(base.LikelihoodModel):
     interpretation. The loglikelihood is not correctly specified in this case,
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
-
     """ % {'extra_params': base._missing_param_doc}
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
@@ -433,7 +432,6 @@ class GLM(base.LikelihoodModel):
         score_obs : ndarray, 2d
             The first derivative of the loglikelihood function evaluated at
             params for each observation.
-
         """
 
         score_factor = self.score_factor(params, scale=scale)
@@ -456,7 +454,6 @@ class GLM(base.LikelihoodModel):
         score : ndarray_1d
             The first derivative of the loglikelihood function calculated as
             the sum of `score_obs`
-
         """
         score_factor = self.score_factor(params, scale=scale)
         return np.dot(score_factor, self.exog)
@@ -480,7 +477,6 @@ class GLM(base.LikelihoodModel):
         score_factor : ndarray_1d
             A 1d weight vector used in the calculation of the score_obs.
             The score_obs are obtained by `score_factor[:, None] * exog`
-
         """
         mu = self.predict(params)
         if scale is None:
@@ -628,7 +624,6 @@ class GLM(base.LikelihoodModel):
             The derivative of the score_obs with respect to endog. This
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
-
         """
         mu = self.predict(params)
         if scale is None:
@@ -683,7 +678,6 @@ class GLM(base.LikelihoodModel):
         Notes
         -----
         not yet verified for case with scale not equal to 1.
-
         """
 
         if exog_extra is None:
@@ -1022,7 +1016,6 @@ class GLM(base.LikelihoodModel):
         in future versions. If attach_wls' is true, then the final WLS
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
-
         """
         self.scaletype = scale
 
@@ -1345,7 +1338,6 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         results : Results instance
-
         """
 
         from patsy import DesignInfo
@@ -1929,7 +1921,6 @@ if __name__ == "__main__":
     # print(GLMT[0])
     # print(GLMT[2])
     GLMTp = GLMmod.summary(title='Test GLM')
-
     """
 From Stata
 . webuse beetle

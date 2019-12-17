@@ -34,7 +34,6 @@ class Reader(object):
         ----------
         data : str
            String with lines separated by '\n'.
-
         """
         if isinstance(data, list):
             self._str = data
@@ -116,7 +115,6 @@ class NumpyDocString(Mapping):
     """Parses a numpydoc string to an abstract representation
 
     Instances define a mapping from section title to structured data.
-
     """
 
     sections = {
@@ -282,7 +280,6 @@ class NumpyDocString(Mapping):
             continued text
         another_func_name : Descriptive text
         func_name1, func_name2, :meth:`func_name`, func_name3
-
         """
 
         items = []
@@ -333,7 +330,6 @@ class NumpyDocString(Mapping):
         """
         .. index: default
            :refguide: something, else, and more
-
         """
 
         def strip_each_in(lst):

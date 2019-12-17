@@ -120,7 +120,6 @@ class TheilGLS(GLS):
     sigma : None or array_like
         Sigma is the covariance matrix of the error term that is used in the same
         way as in GLS.
-
     """
 
     def __init__(self, endog, exog, r_matrix=None, q_matrix=None,
@@ -209,7 +208,6 @@ class TheilGLS(GLS):
 
         The sandwich form of the covariance estimator is not robust to
         misspecified heteroscedasticity or autocorrelation.
-
         """
         lambd = pen_weight
         #this does duplicate transformation, but I need resid not wresid
@@ -278,7 +276,6 @@ class TheilGLS(GLS):
         Notes
         -----
         This uses `scipy.optimize.fmin` as optimizer.
-
         """
         if optim_args is None:
             optim_args = {}
@@ -370,7 +367,6 @@ class TheilRegressionResults(RegressionResults):
 
     def test_compatibility(self):
         """Hypothesis test for the compatibility of prior mean with data
-
         """
         # TODO: should we store the OLS results ?  not needed so far, but maybe cache
         #params_ols = np.linalg.pinv(self.model.exog).dot(self.model.endog)
@@ -399,7 +395,6 @@ class TheilRegressionResults(RegressionResults):
             share of data defined as the ration between effective degrees of
             freedom of the model and the number (TODO should be rank) of the
             explanatory variables.
-
         """
 
         # this is hatmatrix_trace / self.exog.shape[1]

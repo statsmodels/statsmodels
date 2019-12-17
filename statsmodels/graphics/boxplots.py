@@ -122,7 +122,6 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     >>> plt.show()
 
     .. plot:: plots/graphics_boxplot_violinplot.py
-
     """
 
     if np.size(data) == 0:
@@ -329,7 +328,6 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     >>> plt.show()
 
     .. plot:: plots/graphics_boxplot_beanplot.py
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 

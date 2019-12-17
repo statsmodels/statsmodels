@@ -602,7 +602,6 @@ def elimination_matrix(n):
 
     Returns
     -------
-
     """
     n = int_like(n, 'n')
     vech_indices = vec(np.tril(np.ones((n, n))))

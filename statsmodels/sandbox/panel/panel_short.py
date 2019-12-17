@@ -196,7 +196,6 @@ class ShortPanelGLS(GLS):
         Repeated calls to fit_iterative, will do one redundant pinv_wexog
         calculation. Calling fit_iterative(maxiter) once does not do any
         redundant recalculations (whitening or calculating pinv_wexog).
-
         """
         #Note: in contrast to GLSHet, we do not have an auxiliary regression here
         #      might be needed if there is more structure in cov_i

@@ -83,7 +83,6 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     Notes
     -----
     Status: experimental and incomplete
-
     """
     y = endog
     x = exog
@@ -404,7 +403,6 @@ class _MultivariateOLS(Model):
 class _MultivariateOLSResults(object):
     """
     _MultivariateOLS results class
-
     """
     def __init__(self, fitted_mv_ols):
         if (hasattr(fitted_mv_ols, 'data') and

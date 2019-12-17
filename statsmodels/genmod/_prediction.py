@@ -102,7 +102,6 @@ class PredictionResults(object):
         ci : ndarray, (k_constraints, 2)
             The array has the lower and the upper limit of the confidence
             interval in the columns.
-
         """
         tmp = np.linspace(0, 1, 6)
         is_linear = (self.link.inverse(tmp) == tmp).all()
@@ -176,7 +175,6 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
-
     """
 
     # prepare exog and row_labels, based on base Results.predict
@@ -245,7 +243,6 @@ def params_transform_univariate(params, cov_params, link=None, transform=None,
     for transformations of parameters, for example in calculating rates with
     `exp(params)` in the case of Poisson or other models with exponential
     mean function.
-
     """
 
     from statsmodels.genmod.families import links

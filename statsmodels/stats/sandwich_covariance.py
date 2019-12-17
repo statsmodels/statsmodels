@@ -220,7 +220,6 @@ def _get_sandwich_arrays(results, cov_type=''):
     """Helper function to get scores from results
 
     Parameters
-
     """
 
     if isinstance(results, tuple):

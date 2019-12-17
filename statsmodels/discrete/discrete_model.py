@@ -85,7 +85,7 @@ _discrete_results_docs = """
 _l1_results_attr = """    nnz_params : int
         The number of nonzero parameters in the model.  Train with
         trim_params == True or else numerical error will distort this.
-    trimmed : boolean array
+    trimmed : bool array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
 
 _get_start_params_null_docs = """
@@ -925,7 +925,6 @@ class Poisson(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-
     """ + base._missing_param_doc}
 
     @property
@@ -1036,7 +1035,6 @@ class Poisson(CountModel):
         .. math:: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
         for observations :math:`i=1,...,n`
-
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1119,7 +1117,6 @@ class Poisson(CountModel):
         Returns
         -------
         results : Results instance
-
         """
 
         #constraints = (R, q)
@@ -1273,7 +1270,6 @@ class Poisson(CountModel):
         where the loglinear model is assumed
 
         .. math:: \\ln\\lambda_{i}=x_{i}\\beta
-
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1303,7 +1299,6 @@ class Poisson(CountModel):
         where the loglinear model is assumed
 
         .. math:: \\ln\\lambda_{i}=x_{i}\\beta
-
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1336,7 +1331,6 @@ class GeneralizedPoisson(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, p = 1, offset=None,
@@ -1375,7 +1369,6 @@ class GeneralizedPoisson(CountModel):
             \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
             ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
             \\mu_{i}^{p-1}}\\right]
-
         """
         return np.sum(self.loglikeobs(params))
 
@@ -1447,7 +1440,6 @@ class GeneralizedPoisson(CountModel):
             use_transparams=True imposes the no underdispersion (alpha > 0)
             constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
-
         """)
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
@@ -1750,7 +1742,6 @@ class Logit(BinaryModel):
         .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=
                   \\text{Prob}\\left(Y=1|x\\right)=
                   \\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
-
         """
         X = np.asarray(X)
         return 1/(1+np.exp(-X))
@@ -1884,7 +1875,6 @@ class Logit(BinaryModel):
         .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
 
         for observations :math:`i=1,...,n`
-
         """
 
         y = self.endog
@@ -1979,7 +1969,6 @@ class Probit(BinaryModel):
         Notes
         -----
         This function is just an alias for scipy.stats.norm.pdf
-
         """
         X = np.asarray(X)
         return stats.norm._pdf(X)
@@ -2333,7 +2322,6 @@ class MNLogit(MultinomialModel):
 
         Note that both of these returned quantities will need to be negated
         before being minimized by the maximum likelihood fitting machinery.
-
         """
         params = params.reshape(self.K, -1, order='F')
         cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
@@ -2516,7 +2504,6 @@ class NegativeBinomial(CountModel):
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
                  exposure=None, missing='none', **kwargs):
@@ -2629,7 +2616,6 @@ class NegativeBinomial(CountModel):
 
         where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
         For the geometric, :math:`\alpha=0` as well.
-
         """
         llf = np.sum(self.loglikeobs(params))
         return llf

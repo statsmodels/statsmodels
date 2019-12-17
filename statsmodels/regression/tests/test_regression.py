@@ -368,7 +368,6 @@ class TestTtest(object):
     """
     Test individual t-tests.  Ie., are the coefficients significantly
     different than zero.
-
         """
     @classmethod
     def setup_class(cls):

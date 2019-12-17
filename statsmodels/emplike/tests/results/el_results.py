@@ -19,7 +19,6 @@ class DescStatRes(object):
     http://www.ssc.wisc.edu/~bhansen/
 
     The R results are from Mai Zhou's emplik package
-
     """
 
     def __init__(self):

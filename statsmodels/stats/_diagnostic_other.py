@@ -681,7 +681,6 @@ def dispersion_poisson(results):
     description : 2-D list of strings
        Each test has two strings a descriptive name and a string for the
        alternative hypothesis.
-
     """
 
     if hasattr(results, '_results'):
@@ -755,7 +754,6 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     of the `exog_new_test`.
 
     Warning: insufficiently tested, especially for options
-
     """
 
     if hasattr(results, '_results'):
@@ -858,7 +856,6 @@ def conditional_moment_test_generic(mom_test, mom_test_deriv,
     Cameron and Trivedi 1998 count book
     Wooldridge ???
     Pagan and Vella 1989
-
     """
     if cov_type != 'OPG':
         raise NotImplementedError
@@ -920,7 +917,6 @@ def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
     in GMM where the test statistic is the value of the GMM objective function
     and it is assumed that parameters were estimated with optimial GMM, i.e.
     the weight matrix equal to the expectation of the score variance.
-
     """
     # so far coded from memory
     nobs, k_constraints = mom_test.shape
@@ -1008,7 +1004,6 @@ class CMTNewey(object):
       Journal of Econometrics
     - Newey 1985b, Maximum Likelihood Specification Testing and Conditional
       Moment Tests, Econometrica
-
     """
 
     def __init__(self, moments, cov_moments, moments_deriv,
@@ -1136,7 +1131,6 @@ class CMTTauchen(object):
         An estimate for the joint (expected) covariance of score and test
         moments. This can be a heteroscedasticity or correlation robust
         covariance estimate, i.e. the inner part of a sandwich covariance.
-
     """
 
     def __init__(self, score, score_deriv, moments, moments_deriv, cov_moments):

@@ -181,7 +181,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         **kwargs
             Additional keyword arguments to pass to the state space class
             constructor.
-
         """
         # (Now self.endog is C-ordered and in long format (nobs x k_endog). To
         # get F-ordered and in wide format just need to transpose)
@@ -712,7 +711,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         --------
         >>> mod = sm.tsa.SARIMAX(endog, order=(1, 0, 1))
         >>> res = mod.fit_constrained({'ar.L1': 0.5})
-
         """
         with self.fix_params(constraints):
             res = self.fit(start_params, **fit_kwds)
@@ -1086,7 +1084,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         Harvey, Andrew C. 1990.
         Forecasting, Structural Time Series Models and the Kalman Filter.
         Cambridge University Press.
-
         """
         params = np.array(params, ndmin=1)
 
@@ -1169,7 +1166,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         Berndt, Ernst R., Bronwyn Hall, Robert Hall, and Jerry Hausman. 1974.
         Estimation and Inference in Nonlinear Structural Models.
         NBER Chapters. National Bureau of Economic Research, Inc.
-
         """
         # We cannot use complex-step differentiation with non-transformed
         # parameters
@@ -1233,7 +1229,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         Harvey, Andrew C. 1990.
         Forecasting, Structural Time Series Models and the Kalman Filter.
         Cambridge University Press.
-
         """
         params = np.array(params, ndmin=1)
         n = len(params)
@@ -1765,7 +1760,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             this argument describes whether or not `start_params` also includes
             the fixed parameters, in addition to the free parameters. Default
             is False.
-
         """
         # Get the appropriate exog for the extended sample
         exog = self._validate_out_of_sample_exog(exog, out_of_sample)
@@ -2042,7 +2036,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         TODO: add an option to allow changing the ordering for the
               orthogonalized option. Will require permuting matrices when
               constructing the extended model.
-
         """
         # Make sure the model class has the current parameters
         self.update(params, transformed=transformed,
@@ -3499,7 +3492,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         -----
         Intercepts in the measurement and state equation are ignored when
         calculating impulse responses.
-
         """
         scale = self.scale if self.filter_results.filter_concentrated else None
         with self.model.ssm.fixed_scale(scale):
@@ -4121,7 +4113,6 @@ class PredictionResults(pred.PredictionResults):
 
     Attributes
     ----------
-
     """
     def __init__(self, model, prediction_results, row_labels=None):
         if model.model.k_endog == 1:

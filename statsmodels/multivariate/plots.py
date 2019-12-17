@@ -97,7 +97,6 @@ def plot_loadings(loadings, col_names=None, row_names=None,
     Returns
     -------
     figs : a list of figure handles
-
     """
     k_var, n_factor = loadings.shape
     if loading_pairs is None:

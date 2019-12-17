@@ -131,7 +131,6 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     >>> plt.show()
 
     .. plot:: plots/graphics_plot_fit_ex.py
-
     """
 
     fig, ax = utils.create_mpl_ax(ax)
@@ -211,7 +210,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_regress_exog.py
-
     """
 
     fig = utils.create_mpl_fig(fig)
@@ -288,7 +286,6 @@ def _partial_regression(endog, exog_i, exog_others):
     (res1a, res1b) : tuple of OLS results instances
          results from regression of endog on exog_others and of exog_i on
          exog_others
-
     """
     #FIXME: This function does not appear to be used.
     res1a = OLS(endog, exog_others).fit()
@@ -379,7 +376,6 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
     More detailed examples can be found in the Regression Plots notebook
     on the examples page.
-
     """
     #NOTE: there is no interaction between possible missing data and
     #obs_labels yet, so this will need to be tweaked a bit for this case
@@ -520,7 +516,6 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     References
     ----------
     See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
-
     """
     import pandas
     fig = utils.create_mpl_fig(fig)
@@ -623,7 +618,6 @@ def plot_ccpr(results, exog_idx, ax=None):
     References
     ----------
     http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 

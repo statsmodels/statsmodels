@@ -140,7 +140,6 @@ class TLinearModel(GenericLikelihoodModel):
 
         self.fixed_params and self.expandparams can be used to fix some
         parameters. (I doubt this has been tested in this model.)
-
         """
         #print len(params),
         #store_params.append(params)

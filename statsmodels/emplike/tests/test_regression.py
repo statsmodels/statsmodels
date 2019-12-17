@@ -11,7 +11,6 @@ from statsmodels.datasets import stackloss
 class GenRes(object):
     """
     Loads data and creates class instance ot be tested
-
     """
     @classmethod
     def setup_class(cls):
@@ -31,7 +30,6 @@ class TestRegressionPowell(GenRes):
     --------
 
     test_descriptive.py, test_ci_skew
-
     """
 
     @pytest.mark.slow
@@ -96,7 +94,6 @@ class TestRegressionNM(GenRes):
     --------
 
     test_descriptive.py, test_ci_skew
-
     """
 
     def test_hypothesis_beta0(self):

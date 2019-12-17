@@ -184,7 +184,6 @@ def variance_inflation_factor(exog, exog_idx):
     References
     ----------
     https://en.wikipedia.org/wiki/Variance_inflation_factor
-
     """
     k_vars = exog.shape[1]
     x_i = exog[:, exog_idx]
@@ -266,7 +265,6 @@ class _BaseInfluenceMixin(object):
             In dfbetas this refers to the column indes.
         kwds : optional keywords
             Keywords will be used in the call to matplotlib scatter function.
-
         """
         criterion = y_var  # alias
         if threshold is None:
@@ -358,8 +356,6 @@ class MLEInfluence(_BaseInfluenceMixin):
     This class will need changes to support different kinds of models, e.g.
     extra parameters in discrete.NegativeBinomial or two-part models like
     ZeroInflatedPoisson.
-
-
     """
 
     def __init__(self, results, resid=None, endog=None, exog=None,
@@ -387,7 +383,6 @@ class MLEInfluence(_BaseInfluenceMixin):
         """Diagonal of the generalized leverage
 
         This is the analogue of the hat matrix diagonal for general MLE.
-
         """
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
@@ -443,7 +438,6 @@ class MLEInfluence(_BaseInfluenceMixin):
         Warning: The definition of p-values might change if we switch to using
         chi-square distribution instead of F-distribution, or if we make it
         dependent on the fit keyword use_t.
-
         """
         cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params,
                                                     self.d_params.T).T).sum(1)
@@ -526,7 +520,6 @@ class MLEInfluence(_BaseInfluenceMixin):
           `hat_matrix_diag`
         * dffits_internal : DFFITS statistics using internally Studentized
           residuals defined in `d_fittedvalues_scaled`
-
         """
         from pandas import DataFrame
 
@@ -575,7 +568,6 @@ class OLSInfluence(_BaseInfluenceMixin):
 
     The leave-one-variable-out (LOVO) auxiliary regression are currently not
     used.
-
     """
 
     def __init__(self, results):
@@ -691,7 +683,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         where resid are the residuals from the regression, sigma is an
         estimate of the standard deviation of the residuals, and hii is the
         diagonal of the hat_matrix.
-
         """
         hii = self.hat_matrix_diag
         if sigma is None:
@@ -734,7 +725,6 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         based on resid_studentized_internal
         uses original results, no nobs loop
-
         """
         # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
@@ -763,7 +753,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         References
         ----------
         `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
-
         """
         # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
@@ -826,7 +815,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         This uses determinant of the estimate of the parameter covariance
         from leave-one-out estimates.
         requires leave one out loop for observations
-
         """
         # do not use inplace division / because then we change original
         cov_ratio = (self.det_cov_params_not_obsi
@@ -842,7 +830,6 @@ class OLSInfluence(_BaseInfluenceMixin):
            sigma2 = sigma2_OLS * (1 - hii)
 
         where hii is the diagonal of the hat matrix
-
         """
         # TODO:check if correct outside of ols
         return self.scale * (1 - self.hat_matrix_diag)
@@ -854,7 +841,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         See Also
         --------
         resid_var
-
         """
         return np.sqrt(self.resid_var)
 
@@ -1036,9 +1022,6 @@ class OLSInfluence(_BaseInfluenceMixin):
         Notes
         -----
         This also attaches table_data to the instance.
-
-
-
         """
         # print self.dfbetas
 

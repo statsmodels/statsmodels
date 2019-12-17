@@ -91,7 +91,6 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     "State-Space Models with Regime Switching:
     Classical and Gibbs-Sampling Approaches with Applications".
     MIT Press Books. The MIT Press.
-
     """
 
     def __init__(self, endog, k_regimes, order, trend='c', exog=None,
@@ -479,7 +478,6 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
         The parameters of the model.
     scale : float
         This is currently set to 1.0 and not used by the model or its results.
-
     """
     pass
 

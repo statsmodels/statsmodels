@@ -199,7 +199,6 @@ class IVRegressionResults(RegressionResults):
     See Also
     --------
     RegressionResults
-
     """
 
     @cache_readonly
@@ -275,7 +274,6 @@ class IVRegressionResults(RegressionResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary
             results
-
         """
 
         #TODO: import where we need it (for now), add as cached attributes
@@ -1309,7 +1307,6 @@ class GMMResults(LikelihoodModelResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary
             results
-
         """
         #TODO: add a summary text for options that have been used
 
@@ -1427,8 +1424,6 @@ class LinearIVGMM(IVGMM):
         Instrumental variables, variables that are exogenous to the error
         in the linear model containing both included and excluded exogenous
         variables
-
-
     """
 
     def fitgmm(self, start, weights=None, optim_method=None, **kwds):
@@ -1547,7 +1542,6 @@ class NonlinearIVGMM(IVGMM):
     a method `jac_func`.
 
     TODO: check required signature of jac_error and jac_func
-
     """
     # This should be reversed:
     # NonlinearIVGMM is IVGMM and need LinearIVGMM as special case (fit, predict)

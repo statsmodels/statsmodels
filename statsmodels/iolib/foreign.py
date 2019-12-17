@@ -1143,7 +1143,6 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     >>> savetxt('test.out', x, delimiter=',')   # x is an array
     >>> savetxt('test.out', (x,y,z))   # x,y,z equal sized 1D arrays
     >>> savetxt('test.out', x, fmt='%1.4e')   # use exponential notation
-
     """
 
     with get_file_obj(fname, 'w') as fh:

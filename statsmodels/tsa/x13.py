@@ -258,7 +258,6 @@ class SeriesSpec(Spec):
     missingval
     saveprecision
     trimzero
-
     """
     def __init__(self, data, name='Unnamed Series', appendbcst=False,
                  appendfcst=False,

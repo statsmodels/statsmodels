@@ -51,7 +51,6 @@ class SARIMAXParams(object):
         Number of parameters associated with seasonal moving average lags.
     k_params : int
         Total number of model parameters.
-
     """
 
     def __init__(self, spec):

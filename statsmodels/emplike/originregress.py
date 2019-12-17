@@ -50,8 +50,7 @@ class ELOriginRegress(object):
 
     nvar : float
         Number of exogenous regressors.
-
-     """
+    """
     def __init__(self, endog, exog):
         self.endog = endog
         self.exog = exog
@@ -69,7 +68,6 @@ class ELOriginRegress(object):
         -------
         Results : class
             Empirical likelihood regression class.
-
         """
         exog_with = add_constant(self.exog, prepend=True)
         restricted_model = OLS(self.endog, exog_with)
@@ -150,7 +148,6 @@ class OriginResults(RegressionResults):
     # No covariance matrix so normal inference is not valid
     >>> fitted.conf_int()
     TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
-
     """
     def __init__(self, model, params, est_llr, llf_el):
         self.model = model

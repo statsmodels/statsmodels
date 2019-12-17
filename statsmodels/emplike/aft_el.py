@@ -52,7 +52,6 @@ class OptAFT(_OptFuncts):
     _EM_test:
         Uses the modified Em algorithm of Zhou 2005 to maximize the
         likelihood of a parameter vector.
-
     """
     def __init__(self):
         pass
@@ -75,7 +74,6 @@ class OptAFT(_OptFuncts):
         llr: float
             -2 times the log likelihood of the nuisance parameters and the
             hypothesized value of the parameter(s) of interest.
-
         """
         test_params = test_vals.reshape(self.model.nvar, 1)
         est_vect = self.model.uncens_exog * (self.model.uncens_endog -
@@ -286,7 +284,6 @@ class emplikeAFT(object):
             Indicates if the i'th observation is the same as the ith +1
         untied_km: 1d array
             Km estimates at each observation assuming no ties.
-
         """
         # TODO: Vectorize, even though it is only 1 pass through for any
         # function call
@@ -327,7 +324,6 @@ class emplikeAFT(object):
         This function makes calls to _is_tied and km_w_ties to handle ties in
         the data.If a censored observation and an uncensored observation has
         the same value, it is assumed that the uncensored happened first.
-
         """
         nobs = self.nobs
         num = (nobs - (np.arange(nobs) + 1.))
@@ -462,7 +458,6 @@ class AFTResults(OptAFT):
         >>> res = model.test_beta([0], [1])
         >>> res
         (4.623487775078047, 0.031537049752572731)
-
         """
         censors = self.model.censors
         endog = self.model.endog
@@ -548,7 +543,6 @@ class AFTResults(OptAFT):
 
         If the user desires to verify the success of the optimization,
         it is recommended to test the limits using test_beta.
-
         """
         params = self.params()
         self.r0 = chi2.ppf(1 - sig, 1)

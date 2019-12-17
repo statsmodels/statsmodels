@@ -55,7 +55,6 @@ class Unit(object):
     mean of the random constants or coefficients are not centered.
     The covariance matrix of the random parameter estimates are not
     centered in this case. (That's how it looks to me. JP)
-
     """
 
 
@@ -139,7 +138,6 @@ class Unit(object):
         -----
         In example where the mean of the random coefficient is not zero, this
         is not a covariance but a non-centered moment. (proof by example)
-
         """
         if Sinv is not None:
             self.compute_P(Sinv)
@@ -175,7 +173,6 @@ class Unit(object):
 
 
 class OneWayMixed(object):
-
     """
     Model for
     EM implementation of (repeated measures)
@@ -244,7 +241,6 @@ class OneWayMixed(object):
     The above was with a misspecified model, without a constant. With a
     correctly specified model convergence is fast, within a few iterations
     (6 in example).
-
     """
 
     def __init__(self, units):
@@ -276,7 +272,6 @@ class OneWayMixed(object):
 
         Display (3.1) of
         Laird, Lange, Stram (see help(Mixed)).
-
         """
 
         for unit in self.units:
@@ -297,7 +292,6 @@ class OneWayMixed(object):
         otherwise it corresponds to (3.8).
 
         sigma is the standard deviation of the noise (residual)
-
         """
         sigmasq = 0.
         for unit in self.units:
@@ -320,7 +314,6 @@ class OneWayMixed(object):
 
         If ML, this is (3.7) in Laird, Lange, Stram (see help(Mixed)),
         otherwise it corresponds to (3.9).
-
         """
         D = 0.
         for unit in self.units:
@@ -400,7 +393,6 @@ class OneWayMixed(object):
     def logL(self, ML=False):
         """
         Return log-likelihood, REML by default.
-
         """
         #I do not know what the difference between REML and ML is here.
         logL = 0.

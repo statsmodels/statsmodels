@@ -62,7 +62,6 @@ class _OptFuncts(object):
     Any method starting with _ci_limits calculates the log likelihood
     ratio for a specific value of a parameter and then subtracts a
     pre-specified critical value.  This is solved so that llr - crit = 0.
-
     """
 
     def __init__(self, endog):
@@ -952,7 +951,6 @@ class DescStatMV(_OptFuncts):
 
     nobs : float
         Number of observations
-
     """
 
     def __init__(self, endog):
@@ -1126,7 +1124,6 @@ class DescStatMV(_OptFuncts):
         -------
         interval : tuple
             Confidence interval for the correlation
-
         """
         endog = self.endog
         nobs = self.nobs

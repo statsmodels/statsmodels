@@ -59,7 +59,6 @@ class RecursiveLS(MLEModel):
     .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
-
     """
     def __init__(self, endog, exog, constraints=None, **kwargs):
         # Standardize data
@@ -345,7 +344,6 @@ class RecursiveLSResults(MLEResults):
         variance is not necessarily equal to unity as the mean need not be
         equal to zero", and he defines an alternative version (which are
         not provided here).
-
         """
         return (self.filter_results.standardized_forecasts_error[0] *
                 self.scale**0.5)
@@ -388,7 +386,6 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (np.cumsum(self.resid_recursive[d:]) /
@@ -426,7 +423,6 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         numer = np.cumsum(self.resid_recursive[d:]**2)
@@ -713,7 +709,6 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
@@ -813,7 +808,6 @@ class RecursiveLSResults(MLEResults):
            "Critical Values for the Cusumsq Statistic
            in Medium and Large Sized Samples."
            Oxford Bulletin of Economics and Statistics 56 (3): 355-65.
-
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig

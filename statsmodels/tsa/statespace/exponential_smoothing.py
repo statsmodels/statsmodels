@@ -45,7 +45,7 @@ class ExponentialSmoothing(MLEModel):
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Default is
         no seasonal effects.
-    initialization_method: str, optional
+    initialization_method : str, optional
         Method for initialize the recursions. One of:
 
         * 'estimated'

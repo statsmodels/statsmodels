@@ -525,7 +525,6 @@ class MVElliptical(object):
         See Also
         --------
         standardize : subtract mean and rescale to standardized random variable.
-
         """
         x = np.asarray(x)
         return np.dot(x, self.cholsigmainv.T)
@@ -745,7 +744,6 @@ class MVNormal0(object):
         See Also
         --------
         standardize : subtract mean and rescale to standardized random variable.
-
         """
         x = np.asarray(x)
         if np.any(self.cov):

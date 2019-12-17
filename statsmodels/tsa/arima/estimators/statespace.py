@@ -36,13 +36,13 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         The estimate of the constant will then appear as one of the `exog`
         parameters. If `exog` is None, then the constant will represent the
         mean of the process.
-    enforce_stationarity : boolean, optional
+    enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
-    enforce_invertibility : boolean, optional
+    enforce_invertibility : bool, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    concentrate_scale : boolean, optional
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters estimated
         by maximum likelihood by one.
@@ -72,7 +72,6 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
-
     """
     # Handle including the constant (need to do it now so that the constant
     # parameter can be included in the specification as part of `exog`.)

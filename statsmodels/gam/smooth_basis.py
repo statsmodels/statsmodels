@@ -140,7 +140,6 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
 
     The first corresponds to splines as used by patsy. the second is the
     knot spacing for P-Splines.
-
     """
     # based on patsy memorize_finish
     if all_knots is not None:
@@ -442,7 +441,6 @@ class UnivariateBSplines(UnivariateGamSmoother):
         - all_knots : None or array
           If all knots are provided, then those will be taken as given and
           all other options will be ignored.
-
     """
     def __init__(self, x, df, degree=3, include_intercept=False,
                  constraints=None, variable_name='x',
@@ -787,7 +785,6 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         -------
         basis : ndarray
             design matrix for the spline basis for given ``x_new``.
-
         """
         exog = np.hstack(list(self.smoothers[i].transform(x_new[:, i])
                          for i in range(self.k_variables)))
@@ -901,8 +898,6 @@ class BSplines(AdditiveGamSmoother):
     support anymore. This is obtained ``constraints='center'``. In this case
     ``include_intercept`` will be automatically set to True to avoid
     dropping an additional column.
-
-
     """
     def __init__(self, x, df, degree, include_intercept=False,
                  constraints=None, variable_names=None, knot_kwds=None):
@@ -937,7 +932,6 @@ class CubicSplines(AdditiveGamSmoother):
 
     Note, these splines do NOT use the same spline basis as
     ``Cubic Regression Splines``.
-
     """
     def __init__(self, x, df, constraints='center', transform='domain',
                  variable_names=None):
@@ -980,7 +974,6 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
-
     """
     def __init__(self, x, df, constraints=None, variable_names=None):
         self.dfs = df

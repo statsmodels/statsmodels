@@ -46,7 +46,6 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     Notes
     -----
     Since this can be a very large matrix, use np.int8 to save some space.
-
     """
     x = array_like(x, 'x')
 
@@ -85,7 +84,6 @@ def correlation_sum(indicators, embedding_dim):
         Correlation sum
     indicators_joint
         matrix of joint-distance-threshold indicators
-
     """
     if not indicators.ndim == 2:
         raise ValueError('Indicators must be a matrix')
@@ -118,7 +116,6 @@ def correlation_sums(indicators, max_dim):
     -------
     corrsums : 1d array
         Correlation sums
-
     """
 
     corrsums = np.zeros((1, max_dim))
@@ -145,7 +142,6 @@ def _var(indicators, max_dim):
     -------
     variances : float
         Variance of BDS effect
-
     """
     nobs = len(indicators)
     corrsum_1dim, _ = correlation_sum(indicators, 1)

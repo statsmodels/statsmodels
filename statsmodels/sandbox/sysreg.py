@@ -197,7 +197,6 @@ exogenous variables.  Got length %s" % len(sys))
         ``np.dot(np.kron(cholsigmainv,np.eye(M)),np.diag(X))``
 
         If X is the endogenous LHS of the system.
-
         """
         nobs = self.nobs
         if X is self.endog: # definitely not a robust check

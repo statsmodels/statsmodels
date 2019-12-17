@@ -347,7 +347,6 @@ class SVAR(tsbase.TimeSeriesModel):
         Returns
         -------
         A_solve, B_solve: ML solutions for A, B matrices
-
         """
         #TODO: this could stand a refactor
         A_mask = self.A_mask
@@ -478,7 +477,6 @@ class SVARProcess(VARProcess):
         """
 
         Unavailable for SVAR
-
         """
         raise NotImplementedError
 
@@ -487,7 +485,6 @@ class SVARProcess(VARProcess):
 
         Compute Structural MA coefficient matrices using MLE
         of A, B
-
         """
         if P is None:
             A_solve = self.A_solve
@@ -659,7 +656,6 @@ class SVARResults(SVARProcess, VARResults):
         Returns
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
-
         """
         neqs = self.neqs
         mean = self.mean()

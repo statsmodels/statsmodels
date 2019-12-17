@@ -393,7 +393,6 @@ def _phi( p ):
     # this function is faster than using scipy.stats.norm.isf(p)
     # but the permissity of the license is not explicitly listed.
     # using scipy.stats.norm.isf(p) is an acceptable alternative
-
     """
     Modified from the author's original perl code (original comments follow below)
     by dfield@yahoo-inc.com.  May 3, 2004.
@@ -626,7 +625,6 @@ def _select_vs(v, p):
     return vi - 1, vi, vi + 1
 
 def _interpolate_v(p, r, v):
-
     """
     interpolates v based on the values in the A table for the
     scalar value of r and th
@@ -787,7 +785,6 @@ def qsturng(p, r, v):
     -------
     q : (scalar, array_like)
         approximation of the Studentized Range
-
     """
 
     if all(map(_isfloat, [p, r, v])):
@@ -869,7 +866,6 @@ def psturng(q, r, v):
         distribution. When v == 1, p is bound between .001
         and .1, when v > 1, p is bound between .001 and .9.
         Values between .5 and .9 are 1st order appoximations.
-
     """
     if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)
