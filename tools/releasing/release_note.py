@@ -25,6 +25,7 @@ VERSION = MILESTONE = "0.11"
 LAST_COMMIT_SHA = "8e58e465159f26716b2b9a1396a8763c88579725"
 # Branch, usually master but can be a maintenance branch as well
 BRANCH = "master"
+# Provide access token using command line to keep out of repo
 ACCESS_TOKEN = os.environ.get("GITHUB_ACCESS_TOKEN", None)
 if not ACCESS_TOKEN:
     raise RuntimeError("Must set environment variable GITHUB_ACCESS_TOKEN "
@@ -51,12 +52,28 @@ query_parts = ("repo:statsmodels/statsmodels",
 query = " ".join(query_parts)
 merged_pull_data = []
 merged_pulls = g.search_issues(query)
+
+# Get the milestone for the current release or create if it does not exist
+milestone = None
+for ms in statsmodels.get_milestones():
+    if ms.title == MILESTONE:
+        milestone = ms
+if milestone is None:
+    description = "Release {} issues and pull requests".format(MILESTONE)
+    milestone = statsmodels.create_milestone(MILESTONE, state="open",
+                                             description=description)
+
+# Get PR data and set the milestone if needed
 for pull in merged_pulls:
     merged_pull_data.append({"number": pull.number,
                              "title": pull.title,
                              "login": pull.user.login,
-                             "labels": pull.labels}
+                             "labels": pull.labels,
+                             "milestone": pull.milestone}
                             )
+    if pull.milestone is None or pull.milestone != milestone:
+        pull.edit(milestone=milestone)
+
 merged_pull_data = sorted(merged_pull_data, key=lambda x: x["number"])
 
 # Robust name resolutions using commits and GitHub lookup
@@ -77,6 +94,7 @@ for login in names:
     if user.name:
         names[login].update([user.name])
 
+# Continue trying to resolve to human names
 contributors = []
 for login in names:
     print("Reading user data for {}".format(login))
@@ -95,14 +113,22 @@ for login in names:
 
 contributors = sorted(set(contributors))
 
+# Get all issues closed since first_commit_time_iso
 query_parts = ("repo:statsmodels/statsmodels",
                "is:issue",
                "is:closed",
                "closed:>{}".format(first_commit_time_iso))
 query = " ".join(query_parts)
 closed_issues = g.search_issues(query)
+# Set the milestone for these issues if needed
+for issue in closed_issues:
+    if issue.milestone is None or issue.milestone != milestone:
+        issue.edit(milestone=milestone)
+
 issues_closed = closed_issues.totalCount
 
+# Create a What's New Dictionary to automatically populate the template
+# Structure is dict[module, dict[pr number, sanitized title]]
 whats_new = defaultdict(dict)
 for pull in merged_pull_data:
     if pull["labels"]:

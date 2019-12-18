@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Release Statistics
 ------------------
-**Issues Closed**: 320
+**Issues Closed**: 321
 
-**Pull Requests Merged**: 266
+**Pull Requests Merged**: 268
 
 
 The Highlights
@@ -175,6 +175,7 @@ Submodules
 - Test_constrained  (:pr:`5821`)
 - Improve the cvxopt not found error  (:pr:`6163`)
 
+
 ``genmod``
 ~~~~~~~~~~
 - Improvements to BayesMixedGLM docs, argument checking  (:pr:`5895`)
@@ -200,6 +201,7 @@ Submodules
 - Ensure BW is not 0  (:pr:`6292`)
 - Check dtype in KDEUnivariate  (:pr:`6314`)
 
+
 ``regression``
 ~~~~~~~~~~~~~~
 - Test for anova_nistcertified  (:pr:`5797`)
@@ -210,6 +212,7 @@ Submodules
 - Prepare for Rolling Least Squares  (:pr:`6056`)
 - Improve regression doc strings  (:pr:`6077`)
 - Fix summary table header for mixedlm  (:pr:`6217`)
+
 
 ``robust``
 ~~~~~~~~~~
@@ -223,15 +226,17 @@ Submodules
 - Replace alpha=0.05 with alpha=alpha  (:pr:`5998`)
 - Added Oaxaca-Blinder Decomposition  (:pr:`6026`)
 - Improve Ljung-Box  (:pr:`6079`)
-- Correct thresholding in corrrelation tools  (:pr:`6105`)
+- Correct thresholding in correlation tools  (:pr:`6105`)
 - Use self.data consistently  (:pr:`6144`)
 - Better argument checking for StratifiedTable  (:pr:`6294`)
 - Restore multicomp  (:pr:`6320`)
 - Improve Ljung Box diagnostics  (:pr:`6324`)
 
+
 ``tools``
 ~~~~~~~~~
 - Fix error introduced in isestimable  (:pr:`6081`)
+
 
 ``tsa``
 ~~~~~~~
@@ -255,13 +260,14 @@ Submodules
 - Forecasts now ignore non-monotonic period index  (:pr:`6242`)
 - Hannan-Rissanen third stage is invalid if non-stationary/invertible  (:pr:`6258`)
 - Fix notebook  (:pr:`6279`)
-- Correct VAR sumary when model contains exog variables  (:pr:`6286`)
+- Correct VAR summary when model contains exog variables  (:pr:`6286`)
 - Fix conf interval with MI  (:pr:`6297`)
-- Ensure inputs are finite in granger causalty test  (:pr:`6318`)
+- Ensure inputs are finite in granger causality test  (:pr:`6318`)
 - Fix trend due to recent changes  (:pr:`6321`)
 - Improve Ljung Box diagnostics  (:pr:`6324`)
 - Documentation for release v0.11  (:pr:`6338`)
 - Fix _get_index_loc with date strings  (:pr:`6340`)
+
 
 ``tsa.statespace``
 ~~~~~~~~~~~~~~~~~~
@@ -298,10 +304,11 @@ Submodules
 - Fix k_exog, k_trend in arima.ARIMA; raise error when cloning a model with exog if no new exog given  (:pr:`6337`)
 - Documentation for release v0.11  (:pr:`6338`)
 
+
 ``tsa.vector.ar``
 ~~~~~~~~~~~~~~~~~
 - Raise in GC test for VAR(0)  (:pr:`6285`)
-- Correct VAR sumary when model contains exog variables  (:pr:`6286`)
+- Correct VAR summary when model contains exog variables  (:pr:`6286`)
 
 
 Build
@@ -309,6 +316,88 @@ Build
 - Ignore warns on 32 bit linux  (:pr:`6005`)
 - Travis CI: The sudo: tag is deprecated in Travis  (:pr:`6161`)
 - Relax precision for ppc64el  (:pr:`6222`)
+
+Documentation
+-------------
+- Remove orphaned docs files  (:pr:`5832`)
+- Array-like -> array_like  (:pr:`5929`)
+- Change some more links to https  (:pr:`5937`)
+- Fix self-contradictory minimum dependency versions  (:pr:`5939`)
+- Fix formula for log-like in WLS  (:pr:`5946`)
+- Fix typo  (:pr:`5949`)
+- Add parameters for CountModel predict  (:pr:`5986`)
+- Fix many spelling errors  (:pr:`5992`)
+- Small fixups after the spell check  (:pr:`5994`)
+- Clarify that GARCH models are deprecated  (:pr:`6000`)
+- Added content for two headings in VAR docs  (:pr:`6022`)
+- Fix regression doc strings  (:pr:`6031`)
+- Add doc string check to doc build  (:pr:`6036`)
+- Apply documentation standardizations  (:pr:`6038`)
+- Fix spelling  (:pr:`6041`)
+- Merge pull request #6041 from bashtage/doc-fixes  (:pr:`6042`)
+- Fix notebook due to pandas index change  (:pr:`6044`)
+- Remove warning due to deprecated features  (:pr:`6045`)
+- Remove DynamicVAR  (:pr:`6046`)
+- Small doc site improvements  (:pr:`6048`)
+- Small fix ups for modernized size  (:pr:`6052`)
+- More small doc fixes  (:pr:`6053`)
+- Small changes to doc building  (:pr:`6054`)
+- Use the working branch of numpy doc  (:pr:`6055`)
+- Fix spelling in notebooks  (:pr:`6057`)
+- Fix missing spaces around colon  (:pr:`6058`)
+- Continue fixing docstring formatting  (:pr:`6060`)
+- Fix web font size  (:pr:`6062`)
+- Fix web font size  (:pr:`6063`)
+- Fix doc errors affecting build  (:pr:`6067`)
+- Improve docs in tools and ar_model  (:pr:`6080`)
+- Improve filter docstrings  (:pr:`6082`)
+- Spelling and notebook link  (:pr:`6085`)
+- Website fix  (:pr:`6089`)
+- Changes summary_col's docstring to match variables  (:pr:`6106`)
+- Update CONTRIBUTING.rst "relase"-> "release"  (:pr:`6107`)
+- Update link in CONTRIBUTING.rst  (:pr:`6108`)
+- Update PR template Numpy guide link  (:pr:`6110`)
+- Added interpretations to LogitResults.get_margeff  (:pr:`6113`)
+- Improve docstrings  (:pr:`6116`)
+- Switch doc theme  (:pr:`6119`)
+- Add initial API doc  (:pr:`6120`)
+- Small improvements to docs  (:pr:`6122`)
+- Switch doc icon  (:pr:`6123`)
+- Fix doc build failure  (:pr:`6125`)
+- Update templates and add missing API functions  (:pr:`6126`)
+- Add missing functions from the API  (:pr:`6134`)
+- Restructure the documentation  (:pr:`6136`)
+- Add a new logo  (:pr:`6142`)
+- Fix validator so that it works  (:pr:`6143`)
+- Add formula API  (:pr:`6145`)
+- Fix sidebartoc  (:pr:`6160`)
+- Warn that only trusted files should be unpickled  (:pr:`6162`)
+- Update pickle warning  (:pr:`6166`)
+- Fix warning format  (:pr:`6167`)
+- Clarify req for cvxopt  (:pr:`6198`)
+- Spelling and Doc String Fixes  (:pr:`6204`)
+- Fix a typo  (:pr:`6214`)
+- Fix typos in install.rst  (:pr:`6215`)
+- Fix a typo  (:pr:`6216`)
+- Docstring fixes  (:pr:`6235`)
+- Fix spelling in notebooks  (:pr:`6257`)
+- Clarify patsy 0.5.1 is required  (:pr:`6275`)
+- Fix notebook  (:pr:`6279`)
+- Close issues  (:pr:`6283`)
+- Doc string changes  (:pr:`6289`)
+- Correct spells  (:pr:`6298`)
+- Add simple, documented script to get github info  (:pr:`6303`)
+- Update test running instructions  (:pr:`6317`)
+- Restore test() autosummary  (:pr:`6319`)
+- Fix alpha description for GLMGam  (:pr:`6322`)
+- Move api docs  (:pr:`6327`)
+- Update Release Note  (:pr:`6342`)
+- Fix documentation errors  (:pr:`6343`)
+- Fixes in preparation for release  (:pr:`6344`)
+- Further doc fixes  (:pr:`6345`)
+- Fix minor doc errors  (:pr:`6347`)
+- Git notes  (:pr:`6348`)
+- Add version dropdown  (:pr:`6350`)
 
 Maintenance
 -----------
@@ -332,7 +421,7 @@ Maintenance
 - Port parts of #5220  (:pr:`5935`)
 - Remove Python 2.7 from travis  (:pr:`5938`)
 - Fix linting failures  (:pr:`5940`)
-- Drop redendant travis configs  (:pr:`5950`)
+- Drop redundant travis configs  (:pr:`5950`)
 - Mark MPL test as MPL  (:pr:`5954`)
 - Deprecate periodogram  (:pr:`5958`)
 - Ensure seaborn is available for docbuild  (:pr:`5960`)
@@ -357,8 +446,8 @@ Maintenance
 - Change types for future changes in NumPy  (:pr:`6039`)
 - Move garch to archive/  (:pr:`6059`)
 - Fix small lint issue  (:pr:`6066`)
-- Stop testing on old, bugy SciPy  (:pr:`6069`)
-- Small fixes in preperation for larger changes  (:pr:`6088`)
+- Stop testing on old, buggy SciPy  (:pr:`6069`)
+- Small fixes in preparation for larger changes  (:pr:`6088`)
 - Add tools for programatically manipulating docstrings  (:pr:`6090`)
 - Ensure r download cache works  (:pr:`6092`)
 - Fix new cache name  (:pr:`6093`)
@@ -371,14 +460,12 @@ Maintenance
 - Ignore vscode  (:pr:`6255`)
 - Update test tolerance  (:pr:`6288`)
 - Remove open_help method  (:pr:`6290`)
-- Remove deprecated code in preperation for release  (:pr:`6291`)
+- Remove deprecated code in preparation for release  (:pr:`6291`)
 - Deprecate recarray support  (:pr:`6310`)
 - Reduce test size to prevent 32-bit crash  (:pr:`6311`)
 - Remove chain dot  (:pr:`6312`)
 - Catch and fix warnings  (:pr:`6313`)
 - Use NumPy's linalg when available  (:pr:`6315`)
-
-
 
 
 bug-wrong
@@ -406,15 +493,15 @@ Development summary and credits
 Besides receiving contributions for new and improved features and for bugfixes,
 important contributions to general maintenance for this release came from
 
-* Chad Fulton
-* Brock Mendel
-* Peter Quackenbush
-* Kerby Shedden
-* Kevin Sheppard
+- Chad Fulton
+- Brock Mendel
+- Peter Quackenbush
+- Kerby Shedden
+- Kevin Sheppard
 
 and the general maintainer and code reviewer
 
-* Josef Perktold
+- Josef Perktold
 
 Additionally, many users contributed by participation in github issues and
 providing feedback.
@@ -510,7 +597,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`5947`: PERF: Cythonize innovations algo and filter
 - :pr:`5948`: ENH: Normalize eigenvectors from coint_johansen
 - :pr:`5949`: DOC: Fix typo
-- :pr:`5950`: MAINT: Drop redendant travis configs
+- :pr:`5950`: MAINT: Drop redundant travis configs
 - :pr:`5951`: BUG: Fix mosaic plot with missing category
 - :pr:`5952`: ENH: Improve RESET test stability
 - :pr:`5953`: ENH: Add type checkers/converts for int, float and bool
@@ -596,7 +683,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6064`: ENH/PERF: Only perform required predict iterations in state space models
 - :pr:`6066`: MAINT: Fix small lint issue
 - :pr:`6067`: DOC: Fix doc errrors affecting build
-- :pr:`6069`: MAINT: Stop testing on old, bugy SciPy
+- :pr:`6069`: MAINT: Stop testing on old, buggy SciPy
 - :pr:`6070`: BUG: Fix ARMA so that it works with exog when trend=nc
 - :pr:`6071`: ENH: state space: Improve low memory usability; allow in fit, loglike
 - :pr:`6072`: BUG: state space: cov_params computation in fix_params context
@@ -610,7 +697,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6082`: DOC: Improve filter docstrings
 - :pr:`6085`: DOC: Spelling and notebook link
 - :pr:`6087`: ENH: Replacement for AR
-- :pr:`6088`: MAINT: Small fixes in preperation for larger changes
+- :pr:`6088`: MAINT: Small fixes in preparation for larger changes
 - :pr:`6089`: DOC: Website fix
 - :pr:`6090`: ENH/DOC: Add tools for programatically manipulating docstrings
 - :pr:`6091`: MAINT/SEC: Remove unnecessary pickle use
@@ -620,7 +707,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6096`: DOC: Seasonality in SARIMAX Notebook
 - :pr:`6102`: ENH: Improve SARIMAX start_params if too few nobs
 - :pr:`6104`: BUG: Fix score computation with fixed params
-- :pr:`6105`: BUG: Correct thresholding in corrrelation tools
+- :pr:`6105`: BUG: Correct thresholding in correlation tools
 - :pr:`6106`: DOC: Changes summary_col's docstring to match variables
 - :pr:`6107`: DOC: Update CONTRIBUTING.rst "relase"-> "release"
 - :pr:`6108`: DOC: Update link in CONTRIBUTING.rst
@@ -690,11 +777,11 @@ The following Pull Requests were merged since the last release:
 - :pr:`6281`: BUG: Pass arguments through in plot_leverage_resid2
 - :pr:`6283`: MAINT/DOC: Close issues
 - :pr:`6285`: BUG: Raise in GC test for VAR(0)
-- :pr:`6286`: BUG: Correct VAR sumary when model contains exog variables
+- :pr:`6286`: BUG: Correct VAR summary when model contains exog variables
 - :pr:`6288`: MAINT: Update test tolerance
 - :pr:`6289`: DOC: doc string changes
 - :pr:`6290`: MAINT: Remove open_help method
-- :pr:`6291`: MAINT: Remove deprecated code in preperation for release
+- :pr:`6291`: MAINT: Remove deprecated code in preparation for release
 - :pr:`6292`: BUG: Ensure BW is not 0
 - :pr:`6294`: ENH: better argument checking for StratifiedTable
 - :pr:`6297`: BUG: Fix conf interval with MI
@@ -709,7 +796,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6315`: MAINT: Use NumPy's linalg when available
 - :pr:`6316`: MAINT: Workaround NumPy ptp issue
 - :pr:`6317`: DOC: Update test running instructions
-- :pr:`6318`: BUG: Ensure inputs are finite in granger causalty test
+- :pr:`6318`: BUG: Ensure inputs are finite in granger causality test
 - :pr:`6319`: DOC: Restore test() autosummary
 - :pr:`6320`: BUG: Restore multicomp
 - :pr:`6321`: BUG: Fix trend due to recent changes
@@ -728,3 +815,5 @@ The following Pull Requests were merged since the last release:
 - :pr:`6345`: DOC: Further doc fixes
 - :pr:`6347`: DOC: Fix minor doc errors
 - :pr:`6348`: DOC: git notes
+- :pr:`6349`: DOC: Finalize release notes for 0.11
+- :pr:`6350`: DOC: Add version dropdown
