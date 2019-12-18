@@ -5,9 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
-from numpy.testing import (assert_equal, assert_array_almost_equal,
-        assert_raises, assert_array_equal, assert_, assert_array_less)
-from numpy.testing.utils import assert_allclose
+from numpy.testing import (assert_equal, assert_array_almost_equal, assert_,
+                           assert_raises, assert_array_equal,
+                           assert_array_less, assert_allclose)
 import pytest
 
 try:
