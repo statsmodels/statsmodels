@@ -10,7 +10,7 @@
    .. rubric:: Methods
 
    .. autosummary::
-      :toctree: generated/
+      :toctree:
 
    {% for item in methods %}
    {%- if not item.startswith('_') or item in ['__call__'] %}   ~{{ name }}.{{ item }}
@@ -23,7 +23,7 @@
    .. rubric:: Properties
 
    .. autosummary::
-      :toctree: generated/
+      :toctree:
 
    {% for item in attributes %}
    {%- if not item.startswith('_') or item in ['__call__'] %}   ~{{ name }}.{{ item }}
