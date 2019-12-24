@@ -19,16 +19,16 @@ def create_mpl_ax(ax=None):
 
     Parameters
     ----------
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
-    ax : Matplotlib AxesSubplot instance
+    ax : AxesSubplot
         The created axis if `ax` is None, otherwise the axis that was passed
         in.
 
@@ -68,13 +68,13 @@ def create_mpl_fig(fig=None, figsize=None):
 
     Parameters
     ----------
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `fig` is None, the created figure.  Otherwise the input `fig` is
         returned.
 

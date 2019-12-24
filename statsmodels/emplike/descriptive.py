@@ -725,7 +725,7 @@ class DescStatUV(_OptFuncts):
 
         Returns
         -------
-        fig : matplotlib figure instance
+        Figure
             The contour plot
         """
         fig, ax = utils.create_mpl_ax()

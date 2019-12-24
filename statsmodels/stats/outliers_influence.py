@@ -198,7 +198,7 @@ class _BaseInfluenceMixin(object):
     """common methods between OLSInfluence and MLE/GLMInfluence
     """
 
-    @Appender(_plot_influence_doc.format({'extra_params_doc': ""}))
+    @Appender(_plot_influence_doc.format(**{'extra_params_doc': ""}))
     def plot_influence(self, external=None, alpha=.05, criterion="cooks",
                        size=48, plot_alpha=.75, ax=None, **kwargs):
 

@@ -2247,7 +2247,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        ax : Matplotlib axes instance
+        ax : AxesSubplot
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
         xpoints : scalar or array_like
@@ -2516,7 +2516,7 @@ class OrdinalGEEResults(GEEResults):
 
         Parameters
         ----------
-        ax : Matplotlib axes instance
+        ax : AxesSubplot
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
         exog_values : array_like
@@ -2901,7 +2901,7 @@ class NominalGEEResults(GEEResults):
 
         Parameters
         ----------
-        ax : Matplotlib axes instance
+        ax : AxesSubplot
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
         exog_values : array_like

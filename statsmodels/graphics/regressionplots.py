@@ -51,7 +51,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
 
     Parameters
     ----------
-    ax : matplotlib Axes instance
+    ax : AxesSubplot
         The Axes to which to add the plot
     lines_idx : int
         This is the line on the existing plot to which you want to add
@@ -63,7 +63,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
 
     Returns
     -------
-    fig : Figure
+    Figure
         The figure that holds the instance.
     """
     y0 = ax.get_lines()[lines_idx]._y
@@ -74,24 +74,26 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
 
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
-    """Plot fit against one regressor.
+    """
+    Plot fit against one regressor.
 
-    This creates one graph with the scatterplot of observed values compared to
-    fitted values.
+    This creates one graph with the scatterplot of observed values
+    compared to fitted values.
 
     Parameters
     ----------
-    results : result instance
-        result instance with resid, model.endog and model.exog as attributes
-    x_var : int or str
+    results : Results
+        A result instance with resid, model.endog and model.exog as
+        attributes.
+    exog_idx : {int, str}
         Name or index of regressor in exog matrix.
-    y_true : array_like
-        (optional) If this is not None, then the array is added to the plot.
-    ax : Matplotlib AxesSubplot instance, optional
+    y_true : array_like. optional
+        If this is not None, then the array is added to the plot.
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    vlines : bool
-        (optional) If this not True, then the uncertainty of the fit is not
+    vlines : bool, optional
+        If this not True, then the uncertainty of the fit is not
         plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
@@ -99,7 +101,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
 
     Returns
     -------
-    fig : Figure
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -176,16 +178,17 @@ def plot_regress_exog(results, exog_idx, fig=None):
     Parameters
     ----------
     results : result instance
-        result instance with resid, model.endog and model.exog as attributes
+        A result instance with resid, model.endog and model.exog as attributes.
     exog_idx : int or str
-        Name or index of regressor in exog matrix
+        Name or index of regressor in exog matrix.
     fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
     Returns
     -------
-    fig : Figure
+    Figure
+        The value of `fig` if provided. Otherwise a new instance.
 
     Examples
     --------
@@ -303,31 +306,31 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     Parameters
     ----------
     endog : {ndarray, str}
-       endogenous or response variable. If string is given, you can use a
+       The endogenous or response variable. If string is given, you can use a
        arbitrary translations as with a formula.
     exog_i : {ndarray, str}
-        exogenous, explanatory variable. If string is given, you can use a
+        THe exogenous, explanatory variable. If string is given, you can use a
         arbitrary translations as with a formula.
     exog_others : {ndarray, list[str]}
-        other exogenous, explanatory variables. If a list of strings is given,
-        each item is a term in formula. You can use a arbitrary translations
-        as with a formula. The effect of these variables will be removed by
-        OLS regression.
-    data : DataFrame, dict, or recarray
+        Any other exogenous, explanatory variables. If a list of strings is
+        given, each item is a term in formula. You can use a arbitrary
+        translations as with a formula. The effect of these variables will be
+        removed by OLS regression.
+    data : {DataFrame, dict}
         Some kind of data structure with names if the other variables are
         given as strings.
     title_kwargs : dict
         Keyword arguments to pass on for the title. The key to control the
         fonts is fontdict.
-    obs_labels : bool or array_like
+    obs_labels : {bool, array_like}
         Whether or not to annotate the plot points with their observation
         labels. If obs_labels is a boolean, the point labels will try to do
         the right thing. First it will try to use the index of data, then
         fall back to the index of exog_i. Alternatively, you may give an
         array-like object corresponding to the observation numbers.
-    labels_kwargs : dict
+    label_kwargs : dict
         Keyword arguments that control annotate for the observation labels.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     ret_coords : bool
@@ -344,15 +347,15 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     coords : list, optional
         If ret_coords is True, return a tuple of arrays (x_coords, y_coords).
 
+    See Also
+    --------
+    plot_partregress_grid : Plot partial regression for a set of regressors.
+
     Notes
     -----
     The slope of the fitted line is the that of `exog_i` in the full
     multiple regression. The individual points can be used to assess the
     influence of points on the estimated coefficient.
-
-    See Also
-    --------
-    plot_partregress_grid : Plot partial regression for a set of regressors.
 
     Examples
     --------
@@ -458,14 +461,16 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
 
 def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
-    """Plot partial regression for a set of regressors.
+    """
+    Plot partial regression for a set of regressors.
 
     Parameters
     ----------
-    results : results instance
-        A regression model results instance
+    results : Results instance
+        A regression model results instance.
     exog_idx : {None, list[int], list[str]}
-        (column) indices of the exog used in the plot, default is all.
+        The indices  or column names of the exog used in the plot, default is
+        all.
     grid : {None, tuple[int]}
         If grid is given, then it is used for the arrangement of the subplots.
         The format of grid is  (nrows, ncols). If grid is None, then ncol is
@@ -477,8 +482,13 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     Returns
     -------
-    fig : Figure
+    Figure
         If `fig` is None, the created figure.  Otherwise `fig` itself.
+
+    See Also
+    --------
+    plot_partregress : Plot partial regression for a single regressor.
+    plot_ccpr : Plot CCPR against one regressor
 
     Notes
     -----
@@ -487,10 +497,9 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     and the given explanatory variable after removing the effect of all other
     explanatory variables in exog.
 
-    See Also
-    --------
-    plot_partregress : Plot partial regression for a single regressor.
-    plot_ccpr : Plot CCPR against one regressor
+    References
+    ----------
+    See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
 
     Examples
     --------
@@ -512,10 +521,6 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_partregress_grid.py
-
-    References
-    ----------
-    See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
     """
     import pandas
     fig = utils.create_mpl_fig(fig)
@@ -558,9 +563,10 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
 
 def plot_ccpr(results, exog_idx, ax=None):
-    """Plot CCPR against one regressor.
+    """
+    Plot CCPR against one regressor.
 
-    Generates a CCPR (component and component-plus-residual) plot.
+    Generates a component and component-plus-residual (CCPR) plot.
 
     Parameters
     ----------
@@ -570,13 +576,13 @@ def plot_ccpr(results, exog_idx, ax=None):
         Exogenous, explanatory variable. If string is given, it should
         be the variable name that you want to use, and you can use arbitrary
         translations as with a formula.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, it is used to plot in instead of a new figure being
         created.
 
     Returns
     -------
-    fig : Figure
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -595,13 +601,16 @@ def plot_ccpr(results, exog_idx, ax=None):
     is the case, the variance evident in the plot will be an underestimate of
     the true variance.
 
+    References
+    ----------
+    http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
+
     Examples
     --------
     Using the state crime dataset plot the effect of the rate of single
     households ('single') on the murder rate while accounting for high school
     graduation rate ('hs_grad'), percentage of people in an urban area, and rate
     of poverty ('poverty').
-
 
     >>> import statsmodels.api as sm
     >>> import matplotlib.pyplot as plot
@@ -614,10 +623,6 @@ def plot_ccpr(results, exog_idx, ax=None):
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_ccpr.py
-
-    References
-    ----------
-    http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -641,16 +646,17 @@ def plot_ccpr(results, exog_idx, ax=None):
 
 
 def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
-    """Generate CCPR plots against a set of regressors, plot in a grid.
+    """
+    Generate CCPR plots against a set of regressors, plot in a grid.
 
-    Generates a grid of CCPR (component and component-plus-residual) plots.
+    Generates a grid of component and component-plus-residual (CCPR) plots.
 
     Parameters
     ----------
     results : result instance
-        uses exog and params of the result instance
+        A results instance with exog and params.
     exog_idx : None or list of int
-        (column) indices of the exog used in the plot
+        The indices or column names of the exog used in the plot.
     grid : None or tuple of int (nrows, ncols)
         If grid is given, then it is used for the arrangement of the subplots.
         If grid is None, then ncol is one, if there are only 2 subplots, and
@@ -661,9 +667,13 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     Returns
     -------
-    fig : Figure
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
+
+    See Also
+    --------
+    plot_ccpr : Creates CCPR plot for a single regressor.
 
     Notes
     -----
@@ -675,9 +685,9 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
         Betahat(i)*Xi versus Xi
 
-    See Also
-    --------
-    plot_ccpr : Creates CCPR plot for a single regressor.
+    References
+    ----------
+    See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
 
     Examples
     --------
@@ -697,10 +707,6 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_ccpr_grid.py
-
-    References
-    ----------
-    See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
     """
     fig = utils.create_mpl_fig(fig)
 
@@ -841,11 +847,11 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     return fig
 
 
-@Appender(_plot_influence_doc.format({
+@Appender(_plot_influence_doc.format(**{
     'extra_params_doc': "results: object\n"
-                        "    Results for a fitted regression model\n"
-                        "influence: instance\n"
-                        "    instance of Influence for model"}))
+                        "        Results for a fitted regression model.\n"
+                        "    influence: instance\n"
+                        "        The instance of Influence for model."}))
 def _influence_plot(results, influence, external=True, alpha=.05,
                     criterion="cooks", size=48, plot_alpha=.75, ax=None,
                     **kwargs):
@@ -900,9 +906,9 @@ def _influence_plot(results, influence, external=True, alpha=.05,
     return fig
 
 
-@Appender(_plot_influence_doc.format({
-    'extra_params_doc': "results: object\n"
-                        "    Results for a fitted regression model"}))
+@Appender(_plot_influence_doc.format(**{
+    'extra_params_doc': "results : Results\n"
+                        "        Results for a fitted regression model."}))
 def influence_plot(results, external=True, alpha=.05, criterion="cooks",
                    size=48, plot_alpha=.75, ax=None, **kwargs):
 
@@ -1016,8 +1022,9 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 
 
 @Appender(_plot_ceres_residuals_doc % {
-    'extra_params_doc': "results : object\n"
-                        "    Results for a fitted regression model"})
+    'extra_params_doc': "results : Results\n"
+                        "        Results instance of a fitted regression "
+                        "model."})
 def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
                          ax=None):
 

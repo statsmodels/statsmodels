@@ -2001,6 +2001,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             created.
         figsize: tuple[float, float]
             Tuple containing the figure size values.
+
         Returns
         -------
         Figure

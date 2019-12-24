@@ -21,12 +21,12 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
     Parameters
     ----------
-    data : sequence of ndarrays
+    data : sequence[array_like]
         Data arrays, one array per value in `positions`.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    labels : list of str, optional
+    labels : list[str], optional
         Tick labels for the horizontal axis.  If not given, integers
         ``1..len(data)`` are used.
     positions : array_like, optional
@@ -62,7 +62,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -232,7 +232,8 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
 
 def beanplot(data, ax=None, labels=None, positions=None, side='both',
              jitter=False, plot_opts={}):
-    """Make a bean plot of each dataset in the `data` sequence.
+    """
+    Bean plot of each dataset in a sequence.
 
     A bean plot is a combination of a `violinplot` (kernel density estimate of
     the probability density function per point) with a line-scatter plot of all
@@ -240,12 +241,12 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
     Parameters
     ----------
-    data : sequence of ndarrays
+    data : sequence[array_like]
         Data arrays, one array per value in `positions`.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    labels : list of str, optional
+    labels : list[str], optional
         Tick labels for the horizontal axis.  If not given, integers
         ``1..len(data)`` are used.
     positions : array_like, optional
@@ -287,7 +288,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 

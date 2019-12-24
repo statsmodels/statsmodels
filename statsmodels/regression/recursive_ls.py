@@ -689,7 +689,7 @@ class RecursiveLSResults(MLEResults):
             The plotted significance bounds are alpha %.
         legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.
@@ -781,7 +781,7 @@ class RecursiveLSResults(MLEResults):
             The plotted significance bounds are alpha %.
         legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.

@@ -20,11 +20,11 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     ----------
     dcorr : ndarray
         Correlation matrix, square 2-D array.
-    xnames : list of str, optional
+    xnames : list[str], optional
         Labels for the horizontal axis.  If not given (None), then the
         matplotlib defaults (integers) are used.  If it is an empty list, [],
         then no ticks and labels are added.
-    ynames : list of str, optional
+    ynames : list[str], optional
         Labels for the vertical axis.  Works the same way as `xnames`.
         If not given, the same names as for `xnames` are re-used.
     title : str, optional
@@ -35,7 +35,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         range of `dcorr`.  If True, then the color range is normalized to
         (-1, 1).  If this is a tuple of two numbers, then they define the range
         for the color bar.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, then only the main plot but not the colorbar is created.
     cmap : str or Matplotlib Colormap instance, optional
@@ -44,7 +44,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -123,7 +123,8 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
 def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
                    ynames=None, fig=None, cmap='RdYlBu_r'):
-    """Create a grid of correlation plots.
+    """
+    Create a grid of correlation plots.
 
     The individual correlation plots are assumed to all have the same
     variables, axis labels can be specified only once.
@@ -132,7 +133,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     ----------
     dcorrs : list or iterable of ndarrays
         List of correlation matrices.
-    titles : list of str, optional
+    titles : list[str], optional
         List of titles for the subplots.  By default no title are shown.
     ncols : int, optional
         Number of columns in the subplot grid.  If not given, the number of
@@ -142,14 +143,14 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
         range of `dcorr`.  If True, then the color range is normalized to
         (-1, 1).  If this is a tuple of two numbers, then they define the range
         for the color bar.
-    xnames : list of str, optional
+    xnames : list[str], optional
         Labels for the horizontal axis.  If not given (None), then the
         matplotlib defaults (integers) are used.  If it is an empty list, [],
         then no ticks and labels are added.
-    ynames : list of str, optional
+    ynames : list[str], optional
         Labels for the vertical axis.  Works the same way as `xnames`.
         If not given, the same names as for `xnames` are re-used.
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
     cmap : str or Matplotlib Colormap instance, optional
@@ -158,7 +159,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 

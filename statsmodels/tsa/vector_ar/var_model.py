@@ -1292,7 +1292,7 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        fig : matplotlib.Figure
+        Figure
             The figure that contains the plot axes.
         """
         fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
@@ -2008,7 +2008,8 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        fig : matplotlib figure instance
+        Figure
+            Figure instance containing the plot.
         """
         if resid:
             acorrs = self.resid_acorr(nlags)

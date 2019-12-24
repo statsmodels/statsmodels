@@ -3860,7 +3860,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             should be created. Default is 0.
         lags : int, optional
             Number of lags to include in the correlogram. Default is 10.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the 2x2 grid will be created in the provided
             figure using `fig.add_subplot()`.

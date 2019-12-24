@@ -17,12 +17,12 @@ _plot_added_variable_doc = """\
     fit_kwargs : dict, optional
         Keyword arguments to be passed to fit when refitting the
         model.
-    ax : Axes instance
+    ax: Axes
         Matplotlib Axes instance
 
     Returns
     -------
-    fig : matplotlib Figure
+    Figure
         A matplotlib figure instance.
 """
 
@@ -35,22 +35,24 @@ _plot_partial_residuals_doc = """\
     %(extra_params_doc)sfocus_exog : int or string
         The column index of exog, or variable name, indicating the
         variable whose role in the regression is to be assessed.
-    ax : Axes instance
+    ax: Axes
         Matplotlib Axes instance
 
     Returns
     -------
-    fig : matplotlib Figure
+    Figure
         A matplotlib figure instance.
 """
 
 _plot_ceres_residuals_doc = """\
-    Produces a CERES (Conditional Expectation Partial Residuals)
-    plot for a fitted regression model.
+    Conditional Expectation Partial Residuals (CERES) plot.
+
+    Produce a CERES plot for a fitted regression model.
 
     Parameters
     ----------
-    %(extra_params_doc)sfocus_exog : {int, str}
+    %(extra_params_doc)s
+    focus_exog : {int, str}
         The column index of results.model.exog, or the variable name,
         indicating the variable whose role in the regression is to be
         assessed.
@@ -67,16 +69,8 @@ _plot_ceres_residuals_doc = """\
 
     Returns
     -------
-    fig : matplotlib.Figure instance
+    Figure
         The figure on which the partial residual plot is drawn.
-
-    References
-    ----------
-    RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
-    generalized linear models.  Journal of the American
-    Statistical Association, 93:442.
-
-    RD Cook (1993). Partial residual plots.  Technometrics 35:4.
 
     Notes
     -----
@@ -99,6 +93,14 @@ _plot_ceres_residuals_doc = """\
     If the focus variable is believed to be independent of the
     other exog variables, `cond_means` can be set to an (empty)
     nx0 array.
+
+    References
+    ----------
+    .. [1] RD Cook and R Croos-Dabrera (1998).  Partial residual plots
+       in generalized linear models.  Journal of the American
+       Statistical Association, 93:442.
+
+    .. [2] RD Cook (1993). Partial residual plots.  Technometrics 35:4.
 
     Examples
     --------
@@ -125,7 +127,8 @@ _plot_influence_doc = """\
 
     Parameters
     ----------
-    %(extra_params_doc)external : bool
+    {extra_params_doc}
+    external : bool
         Whether to use externally or internally studentized residuals. It is
         recommended to leave external as True.
     alpha : float
@@ -138,12 +141,14 @@ _plot_influence_doc = """\
         The range of `criterion` is mapped to 10**2 - size**2 in points.
     plot_alpha : float
         The `alpha` of the plotted points.
-    ax : matplotlib Axes instance
+    ax : AxesSubplot
         An instance of a matplotlib Axes.
+    **kwargs
+        Additional parameters passed through to `plot`.
 
     Returns
     -------
-    fig : matplotlib figure
+    Figure
         The matplotlib figure that contains the Axes.
 
     Notes
@@ -176,7 +181,7 @@ _plot_influence_doc = """\
 
 
 _plot_leverage_resid2_doc = """\
-    Plots leverage statistics vs. normalized residuals squared
+    Plot leverage statistics vs. normalized residuals squared
 
     Parameters
     ----------
@@ -185,12 +190,14 @@ _plot_leverage_resid2_doc = """\
     alpha : float
         Specifies the cut-off for large-standardized residuals. Residuals
         are assumed to be distributed N(0, 1) with alpha=alpha.
-    ax : Axes instance
+    ax : Axes
         Matplotlib Axes instance
+    **kwargs
+        Additional parameters passed the plot command.
 
     Returns
     -------
-    fig : matplotlib Figure
+    Figure
         A matplotlib figure instance.
 
     Examples

@@ -701,7 +701,7 @@ class PCA(object):
         cumulative : bool, optional
             Flag indicating whether to plot the eigenvalues or cumulative
             eigenvalues
-        ax : Matplotlib axes instance, optional
+        ax : AxesSubplot, optional
             An axes on which to draw the graph.  If omitted, new a figure
             is created
 
@@ -755,7 +755,7 @@ class PCA(object):
         ncomp : int, optional
             Number of components ot include in the plot.  If None, will
             plot the minimum of 10 or the number of computed components.
-        ax : Matplotlib axes instance, optional
+        ax : AxesSubplot, optional
             An axes on which to draw the graph.  If omitted, new a figure
             is created.
 

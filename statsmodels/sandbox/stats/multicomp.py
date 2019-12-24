@@ -682,7 +682,7 @@ class TukeyHSDResults(object):
 
         Returns
         -------
-        fig : Matplotlib Figure object
+        Figure
             handle to figure object containing interval plots
 
         Notes

@@ -17,10 +17,9 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     Interaction plot for factor level statistics.
 
     Note. If categorial factors are supplied levels will be internally
-    recoded to integers. This ensures matplotlib compatibility.
-
-    uses pandas.DataFrame to calculate an `aggregate` statistic for each
-    level of the factor or group given by `trace`.
+    recoded to integers. This ensures matplotlib compatibility. Uses
+    a DataFrame to calculate an `aggregate` statistic for each level of the
+    factor or group given by `trace`.
 
     Parameters
     ----------
@@ -37,10 +36,10 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
-    plottype : str {'line', 'scatter', 'both'}, optional
-        The type of plot to return. Can be 'l', 's', or 'b'
     ax : axes, optional
         Matplotlib axes instance
+    plottype : str {'line', 'scatter', 'both'}, optional
+        The type of plot to return. Can be 'l', 's', or 'b'
     xlabel : str, optional
         Label to use for `x`. Default is 'X'. If `x` is a `pandas.Series` it
         will use the series names.
@@ -49,17 +48,21 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         `response` is a `pandas.Series` it will use the series names.
     colors : list, optional
         If given, must have length == number of levels in trace.
-    linestyles : list, optional
-        If given, must have length == number of levels in trace.
     markers : list, optional
         If given, must have length == number of levels in trace
+    linestyles : list, optional
+        If given, must have length == number of levels in trace.
+    legendloc : {None, str, int}
+        Location passed to the legend command.
+    legendtitle : {None, str}
+        Title of the legend.
     **kwargs
         These will be passed to the plot command used either plot or scatter.
         If you want to control the overall plotting options, use kwargs.
 
     Returns
     -------
-    fig : Figure
+    Figure
         The figure given by `ax.figure` or a new instance.
 
     Examples
