@@ -10,3 +10,17 @@ pytest
 pytest-randomly
 pytest-xdist!=1.30
 flake8
+
+# doc
+sphinx
+sphinx-material
+jupyter
+notebook
+nbsphinx
+nbconvert
+pyyaml
+pandas-datareader
+simplegeneric
+matplotlib
+seaborn
+numpydoc

@@ -90,5 +90,6 @@ Bibtex entry::
 Index
 =====
 
-* :ref:`genindex`
-* :ref:`modindex`
+:ref:`genindex`
+
+:ref:`modindex`

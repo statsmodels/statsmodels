@@ -14,6 +14,9 @@ We also encourage users to submit their own examples, tutorials or cool
 `statsmodels` trick to the `Examples wiki page
 <https://github.com/statsmodels/statsmodels/wiki/Examples>`_
 
+.. toctree::
+   :maxdepth: 1
+
 {# This content is white space sensitive. Do not reformat #}
 
 {% for category in examples%}
