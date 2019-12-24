@@ -10,3 +10,16 @@ pytest
 pytest-randomly
 pytest-xdist!=1.30
 flake8
+
+# doc
+sphinx
+sphinx-material; python_version > '3.5'
+jupyter
+notebook
+nbsphinx
+nbconvert
+pyyaml
+pandas-datareader
+simplegeneric
+seaborn
+numpydoc

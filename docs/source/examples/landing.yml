@@ -1,0 +1,199 @@
+# Add new notebook here
+# To add a new notebook, create an image in _static/images/<notebook>.png,
+# set the target to <notebook>.html, and add the text name of the notebook
+# Care is needed with special characters, especially : (use single quotes)
+#
+# New sections are added by adding header and id to the top level
+
+- header: Linear Regression Models
+  id: regression
+  links:
+  - img: ../_static/images/ols.png
+    target: notebooks/generated/ols.html
+    text: Ordinary Least Squares
+  - img: ../_static/images/gls.png
+    target: notebooks/generated/gls.html
+    text: Generalized Least Squares
+  - img: ../_static/images/quantile_regression.png
+    target: notebooks/generated/quantile_regression.html
+    text: Quantile Regression
+  - img: ../_static/images/recursive_ls.png
+    target: notebooks/generated/recursive_ls.html
+    text: Recursive Least Squares
+  - img: ../_static/images/rolling_ls.png
+    target: notebooks/generated/rolling_ls.html
+    text: Rolling Least Squares
+  - img: ../_static/images/regression_diagnostics.png
+    target: notebooks/generated/regression_diagnostics.html
+    text: Regression Diagnostics
+  - img: ../_static/images/wls.png
+    target: notebooks/generated/wls.html
+    text: Weighted Least Squares
+  - img: ../_static/images/mixed_lm.png
+    target: notebooks/generated/mixed_lm_example.html
+    text: Linear Mixed-Effects
+- header: Plotting
+  id: plotting
+  links:
+  - img: ../_static/images/regression_plots.png
+    target: notebooks/generated/regression_plots.html
+    text: Regression Plots
+  - img: ../_static/images/categorical_interaction_plot.png
+    target: notebooks/generated/categorical_interaction_plot.html
+    text: Categorical Interactions
+  - img: ../_static/images/plots_boxplots.png
+    target: notebooks/generated/plots_boxplots.html
+    text: Box Plots
+- header: Discrete Choice Models
+  id: discrete
+  links:
+  - img: ../_static/images/discrete_overview.png
+    target: notebooks/generated/discrete_choice_overview.html
+    text: Getting Started
+  - img: ../_static/images/fairs_data.png
+    target: notebooks/generated/discrete_choice_example.html
+    text: Fair's Affairs Data
+- header: Nonparametric Statistics
+  id: nonparametric
+  links:
+  - img: ../_static/images/kde_overview.png
+    target: notebooks/generated/kernel_density.html
+    text: Univariate Kernel Density Estimator
+- header: Generalized Linear Models
+  id: glm
+  links:
+  - img: ../_static/images/glm_overview.png
+    target: notebooks/generated/glm.html
+    text: Generalized Linear Models Overview
+  - img: ../_static/images/glm_formulas.png
+    target: notebooks/generated/glm_formula.html
+    text: Using Formulas with GLMs
+  - img: ../_static/images/glm_weights.png
+    target: notebooks/generated/glm_weights.html
+    text: Weighting Observations with GLMs
+  - img: ../_static/images/influence_glm_logit.png
+    target: notebooks/generated/influence_glm_logit.html
+    text: Influence Measures for GLMs
+- header: Robust Regression
+  id: robust
+  links:
+  - img: ../_static/images/rlm_overview.png
+    target: notebooks/generated/robust_models_1.html
+    text: M-estimators for Robust Regression
+  - img: ../_static/images/rlm.png
+    target: notebooks/generated/robust_models_0.html
+    text: Comparing OLS and RLM
+- header: Generalized Estimating Equations
+  id: robust
+  links:
+  - img: ../_static/images/gee-cov-struct.png
+    target: notebooks/generated/gee_nested_simulation.html
+    text: GEE Nested Covariance Structure
+  - img: ../_static/images/gee-score-tests.png
+    target: notebooks/generated/gee_score_test_simulation.html
+    text: GEE Score Tests
+- header: Statistics
+  id: stats
+  links:
+  - img: ../_static/images/anova.png
+    target: notebooks/generated/interactions_anova.html
+    text: ANOVA
+- header: Time Series Analysis
+  id: stats
+  links:
+  - img: ../_static/images/autoregressions.png
+    target: notebooks/generated/autoregressions.html
+    text: Autoregressions
+  - img: ../_static/images/tsa_arma0.png
+    target: notebooks/generated/tsa_arma_0.html
+    text: 'ARMA: Sunspots Data'
+  - img: ../_static/images/tsa_arma1.png
+    target: notebooks/generated/tsa_arma_1.html
+    text: 'ARMA: Artificial Data'
+  - img: ../_static/images/tsa_filters.png
+    target: notebooks/generated/tsa_filters.html
+    text: Time Series Filters
+  - img: ../_static/images/markov_regression.png
+    target: notebooks/generated/markov_regression.html
+    text: Markov switching dynamic regression
+  - img: ../_static/images/markov_autoregression.png
+    target: notebooks/generated/markov_autoregression.html
+    text: Markov switching autoregression
+  - img: ../_static/images/exponential_smoothing.png
+    target: notebooks/generated/exponential_smoothing.html
+    text: Exponential Smoothing
+  - img: ../_static/images/stl_decomposition.png
+    target: notebooks/generated/stl_decomposition.html
+    text: Seasonal Decomposition
+- header: State space models
+  id: statespace
+  links:
+  - img: ../_static/images/statespace_sarimax_stata.png
+    target: notebooks/generated/statespace_sarimax_stata.html
+    text: 'SARIMAX: Introduction'
+  - img: ../_static/images/statespace_sarimax_internet.png
+    target: notebooks/generated/statespace_sarimax_internet.html
+    text: 'SARIMAX: Model selection, missing data'
+  - img: ../_static/images/statespace_varmax.png
+    target: notebooks/generated/statespace_varmax.html
+    text: 'VARMAX: introduction'
+  - img: ../_static/images/statespace_dfm_coincident.png
+    target: notebooks/generated/statespace_dfm_coincident.html
+    text: 'Dynamic Factor Models: Application'
+  - img: ../_static/images/statespace_structural_harvey_jaeger.png
+    target: notebooks/generated/statespace_structural_harvey_jaeger.html
+    text: 'Unobserved Components: Application'
+  - img: ../_static/images/statespace_cycles.png
+    target: notebooks/generated/statespace_cycles.html
+    text: Trends and cycles in unemployment
+  - img: ../_static/images/statespace_local_linear_trend.png
+    target: notebooks/generated/statespace_local_linear_trend.html
+    text: 'State space modeling: Local Linear Trends'
+  - img: ../_static/images/statespace_arma0.png
+    target: notebooks/generated/statespace_arma_0.html
+    text: 'Statespace ARMA: Sunspots Data'
+  - img: ../_static/images/statespace_seasonal.png
+    target: notebooks/generated/statespace_seasonal.html
+    text: Seasonality in Time Series Data
+  - img: ../_static/images/statespace_fixed_params.png
+    target: notebooks/generated/statespace_fixed_params.html
+    text: Fixed / constrained parameters in state space models
+- header: State space models - Technical notes
+  id: statespace_notes
+  links:
+  - img: ../_static/images/statespace_concentrated_scale.png
+    target: notebooks/generated/statespace_concentrated_scale.html
+    text: 'State space models: concentrating out the scale'
+- header: Multivariate Methods
+  id: multivariate
+  links:
+  - img: ../_static/images/pca_fertility_factors.png
+    target: notebooks/generated/pca_fertility_factors.html
+    text: Principal Component Analysis
+- header: User Notes
+  id: user
+  links:
+  - img: ../_static/images/contrasts.png
+    target: notebooks/generated/contrasts.html
+    text: Contrasts
+  - img: ../_static/images/formulas_intro.png
+    target: notebooks/generated/formulas.html
+    text: Formulas
+  - img: ../_static/images/prediction.png
+    target: notebooks/generated/predict.html
+    text: Prediction
+  - img: ../_static/images/statespace_forecasting.png
+    target: notebooks/generated/statespace_forecasting.html
+    text: Forecasting in statsmodels
+  - img: ../_static/images/generic_mle.png
+    target: notebooks/generated/generic_mle.html
+    text: Generic Maximum Likelihood
+  - img: ../_static/images/tsa_dates.png
+    target: notebooks/generated/tsa_dates.html
+    text: Dates in Time-Series Models
+  - img: ../_static/images/chi2_fitting.png
+    target: notebooks/generated/chi2_fitting.html
+    text: Least squares fitting of models to data
+  - img: ../_static/images/distributed_estimation.png
+    target: notebooks/generated/distributed_estimation.html
+    text: Distributed Estimations

@@ -157,7 +157,7 @@ def test_statespace():
     mod = ARIMA(endog, order=(1, 0, 1), trend='n')
     res = mod.fit(method='statespace')
     # Note: atol is required only due to precision issues on Windows
-    assert_allclose(res.params, desired_p.params, atol=1e-5)
+    assert_allclose(res.params, desired_p.params, atol=1e-4)
 
     # ARMA(1, 2), with trend
     desired_p, _ = statespace(endog, order=(1, 0, 2),
@@ -165,7 +165,7 @@ def test_statespace():
     mod = ARIMA(endog, order=(1, 0, 2), trend='c')
     res = mod.fit(method='statespace')
     # Note: atol is required only due to precision issues on Windows
-    assert_allclose(res.params, desired_p.params, atol=1e-5)
+    assert_allclose(res.params, desired_p.params, atol=1e-4)
 
     # SARMA(1, 0)x(1, 0)4, no trend
     desired_p, _spec = statespace(endog, order=(1, 0, 0),
@@ -174,7 +174,7 @@ def test_statespace():
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend='n')
     res = mod.fit(method='statespace')
     # Note: atol is required only due to precision issues on Windows
-    assert_allclose(res.params, desired_p.params, atol=1e-5)
+    assert_allclose(res.params, desired_p.params, atol=1e-4)
 
 
 def test_low_memory():

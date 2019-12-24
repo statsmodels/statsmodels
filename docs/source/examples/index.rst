@@ -14,10 +14,18 @@ We also encourage users to submit their own examples, tutorials or cool
 `statsmodels` trick to the `Examples wiki page
 <https://github.com/statsmodels/statsmodels/wiki/Examples>`_
 
+.. toctree::
+
+
 {# This content is white space sensitive. Do not reformat #}
 
 {% for category in examples%}
 {% set underscore = "-" * (category.header | length) %}
+
+.. raw:: html
+
+   <div class="example-header-clear">&nbsp;</div>
+
 {{ category.header }}
 {{ underscore }}
 
@@ -30,12 +38,14 @@ We also encourage users to submit their own examples, tutorials or cool
 
 {%- for notebook in category.links  %}
 {% set heading = "`" ~ notebook.text ~ " <" ~ notebook.target|e ~ ">`_" %}
-{% set subunderscore = "~" * (heading | length) %}
-{{ heading }}
-{{ subunderscore }}
-.. image:: {{ notebook.img }}
-   :target: {{ notebook.target }}
-   :width: 360px
+
+.. container:: example
+
+   {{ heading }}
+
+   .. image:: {{ notebook.img }}
+      :target: {{ notebook.target }}
+      :width: 240px
 
 {%- endfor %}
 
