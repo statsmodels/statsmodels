@@ -1,6 +1,7 @@
 # Add new notebook here
 # To add a new notebook, create an image in _static/images/<notebook>.png,
 # set the target to <notebook>.html, and add the text name of the notebook
+# Care is needed with special characters, especially : (use single quotes)
 #
 # New sections are added by adding header and id to the top level
 
@@ -87,7 +88,7 @@
   links:
   - img: ../_static/images/gee-cov-struct.png
     target: notebooks/generated/gee_nested_simulation.html
-    text: 'GEE Nested Covariance Structure '
+    text: GEE Nested Covariance Structure
   - img: ../_static/images/gee-score-tests.png
     target: notebooks/generated/gee_score_test_simulation.html
     text: GEE Score Tests
@@ -165,6 +166,7 @@
     text: 'State space models: concentrating out the scale'
 - header: Multivariate Methods
   id: multivariate
+  links:
   - img: ../_static/images/pca_fertility_factors.png
     target: notebooks/generated/pca_fertility_factors.html
     text: Principal Component Analysis

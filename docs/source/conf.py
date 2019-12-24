@@ -13,9 +13,9 @@
 # serve to show the default.
 
 import contextlib
-import yaml
 import os
 import sys
+import yaml
 from os.path import dirname, join
 
 import sphinx_material
@@ -393,7 +393,7 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 # ghissue config
 github_project_url = 'https://github.com/statsmodels/statsmodels'
 
-example_context = yaml.load(open('examples/landing.yml'))
+example_context = yaml.safe_load(open('examples/landing.yml'))
 html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------

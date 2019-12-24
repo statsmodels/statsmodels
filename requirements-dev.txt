@@ -13,7 +13,7 @@ flake8
 
 # doc
 sphinx
-sphinx-material
+sphinx-material; python_version > '3.5'
 jupyter
 notebook
 nbsphinx
@@ -21,6 +21,5 @@ nbconvert
 pyyaml
 pandas-datareader
 simplegeneric
-matplotlib
 seaborn
 numpydoc
