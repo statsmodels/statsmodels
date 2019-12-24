@@ -186,7 +186,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`. If not given,
         outliers are labeled in the plot with array indices.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     use_brute : bool
@@ -199,7 +199,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
     hdr_res : HdrResults instance
@@ -212,6 +212,10 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
          - 'extra_quantiles', list of array. Extra quantile band.
             [sup, inf] curves.
          - 'outliers', ndarray. Outlier curves.
+
+    See Also
+    --------
+    banddepth, rainbowplot, fboxplot
 
     Notes
     -----
@@ -288,10 +292,6 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     >>> plt.show()
 
     .. plot:: plots/graphics_functional_hdrboxplot.py
-
-    See Also
-    --------
-    banddepth, rainbowplot, fboxplot
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -501,7 +501,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     wfactor : float, optional
         Factor by which the central 50% region is multiplied to find the outer
         region (analog of "whiskers" of a classical boxplot).
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     plot_opts : dict, optional
@@ -518,16 +518,16 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    fig : Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
     depth : ndarray
-        1-D array containing the calculated band depths of the curves.
+        A 1-D array containing the calculated band depths of the curves.
     ix_depth : ndarray
-        1-D array of indices needed to order curves (or `depth`) from most to
+        A 1-D array of indices needed to order curves (or `depth`) from most to
         least central curve.
     ix_outliers : ndarray
-        1-D array of indices of outlying curves in `data`.
+        A 1-D array of indices of outlying curves in `data`.
 
     See Also
     --------
@@ -685,7 +685,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
         If not given, it will be calculated through `banddepth`.
     method : {'MBD', 'BD2'}, optional
         The method to use to calculate the band depth.  Default is 'MBD'.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     cmap : Matplotlib LinearSegmentedColormap instance, optional
@@ -695,7 +695,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -789,7 +789,7 @@ def banddepth(data, method='MBD'):
 
     Returns
     -------
-    depth : ndarray
+    ndarray
         Depth values for functional curves.
 
     Notes

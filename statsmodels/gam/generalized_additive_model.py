@@ -329,7 +329,9 @@ class GLMGamResults(GLMResults):
 
         Returns
         -------
-        fig : matplotlib Figure instance
+        Figure
+            If `ax` is None, the created figure. Otherwise the Figure to which
+            `ax` is connected.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
         _import_mpl()

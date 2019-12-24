@@ -306,20 +306,21 @@ class Power(object):
 
     def plot_power(self, dep_var='nobs', nobs=None, effect_size=None,
                    alpha=0.05, ax=None, title=None, plt_kwds=None, **kwds):
-        '''plot power with number of observations or effect size on x-axis
+        """
+        Plot power with number of observations or effect size on x-axis
 
         Parameters
         ----------
-        dep_var : str in ['nobs', 'effect_size', 'alpha']
+        dep_var : {'nobs', 'effect_size', 'alpha'}
             This specifies which variable is used for the horizontal axis.
             If dep_var='nobs' (default), then one curve is created for each
             value of ``effect_size``. If dep_var='effect_size' or alpha, then
             one curve is created for each value of ``nobs``.
-        nobs : scalar or array_like
+        nobs : {scalar, array_like}
             specifies the values of the number of observations in the plot
-        effect_size : scalar or array_like
+        effect_size : {scalar, array_like}
             specifies the values of the effect_size in the plot
-        alpha : float or array_like
+        alpha : {float, array_like}
             The significance level (type I error) used in the power
             calculation. Can only be more than a scalar, if ``dep_var='alpha'``
         ax : None or axis instance
@@ -328,16 +329,18 @@ class Power(object):
             are created with it.
         title : str
             title for the axis. Use an empty string, ``''``, to avoid a title.
-        plt_kwds : None or dict
+        plt_kwds : {None, dict}
             not used yet
-        kwds : optional keywords for power function
+        kwds : dict
             These remaining keyword arguments are used as arguments to the
             power function. Many power function support ``alternative`` as a
             keyword argument, two-sample test support ``ratio``.
 
         Returns
         -------
-        fig : matplotlib figure instance
+        Figure
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
 
         Notes
         -----
@@ -348,7 +351,7 @@ class Power(object):
         TODO: fix this for FTestPower and GofChisquarePower
 
         TODO: maybe add line variable, if we want more than nobs and effectsize
-        '''
+        """
         #if pwr_kwds is None:
         #    pwr_kwds = {}
         from statsmodels.graphics import utils

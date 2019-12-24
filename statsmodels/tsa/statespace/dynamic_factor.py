@@ -1130,7 +1130,7 @@ class DynamicFactorResults(MLEResults):
             Whether or not to label the endogenous variables along the x-axis
             of the plots. Default is to include labels if there are 5 or fewer
             endogenous variables.
-        fig : Matplotlib Figure instance, optional
+        fig : Figure, optional
             If given, subplots are created in this figure instead of in a new
             figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.

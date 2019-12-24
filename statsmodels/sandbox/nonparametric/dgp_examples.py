@@ -114,7 +114,7 @@ class _UnivariateFunction(object):
 
         Returns
         -------
-        fig : matplotlib figure
+        Figure
             This is either the created figure instance or the one associated
             with ax if ax is given.
 

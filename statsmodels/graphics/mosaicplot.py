@@ -477,7 +477,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     Parameters
     ----------
-    data : dict, pandas.Series, np.ndarray, pandas.DataFrame
+    data : {dict, Series, ndarray, DataFrame}
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
@@ -493,21 +493,18 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         will default to the given order.  It does not support named indexes
         for hierarchical Series.  If a DataFrame is provided, it expects
         a list with the name of the columns.
-    ax : matplotlib.Axes, optional
+    ax : Axes, optional
         The graph where display the mosaic. If not given, will
         create a new figure
-    horizontal : bool, optional (default True)
+    horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : float or array of floats
+    gap : {float, sequence[float]}
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
-    labelizer : function (key) -> str, optional
-        A function that generate the text to display at the center of
-        each tile base on the key of that tile
-    properties : function (key) -> dict, optional
+    properties : dict[str, callable], optional
         A function that for each tile in the mosaic take the key
         of the tile and returns the dictionary of properties
         of the generated Rectangle, like color, hatch or similar.
@@ -517,29 +514,32 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         to indicate that it should use the default property for the tile.
         A dictionary of the properties for each key can be passed,
         and it will be internally converted to the correct function
-    statistic : bool, optional (default False)
-        if true will use a crude statistical model to give colors to the plot.
+    labelizer : dict[str, callable], optional
+        A function that generate the text to display at the center of
+        each tile base on the key of that tile
+    title : str, optional
+        The title of the axis
+    statistic : bool, optional
+        If true will use a crude statistical model to give colors to the plot.
         If the tile has a constraint that is more than 2 standard deviation
         from the expected value under independence hypothesis, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
-    title : str, optional
-        The title of the axis
     axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation : float or list of float
-        the rotation of the axis label (if present). If a list is given
+    label_rotation : {float, list[float]}
+        The rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 
     Returns
     ---------
-    fig : matplotlib.Figure
-        The generate figure
+    fig : Figure
+        The figure containing the plot.
     rects : dict
         A dictionary that has the same keys of the original
         dataset, that holds a reference to the coordinates of the
-        tile and the Rectangle that represent it
+        tile and the Rectangle that represent it.
 
     References
     ----------

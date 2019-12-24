@@ -372,6 +372,8 @@ numpydoc_xref_param_type = True
 numpydoc_class_members_toctree = False
 numpydoc_xref_aliases = {
     'Figure': 'matplotlib.figure.Figure',
+    'Axes': 'matplotlib.axes.Axes',
+    'AxesSubplot': 'matplotlib.axes.Axes',
     'DataFrame': 'pandas.DataFrame',
     'Series': 'pandas.Series',
     'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'

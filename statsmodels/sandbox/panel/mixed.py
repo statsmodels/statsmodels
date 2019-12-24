@@ -539,7 +539,7 @@ class OneWayMixedResults(LikelihoodModelResults):
 
         Returns
         -------
-        fig : matplotlib figure instance
+        Figure
             figure with subplots
 
         Notes

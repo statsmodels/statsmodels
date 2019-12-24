@@ -541,7 +541,7 @@ class MICEData(object):
 
         Parameters
         ----------
-        ax : matplotlib axes
+        ax : AxesSubplot
             Axes on which to draw the plot.
         row_order : str
             The method for ordering the rows.  Must be one of 'pattern',
@@ -662,7 +662,7 @@ class MICEData(object):
             containing x-axis jitter and y-axis jitter, respectively.
         plot_points : bool
             If True, the data points are plotted.
-        ax : matplotlib axes object
+        ax : AxesSubplot
             Axes on which to plot, created if not provided.
 
         Returns
@@ -767,7 +767,7 @@ class MICEData(object):
             containing x-axis jitter and y-axis jitter, respectively.
         plot_points : bool
             If True, the data points are plotted.
-        ax : matplotlib axes object
+        ax : AxesSubplot
             Axes on which to plot, created if not provided.
 
         Returns
@@ -850,7 +850,7 @@ class MICEData(object):
         ----------
         col_name : str
             The name of the variable to be plotted.
-        ax : matplotlib axes
+        ax : AxesSubplot
             An axes on which to draw the histograms.  If not provided,
             one is created.
         imp_hist_args : dict

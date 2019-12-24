@@ -918,8 +918,8 @@ class FactorResults(object):
 
         Returns
         -------
-        fig : figure
-            Handle to the figure
+        Figure
+            Handle to the figure.
         """
         _import_mpl()
         from .plots import plot_scree

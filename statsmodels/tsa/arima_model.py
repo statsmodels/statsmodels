@@ -210,7 +210,7 @@ _plot_predict = ("""
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
     "params": "",
     "extra_params": _plot_extras,
-    "returns": """fig : matplotlib.Figure
+    "returns": """fig : Figure
             The plotted Figure instance""",
     "extra_section": ('\n' + _arima_plot_predict_example +
                       '\n' + _results_notes)
@@ -221,7 +221,7 @@ _arima_plot_predict = ("""
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
     "params": "",
     "extra_params": _plot_extras,
-    "returns": """fig : matplotlib.Figure
+    "returns": """fig : Figure
             The plotted Figure instance""",
     "extra_section": ('\n' + _arima_plot_predict_example + '\n' +
                       '\n'.join(_results_notes.split('\n')[:3])

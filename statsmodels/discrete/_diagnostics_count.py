@@ -95,7 +95,7 @@ def plot_probs(freq, probs_predicted, label='predicted', upp_xlim=None,
 
     Returns
     -------
-    fig : matplotlib figure instance
+    Figure
         The figure contains 3 subplot with probabilities, cumulative
         probabilities and a PP-plot
     """

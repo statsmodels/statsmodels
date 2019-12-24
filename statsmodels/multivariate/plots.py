@@ -20,8 +20,8 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
 
     Returns
     -------
-    fig : figure
-        Handle to the figure
+    Figure
+        Handle to the figure.
     """
     fig = plt.figure()
     ncomp = len(eigenvals) if ncomp is None else ncomp
