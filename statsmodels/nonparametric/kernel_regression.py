@@ -49,7 +49,9 @@ class KernelReg(GenericKDE):
     Calculates the conditional mean ``E[y|X]`` where ``y = g(X) + e``.
     Note that the "local constant" type of regression provided here is also
     known as Nadaraya-Watson kernel regression; "local linear" is an extension
-    of that which suffers less from bias issues at the edge of the support.
+    of that which suffers less from bias issues at the edge of the support. Note
+    that specifying a custom kernel works only with "local linear" kernel
+    regression. For example, a custom ``tricube`` kernel yields LOESS regression.
 
     Parameters
     ----------
