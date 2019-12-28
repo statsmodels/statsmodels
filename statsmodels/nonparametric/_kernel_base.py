@@ -28,7 +28,8 @@ kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    gaussian_cdf=kernels.gaussian_cdf,
                    aitchisonaitken_cdf=kernels.aitchison_aitken_cdf,
                    wangryzin_cdf=kernels.wang_ryzin_cdf,
-                   d_gaussian=kernels.d_gaussian)
+                   d_gaussian=kernels.d_gaussian,
+                   tricube=kernels.tricube)
 
 
 def _compute_min_std_IQR(data):

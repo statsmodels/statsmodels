@@ -74,6 +74,12 @@ class KernelReg(GenericKDE):
         cross-validation) and 'aic' (AIC Hurvich bandwidth estimation).
         Default is 'cv_ls'. User specified bandwidth must have as many
         entries as the number of variables.
+    ckertype : str, optional
+        The kernel used for the continuous variables.
+    okertype : str, optional
+        The kernel used for the ordered discrete variables.
+    ukertype : str, optional
+        The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
 
@@ -83,10 +89,14 @@ class KernelReg(GenericKDE):
         The bandwidth parameters.
     """
     def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
-                 defaults=None):
+                 ckertype='gaussian', okertype='wangryzin',
+                 ukertype='aitchisonaitken', defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
+        self.ckertype = ckertype
+        self.okertype = okertype
+        self.ukertype = ukertype
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.k_vars)
@@ -154,8 +164,9 @@ class KernelReg(GenericKDE):
         nobs, k_vars = exog.shape
         ker = gpke(bw, data=exog, data_predict=data_predict,
                    var_type=self.var_type,
-                   #ukertype='aitchison_aitken_reg',
-                   #okertype='wangryzin_reg',
+                   ckertype=self.ckertype,
+                   ukertype=self.ukertype,
+                   okertype=self.okertype,
                    tosum=False) / float(nobs)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
@@ -210,8 +221,9 @@ class KernelReg(GenericKDE):
         """
         ker_x = gpke(bw, data=exog, data_predict=data_predict,
                      var_type=self.var_type,
-                     #ukertype='aitchison_aitken_reg',
-                     #okertype='wangryzin_reg',
+                     ckertype=self.ckertype,
+                     ukertype=self.ukertype,
+                     okertype=self.okertype,
                      tosum=False)
         ker_x = np.reshape(ker_x, np.shape(endog))
         G_numer = (ker_x * endog).sum(axis=0)
@@ -256,7 +268,9 @@ class KernelReg(GenericKDE):
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
             H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j,:],
-                           var_type=self.var_type, tosum=False)
+                           ckertype=self.ckertype, ukertype=self.ukertype,
+                           okertype=self.okertype, var_type=self.var_type,
+                           tosum=False)
 
         denom = H.sum(axis=1)
         H = H / denom
@@ -467,6 +481,12 @@ class KernelCensoredReg(KernelReg):
         the method for bandwidth selection.
         cv_ls: cross-validation least squares
         aic: AIC Hurvich Estimator
+    ckertype : str, optional
+        The kernel used for the continuous variables.
+    okertype : str, optional
+        The kernel used for the ordered discrete variables.
+    ukertype : str, optional
+        The kernel used for the unordered discrete variables.
     censor_val : float
         Value at which the dependent variable is censored
     defaults : EstimatorSettings instance, optional
@@ -478,10 +498,16 @@ class KernelCensoredReg(KernelReg):
         The bandwidth parameters
     """
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
+                 ckertype='gaussian',
+                 ukertype='aitchison_aitken_reg',
+                 okertype='wangryzin_reg',
                  censor_val=0, defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
+        self.ckertype = ckertype
+        self.okertype = okertype
+        self.ukertype = ukertype
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.k_vars)
@@ -558,8 +584,9 @@ class KernelCensoredReg(KernelReg):
         nobs, k_vars = exog.shape
         ker = gpke(bw, data=exog, data_predict=data_predict,
                    var_type=self.var_type,
-                   ukertype='aitchison_aitken_reg',
-                   okertype='wangryzin_reg', tosum=False)
+                   ckertype=self.ckertype,
+                   ukertype=self.ukertype,
+                   okertype=self.okertype, tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
 
