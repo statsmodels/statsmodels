@@ -36,7 +36,7 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
+    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR, kernel_func
 
 
 __all__ = ['KernelReg', 'KernelCensoredReg']
@@ -99,6 +99,11 @@ class KernelReg(GenericKDE):
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
+        if not (self.ckertype in kernel_func and self.ukertype in kernel_func
+                and self.okertype in kernel_func):
+            raise ValueError('user specified kernel must be a supported '
+                             'kernel from statsmodels.nonparametric.kernels.')
+
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.k_vars)
@@ -510,6 +515,11 @@ class KernelCensoredReg(KernelReg):
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
+        if not (self.ckertype in kernel_func and self.ukertype in kernel_func
+                and self.okertype in kernel_func):
+            raise ValueError('user specified kernel must be a supported '
+                             'kernel from statsmodels.nonparametric.kernels.')
+
         self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.k_vars)

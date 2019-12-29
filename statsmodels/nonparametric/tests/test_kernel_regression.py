@@ -345,6 +345,18 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
+    def test_invalid_kernel(self):
+        # silverman kernel is not currently in statsmodels kernel library
+        with pytest.raises(ValueError):
+            nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
+                             reg_type='ll', var_type='cc', bw='cv_ls',
+                             ckertype='silverman')
+
+        with pytest.raises(ValueError):
+            nparam.KernelCensoredReg(endog=[self.y], exog=[self.c1, self.c2],
+                                     reg_type='ll', var_type='cc', bw='cv_ls',
+                                     censor_val=0, ckertype='silverman')
+
     def test_efficient_user_specificed_bw(self):
 
         bw_user=[0.23, 434697.22]
