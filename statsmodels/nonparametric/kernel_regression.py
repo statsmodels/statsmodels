@@ -99,7 +99,6 @@ class KernelReg(GenericKDE):
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
-
         if not (self.ckertype in kernel_func and self.ukertype in kernel_func
                 and self.okertype in kernel_func):
             raise ValueError('user specified kernel must be a supported '
@@ -516,7 +515,6 @@ class KernelCensoredReg(KernelReg):
         self.ckertype = ckertype
         self.okertype = okertype
         self.ukertype = ukertype
-        
         if not (self.ckertype in kernel_func and self.ukertype in kernel_func
                 and self.okertype in kernel_func):
             raise ValueError('user specified kernel must be a supported '
