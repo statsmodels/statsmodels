@@ -42,6 +42,10 @@ Statistics
 Add the Oaxaca-Blinder decomposition (:class:`~statsmodels.stats.oaxaca.OaxacaBlinder`) that
 decomposes the difference in group means into with and between components.
 
+Add the Distance dependence measures statistics
+(:func:`~statsmodels.stats.dist_dependence_measures.distance_statistics`) and the Distance Covariance
+test (:func:`~statsmodels.stats.dist_dependence_measures.distance_covariance_test`).
+
 Statespace Models
 -----------------
 
