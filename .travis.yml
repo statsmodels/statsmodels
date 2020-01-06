@@ -112,7 +112,8 @@ before_install:
   - pip install pytest pip pytest-randomly nose jupyter_client nbformat
   # Moved to enable Python 3.8 since cvxopt wheel is not available
   - if [ ${USE_CVXOPT} = true ]; then pip install cvxopt; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist!=1.30"; fi;
+  # Pin to 1.29 for now due to test discovery issues
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist==1.29"; fi;
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
