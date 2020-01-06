@@ -516,6 +516,8 @@ class SelectionResults(object):
     """class to hold and analyse variable selection results
     """
     def __init__(self, res_all, attributes=None, **kwds):
+        # Note: we don't want to have access to the instance that created
+        # the results because that will change inplace.
         self.isexog = np.array([i[1] for i in res_all])
         self.aic = np.array([res_i[3] for res_i in res_all])
         self.exog_idx = [np.nonzero(ii)[0] for ii in self.isexog]

@@ -102,8 +102,8 @@ class CheckSubsetsSweeps(object):
         df_best = df_summ.iloc[:k_best]
         df_resid_best = df_resid[idx_sort_aic[:k_best]]
         if self.keep_exog > 0:
-                params_best = params[idx_sort_aic[:k_best]]
-                bse_best = bse[idx_sort_aic[:k_best]]
+            params_best = params[idx_sort_aic[:k_best]]
+            bse_best = bse[idx_sort_aic[:k_best]]
         for i in range(df_best.shape[0]):
             mod = df_best.iloc[i]
             ex_idx = mod["exog_idx"]
