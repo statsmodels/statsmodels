@@ -626,14 +626,18 @@ class VAR(TimeSeriesModel):
                 lags = 1
 
         k_trend = util.get_trendorder(trend)
+        orig_exog_names = self.exog_names
         self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = self.n_totobs - lags
 
         # add exog to data.xnames (necessary because the length of xnames also
         # determines the allowed size of VARResults.params)
         if self.exog is not None:
-            x_names_to_add = [("exog%d" % i)
-                              for i in range(self.exog.shape[1])]
+            if orig_exog_names:
+                x_names_to_add = orig_exog_names
+            else:
+                x_names_to_add = [("exog%d" % i)
+                                  for i in range(self.exog.shape[1])]
             self.data.xnames = (self.data.xnames[:k_trend] +
                                 x_names_to_add +
                                 self.data.xnames[k_trend:])
@@ -1207,7 +1211,8 @@ class VARResults(VARProcess):
         self.nobs = self.n_totobs - lag_order
         self.trend = trend
         k_trend = util.get_trendorder(trend)
-        self.exog_names = util.make_lag_names(names, lag_order, k_trend, exog)
+        self.exog_names = util.make_lag_names(names, lag_order, k_trend,
+                                              model.data.orig_exog)
         self.params = params
         self.exog = exog
 
