@@ -234,8 +234,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     Parameters
     ----------
     x : array_like
-        The data series. Assumed to have mean zero, e.g., regression residuals
-        when used as diagnostic test.
+        The data series. The data is demeaned before the test statistic is
+        computed.
     lags : {None, int, array_like}
         If lags is an integer then this is taken to be the largest lag
         that is included, the test result is reported for all smaller lag
