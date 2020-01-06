@@ -101,3 +101,23 @@ def test_ic():
                         aic(0, n, k) + 2*k*(k+1.)/(n-k-1.), decimal=14)
     assert_almost_equal(bic(0, 10, 2), np.log(n)*k, decimal=14)
     assert_almost_equal(hqic(0, 10, 2), 2*np.log(np.log(n))*k, decimal=14)
+
+
+def test_iqr_axis(reset_randomstate):
+    x1 = np.random.standard_normal((100, 100))
+    x2 = np.random.standard_normal((100, 100))
+    ax_none = iqr(x1, x2, axis=None)
+    ax_none_direct = iqr(x1.ravel(), x2.ravel())
+    assert_equal(ax_none, ax_none_direct)
+
+    ax_0 = iqr(x1, x2, axis=0)
+    assert ax_0.shape == (100,)
+    ax_0_direct = [iqr(x1[:,i], x2[:,i]) for i in range(100)]
+    assert_almost_equal(ax_0, np.array(ax_0_direct))
+
+    ax_1 = iqr(x1, x2, axis=1)
+    assert ax_1.shape == (100,)
+    ax_1_direct = [iqr(x1[i,:], x2[i,:]) for i in range(100)]
+    assert_almost_equal(ax_1, np.array(ax_1_direct))
+
+    assert any(ax_0 != ax_1)

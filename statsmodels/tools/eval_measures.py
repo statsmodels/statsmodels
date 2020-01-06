@@ -9,6 +9,8 @@ License: BSD-3
 """
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 
 def mse(x1, x2, axis=0):
     """mean squared error
@@ -256,39 +258,34 @@ def stde(x1, x2, ddof=0, axis=0):
 
 
 def iqr(x1, x2, axis=0):
-    """interquartile range of error
-
-    rounded index, no interpolations
-
-    this could use newer numpy function instead
+    """
+    Interquartile range of error
 
     Parameters
     ----------
-    x1, x2 : array_like
-       The performance measure depends on the difference between these two
-       arrays.
-    axis : int
+    x1 : array_like
+       One of the inputs into the IQR calculation.
+    x2 : array_like
+       The other input into the IQR calculation.
+    axis : {None, int}
        axis along which the summary statistic is calculated
 
     Returns
     -------
-    mse : ndarray or float
-       mean squared error along given axis.
+    irq : {float, ndarray}
+       Interquartile range along given axis.
 
     Notes
     -----
-    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
-
-    This uses ``numpy.asarray`` to convert the input, in contrast to the other
-    functions in this category.
+    If ``x1`` and ``x2`` have different shapes, then they must broadcast.
     """
-    x1 = np.asarray(x1)
-    x2 = np.asarray(x2)
+    x1 = array_like(x1, 'x1', dtype=None, ndim=None)
+    x2 = array_like(x2, 'x1', dtype=None, ndim=None)
     if axis is None:
-        x1 = np.ravel(x1)
-        x2 = np.ravel(x2)
+        x1 = x1.ravel()
+        x2 = x2.ravel()
         axis = 0
-    xdiff = np.sort(x1 - x2)
+    xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
     idx = np.round((nobs-1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
