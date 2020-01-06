@@ -8,7 +8,8 @@ cvxopt
 # test
 pytest
 pytest-randomly
-pytest-xdist!=1.30
+# Pin to 1.29 due to test discovery issues
+pytest-xdist==1.29
 flake8
 
 # doc
