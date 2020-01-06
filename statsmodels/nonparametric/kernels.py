@@ -125,6 +125,28 @@ def gaussian(h, Xi, x):
     return (1. / np.sqrt(2 * np.pi)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
 
 
+def tricube(h, Xi, x):
+    """
+    Tricube Kernel for continuous variables
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    kernel_value : ndarray, shape (nobs, K)
+        The value of the kernel function at each training point for each var.
+    """
+    u = (Xi - x) / h
+    u[np.abs(u) > 1] = 0
+    return (70. / 81) * (1 - np.abs(u)**3)**3
+
+
 def gaussian_convolution(h, Xi, x):
     """ Calculates the Gaussian Convolution Kernel """
     return (1. / np.sqrt(4 * np.pi)) * np.exp(- (Xi - x)**2 / (h**2 * 4.))
