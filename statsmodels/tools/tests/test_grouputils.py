@@ -1,7 +1,8 @@
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
+
 import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
-from pandas.util import testing as tm
 import pytest
 from scipy import sparse
 
@@ -26,7 +27,7 @@ class CheckGrouping(object):
         sorted_data, index = self.grouping.sort(self.data)
         expected_sorted_data = self.data.sort_index()
 
-        tm.assert_frame_equal(sorted_data, expected_sorted_data)
+        assert_frame_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, pd.DataFrame))
         np.testing.assert_(not index.equals(self.grouping.index))
 
@@ -45,7 +46,7 @@ class CheckGrouping(object):
         sorted_data, index = self.grouping.sort(series)
 
         expected_sorted_data = series.sort_index()
-        tm.assert_series_equal(sorted_data, expected_sorted_data)
+        assert_series_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, pd.Series))
         if hasattr(sorted_data, 'equals'):
             np.testing.assert_(not sorted_data.equals(series))

@@ -1,11 +1,10 @@
-from statsmodels.compat.pandas import assert_frame_equal
+from statsmodels.compat.pandas import assert_frame_equal, make_dataframe
 
 from datetime import datetime
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
-import pandas as pd
 
 from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.datasets import macrodata
@@ -761,7 +760,7 @@ def dummy_func_pandas_series(x):
 
 
 def test_pandas_freq_decorator():
-    x = pd.util.testing.makeDataFrame()
+    x = make_dataframe()
     # in x, get a function back that returns an x with the same columns
     func = pandas_wrapper(dummy_func)
 

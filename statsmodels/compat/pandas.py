@@ -1,14 +1,16 @@
 
 from distutils.version import LooseVersion
 
-import pandas
+import numpy as np
+import pandas as pd
 from pandas.util._decorators import deprecate_kwarg, Appender, Substitution
 
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
            'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
-           'cache_readonly', 'deprecate_kwarg', 'Appender', 'Substitution']
+           'cache_readonly', 'deprecate_kwarg', 'Appender', 'Substitution',
+           'make_dataframe', 'assert_equal']
 
-version = LooseVersion(pandas.__version__)
+version = LooseVersion(pd.__version__)
 pandas_lt_25_0 = version < LooseVersion('0.25.0')
 pandas_gte_23_0 = version >= LooseVersion('0.23.0')
 
@@ -22,9 +24,9 @@ try:
 except ImportError:
     from pandas.tseries import frequencies
 
-data_klasses = (pandas.Series, pandas.DataFrame)
+data_klasses = (pd.Series, pd.DataFrame)
 if pandas_lt_25_0:
-    data_klasses += (pandas.Panel,)
+    data_klasses += (pd.Panel,)
 
 try:
     import pandas.testing as testing
@@ -35,6 +37,32 @@ assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
+try:
+    from pandas.testing import assert_equal
+except ImportError:
+    def assert_equal(left, right):
+        """
+        pandas >= 0.24.0 has `pandas.testing.assert_equal` that works for any
+        of Index, Series, and DataFrame inputs.  Until statsmodels requirements
+        catch up to that, we implement a version of that here.
+
+        Parameters
+        ----------
+        left : pd.Index, pd.Series, or pd.DataFrame
+        right : object
+
+        Raises
+        ------
+        AssertionError
+        """
+        if isinstance(left, pd.Index):
+            assert_index_equal(left, right)
+        elif isinstance(left, pd.Series):
+            assert_series_equal(left, right)
+        elif isinstance(left, pd.DataFrame):
+            assert_frame_equal(left, right)
+        else:
+            raise TypeError(type(left))
 
 if pandas_gte_23_0:
     from pandas.util._decorators import cache_readonly
@@ -71,3 +99,34 @@ else:
             raise AttributeError("Can't set attribute")
 
     cache_readonly = CachedProperty
+
+try:
+    from pandas._testing import makeDataFrame as make_dataframe
+except ImportError:
+    import string
+
+    def rands_array(nchars, size, dtype="O"):
+        """
+        Generate an array of byte strings.
+        """
+        rands_chars = np.array(list(string.ascii_letters + string.digits),
+                               dtype=(np.str_, 1))
+        retval = (np.random.choice(rands_chars, size=nchars * np.prod(size))
+                  .view((np.str_, nchars))
+                  .reshape(size))
+        if dtype is None:
+            return retval
+        else:
+            return retval.astype(dtype)
+
+    def make_dataframe():
+        """
+        Simple verion of pandas._testing.makeDataFrame
+        """
+        n = 30
+        k = 4
+        index = pd.Index(rands_array(nchars=10, size=n), name=None)
+        data = {c: pd.Series(np.random.randn(n), index=index)
+                for c in string.ascii_uppercase[:k]}
+
+        return pd.DataFrame(data)
