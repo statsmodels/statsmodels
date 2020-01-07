@@ -5,6 +5,8 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pandas import assert_series_equal
+
 import pickle
 from io import BytesIO
 
@@ -12,7 +14,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_
-from pandas.util.testing import assert_series_equal
 # we need log in module namespace for TestPickleFormula5
 from numpy import log  # noqa:F401
 

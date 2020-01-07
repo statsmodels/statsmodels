@@ -2,6 +2,8 @@
 """
 Test VAR Model
 """
+from statsmodels.compat.pandas import assert_index_equal
+
 import os
 import sys
 import warnings
@@ -12,7 +14,6 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
-from pandas.util.testing import assert_index_equal
 
 import statsmodels.api as sm
 import statsmodels.tools.data as data_util

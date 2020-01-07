@@ -1,6 +1,7 @@
 """
 Test functions for models.tools
 """
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 from statsmodels.compat.python import lrange
 
 import string
@@ -10,7 +11,6 @@ from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
                            assert_almost_equal, assert_string_equal)
 import pandas as pd
-from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pytest
 
 from statsmodels.datasets import longley

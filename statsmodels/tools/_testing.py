@@ -8,6 +8,8 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
+from statsmodels.compat.pandas import assert_equal
+
 import os
 import sys
 from distutils.version import LooseVersion
@@ -16,7 +18,6 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_
 
 import pandas as pd
-import pandas.util.testing as tm
 
 
 class PytestTester(object):
@@ -43,31 +44,6 @@ class PytestTester(object):
                 sys.exit(status)
         except ImportError:
             raise ImportError('pytest>=3 required to run the test')
-
-
-def assert_equal(left, right):
-    """
-    pandas >= 0.24.0 has `tm.assert_equal` that works for any of
-    Index, Series, and DataFrame inputs.  Until statsmodels requirements
-    catch up to that, we implement a version of that here.
-
-    Parameters
-    ----------
-    left : pd.Index, pd.Series, or pd.DataFrame
-    right : object
-
-    Raises
-    ------
-    AssertionError
-    """
-    if isinstance(left, pd.Index):
-        tm.assert_index_equal(left, right)
-    elif isinstance(left, pd.Series):
-        tm.assert_series_equal(left, right)
-    elif isinstance(left, pd.DataFrame):
-        tm.assert_frame_equal(left, right)
-    else:
-        raise TypeError(type(left))
 
 
 def check_ttest_tvalues(results):

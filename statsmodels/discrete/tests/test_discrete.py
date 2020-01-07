@@ -8,6 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 # pylint: disable-msg=E1101
+from statsmodels.compat.pandas import assert_index_equal
 
 import os
 import warnings
@@ -17,7 +18,6 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
 import pandas as pd
-from pandas.util.testing import assert_index_equal
 import pytest
 from scipy import stats
 
@@ -31,7 +31,8 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             SpecificationWarning)
+                                             SpecificationWarning,
+                                             ConvergenceWarning)
 from scipy.stats import nbinom
 
 try:
@@ -1434,10 +1435,7 @@ def test_perfect_prediction():
     #turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
     # this will raise if you set maxiter high enough with a singular matrix
-    from pandas.util.testing import assert_produces_warning
-    # this is not thread-safe
-    with assert_produces_warning():
-        warnings.simplefilter('always')
+    with pytest.warns(ConvergenceWarning):
         res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
     assert_(not res.mle_retvals['converged'])
 
@@ -1467,10 +1465,8 @@ def test_poisson_newton():
     x = sm.add_constant(x, prepend=True)
     y_count = np.random.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
-    from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
-    with assert_produces_warning():
-        warnings.simplefilter('always')
+    with pytest.warns(ConvergenceWarning):
         res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
 
     assert_(not res.mle_retvals['converged'])
@@ -2342,9 +2338,7 @@ def test_optim_kwds_prelim():
 
 
 def test_unchanging_degrees_of_freedom():
-    import warnings
-    with pytest.warns(None):
-        data = sm.datasets.randhie.load(as_pandas=False)
+    data = sm.datasets.randhie.load(as_pandas=False)
     # see GH3734
     warnings.simplefilter('error')
     model = sm.NegativeBinomial(data.endog, data.exog, loglike_method='nb2')
