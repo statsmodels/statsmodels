@@ -212,6 +212,7 @@ Submodules
 - Prepare for Rolling Least Squares  (:pr:`6056`)
 - Improve regression doc strings  (:pr:`6077`)
 - Fix summary table header for mixedlm  (:pr:`6217`)
+- Modify quantile regression initialization to use X dimension rather than rank (:pr:`6397`)
 
 
 ``robust``

@@ -144,7 +144,7 @@ class QuantReg(RegressionModel):
         n_iter = 0
         xstar = exog
 
-        beta = np.ones(exog_rank)
+        beta = np.ones(exog.shape[1])
         # TODO: better start, initial beta is used only for convergence check
 
         # Note the following does not work yet,
