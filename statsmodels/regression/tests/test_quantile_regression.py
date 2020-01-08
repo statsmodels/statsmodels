@@ -1,8 +1,8 @@
 import scipy.stats
 import numpy as np
-import statsmodels.api as sm
 from numpy.testing import assert_allclose, assert_equal, assert_almost_equal
 from patsy import dmatrices  # pylint: disable=E0611
+import statsmodels.api as sm
 from statsmodels.regression.quantile_regression import QuantReg
 from .results.results_quantile_regression import (
     biweight_chamberlain, biweight_hsheather, biweight_bofinger,
@@ -289,3 +289,26 @@ def test_remove_data():
 
     res = QuantReg(y, X).fit(0.5)
     res.remove_data()
+
+
+def test_collinear_matrix():
+    X = np.array([[1, 0, .5], [1, 0, .8],
+                  [1, 0, 1.5], [1, 0, .25]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+
+    est_collinear = QuantReg(y, X).fit(0.5)
+    assert len(est_collinear.params) == X.shape[1]
+
+
+def test_nontrivial_singular_matrix():
+    x_one = np.random.random(1000)
+    x_two = np.random.random(1000)*10
+    x_three = np.random.random(1000)
+    intercept = np.ones(1000)
+
+    y = np.random.random(1000)*5
+    X = np.column_stack((intercept, x_one, x_two, x_three, x_one))
+
+    assert np.linalg.matrix_rank(X) < X.shape[1]
+    est_singular = QuantReg(y, X).fit(0.5)
+    assert len(est_singular.params) == X.shape[1]
