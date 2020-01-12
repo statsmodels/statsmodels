@@ -33,7 +33,8 @@ build_script:
   - SET OMP_NUM_THREADS=1
   - SET OPENBLAS_NUM_THREADS=1
   - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
-  - pip install pytest "pytest-xdist!=1.30" pytest-randomly
+  # Pin to 1.29 for now due to test discovery issues
+  - pip install pytest "pytest-xdist==1.29" pytest-randomly
   - if Defined PYTEST_DIRECTIVES ( python setup.py develop ) else ( python setup.py install )
 
 test_script:

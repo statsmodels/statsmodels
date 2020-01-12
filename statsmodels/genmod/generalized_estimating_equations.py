@@ -595,7 +595,7 @@ class GEE(base.Model):
 
         # Create list of row indices for each group
         group_labels, ix = np.unique(self.groups, return_inverse=True)
-        se = pd.Series(index=np.arange(len(ix)))
+        se = pd.Series(index=np.arange(len(ix)), dtype="int")
         gb = se.groupby(ix).groups
         dk = [(lb, np.asarray(gb[k])) for k, lb in enumerate(group_labels)]
         self.group_indices = dict(dk)

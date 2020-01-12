@@ -68,7 +68,7 @@ def test_webuse():
 
 def test_webuse_pandas():
     # test copied and adjusted from iolib/tests/test_foreign
-    from pandas.util.testing import assert_frame_equal
+    from statsmodels.compat.pandas import assert_frame_equal
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
     base_gh = "https://github.com/statsmodels/statsmodels/raw/master/" \

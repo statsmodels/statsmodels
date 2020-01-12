@@ -193,7 +193,7 @@ def robust_skewness(y, axis=0):
     mu_b = np.reshape(mu, shape)
     q2_b = np.reshape(q2, shape)
 
-    sigma = np.mean(((y - mu_b)**2), axis)
+    sigma = np.sqrt(np.mean(((y - mu_b)**2), axis))
 
     sk1 = stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)

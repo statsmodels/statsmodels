@@ -1,8 +1,9 @@
+from statsmodels.compat.pandas import assert_series_equal, assert_frame_equal
+
 from io import StringIO
 from textwrap import dedent
 
 import numpy.testing as npt
-import pandas.util.testing as pdtest
 
 import numpy
 from numpy.testing import assert_equal
@@ -195,14 +196,14 @@ class Test__ros_sort(object):
 
     def test_baseline(self):
         result = ros._ros_sort(self.df, 'conc', 'censored')
-        pdtest.assert_frame_equal(result, self.expected_baseline)
+        assert_frame_equal(result, self.expected_baseline)
 
     def test_censored_greater_than_max(self):
         df = self.df.copy()
         max_row = df['conc'].idxmax()
         df.loc[max_row, 'censored'] = True
         result = ros._ros_sort(df, 'conc', 'censored')
-        pdtest.assert_frame_equal(result, self.expected_with_warning)
+        assert_frame_equal(result, self.expected_with_warning)
 
 
 class Test_cohn_numbers(object):
@@ -231,7 +232,7 @@ class Test_cohn_numbers(object):
 
     def test_baseline(self):
         result = ros.cohn_numbers(self.df, observations='conc', censorship='censored')
-        pdtest.assert_frame_equal(result, self.expected_baseline)
+        assert_frame_equal(result, self.expected_baseline)
 
     def test_no_NDs(self):
         _df = self.df.copy()
@@ -267,7 +268,7 @@ def test__ros_group_rank():
 
     result = ros._ros_group_rank(df, 'dl_idx', 'params')
     expected = pandas.Series([1, 2, 1, 1, 2, 3, 1, 1, 2, 4, 2, 3], name='rank')
-    pdtest.assert_series_equal(result.astype(int), expected.astype(int))
+    assert_series_equal(result.astype(int), expected.astype(int))
 
 
 class Test__ros_plot_pos(object):
@@ -378,7 +379,7 @@ class CheckROSMixin(object):
             'ncen_equal', 'prob_exceedance'
         ]
         cohn = ros.cohn_numbers(self.df, self.rescol, self.cencol)
-        pdtest.assert_frame_equal(
+        assert_frame_equal(
             cohn[cols],
             self.expected_cohn[cols],
             check_less_precise=True,

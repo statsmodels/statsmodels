@@ -2,6 +2,8 @@
 """
 Test VAR Model
 """
+from statsmodels.compat.pandas import assert_index_equal
+
 import os
 import sys
 import warnings
@@ -12,7 +14,6 @@ import pandas as pd
 import pytest
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
-from pandas.util.testing import assert_index_equal
 
 import statsmodels.api as sm
 import statsmodels.tools.data as data_util
@@ -831,14 +832,14 @@ def test_summaries_exog(reset_randomstate):
 
     res = VAR(endog=endog, exog=exog).fit(maxlags=0)
     summ = res.summary().summary
-    assert 'exog0' in summ
-    assert 'exog1' in summ
-    assert 'exog2' in summ
-    assert 'exog3' in summ
+    assert 'exog_0' in summ
+    assert 'exog_1' in summ
+    assert 'exog_2' in summ
+    assert 'exog_3' in summ
 
     res = VAR(endog=endog, exog=exog).fit(maxlags=2)
     summ = res.summary().summary
-    assert 'exog0' in summ
-    assert 'exog1' in summ
-    assert 'exog2' in summ
-    assert 'exog3' in summ
+    assert 'exog_0' in summ
+    assert 'exog_1' in summ
+    assert 'exog_2' in summ
+    assert 'exog_3' in summ

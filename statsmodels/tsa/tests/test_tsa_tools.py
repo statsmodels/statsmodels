@@ -1,12 +1,13 @@
 '''tests for some time series analysis functions
 
 '''
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
+
 import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_equal,
     assert_raises, assert_array_equal)
 import pandas as pd
-from pandas.util.testing import assert_frame_equal, assert_series_equal
 
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as tsa

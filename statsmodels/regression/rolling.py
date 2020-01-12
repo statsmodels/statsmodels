@@ -8,12 +8,12 @@ Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.pandas import Appender, Substitution
 
 from collections import namedtuple
 
 import numpy as np
 from pandas import Series, DataFrame, MultiIndex
-from pandas.util._decorators import Appender, Substitution
 from scipy import stats
 
 from statsmodels.base import model

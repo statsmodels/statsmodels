@@ -1,9 +1,10 @@
+from statsmodels.compat.pandas import assert_frame_equal
+
 import pandas as pd
 import numpy as np
 from statsmodels.stats.anova import AnovaRM
 from numpy.testing import (assert_array_almost_equal, assert_raises,
                            assert_equal)
-from pandas.util.testing import assert_frame_equal
 
 
 DV = [7, 3, 6, 6, 5, 8, 6, 7,

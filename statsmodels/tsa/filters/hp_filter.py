@@ -47,7 +47,7 @@ def hpfilter(x, lamb=1600):
     Here we implemented the HP filter as a ridge-regression rule using
     scipy.sparse. In this sense, the solution can be written as
 
-    T = inv(I - lamb*K'K)x
+    T = inv(I + lamb*K'K)x
 
     where I is a nobs x nobs identity matrix, and K is a (nobs-2) x nobs matrix
     such that
