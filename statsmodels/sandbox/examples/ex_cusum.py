@@ -91,7 +91,7 @@ assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #plt.show()
 
 ####################  Example break test
-H, crit95, ft, s = breaks_hansen(res1)
+H, crit95 = breaks_hansen(res1)
 print(H)
 print(crit95)
 

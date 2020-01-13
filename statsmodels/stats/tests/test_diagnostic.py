@@ -1106,7 +1106,6 @@ def test_encompasing_direct(cov_type, reset_randomstate):
 def test_encompasing_error(reset_randomstate):
     x = np.random.standard_normal((500, 2))
     e = np.random.standard_normal((500, 1))
-    x_extra = np.random.standard_normal((500, 2))
     z_extra = np.random.standard_normal((500, 3))
     y = x @ np.ones((2, 1)) + e
     z = np.hstack([x, z_extra])

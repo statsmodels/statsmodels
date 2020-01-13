@@ -37,7 +37,6 @@ from scipy import stats
 
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
-from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.validation import (array_like, int_like, bool_like,
                                           string_like, dict_like)
@@ -490,6 +489,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, 'lags', dtype=np.int)
     maxlag = lags.max()
+
+    # Avoid cyclic import
+    from statsmodels.tsa.stattools import acf
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
     sacf = acf(x, nlags=maxlag, fft=False)
