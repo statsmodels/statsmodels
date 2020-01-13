@@ -716,34 +716,6 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
     return np.maximum(power[0], 0), power[1:]
 
 
-def _table_proportion(count, nobs):
-    '''create a k by 2 contingency table for proportion
-
-    helper function for proportions_chisquare
-
-    Parameters
-    ----------
-    count : {int, array_like}
-        the number of successes in nobs trials.
-    nobs : int
-        the number of trials or observations.
-
-    Returns
-    -------
-    table : ndarray
-        (k, 2) contingency table
-
-    Notes
-    -----
-    recent scipy has more elaborate contingency table functions
-
-    '''
-    table = np.column_stack((count, nobs - count))
-    expected = table.sum(0) * table.sum(1)[:,None] * 1. / table.sum()
-    n_rows = table.shape[0]
-    return table, expected, n_rows
-
-
 def proportions_ztest(count, nobs, value=None, alternative='two-sided',
                       prop_var=False):
     """
@@ -897,6 +869,7 @@ def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
                             prop_var=prop_var_upp, value=upp)
     return np.maximum(tt1[1], tt2[1]), tt1, tt2,
 
+
 def proportions_chisquare(count, nobs, value=None):
     '''test for proportions based on chisquare test
 
@@ -940,7 +913,9 @@ def proportions_chisquare(count, nobs, value=None):
 
     '''
     nobs = np.atleast_1d(nobs)
-    table, expected, n_rows = _table_proportion(count, nobs)
+    table = np.column_stack((count, nobs - count))
+    expected = stats.contingency.expected_freq(table)
+    n_rows = table.shape[0]
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
         ddof = n_rows - 1
@@ -951,8 +926,6 @@ def proportions_chisquare(count, nobs, value=None):
     chi2stat, pval = stats.chisquare(table.ravel(), expected.ravel(),
                                      ddof=ddof)
     return chi2stat, pval, (table, expected)
-
-
 
 
 def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
