@@ -3134,6 +3134,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
         """
         if method is None:
             method = 'ljungbox'

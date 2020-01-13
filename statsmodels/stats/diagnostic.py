@@ -43,13 +43,13 @@ from statsmodels.tools.validation import (array_like, int_like, bool_like,
                                           string_like, dict_like)
 from statsmodels.stats._lilliefors import (kstest_fit, lilliefors,
                                            kstest_normal, kstest_exponential)
-from statsmodels.stats._adnorm import normal_ad
+from statsmodels.stats._adnorm import normal_ad, anderson_statistic
 
 __all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
            "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
            "acorr_ljungbox", "acorr_lm", "het_arch", "het_breuschpagan",
            "het_goldfeldquandt", "het_white", "spec_white", "linear_lm",
-           "linear_rainbow", "linear_harvey_collier"]
+           "linear_rainbow", "linear_harvey_collier", "anderson_statistic"]
 
 
 def check_nested(small, large):
@@ -295,7 +295,7 @@ class CompareJ(object):
 
 def compare_encompassing(results_x, results_z, cov_type="nonrobust",
                          cov_kwargs=None):
-    """
+    r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
 
     Parameters
@@ -313,14 +313,40 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
+    Returns
+    -------
+    DataFrame
+        A DataFrame with two rows and four columns. The row labeled x
+        contains results for the null that the model contained in
+        results_x is equivalent to the encompassing model. The results in
+        the row labeled z correspond to the test that the model contained
+        in results_z are equivalent to the encompassing model. The columns
+        are the test statistic, its p-value, and the numerator and
+        denominator degrees of freedom. The test statistic has an F
+        distribution. The numerator degree of freedom is the number of
+        variables in the encompassing model that are not in the x or z model.
+        The denominator degree of freedom is the number of observations minus
+        the number of variables in the nesting model.
+
     Notes
     -----
+    The null is that the fit produced using x is the same as the fit
+    produced using both x and z. When testing whether x is encompassed,
+    the model estimated is
+
+    .. math::
+
+        Y = X\beta + Z_1\gamma + \epsilon
+
+    where :math:`Z_1` are the columns of :math:`Z` that are not spanned by
+    :math:`X`. The null is :math:`H_0:\gamma=0`. When testing whether z is
+    encompassed, the roles of :math:`X` and :math:`Z` are reversed.
+
+    Implementation of  Davidson and MacKinnon (1993)'s encompassing test.
     Performs two Wald tests where models x and z are compared to a model
     that nests the two. The Wald tests are performed by using an OLS
     regression.
     """
-    # 1. Construct nexting model for each
-    # 2. Wald test extra columns are 0 for each
     if not isinstance(results_x, RegressionResultsWrapper):
         raise TypeError("results_x must come from a linear regression model")
     if not isinstance(results_z, RegressionResultsWrapper):
@@ -335,25 +361,27 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         eps = np.finfo(np.double).eps
         tol = s.max(axis=-1, keepdims=True) * max(err.shape) * eps
         non_zero = np.abs(s) > tol
-        if non_zero.sum() == 0:
-            raise RuntimeError("Models are nested. Test requires non-nested"
+        if check_nested(b, a):
+            raise RuntimeError("Models are nested. Test requires non-nested "
                                "models.")
         aug = err @ v[:, non_zero]
-        aug_reg = np.hstack([x, aug])
+        aug_reg = np.hstack([a, aug])
         k_a = aug.shape[1]
         k = aug_reg.shape[1]
 
         res = OLS(endog, aug_reg).fit(cov_type=cov_type, cov_kwds=cov_kwargs)
         r_matrix = np.zeros((k_a, k))
         r_matrix[:, -k_a:] = np.eye(k_a)
-        test = res.wald_test(r_matrix)
-        return test.fvalue, test.pvalue
+        test = res.wald_test(r_matrix, use_f=True)
+        stat, pvalue = float(np.squeeze(test.statistic)), float(test.pvalue)
+        df_num, df_denom = int(test.df_num), int(test.df_denom)
+        return stat, pvalue, df_num, df_denom
 
-    z_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
-    x_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
+    x_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
+    z_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
     return pd.DataFrame([x_nested, z_nested],
                         index=['x', 'z'],
-                        columns=['stat', 'pvalue'])
+                        columns=['stat', 'pvalue', 'df_num', 'df_denom'])
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
@@ -377,7 +405,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         is set.
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
-        Box-Pierce test results are returned
+        Box-Pierce test results are returned.
     model_df : int
         Number of degrees of freedom consumed by the model. In an ARMA model,
         this value is usually p+q where p is the AR order and q is the MA
@@ -412,11 +440,22 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         lag - model_df. If lag - model_df <= 0, then NaN is returned for the
         pvalue.
 
+    See Also
+    --------
+    statsmodels.regression.linear_model.OLS.fit
+        Regression model fitting.
+    statsmodels.regression.linear_model.RegressionResults
+        Results from linear regression models.
+
     Notes
     -----
     Ljung-Box and Box-Pierce statistic differ in their scaling of the
     autocorrelation function. Ljung-Box test is has better finite-sample
     properties.
+
+    References
+    ----------
+    .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
 
     Examples
     --------
@@ -425,17 +464,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     >>> sm.stats.acorr_ljungbox(res.resid, lags=[10], return_df=True)
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
-
-    References
-    ----------
-    .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
-
-    See Also
-    --------
-    statsmodels.regression.linear_model.OLS.fit
-        Regression model fitting.
-    statsmodels.regression.linear_model.RegressionResults
-        Results from linear regression models.
     """
     x = array_like(x, 'x')
     period = int_like(period, 'period', optional=True)
@@ -501,7 +529,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
              ddof=0, cov_type='nonrobust', cov_kwargs=None):
     """
-    Lagrange Multiplier tests for autocorrelation
+    Lagrange Multiplier tests for autocorrelation.
 
     This is a generic Lagrange Multiplier test for autocorrelation. Returns
     Engle's ARCH test if resid is the squared residual array. Breusch-Godfrey
@@ -510,7 +538,7 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
     Parameters
     ----------
     resid : array_like
-        residuals from an estimation, or time series
+        Time series to test.
     nlag : int
         Highest lag to use. The behavior of this parameter will change
         after 0.12.
@@ -519,7 +547,7 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
         parameter is deprecated and will be removed after 0.12.  Searching
         for model specification cannot control test siez.
     store : bool
-        If true then the intermediate results are also returned
+        If true then the intermediate results are also returned.
     period : {int, None}
         The period of a Seasonal time series.  Used to compute the max lag
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
@@ -528,20 +556,6 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
     ddof : int
         The number of degrees of freedom consumed by the model used to
         produce resid. The default value is 0.
-
-    Returns
-    -------
-    lm : float
-        Lagrange multiplier test statistic
-    lmpval : float
-        p-value for Lagrange multiplier test
-    fval : float
-        fstatistic for F test, alternative version of the same test based on
-        F test for the parameter restriction
-    fpval : float
-        pvalue for F test
-    res_store : ResultsStore, optional
-        Intermediate results. Only returned if store=True
     cov_type : str
         Covariance type. The default is 'nonrobust` which uses the classic
         OLS covariance estimator. Specify one of 'HC0', 'HC1', 'HC2', 'HC3'
@@ -551,11 +565,19 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
 
-    Notes
-    -----
-    The test statistic is computed as (nobs - ddof) * r2 where r2 is the
-    R-squared from a regression on the residual on nlag lags of the
-    residual.
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic.
+    lmpval : float
+        The p-value for Lagrange multiplier test.
+    fval : float
+        The f statistic of the F test, alternative version of the same
+        test based on F test for the parameter restriction.
+    fpval : float
+        The pvalue of the F test.
+    res_store : ResultsStore, optional
+        Intermediate results. Only returned if store=True.
 
     See Also
     --------
@@ -565,6 +587,12 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
         Breusch-Godfrey test for serial correlation.
     acorr_ljung_box
         Ljung-Box test for serial correlation.
+
+    Notes
+    -----
+    The test statistic is computed as (nobs - ddof) * r2 where r2 is the
+    R-squared from a regression on the residual on nlag lags of the
+    residual.
     """
     resid = array_like(resid, "resid", ndim=1)
     cov_type = string_like(cov_type, 'cov_type')

@@ -220,32 +220,32 @@ def pval_lf(d_max, n):
 
 def kstest_fit(x, dist='norm', pvalmethod=None):
     """
-    Lilliefors test for normality or an exponential distribution
+    Test assumed normal or exponetntial distribution using Lilliefor's test.
 
-    Lilliefors test is a Kolmogorov-Smirnov test with estimated parameters
+    Lilliefor's test is a Kolmogorov-Smirnov test with estimated parameters.
 
     Parameters
     ----------
     x : array_like, 1d
-        Data to test
+        Data to test.
     dist : {'norm', 'exp'}, optional
-        Assumed distribution
+        The assumed distribution.
     pvalmethod : {'approx', 'table'}, optional
         The method used to compute the p-value of the test statistic. In
         general, 'table' is preferred and makes use of a very large simulation.
         'approx' is only valid for normality. if `dist = 'exp'` `table` is
         always used. 'approx' uses the approximation formula of Dalal and
         Wilkinson, valid for pvalues < 0.1. If the pvalue is larger than 0.1,
-        then the result of `table` is returned
+        then the result of `table` is returned.
 
     Returns
     -------
     ksstat : float
-        Kolmogorov-Smirnov test statistic with estimated mean and variance
+        Kolmogorov-Smirnov test statistic with estimated mean and variance.
     pvalue : float
         If the pvalue is lower than some threshold, e.g. 0.05, then we can
         reject the Null hypothesis that the sample comes from a normal
-        distribution
+        distribution.
 
     Notes
     -----
@@ -305,6 +305,5 @@ def kstest_fit(x, dist='norm', pvalmethod=None):
 
 
 lilliefors = kstest_fit
-
 kstest_normal = kstest_fit
 kstest_exponential = partial(kstest_fit, dist='exp')

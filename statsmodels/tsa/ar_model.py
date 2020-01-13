@@ -1830,6 +1830,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.diagnostic import acorr_ljungbox

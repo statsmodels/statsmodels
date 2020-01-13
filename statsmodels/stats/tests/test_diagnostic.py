@@ -475,7 +475,7 @@ class TestDiagnosticG(object):
         cj.run(res1, res2, attach=True)
         assert hasattr(cj, "res_zx")
 
-    @pytest.mark.parametrize("comp",[smsdia.compare_cox, smsdia.compare_j])
+    @pytest.mark.parametrize("comp", [smsdia.compare_cox, smsdia.compare_j])
     def test_compare_error(self, comp, diagnostic_data):
         data = diagnostic_data
         res1 = OLS(data.y, data[["c", "x1"]]).fit()
@@ -1067,6 +1067,57 @@ def test_ljungbox_period():
     res = smsdia.acorr_ljungbox(ar_res.resid, period=13, return_df=True)
     res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26, return_df=True)
     assert_frame_equal(res, res2)
+
+
+@pytest.mark.parametrize('cov_type', ['nonrobust', 'HC0'])
+def test_encompasing_direct(cov_type, reset_randomstate):
+    x = np.random.standard_normal((500, 2))
+    e = np.random.standard_normal((500, 1))
+    x_extra = np.random.standard_normal((500, 2))
+    z_extra = np.random.standard_normal((500, 3))
+    y = x @ np.ones((2, 1)) + e
+    x1 = np.hstack([x[:, :1], x_extra])
+    z1 = np.hstack([x, z_extra])
+    res1 = OLS(y, x1).fit()
+    res2 = OLS(y, z1).fit()
+    df = smsdia.compare_encompassing(res1, res2, cov_type=cov_type)
+
+    direct1 = OLS(y, np.hstack([x1, x[:, 1:], z_extra])).fit(cov_type=cov_type)
+    r1 = np.zeros((4, 3 + 1 + 3))
+    r1[:, -4:] = np.eye(4)
+    direct_test_1 = direct1.wald_test(r1, use_f=True)
+    expected = (float(np.squeeze(direct_test_1.statistic)),
+                float(np.squeeze(direct_test_1.pvalue)),
+                int(direct_test_1.df_num),
+                int(direct_test_1.df_denom))
+    assert_allclose(np.asarray(df.loc['x']), expected)
+
+    direct2 = OLS(y, np.hstack([z1, x_extra])).fit(cov_type=cov_type)
+    r2 = np.zeros((2, 2 + 3 + 2))
+    r2[:, -2:] = np.eye(2)
+    direct_test_2 = direct2.wald_test(r2, use_f=True)
+    expected = (float(np.squeeze(direct_test_2.statistic)),
+                float(np.squeeze(direct_test_2.pvalue)),
+                int(direct_test_2.df_num),
+                int(direct_test_2.df_denom))
+    assert_allclose(np.asarray(df.loc['z']), expected)
+
+
+def test_encompasing_error(reset_randomstate):
+    x = np.random.standard_normal((500, 2))
+    e = np.random.standard_normal((500, 1))
+    x_extra = np.random.standard_normal((500, 2))
+    z_extra = np.random.standard_normal((500, 3))
+    y = x @ np.ones((2, 1)) + e
+    z = np.hstack([x, z_extra])
+    res1 = OLS(y, x).fit()
+    res2 = OLS(y, z).fit()
+    with pytest.raises(RuntimeError, match="Models are nested."):
+        smsdia.compare_encompassing(res1, res2)
+    with pytest.raises(TypeError, match="results_z must come from a linear"):
+        smsdia.compare_encompassing(res1, 2)
+    with pytest.raises(TypeError, match="results_x must come from a linear"):
+        smsdia.compare_encompassing(4, 2)
 
 # R code used in testing
 # J test
