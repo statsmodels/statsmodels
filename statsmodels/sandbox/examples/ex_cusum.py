@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import recursive_olsresiduals
-from statsmodels.sandbox.stats.diagnostic import _recursive_olsresiduals2 as recursive_olsresiduals2
-from statsmodels.sandbox.stats.diagnostic import (
+from statsmodels.stats.diagnostic import (
     breaks_hansen, breaks_cusumolsresid)
 
 
@@ -85,7 +84,7 @@ print('cusum test reject:')
 print(((rcusum[1:]>rcusumci[1]) | (rcusum[1:]<rcusumci[0])).any())
 
 rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusumci2 = \
-            recursive_olsresiduals2(res1, skip)
+            recursive_olsresiduals(res1, skip)
 #assert_almost_equal(rparams[skip+1:], rparams2[skip:-1],13)
 assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #np.c_[rparams[skip+1:], rparams2[skip:-1]]
