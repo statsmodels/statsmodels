@@ -517,3 +517,24 @@ This function attempts to port the functionality of the oaxaca command in STATA 
 
    OaxacaBlinder
    OaxacaResults
+
+
+Distance Dependence Measures
+----------------------------
+
+Distance dependence measures and the Distance Covariance (dCov) test.
+
+.. module:: statsmodels.stats.dist_dependence_measures
+   :synopsis: Distance Dependence Measures
+
+.. currentmodule:: statsmodels.stats.dist_dependence_measures
+
+.. autosummary::
+   :toctree: generated/
+
+   distance_covariance_test
+   distance_statistics
+   distance_correlation
+   distance_covariance
+   distance_variance
+
