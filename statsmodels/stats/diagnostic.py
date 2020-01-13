@@ -297,8 +297,63 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
                          cov_kwargs=None):
     """
     Davidson-MacKinnon encompassing test for comparing non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    cov_type : str
+        Covariance type. The default is 'nonrobust` which uses the classic
+        OLS covariance estimator. Specify one of 'HC0', 'HC1', 'HC2', 'HC3'
+        to use White's covariance estimator. All covariance types supported
+        by ``OLS.fit`` are accepted.
+    cov_kwargs : dict
+        Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
+        for more details.
+
+    Notes
+    -----
+    Performs two Wald tests where models x and z are compared to a model
+    that nests the two. The Wald tests are performed by using an OLS
+    regression.
     """
-    raise NotImplementedError
+    # 1. Construct nexting model for each
+    # 2. Wald test extra columns are 0 for each
+    if not isinstance(results_x, RegressionResultsWrapper):
+        raise TypeError("results_x must come from a linear regression model")
+    if not isinstance(results_z, RegressionResultsWrapper):
+        raise TypeError("results_z must come from a linear regression model")
+    y = results_x.model.endog
+    x = results_x.model.exog
+    z = results_z.model.exog
+
+    def _test_nested(endog, a, b, cov_type, cov_kwargs):
+        err = b - a @ np.linalg.lstsq(a, b, rcond=None)[0]
+        u, s, v = np.linalg.svd(err)
+        eps = np.finfo(np.double).eps
+        tol = s.max(axis=-1, keepdims=True) * max(err.shape) * eps
+        non_zero = np.abs(s) > tol
+        if non_zero.sum() == 0:
+            raise RuntimeError("Models are nested. Test requires non-nested"
+                               "models.")
+        aug = err @ v[:, non_zero]
+        aug_reg = np.hstack([x, aug])
+        k_a = aug.shape[1]
+        k = aug_reg.shape[1]
+
+        res = OLS(endog, aug_reg).fit(cov_type=cov_type, cov_kwds=cov_kwargs)
+        r_matrix = np.zeros((k_a, k))
+        r_matrix[:, -k_a:] = np.eye(k_a)
+        test = res.wald_test(r_matrix)
+        return test.fvalue, test.pvalue
+
+    z_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
+    x_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
+    return pd.DataFrame([x_nested, z_nested],
+                        index=['x', 'z'],
+                        columns=['stat', 'pvalue'])
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
@@ -378,7 +433,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     See Also
     --------
     statsmodels.regression.linear_model.OLS.fit
+        Regression model fitting.
     statsmodels.regression.linear_model.RegressionResults
+        Results from linear regression models.
     """
     x = array_like(x, 'x')
     period = int_like(period, 'period', optional=True)
@@ -442,7 +499,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 
 @deprecate_kwarg('maxlag', 'nlag')
 def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
-             ddof=0, cov_type='nonrobust', cov_kwds=None):
+             ddof=0, cov_type='nonrobust', cov_kwargs=None):
     """
     Lagrange Multiplier tests for autocorrelation
 
@@ -490,7 +547,7 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
         OLS covariance estimator. Specify one of 'HC0', 'HC1', 'HC2', 'HC3'
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwds : dict
+    cov_kwargs : dict
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
 
@@ -503,12 +560,16 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
     See Also
     --------
     het_arch
+        Conditional heteroskedasticity testing.
     acorr_breusch_godfrey
+        Breusch-Godfrey test for serial correlation.
     acorr_ljung_box
+        Ljung-Box test for serial correlation.
     """
     resid = array_like(resid, "resid", ndim=1)
     cov_type = string_like(cov_type, 'cov_type')
-    cov_kwds = dict_like(cov_kwds, 'cov_kwds')
+    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
+    cov_kwargs = dict_like(cov_kwargs, 'cov_kwargs')
     nobs = resid.shape[0]
     if period is not None and nlag is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -566,7 +627,7 @@ def acorr_lm(resid, nlag=None, autolag='AIC', store=False, *, period=None,
         usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
-                                                     cov_kwds=cov_kwds)
+                                                     cov_kwargs=cov_kwargs)
     fval = resols.fvalue
     fpval = resols.f_pvalue
     if cov_type == "nonrobust":
@@ -637,10 +698,10 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     ----------
     results : Result instance
         Estimation results for which the residuals are tested for serial
-        correlation
+        correlation.
     nlags : int
         Number of lags to include in the auxiliary regression. (nlags is
-        highest lag)
+        highest lag).
     store : bool
         If store is true, then an additional class instance that contains
         intermediate results is returned.
@@ -648,17 +709,17 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     Returns
     -------
     lm : float
-        Lagrange multiplier test statistic
+        Lagrange multiplier test statistic.
     lmpval : float
-        p-value for Lagrange multiplier test
+        The p-value for Lagrange multiplier test.
     fval : float
-        fstatistic for F test, alternative version of the same test based on
-        F test for the parameter restriction
+        The value of the f statistic for F test, alternative version of the
+        same test based on F test for the parameter restriction.
     fpval : float
-        pvalue for F test
+        The pvalue for F test.
     res_store : ResultsStore
-        a class instance that holds intermediate results. Only returned if
-        store=True
+        A class instance that holds intermediate results. Only returned if
+        store=True.
 
     Notes
     -----
@@ -969,6 +1030,7 @@ class HetGoldfeldQuandt(object):
     See Also
     --------
     het_goldfeldquant
+        Goldfeld-Quant heteroskedasticity test.
     """
 
     def __init__(self):
@@ -988,6 +1050,7 @@ class HetGoldfeldQuandt(object):
         See Also
         --------
         het_goldfeldquant
+            Goldfeld-Quant heteroskedasticity test.
         """
         res = het_goldfeldquandt(y, x, idx=idx, split=split, drop=drop,
                                  alternative=alternative, store=attach)
