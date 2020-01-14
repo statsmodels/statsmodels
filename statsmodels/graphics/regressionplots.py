@@ -309,7 +309,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
        The endogenous or response variable. If string is given, you can use a
        arbitrary translations as with a formula.
     exog_i : {ndarray, str}
-        THe exogenous, explanatory variable. If string is given, you can use a
+        The exogenous, explanatory variable. If string is given, you can use a
         arbitrary translations as with a formula.
     exog_others : {ndarray, list[str]}
         Any other exogenous, explanatory variables. If a list of strings is

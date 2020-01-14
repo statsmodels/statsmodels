@@ -76,7 +76,7 @@ def omni_normtest(resids, axis=0):
 
 def jarque_bera(resids, axis=0):
     r"""
-    Calculates the Jarque-Bera test for normality
+    The Jarque-Bera test of normality.
 
     Parameters
     ----------

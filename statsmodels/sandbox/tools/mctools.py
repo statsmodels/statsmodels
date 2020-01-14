@@ -144,7 +144,7 @@ class StatTestMC(object):
             for ii in range(1, nrepl-1, nreturns):
                 x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
                 #should I ravel?
-                mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
+                mcres[ii] = statfun(x, *statsargs)
         #more than one return statistic
         else:
             self.nreturn = nreturns = len(statindices)

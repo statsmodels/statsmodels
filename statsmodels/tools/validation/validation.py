@@ -44,7 +44,7 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
         __array__ method returns an array, or any (nested) sequence.
     name : str
         Name of the variable to use in exceptions
-    dtype : {None, numpy.dtype}
+    dtype : {None, numpy.dtype, str}
         Required dtype. Default is double. If None, does not change the dtype
         of obj (if present) or uses NumPy to automatically detect the dtype
     ndim : {int, None}

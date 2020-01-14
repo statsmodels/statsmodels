@@ -904,7 +904,7 @@ a wrapper for scipy.stats.kde.mvndst
 *     CORREL REAL, array of correlation coefficients; the correlation
 *            coefficient in row I column J of the correlation matrix
 *            should be stored in CORREL( J + ((I-2)*(I-1))/2 ), for J < I.
-*            THe correlation matrix must be positive semidefinite.
+*            The correlation matrix must be positive semidefinite.
 *     MAXPTS INTEGER, maximum number of function values allowed. This
 *            parameter can be used to limit the time. A sensible
 *            strategy is to start with MAXPTS = 1000*N, and then
