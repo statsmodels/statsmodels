@@ -32,8 +32,8 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
 
     Returns
     -------
-    ad2 : {float, ndarray}
-        Anderson-Darling statistic.
+    {float, ndarray}
+        The Anderson-Darling statistic.
     """
     x = array_like(x, 'x', ndim=None)
     fit = bool_like(fit, 'fit')

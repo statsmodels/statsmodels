@@ -203,6 +203,12 @@ class TestDiagnosticG(object):
                      7.7945101228430946, 1.0354575277704231e-06)
         assert_almost_equal(hw, hw_values)
 
+    def test_het_white_error(self):
+        res = self.res
+
+        with pytest.raises(ValueError, match="x should have a constant"):
+            hw = smsdia.het_white(res.resid, res.model.exog[:,:1])
+
     def test_het_arch(self):
         # test het_arch and indirectly het_lm against R
         # > library(FinTS)
@@ -471,9 +477,8 @@ class TestDiagnosticG(object):
         res1 = OLS(data.y, data[["c", "x1"]]).fit()
         res2 = OLS(data.y, data[["c", "x2"]]).fit()
         cj(res1, res2)
-        assert not hasattr(cj, "res_zx")
         cj.run(res1, res2, attach=True)
-        assert hasattr(cj, "res_zx")
+        assert cj.res_zx is not None
 
     @pytest.mark.parametrize("comp", [smsdia.compare_cox, smsdia.compare_j])
     def test_compare_error(self, comp, diagnostic_data):
@@ -519,9 +524,8 @@ class TestDiagnosticG(object):
         res1 = OLS(data.y, data[["c", "x1"]]).fit()
         res2 = OLS(data.y, data[["c", "x2"]]).fit()
         cc(res1, res2)
-        assert not hasattr(cc, "res_dx")
         cc.run(res1, res2, attach=True)
-        assert hasattr(cc, "res_dx")
+        assert cc.res_dx is not None
 
     def test_cusum_ols(self):
         # R library(strucchange)
@@ -611,6 +615,10 @@ class TestDiagnosticG(object):
         # assert_equal(np.round(rr[3][4:], 3), np.diff(reccumres_standardize))
         assert_almost_equal(rr[3][4:], np.diff(reccumres_standardize), 3)
         assert_almost_equal(rr[4][3:].std(ddof=1), 10.7242, decimal=4)
+        order = np.arange(self.res.model.endog.shape[0])
+        rr_order = smsdia.recursive_olsresiduals(self.res, skip=3, alpha=0.95,
+                                                 order_by=order)
+        assert_allclose(rr[0], rr_order[0])
 
         # regression number, visually checked with graph from gretl
         ub0 = np.array([13.37318571, 13.50758959, 13.64199346, 13.77639734,
@@ -799,6 +807,22 @@ def test_spec_white():
             assert_almost_equal(wsres, [6.767, 0.454, 7], decimal=3)
         else:
             assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
+
+
+def test_spec_white_error(reset_randomstate):
+    with pytest.raises(ValueError, match="resid should have"):
+        smsdia.spec_white(np.random.standard_normal(100))
+
+
+def test_linear_lm_direct(reset_randomstate):
+    endog = np.random.standard_normal(500)
+    exog = add_constant(np.random.standard_normal((500, 3)))
+    res = OLS(endog, exog).fit()
+    lm_res = smsdia.linear_lm(res.resid, exog)
+    aug = np.hstack([exog, exog[:,1:]**2])
+    res_aug = OLS(res.resid, aug).fit()
+    stat = res_aug.rsquared * aug.shape[0]
+    assert_allclose(lm_res[0], stat)
 
 
 # TODO: make this a test or move/remove
@@ -1111,12 +1135,28 @@ def test_encompasing_error(reset_randomstate):
     z = np.hstack([x, z_extra])
     res1 = OLS(y, x).fit()
     res2 = OLS(y, z).fit()
-    with pytest.raises(RuntimeError, match="Models are nested."):
+    with pytest.raises(ValueError, match="The exog in results_x"):
         smsdia.compare_encompassing(res1, res2)
     with pytest.raises(TypeError, match="results_z must come from a linear"):
         smsdia.compare_encompassing(res1, 2)
     with pytest.raises(TypeError, match="results_x must come from a linear"):
         smsdia.compare_encompassing(4, 2)
+
+
+@pytest.mark.smoke
+@pytest.mark.parametrize('power',[2, 3])
+@pytest.mark.parametrize('test_type',["fitted","exog","princomp"])
+@pytest.mark.parametrize('use_f',[True, False])
+@pytest.mark.parametrize('cov',[dict(cov_type="nonrobust", cov_kwargs={}),
+                                dict(cov_type="HC0", cov_kwargs={})])
+def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
+    x = add_constant(np.random.standard_normal((1000,3)))
+    e = np.random.standard_normal((1000,1))
+    x = np.hstack([x, x[:,1:]**2])
+    y = x @ np.ones((7,1)) + e
+    res = OLS(y, x[:,:4]).fit()
+    reset = smsdia.linear_reset(res, power=power, test_type=test_type,
+                                use_f=use_f, **cov)
 
 # R code used in testing
 # J test

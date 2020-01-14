@@ -220,9 +220,9 @@ def pval_lf(d_max, n):
 
 def kstest_fit(x, dist='norm', pvalmethod=None):
     """
-    Test assumed normal or exponetntial distribution using Lilliefor's test.
+    Test assumed normal or exponential distribution using Lilliefors' test.
 
-    Lilliefor's test is a Kolmogorov-Smirnov test with estimated parameters.
+    Lilliefors' test is a Kolmogorov-Smirnov test with estimated parameters.
 
     Parameters
     ----------

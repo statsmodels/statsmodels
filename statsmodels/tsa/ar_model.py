@@ -1877,6 +1877,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.stattools import jarque_bera

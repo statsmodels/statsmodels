@@ -65,21 +65,12 @@ Residual Diagnostics and Specification Tests
    het_breuschpagan
    het_goldfeldquandt
    het_white
-
-   kstest_exponential
-   kstest_fit
-   kstest_normal
-   lilliefors
+   spec_white
 
    linear_harvey_collier
    linear_lm
    linear_rainbow
    linear_reset
-
-   normal_ad
-   spec_white
-
-   unitroot_adf
 
 
 Outliers and influence measures
@@ -159,6 +150,8 @@ some tests for goodness of fit for univariate distributions
 
    anderson_statistic
    normal_ad
+   kstest_exponential
+   kstest_fit
    kstest_normal
    lilliefors
 
