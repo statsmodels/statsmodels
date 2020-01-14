@@ -67,9 +67,9 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     sl2 = [slice(None)] * x.ndim
     sl2[axis] = slice(None, None, -1)
     sl2 = tuple(sl2)
-    S = np.sum((2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log(1 - z[sl2])),
+    s = np.sum((2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log1p(-z[sl2])),
                axis=axis)
-    a2 = -nobs - S
+    a2 = -nobs - s
     return a2
 
 

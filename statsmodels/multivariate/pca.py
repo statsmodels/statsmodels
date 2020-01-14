@@ -37,7 +37,7 @@ class PCA(object):
         but not standardizing is equivalent to computing principal components
         from the covariance matrix of data.
     normalize : bool , optional
-        Indicates whether th normalize the factors to have unit inner product.
+        Indicates whether to normalize the factors to have unit inner product.
         If False, the loadings will have unit inner product.
     gls : bool, optional
         Flag indicating to implement a two-step GLS estimator where

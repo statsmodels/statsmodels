@@ -40,7 +40,7 @@ def diagnostic_data():
     y = x.sum(1) + e
     c = np.ones_like(y)
     data = pd.DataFrame(np.c_[y, c, x], columns=["y", "c", "x1", "x2", "x3"])
-    data.to_csv("diagnostic-data.csv")
+
     return data
 
 
@@ -206,8 +206,8 @@ class TestDiagnosticG(object):
     def test_het_white_error(self):
         res = self.res
 
-        with pytest.raises(ValueError, match="x should have a constant"):
-            hw = smsdia.het_white(res.resid, res.model.exog[:,:1])
+        with pytest.raises(ValueError, match="White's heteroskedasticity test "):
+            smsdia.het_white(res.resid, res.model.exog[:, :1])
 
     def test_het_arch(self):
         # test het_arch and indirectly het_lm against R
@@ -224,8 +224,8 @@ class TestDiagnosticG(object):
                            pvalue=0.732638635007718, parameters=(12,),
                            distr='chi2')
 
-        at4 = smsdia.het_arch(self.res.resid, maxlag=4)
-        at12 = smsdia.het_arch(self.res.resid, maxlag=12)
+        at4 = smsdia.het_arch(self.res.resid, nlags=4)
+        at12 = smsdia.het_arch(self.res.resid, nlags=12)
         compare_to_reference(at4[:2], archtest_4, decimal=(12, 13))
         compare_to_reference(at12[:2], archtest_12, decimal=(12, 13))
 
@@ -234,17 +234,18 @@ class TestDiagnosticG(object):
         # unfortunately optimal lag=1 for this data
         resid = self.res.resid
 
-        res1 = smsdia.het_arch(resid, maxlag=1, autolag=None, store=True)
+        res1 = smsdia.het_arch(resid, nlags=1, autolag=None, store=True)
         rs1 = res1[-1]
-
-        res2 = smsdia.het_arch(resid, maxlag=5, autolag='aic', store=True)
+        with pytest.warns(FutureWarning, match="autolag is deprecated and"):
+            res2 = smsdia.het_arch(resid, nlags=5, autolag='aic', store=True)
         rs2 = res2[-1]
 
         assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=13)
         assert_almost_equal(res2[:4], res1[:4], decimal=13)
 
-        # test that smallest lag, maxlag=1 works
-        res3 = smsdia.het_arch(resid, maxlag=1, autolag='aic')
+        # test that smallest lag, nlags=1 works
+        with pytest.warns(FutureWarning, match="autolag is deprecated and"):
+            res3 = smsdia.het_arch(resid, nlags=1, autolag='aic')
         assert_almost_equal(res3[:4], res1[:4], decimal=13)
 
     def test_acorr_breusch_godfrey(self):
@@ -267,7 +268,8 @@ class TestDiagnosticG(object):
         assert_almost_equal(bg, bg_r, decimal=13)
 
         # check that lag choice works
-        bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
+        with pytest.warns(FutureWarning, match="The default value of nlags"):
+            bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
         bg3 = smsdia.acorr_breusch_godfrey(res, nlags=14)
         assert_almost_equal(bg2, bg3, decimal=13)
 
@@ -618,7 +620,7 @@ class TestDiagnosticG(object):
         order = np.arange(self.res.model.endog.shape[0])
         rr_order = smsdia.recursive_olsresiduals(self.res, skip=3, alpha=0.95,
                                                  order_by=order)
-        assert_allclose(rr[0], rr_order[0])
+        assert_allclose(rr[0], rr_order[0], atol=1e-6)
 
         # regression number, visually checked with graph from gretl
         ub0 = np.array([13.37318571, 13.50758959, 13.64199346, 13.77639734,
@@ -810,8 +812,12 @@ def test_spec_white():
 
 
 def test_spec_white_error(reset_randomstate):
-    with pytest.raises(ValueError, match="resid should have"):
-        smsdia.spec_white(np.random.standard_normal(100))
+    with pytest.raises(ValueError, match="White's specification test "):
+        smsdia.spec_white(np.random.standard_normal(100),
+                          np.random.standard_normal((100, 1)))
+    with pytest.raises(ValueError, match="White's specification test "):
+        smsdia.spec_white(np.random.standard_normal(100),
+                          np.random.standard_normal((100, 2)))
 
 
 def test_linear_lm_direct(reset_randomstate):
@@ -1147,16 +1153,76 @@ def test_encompasing_error(reset_randomstate):
 @pytest.mark.parametrize('power',[2, 3])
 @pytest.mark.parametrize('test_type',["fitted","exog","princomp"])
 @pytest.mark.parametrize('use_f',[True, False])
-@pytest.mark.parametrize('cov',[dict(cov_type="nonrobust", cov_kwargs={}),
-                                dict(cov_type="HC0", cov_kwargs={})])
+@pytest.mark.parametrize('cov', [dict(cov_type="nonrobust", cov_kwargs={}),
+                                 dict(cov_type="HC0", cov_kwargs={})])
 def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
-    x = add_constant(np.random.standard_normal((1000,3)))
-    e = np.random.standard_normal((1000,1))
-    x = np.hstack([x, x[:,1:]**2])
-    y = x @ np.ones((7,1)) + e
-    res = OLS(y, x[:,:4]).fit()
-    reset = smsdia.linear_reset(res, power=power, test_type=test_type,
-                                use_f=use_f, **cov)
+    x = add_constant(np.random.standard_normal((1000, 3)))
+    e = np.random.standard_normal((1000, 1))
+    x = np.hstack([x, x[:, 1:] ** 2])
+    y = x @ np.ones((7, 1)) + e
+    res = OLS(y, x[:, :4]).fit()
+    smsdia.linear_reset(res, power=power, test_type=test_type,
+                        use_f=use_f, **cov)
+
+
+@pytest.mark.smoke
+@pytest.mark.parametrize("autolag", ["AIC", "BIC"])
+@pytest.mark.parametrize("store", [True, False])
+@pytest.mark.parametrize("ddof", [0, 2])
+@pytest.mark.parametrize('cov', [dict(cov_type="nonrobust", cov_kwargs={}),
+                                 dict(cov_type="HC0", cov_kwargs={})])
+def test_acorr_lm_smoke(autolag, store, ddof, cov, reset_randomstate):
+    e = np.random.standard_normal(250)
+    with pytest.warns(FutureWarning):
+        smsdia.acorr_lm(e, nlags=6, autolag=autolag, store=store,
+                        ddof=ddof, **cov)
+
+    with pytest.warns(FutureWarning):
+        smsdia.acorr_lm(e, nlags=None, autolag=autolag, store=store,
+                        period=12, ddof=ddof, **cov)
+
+
+def test_acorr_lm_smoke_no_autolag(reset_randomstate):
+    e = np.random.standard_normal(250)
+    smsdia.acorr_lm(e, nlags=6, autolag=None, store=False, ddof=0)
+
+
+@pytest.mark.parametrize("frac", [0.25, 0.5, 0.75])
+@pytest.mark.parametrize("order_by", [None,
+                                      np.arange(500),
+                                      np.random.choice(500, size=500, replace=False),
+                                      "x0",
+                                      ["x0", "x2"]])
+def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
+    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    x = pd.DataFrame(np.random.standard_normal((500, 3)),
+                     columns=["x{0}".format(i) for i in range(3)])
+    y = x @ np.ones((3, 1)) + e
+    res = OLS(y, x).fit()
+    smsdia.linear_rainbow(res, frac=frac, order_by=order_by)
+
+
+@pytest.mark.parametrize("center", [None, 0.33, 300])
+def test_rainbow_smoke_centered(center, reset_randomstate):
+    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    x = pd.DataFrame(np.random.standard_normal((500, 3)),
+                     columns=["x{0}".format(i) for i in range(3)])
+    y = x @ np.ones((3, 1)) + e
+    res = OLS(y, x).fit()
+    smsdia.linear_rainbow(res, use_distance=True, center=center)
+
+
+def test_rainbow_exception(reset_randomstate):
+    e = pd.DataFrame(np.random.standard_normal((500, 1)))
+    x = pd.DataFrame(np.random.standard_normal((500, 3)),
+                     columns=["x{0}".format(i) for i in range(3)])
+    y = x @ np.ones((3, 1)) + e
+    res = OLS(y, x).fit()
+    with pytest.raises(TypeError, match="order_by must contain"):
+        smsdia.linear_rainbow(res, order_by="x5")
+    res = OLS(np.asarray(y), np.asarray(x)).fit()
+    with pytest.raises(TypeError,match="order_by must contain"):
+        smsdia.linear_rainbow(res, order_by=["x0"])
 
 # R code used in testing
 # J test
