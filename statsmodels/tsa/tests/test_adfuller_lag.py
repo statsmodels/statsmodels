@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test for autolag of adfuller, unitroot_adf
+"""Test for autolag of adfuller
 
 Created on Wed May 30 21:39:46 2012
 Author: Josef Perktold

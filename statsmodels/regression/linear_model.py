@@ -55,7 +55,8 @@ from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
 
-__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR', 'PredictionResults']
+__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR', 'PredictionResults',
+           'RegressionResultsWrapper']
 
 
 _fit_regularized_doc =\

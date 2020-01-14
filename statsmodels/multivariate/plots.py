@@ -9,7 +9,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label='factor'):
     Parameters
     ----------
     eigenvals : array_like
-        THe eigenvalues
+        The eigenvalues
     total_var : float
         the total variance (for plotting percent variance explained)
     ncomp : int, optional

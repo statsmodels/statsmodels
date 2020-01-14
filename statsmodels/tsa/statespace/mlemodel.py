@@ -2910,6 +2910,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
         """
         if method is None:
             method = 'jarquebera'

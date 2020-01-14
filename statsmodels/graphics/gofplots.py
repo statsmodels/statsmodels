@@ -497,7 +497,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     data : array_like
         A 1d data array.
     dist : callable
-        Comparrison distribution. The default is
+        Comparison distribution. The default is
         scipy.stats.distributions.norm (a standard normal).
     distargs : tuple
         A tuple of arguments passed to dist to specify it fully

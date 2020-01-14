@@ -1,6 +1,4 @@
-
-from .diagnostic import unitroot_adf
-
+from statsmodels.tsa.stattools import adfuller
 import statsmodels.datasets.macrodata.data as macro
 
 macrod = macro.load(as_pandas=False).data
@@ -26,5 +24,6 @@ datatrendli = [
 
 print('%-10s %5s %-8s' % ('variable', 'trend', '  adf'))
 for name, torder in datatrendli:
-    adf_, pval = unitroot_adf(macrod[name], trendorder=torder)[:2]
+    c_order = {0: "nc", 1: "c"}
+    adf_, pval = adfuller(macrod[name], regression=c_order[torder])[:2]
     print('%-10s %5d %8.4f %8.4f' % (name, torder, adf_, pval))
