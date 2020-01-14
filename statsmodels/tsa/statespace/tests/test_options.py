@@ -19,6 +19,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_EXTENDED,
     FILTER_UNSCENTED,
     FILTER_CONCENTRATED,
+    FILTER_CHANDRASEKHAR,
 
     INVERT_UNIVARIATE,
     SOLVE_LU,
@@ -102,7 +103,8 @@ class TestOptions(Options):
             model.filter_method,
             FILTER_CONVENTIONAL | FILTER_EXACT_INITIAL | FILTER_AUGMENTED |
             FILTER_SQUARE_ROOT | FILTER_UNIVARIATE | FILTER_COLLAPSED |
-            FILTER_EXTENDED | FILTER_UNSCENTED | FILTER_CONCENTRATED
+            FILTER_EXTENDED | FILTER_UNSCENTED | FILTER_CONCENTRATED |
+            FILTER_CHANDRASEKHAR
         )
         for name in model.filter_methods:
             setattr(model, name, False)

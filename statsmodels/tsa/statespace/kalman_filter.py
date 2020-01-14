@@ -24,6 +24,7 @@ FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
 FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
 FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
 FILTER_CONCENTRATED = 0x100    # Harvey (1989), Chapter 3.4
+FILTER_CHANDRASEKHAR = 0x200   # Herbst (2015)
 
 INVERT_UNIVARIATE = 0x01
 SOLVE_LU = 0x02
@@ -139,7 +140,8 @@ class KalmanFilter(Representation):
     filter_methods = [
         'filter_conventional', 'filter_exact_initial', 'filter_augmented',
         'filter_square_root', 'filter_univariate', 'filter_collapsed',
-        'filter_extended', 'filter_unscented', 'filter_concentrated'
+        'filter_extended', 'filter_unscented', 'filter_concentrated',
+        'filter_chandrasekhar'
     ]
 
     filter_conventional = OptionWrapper('filter_method', FILTER_CONVENTIONAL)
@@ -177,6 +179,10 @@ class KalmanFilter(Representation):
     filter_concentrated = OptionWrapper('filter_method', FILTER_CONCENTRATED)
     """
     (bool) Flag for Kalman filtering with concentrated log-likelihood.
+    """
+    filter_chandrasekhar = OptionWrapper('filter_method', FILTER_CHANDRASEKHAR)
+    """
+    (bool) Flag for filtering with Chandrasekhar recursions.
     """
 
     inversion_methods = [
@@ -771,7 +777,7 @@ class KalmanFilter(Representation):
         MEMORY_NO_GAIN
             Do not store the Kalman gain matrices.
         MEMORY_NO_SMOOTHING
-            Do not store temporary variables related to Klaman smoothing. If
+            Do not store temporary variables related to Kalman smoothing. If
             this option is used, smoothing is unavailable.
         MEMORY_NO_STD_FORECAST
             Do not store standardized forecast errors.

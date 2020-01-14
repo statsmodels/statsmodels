@@ -19,16 +19,16 @@ TYPES = {
 # ## Constants
 
 # ### Filters
-# TODO note that only the conventional filter is implemented
 cdef int FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
 cdef int FILTER_EXACT_INITIAL = 0x02    # ibid., Chapter 5.6
-cdef int FILTER_AUGMENTED = 0x04        # ibid., Chapter 5.7
-cdef int FILTER_SQUARE_ROOT = 0x08      # ibid., Chapter 6.3
+cdef int FILTER_AUGMENTED = 0x04        # ibid., Chapter 5.7 not implemented
+cdef int FILTER_SQUARE_ROOT = 0x08      # ibid., Chapter 6.3 not implemented
 cdef int FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
 cdef int FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
-cdef int FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
-cdef int FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
+cdef int FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2 not implemented
+cdef int FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3 not implemented
 cdef int FILTER_CONCENTRATED = 0x100    # Harvey (1989), Chapter 3.4
+cdef int FILTER_CHANDRASEKHAR = 0x200   # Herbst (2015)
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error
@@ -684,6 +684,33 @@ cdef class {{prefix}}KalmanFilter(object):
         dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
         self.tmp4 = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
+        # Arrays for Chandrasekhar recursions
+        # W $(m \times p)$ (W1 = T @ P @ Z[i].T)
+        dim2[0] = self.k_states; dim2[1] = self.k_endog;
+        self.CW = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        # temporary array for W (m \times p)
+        self.CtmpW = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        # Previous version of `tmp3` array: F_{t-1}^{-1} Z
+        dim2[0] = self.k_endog; dim2[1] = self.k_states;
+        # temporary array for W (m \times p)
+        self.CprevFiZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        # M.T @ W.T $(p \times m)$
+        dim2[0] = self.k_states; dim2[1] = self.k_endog;
+        self.CMW = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        # M.T @ W.T @ Z $(p \times m)$
+        # or in univariate case: M.T @ W.T @ Z[i] $(p \times 1)$
+        dim2[0] = self.k_endog; dim2[1] = self.k_states;
+        self.CMWZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        # M $(p \times p)$ (M1 = -F^{-1})
+        dim2[0] = self.k_endog; dim2[1] = self.k_endog;
+        self.CM = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        # temporary array for M (p \times p)
+        self.CtmpM = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
     cdef void set_dimensions(self):
         """
         Set dimensions for the Kalman filter
@@ -728,6 +755,8 @@ cdef class {{prefix}}KalmanFilter(object):
 
         Change the filter method.
         """
+        cdef int time_invariant
+
         if not filter_method == self.filter_method or force_reset:
             # Check for invalid filter methods
             if filter_method & FILTER_COLLAPSED and self.k_endog <= self.k_states:
@@ -738,6 +767,40 @@ cdef class {{prefix}}KalmanFilter(object):
             if filter_method & FILTER_COLLAPSED and filter_method & FILTER_CONCENTRATED:
                 raise RuntimeError('Cannot apply a concentrated likelihood function'
                                    ' with a collapsed observation vector.')
+
+            if filter_method & FILTER_CHANDRASEKHAR:
+                if filter_method & FILTER_UNIVARIATE:
+                    raise NotImplementedError('Univariate Chandrasekhar'
+                                              ' recursions not yet'
+                                              ' implemented.')
+
+                # Check for missing data
+                if self.model.has_missing:
+                    raise RuntimeError('Cannot use Chandrasekhar recursions'
+                                       ' with missing data.')
+
+                # Note: would like to check for stationary initialization, but
+                # we can't do that here b/c self.model doesn't store the
+                # initialization object for us to inspect.
+                # TODO: however, we can set a new flag in self.model.initialize
+                # noting the type of initialization (stationary, diffuse,
+                # mixed, etc.) and then check the value here.
+
+                if self.filter_timing == TIMING_INIT_FILTERED:
+                    raise RuntimeError('Cannot use Chandrasekhar recursions'
+                                       ' with filtered timing data.')
+
+                # Check for a time-invariant model
+                time_invariant = (
+                    self.model.design.shape[2] == 1           and
+                    self.model.obs_cov.shape[2] == 1          and
+                    self.model.transition.shape[2] == 1       and
+                    self.model.selection.shape[2] == 1        and
+                    self.model.state_cov.shape[2] == 1)
+                if not time_invariant:
+                    raise RuntimeError('Cannot use Chandrasekhar recursions'
+                                       ' with time-varying system matrices'
+                                       ' (except for intercept terms).')
 
             # Change the smoother output flag
             self.filter_method = filter_method

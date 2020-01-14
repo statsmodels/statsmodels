@@ -24,6 +24,7 @@ cdef np.float32_t sloglikelihood_missing_conventional(sKalmanFilter kfilter, sSt
 cdef np.float32_t sscale_missing_conventional(sKalmanFilter kfilter, sStatespace model)
 
 cdef int sforecast_conventional(sKalmanFilter kfilter, sStatespace model)
+cdef int schandrasekhar_recursion(sKalmanFilter kfilter, sStatespace model)
 cdef int supdating_conventional(sKalmanFilter kfilter, sStatespace model)
 cdef int sprediction_conventional(sKalmanFilter kfilter, sStatespace model)
 cdef np.float32_t sloglikelihood_conventional(sKalmanFilter kfilter, sStatespace model, np.float32_t determinant)
@@ -37,6 +38,7 @@ cdef np.float64_t dloglikelihood_missing_conventional(dKalmanFilter kfilter, dSt
 cdef np.float64_t dscale_missing_conventional(dKalmanFilter kfilter, dStatespace model)
 
 cdef int dforecast_conventional(dKalmanFilter kfilter, dStatespace model)
+cdef int dchandrasekhar_recursion(dKalmanFilter kfilter, dStatespace model)
 cdef int dupdating_conventional(dKalmanFilter kfilter, dStatespace model)
 cdef int dprediction_conventional(dKalmanFilter kfilter, dStatespace model)
 cdef np.float64_t dloglikelihood_conventional(dKalmanFilter kfilter, dStatespace model, np.float64_t determinant)
@@ -51,6 +53,7 @@ cdef np.complex64_t cscale_missing_conventional(cKalmanFilter kfilter, cStatespa
 
 cdef int cforecast_conventional(cKalmanFilter kfilter, cStatespace model)
 cdef int cupdating_conventional(cKalmanFilter kfilter, cStatespace model)
+cdef int cchandrasekhar_recursion(cKalmanFilter kfilter, cStatespace model)
 cdef int cprediction_conventional(cKalmanFilter kfilter, cStatespace model)
 cdef np.complex64_t cloglikelihood_conventional(cKalmanFilter kfilter, cStatespace model, np.complex64_t determinant)
 cdef np.complex64_t cscale_conventional(cKalmanFilter kfilter, cStatespace model)
@@ -63,6 +66,7 @@ cdef np.complex128_t zloglikelihood_missing_conventional(zKalmanFilter kfilter, 
 cdef np.complex128_t zscale_missing_conventional(zKalmanFilter kfilter, zStatespace model)
 
 cdef int zforecast_conventional(zKalmanFilter kfilter, zStatespace model)
+cdef int zchandrasekhar_recursion(zKalmanFilter kfilter, zStatespace model)
 cdef int zupdating_conventional(zKalmanFilter kfilter, zStatespace model)
 cdef int zprediction_conventional(zKalmanFilter kfilter, zStatespace model)
 cdef np.complex128_t zloglikelihood_conventional(zKalmanFilter kfilter, zStatespace model, np.complex128_t determinant)

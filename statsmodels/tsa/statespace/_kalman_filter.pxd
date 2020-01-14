@@ -20,6 +20,7 @@ cdef int FILTER_COLLAPSED        # ibid., Chapter 6.5
 cdef int FILTER_EXTENDED         # ibid., Chapter 10.2
 cdef int FILTER_UNSCENTED        # ibid., Chapter 10.3
 cdef int FILTER_CONCENTRATED     # Harvey (1989), Chapter 3.4
+cdef int FILTER_CHANDRASEKHAR    # Herbst (2015)
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error
@@ -106,6 +107,9 @@ cdef class sKalmanFilter(object):
     cdef readonly np.float32_t [::1,:,:] tmp1, tmp3, tmp4
     cdef readonly np.float32_t [:] tmpK0, tmpK1
     cdef readonly np.float32_t [::1,:] tmpL0, tmpL1
+
+    cdef readonly np.float32_t [::1,:] CW, CtmpW, CMW, CM, CprevFiZ, CtmpM, CMWZ
+
 
     cdef readonly np.float32_t determinant
 
@@ -257,6 +261,8 @@ cdef class dKalmanFilter(object):
     cdef readonly np.float64_t [:] tmpM_inf, tmpK0, tmpK1
     cdef readonly np.float64_t [::1,:] tmpL0, tmpL1
 
+    cdef readonly np.float64_t [::1,:] CW, CtmpW, CMW, CM, CprevFiZ, CtmpM, CMWZ
+
     cdef readonly np.float64_t determinant
 
     # ### Pointers to current-iteration arrays
@@ -407,6 +413,9 @@ cdef class cKalmanFilter(object):
     cdef readonly np.complex64_t [:] tmpM_inf, tmpK0, tmpK1
     cdef readonly np.complex64_t [::1,:] tmpL0, tmpL1
 
+    cdef readonly np.complex64_t [::1,:] CW, CtmpW, CMW, CM, CprevFiZ, CtmpM, CMWZ
+
+
     cdef readonly np.complex64_t determinant
 
     # ### Pointers to current-iteration arrays
@@ -556,6 +565,9 @@ cdef class zKalmanFilter(object):
     cdef readonly np.complex128_t [::1,:,:] tmp1, tmp3, tmp4
     cdef readonly np.complex128_t [:] tmpM_inf, tmpK0, tmpK1
     cdef readonly np.complex128_t [::1,:] tmpL0, tmpL1
+
+    cdef readonly np.complex128_t [::1,:] CW, CtmpW, CMW, CM, CprevFiZ, CtmpM, CMWZ
+
 
     cdef readonly np.complex128_t determinant
 
