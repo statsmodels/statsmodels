@@ -49,33 +49,29 @@ Residual Diagnostics and Specification Tests
 .. autosummary::
    :toctree: generated/
 
-   acorr_ljungbox
    acorr_breusch_godfrey
-
-   HetGoldfeldQuandt
-   het_goldfeldquandt
-   het_breuschpagan
-   het_white
-   het_arch
-
-   linear_harvey_collier
-   linear_rainbow
-   linear_lm
+   acorr_ljungbox
+   acorr_lm
 
    breaks_cusumolsresid
    breaks_hansen
    recursive_olsresiduals
 
-   CompareCox
    compare_cox
-   CompareJ
+   compare_encompassing
    compare_j
 
-   unitroot_adf
+   het_arch
+   het_breuschpagan
+   het_goldfeldquandt
+   het_white
+   spec_white
 
-   normal_ad
-   kstest_normal
-   lilliefors
+   linear_harvey_collier
+   linear_lm
+   linear_rainbow
+   linear_reset
+
 
 Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,7 +148,10 @@ some tests for goodness of fit for univariate distributions
 .. autosummary::
    :toctree: generated/
 
+   anderson_statistic
    normal_ad
+   kstest_exponential
+   kstest_fit
    kstest_normal
    lilliefors
 

@@ -1877,6 +1877,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.stattools import jarque_bera
@@ -1901,12 +1902,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         See Also
         --------
-        statsmodels.sandbox.stats.diagnostic.het_arch
+        statsmodels.stats.diagnostic.het_arch
             ARCH-LM test.
-        statsmodels.sandbox.stats.diagnostic.acorr_lm
+        statsmodels.stats.diagnostic.acorr_lm
             LM test for autocorrelation.
         """
-        from statsmodels.sandbox.stats.diagnostic import het_arch
+        from statsmodels.stats.diagnostic import het_arch
 
         lags = int_like(lags, 'lags', optional=True)
         nobs_effective = self.resid.shape[0]

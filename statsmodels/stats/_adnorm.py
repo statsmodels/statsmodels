@@ -13,27 +13,27 @@ from statsmodels.tools.validation import array_like, bool_like, int_like
 
 def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     """
-    Calculate the Anderson-Darling a2 statistic
+    Calculate the Anderson-Darling a2 statistic.
 
     Parameters
     ----------
     x : array_like
-        data
-    dist : 'norm' or callable
-        null distribution for the test statistic
+        The data to test.
+    dist : {'norm', callable}
+        The assumed distribution under the null of test statistic.
     fit : bool
         If True, then the distribution parameters are estimated.
-        Currently only for 1d data x, except in case dist='norm'
+        Currently only for 1d data x, except in case dist='norm'.
     params : tuple
-        optional distribution parameters if fit is False
+        The optional distribution parameters if fit is False.
     axis : int
         If dist is 'norm' or fit is False, then data can be an n-dimensional
-        and axis specifies the axis of a variable
+        and axis specifies the axis of a variable.
 
     Returns
     -------
-    ad2 : {float, ndarray}
-        Anderson-Darling statistic
+    {float, ndarray}
+        The Anderson-Darling statistic.
     """
     x = array_like(x, 'x', ndim=None)
     fit = bool_like(fit, 'fit')
@@ -67,30 +67,39 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     sl2 = [slice(None)] * x.ndim
     sl2[axis] = slice(None, None, -1)
     sl2 = tuple(sl2)
-    S = np.sum((2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log(1 - z[sl2])),
+    s = np.sum((2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log1p(-z[sl2])),
                axis=axis)
-    a2 = -nobs - S
+    a2 = -nobs - s
     return a2
 
 
 def normal_ad(x, axis=0):
     """
-    Anderson-Darling test for normal distribution unknown mean and variance
+    Anderson-Darling test for normal distribution unknown mean and variance.
 
     Parameters
     ----------
     x : array_like
-        data array, currently only 1d
+        The data array.
+    axis : int
+        The axis to perform the test along.
 
     Returns
     -------
     ad2 : float
-        Anderson Darling test statistic
+        Anderson Darling test statistic.
     pval : float
-        pvalue for hypothesis that the data comes from a normal distribution
-        with unknown mean and variance
+        The pvalue for hypothesis that the data comes from a normal
+        distribution with unknown mean and variance.
+
+    See Also
+    --------
+    statsmodels.stats.diagnostic.anderson_statistic
+        The Anderson-Darling a2 statistic.
+    statsmodels.stats.diagnostic.kstest_fit
+        Kolmogorov-Smirnov test with estimated parameters for Normal or
+        Exponential distributions.
     """
-    # ad2 = stats.anderson(x)[0]
     ad2 = anderson_statistic(x, dist='norm', fit=True, axis=axis)
     n = x.shape[axis]
 
