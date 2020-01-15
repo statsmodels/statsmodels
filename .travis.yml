@@ -2,8 +2,9 @@
 # versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
-dist: xenial
+dist: bionic
 language: python
+cache: pip
 
 git:
   depth: 10000
