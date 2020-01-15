@@ -675,7 +675,7 @@ def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
     if cov_type == "nonrobust":
         lm = (nobs - ddof) * resols.rsquared
         lmpval = stats.chi2.sf(lm, usedlag)
-        # Note: degrees of freedom for LM test is nvars minus constant = usedlags
+        # Note: deg of freedom for LM test: nvars - constant = lags used
     else:
         r_matrix = np.hstack((np.ones((usedlag, 1)), np.eye(usedlag)))
         test_stat = resols.wald_test(r_matrix, use_f=False)
@@ -1524,7 +1524,8 @@ def spec_white(resid, exog):
 
 
 @deprecate_kwarg("olsresults", "res")
-def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None):
+def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
+                           order_by=None):
     """
     Calculate recursive ols with residuals and Cusum test statistic
 

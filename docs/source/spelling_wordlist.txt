@@ -2298,3 +2298,17 @@ parametrized
 nonlinearity
 lexicographically
 Appender
+dCov
+princomp
+nonmonotone
+dvar
+ptp
+ppc
+vscode
+irq
+sudo
+startparams
+autosummary
+hsd
+standardizations
+dtypes

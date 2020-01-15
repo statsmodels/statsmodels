@@ -290,15 +290,43 @@ weights[X[X['log.Te'] < 3.8].index.values - 1] = 0
 wls_model = sm.WLS(y, X, weights=weights).fit()
 abline_plot(model_results=wls_model, ax=ax, color='green')
 
-# * MM estimators are good for this type of problem, unfortunately, we
-# do not yet have these yet.
+# * MM estimators are good for this type of problem, unfortunately, we do
+# not yet have these yet.
 # * It's being worked on, but it gives a good excuse to look at the R cell
 # magics in the notebook.
 
 yy = y.values[:, None]
 xx = X['log.Te'].values[:, None]
 
-print(params)
+# **Note**: The R code and the results in this notebook has been converted
+# to markdown so that R is not required to build the documents. The R
+# results in the notebook were computed using R 3.5.1 and robustbase 0.93.
+
+# ```ipython
+# %load_ext rpy2.ipython
+#
+# %R library(robustbase)
+# %Rpush yy xx
+# %R mod <- lmrob(yy ~ xx);
+# %R params <- mod$coefficients;
+# %Rpull params
+# ```
+
+# ```ipython
+# %R print(mod)
+# ```
+
+# ```
+# Call:
+# lmrob(formula = yy ~ xx)
+#  \--> method = "MM"
+# Coefficients:
+# (Intercept)           xx
+#      -4.969        2.253
+# ```
+
+params = [-4.969387980288108, 2.2531613477892365]  # Computed using R
+print(params[0], params[1])
 
 abline_plot(intercept=params[0], slope=params[1], ax=ax, color='red')
 
