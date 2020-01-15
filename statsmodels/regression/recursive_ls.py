@@ -136,6 +136,10 @@ class RecursiveLS(MLEModel):
         return super(MLEModel, cls).from_formula(formula, data, subset,
                                                  constraints=constraints)
 
+    def _validate_can_fix_params(self, param_names):
+        raise ValueError('No parameters can be fixed in the recursive least'
+                         ' squares model.')
+
     def fit(self):
         """
         Fits the model by application of the Kalman filter
