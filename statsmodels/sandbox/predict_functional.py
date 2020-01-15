@@ -421,7 +421,7 @@ def _glm_basic_scr(result, exog, alpha):
 
     # The variance and SD of the linear predictor at each row of exog.
     sigma2 = (np.dot(exog, cov) * exog).sum(1)
-    sigma = np.sqrt(sigma2)
+    sigma = np.asarray(np.sqrt(sigma2))
 
     # Calculate kappa_0 (formula 42 from Sun et al)
     bz = np.linalg.solve(B.T, exog.T).T
