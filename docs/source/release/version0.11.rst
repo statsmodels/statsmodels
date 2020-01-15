@@ -9,8 +9,8 @@ Release summary
 
 statsmodels is using github to store the updated documentation. Two version are available:
 
-* `Stable <https://www.statsmodels.org/stable/>`_, the latest release
-* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
+- `Stable <https://www.statsmodels.org/>`_, the latest release
+- `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
 
 **Warning**
 
@@ -21,11 +21,11 @@ was already in statsmodels master and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
 
-Release Statistics
-------------------
-**Issues Closed**: 321
+Stats
+-----
+**Issues Closed**: 332
 
-**Pull Requests Merged**: 268
+**Pull Requests Merged**: 287
 
 
 The Highlights
@@ -69,8 +69,9 @@ Methods to apply parameters fitted on one dataset to another dataset
 Method to hold some parameters fixed at known values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Methods: :func:`statsmodels.tsa.statespace.mlemodel.MLEModel.fix_params` and :func:`statsmodels.tsa.statespace.mlemodel.MLEModel.fit_constrained`
-  for state space model classes.
+- Methods: :func:`statsmodels.tsa.statespace.mlemodel.MLEModel.fix_params` and
+  :func:`statsmodels.tsa.statespace.mlemodel.MLEModel.fit_constrained` for state
+  space model classes.
 - These methods allow setting some parameters to known values and then
   estimating the remaining parameters
 
@@ -204,6 +205,8 @@ Submodules
 ~~~~~~~~~~~~~~~~~
 - Ensure BW is not 0  (:pr:`6292`)
 - Check dtype in KDEUnivariate  (:pr:`6314`)
+- Supporting custom kernel in local linear kernel regression  (:pr:`6375`)
+
 
 
 ``regression``
@@ -235,11 +238,17 @@ Submodules
 - Better argument checking for StratifiedTable  (:pr:`6294`)
 - Restore multicomp  (:pr:`6320`)
 - Improve Ljung Box diagnostics  (:pr:`6324`)
+- Correct standardization in robust skewness  (:pr:`6374`)
+- Distance dependence measures  (:pr:`6401`)
+- Improve diagnostics   (:pr:`6410`)
+
 
 
 ``tools``
 ~~~~~~~~~
 - Fix error introduced in isestimable  (:pr:`6081`)
+- Fix axis in irq  (:pr:`6391`)
+
 
 
 ``tsa``
@@ -271,6 +280,8 @@ Submodules
 - Improve Ljung Box diagnostics  (:pr:`6324`)
 - Documentation for release v0.11  (:pr:`6338`)
 - Fix _get_index_loc with date strings  (:pr:`6340`)
+- Use correct exog names  (:pr:`6389`)
+
 
 
 ``tsa.statespace``
@@ -307,12 +318,15 @@ Submodules
 - Append, extend check that index matches model  (:pr:`6334`)
 - Fix k_exog, k_trend in arima.ARIMA; raise error when cloning a model with exog if no new exog given  (:pr:`6337`)
 - Documentation for release v0.11  (:pr:`6338`)
+- RecursiveLS should not allow `fix_params` method.  (:pr:`6415`)
+
 
 
 ``tsa.vector.ar``
 ~~~~~~~~~~~~~~~~~
 - Raise in GC test for VAR(0)  (:pr:`6285`)
 - Correct VAR summary when model contains exog variables  (:pr:`6286`)
+- Use correct exog names  (:pr:`6389`)
 
 
 Build
@@ -358,7 +372,7 @@ Documentation
 - Spelling and notebook link  (:pr:`6085`)
 - Website fix  (:pr:`6089`)
 - Changes summary_col's docstring to match variables  (:pr:`6106`)
-- Update CONTRIBUTING.rst "relase"-> "release"  (:pr:`6107`)
+- Update spelling in CONTRIBUTING.rst  (:pr:`6107`)
 - Update link in CONTRIBUTING.rst  (:pr:`6108`)
 - Update PR template Numpy guide link  (:pr:`6110`)
 - Added interpretations to LogitResults.get_margeff  (:pr:`6113`)
@@ -374,7 +388,7 @@ Documentation
 - Add a new logo  (:pr:`6142`)
 - Fix validator so that it works  (:pr:`6143`)
 - Add formula API  (:pr:`6145`)
-- Fix sidebartoc  (:pr:`6160`)
+- Fix sidebar TOC  (:pr:`6160`)
 - Warn that only trusted files should be unpickled  (:pr:`6162`)
 - Update pickle warning  (:pr:`6166`)
 - Fix warning format  (:pr:`6167`)
@@ -401,7 +415,15 @@ Documentation
 - Further doc fixes  (:pr:`6345`)
 - Fix minor doc errors  (:pr:`6347`)
 - Git notes  (:pr:`6348`)
+- Finalize release notes for 0.11  (:pr:`6349`)
 - Add version dropdown  (:pr:`6350`)
+- Finalize release note  (:pr:`6353`)
+- Change generated path  (:pr:`6363`)
+- Doc updates  (:pr:`6368`)
+- Improve doc strings  (:pr:`6369`)
+- Clarify demeaning in ljungbox  (:pr:`6390`)
+- Fix ridge regression formula in hpfilter  (:pr:`6398`)
+- Fix link  (:pr:`6407`)
 
 Maintenance
 -----------
@@ -470,7 +492,10 @@ Maintenance
 - Remove chain dot  (:pr:`6312`)
 - Catch and fix warnings  (:pr:`6313`)
 - Use NumPy's linalg when available  (:pr:`6315`)
-
+- Pin xdist  (:pr:`6392`)
+- Unify pandas testing import  (:pr:`6394`)
+- Clarify codecov  (:pr:`6406`)
+- Fixes for future SciPY and pandas  (:pr:`6414`)
 
 bug-wrong
 ---------
@@ -514,6 +539,7 @@ Thanks to all of the contributors for the 0.10 release (based on git log):
 
 - Atticus Yang
 - Austin Adams
+- Balazs Varga
 - Brock Mendel
 - Chad Fulton
 - Christian Clauss
@@ -534,9 +560,11 @@ Thanks to all of the contributors for the 0.10 release (based on git log):
 - Peter Quackenbush
 - Qingqing Mao
 - Rebecca N. Palmer
+- Ron Itzikovitch
 - Samesh Lakhotia
 - Sandu Ursu
 - Tim Staley
+- Varun Sriram
 - Yasine Gangat
 - comatrion
 - luxiform
@@ -606,7 +634,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`5952`: ENH: Improve RESET test stability
 - :pr:`5953`: ENH: Add type checkers/converts for int, float and bool
 - :pr:`5954`: MAINT: Mark MPL test as MPL
-- :pr:`5956`: BUG: Fix mutidimensional model cov_params when using pandas
+- :pr:`5956`: BUG: Fix multidimensional model cov_params when using pandas
 - :pr:`5957`: DOC: Clarify xname length and purpose
 - :pr:`5958`: MAINT: Deprecate periodogram
 - :pr:`5960`: MAINT: Ensure seaborn is available for docbuild
@@ -647,12 +675,12 @@ The following Pull Requests were merged since the last release:
 - :pr:`6007`: MAINT: Rename forecast years to forecast periods
 - :pr:`6008`: ENH: Allow GC testing for specific lags
 - :pr:`6009`: TST: Verify categorical is supported for MNLogit
-- :pr:`6010`: TST: Imrove test that is failing due to precision issues
+- :pr:`6010`: TST: Improve test that is failing due to precision issues
 - :pr:`6011`: MAINT/BUG/TST: Improve testing of seasonal decompose
-- :pr:`6012`: BUG: Fix t-test and f-test for multidim params
+- :pr:`6012`: BUG: Fix t-test and f-test for multidimensional params
 - :pr:`6014`: ENH: Zivot Andrews test
 - :pr:`6015`: CLN: Remove notes about incorrect test
-- :pr:`6016`: TST: Add check for dtyppes in Binomial
+- :pr:`6016`: TST: Add check for dtypes in Binomial
 - :pr:`6017`: ENH: Set limit for number of endog variables when using formulas
 - :pr:`6018`: ENH: Improve ARMA startparams
 - :pr:`6019`: BUG: Fix ARMA cov_params
@@ -686,7 +714,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6063`: DOC: Fix web font size
 - :pr:`6064`: ENH/PERF: Only perform required predict iterations in state space models
 - :pr:`6066`: MAINT: Fix small lint issue
-- :pr:`6067`: DOC: Fix doc errrors affecting build
+- :pr:`6067`: DOC: Fix doc errors affecting build
 - :pr:`6069`: MAINT: Stop testing on old, buggy SciPy
 - :pr:`6070`: BUG: Fix ARMA so that it works with exog when trend=nc
 - :pr:`6071`: ENH: state space: Improve low memory usability; allow in fit, loglike
@@ -713,7 +741,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6104`: BUG: Fix score computation with fixed params
 - :pr:`6105`: BUG: Correct thresholding in correlation tools
 - :pr:`6106`: DOC: Changes summary_col's docstring to match variables
-- :pr:`6107`: DOC: Update CONTRIBUTING.rst "relase"-> "release"
+- :pr:`6107`: DOC: Update spelling in CONTRIBUTING.rst
 - :pr:`6108`: DOC: Update link in CONTRIBUTING.rst
 - :pr:`6110`: DOC: Update PR template Numpy guide link
 - :pr:`6111`: ENH: Add exact diffuse initialization as an option for SARIMAX, UnobservedComponents
@@ -738,7 +766,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6144`: BUG: use self.data consistently
 - :pr:`6145`: DOC: Add formula API
 - :pr:`6152`: BUG: Fix accepting of eval environment for formula
-- :pr:`6160`: DOC: fix sidebartoc
+- :pr:`6160`: DOC: fix sidebar TOC
 - :pr:`6161`: BLD: Travis CI: The sudo: tag is deprecated in Travis
 - :pr:`6162`: DOC/SEC: Warn that only trusted files should be unpickled
 - :pr:`6163`: ENH: Improve the cvxopt not found error
@@ -821,3 +849,22 @@ The following Pull Requests were merged since the last release:
 - :pr:`6348`: DOC: git notes
 - :pr:`6349`: DOC: Finalize release notes for 0.11
 - :pr:`6350`: DOC: Add version dropdown
+- :pr:`6353`: DOC: Finalize release note
+- :pr:`6363`: DOC: Change generated path
+- :pr:`6368`: Doc updates
+- :pr:`6369`: DOC: Improve doc strings
+- :pr:`6374`: BUG: Correct standardization in robust skewness
+- :pr:`6375`: ENH: Supporting custom kernel in local linear kernel regression
+- :pr:`6389`: BUG: Use correct exog names
+- :pr:`6390`: DOC: Clarify demeaning in ljungbox
+- :pr:`6391`: BUG: Fix axis in irq
+- :pr:`6392`: MAINT: Pin xdist
+- :pr:`6394`: MAINT: Unify pandas testing import
+- :pr:`6398`: DOC: fix ridge regression formula in hpfilter
+- :pr:`6401`: ENH: Distance dependence measures
+- :pr:`6406`: MAINT: Clarify codecov
+- :pr:`6407`: DOC: Fix link
+- :pr:`6410`: ENH/CLN: Improve diagnostics
+- :pr:`6412`: CLN/MAINT: Port non-diagnostic changes
+- :pr:`6414`: CLN: Fixes for future SciPY and pandas
+- :pr:`6415`: BUG: RecursiveLS should not allow `fix_params` method.

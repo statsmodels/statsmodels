@@ -313,7 +313,7 @@ def distance_statistics(x, y, x_dist=None, y_dist=None):
     Returns
     -------
     namedtuple
-        A named tuple of distance dependance statistics (DistDependStat) with
+        A named tuple of distance dependence statistics (DistDependStat) with
         the following values:
 
         - test_statistic : float - The "basic" test statistic (i.e., the one
