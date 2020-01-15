@@ -324,9 +324,9 @@ class TestHoltWinters(object):
         assert_allclose(fit.forecast(10), desired, atol=1e-4)
 
     def test_hw_seasonal(self):
-        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4,
-                                    trend='additive',
-                                    seasonal='additive').fit(use_boxcox=True)
+        mod = ExponentialSmoothing(self.aust, seasonal_periods=4,
+                                   trend='additive', seasonal='additive')
+        fit1 = mod.fit(use_boxcox=True)
         fit2 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
                                     seasonal='mul').fit(use_boxcox=True)
         assert_almost_equal(fit1.forecast(8),
@@ -335,13 +335,12 @@ class TestHoltWinters(object):
         assert_almost_equal(fit2.forecast(8),
                             [60.97, 36.99, 46.71, 51.48, 64.46, 39.02, 49.29, 54.32],
                             2)
-        fit5 = ExponentialSmoothing(self.aust, seasonal_periods=4,
-                                    trend='mul', seasonal='add'
-                                    ).fit(use_boxcox='log')
-        fit6 = ExponentialSmoothing(self.aust, seasonal_periods=4,
-                                    trend='multiplicative',
-                                    seasonal='multiplicative'
-                                    ).fit(use_boxcox='log')
+        ExponentialSmoothing(self.aust, seasonal_periods=4, trend='mul',
+                             seasonal='add').fit(use_boxcox='log')
+        ExponentialSmoothing(self.aust,
+                             seasonal_periods=4,
+                             trend='multiplicative',
+                             seasonal='multiplicative').fit(use_boxcox='log')
         # Skip since estimator is unstable
         # assert_almost_equal(fit5.forecast(1), [60.60], 2)
         # assert_almost_equal(fit6.forecast(1), [61.47], 2)
