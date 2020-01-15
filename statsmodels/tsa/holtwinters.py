@@ -720,12 +720,21 @@ class ExponentialSmoothing(TimeSeriesModel):
                     _bounds = [bnd for bnd, flag in zip(bounds, xi) if flag]
                     lb, ub = np.asarray(_bounds).T.astype(np.float)
                     initial_p = p[xi]
-                    loc = p[xi] < lb
-                    eps = np.finfo(np.double).eps
-                    initial_p[loc] = lb[loc] + eps * (ub[loc] - lb[loc])
-                    loc = p[xi] > ub
-                    initial_p[loc] = ub[loc] - eps * (ub[loc] - lb[loc])
-                    res = minimize(func, p[xi], args=args, bounds=_bounds)
+
+                    # Ensure strictly inbounds
+                    loc = initial_p <= lb
+                    upper = ub[loc].copy()
+                    upper[~np.isfinite(upper)] = 100.0
+                    eps = 1e-4
+                    initial_p[loc] = lb[loc] + eps * (upper - lb[loc])
+
+                    loc = initial_p >= ub
+                    lower = lb[loc].copy()
+                    lower[~np.isfinite(lower)] = -100.0
+                    eps = 1e-4
+                    initial_p[loc] = ub[loc] - eps * (ub[loc] - lower)
+
+                    res = minimize(func, initial_p, args=args, bounds=_bounds)
                     success = res.success
 
                 if not success:

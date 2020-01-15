@@ -1,3 +1,5 @@
+from statsmodels.compat.platform import PLATFORM_LINUX32
+
 import numpy as np
 from numpy.testing import (assert_,
                            assert_equal, assert_array_equal, assert_allclose)
@@ -99,6 +101,10 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         cls.init_kwds = {'inflation': 'probit'}
         res2 = RandHIE.zero_inflated_poisson_probit
         cls.res2 = res2
+
+    @pytest.mark.skipif(PLATFORM_LINUX32, reason="Fails on 32-bit Linux")
+    def test_fit_regularized(self):
+        super().test_fit_regularized()
 
 class TestZeroInflatedModel_offset(CheckGeneric):
     @classmethod
