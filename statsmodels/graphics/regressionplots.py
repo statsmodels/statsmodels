@@ -406,6 +406,8 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     # all arrays or pandas-like
 
     if RHS_isemtpy:
+        endog = np.asarray(endog)
+        exog_i = np.asarray(exog_i)
         ax.plot(endog, exog_i, 'o', **kwargs)
         fitted_line = OLS(endog, exog_i).fit()
         x_axis_endog_name = 'x' if isinstance(exog_i, np.ndarray) else exog_i.name
@@ -428,11 +430,11 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     ax.set_ylabel("e(%s | X)" % y_axis_endog_name)
     ax.set_title('Partial Regression Plot', **title_kwargs)
 
-    #NOTE: if we want to get super fancy, we could annotate if a point is
-    #clicked using this widget
-    #http://stackoverflow.com/questions/4652439/
-    #is-there-a-matplotlib-equivalent-of-matlabs-datacursormode/
-    #4674445#4674445
+    # NOTE: if we want to get super fancy, we could annotate if a point is
+    # clicked using this widget
+    # http://stackoverflow.com/questions/4652439/
+    # is-there-a-matplotlib-equivalent-of-matlabs-datacursormode/
+    # 4674445#4674445
     if obs_labels is True:
         if data is not None:
             obs_labels = data.index

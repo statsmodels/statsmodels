@@ -587,7 +587,7 @@ class PandasData(ModelData):
         squeezed = result.squeeze()
         k_endog = np.array(self.ynames, ndmin=1).shape[0]
         if k_endog > 1 and squeezed.shape == (k_endog,):
-            squeezed = squeezed[None, :]
+            squeezed = np.asarray(squeezed)[None, :]
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
             return Series(squeezed, index=self.predict_dates)

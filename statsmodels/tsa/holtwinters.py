@@ -680,12 +680,13 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # using guesstimates for the levels
                 txi = xi & np.array([True, True, True, False, False, True] + [False] * m)
                 txi = txi.astype(np.bool)
-                bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
-                                   (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
+                bounds = ([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, None),
+                           (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
                 args = (txi.astype(np.uint8), p, y, lvls, b, s, m, self.nobs,
                         max_seen)
                 if start_params is None and np.any(txi) and use_brute:
-                    res = brute(func, bounds[txi], args, Ns=20,
+                    _bounds = [bnd for bnd, flag in zip(bounds, txi) if flag]
+                    res = brute(func, _bounds, args, Ns=20,
                                 full_output=True, finish=None)
                     p[txi], max_seen, _, _ = res
                 else:
@@ -708,14 +709,23 @@ class ExponentialSmoothing(TimeSeriesModel):
                     # Take a deeper look in the local minimum we are in to find the best
                     # solution to parameters, maybe hop around to try escape the local
                     # minimum we may be in.
+                    _bounds = [bnd for bnd, flag in zip(bounds, xi) if flag]
                     res = basinhopping(func, p[xi],
-                                       minimizer_kwargs={'args': args, 'bounds': bounds[xi]},
+                                       minimizer_kwargs={'args': args, 'bounds': _bounds},
                                        stepsize=0.01)
                     success = res.lowest_optimization_result.success
                 else:
                     # Take a deeper look in the local minimum we are in to find the best
                     # solution to parameters
-                    res = minimize(func, p[xi], args=args, bounds=bounds[xi])
+                    _bounds = [bnd for bnd, flag in zip(bounds, xi) if flag]
+                    lb, ub = np.asarray(_bounds).T.astype(np.float)
+                    initial_p = p[xi]
+                    loc = p[xi] < lb
+                    eps = np.finfo(np.double).eps
+                    initial_p[loc] = lb[loc] + eps * (ub[loc] - lb[loc])
+                    loc = p[xi] > ub
+                    initial_p[loc] = ub[loc] - eps * (ub[loc] - lb[loc])
+                    res = minimize(func, p[xi], args=args, bounds=_bounds)
                     success = res.success
 
                 if not success:

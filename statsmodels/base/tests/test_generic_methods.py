@@ -13,6 +13,7 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.platform import (PLATFORM_OSX, PLATFORM_LINUX32,
                                          PLATFORM_WIN32)
+from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
 import pandas as pd
@@ -114,7 +115,7 @@ class CheckGenericMixin(object):
         assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
 
         # See gh5993
-        if PLATFORM_LINUX32:
+        if PLATFORM_LINUX32 or SCIPY_GT_14:
             pvals1 = res1.pvalues[keep_index_p]
         else:
             with pytest.warns(RuntimeWarning,
@@ -264,7 +265,7 @@ class CheckGenericMixin(object):
             assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
 
             # See gh5993
-            if PLATFORM_LINUX32:
+            if PLATFORM_LINUX32 or SCIPY_GT_14:
                 pvals1 = res1.pvalues[keep_index_p]
             else:
                 with pytest.warns(RuntimeWarning,

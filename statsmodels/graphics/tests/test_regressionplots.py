@@ -140,9 +140,9 @@ class TestPlotFormula(TestPlotPandas):
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
-        fig = plot_regress_exog(res, "var1")
+        plot_regress_exog(res, "var1")
         res = ols("y~var1", data=self.data).fit()
-        fig = plot_regress_exog(res, "var1")
+        plot_regress_exog(res, "var1")
 
 
 class TestABLine(object):

@@ -6,6 +6,8 @@ import scipy
 SCIPY_11 = (LooseVersion(scipy.__version__) < LooseVersion('1.2.0') and
             LooseVersion(scipy.__version__) >= LooseVersion('1.1.0'))
 
+SCIPY_GT_14 = LooseVersion(scipy.__version__) >= LooseVersion('1.5')
+
 
 def _next_regular(target):
     """

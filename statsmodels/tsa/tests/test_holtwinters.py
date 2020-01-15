@@ -323,8 +323,6 @@ class TestHoltWinters(object):
             447.2614880558126]
         assert_allclose(fit.forecast(10), desired, atol=1e-4)
 
-
-
     def test_hw_seasonal(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     trend='additive',
