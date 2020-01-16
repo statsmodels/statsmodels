@@ -52,6 +52,7 @@ from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.structural import UnobservedComponents
+from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 from numpy.testing import assert_equal, assert_allclose
 
 from . import kfas_helpers
@@ -995,3 +996,25 @@ def test_irrelevant_state():
     # Check that e.g. the filtered state for the level is equal
     assert_allclose(res.filtered_state[0, 25:],
                     res2.filtered_state[0, 25:], atol=1e-5)
+
+
+def test_nondiagonal_obs_cov():
+    # All diffuse handling is done using the univariate filtering approach,
+    # even if the usual multivariate filtering method is being used for the
+    # other periods. This means that if the observation covariance matrix is
+    # not a diagonal matrix during the diffuse periods, we need to transform
+    # the observation equation as we would if we were using the univariate
+    # filter.
+
+    mod = TVSS(np.zeros((10, 2)))
+    res1 = mod.smooth([])
+    mod.ssm.filter_univariate = True
+    res2 = mod.smooth([])
+
+    # Here we'll just test a few values
+    assert_allclose(res1.llf, res2.llf)
+    assert_allclose(res1.forecasts[0], res2.forecasts[0])
+    assert_allclose(res1.filtered_state, res2.filtered_state)
+    assert_allclose(res1.filtered_state_cov, res2.filtered_state_cov)
+    assert_allclose(res1.smoothed_state, res2.smoothed_state)
+    assert_allclose(res1.smoothed_state_cov, res2.smoothed_state_cov)
