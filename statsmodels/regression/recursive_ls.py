@@ -137,8 +137,10 @@ class RecursiveLS(MLEModel):
                                                  constraints=constraints)
 
     def _validate_can_fix_params(self, param_names):
-        raise ValueError('No parameters can be fixed in the recursive least'
-                         ' squares model.')
+        raise ValueError('Linear constraints on coefficients should be given'
+                         ' using the `constraints` argument in constructing.'
+                         ' the model. Other parameter constraints are not'
+                         ' available in the resursive least squares model.')
 
     def fit(self):
         """
