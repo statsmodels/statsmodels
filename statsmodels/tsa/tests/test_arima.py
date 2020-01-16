@@ -2738,7 +2738,9 @@ def test_nan_exog_arima_d1():
 
 
 def test_arma_exog_const_trend_nc(reset_randomstate):
-    y = np.random.randn(1000)
     x = np.ones((1000, 1))
-    res = ARMA(y, (2, 1), exog=x).fit(trend='nc')
+    y = arma_generate_sample([1, -1.2, 0.5], [1, 0.7], 1000,
+                             distrvs=np.random.standard_normal)
+    y += 1
+    res = ARMA(y, (2, 1), exog=x).fit(trend='nc', disp=-1)
     assert res.params.shape[0] == 4
