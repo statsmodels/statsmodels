@@ -28,6 +28,7 @@ cdef class sStatespace(object):
     cdef readonly int time_invariant
     cdef readonly int initialized
     cdef public int diagonal_obs_cov
+    cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
     cdef public int companion_transition
 
@@ -44,6 +45,7 @@ cdef class sStatespace(object):
     cdef readonly np.float32_t [::1,:] transform_cholesky
     cdef readonly np.float32_t [::1,:] transform_obs_cov
     cdef readonly np.float32_t [::1,:] transform_design
+    cdef readonly np.float32_t [:] transform_obs_intercept
     cdef readonly np.float32_t transform_determinant
 
     cdef readonly np.float32_t [:] collapse_obs
@@ -69,6 +71,7 @@ cdef class sStatespace(object):
 
     # Current location
     cdef int t
+    cdef readonly int _previous_t
     cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
     cdef int _nmissing
 
@@ -102,6 +105,7 @@ cdef class dStatespace(object):
     cdef readonly int time_invariant
     cdef readonly int initialized
     cdef public int diagonal_obs_cov
+    cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
     cdef public int companion_transition
 
@@ -118,6 +122,7 @@ cdef class dStatespace(object):
     cdef readonly np.float64_t [::1,:] transform_cholesky
     cdef readonly np.float64_t [::1,:] transform_obs_cov
     cdef readonly np.float64_t [::1,:] transform_design
+    cdef readonly np.float64_t [:] transform_obs_intercept
     cdef readonly np.float64_t transform_determinant
 
     cdef readonly np.float64_t [:] collapse_obs
@@ -143,6 +148,7 @@ cdef class dStatespace(object):
 
     # Current location
     cdef int t
+    cdef readonly int _previous_t
     cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
     cdef int _nmissing
 
@@ -176,6 +182,7 @@ cdef class cStatespace(object):
     cdef readonly int time_invariant
     cdef readonly int initialized
     cdef public int diagonal_obs_cov
+    cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
     cdef public int companion_transition
 
@@ -192,6 +199,7 @@ cdef class cStatespace(object):
     cdef readonly np.complex64_t [::1,:] transform_cholesky
     cdef readonly np.complex64_t [::1,:] transform_obs_cov
     cdef readonly np.complex64_t [::1,:] transform_design
+    cdef readonly np.complex64_t [:] transform_obs_intercept
     cdef readonly np.complex64_t transform_determinant
 
     cdef readonly np.complex64_t [:] collapse_obs
@@ -217,6 +225,7 @@ cdef class cStatespace(object):
 
     # Current location
     cdef int t
+    cdef readonly int _previous_t
     cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
     cdef int _nmissing
 
@@ -250,6 +259,7 @@ cdef class zStatespace(object):
     cdef readonly int time_invariant
     cdef readonly int initialized
     cdef public int diagonal_obs_cov
+    cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
     cdef public int companion_transition
 
@@ -266,6 +276,7 @@ cdef class zStatespace(object):
     cdef readonly np.complex128_t [::1,:] transform_cholesky
     cdef readonly np.complex128_t [::1,:] transform_obs_cov
     cdef readonly np.complex128_t [::1,:] transform_design
+    cdef readonly np.complex128_t [:] transform_obs_intercept
     cdef readonly np.complex128_t transform_determinant
 
     cdef readonly np.complex128_t [:] collapse_obs
@@ -291,6 +302,7 @@ cdef class zStatespace(object):
 
     # Current location
     cdef int t
+    cdef readonly int _previous_t
     cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
     cdef int _nmissing
 

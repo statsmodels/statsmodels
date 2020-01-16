@@ -1006,6 +1006,13 @@ cdef class {{prefix}}KalmanFilter(object):
             blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_state_cov, &inc, self._input_state_cov, &inc)
             blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
 
+        # Now we can check if we are in a diffuse period. If we are but we are
+        # not generally using the univariate method, then we may need to re-do
+        # the diagonalization transformation (since in diffuse periods we
+        # always use the univariate method)
+        if not (self.filter_method & FILTER_UNIVARIATE) and self.check_diffuse():
+            self.model.transform_diagonalize(self.model.t, self.model._previous_t)
+
         # Initialize object-level pointers to output arrays
         self._forecast = &self.forecast[0, forecast_mean_t]
         self._forecast_error = &self.forecast_error[0, forecast_mean_t]
