@@ -783,7 +783,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
                 if self.filter_timing == TIMING_INIT_FILTERED:
                     raise RuntimeError('Cannot use Chandrasekhar recursions'
-                                       ' with filtered timing data.')
+                                       ' with filtered timing.')
 
                 # Check for a time-invariant model
                 time_invariant = (
