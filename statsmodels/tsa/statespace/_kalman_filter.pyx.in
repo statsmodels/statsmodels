@@ -1189,9 +1189,12 @@ cdef class {{prefix}}KalmanFilter(object):
             blas.{{prefix}}copy(&self.k_endogstates, self._converged_M, &inc, self._M, &inc)
 
     cdef void numerical_stability(self):
+        cdef int inc = 1
+        cdef int k_states
         cdef int i, j
         cdef int predicted_cov_t = self.t
-        cdef {{cython_type}} value
+        cdef {{cython_type}} alpha = 1.0
+        cdef {{cython_type}} scalar = 0.5
 
         if self.conserve_memory & MEMORY_NO_PREDICTED_COV:
             predicted_cov_t = 1
@@ -1204,13 +1207,12 @@ cdef class {{prefix}}KalmanFilter(object):
             # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$  
             # See Grewal (2001), Section 6.3.1.1
             for i in range(self.k_states):
-                for j in range(i, self.k_states):
-                    value = 0.5 * (
-                        self.predicted_state_cov[i,j,predicted_cov_t] +
-                        self.predicted_state_cov[j,i,predicted_cov_t]
-                    )
-                    self.predicted_state_cov[i,j,predicted_cov_t] = value
-                    self.predicted_state_cov[j,i,predicted_cov_t] = value
+                k_states = self.k_states - i
+                blas.{{prefix}}axpy(&k_states, &alpha, &self.predicted_state_cov[i, i, predicted_cov_t], &self.k_states,
+                                                       &self.predicted_state_cov[i, i, predicted_cov_t], &inc)
+                blas.{{prefix}}copy(&k_states, &self.predicted_state_cov[i, i, predicted_cov_t], &inc,
+                                               &self.predicted_state_cov[i, i, predicted_cov_t], &self.k_states)
+            blas.{{prefix}}scal(&self.k_states2, &scalar, &self.predicted_state_cov[0, 0, predicted_cov_t], &inc)
 
     cdef int check_diffuse(self):
         cdef:
