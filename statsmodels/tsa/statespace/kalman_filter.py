@@ -2076,6 +2076,10 @@ class FilterResults(FrozenRepresentation):
                 self.conserve_memory & ~MEMORY_NO_FORECAST &
                 ~MEMORY_NO_PREDICTED)
 
+            # Can't use Chandrasekhar recursions for prediction
+            kwargs['filter_method'] = (
+                self.filter_method & ~FILTER_CHANDRASEKHAR)
+
             # Even if we have not stored all predicted values (means and covs),
             # we can still do pure out-of-sample forecasting because we will
             # always have stored the last predicted values. In this case, we
