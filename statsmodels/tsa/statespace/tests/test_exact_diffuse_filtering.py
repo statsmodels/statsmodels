@@ -998,7 +998,7 @@ def test_irrelevant_state():
                     res2.filtered_state[0, 25:], atol=1e-5)
 
 
-def test_nondiagonal_obs_cov():
+def test_nondiagonal_obs_cov(reset_randomstate):
     # All diffuse handling is done using the univariate filtering approach,
     # even if the usual multivariate filtering method is being used for the
     # other periods. This means that if the observation covariance matrix is
@@ -1017,4 +1017,5 @@ def test_nondiagonal_obs_cov():
     assert_allclose(res1.filtered_state, res2.filtered_state)
     assert_allclose(res1.filtered_state_cov, res2.filtered_state_cov)
     assert_allclose(res1.smoothed_state, res2.smoothed_state)
-    assert_allclose(res1.smoothed_state_cov, res2.smoothed_state_cov)
+    assert_allclose(res1.smoothed_state_cov, res2.smoothed_state_cov,
+                    atol=1e-7)
