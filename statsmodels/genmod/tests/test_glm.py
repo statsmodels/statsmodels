@@ -2109,13 +2109,17 @@ def test_glm_lasso_6431():
 
     for method in "bfgs", None:
         for fun in [OLS, GLM]:
+
+            # Changing L1_wtValue from 0 to 1e-9 changes
+            # the algorithm from scipy gradient optimization
+            # to statsmodels coordinate descent
             for L1_wtValue in [0, 1e-9]:
                 model = fun(y, x)
                 if fun == OLS:
-                    fit = model.fit_regularized(alpha=0, L1_wt=0)
+                    fit = model.fit_regularized(alpha=0, L1_wt=L1_wtValue)
                 else:
                     fit = model._fit_ridge(alpha=0, start_params=None, method=method)
-                assert_allclose(params, fit.params)
+                assert_allclose(params, fit.params, atol=1e-6, rtol=1e-6)
 
 class TestRegularized(object):
 
