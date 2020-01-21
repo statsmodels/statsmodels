@@ -60,8 +60,8 @@ def _inverse_transform(pca, data):
 
     Returns
     -------
-    projection : array
-        nobs by nvar array of the projection onto ncomp factors
+    projection : ndarray
+nobs by nvar array of the projection onto ncomp factors
     """
     factors = pca.factors
     pca.factors = data.reshape(-1, factors.shape[1])

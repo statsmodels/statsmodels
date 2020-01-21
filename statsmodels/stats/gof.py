@@ -248,8 +248,8 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
     Parameters
     ----------
-    rvs : array
-        sample data
+    rvs : ndarray
+sample data
     distname : str
         name of distribution function
     arg : sequence
@@ -260,12 +260,12 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
     Returns
     -------
-    freq : array
-        empirical frequencies for sample; not normalized, adds up to sample size
-    expfreq : array
-        theoretical frequencies according to distribution
-    histsupp : array
-        bin boundaries for histogram, (added 1e-8 for numerical robustness)
+    freq : ndarray
+empirical frequencies for sample; not normalized, adds up to sample size
+    expfreq : ndarray
+theoretical frequencies according to distribution
+    histsupp : ndarray
+bin boundaries for histogram, (added 1e-8 for numerical robustness)
 
     Notes
     -----

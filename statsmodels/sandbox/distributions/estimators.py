@@ -120,8 +120,8 @@ def gammamomentcond2(distfn, params, mom2, quantile=None):
 
     Returns
     -------
-    difference : array
-        difference between theoretical and empirical moments
+    difference : ndarray
+difference between theoretical and empirical moments
 
     Notes
     -----
@@ -144,8 +144,8 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
 
     Returns
     -------
-    difference : array
-        difference between theoretical and empirical moments and quantiles
+    difference : ndarray
+difference between theoretical and empirical moments and quantiles
 
     '''
     shape, loc, scale = params
@@ -165,8 +165,8 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
 
     Returns
     -------
-    difference : array
-        difference between theoretical and empirical moments or quantiles
+    difference : ndarray
+difference between theoretical and empirical moments or quantiles
 
     '''
     loc, scale = params
@@ -190,8 +190,8 @@ def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
 
     Returns
     -------
-    difference : array
-        difference between theoretical and empirical quantiles
+    difference : ndarray
+difference between theoretical and empirical quantiles
 
     Notes
     -----
@@ -250,8 +250,8 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
 
     Returns
     -------
-    paramest : array
-        estimated parameters
+    paramest : ndarray
+estimated parameters
 
     Notes
     -----
@@ -296,8 +296,8 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
 
     Returns
     -------
-    paramest : array
-        estimated parameters
+    paramest : ndarray
+estimated parameters
 
     Notes
     -----

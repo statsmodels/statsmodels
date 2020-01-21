@@ -60,8 +60,8 @@ def movorder(x, order = 'med', windsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
-       time series data
+    x : ndarray
+time series data
     order : float or 'med', 'min', 'max'
        which order statistic to calculate
     windsize : int
@@ -160,8 +160,8 @@ def movmean(x, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
-       time series data
+    x : ndarray
+time series data
     windsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
@@ -169,8 +169,8 @@ def movmean(x, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
-        moving mean, with same shape as x
+    mk : ndarray
+moving mean, with same shape as x
 
 
     Notes
@@ -187,8 +187,8 @@ def movvar(x, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
-       time series data
+    x : ndarray
+time series data
     windsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
@@ -196,8 +196,8 @@ def movvar(x, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
-        moving variance, with same shape as x
+    mk : ndarray
+moving variance, with same shape as x
 
 
     '''
@@ -211,8 +211,8 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
-       time series data
+    x : ndarray
+time series data
     windsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
@@ -220,8 +220,8 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
-        k-th moving non-central moment, with same shape as x
+    mk : ndarray
+k-th moving non-central moment, with same shape as x
 
 
     Notes

@@ -698,8 +698,8 @@ class Representation(object):
 
         Parameters
         ----------
-        endog : array
-            Endogenous data to bind to the model. Must be column-ordered
+        endog : ndarray
+Endogenous data to bind to the model. Must be column-ordered
             ndarray with shape (`k_endog`, `nobs`) or row-ordered ndarray with
             shape (`nobs`, `k_endog`).
 
@@ -982,22 +982,22 @@ class FrozenRepresentation(object):
     shapes : dictionary of name:tuple
         A dictionary recording the shapes of each of
         the representation matrices as tuples.
-    endog : array
-        The observation vector.
-    design : array
-        The design matrix, :math:`Z`.
-    obs_intercept : array
-        The intercept for the observation equation, :math:`d`.
-    obs_cov : array
-        The covariance matrix for the observation equation :math:`H`.
-    transition : array
-        The transition matrix, :math:`T`.
-    state_intercept : array
-        The intercept for the transition equation, :math:`c`.
-    selection : array
-        The selection matrix, :math:`R`.
-    state_cov : array
-        The covariance matrix for the state equation :math:`Q`.
+    endog : ndarray
+The observation vector.
+    design : ndarray
+The design matrix, :math:`Z`.
+    obs_intercept : ndarray
+The intercept for the observation equation, :math:`d`.
+    obs_cov : ndarray
+The covariance matrix for the observation equation :math:`H`.
+    transition : ndarray
+The transition matrix, :math:`T`.
+    state_intercept : ndarray
+The intercept for the transition equation, :math:`c`.
+    selection : ndarray
+The selection matrix, :math:`R`.
+    state_cov : ndarray
+The covariance matrix for the state equation :math:`Q`.
     missing : array of bool
         An array of the same size as `endog`, filled
         with boolean values that are True if the

@@ -85,8 +85,8 @@ class _OptFuncts(object):
 
         Returns
         ------
-        data_star : array
-            The weighted logstar of the estimting equations
+        data_star : ndarray
+The weighted logstar of the estimting equations
 
         Notes
         -----

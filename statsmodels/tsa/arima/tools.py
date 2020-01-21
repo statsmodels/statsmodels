@@ -127,8 +127,8 @@ def validate_basic(params, length, allow_infnan=False, title=None):
 
     Returns
     -------
-    params : array
-        Array of validated parameters.
+    params : ndarray
+Array of validated parameters.
 
     Notes
     -----

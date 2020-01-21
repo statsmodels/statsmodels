@@ -504,13 +504,13 @@ class Initialization(object):
 
         Returns
         -------
-        initial_state_mean : array
-            Initial state mean, :math:`a_1^{(0)} = a`
-        initial_diffuse_state_cov : array
-            Diffuse component of initial state covariance matrix,
+        initial_state_mean : ndarray
+Initial state mean, :math:`a_1^{(0)} = a`
+        initial_diffuse_state_cov : ndarray
+Diffuse component of initial state covariance matrix,
             :math:`P_\infty = A A'`
-        initial_stationary_state_cov : array
-            Stationary component of initial state covariance matrix,
+        initial_stationary_state_cov : ndarray
+Stationary component of initial state covariance matrix,
             :math:`P_* = R_0 Q_0 R_0'`
 
         Notes

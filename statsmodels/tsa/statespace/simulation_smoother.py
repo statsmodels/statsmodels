@@ -301,23 +301,23 @@ class SimulationSmoothResults(object):
         simulation output.
     simulate_all : bool
         Flag for if simulation output should include everything.
-    generated_measurement_disturbance : array
-        Measurement disturbance variates used to genereate the observation
+    generated_measurement_disturbance : ndarray
+Measurement disturbance variates used to genereate the observation
         vector.
-    generated_state_disturbance : array
-        State disturbance variates used to genereate the state and
+    generated_state_disturbance : ndarray
+State disturbance variates used to genereate the state and
         observation vectors.
-    generated_obs : array
-        Generated observation vector produced as a byproduct of simulation
+    generated_obs : ndarray
+Generated observation vector produced as a byproduct of simulation
         smoothing.
-    generated_state : array
-        Generated state vector produced as a byproduct of simulation smoothing.
-    simulated_state : array
-        Simulated state.
-    simulated_measurement_disturbance : array
-        Simulated measurement disturbance.
-    simulated_state_disturbance : array
-        Simulated state disturbance.
+    generated_state : ndarray
+Generated state vector produced as a byproduct of simulation smoothing.
+    simulated_state : ndarray
+Simulated state.
+    simulated_measurement_disturbance : ndarray
+Simulated measurement disturbance.
+    simulated_state_disturbance : ndarray
+Simulated state disturbance.
     """
 
     def __init__(self, model, simulation_smoother):

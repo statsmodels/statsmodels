@@ -1362,14 +1362,14 @@ class PHRegResults(base.LikelihoodModelResults):
     ----------
     model : class instance
         PHreg model instance that called fit.
-    normalized_cov_params : array
-        The sampling covariance matrix of the estimates
-    params : array
-        The coefficients of the fitted model.  Each coefficient is the
+    normalized_cov_params : ndarray
+The sampling covariance matrix of the estimates
+    params : ndarray
+The coefficients of the fitted model.  Each coefficient is the
         log hazard ratio corresponding to a 1 unit difference in a
         single covariate while holding the other covariates fixed.
-    bse : array
-        The standard errors of the fitted parameters.
+    bse : ndarray
+The standard errors of the fitted parameters.
 
     See Also
     --------

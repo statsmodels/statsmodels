@@ -356,15 +356,15 @@ _gee_results_doc = """
         covariance is used as default
     fit_history : dict
         Contains information about the iterations.
-    fittedvalues : array
-        Linear predicted values for the fitted model.
+    fittedvalues : ndarray
+Linear predicted values for the fitted model.
         dot(exog, params)
     model : class instance
         Pointer to GEE model instance that called `fit`.
-    normalized_cov_params : array
-        See GEE docstring
-    params : array
-        The coefficients of the fitted model.  Note that
+    normalized_cov_params : ndarray
+See GEE docstring
+    params : ndarray
+The coefficients of the fitted model.  Note that
         interpretation of the coefficients often depends on the
         distribution family and the data.
     scale : float
@@ -372,8 +372,8 @@ _gee_results_doc = """
         See GEE.fit for more information.
     score_norm : float
         norm of the score at the end of the iterative estimation.
-    bse : array
-        The standard errors of the fitted GEE parameters.
+    bse : ndarray
+The standard errors of the fitted GEE parameters.
 """
 
 _gee_example = """
@@ -3013,8 +3013,8 @@ class _MultinomialLogit(Link):
 
         Returns
         -------
-        prob : array
-            Probabilities, or expected values
+        prob : ndarray
+Probabilities, or expected values
         """
 
         expval = np.exp(lpr)

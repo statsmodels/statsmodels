@@ -98,16 +98,16 @@ class PCA(object):
         nvar array of eigenvalues
     eigenvecs : array or DataFrame
         nvar by nvar array of eigenvectors
-    weights : array
-        nvar array of weights used to compute the principal components,
+    weights : ndarray
+nvar array of weights used to compute the principal components,
         normalized to unit length
-    transformed_data : array
-        Standardized, demeaned and weighted data used to compute
+    transformed_data : ndarray
+Standardized, demeaned and weighted data used to compute
         principal components and related quantities
-    cols : array
-        Array of indices indicating columns used in the PCA
-    rows : array
-        Array of indices indicating rows used in the PCA
+    cols : ndarray
+Array of indices indicating columns used in the PCA
+    rows : ndarray
+Array of indices indicating rows used in the PCA
 
     Notes
     -----
@@ -789,8 +789,8 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
 
     Parameters
     ----------
-    data : array
-        Variables in columns, observations in rows.
+    data : ndarray
+Variables in columns, observations in rows.
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
         smaller to the number of rows or columns of data.

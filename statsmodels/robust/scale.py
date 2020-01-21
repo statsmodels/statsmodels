@@ -96,8 +96,8 @@ class Huber(object):
 
         Parameters
         ----------
-        a : array
-            1d array
+        a : ndarray
+1d array
         mu : float or None, optional
             If the location mu is supplied then it is not reestimated.
             Default is None, which means that it is estimated.

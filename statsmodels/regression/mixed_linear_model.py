@@ -2290,23 +2290,23 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     ----------
     model : class instance
         Pointer to MixedLM model instance that called fit.
-    normalized_cov_params : array
-        The sampling covariance matrix of the estimates
-    params : array
-        A packed parameter vector for the profile parameterization.
+    normalized_cov_params : ndarray
+The sampling covariance matrix of the estimates
+    params : ndarray
+A packed parameter vector for the profile parameterization.
         The first `k_fe` elements are the estimated fixed effects
         coefficients.  The remaining elements are the estimated
         variance parameters.  The variance parameters are all divided
         by `scale` and are not the variance parameters shown
         in the summary.
-    fe_params : array
-        The fitted fixed-effects coefficients
-    cov_re : array
-        The fitted random-effects covariance matrix
-    bse_fe : array
-        The standard errors of the fitted fixed effects coefficients
-    bse_re : array
-        The standard errors of the fitted random effects covariance
+    fe_params : ndarray
+The fitted fixed-effects coefficients
+    cov_re : ndarray
+The fitted random-effects covariance matrix
+    bse_fe : ndarray
+The standard errors of the fitted fixed effects coefficients
+    bse_re : ndarray
+The standard errors of the fitted random effects covariance
         matrix and variance components.  The first `k_re * (k_re + 1)`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for

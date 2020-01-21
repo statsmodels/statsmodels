@@ -473,8 +473,8 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
         Parameters
         ----------
-        x_new : array
-            observations of the underlying explanatory variable
+        x_new : ndarray
+observations of the underlying explanatory variable
         deriv : int
             which derivative of the spline basis to compute
             This is an options for internal computation.
@@ -778,8 +778,8 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
 
         Parameters
         ----------
-        x_new: array
-            observations of the underlying explanatory variable
+        x_new: ndarray
+observations of the underlying explanatory variable
 
         Returns
         -------

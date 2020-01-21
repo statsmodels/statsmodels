@@ -784,10 +784,10 @@ class MultiComparison(object):
 
     Parameters
     ----------
-    data : array
-        independent data samples
-    groups : array
-        group labels corresponding to each data point
+    data : ndarray
+independent data samples
+    groups : ndarray
+group labels corresponding to each data point
     group_order : list[str], optional
         the desired order for the group mean results to be reported in. If
         not specified, results are reported in increasing order.
@@ -1107,8 +1107,8 @@ def varcorrection_pairs_unbalanced(nobs_all, srange=False):
 
     Returns
     -------
-    correction : array
-        Correction factor for variance.
+    correction : ndarray
+Correction factor for variance.
 
 
     Notes
@@ -1201,10 +1201,10 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
 
     Returns
     -------
-    varjoint : array
-        joint variance.
-    dfjoint : array
-        joint Satterthwait's degrees of freedom
+    varjoint : ndarray
+joint variance.
+    dfjoint : ndarray
+joint Satterthwait's degrees of freedom
 
 
     Notes

@@ -93,13 +93,13 @@ class LeastSquares(RobustNorm):
 
         Parameters
         ----------
-        z : array
-            1d array
+        z : ndarray
+1d array
 
         Returns
         -------
-        rho : array
-            rho(z) = (1/2.)*z**2
+        rho : ndarray
+rho(z) = (1/2.)*z**2
         """
 
         return z**2 * 0.5
@@ -117,8 +117,8 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z
+        psi : ndarray
+psi(z) = z
         """
 
         return np.asarray(z)
@@ -136,8 +136,8 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = np.ones(z.shape)
+        weights : ndarray
+weights(z) = np.ones(z.shape)
         """
 
         z = np.asarray(z)
@@ -149,8 +149,8 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        psi_deriv : array
-            ones(z.shape)
+        psi_deriv : ndarray
+ones(z.shape)
 
         Notes
         -----
@@ -195,8 +195,8 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = .5*z**2            for \|z\| <= t
+        rho : ndarray
+rho(z) = .5*z**2            for \|z\| <= t
 
             rho(z) = \|z\|*t - .5*t**2    for \|z\| > t
         """
@@ -218,8 +218,8 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z      for \|z\| <= t
+        psi : ndarray
+psi(z) = z      for \|z\| <= t
 
             psi(z) = sign(z)*t for \|z\| > t
         """
@@ -240,8 +240,8 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = 1          for \|z\| <= t
+        weights : ndarray
+weights(z) = 1          for \|z\| <= t
 
             weights(z) = t/\|z\|      for \|z\| > t
         """
@@ -292,8 +292,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
+        rho : ndarray
+rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
         """
         z = np.asarray(z)
         return (1 - np.exp(-self.a * np.abs(z)) *
@@ -312,8 +312,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z*exp(-a*\|z\|)
+        psi : ndarray
+psi(z) = z*exp(-a*\|z\|)
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.abs(z))
@@ -331,8 +331,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = exp(-a*\|z\|)
+        weights : ndarray
+weights(z) = exp(-a*\|z\|)
         """
 
         z = np.asarray(z)
@@ -389,8 +389,8 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = a*(1-cos(z/a))     for \|z\| <= a*pi
+        rho : ndarray
+rho(z) = a*(1-cos(z/a))     for \|z\| <= a*pi
 
             rho(z) = 2*a                for \|z\| > a*pi
         """
@@ -414,8 +414,8 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = sin(z/a)       for \|z\| <= a*pi
+        psi : ndarray
+psi(z) = sin(z/a)       for \|z\| <= a*pi
 
             psi(z) = 0              for \|z\| > a*pi
         """
@@ -438,8 +438,8 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = sin(z/a)/(z/a)     for \|z\| <= a*pi
+        weights : ndarray
+weights(z) = sin(z/a)/(z/a)     for \|z\| <= a*pi
 
             weights(z) = 0                  for \|z\| > a*pi
         """
@@ -508,8 +508,8 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = (1/2.)*z**2    for \|z\| <= c
+        rho : ndarray
+rho(z) = (1/2.)*z**2    for \|z\| <= c
 
             rho(z) = 0              for \|z\| > c
         """
@@ -531,8 +531,8 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z              for \|z\| <= c
+        psi : ndarray
+psi(z) = z              for \|z\| <= c
 
             psi(z) = 0              for \|z\| > c
         """
@@ -553,8 +553,8 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = 1             for \|z\| <= c
+        weights : ndarray
+weights(z) = 1             for \|z\| <= c
 
             weights(z) = 0             for \|z\| > c
         """
@@ -618,8 +618,8 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = (1/2.)*z**2                    for \|z\| <= a
+        rho : ndarray
+rho(z) = (1/2.)*z**2                    for \|z\| <= a
 
             rho(z) = a*\|z\| - 1/2.*a**2              for a < \|z\| <= b
 
@@ -652,8 +652,8 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z                            for \|z\| <= a
+        psi : ndarray
+psi(z) = z                            for \|z\| <= a
 
             psi(z) = a*sign(z)                    for a < \|z\| <= b
 
@@ -686,8 +686,8 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        weights : array
-            weights(z) = 1                            for \|z\| <= a
+        weights : ndarray
+weights(z) = 1                            for \|z\| <= a
 
             weights(z) = a/\|z\|                        for a < \|z\| <= b
 
@@ -758,8 +758,8 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        rho : array
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for \|z\| <= R
+        rho : ndarray
+rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for \|z\| <= R
 
             rho(z) = 0                              for \|z\| > R
         """
@@ -779,8 +779,8 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        psi : array
-            psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= R
+        psi : ndarray
+psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= R
 
             psi(z) = 0                           for \|z\| > R
         """
@@ -802,8 +802,8 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        weights : array
-            psi(z) = (1 - (z/c)**2)**2          for \|z\| <= R
+        weights : ndarray
+psi(z) = (1 - (z/c)**2)**2          for \|z\| <= R
 
             psi(z) = 0                          for \|z\| > R
         """
@@ -836,10 +836,10 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     Parameters
     ----------
-    a : array
-        Array over which the location parameter is to be estimated
-    scale : array
-        Scale parameter to be used in M-estimator
+    a : ndarray
+Array over which the location parameter is to be estimated
+    scale : ndarray
+Scale parameter to be used in M-estimator
     norm : RobustNorm, optional
         Robust norm used in the M-estimator.  The default is HuberT().
     axis : int, optional
@@ -854,8 +854,8 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     Returns
     -------
-    mu : array
-        Estimate of location
+    mu : ndarray
+Estimate of location
     """
     if norm is None:
         norm = HuberT()

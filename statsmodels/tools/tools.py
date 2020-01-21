@@ -43,11 +43,10 @@ def drop_missing(Y, X=None, axis=1):
 
     Returns
     -------
-    Y : array
-        All Y where the
-    X : array
-
-    Notes
+    Y : ndarray
+All Y where the
+    X : ndarray
+Notes
     -----
     If either Y or X is 1d, it is reshaped to be 2d.
     """

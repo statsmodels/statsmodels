@@ -838,11 +838,11 @@ class VARMAXResults(MLEResults):
     ----------
     specification : dictionary
         Dictionary including all attributes from the VARMAX model instance.
-    coefficient_matrices_var : array
-        Array containing autoregressive lag polynomial coefficient matrices,
+    coefficient_matrices_var : ndarray
+Array containing autoregressive lag polynomial coefficient matrices,
         ordered from lowest degree to highest.
-    coefficient_matrices_vma : array
-        Array containing moving average lag polynomial coefficients,
+    coefficient_matrices_vma : ndarray
+Array containing moving average lag polynomial coefficients,
         ordered from lowest degree to highest.
 
     See Also

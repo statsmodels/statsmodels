@@ -435,22 +435,22 @@ class SmootherResults(FilterResults):
     shapes : dictionary of name:tuple
         A dictionary recording the shapes of each of the representation
         matrices as tuples.
-    endog : array
-        The observation vector.
-    design : array
-        The design matrix, :math:`Z`.
-    obs_intercept : array
-        The intercept for the observation equation, :math:`d`.
-    obs_cov : array
-        The covariance matrix for the observation equation :math:`H`.
-    transition : array
-        The transition matrix, :math:`T`.
-    state_intercept : array
-        The intercept for the transition equation, :math:`c`.
-    selection : array
-        The selection matrix, :math:`R`.
-    state_cov : array
-        The covariance matrix for the state equation :math:`Q`.
+    endog : ndarray
+The observation vector.
+    design : ndarray
+The design matrix, :math:`Z`.
+    obs_intercept : ndarray
+The intercept for the observation equation, :math:`d`.
+    obs_cov : ndarray
+The covariance matrix for the observation equation :math:`H`.
+    transition : ndarray
+The transition matrix, :math:`T`.
+    state_intercept : ndarray
+The intercept for the transition equation, :math:`c`.
+    selection : ndarray
+The selection matrix, :math:`R`.
+    state_cov : ndarray
+The covariance matrix for the state equation :math:`Q`.
     missing : array of bool
         An array of the same size as `endog`, filled with boolean values that
         are True if the corresponding entry in `endog` is NaN and False
@@ -486,60 +486,60 @@ class SmootherResults(FilterResults):
         Whether or not the Kalman filter converged.
     period_converged : int
         The time period in which the Kalman filter converged.
-    filtered_state : array
-        The filtered state vector at each time period.
-    filtered_state_cov : array
-        The filtered state covariance matrix at each time period.
-    predicted_state : array
-        The predicted state vector at each time period.
-    predicted_state_cov : array
-        The predicted state covariance matrix at each time period.
-    kalman_gain : array
-        The Kalman gain at each time period.
-    forecasts : array
-        The one-step-ahead forecasts of observations at each time period.
-    forecasts_error : array
-        The forecast errors at each time period.
-    forecasts_error_cov : array
-        The forecast error covariance matrices at each time period.
-    loglikelihood : array
-        The loglikelihood values at each time period.
-    collapsed_forecasts : array
-        If filtering using collapsed observations, stores the one-step-ahead
+    filtered_state : ndarray
+The filtered state vector at each time period.
+    filtered_state_cov : ndarray
+The filtered state covariance matrix at each time period.
+    predicted_state : ndarray
+The predicted state vector at each time period.
+    predicted_state_cov : ndarray
+The predicted state covariance matrix at each time period.
+    kalman_gain : ndarray
+The Kalman gain at each time period.
+    forecasts : ndarray
+The one-step-ahead forecasts of observations at each time period.
+    forecasts_error : ndarray
+The forecast errors at each time period.
+    forecasts_error_cov : ndarray
+The forecast error covariance matrices at each time period.
+    loglikelihood : ndarray
+The loglikelihood values at each time period.
+    collapsed_forecasts : ndarray
+If filtering using collapsed observations, stores the one-step-ahead
         forecasts of collapsed observations at each time period.
-    collapsed_forecasts_error : array
-        If filtering using collapsed observations, stores the one-step-ahead
+    collapsed_forecasts_error : ndarray
+If filtering using collapsed observations, stores the one-step-ahead
         forecast errors of collapsed observations at each time period.
-    collapsed_forecasts_error_cov : array
-        If filtering using collapsed observations, stores the one-step-ahead
+    collapsed_forecasts_error_cov : ndarray
+If filtering using collapsed observations, stores the one-step-ahead
         forecast error covariance matrices of collapsed observations at each
         time period.
-    standardized_forecast_error : array
-        The standardized forecast errors
+    standardized_forecast_error : ndarray
+The standardized forecast errors
     smoother_output : int
         Bitmask representing the generated Kalman smoothing output
-    scaled_smoothed_estimator : array
-        The scaled smoothed estimator at each time period.
-    scaled_smoothed_estimator_cov : array
-        The scaled smoothed estimator covariance matrices at each time period.
-    smoothing_error : array
-        The smoothing error covariance matrices at each time period.
-    smoothed_state : array
-        The smoothed state at each time period.
-    smoothed_state_cov : array
-        The smoothed state covariance matrices at each time period.
-    smoothed_state_autocov : array
-        The smoothed state lago-one autocovariance matrices at each time
+    scaled_smoothed_estimator : ndarray
+The scaled smoothed estimator at each time period.
+    scaled_smoothed_estimator_cov : ndarray
+The scaled smoothed estimator covariance matrices at each time period.
+    smoothing_error : ndarray
+The smoothing error covariance matrices at each time period.
+    smoothed_state : ndarray
+The smoothed state at each time period.
+    smoothed_state_cov : ndarray
+The smoothed state covariance matrices at each time period.
+    smoothed_state_autocov : ndarray
+The smoothed state lago-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
-    smoothed_measurement_disturbance : array
-        The smoothed measurement at each time period.
-    smoothed_state_disturbance : array
-        The smoothed state at each time period.
-    smoothed_measurement_disturbance_cov : array
-        The smoothed measurement disturbance covariance matrices at each time
+    smoothed_measurement_disturbance : ndarray
+The smoothed measurement at each time period.
+    smoothed_state_disturbance : ndarray
+The smoothed state at each time period.
+    smoothed_measurement_disturbance_cov : ndarray
+The smoothed measurement disturbance covariance matrices at each time
         period.
-    smoothed_state_disturbance_cov : array
-        The smoothed state disturbance covariance matrices at each time period.
+    smoothed_state_disturbance_cov : ndarray
+The smoothed state disturbance covariance matrices at each time period.
     """
 
     _smoother_attributes = [

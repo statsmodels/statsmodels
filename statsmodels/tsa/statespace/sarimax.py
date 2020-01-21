@@ -149,30 +149,30 @@ class SARIMAX(MLEModel):
         Parameter controlling the deterministic
         trend polynomial :math:`A(t)`. See the class
         parameter documentation for more information.
-    polynomial_ar : array
-        Array containing autoregressive lag polynomial
+    polynomial_ar : ndarray
+Array containing autoregressive lag polynomial
         coefficients, ordered from lowest degree to highest.
         Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
-    polynomial_ma : array
-        Array containing moving average lag polynomial
+    polynomial_ma : ndarray
+Array containing moving average lag polynomial
         coefficients, ordered from lowest degree to highest.
         Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
-    polynomial_seasonal_ar : array
-        Array containing seasonal moving average lag
+    polynomial_seasonal_ar : ndarray
+Array containing seasonal moving average lag
         polynomial coefficients, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).
-    polynomial_seasonal_ma : array
-        Array containing seasonal moving average lag
+    polynomial_seasonal_ma : ndarray
+Array containing seasonal moving average lag
         polynomial coefficients, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).
-    polynomial_trend : array
-        Array containing trend polynomial coefficients,
+    polynomial_trend : ndarray
+Array containing trend polynomial coefficients,
         ordered from lowest degree to highest. Initialized
         with ones, unless a coefficient is constrained to be
         zero (in which case it is zero).
@@ -1762,24 +1762,24 @@ class SARIMAXResults(MLEResults):
     ----------
     specification : dictionary
         Dictionary including all attributes from the SARIMAX model instance.
-    polynomial_ar : array
-        Array containing autoregressive lag polynomial coefficients,
+    polynomial_ar : ndarray
+Array containing autoregressive lag polynomial coefficients,
         ordered from lowest degree to highest. Initialized with ones, unless
         a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_ma : array
-        Array containing moving average lag polynomial coefficients,
+    polynomial_ma : ndarray
+Array containing moving average lag polynomial coefficients,
         ordered from lowest degree to highest. Initialized with ones, unless
         a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_seasonal_ar : array
-        Array containing seasonal autoregressive lag polynomial coefficients,
+    polynomial_seasonal_ar : ndarray
+Array containing seasonal autoregressive lag polynomial coefficients,
         ordered from lowest degree to highest. Initialized with ones, unless
         a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_seasonal_ma : array
-        Array containing seasonal moving average lag polynomial coefficients,
+    polynomial_seasonal_ma : ndarray
+Array containing seasonal moving average lag polynomial coefficients,
         ordered from lowest degree to highest. Initialized with ones, unless
         a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_trend : array
-        Array containing trend polynomial coefficients, ordered from lowest
+    polynomial_trend : ndarray
+Array containing trend polynomial coefficients, ordered from lowest
         degree to highest. Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
     model_orders : list of int

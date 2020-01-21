@@ -298,8 +298,8 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     Returns
     -------
-    density : array
-        The densities estimated at the grid points.
+    density : ndarray
+The densities estimated at the grid points.
     grid : array, optional
         The grid points at which the density is estimated.
 
@@ -414,8 +414,8 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Returns
     -------
-    density : array
-        The densities estimated at the grid points.
+    density : ndarray
+The densities estimated at the grid points.
     grid : array, optional
         The grid points at which the density is estimated.
 

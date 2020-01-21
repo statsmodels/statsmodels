@@ -99,8 +99,8 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
     -------
     reject : array, boolean
         true for hypothesis that can be rejected for given alpha
-    pvals_corrected : array
-        p-values corrected for multiple tests
+    pvals_corrected : ndarray
+p-values corrected for multiple tests
     alphacSidak: float
         corrected alpha for Sidak method
     alphacBonf: float
@@ -284,8 +284,8 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     -------
     rejected : array, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : array
-        pvalues adjusted for multiple hypothesis testing to limit FDR
+    pvalue-corrected : ndarray
+pvalues adjusted for multiple hypothesis testing to limit FDR
 
     Notes
     -----
@@ -368,8 +368,8 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     -------
     rejected : array, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : array
-        pvalues adjusted for multiple hypotheses testing to limit FDR
+    pvalue-corrected : ndarray
+pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
         ntest - rej, estimated number of true hypotheses
     alpha_stages : list of floats

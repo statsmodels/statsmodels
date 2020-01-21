@@ -59,8 +59,8 @@ class Optimizer(object):
 
         Returns
         -------
-        xopt : array
-            The solution to the objective function
+        xopt : ndarray
+The solution to the objective function
         retvals : dict, None
             If `full_output` is True then this is a dictionary which holds
             information returned from the solver used. If it is False, this is

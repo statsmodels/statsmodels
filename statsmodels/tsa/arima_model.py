@@ -144,8 +144,8 @@ _predict = """
         %(extra_section)s
 """
 
-_predict_returns = """predict : array
-            The predicted values.
+_predict_returns = """predict : ndarray
+The predicted values.
 
 """
 
@@ -473,8 +473,8 @@ class ARMA(tsa_model.TimeSeriesModel):
 
         Returns
         -------
-        start_params : array
-            A first guess at the starting parameters.
+        start_params : ndarray
+A first guess at the starting parameters.
 
         Notes
         -----
@@ -1321,8 +1321,8 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
     ----------
     model : ARMA instance
         The fitted model instance
-    params : array
-        Fitted parameters
+    params : ndarray
+Fitted parameters
     normalized_cov_params : array, optional
         The normalized variance covariance matrix
     scale : float, optional
@@ -1335,10 +1335,10 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         :math:`-2*llf+2* df_model`
         where `df_model` includes all AR parameters, MA parameters, constant
         terms parameters on constant terms and the variance.
-    arparams : array
-        The parameters associated with the AR coefficients in the model.
-    arroots : array
-        The roots of the AR coefficients are the solution to
+    arparams : ndarray
+The parameters associated with the AR coefficients in the model.
+    arroots : ndarray
+The roots of the AR coefficients are the solution to
         (1 - arparams[0]*z - arparams[1]*z**2 -...- arparams[p-1]*z**k_ar) = 0
         Stability requires that the roots in modulus lie outside the unit
         circle.
@@ -1348,15 +1348,15 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         Where if the model is fit using conditional sum of squares, the
         number of observations `nobs` does not include the `p` pre-sample
         observations.
-    bse : array
-        The standard errors of the parameters. These are computed using the
+    bse : ndarray
+The standard errors of the parameters. These are computed using the
         numerical Hessian.
-    df_model : array
-        The model degrees of freedom = `k_exog` + `k_trend` + `k_ar` + `k_ma`
-    df_resid : array
-        The residual degrees of freedom = `nobs` - `df_model`
-    fittedvalues : array
-        The predicted values of the model.
+    df_model : ndarray
+The model degrees of freedom = `k_exog` + `k_trend` + `k_ar` + `k_ma`
+    df_resid : ndarray
+The residual degrees of freedom = `nobs` - `df_model`
+    fittedvalues : ndarray
+The predicted values of the model.
     hqic : float
         Hannan-Quinn Information Criterion
         -2*llf + 2*(`df_model`)*log(log(nobs))
@@ -1373,10 +1373,10 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         This is 0 for no constant or 1 if a constant is included.
     llf : float
         The value of the log-likelihood function evaluated at `params`.
-    maparams : array
-        The value of the moving average coefficients.
-    maroots : array
-        The roots of the MA coefficients are the solution to
+    maparams : ndarray
+The value of the moving average coefficients.
+    maroots : ndarray
+The roots of the MA coefficients are the solution to
         (1 + maparams[0]*z + maparams[1]*z**2 + ... + maparams[q-1]*z**q) = 0
         Stability requires that the roots in modules lie outside the unit
         circle.
@@ -1390,15 +1390,15 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
     n_totobs : float
         The total number of observations for `endog`. This includes all
         observations, even pre-sample values if the model is fit using `css`.
-    params : array
-        The parameters of the model. The order of variables is the trend
+    params : ndarray
+The parameters of the model. The order of variables is the trend
         coefficients and the `k_exog` exogenous coefficients, then the
         `k_ar` AR coefficients, and finally the `k_ma` MA coefficients.
-    pvalues : array
-        The p-values associated with the t-values of the coefficients. Note
+    pvalues : ndarray
+The p-values associated with the t-values of the coefficients. Note
         that the coefficients are assumed to have a Student's T distribution.
-    resid : array
-        The model residuals. If the model is fit using 'mle' then the
+    resid : ndarray
+The model residuals. If the model is fit using 'mle' then the
         residuals are created via the Kalman Filter. If the model is fit
         using 'css' then the residuals are obtained via `scipy.signal.lfilter`
         adjusted such that the first `k_ma` residuals are zero. These zero
@@ -1557,8 +1557,8 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         steps : int
             The number of out of sample forecasts from the end of the
             sample.
-        exog : array
-            If the model is an ARMAX, you must provide out of sample
+        exog : ndarray
+If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
             the constant. The number of observation in exog must match the
             value of steps.
@@ -1567,12 +1567,12 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
-            Array of out of sample forecasts
-        stderr : array
-            Array of the standard error of the forecasts.
-        conf_int : array
-            2d array of the confidence interval for the forecast
+        forecast : ndarray
+Array of out of sample forecasts
+        stderr : ndarray
+Array of the standard error of the forecasts.
+        conf_int : ndarray
+2d array of the confidence interval for the forecast
         """
         if exog is not None:
             exog = array_like(exog, 'exog', maxdim=2)
@@ -1890,12 +1890,12 @@ class ARIMAResults(ARMAResults):
 
         Returns
         -------
-        forecast : array
-            Array of out of sample forecasts
-        stderr : array
-            Array of the standard error of the forecasts.
-        conf_int : array
-            2d array of the confidence interval for the forecast
+        forecast : ndarray
+Array of out of sample forecasts
+        stderr : ndarray
+Array of the standard error of the forecasts.
+        conf_int : ndarray
+2d array of the confidence interval for the forecast
 
         Notes
         -----

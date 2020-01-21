@@ -38,10 +38,10 @@ class MANOVA(Model):
 
     Attributes
     ----------
-    endog : array
-        See Parameters.
-    exog : array
-        See Parameters.
+    endog : ndarray
+See Parameters.
+    exog : ndarray
+See Parameters.
 
     Notes
     -----

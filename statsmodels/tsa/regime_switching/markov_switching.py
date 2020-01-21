@@ -108,12 +108,12 @@ def cy_hamilton_filter_log(initial_probabilities, regime_transition,
 
     Parameters
     ----------
-    initial_probabilities : array
-        Array of initial probabilities, shaped (k_regimes,) giving the
+    initial_probabilities : ndarray
+Array of initial probabilities, shaped (k_regimes,) giving the
         distribution of the regime process at time t = -order where order
         is a nonnegative integer.
-    regime_transition : array
-        Matrix of regime transition probabilities, shaped either
+    regime_transition : ndarray
+Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs + order).  Entry [i, j,
         t] contains the probability of moving from j at time t-1 to i at
@@ -121,25 +121,25 @@ def cy_hamilton_filter_log(initial_probabilities, regime_transition,
         stochastic.  The first order entries and initial_probabilities are
         used to produce the initial joint distribution of dimension order +
         1 at time t=0.
-    conditional_loglikelihoods : array
-        Array of loglikelihoods conditional on the last `order+1` regimes,
+    conditional_loglikelihoods : ndarray
+Array of loglikelihoods conditional on the last `order+1` regimes,
         shaped (k_regimes,)*(order + 1) + (nobs,).
 
     Returns
     -------
-    filtered_marginal_probabilities : array
-        Array containing Pr[S_t=s_t | Y_t] - the probability of being in each
+    filtered_marginal_probabilities : ndarray
+Array containing Pr[S_t=s_t | Y_t] - the probability of being in each
         regime conditional on time t information. Shaped (k_regimes, nobs).
-    predicted_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
+    predicted_joint_probabilities : ndarray
+Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t-1
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-    joint_loglikelihoods : array
-        Array of loglikelihoods condition on time t information,
+    joint_loglikelihoods : ndarray
+Array of loglikelihoods condition on time t information,
         shaped (nobs,).
-    filtered_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
+    filtered_joint_probabilities : ndarray
+Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
@@ -232,30 +232,30 @@ def cy_kim_smoother_log(regime_transition, predicted_joint_probabilities,
 
     Parameters
     ----------
-    regime_transition : array
-        Matrix of regime transition probabilities, shaped either
+    regime_transition : ndarray
+Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs).
-    predicted_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
+    predicted_joint_probabilities : ndarray
+Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t-1
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
-    filtered_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
+    filtered_joint_probabilities : ndarray
+Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
 
     Returns
     -------
-    smoothed_joint_probabilities : array
-        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_T] -
+    smoothed_joint_probabilities : ndarray
+Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_T] -
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on all information.
         Shaped (k_regimes,) * (order + 1) + (nobs,).
-    smoothed_marginal_probabilities : array
-        Array containing Pr[S_t=s_t | Y_T] - the probability of being in each
+    smoothed_marginal_probabilities : ndarray
+Array containing Pr[S_t=s_t | Y_T] - the probability of being in each
         regime conditional on all information. Shaped (k_regimes, nobs).
     """
 
@@ -662,8 +662,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array
-            Parameters at which to form predictions
+        params : ndarray
+Parameters at which to form predictions
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
@@ -689,8 +689,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        predict : array
-            Array of out of in-sample predictions and / or out-of-sample
+        predict : ndarray
+Array of out of in-sample predictions and / or out-of-sample
             forecasts.
         """
         if start is None:
@@ -1525,24 +1525,24 @@ class HamiltonFilterResults(object):
         The dimension of the observation series.
     k_regimes : int
         The number of unobserved regimes.
-    regime_transition : array
-        The regime transition matrix.
+    regime_transition : ndarray
+The regime transition matrix.
     initialization : str
         Initialization method for regime probabilities.
-    initial_probabilities : array
-        Initial regime probabilities
-    conditional_loglikelihoods : array
-        The loglikelihood values at each time period, conditional on regime.
-    predicted_joint_probabilities : array
-        Predicted joint probabilities at each time period.
-    filtered_marginal_probabilities : array
-        Filtered marginal probabilities at each time period.
-    filtered_joint_probabilities : array
-        Filtered joint probabilities at each time period.
-    joint_loglikelihoods : array
-        The likelihood values at each time period.
-    llf_obs : array
-        The loglikelihood values at each time period.
+    initial_probabilities : ndarray
+Initial regime probabilities
+    conditional_loglikelihoods : ndarray
+The loglikelihood values at each time period, conditional on regime.
+    predicted_joint_probabilities : ndarray
+Predicted joint probabilities at each time period.
+    filtered_marginal_probabilities : ndarray
+Filtered marginal probabilities at each time period.
+    filtered_joint_probabilities : ndarray
+Filtered joint probabilities at each time period.
+    joint_loglikelihoods : ndarray
+The likelihood values at each time period.
+    llf_obs : ndarray
+The loglikelihood values at each time period.
     """
     def __init__(self, model, result):
 
@@ -1645,8 +1645,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
     ----------
     model : MarkovSwitching instance
         The fitted model instance
-    params : array
-        Fitted parameters
+    params : ndarray
+Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
     cov_type : str
@@ -1661,8 +1661,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         The underlying filter and, optionally, smoother output
     nobs : float
         The number of observations used to fit the model.
-    params : array
-        The parameters of the model.
+    params : ndarray
+The parameters of the model.
     scale : float
         This is currently set to 1.0 and not used by the model or its results.
     """
@@ -1941,8 +1941,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        predict : array
-            Array of out of in-sample predictions and / or out-of-sample
+        predict : ndarray
+Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """
         return self.model.predict(self.params, start=start, end=end,
@@ -1966,8 +1966,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
-            Array of out of sample forecasts. A (steps x k_endog) array.
+        forecast : ndarray
+Array of out of sample forecasts. A (steps x k_endog) array.
         """
         raise NotImplementedError
 

@@ -36,8 +36,8 @@ def norm_lls(y, params):
 
     Returns
     -------
-    lls : array
-        contribution to loglikelihood for each observation
+    lls : ndarray
+contribution to loglikelihood for each observation
     '''
 
     mu, sigma2 = params.T
@@ -127,8 +127,8 @@ def tstd_lls(y, params, df):
 
     Returns
     -------
-    lls : array
-        contribution to loglikelihood for each observation
+    lls : ndarray
+contribution to loglikelihood for each observation
 
     Notes
     -----
@@ -174,8 +174,8 @@ def ts_lls(y, params, df):
 
     Returns
     -------
-    lls : array
-        contribution to loglikelihood for each observation
+    lls : ndarray
+contribution to loglikelihood for each observation
 
     Notes
     -----
@@ -212,8 +212,8 @@ def ts_dlldy(y, df):
 
     Returns
     -------
-    dlldy : array
-        derivative of loglikelihood wrt random variable y evaluated at the
+    dlldy : ndarray
+derivative of loglikelihood wrt random variable y evaluated at the
         points given in y
 
     Notes
@@ -239,8 +239,8 @@ def tstd_dlldy(y, df):
 
     Returns
     -------
-    dlldy : array
-        derivative of loglikelihood wrt random variable y evaluated at the
+    dlldy : ndarray
+derivative of loglikelihood wrt random variable y evaluated at the
         points given in y
 
 
@@ -270,11 +270,11 @@ def locscale_grad(y, loc, scale, dlldy, *args):
 
     Returns
     -------
-    dlldloc : array
-        derivative of loglikelihood wrt location evaluated at the
+    dlldloc : ndarray
+derivative of loglikelihood wrt location evaluated at the
         points given in y
-    dlldscale : array
-        derivative of loglikelihood wrt scale evaluated at the
+    dlldscale : ndarray
+derivative of loglikelihood wrt scale evaluated at the
         points given in y
 
     '''

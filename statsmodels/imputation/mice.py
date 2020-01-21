@@ -389,8 +389,8 @@ class MICEData(object):
         ----------
         col : str
             Name of variable to be filled in.
-        vals : array
-            Array of imputed values to use for filling-in missing values.
+        vals : ndarray
+Array of imputed values to use for filling-in missing values.
         """
 
         ix = self.ix_miss[col]

@@ -95,8 +95,8 @@ class OptAFT(_OptFuncts):
         Parameters
         ----------
 
-        Nuisance Params: array
-            Vector of values to be used as nuisance params.
+        Nuisance Params: ndarray
+Vector of values to be used as nuisance params.
 
         maxiter: int
             Number of iterations in the EM algorithm for a parameter vector
@@ -191,11 +191,11 @@ class emplikeAFT(object):
     nobs: float
         Number of observations
 
-    endog: array
-        Endog attay
+    endog: ndarray
+Endog attay
 
-    exog: array
-        Exogenous variable matrix
+    exog: ndarray
+Exogenous variable matrix
 
     censors
         Censors array but sets the max(endog) to uncensored
@@ -206,11 +206,11 @@ class emplikeAFT(object):
     uncens_nobs: float
         Number of uncensored observations
 
-    uncens_endog: array
-        Uncensored response variables
+    uncens_endog: ndarray
+Uncensored response variables
 
-    uncens_exog: array
-        Exogenous variables of the uncensored observations
+    uncens_exog: ndarray
+Exogenous variables of the uncensored observations
 
     Methods
     -------
@@ -254,15 +254,15 @@ class emplikeAFT(object):
 
         Parameters
         ----------
-        endog: array
-            Models endogenous variable
-        censors: array
-            arrat indicating a censored array
+        endog: ndarray
+Models endogenous variable
+        censors: ndarray
+arrat indicating a censored array
 
         Returns
         -------
-        indic_ties: array
-            ties[i]=1 if endog[i]==endog[i+1] and
+        indic_ties: ndarray
+ties[i]=1 if endog[i]==endog[i+1] and
             censors[i]=censors[i+1]
         """
         nobs = int(self.nobs)

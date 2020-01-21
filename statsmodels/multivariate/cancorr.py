@@ -28,16 +28,16 @@ class CanCorr(Model):
 
     Attributes
     ----------
-    endog : array
-        See Parameters.
-    exog : array
-        See Parameters.
-    cancorr : array
-        The canonical correlation values
-    y_cancoeff: array
-        The canonical coefficients for endog
-    x_cancoeff: array
-        The canonical coefficients for exog
+    endog : ndarray
+See Parameters.
+    exog : ndarray
+See Parameters.
+    cancorr : ndarray
+The canonical correlation values
+    y_cancoeff: ndarray
+The canonical coefficients for endog
+    x_cancoeff: ndarray
+The canonical coefficients for exog
 
     References
     ----------

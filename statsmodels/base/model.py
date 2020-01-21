@@ -849,13 +849,13 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         Parameters
         ----------
-        params : array
-            reduced parameter array
+        params : ndarray
+reduced parameter array
 
         Returns
         -------
-        paramsfull : array
-            expanded parameter array where fixed parameters are included
+        paramsfull : ndarray
+expanded parameter array where fixed parameters are included
 
         Notes
         -----
@@ -981,8 +981,8 @@ class Results(object):
     ----------
     model : class instance
         the previously specified model instance
-    params : array
-        parameter estimates from the fit model
+    params : ndarray
+parameter estimates from the fit model
     """
     def __init__(self, model, params, **kwd):
         self.__dict__.update(kwd)
@@ -1151,8 +1151,8 @@ class LikelihoodModelResults(Results):
         The parameters estimated for the model.
     scale : float
         The scaling factor of the model given during instantiation.
-    tvalues : array
-        The t-values of the standard errors.
+    tvalues : ndarray
+The t-values of the standard errors.
 
 
     Notes
@@ -2366,10 +2366,10 @@ class ResultMixin(object):
 
         Returns
         -------
-        mean : array
-            mean of parameter estimates over bootstrap replications
-        std : array
-            standard deviation of parameter estimates over bootstrap
+        mean : ndarray
+mean of parameter estimates over bootstrap replications
+        std : ndarray
+standard deviation of parameter estimates over bootstrap
             replications
 
         Notes
@@ -2442,14 +2442,14 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     bic : float
         Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
         number of regressors including the intercept.
-    bse : array
-        The standard errors of the coefficients.
+    bse : ndarray
+The standard errors of the coefficients.
     df_resid : float
         See model definition.
     df_model : float
         See model definition.
-    fitted_values : array
-        Linear predictor XB.
+    fitted_values : ndarray
+Linear predictor XB.
     llf : float
         Value of the loglikelihood
     llnull : float

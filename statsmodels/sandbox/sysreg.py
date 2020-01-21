@@ -34,20 +34,20 @@ class SUR(object):
 
     Attributes
     ----------
-    cholsigmainv : array
-        The transpose of the Cholesky decomposition of `pinv_wexog`
-    df_model : array
-        Model degrees of freedom of each equation. p_{m} - 1 where p is
+    cholsigmainv : ndarray
+The transpose of the Cholesky decomposition of `pinv_wexog`
+    df_model : ndarray
+Model degrees of freedom of each equation. p_{m} - 1 where p is
         the number of regressors for each equation m and one is subtracted
         for the constant.
-    df_resid : array
-        Residual degrees of freedom of each equation. Number of observations
+    df_resid : ndarray
+Residual degrees of freedom of each equation. Number of observations
         less the number of parameters.
-    endog : array
-        The LHS variables for each equation in the system.
+    endog : ndarray
+The LHS variables for each equation in the system.
         It is a M x nobs array where M is the number of equations.
-    exog : array
-        The RHS variable for each equation in the system.
+    exog : ndarray
+The RHS variable for each equation in the system.
         It is a nobs x sum(p_{m}) array.  Which is just each
         RHS array stacked next to each other in columns.
     history : dict
@@ -58,21 +58,21 @@ class SUR(object):
         iteratively.
     nobs : float
         The number of observations of the equations.
-    normalized_cov_params : array
-        sum(p_{m}) x sum(p_{m}) array
+    normalized_cov_params : ndarray
+sum(p_{m}) x sum(p_{m}) array
         :math:`\\left[X^{T}\\left(\\Sigma^{-1}\\otimes\\boldsymbol{I}\\right)X\\right]^{-1}`
-    pinv_wexog : array
-        The pseudo-inverse of the `wexog`
-    sigma : array
-        M x M covariance matrix of the cross-equation disturbances. See notes.
+    pinv_wexog : ndarray
+The pseudo-inverse of the `wexog`
+    sigma : ndarray
+M x M covariance matrix of the cross-equation disturbances. See notes.
     sp_exog : CSR sparse matrix
         Contains a block diagonal sparse matrix of the design so that
         exog1 ... exogM are on the diagonal.
-    wendog : array
-        M * nobs x 1 array of the endogenous variables whitened by
+    wendog : ndarray
+M * nobs x 1 array of the endogenous variables whitened by
         `cholsigmainv` and stacked into a single column.
-    wexog : array
-        M*nobs x sum(p_{m}) array of the whitened exogenous variables.
+    wexog : ndarray
+M*nobs x sum(p_{m}) array of the whitened exogenous variables.
 
     Notes
     -----
@@ -271,8 +271,8 @@ class Sem2SLS(object):
         It is assumed that the system is entered as broken up into
         LHS and RHS. For now, the values of the dict have to be sequences.
         Note that the keys for the equations should be zero-indexed.
-    instruments : array
-        Array of the exogenous independent variables.
+    instruments : ndarray
+Array of the exogenous independent variables.
 
     Notes
     -----

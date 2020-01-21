@@ -31,8 +31,8 @@ def _fitstart(self, x):
 
     Parameters
     ----------
-    x : array
-        data for which the parameters are estimated
+    x : ndarray
+data for which the parameters are estimated
 
     Returns
     -------
@@ -58,8 +58,8 @@ def _fitstart_beta(self, x, fixed=None):
 
     Parameters
     ----------
-    x : array
-        data for which the parameters are estimated
+    x : ndarray
+data for which the parameters are estimated
     fixed : None or array_like
         sequence of numbers and np.nan to indicate fixed parameters and parameters
         to estimate
@@ -120,8 +120,8 @@ def _fitstart_poisson(self, x, fixed=None):
 
     Parameters
     ----------
-    x : array
-        data for which the parameters are estimated
+    x : ndarray
+data for which the parameters are estimated
     fixed : None or array_like
         sequence of numbers and np.nan to indicate fixed parameters and parameters
         to estimate
@@ -211,8 +211,8 @@ def fit_fr(self, data, *args, **kwds):
 
     Returns
     -------
-    argest : array
-        estimated parameters
+    argest : ndarray
+estimated parameters
 
 
     Examples
@@ -554,8 +554,8 @@ def distfitbootstrap(sample, distr, nrepl=100):
 
     Parameters
     ----------
-    sample : array
-        original sample data for bootstrap
+    sample : ndarray
+original sample data for bootstrap
     distr : distribution instance with fit_fr method
     nrepl : int
         number of bootstrap replications
@@ -582,8 +582,8 @@ def distfitmc(sample, distr, nrepl=100, distkwds={}):
 
     Parameters
     ----------
-    sample : array
-        original sample data, in Monte Carlo only used to get nobs,
+    sample : ndarray
+original sample data, in Monte Carlo only used to get nobs,
     distr : distribution instance with fit_fr method
     nrepl : int
         number of Monte Carlo replications
@@ -608,11 +608,11 @@ def printresults(sample, arg, bres, kind='bootstrap'):
 
     Parameters
     ----------
-    sample : array
-        original sample data
+    sample : ndarray
+original sample data
     arg : float   (for general case will be array)
-    bres : array
-        parameter estimates from Bootstrap or Monte Carlo run
+    bres : ndarray
+parameter estimates from Bootstrap or Monte Carlo run
     kind : {'bootstrap', 'montecarlo'}
         output is printed for Mootstrap (default) or Monte Carlo
 

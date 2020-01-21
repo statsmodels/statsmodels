@@ -141,8 +141,8 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     ----------
     results : results instance
         Instance of a count regression results
-    probs : array
-        Array of predicted probabilities with observations
+    probs : ndarray
+Array of predicted probabilities with observations
         in rows and event counts in columns
     bin_edges : None or array
         intervals to combine several counts into cells
@@ -212,8 +212,8 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     results_poisson: results instance
         The test is only valid if the results instance is a Poisson
         model.
-    exog_infl : array
-        Explanatory variables for the zero inflated or zero modified
+    exog_infl : ndarray
+Explanatory variables for the zero inflated or zero modified
         alternative. I exog_infl is None, then the inflation
         probability is assumed to be constant.
 

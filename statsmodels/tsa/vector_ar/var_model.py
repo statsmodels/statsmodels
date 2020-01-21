@@ -1155,19 +1155,18 @@ class VARResults(VARProcess):
 
     Parameters
     ----------
-    endog : array
-    endog_lagged : array
-    params : array
-    sigma_u : array
-    lag_order : int
+    endog : ndarray
+endog_lagged : ndarray
+params : ndarray
+sigma_u : ndarray
+lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
     names : array_like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
-    exog : array
-
-    Attributes
+    exog : ndarray
+Attributes
     ----------
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]

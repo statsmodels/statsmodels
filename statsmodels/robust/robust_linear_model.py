@@ -60,24 +60,24 @@ class RLM(base.LikelihoodModel):
         The residual degrees of freedom.  The number of observations n
         less the number of regressors p.  Note that here p does include
         the intercept as using a degree of freedom.
-    endog : array
-        See above.  Note that endog is a reference to the data so that if
+    endog : ndarray
+See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    exog : array
-        See above.  Note that endog is a reference to the data so that if
+    exog : ndarray
+See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
     M : statsmodels.robust.norms.RobustNorm
          See above.  Robust estimator instance instantiated.
     nobs : float
         The number of observations n
-    pinv_wexog : array
-        The pseudoinverse of the design / exogenous data array.  Note that
+    pinv_wexog : ndarray
+The pseudoinverse of the design / exogenous data array.  Note that
         RLM has no whiten method, so this is just the pseudo inverse of the
         design.
-    normalized_cov_params : array
-        The p x p normalized covariance of the design / exogenous data.
+    normalized_cov_params : ndarray
+The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
 
     Examples
@@ -319,8 +319,8 @@ class RLMResults(base.LikelihoodModelResults):
     Attributes
     ----------
 
-    bcov_scaled : array
-        p x p scaled covariance matrix specified in the model fit method.
+    bcov_scaled : ndarray
+p x p scaled covariance matrix specified in the model fit method.
         The default is H1. H1 is defined as
         ``k**2 * (1/df_resid*sum(M.psi(sresid)**2)*scale**2)/
         ((1/nobs*sum(M.psi_deriv(sresid)))**2) * (X.T X)^(-1)``
@@ -341,15 +341,15 @@ class RLMResults(base.LikelihoodModelResults):
         ``W_inv = (M.psi_deriv(sresid) exog.T exog)^(-1)``
 
         See the technical documentation for cleaner formulae.
-    bcov_unscaled : array
-        The usual p x p covariance matrix with scale set equal to 1.  It
+    bcov_unscaled : ndarray
+The usual p x p covariance matrix with scale set equal to 1.  It
         is then just equivalent to normalized_cov_params.
-    bse : array
-        An array of the standard errors of the parameters.  The standard
+    bse : ndarray
+An array of the standard errors of the parameters.  The standard
         errors are taken from the robust covariance matrix specified in the
         argument to fit.
-    chisq : array
-        An array of the chi-squared values of the parameter estimates.
+    chisq : ndarray
+An array of the chi-squared values of the parameter estimates.
     df_model
         See RLM.df_model
     df_resid
@@ -360,37 +360,37 @@ class RLMResults(base.LikelihoodModelResults):
         `RLM.fit`, if different from `deviance` or `params`.
     fit_options : dict
         Contains the options given to fit.
-    fittedvalues : array
-        The linear predicted values.  dot(exog, params)
+    fittedvalues : ndarray
+The linear predicted values.  dot(exog, params)
     model : statsmodels.rlm.RLM
         A reference to the model instance
     nobs : float
         The number of observations n
-    normalized_cov_params : array
-        See RLM.normalized_cov_params
-    params : array
-        The coefficients of the fitted model
-    pinv_wexog : array
-        See RLM.pinv_wexog
-    pvalues : array
-        The p values associated with `tvalues`. Note that `tvalues` are assumed
+    normalized_cov_params : ndarray
+See RLM.normalized_cov_params
+    params : ndarray
+The coefficients of the fitted model
+    pinv_wexog : ndarray
+See RLM.pinv_wexog
+    pvalues : ndarray
+The p values associated with `tvalues`. Note that `tvalues` are assumed
         to be distributed standard normal rather than Student's t.
-    resid : array
-        The residuals of the fitted model.  endog - fittedvalues
+    resid : ndarray
+The residuals of the fitted model.  endog - fittedvalues
     scale : float
         The type of scale is determined in the arguments to the fit method in
         RLM.  The reported scale is taken from the residuals of the weighted
         least squares in the last IRLS iteration if update_scale is True.  If
         update_scale is False, then it is the scale given by the first OLS
         fit before the IRLS iterations.
-    sresid : array
-        The scaled residuals.
-    tvalues : array
-        The "t-statistics" of params. These are defined as params/bse where
+    sresid : ndarray
+The scaled residuals.
+    tvalues : ndarray
+The "t-statistics" of params. These are defined as params/bse where
         bse are taken from the robust covariance matrix specified in the
         argument to fit.
-    weights : array
-        The reported weights are determined by passing the scaled residuals
+    weights : ndarray
+The reported weights are determined by passing the scaled residuals
         from the last weighted least squares fit in the IRLS algorithm.
 
     See Also

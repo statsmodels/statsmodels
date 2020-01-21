@@ -481,10 +481,10 @@ def lpol2index(ar):
 
     Returns
     -------
-    coeffs : array
-        non-zero coefficients of lag polynomial
-    index : array
-        index (lags) of lag polynomial with non-zero elements
+    coeffs : ndarray
+non-zero coefficients of lag polynomial
+    index : ndarray
+index (lags) of lag polynomial with non-zero elements
     """
     ar = array_like(ar, 'ar')
     index = np.nonzero(ar)[0]
@@ -498,10 +498,10 @@ def index2lpol(coeffs, index):
 
     Parameters
     ----------
-    coeffs : array
-        non-zero coefficients of lag polynomial
-    index : array
-        index (lags) of lag polynomial with non-zero elements
+    coeffs : ndarray
+non-zero coefficients of lag polynomial
+    index : ndarray
+index (lags) of lag polynomial with non-zero elements
 
     Returns
     -------
@@ -528,8 +528,8 @@ def lpol_fima(d, n=20):
 
     Returns
     -------
-    ma : array
-        coefficients of lag polynomial
+    ma : ndarray
+coefficients of lag polynomial
     """
     # hide import inside function until we use this heavily
     from scipy.special import gammaln
@@ -552,8 +552,8 @@ def lpol_fiar(d, n=20):
 
     Returns
     -------
-    ar : array
-        coefficients of lag polynomial
+    ar : ndarray
+coefficients of lag polynomial
 
     Notes:
     first coefficient is 1, negative signs except for first term,
@@ -601,10 +601,10 @@ def deconvolve(num, den, n=None):
 
     Returns
     -------
-    quot : array
-        quotient or filtered series
-    rem : array
-        remainder
+    quot : ndarray
+quotient or filtered series
+    rem : ndarray
+remainder
 
     Notes
     -----
@@ -897,8 +897,8 @@ class ArmaProcess(object):
 
         Returns
         -------
-        manew : array
-           A new invertible MA lag-polynomial, returned if retnew is false.
+        manew : ndarray
+A new invertible MA lag-polynomial, returned if retnew is false.
         wasinvertible : bool
            True if the MA lag-polynomial was already invertible, returned if
            retnew is false.

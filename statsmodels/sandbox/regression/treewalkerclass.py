@@ -208,8 +208,8 @@ class RU2NMNL(object):
 
     Parameters
     ----------
-    endog : array
-        not used in this part
+    endog : ndarray
+not used in this part
     exog : dict_like
         dictionary access to data where keys correspond to branch and leaf
         names. The values are the data arrays for the exog in that node.

@@ -34,8 +34,8 @@ def acovf_fft(x, demean=True):
 
     Returns
     -------
-    acovf : array
-        autocovariance for data, same length as x
+    acovf : ndarray
+autocovariance for data, same length as x
 
     might work for nd in parallel with time along axis 0
 

@@ -265,30 +265,30 @@ class HoltWintersResults(Results):
     params_formatted: pd.DataFrame
         DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
-    fittedfcast: array
-        An array of both the fitted values and forecast values.
-    fittedvalues: array
-        An array of the fitted values. Fitted by the Exponential Smoothing
+    fittedfcast: ndarray
+An array of both the fitted values and forecast values.
+    fittedvalues: ndarray
+An array of the fitted values. Fitted by the Exponential Smoothing
         model.
-    fcastvalues: array
-        An array of the forecast values forecast by the Exponential Smoothing
+    fcastvalues: ndarray
+An array of the forecast values forecast by the Exponential Smoothing
         model.
     sse: float
         The sum of squared errors
-    level: array
-        An array of the levels values that make up the fitted values.
-    slope: array
-        An array of the slope values that make up the fitted values.
-    season: array
-        An array of the seasonal values that make up the fitted values.
+    level: ndarray
+An array of the levels values that make up the fitted values.
+    slope: ndarray
+An array of the slope values that make up the fitted values.
+    season: ndarray
+An array of the seasonal values that make up the fitted values.
     aic: float
         The Akaike information criterion.
     bic: float
         The Bayesian information criterion.
     aicc: float
         AIC with a correction for finite sample sizes.
-    resid: array
-        An array of the residuals of the fittedvalues and actual values.
+    resid: ndarray
+An array of the residuals of the fittedvalues and actual values.
     k: int
         the k parameter used to remove the bias in AIC, BIC etc.
     optimized: bool
@@ -322,8 +322,8 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : array
-            Array of out of sample forecasts.
+        forecast : ndarray
+Array of out of sample forecasts.
         """
         return self.model.predict(self.params, start, end)
 
@@ -339,8 +339,8 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : array
-            Array of out of sample forecasts
+        forecast : ndarray
+Array of out of sample forecasts
         """
         try:
             freq = getattr(self.model._index, 'freq', 1)
@@ -524,8 +524,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Parameters
         ----------
-        params : array
-            The fitted model parameters.
+        params : ndarray
+The fitted model parameters.
         start : int, str, or datetime
             Zero-indexed observation number at which to start forecasting, ie.,
             the first forecast is start. Can also be a date string to
@@ -537,8 +537,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Returns
         -------
-        predicted values : array
-        """
+        predicted values : ndarray
+"""
         if start is None:
             freq = getattr(self._index, 'freq', 1)
             start = self._index[-1] + freq

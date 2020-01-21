@@ -157,8 +157,8 @@ def dates_from_str(dates):
 
     Returns
     -------
-    date_list : array
-        A list of datetime types.
+    date_list : ndarray
+A list of datetime types.
     """
     return lmap(date_parser, dates)
 
@@ -185,8 +185,8 @@ def dates_from_range(start, end=None, length=None):
 
     Returns
     -------
-    date_list : array
-        A list of datetime types.
+    date_list : ndarray
+A list of datetime types.
     """
     dates = date_range_str(start, end, length)
     return dates_from_str(dates)
