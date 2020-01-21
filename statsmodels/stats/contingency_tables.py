@@ -1336,7 +1336,6 @@ def mcnemar(table, exact=True, correction=True):
         # SciPy 1.7+ required int arguments
         int_sum = int(n1 + n2)
         if int_sum != (n1 + n2):
-            import warnings
             warnings.warn("exact can only be used with tables containing "
                           "integers. This warning will become a ValueError "
                           "after 0.12.", FutureWarning)
