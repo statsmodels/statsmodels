@@ -698,7 +698,7 @@ class Representation(object):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Endogenous data to bind to the model. Must be column-ordered
             ndarray with shape (`k_endog`, `nobs`) or row-ordered ndarray with
             shape (`nobs`, `k_endog`).
@@ -982,21 +982,21 @@ class FrozenRepresentation(object):
     shapes : dictionary of name:tuple
         A dictionary recording the shapes of each of
         the representation matrices as tuples.
-    endog : array
+    endog : ndarray
         The observation vector.
-    design : array
+    design : ndarray
         The design matrix, :math:`Z`.
-    obs_intercept : array
+    obs_intercept : ndarray
         The intercept for the observation equation, :math:`d`.
-    obs_cov : array
+    obs_cov : ndarray
         The covariance matrix for the observation equation :math:`H`.
-    transition : array
+    transition : ndarray
         The transition matrix, :math:`T`.
-    state_intercept : array
+    state_intercept : ndarray
         The intercept for the transition equation, :math:`c`.
-    selection : array
+    selection : ndarray
         The selection matrix, :math:`R`.
-    state_cov : array
+    state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
     missing : array of bool
         An array of the same size as `endog`, filled

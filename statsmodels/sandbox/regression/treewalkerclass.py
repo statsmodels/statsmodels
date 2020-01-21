@@ -208,7 +208,7 @@ class RU2NMNL(object):
 
     Parameters
     ----------
-    endog : array
+    endog : ndarray
         not used in this part
     exog : dict_like
         dictionary access to data where keys correspond to branch and leaf
@@ -304,7 +304,7 @@ class RU2NMNL(object):
 
         Returns
         -------
-        probs : array, (nobs, nchoices)
+        probs : ndarray, (nobs, nchoices)
             probabilites for all choices for each observation. The order
             is available by attribute leaves. See note in docstring of class
 

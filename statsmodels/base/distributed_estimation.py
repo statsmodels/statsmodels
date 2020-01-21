@@ -644,7 +644,7 @@ class DistributedResults(LikelihoodModelResults):
         Class instance for model used for distributed data,
         this particular instance uses fake data and is really
         only to allow use of methods like predict.
-    params : array
+    params : ndarray
         Parameter estimates from the fit model.
     """
 

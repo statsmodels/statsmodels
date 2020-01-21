@@ -782,7 +782,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        params : array
+        params : ndarray
             Array of parameters.
 
         Examples
@@ -889,7 +889,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        constrained : array
+        constrained : ndarray
             Array of model parameters transformed to produce a valid model.
 
         Notes
@@ -951,7 +951,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        unconstrained : array
+        unconstrained : ndarray
             Array of parameters with constraining transformions reversed.
 
         Notes

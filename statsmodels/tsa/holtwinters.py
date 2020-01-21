@@ -265,21 +265,21 @@ class HoltWintersResults(Results):
     params_formatted: pd.DataFrame
         DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
-    fittedfcast: array
+    fittedfcast: ndarray
         An array of both the fitted values and forecast values.
-    fittedvalues: array
+    fittedvalues: ndarray
         An array of the fitted values. Fitted by the Exponential Smoothing
         model.
-    fcastvalues: array
+    fcastvalues: ndarray
         An array of the forecast values forecast by the Exponential Smoothing
         model.
     sse: float
         The sum of squared errors
-    level: array
+    level: ndarray
         An array of the levels values that make up the fitted values.
-    slope: array
+    slope: ndarray
         An array of the slope values that make up the fitted values.
-    season: array
+    season: ndarray
         An array of the seasonal values that make up the fitted values.
     aic: float
         The Akaike information criterion.
@@ -287,7 +287,7 @@ class HoltWintersResults(Results):
         The Bayesian information criterion.
     aicc: float
         AIC with a correction for finite sample sizes.
-    resid: array
+    resid: ndarray
         An array of the residuals of the fittedvalues and actual values.
     k: int
         the k parameter used to remove the bias in AIC, BIC etc.
@@ -322,7 +322,7 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : array
+        forecast : ndarray
             Array of out of sample forecasts.
         """
         return self.model.predict(self.params, start, end)
@@ -339,7 +339,7 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : array
+        forecast : ndarray
             Array of out of sample forecasts
         """
         try:
@@ -524,7 +524,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             The fitted model parameters.
         start : int, str, or datetime
             Zero-indexed observation number at which to start forecasting, ie.,
@@ -537,7 +537,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Returns
         -------
-        predicted values : array
+        predicted values : ndarray
         """
         if start is None:
             freq = getattr(self._index, 'freq', 1)
@@ -581,7 +581,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             that the average residual is equal to zero.
         use_basinhopping : bool, optional
             Using Basin Hopping optimizer to find optimal values
-        start_params : array, optional
+        start_params : ndarray, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data
@@ -1049,7 +1049,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             the value is set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood
-        start_params : array, optional
+        start_params : ndarray, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data
@@ -1136,7 +1136,7 @@ class Holt(ExponentialSmoothing):
             set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood
-        start_params : array, optional
+        start_params : ndarray, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data

@@ -59,7 +59,7 @@ class Optimizer(object):
 
         Returns
         -------
-        xopt : array
+        xopt : ndarray
             The solution to the objective function
         retvals : dict, None
             If `full_output` is True then this is a dictionary which holds

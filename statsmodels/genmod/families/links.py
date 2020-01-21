@@ -42,7 +42,7 @@ class Link(object):
 
         Returns
         -------
-        g^(-1)(z) : array
+        g^(-1)(z) : ndarray
             The value of the inverse of the link function g^(-1)(z) = p
         """
         return NotImplementedError
@@ -57,7 +57,7 @@ class Link(object):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             The value of the derivative of the link function g'(p)
         """
         return NotImplementedError
@@ -82,7 +82,7 @@ class Link(object):
 
         Returns
         -------
-        g'^(-1)(z) : array
+        g'^(-1)(z) : ndarray
             The value of the derivative of the inverse of the link function
 
         Notes
@@ -103,7 +103,7 @@ class Link(object):
 
         Returns
         -------
-        g'^(-1)(z) : array
+        g'^(-1)(z) : ndarray
             The value of the second derivative of the inverse of the link
             function
 
@@ -140,7 +140,7 @@ class Logit(Link):
 
         Returns
         -------
-        pclip : array
+        pclip : ndarray
             Clipped probabilities
         """
         return np.clip(p, FLOAT_EPS, 1. - FLOAT_EPS)
@@ -156,7 +156,7 @@ class Logit(Link):
 
         Returns
         -------
-        z : array
+        z : ndarray
             Logit transform of `p`
 
         Notes
@@ -177,7 +177,7 @@ class Logit(Link):
 
         Returns
         -------
-        p : array
+        p : ndarray
             Probabilities
 
         Notes
@@ -199,7 +199,7 @@ class Logit(Link):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             Value of the derivative of logit transform at `p`
 
         Notes
@@ -223,7 +223,7 @@ class Logit(Link):
 
         Returns
         -------
-        g'^(-1)(z) : array
+        g'^(-1)(z) : ndarray
             The value of the derivative of the inverse of the logit function
         """
         t = np.exp(z)
@@ -240,7 +240,7 @@ class Logit(Link):
 
         Returns
         -------
-        g''(z) : array
+        g''(z) : ndarray
             The value of the second derivative of the logit function
         """
         v = p * (1 - p)
@@ -306,7 +306,7 @@ class Power(Link):
 
         Returns
         -------
-        `p` : array
+        `p` : ndarray
             Mean parameters
 
         Notes
@@ -329,7 +329,7 @@ class Power(Link):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             Derivative of power transform of `p`
 
         Notes
@@ -352,7 +352,7 @@ class Power(Link):
 
         Returns
         -------
-        g''(p) : array
+        g''(p) : ndarray
             Second derivative of the power transform of `p`
 
         Notes
@@ -375,7 +375,7 @@ class Power(Link):
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The value of the derivative of the inverse of the power transform
         function
         """
@@ -395,7 +395,7 @@ class Power(Link):
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The value of the derivative of the inverse of the power transform
         function
         """
@@ -486,7 +486,7 @@ class Log(Link):
 
         Returns
         -------
-        z : array
+        z : ndarray
             log(x)
 
         Notes
@@ -502,12 +502,12 @@ class Log(Link):
 
         Parameters
         ----------
-        z : array
+        z : ndarray
             The inverse of the link function at `p`
 
         Returns
         -------
-        p : array
+        p : ndarray
             The mean probabilities given the value of the inverse `z`
 
         Notes
@@ -527,7 +527,7 @@ class Log(Link):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             derivative of log transform of x
 
         Notes
@@ -548,7 +548,7 @@ class Log(Link):
 
         Returns
         -------
-        g''(p) : array
+        g''(p) : ndarray
             Second derivative of log transform of x
 
         Notes
@@ -564,12 +564,12 @@ class Log(Link):
 
         Parameters
         ----------
-        z : array
+        z : ndarray
             The inverse of the link function at `p`
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The value of the derivative of the inverse of the log function,
             the exponential function
         """
@@ -619,7 +619,7 @@ class CDFLink(Logit):
 
         Returns
         -------
-        z : array
+        z : ndarray
             (ppf) inverse of CDF transform of p
 
         Notes
@@ -640,7 +640,7 @@ class CDFLink(Logit):
 
         Returns
         -------
-        p : array
+        p : ndarray
             Mean probabilities.  The value of the inverse of CDF link of `z`
 
         Notes
@@ -660,7 +660,7 @@ class CDFLink(Logit):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             The derivative of CDF transform at `p`
 
         Notes
@@ -687,12 +687,12 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : array
+        z : ndarray
             The inverse of the link function at `p`
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The value of the derivative of the inverse of the logit function
         """
         return 1/self.deriv(self.inverse(z))
@@ -736,7 +736,7 @@ class cauchy(CDFLink):
 
         Returns
         -------
-        g''(p) : array
+        g''(p) : ndarray
             Value of the second derivative of Cauchy link function at `p`
         """
         a = np.pi * (p - 0.5)
@@ -761,12 +761,12 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : array
+        p : ndarray
             Mean parameters
 
         Returns
         -------
-        z : array
+        z : ndarray
             The CLogLog transform of `p`
 
         Notes
@@ -788,7 +788,7 @@ class CLogLog(Logit):
 
         Returns
         -------
-        p : array
+        p : ndarray
             Mean parameters
 
         Notes
@@ -808,7 +808,7 @@ class CLogLog(Logit):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             The derivative of the CLogLog transform link function
 
         Notes
@@ -829,7 +829,7 @@ class CLogLog(Logit):
 
         Returns
         -------
-        g''(p) : array
+        g''(p) : ndarray
             The second derivative of the CLogLog link function
         """
         p = self._clean(p)
@@ -849,7 +849,7 @@ class CLogLog(Logit):
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The derivative of the inverse of the CLogLog link function
         """
         return np.exp(z - np.exp(z))
@@ -898,7 +898,7 @@ class NegativeBinomial(Link):
 
         Returns
         -------
-        z : array
+        z : ndarray
             The negative binomial transform of `p`
 
         Notes
@@ -919,7 +919,7 @@ class NegativeBinomial(Link):
 
         Returns
         -------
-        p : array
+        p : ndarray
             Mean parameters
 
         Notes
@@ -939,7 +939,7 @@ class NegativeBinomial(Link):
 
         Returns
         -------
-        g'(p) : array
+        g'(p) : ndarray
             The derivative of the negative binomial transform link function
 
         Notes
@@ -959,7 +959,7 @@ class NegativeBinomial(Link):
 
         Returns
         -------
-        g''(p) : array
+        g''(p) : ndarray
             The second derivative of the negative binomial transform link
             function
 
@@ -982,7 +982,7 @@ class NegativeBinomial(Link):
 
         Returns
         -------
-        g^(-1)'(z) : array
+        g^(-1)'(z) : ndarray
             The value of the derivative of the inverse of the negative
             binomial link
         '''

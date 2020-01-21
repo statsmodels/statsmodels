@@ -43,11 +43,11 @@ class GenericZeroInflated(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    exog_infl: array
+    exog_infl: ndarray
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : _doc_zi_params + base._missing_param_doc}
@@ -367,15 +367,15 @@ class GenericZeroInflated(CountModel):
         ----------
         params : array_like
             The parameters of the model
-        exog : array, optional
+        exog : ndarray, optional
             A reference to the exogenous design.
             If not assigned, will be used exog from fitting.
-        exog_infl : array, optional
+        exog_infl : ndarray, optional
             A reference to the zero-inflated exogenous design.
             If not assigned, will be used exog from fitting.
-        offset : array, optional
+        offset : ndarray, optional
             Offset is added to the linear prediction with coefficient equal to 1.
-        exposure : array, optional
+        exposure : ndarray, optional
             Log(exposure) is added to the linear prediction with coefficient
             equal to 1. If exposure is specified, then it will be logged by the method.
             The user does not need to log it first.
@@ -462,11 +462,11 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    exog_infl: array
+    exog_infl: ndarray
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : _doc_zi_params + base._missing_param_doc}
@@ -550,11 +550,11 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    exog_infl: array
+    exog_infl: ndarray
         A reference to the zero-inflated exogenous design.
     p: scalar
         P denotes parametrizations for ZIGP regression.
@@ -628,11 +628,11 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    exog_infl: array
+    exog_infl: ndarray
         A reference to the zero-inflated exogenous design.
     p: scalar
         P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and

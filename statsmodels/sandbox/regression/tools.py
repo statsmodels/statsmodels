@@ -29,14 +29,14 @@ def norm_lls(y, params):
 
     Parameters
     ----------
-    y : array, 1d
+    y : ndarray, 1d
         normally distributed random variable
-    params: array, (nobs, 2)
+    params: ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
 
     Returns
     -------
-    lls : array
+    lls : ndarray
         contribution to loglikelihood for each observation
     '''
 
@@ -49,9 +49,9 @@ def norm_lls_grad(y, params):
 
     Parameters
     ----------
-    y : array, 1d
+    y : ndarray, 1d
         normally distributed random variable
-    params: array, (nobs, 2)
+    params: ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
 
     Returns
@@ -82,9 +82,9 @@ def normgrad(y, x, params):
 
     Parameters
     ----------
-    y : array, 1d
+    y : ndarray, 1d
         normally distributed random variable with mean x*beta, and variance sigma2
-    x : array, 2d
+    x : ndarray, 2d
         explanatory variables, observation in rows, variables in columns
     params: array_like, (nvars + 1)
         array of coefficients and variance (beta, sigma2)
@@ -118,16 +118,16 @@ def tstd_lls(y, params, df):
 
     Parameters
     ----------
-    y : array, 1d
+    y : ndarray, 1d
         normally distributed random variable
-    params: array, (nobs, 2)
+    params: ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
     df : int
         degrees of freedom of the t distribution
 
     Returns
     -------
-    lls : array
+    lls : ndarray
         contribution to loglikelihood for each observation
 
     Notes
@@ -165,16 +165,16 @@ def ts_lls(y, params, df):
 
     Parameters
     ----------
-    y : array, 1d
+    y : ndarray, 1d
         normally distributed random variable
-    params: array, (nobs, 2)
+    params: ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
     df : int
         degrees of freedom of the t distribution
 
     Returns
     -------
-    lls : array
+    lls : ndarray
         contribution to loglikelihood for each observation
 
     Notes
@@ -212,7 +212,7 @@ def ts_dlldy(y, df):
 
     Returns
     -------
-    dlldy : array
+    dlldy : ndarray
         derivative of loglikelihood wrt random variable y evaluated at the
         points given in y
 
@@ -239,7 +239,7 @@ def tstd_dlldy(y, df):
 
     Returns
     -------
-    dlldy : array
+    dlldy : ndarray
         derivative of loglikelihood wrt random variable y evaluated at the
         points given in y
 
@@ -270,10 +270,10 @@ def locscale_grad(y, loc, scale, dlldy, *args):
 
     Returns
     -------
-    dlldloc : array
+    dlldloc : ndarray
         derivative of loglikelihood wrt location evaluated at the
         points given in y
-    dlldscale : array
+    dlldscale : ndarray
         derivative of loglikelihood wrt scale evaluated at the
         points given in y
 

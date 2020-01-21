@@ -257,7 +257,7 @@ def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
 
     Returns
     -------
-    ekr : array, 4-element
+    ekr : ndarray, 4-element
         Contains the expected values of the 4 robust kurtosis measures
 
     Notes

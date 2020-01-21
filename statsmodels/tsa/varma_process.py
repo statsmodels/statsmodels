@@ -145,13 +145,13 @@ def varinversefilter(ar, nobs, version=1):
 
     Parameters
     ----------
-    ar : array, (nlags,nvars,nvars)
+    ar : ndarray, (nlags,nvars,nvars)
         matrix lagpolynomial, currently no exog
         first row should be identity
 
     Returns
     -------
-    arinv : array, (nobs,nvars,nvars)
+    arinv : ndarray, (nobs,nvars,nvars)
 
 
     Notes

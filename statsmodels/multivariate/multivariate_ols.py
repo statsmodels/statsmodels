@@ -139,7 +139,7 @@ def multivariate_stats(eigenvals,
 
     Parameters
     ----------
-    eigenvals : array
+    eigenvals : ndarray
         The eigenvalues of inv(E + H)*H
     r_err_sscp : int
         Rank of E + H
@@ -380,9 +380,9 @@ class _MultivariateOLS(Model):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         See Parameters.
-    exog : array
+    exog : ndarray
         See Parameters.
     """
     _formula_max_endog = None

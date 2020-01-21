@@ -41,20 +41,20 @@ def repanel_cov(groups, sigmas):
 
     Parameters
     ----------
-    groups : array, (nobs, nre) or (nobs,)
+    groups : ndarray, (nobs, nre) or (nobs,)
         array of group/category observations
-    sigma : array, (nre+1,)
+    sigma : ndarray, (nre+1,)
         array of standard deviations of random effects,
         last element is the standard deviation of the
         idiosyncratic error
 
     Returns
     -------
-    omega : array, (nobs, nobs)
+    omega : ndarray, (nobs, nobs)
         covariance matrix of error
-    omegainv : array, (nobs, nobs)
+    omegainv : ndarray, (nobs, nobs)
         inverse covariance matrix of error
-    omegainvsqrt : array, (nobs, nobs)
+    omegainvsqrt : ndarray, (nobs, nobs)
         squareroot inverse covariance matrix of error
         such that omega = omegainvsqrt * omegainvsqrt.T
 

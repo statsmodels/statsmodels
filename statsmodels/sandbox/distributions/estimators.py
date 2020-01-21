@@ -120,7 +120,7 @@ def gammamomentcond2(distfn, params, mom2, quantile=None):
 
     Returns
     -------
-    difference : array
+    difference : ndarray
         difference between theoretical and empirical moments
 
     Notes
@@ -144,7 +144,7 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
 
     Returns
     -------
-    difference : array
+    difference : ndarray
         difference between theoretical and empirical moments and quantiles
 
     '''
@@ -165,7 +165,7 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
 
     Returns
     -------
-    difference : array
+    difference : ndarray
         difference between theoretical and empirical moments or quantiles
 
     '''
@@ -190,7 +190,7 @@ def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
 
     Returns
     -------
-    difference : array
+    difference : ndarray
         difference between theoretical and empirical quantiles
 
     Notes
@@ -241,16 +241,16 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
     ----------
     distfn : distribution instance
         needs to have cdf method, as in scipy.stats
-    freq : array, 1d
+    freq : ndarray, 1d
         frequency count, e.g. obtained by histogram
-    binedges : array, 1d
+    binedges : ndarray, 1d
         binedges including lower and upper bound
     start : tuple or array_like ?
         starting values, needs to have correct length
 
     Returns
     -------
-    paramest : array
+    paramest : ndarray
         estimated parameters
 
     Notes
@@ -282,9 +282,9 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
     ----------
     distfn : distribution instance
         needs to have cdf method, as in scipy.stats
-    freq : array, 1d
+    freq : ndarray, 1d
         frequency count, e.g. obtained by histogram
-    binedges : array, 1d
+    binedges : ndarray, 1d
         binedges including lower and upper bound
     start : tuple or array_like ?
         starting values, needs to have correct length
@@ -296,7 +296,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
 
     Returns
     -------
-    paramest : array
+    paramest : ndarray
         estimated parameters
 
     Notes

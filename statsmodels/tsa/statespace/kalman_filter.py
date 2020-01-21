@@ -1121,9 +1121,9 @@ class KalmanFilter(Representation):
 
         Returns
         -------
-        simulated_obs : array
+        simulated_obs : ndarray
             An (nsimulations x k_endog) array of simulated observations.
-        simulated_states : array
+        simulated_states : ndarray
             An (nsimulations x k_states) array of simulated states.
         """
         time_invariant = self.time_invariant
@@ -1236,7 +1236,7 @@ class KalmanFilter(Representation):
 
         Returns
         -------
-        impulse_responses : array
+        impulse_responses : ndarray
             Responses for each endogenous variable due to the impulse
             given by the `impulse` argument. A (steps + 1 x k_endog) array.
 
@@ -1367,21 +1367,21 @@ class FilterResults(FrozenRepresentation):
     shapes : dictionary of name,tuple
         A dictionary recording the shapes of each of the
         representation matrices as tuples.
-    endog : array
+    endog : ndarray
         The observation vector.
-    design : array
+    design : ndarray
         The design matrix, :math:`Z`.
-    obs_intercept : array
+    obs_intercept : ndarray
         The intercept for the observation equation, :math:`d`.
-    obs_cov : array
+    obs_cov : ndarray
         The covariance matrix for the observation equation :math:`H`.
-    transition : array
+    transition : ndarray
         The transition matrix, :math:`T`.
-    state_intercept : array
+    state_intercept : ndarray
         The intercept for the transition equation, :math:`c`.
-    selection : array
+    selection : ndarray
         The selection matrix, :math:`R`.
-    state_cov : array
+    state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
     missing : array of bool
         An array of the same size as `endog`, filled
@@ -1425,27 +1425,27 @@ class FilterResults(FrozenRepresentation):
         Whether or not the Kalman filter converged.
     period_converged : int
         The time period in which the Kalman filter converged.
-    filtered_state : array
+    filtered_state : ndarray
         The filtered state vector at each time period.
-    filtered_state_cov : array
+    filtered_state_cov : ndarray
         The filtered state covariance matrix at each time period.
-    predicted_state : array
+    predicted_state : ndarray
         The predicted state vector at each time period.
-    predicted_state_cov : array
+    predicted_state_cov : ndarray
         The predicted state covariance matrix at each time period.
-    forecast_error_diffuse_cov : array
+    forecast_error_diffuse_cov : ndarray
         Diffuse forecast error covariance matrix at each time period.
-    predicted_diffuse_state_cov : array
+    predicted_diffuse_state_cov : ndarray
         The predicted diffuse state covariance matrix at each time period.
-    kalman_gain : array
+    kalman_gain : ndarray
         The Kalman gain at each time period.
-    forecasts : array
+    forecasts : ndarray
         The one-step-ahead forecasts of observations at each time period.
-    forecasts_error : array
+    forecasts_error : ndarray
         The forecast errors at each time period.
-    forecasts_error_cov : array
+    forecasts_error_cov : ndarray
         The forecast error covariance matrices at each time period.
-    llf_obs : array
+    llf_obs : ndarray
         The loglikelihood values at each time period.
     """
     _filter_attributes = [
@@ -2151,35 +2151,35 @@ class PredictionResults(FilterResults):
         Number of in-sample dynamic predictions.
     nforecast : int
         Number of in-sample forecasts.
-    endog : array
+    endog : ndarray
         The observation vector.
-    design : array
+    design : ndarray
         The design matrix, :math:`Z`.
-    obs_intercept : array
+    obs_intercept : ndarray
         The intercept for the observation equation, :math:`d`.
-    obs_cov : array
+    obs_cov : ndarray
         The covariance matrix for the observation equation :math:`H`.
-    transition : array
+    transition : ndarray
         The transition matrix, :math:`T`.
-    state_intercept : array
+    state_intercept : ndarray
         The intercept for the transition equation, :math:`c`.
-    selection : array
+    selection : ndarray
         The selection matrix, :math:`R`.
-    state_cov : array
+    state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
-    filtered_state : array
+    filtered_state : ndarray
         The filtered state vector at each time period.
-    filtered_state_cov : array
+    filtered_state_cov : ndarray
         The filtered state covariance matrix at each time period.
-    predicted_state : array
+    predicted_state : ndarray
         The predicted state vector at each time period.
-    predicted_state_cov : array
+    predicted_state_cov : ndarray
         The predicted state covariance matrix at each time period.
-    forecasts : array
+    forecasts : ndarray
         The one-step-ahead forecasts of observations at each time period.
-    forecasts_error : array
+    forecasts_error : ndarray
         The forecast errors at each time period.
-    forecasts_error_cov : array
+    forecasts_error_cov : ndarray
         The forecast error covariance matrices at each time period.
 
     Notes
