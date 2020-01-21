@@ -45,6 +45,17 @@ class RegressionFDR(object):
         The approach used to assess and control FDR, currently
         must be 'knockoff'.
 
+    Optional keyword arguments
+    --------------------------
+    design_method : string or callable
+        The method used to construct the design matrix for the knockoff
+        filter.  If a string, should be 'equi', for 'equivariant', or
+        'sdp', for 'semidefinite programming'.  If a callable, this should
+        be a function that takes the observed exog matrix and returns
+        three values (exogs, exogn, sl).  The array exogs is a scaled/centered
+        version of the input matrix exog, exogn is another matrix of the same
+        shape with cov(exogn) = cov(exogs).
+
     Returns
     -------
     Returns an instance of the RegressionFDR class.  The `fdr` attribute
@@ -81,12 +92,16 @@ class RegressionFDR(object):
         exog = np.asarray(exog)
         endog = np.asarray(endog)
 
+        # Default to equivariant construction of the knockoff
+        #design matrix
         if "design_method" not in kwargs:
             kwargs["design_method"] = "equi"
 
         nobs, nvar = exog.shape
 
-        if kwargs["design_method"] == "equi":
+        if callable(kwargs["design_method"]):
+            exog1, exog2, _ = kwargs["design_method"](exog)
+        elif kwargs["design_method"] == "equi":
             exog1, exog2, _ = _design_knockoff_equi(exog)
         elif kwargs["design_method"] == "sdp":
             exog1, exog2, _ = _design_knockoff_sdp(exog)
