@@ -1201,7 +1201,8 @@ class GLM(base.LikelihoodModel):
         return GLMResultsWrapper(glm_results)
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False, **kwargs):
+                        start_params=None, refit=False,
+                        opt_method="bfgs", **kwargs):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -1220,6 +1221,8 @@ class GLM(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        opt_method : string
+            The method used for numerical optimization.
         **kwargs
             Additional keyword arguments used when fitting the model.
 
@@ -1258,7 +1261,7 @@ class GLM(base.LikelihoodModel):
         """
 
         if kwargs.get("L1_wt", 1) == 0:
-            return self._fit_ridge(alpha, start_params)
+            return self._fit_ridge(alpha, start_params, opt_method)
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
@@ -1280,7 +1283,7 @@ class GLM(base.LikelihoodModel):
 
         return result
 
-    def _fit_ridge(self, alpha, start_params, method="newton-cg"):
+    def _fit_ridge(self, alpha, start_params, method):
 
         if start_params is None:
             start_params = np.zeros(self.exog.shape[1])
