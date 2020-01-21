@@ -78,11 +78,11 @@ class IV2SLS(LikelihoodModel):
 
     Parameters
     ----------
-    endog : array
+    endog : ndarray
        Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
-    exog : array
+    exog : ndarray
        Explanatory variables, 1-dimensional or 2-dimensional array nobs by k
-    instrument : array
+    instrument : ndarray
        Instruments for explanatory variables. Must contain both exog
        variables that are not being instrumented and instruments
 
@@ -426,11 +426,11 @@ class GMM(Model):
 
     Parameters
     ----------
-    endog : array
+    endog : ndarray
         endogenous variable, see notes
-    exog : array
+    exog : ndarray
         array of exogenous variables, see notes
-    instrument : array
+    instrument : ndarray
         array of instruments, see notes
     nmoms : None or int
         number of moment conditions, if None then it is set equal to the
@@ -565,7 +565,8 @@ class GMM(Model):
 
         Parameters
         ----------
-        start_params : array (optional)
+        start_params : ndarray
+(optional)
             starting value for parameters ub minimization. If None then
             fitstart method is called for the starting values.
         maxiter : int or 'cue'
@@ -712,14 +713,14 @@ class GMM(Model):
         ----------
         start : array_like
             starting values for minimization
-        weights : array
+        weights : ndarray
             weighting matrix for moment conditions. If weights is None, then
             the identity matrix is used
 
 
         Returns
         -------
-        paramest : array
+        paramest : ndarray
             estimated parameters
 
         Notes
@@ -779,7 +780,7 @@ class GMM(Model):
 
         Returns
         -------
-        paramest : array
+        paramest : ndarray
             estimated parameters
 
         Notes
@@ -818,9 +819,9 @@ class GMM(Model):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             parameter values at which objective is evaluated
-        weights : array
+        weights : ndarray
             weighting matrix
 
         Returns
@@ -842,7 +843,7 @@ class GMM(Model):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             parameter values at which objective is evaluated
 
         Returns
@@ -869,11 +870,12 @@ class GMM(Model):
 
         Parameters
         ----------
-        start : array
+        start : ndarray
             starting value for parameters
         maxiter : int
             maximum number of iterations
-        start_weights : array (nmoms, nmoms)
+        start_weights : ndarray
+(nmoms, nmoms)
             initial weighting matrix; if None, then the identity matrix
             is used
         weights_method : {'cov', ...}
@@ -882,9 +884,9 @@ class GMM(Model):
 
         Returns
         -------
-        params : array
+        params : ndarray
             estimated parameters
-        weights : array
+        weights : ndarray
             optimal weighting matrix calculated with final parameter
             estimates
 
@@ -938,7 +940,7 @@ class GMM(Model):
 
         Parameters
         ----------
-        moms : array
+        moms : ndarray
             moment conditions (nobs x nmoms) for all observations evaluated at
             a parameter value
         weights_method : str 'cov'
@@ -952,7 +954,8 @@ class GMM(Model):
 
         Returns
         -------
-        w : array (nmoms, nmoms)
+        w : ndarray
+(nmoms, nmoms)
             estimate for the weighting matrix or covariance of the moment
             condition
 
@@ -1436,7 +1439,7 @@ class LinearIVGMM(IVGMM):
         start : not used
             starting values for minimization, not used, only for consistency
             of method signature
-        weights : array
+        weights : ndarray
             weighting matrix for moment conditions. If weights is None, then
             the identity matrix is used
         optim_method : not used,
@@ -1448,7 +1451,7 @@ class LinearIVGMM(IVGMM):
 
         Returns
         -------
-        paramest : array
+        paramest : ndarray
             estimated parameters
 
         '''
@@ -1632,15 +1635,15 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
 
     Parameters
     ----------
-    params_e : array
+    params_e : ndarray
         efficient and consistent under Null hypothesis,
         inconsistent under alternative hypothesis
-    params_i: array
+    params_i: ndarray
         consistent under Null hypothesis,
         consistent under alternative hypothesis
-    cov_params_e : array, 2d
+    cov_params_e : ndarray, 2d
         covariance matrix of parameter estimates for params_e
-    cov_params_i : array, 2d
+    cov_params_i : ndarray, 2d
         covariance matrix of parameter estimates for params_i
 
     example instrumental variables OLS estimator is `e`, IV estimator is `i`
@@ -1737,7 +1740,7 @@ class DistQuantilesGMM(GMM):
 
         Returns
         -------
-        difference : array
+        difference : ndarray
             difference between theoretical and empirical quantiles
 
         Notes

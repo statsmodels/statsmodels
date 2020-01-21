@@ -518,12 +518,13 @@ class GroupsStats(object):
 
         Parameters
         ----------
-        x : array, 2d
+        x : ndarray, 2d
             first column data, second column group labels
         useranks : bool
             if true, then use ranks as data corresponding to the
             scipy.stats.rankdata definition (start at 1, ties get mean)
-        uni, intlab : arrays (optional)
+        uni, intlab : ndarray
+ (optional)
             to avoid call to unique, these can be given as inputs
 
 
@@ -606,7 +607,8 @@ class TukeyHSDResults(object):
 
     Attributes
     ----------
-    reject : array of boolean, True if we reject Null for group pair
+    reject : ndarray
+of boolean, True if we reject Null for group pair
     meandiffs : pairwise mean differences
     confint : confidence interval for pairwise mean differences
     std_pairs : standard deviation of pairwise mean differences
@@ -784,9 +786,9 @@ class MultiComparison(object):
 
     Parameters
     ----------
-    data : array
+    data : ndarray
         independent data samples
-    groups : array
+    groups : ndarray
         group labels corresponding to each data point
     group_order : list[str], optional
         the desired order for the group mean results to be reported in. If
@@ -1107,7 +1109,7 @@ def varcorrection_pairs_unbalanced(nobs_all, srange=False):
 
     Returns
     -------
-    correction : array
+    correction : ndarray
         Correction factor for variance.
 
 
@@ -1201,9 +1203,9 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
 
     Returns
     -------
-    varjoint : array
+    varjoint : ndarray
         joint variance.
-    dfjoint : array
+    dfjoint : ndarray
         joint Satterthwait's degrees of freedom
 
 

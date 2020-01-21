@@ -279,7 +279,8 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
-    weights : array or None
+    weights : ndarray
+or None
         Optional  weights. If the X value is clipped, then this weight is
         also dropped.
     gridsize : int
@@ -298,9 +299,9 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     Returns
     -------
-    density : array
+    density : ndarray
         The densities estimated at the grid points.
-    grid : array, optional
+    grid : ndarray, optional
         The grid points at which the density is estimated.
 
     Notes
@@ -393,7 +394,8 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
-    weights : array or None
+    weights : ndarray
+or None
         WEIGHTS ARE NOT CURRENTLY IMPLEMENTED.
         Optional  weights. If the X value is clipped, then this weight is
         also dropped.
@@ -414,9 +416,9 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Returns
     -------
-    density : array
+    density : ndarray
         The densities estimated at the grid points.
-    grid : array, optional
+    grid : ndarray, optional
         The grid points at which the density is estimated.
 
     Notes

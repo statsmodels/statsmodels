@@ -399,7 +399,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
     Parameters
     ----------
-    x : array, 1-D
+    x : ndarray, 1-D
         underlying explanatory variable for smooth terms.
     df : int
         numer of basis functions or degrees of freedom
@@ -473,7 +473,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
         Parameters
         ----------
-        x_new : array
+        x_new : ndarray
             observations of the underlying explanatory variable
         deriv : int
             which derivative of the spline basis to compute
@@ -613,7 +613,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     Parameters
     ----------
-    x : array, 1-D
+    x : ndarray, 1-D
         underlying explanatory variable for smooth terms.
     df : int
         numer of basis functions or degrees of freedom
@@ -778,7 +778,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
 
         Parameters
         ----------
-        x_new: array
+        x_new: ndarray
             observations of the underlying explanatory variable
 
         Returns

@@ -324,7 +324,8 @@ def _norm_plot_pos(observations):
 
     Returns
     -------
-    plotting_position : array of floats
+    plotting_position : ndarray
+of floats
     """
     ppos, sorted_res = stats.probplot(observations, fit=False)
     return stats.norm.cdf(ppos)
@@ -351,7 +352,8 @@ def plotting_positions(df, censorship, cohn):
 
     Returns
     -------
-    plotting_position : array of float
+    plotting_position : ndarray
+of float
 
     See Also
     --------

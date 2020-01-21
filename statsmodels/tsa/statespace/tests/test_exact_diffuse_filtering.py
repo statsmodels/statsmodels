@@ -735,9 +735,11 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
         # this is an example where the numerical errors associated with the
         # approximate method result in noticeable errors
         # term: (x is the exact method, y is the approximate method)
-        # x: array([[[3.355072, 0.      ],
+        # x: ndarray
+[[[3.355072, 0.      ],
         #            [0.      , 4.221227]]])
-        # y: array([[[ 3.355072, -0.600856],
+        # y: ndarray
+[[[ 3.355072, -0.600856],
         #            [-0.600856,  4.221227]]])
         super(TestVAR1MeasurementError_Approx,
               self).test_smoothed_measurement_disturbance_cov(
@@ -780,10 +782,12 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
         # this is an example where the numerical errors associated with the
         # approximate method result in extreme errors: here a negative variance
         # term: (x is the exact method, y is the approximate method)
-        # x: array([[[ 5.601218e+01,  0.000000e+00],
+        # x: ndarray
+[[[ 5.601218e+01,  0.000000e+00],
         #            [ 0.000000e+00,  0.000000e+00]],
         # ...
-        # y: array([[[-12.083676,   0.      ],
+        # y: ndarray
+[[[-12.083676,   0.      ],
         #            [  0.      ,   0.      ]],
         super(TestVAR1Missing_Approx, self).test_smoothed_state_cov(
             rtol_diffuse=rtol_diffuse)

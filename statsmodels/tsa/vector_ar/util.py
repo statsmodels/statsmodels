@@ -264,7 +264,8 @@ def eigval_decomp(sym_array):
     """
     Returns
     -------
-    W: array of eigenvectors
+    W: ndarray
+of eigenvectors
     eigva: list of eigenvalues
     k: largest eigenvector
     """

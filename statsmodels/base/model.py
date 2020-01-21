@@ -849,12 +849,12 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             reduced parameter array
 
         Returns
         -------
-        paramsfull : array
+        paramsfull : ndarray
             expanded parameter array where fixed parameters are included
 
         Notes
@@ -981,7 +981,7 @@ class Results(object):
     ----------
     model : class instance
         the previously specified model instance
-    params : array
+    params : ndarray
         parameter estimates from the fit model
     """
     def __init__(self, model, params, **kwd):
@@ -1151,7 +1151,7 @@ class LikelihoodModelResults(Results):
         The parameters estimated for the model.
     scale : float
         The scaling factor of the model given during instantiation.
-    tvalues : array
+    tvalues : ndarray
         The t-values of the standard errors.
 
 
@@ -2188,13 +2188,16 @@ class LikelihoodModelResults(Results):
 
         The attributes to remove are named in:
 
-        model._data_attr : arrays attached to both the model instance
+        model._data_attr : ndarray
+ attached to both the model instance
             and the results instance with the same attribute name.
 
-        result.data_in_cache : arrays that may exist as values in
+        result.data_in_cache : ndarray
+ that may exist as values in
             result._cache (TODO : should privatize name)
 
-        result._data_attr_model : arrays attached to the model
+        result._data_attr_model : ndarray
+ attached to the model
             instance but not to the results instance
         """
         cls = self.__class__
@@ -2366,9 +2369,9 @@ class ResultMixin(object):
 
         Returns
         -------
-        mean : array
+        mean : ndarray
             mean of parameter estimates over bootstrap replications
-        std : array
+        std : ndarray
             standard deviation of parameter estimates over bootstrap
             replications
 
@@ -2442,13 +2445,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     bic : float
         Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
         number of regressors including the intercept.
-    bse : array
+    bse : ndarray
         The standard errors of the coefficients.
     df_resid : float
         See model definition.
     df_model : float
         See model definition.
-    fitted_values : array
+    fitted_values : ndarray
         Linear predictor XB.
     llf : float
         Value of the loglikelihood

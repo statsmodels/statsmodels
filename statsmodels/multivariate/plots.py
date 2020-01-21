@@ -81,7 +81,8 @@ def plot_loadings(loadings, col_names=None, row_names=None,
 
     Parameters
     ----------
-    loadings : array like
+    loadings : ndarray
+like
         Each column is a component (or factor)
     col_names : a list of strings
         column names of `loadings`

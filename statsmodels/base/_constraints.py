@@ -21,7 +21,8 @@ class TransformRestriction(object):
     ----------
     R : array_like
         Linear restriction matrix
-    q : arraylike or None
+    q : ndarray
+ike or None
         values of the linear restrictions
 
 

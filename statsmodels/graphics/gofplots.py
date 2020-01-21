@@ -691,9 +691,9 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         - 'q'  - A line is fit through the quartiles.
         - None - By default no reference line is added to the plot.
 
-    x : array
+    x : ndarray
         X data for plot. Not needed if line is '45'.
-    y : array
+    y : ndarray
         Y data for plot. Not needed if line is '45'.
     dist : scipy.stats.distribution
         A scipy.stats distribution, needed if line is 'q'.
@@ -771,7 +771,7 @@ def plotting_pos(nobs, a):
 
     Returns
     -------
-    plotting_positions : array
+    plotting_positions : ndarray
         The plotting positions
 
     Notes

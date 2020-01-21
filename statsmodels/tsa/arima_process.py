@@ -481,9 +481,9 @@ def lpol2index(ar):
 
     Returns
     -------
-    coeffs : array
+    coeffs : ndarray
         non-zero coefficients of lag polynomial
-    index : array
+    index : ndarray
         index (lags) of lag polynomial with non-zero elements
     """
     ar = array_like(ar, 'ar')
@@ -498,9 +498,9 @@ def index2lpol(coeffs, index):
 
     Parameters
     ----------
-    coeffs : array
+    coeffs : ndarray
         non-zero coefficients of lag polynomial
-    index : array
+    index : ndarray
         index (lags) of lag polynomial with non-zero elements
 
     Returns
@@ -528,7 +528,7 @@ def lpol_fima(d, n=20):
 
     Returns
     -------
-    ma : array
+    ma : ndarray
         coefficients of lag polynomial
     """
     # hide import inside function until we use this heavily
@@ -552,7 +552,7 @@ def lpol_fiar(d, n=20):
 
     Returns
     -------
-    ar : array
+    ar : ndarray
         coefficients of lag polynomial
 
     Notes:
@@ -601,9 +601,9 @@ def deconvolve(num, den, n=None):
 
     Returns
     -------
-    quot : array
+    quot : ndarray
         quotient or filtered series
-    rem : array
+    rem : ndarray
         remainder
 
     Notes
@@ -897,7 +897,7 @@ class ArmaProcess(object):
 
         Returns
         -------
-        manew : array
+        manew : ndarray
            A new invertible MA lag-polynomial, returned if retnew is false.
         wasinvertible : bool
            True if the MA lag-polynomial was already invertible, returned if

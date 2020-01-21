@@ -37,9 +37,11 @@ class QuantReg(RegressionModel):
 
     Parameters
     ----------
-    endog : array or dataframe
+    endog : ndarray
+or dataframe
         endogenous/response variable
-    exog : array or dataframe
+    exog : ndarray
+or dataframe
         exogenous/explanatory variable(s)
 
     Notes

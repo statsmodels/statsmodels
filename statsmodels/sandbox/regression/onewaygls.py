@@ -141,9 +141,11 @@ class OneWayLS(object):
 
         olsbygroup : dictionary of result instance
             the returned regression results for each group
-        sigmabygroup : array (ngroups,) (this should be called sigma2group ??? check)
+        sigmabygroup : ndarray
+(ngroups,) (this should be called sigma2group ??? check)
             mse_resid for each group
-        weights : array (nobs,)
+        weights : ndarray
+(nobs,)
             standard deviation of group extended to the original observations. This can
             be used as weights in WLS for group-wise heteroscedasticity.
 

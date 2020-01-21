@@ -120,7 +120,8 @@ def randintw(w, size=1):
 
     Returns
     -------
-    rvs : array of shape given by size
+    rvs : ndarray
+of shape given by size
         random variables each distributed according to the same discrete
         distribution defined by (normalized) w.
 
@@ -208,7 +209,7 @@ class RU2NMNL(object):
 
     Parameters
     ----------
-    endog : array
+    endog : ndarray
         not used in this part
     exog : dict_like
         dictionary access to data where keys correspond to branch and leaf
@@ -304,7 +305,7 @@ class RU2NMNL(object):
 
         Returns
         -------
-        probs : array, (nobs, nchoices)
+        probs : ndarray, (nobs, nchoices)
             probabilites for all choices for each observation. The order
             is available by attribute leaves. See note in docstring of class
 

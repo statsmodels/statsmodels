@@ -971,7 +971,7 @@ class DynamicFactorResults(MLEResults):
     specification : dictionary
         Dictionary including all attributes from the DynamicFactor model
         instance.
-    coefficient_matrices_var : array
+    coefficient_matrices_var : ndarray
         Array containing autoregressive lag polynomial coefficient matrices,
         ordered from lowest degree to highest.
 
@@ -1085,7 +1085,7 @@ class DynamicFactorResults(MLEResults):
 
         Returns
         -------
-        coefficients_of_determination : array
+        coefficients_of_determination : ndarray
             A `k_endog` x `k_factors` array, where
             `coefficients_of_determination[i, j]` represents the :math:`R^2`
             value from a regression of factor `j` and a constant on endogenous

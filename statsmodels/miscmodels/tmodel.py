@@ -120,13 +120,13 @@ class TLinearModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             The parameters of the model. The last 2 parameters are degrees of
             freedom and scale.
 
         Returns
         -------
-        loglike : array
+        loglike : ndarray
             The log likelihood of the model evaluated at `params` for each
             observation defined by self.endog and self.exog.
 

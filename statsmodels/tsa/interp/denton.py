@@ -29,7 +29,7 @@ from numpy.linalg import solve
 #            `freq` == "other".
 #    Returns
 #    -------
-#    benchmarked series : array
+#    benchmarked series : ndarray
 #
 #    Notes
 #    -----
@@ -114,7 +114,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     Returns
     -------
-    transformed : array
+    transformed : ndarray
         The transformed series.
 
     Examples

@@ -45,7 +45,7 @@ class PCA(object):
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components.  Setting gls to True requires
         ncomp to be less then the min of the number of rows or columns.
-    weights : array, optional
+    weights : ndarray, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional
@@ -73,40 +73,48 @@ class PCA(object):
 
     Attributes
     ----------
-    factors : array or DataFrame
+    factors : ndarray
+or DataFrame
         nobs by ncomp array of of principal components (scores)
     scores :  array or DataFrame
         nobs by ncomp array of of principal components - identical to factors
-    loadings : array or DataFrame
+    loadings : ndarray
+or DataFrame
         ncomp by nvar array of  principal component loadings for constructing
         the factors
-    coeff : array or DataFrame
+    coeff : ndarray
+or DataFrame
         nvar by ncomp array of  principal component loadings for constructing
         the projections
-    projection : array or DataFrame
+    projection : ndarray
+or DataFrame
         nobs by var array containing the projection of the data onto the ncomp
         estimated factors
-    rsquare : array or Series
+    rsquare : ndarray
+or Series
         ncomp array where the element in the ith position is the R-square
         of including the fist i principal components.  Note: values are
         calculated on the transformed data, not the original data
-    ic : array or DataFrame
+    ic : ndarray
+or DataFrame
         ncomp by 3 array containing the Bai and Ng (2003) Information
         criteria.  Each column is a different criteria, and each row
         represents the number of included factors.
-    eigenvals : array or Series
+    eigenvals : ndarray
+or Series
         nvar array of eigenvalues
-    eigenvecs : array or DataFrame
+    eigenvecs : ndarray
+or DataFrame
         nvar by nvar array of eigenvectors
-    weights : array
+    weights : ndarray
         nvar array of weights used to compute the principal components,
         normalized to unit length
-    transformed_data : array
+    transformed_data : ndarray
         Standardized, demeaned and weighted data used to compute
         principal components and related quantities
-    cols : array
+    cols : ndarray
         Array of indices indicating columns used in the PCA
-    rows : array
+    rows : ndarray
         Array of indices indicating rows used in the PCA
 
     Notes
@@ -789,7 +797,7 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
 
     Parameters
     ----------
-    data : array
+    data : ndarray
         Variables in columns, observations in rows.
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
@@ -808,7 +816,7 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components
-    weights : array, optional
+    weights : ndarray, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional

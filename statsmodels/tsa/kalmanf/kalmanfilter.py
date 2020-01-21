@@ -192,7 +192,7 @@ class KalmanFilter(object):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             The coefficients of the ARMA model, assumed to be in the order of
             trend variables and `k` exogenous coefficients, the `p` AR
             coefficients, then the `q` MA coefficients.

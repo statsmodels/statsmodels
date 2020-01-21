@@ -43,9 +43,9 @@ def drop_missing(Y, X=None, axis=1):
 
     Returns
     -------
-    Y : array
+    Y : ndarray
         All Y where the
-    X : array
+    X : ndarray
 
     Notes
     -----
@@ -591,7 +591,7 @@ def _ensure_2d(x, ndarray=False):
 
     Parameters
     ----------
-    x : array, Series, DataFrame or None
+    x : ndarray, Series, DataFrame or None
         Input to verify dimensions, and to transform as necesary
     ndarray : bool
         Flag indicating whether to always return a NumPy array. Setting False
@@ -600,7 +600,7 @@ def _ensure_2d(x, ndarray=False):
 
     Returns
     -------
-    out : array, DataFrame or None
+    out : ndarray, DataFrame or None
         array or DataFrame with 2 dimensiona.  One dimensional arrays are
         returned as nobs by 1. None is returned if x is None.
     names : list of str or None

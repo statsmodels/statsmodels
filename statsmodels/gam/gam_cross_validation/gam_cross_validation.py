@@ -175,7 +175,7 @@ class MultivariateGAMCVPath(object):
         model class for creating a model with k-fole training data
     cost : function
         cost function for the prediction error
-    endog : array
+    endog : ndarray
         dependent (response) variable of the model
     cv_iterator : instance of cross-validation iterator
     """

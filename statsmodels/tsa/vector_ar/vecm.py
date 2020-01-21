@@ -1551,7 +1551,8 @@ class VECMResults(object):
 
         Returns
         -------
-        cov : array (neqs**2 * k_ar x neqs**2 * k_ar)
+        cov : ndarray
+(neqs**2 * k_ar x neqs**2 * k_ar)
         """
         # This implementation is using the fact that for a random variable x
         # with covariance matrix Sigma_x the following holds:
@@ -1960,7 +1961,8 @@ class VECMResults(object):
 
         Returns
         -------
-        fitted : array (nobs x neqs)
+        fitted : ndarray
+(nobs x neqs)
             The predicted in-sample values of the models' endogenous variables.
         """
         beta = self.beta
@@ -1981,7 +1983,8 @@ class VECMResults(object):
 
         Returns
         -------
-        resid : array (nobs x neqs)
+        resid : ndarray
+(nobs x neqs)
             The residuals.
         """
         return self.y_all.T[self.k_ar:] - self.fittedvalues

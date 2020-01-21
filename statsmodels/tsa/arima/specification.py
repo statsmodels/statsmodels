@@ -81,7 +81,8 @@ class SARIMAXSpecification(object):
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
         maximum likelihood.
-    dates : array-like of datetime, optional
+    dates : ndarray
+like of datetime, optional
         If no index is given by `endog` or `exog`, an array-like object of
         datetime objects can be provided.
     freq : str, optional
@@ -727,11 +728,16 @@ class SARIMAXSpecification(object):
         --------
         >>> spec = SARIMAXSpecification(ar_order=1)
         >>> spec.split_params([0.5, 4])
-        {'exog_params': array([], dtype=float64),
-         'ar_params': array([0.5]),
-         'ma_params': array([], dtype=float64),
-         'seasonal_ar_params': array([], dtype=float64),
-         'seasonal_ma_params': array([], dtype=float64),
+        {'exog_params': ndarray
+[], dtype=float64),
+         'ar_params': ndarray
+[0.5]),
+         'ma_params': ndarray
+[], dtype=float64),
+         'seasonal_ar_params': ndarray
+[], dtype=float64),
+         'seasonal_ma_params': ndarray
+[], dtype=float64),
          'sigma2': 4.0}
         """
         params = validate_basic(params, self.k_params,
@@ -782,7 +788,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        params : array
+        params : ndarray
             Array of parameters.
 
         Examples
@@ -889,7 +895,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        constrained : array
+        constrained : ndarray
             Array of model parameters transformed to produce a valid model.
 
         Notes
@@ -951,7 +957,7 @@ class SARIMAXSpecification(object):
 
         Returns
         -------
-        unconstrained : array
+        unconstrained : ndarray
             Array of parameters with constraining transformions reversed.
 
         Notes

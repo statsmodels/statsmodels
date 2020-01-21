@@ -322,7 +322,7 @@ def miso_lfilter(ar, ma, x, useic=False):
     -------
     y : ndarray
         The filtered output series.
-    inp : array, 1d
+    inp : ndarray, 1d
         The combined input series.
 
     Notes

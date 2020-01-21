@@ -34,7 +34,8 @@ class TryCLogit(object):
     Parameters
     ----------
 
-    endog : array (nobs,nchoices)
+    endog : ndarray
+(nobs,nchoices)
         dummy encoding of realized choices
     exog_bychoices : list of arrays
         explanatory variables, one array of exog for each choice. Variables

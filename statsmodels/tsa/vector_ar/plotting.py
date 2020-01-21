@@ -95,7 +95,8 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
     Parameters
     ----------
     y :
-    error : array or None
+    error : ndarray
+or None
     """
     import matplotlib.pyplot as plt
 

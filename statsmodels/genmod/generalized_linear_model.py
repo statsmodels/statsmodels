@@ -105,22 +105,22 @@ class GLM(base.LikelihoodModel):
     df_resid : float
         Residual degrees of freedom is equal to the number of observation n
         minus the number of regressors p.
-    endog : array
+    endog : ndarray
         See Notes.  Note that `endog` is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
     exposure : array_like
         Include ln(exposure) in model with coefficient constrained to 1. Can
         only be used if the link is the logarithm function.
-    exog : array
+    exog : ndarray
         See Notes.  Note that `exog` is a reference to the data so that if
         data is already an array and it is changed, then `exog` changes
         as well.
-    freq_weights : array
+    freq_weights : ndarray
         See Notes. Note that `freq_weights` is a reference to the data so that
         if data is already an array and it is changed, then `freq_weights`
         changes as well.
-    var_weights : array
+    var_weights : ndarray
         See Notes. Note that `var_weights` is a reference to the data so that
         if data is already an array and it is changed, then `var_weights`
         changes as well.
@@ -129,20 +129,20 @@ class GLM(base.LikelihoodModel):
     family : family class instance
         The distribution family of the model. Can be any family in
         statsmodels.families.  Default is Gaussian.
-    mu : array
+    mu : ndarray
         The mean response of the transformed variable.  `mu` is the value of
         the inverse of the link function at lin_pred, where lin_pred is the
         linear predicted value of the WLS fit of the transformed variable.
         `mu` is only available after fit is called.  See
         statsmodels.families.family.fitted of the distribution family for more
         information.
-    n_trials : array
+    n_trials : ndarray
         See Notes. Note that `n_trials` is a reference to the data so that if
         data is already an array and it is changed, then `n_trials` changes
         as well. `n_trials` is the number of binomial trials and only available
         with that distribution. See statsmodels.families.Binomial for more
         information.
-    normalized_cov_params : array
+    normalized_cov_params : ndarray
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
     offset : array_like
@@ -154,7 +154,7 @@ class GLM(base.LikelihoodModel):
     scaletype : str
         The scaling used for fitting the model.  This is only available after
         fit is called.  The default is None.  See GLM.fit for more information.
-    weights : array
+    weights : ndarray
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
@@ -728,7 +728,7 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        mu : array
+        mu : ndarray
             mu is the mean response estimate
 
         Returns
@@ -1390,18 +1390,18 @@ class GLMResults(base.LikelihoodModelResults):
         Pointer to GLM model instance that called fit.
     nobs : float
         The number of observations n.
-    normalized_cov_params : array
+    normalized_cov_params : ndarray
         See GLM docstring
-    params : array
+    params : ndarray
         The coefficients of the fitted model.  Note that interpretation
         of the coefficients often depends on the distribution family and the
         data.
-    pvalues : array
+    pvalues : ndarray
         The two-tailed p-values for the parameters.
     scale : float
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
-    stand_errors : array
+    stand_errors : ndarray
         The standard errors of the fitted GLM.   #TODO still named bse
 
     See Also

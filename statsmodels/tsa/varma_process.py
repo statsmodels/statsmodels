@@ -145,13 +145,13 @@ def varinversefilter(ar, nobs, version=1):
 
     Parameters
     ----------
-    ar : array, (nlags,nvars,nvars)
+    ar : ndarray, (nlags,nvars,nvars)
         matrix lagpolynomial, currently no exog
         first row should be identity
 
     Returns
     -------
-    arinv : array, (nobs,nvars,nvars)
+    arinv : ndarray, (nobs,nvars,nvars)
 
 
     Notes
@@ -189,14 +189,17 @@ def vargenerate(ar, u, initvalues=None):
 
     Parameters
     ----------
-    ar : array (nlags,nvars,nvars)
+    ar : ndarray
+(nlags,nvars,nvars)
         matrix lagpolynomial
-    u : array (nobs,nvars)
+    u : ndarray
+(nobs,nvars)
         exogenous variable, error term for VAR
 
     Returns
     -------
-    sar : array (1+nobs,nvars)
+    sar : ndarray
+(1+nobs,nvars)
         sample of var process, inverse filtered u
         does not trim initial condition y_0 = 0
 
@@ -354,9 +357,11 @@ class _Var(object):
         -------
         None, but attaches
 
-        arhat : array (nlags, nvar, nvar)
+        arhat : ndarray
+(nlags, nvar, nvar)
             full lag polynomial array
-        arlhs : array (nlags-1, nvar, nvar)
+        arlhs : ndarray
+(nlags-1, nvar, nvar)
             reduced lag polynomial for left hand side
         other statistics as returned by linalg.lstsq : need to be completed
 
@@ -422,12 +427,14 @@ class _Var(object):
         ----------
         horiz : int (optional, default=1)
             forecast horizon
-        u : array (horiz, nvars)
+        u : ndarray
+(horiz, nvars)
             error term for forecast periods. If None, then u is zero.
 
         Returns
         -------
-        yforecast : array (nobs+horiz, nvars)
+        yforecast : ndarray
+(nobs+horiz, nvars)
             this includes the sample and the forecasts
         '''
         if u is None:

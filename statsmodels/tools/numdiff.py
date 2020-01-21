@@ -112,7 +112,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
         parameters at which the derivative is evaluated
     f : function
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
@@ -129,7 +129,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
 
     Returns
     -------
-    grad : array
+    grad : ndarray
         gradient or Jacobian
 
     Notes
@@ -167,7 +167,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
         parameters at which the derivative is evaluated
     f : function
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array

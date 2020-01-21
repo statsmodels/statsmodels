@@ -118,7 +118,8 @@ class BaseIRAnalysis(object):
             Number of replications for Monte Carlo and Sims-Zha standard errors
         seed: int
             np.random.seed for Monte Carlo replications
-        component: array or vector of principal component indices
+        component: ndarray
+or vector of principal component indices
         """
         periods = self.periods
         model = self.model
@@ -503,7 +504,8 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Returns
         -------
-        W: array of eigenvectors
+        W: ndarray
+of eigenvectors
         eigva: list of eigenvalues
         k: matrix indicating column # of largest eigenvalue for each c_i,j
         """

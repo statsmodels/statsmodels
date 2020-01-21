@@ -100,7 +100,8 @@ def scoreatpercentile(data, percentile):
 def percentileofscore(data, score):
     """Return the percentile-position of score relative to data.
 
-    score: Array of scores at which the percentile is computed.
+    score: ndarray
+of scores at which the percentile is computed.
 
     Return percentiles (0-100).
 
