@@ -1289,7 +1289,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        score : array
+        score : ndarray
             Score, evaluated at `params`.
 
         Notes
@@ -1362,7 +1362,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        score : array
+        score : ndarray
             Score per observation, evaluated at `params`.
 
         Notes
@@ -1423,7 +1423,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        hessian : array
+        hessian : ndarray
             Hessian matrix evaluated at `params`
 
         Notes
@@ -1568,7 +1568,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        jacobian : array
+        jacobian : ndarray
             Jacobian matrix of the transformation, evaluated at `unconstrained`
 
         Notes
@@ -1854,7 +1854,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        simulated_obs : array
+        simulated_obs : ndarray
             An array of simulated observations. If `repetitions=None`, then it
             will be shaped (nsimulations x k_endog) or (nsimulations,) if
             `k_endog=1`. Otherwise it will be shaped
@@ -2018,7 +2018,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        impulse_responses : array
+        impulse_responses : ndarray
             Responses for each endogenous variable due to the impulse
             given by the `impulse` argument. For a time-invariant model, the
             impulse responses are given for `steps + 1` elements (this gives
@@ -2144,7 +2144,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     ----------
     model : MLEModel instance
         The fitted model instance
-    params : array
+    params : ndarray
         Fitted parameters
     filter_results : KalmanFilter instance
         The underlying state space model and Kalman filter output
@@ -2157,7 +2157,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         The underlying state space model and Kalman filter output
     nobs : float
         The number of observations used to fit the model.
-    params : array
+    params : ndarray
         The parameters of the model.
     scale : float
         This is currently set to 1.0 unless the model uses concentrated
@@ -2959,7 +2959,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        output : array
+        output : ndarray
             An array with `(test_statistic, pvalue)` for each endogenous
             variable. The array is then sized `(k_endog, 2)`. If the method is
             called as `het = res.test_heteroskedasticity()`, then `het[0]` is
@@ -3116,7 +3116,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        output : array
+        output : ndarray
             An array with `(test_statistic, pvalue)` for each endogenous
             variable and each lag. The array is then sized
             `(k_endog, 2, lags)`. If the method is called as
@@ -3207,7 +3207,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
+        forecast : ndarray
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """
@@ -3263,7 +3263,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
+        forecast : ndarray
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
         if isinstance(steps, int):
@@ -3328,7 +3328,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array
+        forecast : ndarray
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
         if isinstance(steps, int):
@@ -3385,7 +3385,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        simulated_obs : array
+        simulated_obs : ndarray
             An array of simulated observations. If `repetitions=None`, then it
             will be shaped (nsimulations x k_endog) or (nsimulations,) if
             `k_endog=1`. Otherwise it will be shaped
@@ -3480,7 +3480,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        impulse_responses : array
+        impulse_responses : ndarray
             Responses for each endogenous variable due to the impulse
             given by the `impulse` argument. For a time-invariant model, the
             impulse responses are given for `steps + 1` elements (this gives

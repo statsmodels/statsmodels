@@ -501,10 +501,10 @@ class SVARResults(SVARProcess, VARResults):
 
     Parameters
     ----------
-    endog : array
-    endog_lagged : array
-    params : array
-    sigma_u : array
+    endog : ndarray
+    endog_lagged : ndarray
+    params : ndarray
+    sigma_u : ndarray
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}

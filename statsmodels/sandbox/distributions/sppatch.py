@@ -31,7 +31,7 @@ def _fitstart(self, x):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
         data for which the parameters are estimated
 
     Returns
@@ -58,7 +58,7 @@ def _fitstart_beta(self, x, fixed=None):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
         data for which the parameters are estimated
     fixed : None or array_like
         sequence of numbers and np.nan to indicate fixed parameters and parameters
@@ -120,7 +120,7 @@ def _fitstart_poisson(self, x, fixed=None):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
         data for which the parameters are estimated
     fixed : None or array_like
         sequence of numbers and np.nan to indicate fixed parameters and parameters
@@ -199,7 +199,7 @@ def fit_fr(self, data, *args, **kwds):
 
     Parameters
     ----------
-    data : array, 1d
+    data : ndarray, 1d
         data for which the distribution parameters are estimated,
     args : list ? check
         starting values for optimization
@@ -211,7 +211,7 @@ def fit_fr(self, data, *args, **kwds):
 
     Returns
     -------
-    argest : array
+    argest : ndarray
         estimated parameters
 
 
@@ -554,7 +554,7 @@ def distfitbootstrap(sample, distr, nrepl=100):
 
     Parameters
     ----------
-    sample : array
+    sample : ndarray
         original sample data for bootstrap
     distr : distribution instance with fit_fr method
     nrepl : int
@@ -582,7 +582,7 @@ def distfitmc(sample, distr, nrepl=100, distkwds={}):
 
     Parameters
     ----------
-    sample : array
+    sample : ndarray
         original sample data, in Monte Carlo only used to get nobs,
     distr : distribution instance with fit_fr method
     nrepl : int
@@ -608,10 +608,10 @@ def printresults(sample, arg, bres, kind='bootstrap'):
 
     Parameters
     ----------
-    sample : array
+    sample : ndarray
         original sample data
     arg : float   (for general case will be array)
-    bres : array
+    bres : ndarray
         parameter estimates from Bootstrap or Monte Carlo run
     kind : {'bootstrap', 'montecarlo'}
         output is printed for Mootstrap (default) or Monte Carlo

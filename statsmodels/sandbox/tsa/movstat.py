@@ -60,7 +60,7 @@ def movorder(x, order = 'med', windsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
        time series data
     order : float or 'med', 'min', 'max'
        which order statistic to calculate
@@ -160,7 +160,7 @@ def movmean(x, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
        time series data
     windsize : int
        window size
@@ -169,7 +169,7 @@ def movmean(x, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
+    mk : ndarray
         moving mean, with same shape as x
 
 
@@ -187,7 +187,7 @@ def movvar(x, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
        time series data
     windsize : int
        window size
@@ -196,7 +196,7 @@ def movvar(x, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
+    mk : ndarray
         moving variance, with same shape as x
 
 
@@ -211,7 +211,7 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
     Parameters
     ----------
-    x : array
+    x : ndarray
        time series data
     windsize : int
        window size
@@ -220,7 +220,7 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
     Returns
     -------
-    mk : array
+    mk : ndarray
         k-th moving non-central moment, with same shape as x
 
 

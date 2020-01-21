@@ -106,7 +106,7 @@ class _MinimalWLS(object):
         """
         Construct results
 
-        params : array
+        params : ndarray
             Model parameters
 
         Notes

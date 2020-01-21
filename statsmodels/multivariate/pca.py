@@ -45,7 +45,7 @@ class PCA(object):
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components.  Setting gls to True requires
         ncomp to be less then the min of the number of rows or columns.
-    weights : array, optional
+    weights : ndarray, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional
@@ -98,15 +98,15 @@ class PCA(object):
         nvar array of eigenvalues
     eigenvecs : array or DataFrame
         nvar by nvar array of eigenvectors
-    weights : array
+    weights : ndarray
         nvar array of weights used to compute the principal components,
         normalized to unit length
-    transformed_data : array
+    transformed_data : ndarray
         Standardized, demeaned and weighted data used to compute
         principal components and related quantities
-    cols : array
+    cols : ndarray
         Array of indices indicating columns used in the PCA
-    rows : array
+    rows : ndarray
         Array of indices indicating rows used in the PCA
 
     Notes
@@ -789,7 +789,7 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
 
     Parameters
     ----------
-    data : array
+    data : ndarray
         Variables in columns, observations in rows.
     ncomp : int, optional
         Number of components to return.  If None, returns the as many as the
@@ -808,7 +808,7 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components
-    weights : array, optional
+    weights : ndarray, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional

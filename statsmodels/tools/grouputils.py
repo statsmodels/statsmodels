@@ -81,7 +81,7 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
 def group_sums(x, group, use_bincount=True):
     """simple bincount version, again
 
-    group : array, integer
+    group : ndarray, integer
         assumed to be consecutive integers
 
     no dtype checking because I want to raise in that case

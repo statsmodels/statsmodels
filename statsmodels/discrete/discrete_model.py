@@ -914,9 +914,9 @@ class Poisson(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
@@ -1316,9 +1316,9 @@ class GeneralizedPoisson(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
@@ -1715,9 +1715,9 @@ class Logit(BinaryModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
@@ -1925,9 +1925,9 @@ class Probit(BinaryModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
@@ -2154,9 +2154,9 @@ class MNLogit(MultinomialModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     J : float
         The number of choices for the endogenous variable. Note that this
@@ -2167,7 +2167,7 @@ class MNLogit(MultinomialModel):
     names : dict
         A dictionary mapping the column number in `wendog` to the variables
         in `endog`.
-    wendog : array
+    wendog : ndarray
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
         each observation. See `names` for a dictionary mapping each column to
@@ -2203,7 +2203,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        X : array
+        X : ndarray
             The linear predictor of the model XB.
 
         Returns
@@ -2291,7 +2291,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             The parameters of the multinomial logit model.
 
         Returns
@@ -2336,7 +2336,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        params : array
+        params : ndarray
             The parameters of the multinomial logit model.
 
         Returns
@@ -2478,9 +2478,9 @@ class NegativeBinomial(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
 
     References
@@ -2941,9 +2941,9 @@ class NegativeBinomialP(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     p : scalar
         P denotes parameterizations for NB-P regression. p=1 for NB-1 and

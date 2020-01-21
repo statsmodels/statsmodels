@@ -436,9 +436,9 @@ class GLS(RegressionModel):
 
     Attributes
     ----------
-    pinv_wexog : array
+    pinv_wexog : ndarray
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
-    cholsimgainv : array
+    cholsimgainv : ndarray
         The transpose of the Cholesky decomposition of the pseudoinverse.
     df_model : float
         p - 1, where p is the number of regressors including the intercept.
@@ -449,15 +449,15 @@ class GLS(RegressionModel):
         The value of the likelihood function of the fitted model.
     nobs : float
         The number of observations n.
-    normalized_cov_params : array
+    normalized_cov_params : ndarray
         p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
     results : RegressionResults instance
         A property that returns the RegressionResults class if fit.
-    sigma : array
+    sigma : ndarray
         `sigma` is the n x n covariance structure of the error terms.
-    wexog : array
+    wexog : ndarray
         Design matrix whitened by `cholsigmainv`
-    wendog : array
+    wendog : ndarray
         Response variable whitened by `cholsigmainv`
 
     See Also
@@ -650,7 +650,7 @@ class WLS(RegressionModel):
 
     Attributes
     ----------
-    weights : array
+    weights : ndarray
         The stored weights supplied as an argument.
 
     See Also

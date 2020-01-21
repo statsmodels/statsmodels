@@ -97,9 +97,9 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     Returns
     -------
-    reject : array, boolean
+    reject : ndarray, boolean
         true for hypothesis that can be rejected for given alpha
-    pvals_corrected : array
+    pvals_corrected : ndarray
         p-values corrected for multiple tests
     alphacSidak: float
         corrected alpha for Sidak method
@@ -282,9 +282,9 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 
     Returns
     -------
-    rejected : array, bool
+    rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : array
+    pvalue-corrected : ndarray
         pvalues adjusted for multiple hypothesis testing to limit FDR
 
     Notes
@@ -366,9 +366,9 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
 
     Returns
     -------
-    rejected : array, bool
+    rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : array
+    pvalue-corrected : ndarray
         pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
         ntest - rej, estimated number of true hypotheses

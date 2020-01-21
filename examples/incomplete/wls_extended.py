@@ -125,9 +125,9 @@ def index_trim_outlier(resid, k):
 
     Returns
     -------
-    trimmed_index : array, 1d
+    trimmed_index : ndarray, 1d
         index array with k outliers removed
-    outlier_index : array, 1d
+    outlier_index : ndarray, 1d
         index array of k outliers
 
     Notes

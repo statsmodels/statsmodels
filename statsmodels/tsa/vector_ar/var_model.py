@@ -1155,17 +1155,17 @@ class VARResults(VARProcess):
 
     Parameters
     ----------
-    endog : array
-    endog_lagged : array
-    params : array
-    sigma_u : array
+    endog : ndarray
+    endog_lagged : ndarray
+    params : ndarray
+    sigma_u : ndarray
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
     names : array_like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
-    exog : array
+    exog : ndarray
 
     Attributes
     ----------

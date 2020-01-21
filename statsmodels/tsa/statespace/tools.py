@@ -123,7 +123,7 @@ def companion_matrix(polynomial):
 
     Returns
     -------
-    companion_matrix : array
+    companion_matrix : ndarray
 
     Notes
     -----
@@ -254,7 +254,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
 
     Returns
     -------
-    differenced : array
+    differenced : ndarray
         The differenced array.
     """
     pandas = _is_using_pandas(series, None)
@@ -436,14 +436,14 @@ def constrain_stationary_univariate(unconstrained):
 
     Parameters
     ----------
-    unconstrained : array
+    unconstrained : ndarray
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component.
 
     Returns
     -------
-    constrained : array
+    constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer.
@@ -473,14 +473,14 @@ def unconstrain_stationary_univariate(constrained):
 
     Parameters
     ----------
-    constrained : array
+    constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer.
 
     Returns
     -------
-    unconstrained : array
+    unconstrained : ndarray
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component.
@@ -563,7 +563,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
     partial_autocorrelations : list
         Partial autocorrelation matrices. Should be a list of length `order`,
         where each element is an array sized `k_endog` x `k_endog`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False). The
@@ -739,7 +739,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         element is an array sized `k_endog` x `k_endog`. If an array, should be
         the matrices horizontally concatenated and sized
         `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False). The
@@ -986,7 +986,7 @@ def _compute_multivariate_acovf_from_coefficients(
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
         and sized `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
     maxlag : int, optional
@@ -1275,7 +1275,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
         and sized `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
     order : int, optional
@@ -1337,14 +1337,14 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
         element is an array sized `k_endog` x `k_endog`. If an array, should be
         the coefficient matrices horizontally concatenated and sized
         `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False).
 
     Returns
     -------
-    unconstrained : array
+    unconstrained : ndarray
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component. Will match the type of the passed `constrained`

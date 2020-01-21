@@ -95,7 +95,7 @@ class OptAFT(_OptFuncts):
         Parameters
         ----------
 
-        Nuisance Params: array
+        Nuisance Params: ndarray
             Vector of values to be used as nuisance params.
 
         maxiter: int
@@ -191,10 +191,10 @@ class emplikeAFT(object):
     nobs: float
         Number of observations
 
-    endog: array
+    endog: ndarray
         Endog attay
 
-    exog: array
+    exog: ndarray
         Exogenous variable matrix
 
     censors
@@ -206,10 +206,10 @@ class emplikeAFT(object):
     uncens_nobs: float
         Number of uncensored observations
 
-    uncens_endog: array
+    uncens_endog: ndarray
         Uncensored response variables
 
-    uncens_exog: array
+    uncens_exog: ndarray
         Exogenous variables of the uncensored observations
 
     Methods
@@ -254,14 +254,14 @@ class emplikeAFT(object):
 
         Parameters
         ----------
-        endog: array
+        endog: ndarray
             Models endogenous variable
-        censors: array
+        censors: ndarray
             arrat indicating a censored array
 
         Returns
         -------
-        indic_ties: array
+        indic_ties: ndarray
             ties[i]=1 if endog[i]==endog[i+1] and
             censors[i]=censors[i+1]
         """

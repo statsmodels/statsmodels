@@ -518,7 +518,7 @@ class GroupsStats(object):
 
         Parameters
         ----------
-        x : array, 2d
+        x : ndarray, 2d
             first column data, second column group labels
         useranks : bool
             if true, then use ranks as data corresponding to the
@@ -784,9 +784,9 @@ class MultiComparison(object):
 
     Parameters
     ----------
-    data : array
+    data : ndarray
         independent data samples
-    groups : array
+    groups : ndarray
         group labels corresponding to each data point
     group_order : list[str], optional
         the desired order for the group mean results to be reported in. If
@@ -1107,7 +1107,7 @@ def varcorrection_pairs_unbalanced(nobs_all, srange=False):
 
     Returns
     -------
-    correction : array
+    correction : ndarray
         Correction factor for variance.
 
 
@@ -1201,9 +1201,9 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
 
     Returns
     -------
-    varjoint : array
+    varjoint : ndarray
         joint variance.
-    dfjoint : array
+    dfjoint : ndarray
         joint Satterthwait's degrees of freedom
 
 

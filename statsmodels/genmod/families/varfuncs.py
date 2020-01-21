@@ -37,7 +37,7 @@ class VarianceFunction(object):
 
         Returns
         -------
-        v : array
+        v : ndarray
             ones(mu.shape)
         """
         mu = np.asarray(mu)
@@ -98,7 +98,7 @@ class Power(object):
 
         Returns
         -------
-        variance : array
+        variance : ndarray
             numpy.fabs(mu)**self.power
         """
         return np.power(np.fabs(mu), self.power)
@@ -189,7 +189,7 @@ class Binomial(object):
 
         Returns
         -------
-        variance : array
+        variance : ndarray
            variance = mu/n * (1 - mu/n) * self.n
         """
         p = self._clean(mu / self.n)
@@ -258,7 +258,7 @@ class NegativeBinomial(object):
 
         Returns
         -------
-        variance : array
+        variance : ndarray
             variance = mu + alpha*mu**2
         """
         p = self._clean(mu)

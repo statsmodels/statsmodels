@@ -93,12 +93,12 @@ class Family(object):
 
         Parameters
         ----------
-        y : array
+        y : ndarray
             The untransformed response variable.
 
         Returns
         -------
-        mu_0 : array
+        mu_0 : ndarray
             The first guess on the transformed response variable.
 
         Notes
@@ -122,7 +122,7 @@ class Family(object):
 
         Returns
         -------
-        w : array
+        w : ndarray
             The weights for the IRLS steps
 
         Notes
@@ -155,7 +155,7 @@ class Family(object):
 
         Returns
         -------
-        Deviance : array
+        Deviance : ndarray
             The value of deviance function defined below.
 
         Notes
@@ -220,13 +220,13 @@ class Family(object):
 
         Parameters
         ----------
-        lin_pred : array
+        lin_pred : ndarray
             Values of the linear predictor of the model.
             :math:`X \cdot \beta` in a classical linear model.
 
         Returns
         -------
-        mu : array
+        mu : ndarray
             The mean response variables given by the inverse of the link
             function.
         """
@@ -239,12 +239,12 @@ class Family(object):
 
         Parameters
         ----------
-        mu : array
+        mu : ndarray
             The mean response variables
 
         Returns
         -------
-        lin_pred : array
+        lin_pred : ndarray
             Linear predictors based on the mean response variables.  The value
             of the link function at the given mu.
         """
@@ -257,9 +257,9 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -287,9 +287,9 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -325,9 +325,9 @@ class Family(object):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -408,9 +408,9 @@ class Poisson(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -436,9 +436,9 @@ class Poisson(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -466,9 +466,9 @@ class Poisson(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -478,7 +478,7 @@ class Poisson(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals for the Poisson family defined below
 
         Notes
@@ -534,9 +534,9 @@ class Gaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -559,9 +559,9 @@ class Gaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -608,9 +608,9 @@ class Gaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -620,7 +620,7 @@ class Gaussian(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals for the Gaussian family defined below
 
         Notes
@@ -677,9 +677,9 @@ class Gamma(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -705,9 +705,9 @@ class Gamma(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -745,9 +745,9 @@ class Gamma(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -757,7 +757,7 @@ class Gamma(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals for the Gamma family defined below
 
         Notes
@@ -839,9 +839,9 @@ class Binomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Endogenous response variable
-        freq_weights : array
+        freq_weights : ndarray
             1d array of frequency weights
 
         Returns
@@ -873,9 +873,9 @@ class Binomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -902,9 +902,9 @@ class Binomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -952,9 +952,9 @@ class Binomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -964,7 +964,7 @@ class Binomial(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals as defined below.
 
         Notes
@@ -1057,9 +1057,9 @@ class InverseGaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -1082,9 +1082,9 @@ class InverseGaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1116,9 +1116,9 @@ class InverseGaussian(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1128,7 +1128,7 @@ class InverseGaussian(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals for the inverse Gaussian distribution  as
             defined below
 
@@ -1205,9 +1205,9 @@ class NegativeBinomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -1237,9 +1237,9 @@ class NegativeBinomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1288,9 +1288,9 @@ class NegativeBinomial(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1300,7 +1300,7 @@ class NegativeBinomial(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals as defined below.
 
         Notes
@@ -1390,9 +1390,9 @@ class Tweedie(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable.
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
 
         Returns
@@ -1456,9 +1456,9 @@ class Tweedie(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             Usually the endogenous response variable.
-        mu : array
+        mu : ndarray
             Usually but not always the fitted mean response variable.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1513,9 +1513,9 @@ class Tweedie(Family):
 
         Parameters
         ----------
-        endog : array
+        endog : ndarray
             The endogenous response variable
-        mu : array
+        mu : ndarray
             The inverse of the link function at the linear predicted values.
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
@@ -1525,7 +1525,7 @@ class Tweedie(Family):
 
         Returns
         -------
-        resid_anscombe : array
+        resid_anscombe : ndarray
             The Anscombe residuals as defined below.
 
         Notes

@@ -118,7 +118,7 @@ def whiten_ar(x, ar_coefs, order):
     ----------
     x : array_like, (nobs,) or (nobs, k_vars)
         The data to be whitened along axis 0
-    ar_coefs : array
+    ar_coefs : ndarray
         coefficients of AR lag- polynomial,   TODO: ar or ar_coefs?
     order : int
 
