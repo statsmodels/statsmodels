@@ -1984,12 +1984,19 @@ def test_tweedie_EQL():
 
     # Series of ridge fits using gradients
     ev = (np.array([1.00186882, -0.99213087, 0.00717758, 0.50610942]),
-          np.array([0.98560143, -0.96976442,  0.00727526,  0.49749763]),
+          np.array([0.98560143, -0.96976442, 0.00727526, 0.49749763]),
           np.array([0.20643362, -0.16456528, 0.00023651, 0.10249308]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
         assert_allclose(result3.params, ev[j], rtol=rtol, atol=atol)
+        result4 = model3.fit_regularized(L1_wt=0, alpha=alpha * np.ones(x.shape[1]))
+        assert_allclose(result4.params, result3.params, rtol=rtol, atol=atol)
+        alpha = alpha * np.ones(x.shape[1])
+        alpha[0] = 0
+        result5 = model3.fit_regularized(L1_wt=0, alpha=alpha)
+        assert not np.allclose(result5.params, result4.params, rtol=rtol, atol=atol)
+
 
 def test_tweedie_EQL_poisson_limit():
     # Test the limiting Poisson case of the Nelder/Pregibon/Tweedie
