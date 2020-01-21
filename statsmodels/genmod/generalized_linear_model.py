@@ -1286,7 +1286,7 @@ class GLM(base.LikelihoodModel):
             start_params = np.zeros(self.exog.shape[1])
 
         def fun(x):
-            return -(self.loglike(x) / self.nobs - alpha * np.sum(x**2) / 2)
+            return -(self.loglike(x) / self.nobs - np.sum(alpha * x**2) / 2)
 
         def grad(x):
             return -(self.score(x) / self.nobs - alpha * x)
