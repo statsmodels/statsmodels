@@ -2092,6 +2092,30 @@ def testTweediePowerEstimate():
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
 
+def test_glm_lasso_6431():
+
+    # Based on issue #6431
+    # Fails with newton-cg as optimizer
+    np.random.seed(123)
+
+    from statsmodels.regression.linear_model import OLS
+
+    n = 50
+    x = np.ones((n, 2))
+    x[:, 1] = np.arange(0, n)
+    y = 1000 + x[:, 1] + np.random.normal(0, 1, n)
+
+    params = np.r_[999.82244338, 1.0077889]
+
+    for method in "bfgs", None:
+        for fun in [OLS, GLM]:
+            for L1_wtValue in [0, 1e-9]:
+                model = fun(y, x)
+                if fun == OLS:
+                    fit = model.fit_regularized(alpha=0, L1_wt=0)
+                else:
+                    fit = model._fit_ridge(alpha=0, start_params=None, method=method)
+                assert_allclose(params, fit.params)
 
 class TestRegularized(object):
 
