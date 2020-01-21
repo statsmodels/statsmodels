@@ -168,6 +168,7 @@ if [ "$LINT" == true ]; then
         statsmodels/stats/tests/test_anova_rm.py \
         statsmodels/stats/tests/test_correlation.py \
         statsmodels/stats/tests/test_descriptivestats.py \
+        statsmodels/stats/tests/test_diagnostic.py \
         statsmodels/stats/tests/test_dist_dependant_measures.py \
         statsmodels/stats/tests/test_knockoff.py \
         statsmodels/stats/tests/test_lilliefors.py \
