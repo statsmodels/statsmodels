@@ -36,10 +36,58 @@ matrix:
   fast_finish: true
   include:
     # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
+    - python: 3.8
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
     - python: 3.7
       env:
         - PYTHON=3.7
         - DOCBUILD=true
+    # Python 3.7 + fixed pandas
+    - python: 3.7
+      env:
+        - PYTHON=3.7
+        - PANDAS=0.24
+        - LINT=true
+        - COVERAGE=true
+        - PYTEST_OPTIONS=
+    # Python 3.6 + legacy blas + older pandas
+    - python: 3.6
+      env:
+        - PYTHON=3.6
+        - NUMPY=1.15
+        - PANDAS=0.22
+        - SCIPY=1.1
+        - BLAS="nomkl blas=*=openblas"
+        - COVERAGE=true
+        - PYTEST_OPTIONS=
+    # Python 3.5 + oldest packages
+    - python: 3.5
+      env:
+        - PYTHON=3.5
+        - NUMPY=1.14
+        - SCIPY=1.0
+        - PANDAS=0.21
+        - MATPLOTLIB=2
+        - LINT=true
+    # Latest pre-release packages
+    - python: 3.7
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.7
+
+  allow_failures:
+    # pre-testing is a little fragile. Make it an FYI.
+    - python: 3.7
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
 
 notifications:
   email:
@@ -80,13 +128,7 @@ before_install:
 
 # Install packages
 install:
-  - cp ${SRCDIR}/docs/source/conf.py ${SRCDIR}/docs/source/conf-untracked.py
-  - cp ${SRCDIR}/tools/ci/docbuild.sh ${SRCDIR}/tools/ci/docbuild-untracked.sh
-  - git checkout v0.11.0
-  - export TRAVIS_TAG=v0.11.0
-  - pip install .
-  - rm ${SRCDIR}/docs/source/conf.py
-  - mv ${SRCDIR}/docs/source/conf-untracked.py ${SRCDIR}/docs/source/conf.py
+  - python setup.py develop
 
 before_script:
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
@@ -95,7 +137,7 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # docbuild and exit, if required
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild-untracked.sh; exit 0; fi;
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then
