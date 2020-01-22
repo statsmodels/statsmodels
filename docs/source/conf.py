@@ -98,8 +98,8 @@ release = __version__
 from distutils.version import LooseVersion
 
 lv = LooseVersion(release)
-full_version = version = short_version = lv.version
 commit = ''
+full_version = short_version = version = release
 if '+' in lv.version:
     short_version = lv.vstring[:lv.vstring.index('+')]
     commit = lv.version[lv.version.index('+') + 1]
