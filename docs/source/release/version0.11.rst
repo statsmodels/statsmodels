@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 334
+**Issues Closed**: 335
 
-**Pull Requests Merged**: 294
+**Pull Requests Merged**: 301
 
 
 The Highlights
@@ -186,7 +186,7 @@ Submodules
 - Improvements to BayesMixedGLM docs, argument checking  (:pr:`5895`)
 - Scale parameter handling in GEE  (:pr:`6208`)
 - Add example notebook for GEE score tests  (:pr:`6299`)
-
+- Fix bug in ridge for vector alpha  (:pr:`6442`)
 
 ``graphics``
 ~~~~~~~~~~~~
@@ -426,6 +426,10 @@ Documentation
 - Clarify demeaning in ljungbox  (:pr:`6390`)
 - Fix ridge regression formula in hpfilter  (:pr:`6398`)
 - Fix link  (:pr:`6407`)
+- Update release note for v0.11.0rc2  (:pr:`6416`)
+- Replace array with ndarray (:pr:`6447`)
+- Final release note change for 0.11 (:pr:`6450`)
+
 
 Maintenance
 -----------
@@ -497,7 +501,15 @@ Maintenance
 - Pin xdist  (:pr:`6392`)
 - Unify pandas testing import  (:pr:`6394`)
 - Clarify codecov  (:pr:`6406`)
+- Port non-diagnostic changes  (:pr:`6412`)
 - Fixes for future SciPY and pandas  (:pr:`6414`)
+- Fixes for rc2  (:pr:`6419`)
+- Switch to bionic  (:pr:`6423`)
+- Improve test that randomly fails  (:pr:`6426`)
+- Fix future issues  (:pr:`6440`)
+- Disable cvxopt for windows  (:pr:`6445`)
+- Reduce tolerance on basin hopping test  (:pr:`6448`)
+- Remove unused import  (:pr:`6449`)
 
 bug-wrong
 ---------
@@ -877,3 +889,10 @@ The following Pull Requests were merged since the last release:
 - :pr:`6424`: REF: More descriptive error message for recursive least squares parameter constraints.
 - :pr:`6425`: BUG/ENH: Diffuse multivariate case w/ non-diagonal observation innovation covariance matrix
 - :pr:`6426`: TST: Improve test that randomly fails
+- :pr:`6440`: MAINT: Fix future issues
+- :pr:`6442`: BUG: Fix bug in ridge for vector alpha
+- :pr:`6445`: MAINT: Disable cvxopt for windows
+- :pr:`6447`: DOC: Replace array with ndarray
+- :pr:`6448`: MAINT: Reduce tolerance on basin hopping test
+- :pr:`6449`: MAINT: Remove unused import
+- :pr:`6450`: DOC: Final release note change for 0.11
