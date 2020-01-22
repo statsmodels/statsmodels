@@ -206,7 +206,7 @@ class TestDiagnosticG(object):
     def test_het_white_error(self):
         res = self.res
 
-        with pytest.raises(ValueError, match="White's heteroskedasticity test "):
+        with pytest.raises(ValueError, match="White's heteroskedasticity"):
             smsdia.het_white(res.resid, res.model.exog[:, :1])
 
     def test_het_arch(self):
@@ -825,7 +825,7 @@ def test_linear_lm_direct(reset_randomstate):
     exog = add_constant(np.random.standard_normal((500, 3)))
     res = OLS(endog, exog).fit()
     lm_res = smsdia.linear_lm(res.resid, exog)
-    aug = np.hstack([exog, exog[:,1:]**2])
+    aug = np.hstack([exog, exog[:, 1:]**2])
     res_aug = OLS(res.resid, aug).fit()
     stat = res_aug.rsquared * aug.shape[0]
     assert_allclose(lm_res[0], stat)
@@ -840,8 +840,8 @@ def grangertest():
     # Model 1: ggdp ~ Lags(ggdp, 1:4) + Lags(ginv, 1:4)
     # Model 2: ggdp ~ Lags(ggdp, 1:4)
 
-    grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
-                       df=(198, 193))
+    dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
+         df=(198, 193))
 
 
 @pytest.mark.smoke
@@ -1150,9 +1150,9 @@ def test_encompasing_error(reset_randomstate):
 
 
 @pytest.mark.smoke
-@pytest.mark.parametrize('power',[2, 3])
-@pytest.mark.parametrize('test_type',["fitted","exog","princomp"])
-@pytest.mark.parametrize('use_f',[True, False])
+@pytest.mark.parametrize('power', [2, 3])
+@pytest.mark.parametrize('test_type', ["fitted", "exog", "princomp"])
+@pytest.mark.parametrize('use_f', [True, False])
 @pytest.mark.parametrize('cov', [dict(cov_type="nonrobust", cov_kwargs={}),
                                  dict(cov_type="HC0", cov_kwargs={})])
 def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
@@ -1190,7 +1190,9 @@ def test_acorr_lm_smoke_no_autolag(reset_randomstate):
 @pytest.mark.parametrize("frac", [0.25, 0.5, 0.75])
 @pytest.mark.parametrize("order_by", [None,
                                       np.arange(500),
-                                      np.random.choice(500, size=500, replace=False),
+                                      np.random.choice(500,
+                                                       size=500,
+                                                       replace=False),
                                       "x0",
                                       ["x0", "x2"]])
 def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
@@ -1221,8 +1223,8 @@ def test_rainbow_exception(reset_randomstate):
     with pytest.raises(TypeError, match="order_by must contain"):
         smsdia.linear_rainbow(res, order_by="x5")
     res = OLS(np.asarray(y), np.asarray(x)).fit()
-    with pytest.raises(TypeError,match="order_by must contain"):
-        smsdia.linear_rainbow(res, order_by=["x0"])
+    with pytest.raises(TypeError, match="order_by must contain"):
+        smsdia.linear_rainbow(res, order_by=("x0",))
 
 # R code used in testing
 # J test

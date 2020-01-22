@@ -1339,7 +1339,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
             if isinstance(order_by, str):
                 order_by = [order_by]
             try:
-                cols = res.model.data.orig_exog[order_by]
+                cols = res.model.data.orig_exog[order_by].copy()
             except (IndexError, KeyError):
                 raise TypeError("order_by must contain valid column names "
                                 "from the exog data used to construct res,"

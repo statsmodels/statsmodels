@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 332
+**Issues Closed**: 334
 
-**Pull Requests Merged**: 287
+**Pull Requests Merged**: 294
 
 
 The Highlights
@@ -319,6 +319,8 @@ Submodules
 - Fix k_exog, k_trend in arima.ARIMA; raise error when cloning a model with exog if no new exog given  (:pr:`6337`)
 - Documentation for release v0.11  (:pr:`6338`)
 - RecursiveLS should not allow `fix_params` method.  (:pr:`6415`)
+- More descriptive error message for recursive least squares parameter constraints.  (:pr:`6424`)
+- Diffuse multivariate case w/ non-diagonal observation innovation covariance matrix  (:pr:`6425`)
 
 
 
@@ -868,3 +870,10 @@ The following Pull Requests were merged since the last release:
 - :pr:`6412`: CLN/MAINT: Port non-diagnostic changes
 - :pr:`6414`: CLN: Fixes for future SciPY and pandas
 - :pr:`6415`: BUG: RecursiveLS should not allow `fix_params` method.
+- :pr:`6416`: DOC: Update release note for v0.11.0rc2
+- :pr:`6419`: MAINT: Fixes for rc2
+- :pr:`6422`: BUG: Improve executable detection
+- :pr:`6423`: MAINT: Switch to bionic
+- :pr:`6424`: REF: More descriptive error message for recursive least squares parameter constraints.
+- :pr:`6425`: BUG/ENH: Diffuse multivariate case w/ non-diagonal observation innovation covariance matrix
+- :pr:`6426`: TST: Improve test that randomly fails

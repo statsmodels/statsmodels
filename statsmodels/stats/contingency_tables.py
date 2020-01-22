@@ -1333,7 +1333,13 @@ def mcnemar(table, exact=True, correction=True):
     if exact:
         statistic = np.minimum(n1, n2)
         # binom is symmetric with p=0.5
-        pvalue = stats.binom.cdf(statistic, n1 + n2, 0.5) * 2
+        # SciPy 1.7+ required int arguments
+        int_sum = int(n1 + n2)
+        if int_sum != (n1 + n2):
+            warnings.warn("exact can only be used with tables containing "
+                          "integers. This warning will become a ValueError "
+                          "after 0.12.", FutureWarning)
+        pvalue = stats.binom.cdf(statistic, int_sum, 0.5) * 2
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
         corr = int(correction)  # convert bool to 0 or 1
