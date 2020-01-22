@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+"""Anova k-sample comparison without and with trimming
 
 Created on Sun Jun 09 23:51:34 2013
 
@@ -28,6 +28,10 @@ def trimboth(a, proportiontocut, axis=0):
         Data to trim.
     proportiontocut : float or int
         Proportion of total data set to trim of each end.
+    axis : int or None
+        Axis along which the observations are trimmed. The default is to trim
+        along axis=0. If axis is None then the array will be flattened before
+        trimming.
 
     Returns
     -------
@@ -44,6 +48,9 @@ def trimboth(a, proportiontocut, axis=0):
 
     """
     a = np.asarray(a)
+    if axis is None:
+        a = a.ravel()
+        axis = 0
     nobs = a.shape[axis]
     lowercut = int(proportiontocut * nobs)
     uppercut = nobs - lowercut
@@ -70,6 +77,10 @@ def trim_mean(a, proportiontocut, axis=0):
         Input array
     proportiontocut : float
         Fraction to cut off of both tails of the distribution
+    axis : int or None
+        Axis along which the trimmed means are computed. The default is axis=0.
+        If axis is None then the trimmed mean will be computed for the
+        flattened array.
 
     Returns
     -------
@@ -181,6 +192,45 @@ class TrimmedMean(object):
         #       for example storing a pandas DataFrame or Series index
         return tm
 
+def anova_oneway(data, trim_frac=0):
+    '''one-way anova assuming equal variances, unequal sample size
+
+    another implementation
+    '''
+    args = map(np.asarray, data)
+    if any([x.ndim != 1 for x in args]):
+        raise ValueError('data arrays have to be one-dimensional')
+
+    nobs = np.array([len(x) for x in args], float)
+    n_groups = len(args)
+
+    if trim_frac == 0:
+        means = np.array([x.mean() for x in args])
+        vars_ = np.array([x.var(ddof=1) for x in args])
+    else:
+        tms = [TrimmedMean(x, trim_frac) for x in args]
+        means = np.array([tm.mean_trimmed for tm in tms])
+        vars_ = np.array([tm.var_winsorized for tm in tms])
+        nobs_original = nobs # store just in case
+        nobs = np.array([tm.nobs_reduced for tm in tms])
+
+
+    nobs_t = nobs.sum()
+    mean_t = (nobs * means).sum() / nobs_t
+
+    # variance of group demeaned total sample
+    tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
+    #print 'tmp', tmp
+    statistic = 1. * (nobs * (means - mean_t)**2).sum() / (n_groups - 1)
+    statistic /= tmp
+
+    df_num = n_groups - 1
+    df_denom = nobs_t - n_groups
+
+    pval = stats.f.sf(statistic, df_num, df_denom)
+    return statistic, pval, (df_num, df_denom)
+
+
 
 def anova_bfm(args, trim_frac=0):
     '''Brown-Forsythe Anova for comparison of means
@@ -225,6 +275,7 @@ def anova_bfm(args, trim_frac=0):
     if any([x.ndim != 1 for x in args]):
         raise ValueError('data arrays have to be one-dimensional')
 
+    n_groups = len(args)
     nobs = np.array([len(x) for x in args], float)
 
     if trim_frac == 0:
@@ -350,7 +401,8 @@ def anova_welch(args, trim_frac=0):
     return statistic, pval, (df_num, df_denom)
 
 
-def scale_transform(data, center='median', transform='abs', frac=0.2, axis=0):
+def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
+                    axis=0):
     '''transform data for variance comparison for Levene type tests
 
     Parameters
@@ -361,7 +413,7 @@ def scale_transform(data, center='median', transform='abs', frac=0.2, axis=0):
         the statistic that is used as center for the data transformation
     transform : str in ['abs', 'square', 'exp', 'identity']
         the transform for the centered data
-    frac : float in [0, 0.5)
+    trim_frac : float in [0, 0.5)
         Fraction of observations that are trimmed on each side of the sorted
         observations. This is only used if center is `trimmed`.
     axis : int
@@ -373,7 +425,7 @@ def scale_transform(data, center='median', transform='abs', frac=0.2, axis=0):
         transformed data in the same shape as the original data.
 
     '''
-    data = np.asarray(data)
+    x = np.asarray(data)  # x is shorthand from earlier code
 
     if transform == 'abs':
         tfunc = np.abs
@@ -391,25 +443,50 @@ def scale_transform(data, center='median', transform='abs', frac=0.2, axis=0):
     elif center == 'mean':
         res = tfunc(x - np.expand_dims(np.mean(x, axis=0), axis))
     elif center == 'trimmed':
-        center = trim_mean(x, frac, axis=0)
+        center = trim_mean(x, trim_frac, axis=0)
         res = tfunc(x - np.expand_dims(center, axis))
+    elif center == 'no':
+        res = tfunc(x)
     else:
         raise ValueError('center should be median, mean or trimmed')
 
     return res
 
+def anova_scale(data, method='bfm', center='median', transform='abs', trim_frac=0.2):
+    print method, center, transform, trim_frac
+    data = map(np.asarray, data)
+    #print [x.mean() for x in data]
+    xxd = [scale_transform(x, center=center, transform=transform,
+                           trim_frac=trim_frac) for x in data]
+    print [x.mean() for x in xxd]
+    print method, method == 'bfm'
+    if method == 'bfm':
+        res = anova_bfm(xxd)
+    elif method == 'levene':
+        res = anova_oneway(xxd)
+    elif method == 'welch':
+        res = anova_welch(xxd)
+    else:
+        raise ValueError('method "%s" not supported' % method)
+
+    return res, xxd
+
+
+
+
 if __name__ == '__main__':
-    examples = ['mc', 'anova', 'trimmed'][0]
+    examples = ['mc', 'anova', 'trimmed', 'none'][-1]
     if 'mc' in examples:
         np.random.seed(19864256)
-        nrep = 10000
+        nrep = 100
         nobs = np.array([5,10,5,5]) * 3
         mm = (1, 1, 1, 1)
         ss = (0.8, 1, 1, 2)
         #ss = (1, 1, 1, 1)
 
         # run a Monte Carlo simulation to check size and power of tests
-        res_v = np.zeros((nrep, 3))
+        res_v = np.zeros((nrep, 3))  # without levene
+        res_v = np.zeros((nrep, 5))  # with levene
         res = np.zeros((nrep, 6))
         res_w = np.zeros((nrep, 4))
         for ii in range(nrep):
@@ -418,12 +495,12 @@ if __name__ == '__main__':
             xx = [m + s * (stats.lognorm.rvs(1.5, size=n) - stats.lognorm.mean(1.5)) for n, m, s in zip(nobs, mm, ss)]
             #xx = [m + s * (stats.chi2.rvs(3, size=n) - stats.chi2.mean(3)) for n, m, s in zip(nobs, mm, ss)]
             #xxd = [np.abs(x - np.median(x)) for x in xx]
-            xxd = [scale_transform(x, center='trimmed', transform='abs', frac=0.1)
-                           for x in xx]
+            xxd = [scale_transform(x, center='trimmed', transform='abs',
+                                   trim_frac=0.1) for x in xx]
             #print bf_anova(*xx)[:2], bf_anova(*xxd)[:2]
             # levene raises exception with unbalanced
-            #res_v[ii] = np.concatenate((stats.levene(*xx), anova_bfm(xxd)[:3]))
-            res_v[ii] = anova_bfm(xxd)[:3]
+            res_v[ii] = np.concatenate((stats.levene(*xx), anova_bfm(xxd)[:3]))
+            #res_v[ii] = anova_bfm(xxd)[:3]
             res[ii] = np.concatenate((anova_bfm(xx)[:3],
                                       anova_bfm(xx, trim_frac=0.2)[:3]))
             res_w[ii] = np.concatenate((anova_welch(xx)[:2],
@@ -433,8 +510,9 @@ if __name__ == '__main__':
         print nobs
         print mm
         print ss
-        print '\nBF scale'
-        print (res_v[:, [1, 2]] < 0.05).mean(0)
+        print '\nlevene BF scale'
+        #print (res_v[:, [1, 2]] < 0.05).mean(0) # without levene
+        print (res_v[:, [1, 3, 4]] < 0.05).mean(0) # with levene
         print '\nBF'
         print (res[:, [1, 2, 4, 5]] < 0.05).mean(0)
         print '\nWelch'
@@ -495,3 +573,5 @@ if __name__ == '__main__':
                                   alternative='two-sided', diff=3)
         print smws.DescrStatsW(x).ttest_mean(3)
         print tm.ttest_mean(3, transform='winsorized')
+
+x = np.asarray("7.79 9.16 7.64 10.28 9.12 9.24 8.40 8.60 8.04 8.45 9.51 8.15 7.69 8.84 9.92 7.20 9.25 9.45 9.14 9.99 9.21 9.06 8.65 10.70 10.24 8.62 9.94 10.55 10.13 9.78 9.01".split(), float)
