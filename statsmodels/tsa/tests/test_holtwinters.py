@@ -2,8 +2,6 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-from statsmodels.compat.platform import PLATFORM_OSX
-
 import os
 import warnings
 
