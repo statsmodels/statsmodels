@@ -170,7 +170,7 @@ def select_bandwidth(x, bw, kernel):
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if bandwidth == 0:
         # eventually this can fall back on another selection criterion.
-        err = "Selected KDE bandwidth is 0. Cannot estiamte density."
+        err = "Selected KDE bandwidth is 0. Cannot estimate density."
         raise RuntimeError(err)
     else:
         return bandwidth
