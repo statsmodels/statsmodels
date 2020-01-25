@@ -49,7 +49,8 @@ matrix:
     - python: 3.7
       env:
         - PYTHON=3.7
-        - PANDAS=0.24
+        - PANDAS=0.25
+        - SCIPY=1.2
         - LINT=true
         - COVERAGE=true
         - PYTEST_OPTIONS=
@@ -57,23 +58,23 @@ matrix:
     - python: 3.6
       env:
         - PYTHON=3.6
-        - NUMPY=1.15
-        - PANDAS=0.22
+        - NUMPY=1.16
+        - PANDAS=0.24
         - SCIPY=1.1
         - BLAS="nomkl blas=*=openblas"
         - COVERAGE=true
         - PYTEST_OPTIONS=
-    # Python 3.5 + oldest packages
-    - python: 3.5
+    # Python 3.6 + oldest packages
+    - python: 3.6
       env:
         - PYTHON=3.5
         - NUMPY=1.14
         - SCIPY=1.0
-        - PANDAS=0.21
+        - PANDAS=0.23
         - MATPLOTLIB=2
         - LINT=true
     # Latest pre-release packages
-    - python: 3.7
+    - python: 3.8
       env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
@@ -84,7 +85,7 @@ matrix:
 
   allow_failures:
     # pre-testing is a little fragile. Make it an FYI.
-    - python: 3.7
+    - python: 3.8
       env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
