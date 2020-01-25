@@ -13,8 +13,9 @@ __all__ = ['violinplot', 'beanplot']
 
 
 def violinplot(data, ax=None, labels=None, positions=None, side='both',
-               show_boxplot=True, plot_opts={}):
-    """Make a violin plot of each dataset in the `data` sequence.
+               show_boxplot=True, plot_opts=None):
+    """
+    Make a violin plot of each dataset in the `data` sequence.
 
     A violin plot is a boxplot combined with a kernel density estimate of the
     probability density function per point.
@@ -123,7 +124,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
     .. plot:: plots/graphics_boxplot_violinplot.py
     """
-
+    plot_opts = {} if plot_opts is None else plot_opts
     if np.size(data) == 0:
         msg = "No Data to make Violin: Try again!"
         raise ValueError(msg)
@@ -141,8 +142,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
     # Plot violins.
     for pos_data, pos in zip(data, positions):
-        xvals, violin = _single_violin(ax, pos, pos_data, width, side,
-                                       plot_opts)
+        _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
         ax.boxplot(data, notch=1, positions=positions, vert=1)
