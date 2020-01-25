@@ -8,6 +8,8 @@ License: BSD-3
 """
 
 import numpy as np
+import pandas as pd
+
 from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.decorators import cache_readonly
 
@@ -489,6 +491,96 @@ def vif_ridge(corr_x, pen_factors, is_corr=True):
         vif = minv.dot(corr).dot(minv)
         res.append(np.diag(vif))
     return np.asarray(res)
+
+
+class CondIndexResults(object):
+    """
+    Results class for condition index and variance decomposition
+
+    Parameters
+    ----------
+    t : array
+    """
+
+    def __init__(self, t, d, ci, exog_names=None):
+        self.var_decomp = t
+        self.singular_values = d
+        self.condition_index = ci
+        self.exog_names = exog_names
+
+    def frame(self):
+        res = np.column_stack((self.singular_values**2,
+                               self.condition_index,
+                               self.var_decomp))
+        col_names = ['eig.vals', 'cond_index'] + list(self.exog_names)
+        df = pd.DataFrame(res, columns=col_names)
+        return df
+
+    def frame_styled(self, threshold=0.5, bcolor='yellow', decimals=3,
+                     **kwds):
+        df = self.frame()
+
+        def background(x):
+            """background color for large variance components"""
+            return 'background-color : ' + bcolor if x >= threshold else ''
+
+        df_styled = df.style.applymap(background,
+                                      subset=pd.IndexSlice[:, df.columns[2:]],
+                                      **kwds)
+        df_styled.format("{:.%df}" % decimals)
+        return df_styled
+
+
+def cond_index(exog, scaling=True, demean=False, inverse=True):
+    """condition index and variance decomposition for eigenvectors
+    """
+    if hasattr(exog, 'columns'):
+        exog_names = exog.columns
+    else:
+        exog_names = None
+    x = np.asarray(exog)
+    if scaling or demean:
+        # make a copy
+        x = x.copy(order="F")
+
+    if demean:
+        mask = np.ptp(x) != 0
+        x[: mask] /= x[:, mask].mean()
+    if scaling is True:
+        x /= np.sqrt((x**2).sum(0))
+
+    u, d, v = np.linalg.svd(x)
+
+    d_ = 1 / d if inverse else d
+    # sigma if cov_params and not normalized_cov_params, irrelevant for
+    #     invariant results
+    # sig = 1
+    # vb = sig * (v @ np.diag(d**(-2))) @ v.T   # cov_params for OLS
+    t = ((v * d_[:, None]))**2
+    t /= t.sum(0)
+    ci = d.max() / d
+    return CondIndexResults(t, d, ci, exog_names)
+
+
+def cond_index_from_prodx(prodx, scaling=None, inverse=True):
+    """variance decomposition for eigenvectors
+    """
+    if hasattr(prodx, 'columns'):
+        exog_names = prodx.columns
+    else:
+        exog_names = None
+
+    if scaling is not None:
+        prodx = prodx / np.outer(scaling, scaling)
+
+    u, d, v = np.linalg.svd(prodx)
+    d_ = 1 / d if inverse else d
+    d_ = np.sqrt(d_)  # singular values
+
+    t = ((v * d_[:, None]))**2
+    t /= t.sum(0)
+    ci = d.max() / d
+    return CondIndexResults(t, d, ci, exog_names)
 
 
 def collinear_index(data, atol=1e-14, rtol=1e-13):
