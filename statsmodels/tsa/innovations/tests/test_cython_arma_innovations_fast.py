@@ -38,10 +38,9 @@ def test_brockwell_davis_ex533():
     # through by sigma^2
     arma_process_acovf /= sigma2
     unconditional_variance /= sigma2
-    out = np.array(_arma_innovations.darma_transformed_acovf_fast(
-        ar, ma, arma_process_acovf))
-    acovf = np.array(out[0])
-    acovf2 = np.array(out[1])
+    transformed_acovf = _arma_innovations.darma_transformed_acovf_fast(
+        ar, ma, arma_process_acovf)
+    acovf, acovf2 = (np.array(arr) for arr in transformed_acovf)
 
     # `acovf` is an m^2 x m^2 matrix, where m = max(p, q)
     # but it is only valid for the autocovariances of the first m observations
@@ -144,10 +143,9 @@ def test_brockwell_davis_ex534():
                     [7.17133, 6.44139, 5.06027], atol=1e-5)
 
     # Next, get the autocovariance of the transformed process
-    out = np.array(_arma_innovations.darma_transformed_acovf_fast(
-        ar, ma, arma_process_acovf))
-    acovf = np.array(out[0])
-    acovf2 = np.array(out[1])
+    transformed_acovf = _arma_innovations.darma_transformed_acovf_fast(
+        ar, ma, arma_process_acovf)
+    acovf, acovf2 = (np.array(arr) for arr in transformed_acovf)
     # See test_brockwell_davis_ex533 for details on acovf vs acovf2
 
     # Test acovf
@@ -226,8 +224,9 @@ def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
 
     # Innovations algorithm approach
     arma_process_acovf = arma_acovf(ar, ma, nobs=nobs, sigma2=sigma2)
-    acovf, acovf2 = np.array(_arma_innovations.darma_transformed_acovf_fast(
-                     ar, ma, arma_process_acovf / sigma2))
+    transformed_acov = _arma_innovations.darma_transformed_acovf_fast(
+        ar, ma, arma_process_acovf / sigma2)
+    acovf, acovf2 = (np.array(mv) for mv in transformed_acov)
     theta, r = _arma_innovations.darma_innovations_algo_fast(
         nobs, ar_params, ma_params, acovf, acovf2)
     u = _arma_innovations.darma_innovations_filter(endog, ar_params, ma_params,

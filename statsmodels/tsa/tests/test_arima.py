@@ -2686,7 +2686,7 @@ def test_arma_repeated_fit():
     arma = ARMA(x, (1, 1))
     res = arma.fit(trend='c', disp=-1)
     repeat = arma.fit(trend='c', disp=-1)
-    rtol = 1e-5 if PLATFORM_WIN32 else 1e-7
+    rtol = 1e-4 if PLATFORM_WIN32 else 1e-7
     assert_allclose(res.params, repeat.params, rtol=rtol)
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(repeat.summary().as_text(), str)
