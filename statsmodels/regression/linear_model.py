@@ -1776,6 +1776,9 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def f_pvalue(self):
         """The p-value of the F-statistic."""
+        # Special case for df_model 0
+        if self.df_model == 0:
+            return np.full_like(self.fvalue, np.nan)
         return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
 
     @cache_readonly

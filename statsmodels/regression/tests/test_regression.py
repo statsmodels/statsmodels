@@ -1351,3 +1351,13 @@ def test_bool_regressor(reset_randomstate):
     bool_res = OLS(endog, exog).fit()
     res = OLS(endog, exog.astype(np.double)).fit()
     assert_allclose(bool_res.params, res.params)
+
+
+def test_ols_constant(reset_randomstate):
+    y = np.random.standard_normal((200))
+    x = np.ones((200, 1))
+    res = OLS(y, x).fit()
+    with pytest.warns(None) as recording:
+        assert np.isnan(res.fvalue)
+        assert np.isnan(res.f_pvalue)
+    assert len(recording) == 0
