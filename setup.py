@@ -37,8 +37,8 @@ import versioneer
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
-SETUP_REQUIREMENTS = {'numpy': '1.14',  # released January 2018
-                      'scipy': '1.0',  # released October 2017
+SETUP_REQUIREMENTS = {'numpy': '1.15',  # released June 2018
+                      'scipy': '1.1',  # released May 2018
                       }
 
 REQ_NOT_MET_MSG = """

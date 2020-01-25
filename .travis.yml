@@ -50,7 +50,8 @@ matrix:
       env:
         - PYTHON=3.7
         - PANDAS=0.25
-        - SCIPY=1.2
+        - NUMPY=1.17
+        - SCIPY=1.3
         - LINT=true
         - COVERAGE=true
         - PYTEST_OPTIONS=
@@ -60,7 +61,7 @@ matrix:
         - PYTHON=3.6
         - NUMPY=1.16
         - PANDAS=0.24
-        - SCIPY=1.1
+        - SCIPY=1.2
         - BLAS="nomkl blas=*=openblas"
         - COVERAGE=true
         - PYTEST_OPTIONS=
@@ -68,8 +69,8 @@ matrix:
     - python: 3.6
       env:
         - PYTHON=3.5
-        - NUMPY=1.14
-        - SCIPY=1.0
+        - NUMPY=1.15
+        - SCIPY=1.1
         - PANDAS=0.23
         - MATPLOTLIB=2
         - LINT=true
