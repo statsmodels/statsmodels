@@ -125,7 +125,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     .. plot:: plots/graphics_boxplot_violinplot.py
     """
     plot_opts = {} if plot_opts is None else plot_opts
-    if np.size(data) == 0:
+    if max([np.size(arr) for arr in data]) == 0:
         msg = "No Data to make Violin: Try again!"
         raise ValueError(msg)
 
