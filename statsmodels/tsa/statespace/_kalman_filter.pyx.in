@@ -693,16 +693,15 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Previous version of `tmp3` array: F_{t-1}^{-1} Z
         dim2[0] = self.k_endog; dim2[1] = self.k_states;
-        # temporary array for W (m \times p)
         self.CprevFiZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-        # M.T @ W.T $(p \times m)$
-        dim2[0] = self.k_states; dim2[1] = self.k_endog;
+        # M @ W.T $(p \times m)$
+        dim2[0] = self.k_endog; dim2[1] = self.k_states;
         self.CMW = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-        # M.T @ W.T @ Z $(p \times m)$
+        # M.T @ W.T @ Z.T $(p \times p)$
         # or in univariate case: M.T @ W.T @ Z[i] $(p \times 1)$
-        dim2[0] = self.k_endog; dim2[1] = self.k_states;
+        dim2[0] = self.k_endog; dim2[1] = self.k_endog;
         self.CMWZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # M $(p \times p)$ (M1 = -F^{-1})
