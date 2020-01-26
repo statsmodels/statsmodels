@@ -821,7 +821,8 @@ def _psturng(q, r, v):
     if q < 0.:
         raise ValueError('q should be >= 0')
 
-    opt_func = lambda p, r, v : abs(_qsturng(p, r, v) - q)
+    def opt_func(p, r, v):
+        return abs(_qsturng(p, r, v) - q)
 
     if v == 1:
         if q < _qsturng(.9, r, 1):
