@@ -258,11 +258,14 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
     def test_incorrect_output(self):
         # too few groups
-        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 4)
+        with pytest.raises(ValueError):
+            MultiComparison(np.array([1] * 10), [1, 2] * 4)
         # too many groups
-        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 6)
+        with pytest.raises(ValueError):
+            MultiComparison(np.array([1] * 10), [1, 2] * 6)
         # just one group
-        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
+        with pytest.raises(ValueError):
+            MultiComparison(np.array([1] * 10), [1] * 10)
 
         # group_order does not select all observations, only one group left
         with warnings.catch_warnings(record=True) as w:
