@@ -37,7 +37,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      python setup.py build_ext --inplace -q
+      pip install -e .
     displayName: 'Build Cython Extensions'
 
   - script: |
