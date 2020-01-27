@@ -822,20 +822,22 @@ def _psturng(q, r, v):
         raise ValueError('q should be >= 0')
 
     def opt_func(p, r, v):
-        return abs(_qsturng(p, r, v) - q)
+        return np.squeeze(abs(_qsturng(p, r, v) - q))
 
     if v == 1:
         if q < _qsturng(.9, r, 1):
             return .1
         elif q > _qsturng(.999, r, 1):
             return .001
-        return 1. - fminbound(opt_func, .9, .999, args=(r,v))
+        soln = 1. - fminbound(opt_func, .9, .999, args=(r,v))
+        return np.atleast_1d(soln)
     else:
         if q < _qsturng(.1, r, v):
             return .9
         elif q > _qsturng(.999, r, v):
             return .001
-        return 1. - fminbound(opt_func, .1, .999, args=(r,v))
+        soln = 1. - fminbound(opt_func, .1, .999, args=(r,v))
+        return np.atleast_1d(soln)
 
 _vpsturng = np.vectorize(_psturng)
 _vpsturng.__doc__ = """vector version of psturng"""
