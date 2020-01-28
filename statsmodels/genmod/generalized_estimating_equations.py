@@ -611,8 +611,8 @@ class GEE(GLM):
             self.time = np.concatenate(self.time_li)
 
         if (self._offset_exposure is None or
-           (np.isscalar(self._offset_exposure) and
-            self._offset_exposure == 0.)):
+            (np.isscalar(self._offset_exposure) and
+             self._offset_exposure == 0.)):
             self.offset_li = None
         else:
             self.offset_li = self.cluster_list(self._offset_exposure)
