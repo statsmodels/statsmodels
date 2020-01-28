@@ -1120,7 +1120,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
                 float(np.squeeze(direct_test_1.pvalue)),
                 int(direct_test_1.df_num),
                 int(direct_test_1.df_denom))
-    assert_allclose(np.asarray(df.loc['x']), expected)
+    assert_allclose(np.asarray(df.loc['x']), expected, atol=1e-8)
 
     direct2 = OLS(y, np.hstack([z1, x_extra])).fit(cov_type=cov_type)
     r2 = np.zeros((2, 2 + 3 + 2))
@@ -1130,7 +1130,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
                 float(np.squeeze(direct_test_2.pvalue)),
                 int(direct_test_2.df_num),
                 int(direct_test_2.df_denom))
-    assert_allclose(np.asarray(df.loc['z']), expected)
+    assert_allclose(np.asarray(df.loc['z']), expected, atol=1e-8)
 
 
 def test_encompasing_error(reset_randomstate):

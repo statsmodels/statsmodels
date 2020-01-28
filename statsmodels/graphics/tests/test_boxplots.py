@@ -19,6 +19,7 @@ def age_and_labels():
               "Independent-Independent", "Independent-Republican",
               "Weak Republican", "Strong Republican"]
     age = [data.exog['age'][data.endog == id] for id in party_ID]
+    age = np.array(age, dtype="object")
     return age, labels
 
 
