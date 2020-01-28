@@ -90,6 +90,7 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/api.py \
         statsmodels/graphics/functional.py \
         statsmodels/graphics/tests/test_agreement.py \
+        statsmodels/graphics/tests/test_boxplots.py \
         statsmodels/graphics/tests/test_correlation.py \
         statsmodels/graphics/tests/test_functional.py \
         statsmodels/graphics/tests/test_gofplots.py \
