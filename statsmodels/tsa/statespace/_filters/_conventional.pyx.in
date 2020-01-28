@@ -20,12 +20,14 @@ TYPES = {
 }}
 
 # Typical imports
+import numpy as np
 cimport numpy as np
 from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
-from statsmodels.tsa.statespace._kalman_filter cimport FILTER_CONCENTRATED
+from statsmodels.tsa.statespace._kalman_filter cimport (
+    MEMORY_NO_FORECAST_COV, FILTER_CONCENTRATED, FILTER_CHANDRASEKHAR)
 
 
 {{for prefix, types in TYPES.items()}}
@@ -166,6 +168,87 @@ cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter, {{prefi
 
     return 0
 
+cdef int {{prefix}}chandrasekhar_recursion({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    # Constants
+    cdef:
+        int info
+        int inc = 1
+        int j, k
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # Chandrasekhar recursion
+    # Initialization of the recursions
+    if kfilter.t == 0:
+        # Initialize M
+        blas.{{prefix}}copy(&model._k_endog2, kfilter._forecast_error_cov, &inc, &kfilter.CM[0, 0], &inc)
+        lapack.{{prefix}}getrf(&model._k_endog, &model._k_endog,
+                        &kfilter.CM[0, 0], &kfilter.k_endog,
+                        kfilter._forecast_error_ipiv, &info)
+        lapack.{{prefix}}getri(&model._k_endog, &kfilter.CM[0, 0], &kfilter.k_endog,
+               kfilter._forecast_error_ipiv, kfilter._forecast_error_work, &kfilter.ldwork, &info)
+        blas.{{prefix}}scal(&model._k_endog2, &gamma, &kfilter.CM[0, 0], &inc)
+
+        # Initialize W
+        # Our Kalman gain is T P Z' F^{-1} but we need to initialize
+        # W = T P Z', so we need to multiply by F
+        # (not particularly efficient way to do this, but it's only
+        # done for one time step so it's probably okay)
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_endog,
+          &alpha, kfilter._kalman_gain, &kfilter.k_states,
+                  kfilter._forecast_error_cov, &kfilter.k_endog,
+          &beta, &kfilter.CW[0, 0], &kfilter.k_states)
+    else:
+        # Compute M = M + M @ W.T @ Z.T @ Fi_prev @ Z @ W @ M
+        #           = M + (M @ W.T) @ Z.T @ (Fi_prev @ Z) @ (W @ M)
+
+        # M @ W.T: (p x p) (p x m) -> (p x m)
+        blas.{{prefix}}gemm("N", "T", &model._k_endog, &model._k_states, &model._k_endog,
+          &alpha, &kfilter.CM[0, 0], &kfilter.k_endog,
+                  &kfilter.CW[0, 0], &kfilter.k_states,
+          &beta, &kfilter.CMW[0, 0], &kfilter.k_endog)
+
+        # (Fi_prev @ Z) @ (W @ M): (p x m) (m x p) -> (p x p)
+        blas.{{prefix}}gemm("N", "T", &model._k_endog, &model._k_endog, &model._k_states,
+          &alpha, &kfilter.CprevFiZ[0, 0], &kfilter.k_endog,
+                  &kfilter.CMW[0, 0], &kfilter.k_endog,
+          &beta, &kfilter.CtmpM[0, 0], &kfilter.k_endog)
+
+        # (M @ W.T) @ Z.T: (p x m) (m x p) -> (p x p)
+        blas.{{prefix}}gemm("N", "T", &model._k_endog, &model._k_endog, &model._k_states,
+          &alpha, &kfilter.CMW[0, 0], &kfilter.k_endog,
+                  model._design, &model._k_endog,
+          &beta, &kfilter.CMWZ[0, 0], &kfilter.k_endog)
+
+        # M + (M @ W.T @ Z.T) (Fi_prev @ Z @ W @ M) : (p x p) (p x p) -> (p x p)
+        blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_endog, &model._k_endog,
+          &alpha, &kfilter.CMWZ[0, 0], &kfilter.k_endog,
+                  &kfilter.CtmpM[0, 0], &model._k_endog,
+          &alpha, &kfilter.CM[0, 0], &kfilter.k_endog)
+
+        # Compute W = (T - Kg @ Z) @ W
+        # W -> tmpW
+        blas.{{prefix}}copy(&model._k_endogstates, &kfilter.CW[0, 0], &inc, &kfilter.CtmpW[0, 0], &inc)
+
+        # T -> tmp00
+        blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, kfilter._tmp00, &inc)
+
+        # T - K @ Z: (m x p) (p x m) -> (m x m)
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_endog,
+            &gamma, kfilter._kalman_gain, &kfilter.k_states,
+                    model._design, &model._k_endog,
+            &alpha, kfilter._tmp00, &kfilter.k_states)
+
+        # (T - T @ K @ Z[i]) @ tmpW -> W
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
+              &alpha, kfilter._tmp00, &kfilter.k_states,
+                      &kfilter.CtmpW[0, 0], &kfilter.k_states,
+              &beta, &kfilter.CW[0, 0], &kfilter.k_states)
+
+    # Save F^{-1} Z (this period's value used in next iteration)
+    blas.{{prefix}}copy(&model._k_endogstates, kfilter._tmp3, &inc, &kfilter.CprevFiZ[0, 0], &inc)
+
 cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     # Constants
     cdef:
@@ -184,6 +267,15 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
           &alpha, kfilter._filtered_state, &inc)
 
     # #### Filtered state covariance for time t
+    # Temporary computation used below
+    if not kfilter.converged:
+        # P_t Z_t' F_t^{-1}
+        # $(m \times p) = (m \times m) (m \times p)$
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_endog, &model._k_states,
+              &alpha, kfilter._input_state_cov, &kfilter.k_states,
+                      kfilter._tmp3, &kfilter.k_endog,
+              &beta, &kfilter.CtmpW[0, 0], &kfilter.k_states)
+
     # $P_{t|t} = P_t - P_t Z_t' F_t^{-1} Z_t P_t$  
     # $P_{t|t} = P_t - \\#_1 \\#_3 P_t$  
     # 
@@ -192,19 +284,11 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
     if not kfilter.converged:
         blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
 
-        # `tmp0` array used here, dimension $(m \times m)$  
-        # $\\#_0 = 1.0 * \\#_1 \\#_3$  
-        # $(m \times m) = (m \times p) (p \times m)$
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_endog,
-              &alpha, kfilter._tmp1, &kfilter.k_states,
-                      kfilter._tmp3, &kfilter.k_endog,
-              &beta, kfilter._tmp0, &kfilter.k_states)
-
         # $P_{t|t} = - 1.0 * \\# P_t + 1.0 * P_t$  
-        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
-              &gamma, kfilter._tmp0, &kfilter.k_states,
-                      kfilter._input_state_cov, &kfilter.k_states,
+        # $(m \times m) = (m \times p) (p \times m) + (m \times m)$
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_endog,
+              &gamma, &kfilter.CtmpW[0, 0], &kfilter.k_states,
+                      kfilter._tmp1, &kfilter.k_states,
               &alpha, kfilter._filtered_state_cov, &kfilter.k_states)
 
     # #### Kalman gain for time t
@@ -215,19 +299,11 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
     # *Note*: Kim and Nelson (1999) have a different version of the Kalman
     # gain, defined as $P_t Z_t' F_t^{-1}$. That is not adopted here.
     if not kfilter.converged:
-        # `tmp00` array used here, dimension $(m \times m)$  
-        # $\\#_{00} = 1.0 * T_t P_t$  
-        # $(m \times m) = (m \times m) (m \times m)$
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
-              &alpha, model._transition, &model._k_states,
-                      kfilter._input_state_cov, &kfilter.k_states,
-              &beta, kfilter._tmp00, &kfilter.k_states)
-
-        # K_t = 1.0 * \\#_{00} \\#_3'
+        # T_t P_t Z_t' F_t^{-1}
         # $(m \times p) = (m \times m) (m \times p)$
-        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_endog, &model._k_states,
-              &alpha, kfilter._tmp00, &kfilter.k_states,
-                      kfilter._tmp3, &kfilter.k_endog,
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
+              &alpha, model._transition, &kfilter.k_states,
+                      &kfilter.CtmpW[0, 0], &kfilter.k_states,
               &beta, kfilter._kalman_gain, &kfilter.k_states)
 
     return 0
@@ -237,9 +313,13 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
     # Constants
     cdef:
         int inc = 1
+        int forecast_cov_t = kfilter.t
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
+
+    if kfilter.conserve_memory & MEMORY_NO_FORECAST_COV > 0:
+        forecast_cov_t = 1
 
     # #### Predicted state for time t+1
     # $a_{t+1} = T_t a_{t|t} + c_t$
@@ -258,19 +338,37 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
         blas.{{prefix}}copy(&model._k_states2, model._selected_state_cov, &inc, kfilter._predicted_state_cov, &inc)
         # `tmp0` array used here, dimension $(m \times m)$  
 
-        # $\\#_0 = T_t P_{t|t} $
+        if kfilter.filter_method & FILTER_CHANDRASEKHAR:
+            # Chandrasekhar_recursion
+            {{prefix}}chandrasekhar_recursion(kfilter, model)
 
-        # $(m \times m) = (m \times m) (m \times m)$
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
-              &alpha, model._transition, &model._k_states,
-                      kfilter._filtered_state_cov, &kfilter.k_states,
-              &beta, kfilter._tmp0, &kfilter.k_states)
-        # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
-        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
-        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
-              &alpha, kfilter._tmp0, &kfilter.k_states,
-                      model._transition, &model._k_states,
+            # Chandrasekhar-based prediction step
+            blas.{{prefix}}copy(&model._k_states2, kfilter._input_state_cov, &inc, kfilter._predicted_state_cov, &inc)
+            # M @ W.T. (p x p) (p x m)
+            blas.{{prefix}}gemm("N", "T", &model._k_endog, &model._k_states, &model._k_endog,
+              &alpha, &kfilter.CM[0, 0], &kfilter.k_endog,
+                      &kfilter.CW[0, 0], &kfilter.k_states,
+              &beta, &kfilter.CMW[0, 0], &kfilter.k_endog)
+            # P = P + W M W.T
+            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_endog,
+              &alpha, &kfilter.CW[0, 0], &kfilter.k_states,
+                      &kfilter.CMW[0, 0], &kfilter.k_endog,
               &alpha, kfilter._predicted_state_cov, &kfilter.k_states)
+        else:
+            # Kalman filter prediction step
+            # $\\#_0 = T_t P_{t|t} $
+
+            # $(m \times m) = (m \times m) (m \times m)$
+            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                  &alpha, model._transition, &model._k_states,
+                          kfilter._filtered_state_cov, &kfilter.k_states,
+                  &beta, kfilter._tmp0, &kfilter.k_states)
+            # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+            # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+                  &alpha, kfilter._tmp0, &kfilter.k_states,
+                          model._transition, &model._k_states,
+                  &alpha, kfilter._predicted_state_cov, &kfilter.k_states)
 
     return 0
 

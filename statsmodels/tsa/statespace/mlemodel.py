@@ -1238,6 +1238,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                     complex_step=approx_complex_step)
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+        if 'transformed' in kwargs:
+            del kwargs['transformed']
         res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
         # Get forecasts error partials
