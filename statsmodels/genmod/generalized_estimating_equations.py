@@ -37,7 +37,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.genmod import cov_struct as cov_structs
 
 import statsmodels.genmod.families.varfuncs as varfuncs
@@ -475,7 +475,7 @@ def _check_args(endog, exog, groups, time, offset, exposure):
         raise ValueError("'exposure' and 'endog' should have the same size")
 
 
-class GEE(base.Model):
+class GEE(GLM):
 
     __doc__ = (
         "    Marginal Regression Model using Generalized Estimating "
@@ -534,7 +534,7 @@ class GEE(base.Model):
                                   time=time, offset=offset,
                                   exposure=exposure, weights=weights,
                                   dep_data=dep_data, missing=missing,
-                                  **kwargs)
+                                  family=family, **kwargs)
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])
@@ -748,10 +748,16 @@ class GEE(base.Model):
                 dep_data = data[dep_data]
             kwargs["dep_data"] = np.asarray(dep_data)
 
+        family = None
+        if "family" in kwargs:
+            family = kwargs["family"]
+            del kwargs["family"]
+
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
+                                             family=family,
                                              *args, **kwargs)
 
         if dep_data_names is not None:
@@ -1778,7 +1784,7 @@ class GEE(base.Model):
         return ql, qic, qicu
 
 
-class GEEResults(base.LikelihoodModelResults):
+class GEEResults(GLMResults):
 
     __doc__ = (
         "This class summarizes the fit of a marginal regression model "
@@ -2472,9 +2478,10 @@ class OrdinalGEE(GEE):
         return endog_out, exog_out, groups_out, time_out, offset_out
 
     def _starting_params(self):
+        exposure = getattr(self, "exposure", None)
         model = GEE(self.endog, self.exog, self.groups,
                     time=self.time, family=families.Binomial(),
-                    offset=self.offset, exposure=self.exposure)
+                    offset=self.offset, exposure=exposure)
         result = model.fit()
         return result.params
 
@@ -2677,9 +2684,10 @@ class NominalGEE(GEE):
             offset, dep_data, constraint)
 
     def _starting_params(self):
+        exposure = getattr(self, "exposure", None)
         model = GEE(self.endog, self.exog, self.groups,
                     time=self.time, family=families.Binomial(),
-                    offset=self.offset, exposure=self.exposure)
+                    offset=self.offset, exposure=exposure)
         result = model.fit()
         return result.params
 
