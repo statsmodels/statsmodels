@@ -166,7 +166,7 @@
     text: 'State space models: concentrating out the scale'
   - img: ../_static/images/statespace_chandrasekhar.png
     target: notebooks/generated/statespace_chandrasekhar.html
-    text: 'State space models: Chandrasekhar recursions
+    text: 'State space models: Chandrasekhar recursions'
 - header: Multivariate Methods
   id: multivariate
   links:
