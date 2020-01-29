@@ -1735,6 +1735,13 @@ class GEEResults(GLMResults):
                 raise ValueError('cov_type in argument is different from '
                                  'already attached cov_type')
 
+    @cache_readonly
+    def resid(self):
+        """
+        The response residuals.
+        """
+        return self.resid_response
+
     def standard_errors(self, cov_type="robust"):
         """
         This is a convenience function that returns the standard
@@ -1772,14 +1779,6 @@ class GEEResults(GLMResults):
     @cache_readonly
     def bse(self):
         return self.standard_errors(self.cov_type)
-
-    @cache_readonly
-    def resid(self):
-        """
-        Returns the residuals, the endogeneous data minus the fitted
-        values from the model.
-        """
-        return self.model.endog - self.fittedvalues
 
     def score_test(self):
         """
@@ -1880,38 +1879,6 @@ class GEEResults(GLMResults):
     split_resid = resid_split
     centered_resid = resid_centered
     split_centered_resid = resid_centered_split
-
-    @cache_readonly
-    def resid_response(self):
-        return self.model.endog - self.fittedvalues
-
-    @cache_readonly
-    def resid_pearson(self):
-        val = self.model.endog - self.fittedvalues
-        val = val / np.sqrt(self.family.variance(self.fittedvalues))
-        return val
-
-    @cache_readonly
-    def resid_working(self):
-        val = self.resid_response
-        val = val * self.family.link.deriv(self.fittedvalues)
-        return val
-
-    @cache_readonly
-    def resid_anscombe(self):
-        return self.family.resid_anscombe(self.model.endog, self.fittedvalues)
-
-    @cache_readonly
-    def resid_deviance(self):
-        return self.family.resid_dev(self.model.endog, self.fittedvalues)
-
-    @cache_readonly
-    def fittedvalues(self):
-        """
-        Returns the fitted values from the model.
-        """
-        return self.model.family.link.inverse(np.dot(self.model.exog,
-                                                     self.params))
 
     @Appender(_plot_added_variable_doc % {'extra_params_doc': ''})
     def plot_added_variable(self, focus_exog, resid_type=None,

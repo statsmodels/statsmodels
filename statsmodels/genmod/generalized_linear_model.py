@@ -1476,7 +1476,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_response(self):
         """
-        Respnose residuals.  The response residuals are defined as
+        Response residuals.  The response residuals are defined as
         `endog` - `fittedvalues`
         """
         return self._n_trials * (self._endog-self.mu)
