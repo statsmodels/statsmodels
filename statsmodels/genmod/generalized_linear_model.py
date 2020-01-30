@@ -1564,8 +1564,12 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def fittedvalues(self):
         """
-        Linear predicted values for the fitted model.
-        dot(exog, params)
+        The estimated mean response.
+
+        This is the value of the inverse of the link function at
+        lin_pred, where lin_pred is the linear predicted value
+        obtained by multiplying the design matrix by the coefficient
+        vector.
         """
         return self.mu
 
