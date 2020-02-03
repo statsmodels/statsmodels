@@ -4,7 +4,14 @@
 # stack
 dist: bionic
 language: python
-cache: pip
+cache:
+  - directories:
+    - $HOME/.cache/pip
+    - $TRAVIS_BUILD_DIR/docs/source/dev/generated
+    - $TRAVIS_BUILD_DIR/docs/source/datasets/generated
+    - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
+    - $TRAVIS_BUILD_DIR/docs/source/generated
+    - $TRAVIS_BUILD_DIR/docs/build
 
 git:
   depth: 10000
