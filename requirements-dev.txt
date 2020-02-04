@@ -18,7 +18,7 @@ isort
 
 # doc
 sphinx
-sphinx-material; python_version > '3.5'
+sphinx-material; python_version >=3.6
 jupyter
 notebook
 nbsphinx
