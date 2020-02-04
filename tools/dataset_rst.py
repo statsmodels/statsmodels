@@ -8,7 +8,7 @@ Ie., it imports the datasets package to scrape the meta-information.
 import glob
 import inspect
 import os
-from os.path import join, realpath, dirname
+from os.path import dirname, join, realpath
 from string import Template
 
 import statsmodels.api as sm

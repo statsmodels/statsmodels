@@ -21,6 +21,7 @@ import functools
 import glob
 import importlib
 import inspect
+from io import StringIO
 import json
 import os
 import pydoc
@@ -29,13 +30,12 @@ import string
 import sys
 import tempfile
 import textwrap
-from io import StringIO
 
 import flake8.main.application
 import matplotlib
 import numpy
-import pandas
 from numpydoc.docscrape import NumpyDocString
+import pandas
 from pandas.io.formats.printing import pprint_thing
 
 import statsmodels.api

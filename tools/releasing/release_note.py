@@ -9,9 +9,9 @@ current release begin.
 Requires PyGitHub, dateparser and jinja2
 """
 
+from collections import defaultdict
 import datetime as dt
 import os
-from collections import defaultdict
 
 import dateparser
 from github import Github

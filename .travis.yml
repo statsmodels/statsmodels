@@ -7,11 +7,9 @@ language: python
 cache:
   - directories:
     - $HOME/.cache/pip
-    - $TRAVIS_BUILD_DIR/docs/source/dev/generated
     - $TRAVIS_BUILD_DIR/docs/source/datasets/generated
     - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
-    - $TRAVIS_BUILD_DIR/docs/source/generated
-    - $TRAVIS_BUILD_DIR/docs/build
+
 
 git:
   depth: 10000
@@ -75,7 +73,7 @@ matrix:
     # Python 3.6 + oldest packages
     - python: 3.6
       env:
-        - PYTHON=3.5
+        - PYTHON=3.6
         - NUMPY=1.15
         - SCIPY=1.1
         - PANDAS=0.23

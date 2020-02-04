@@ -3,8 +3,9 @@
     Using a model built from the the state crime dataset, make a CERES plot
     with the rate of Poverty as the focus variable.
 '''
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.graphics.regressionplots import plot_ceres_residuals
 

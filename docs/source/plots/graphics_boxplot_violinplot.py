@@ -6,8 +6,9 @@ Created on Fri May 04 00:11:32 2012
 Author: Ralf Gommers
 
 """
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
 
 data = sm.datasets.anes96.load_pandas()

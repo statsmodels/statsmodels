@@ -11,7 +11,10 @@ pytest
 pytest-randomly
 # Pin to 1.29 due to test discovery issues
 pytest-xdist==1.29
+
+# code quality
 flake8
+isort
 
 # doc
 sphinx

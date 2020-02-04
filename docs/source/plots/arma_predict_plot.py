@@ -1,6 +1,7 @@
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import pandas as pd
+
+import statsmodels.api as sm
 
 dta = sm.datasets.sunspots.load_pandas().data[['SUNACTIVITY']]
 dta.index = pd.date_range(start='1700', end='2009', freq='A')

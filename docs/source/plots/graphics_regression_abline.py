@@ -6,9 +6,10 @@ of all other variables in the model.
 
 '''
 
-import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import numpy as np
+
+import statsmodels.api as sm
 
 np.random.seed(12345)
 X = sm.add_constant(np.random.normal(0, 20, size=30))

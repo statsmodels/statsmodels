@@ -6,8 +6,9 @@ poverty, and rate of single household.
 
 '''
 
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 
 crime_data = sm.datasets.statecrime.load_pandas()
 sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',

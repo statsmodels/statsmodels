@@ -1,11 +1,10 @@
 import numpy as np
+import pandas
 
-from statsmodels.tsa.api import VAR
 from statsmodels.api import datasets as ds
+from statsmodels.tsa.api import VAR
 from statsmodels.tsa.base.datetools import dates_from_str
 
-
-import pandas
 mdata = ds.macrodata.load_pandas().data
 
 # prepare the dates index
