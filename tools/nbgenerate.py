@@ -120,11 +120,9 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
     with io.open(nb, mode="rb") as f:
         current_hash = hashlib.sha512(f.read()).hexdigest()
     update_needed = existing_hash != current_hash
-
-    if skip_existing and os.path.exists(dst) and not update_needed:
-        update_needed = (os.path.getmtime(dst) <= os.path.getmtime(nb))
-        if not update_needed:
-            print('Skipping {0}'.format(nb))
+    update_needed = update_needed or not skip_existing
+    if not update_needed:
+        print('Skipping {0}'.format(nb))
 
     if execute and update_needed:
         print("Executing %s to %s" % (nb, dst))
