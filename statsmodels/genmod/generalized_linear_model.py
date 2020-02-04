@@ -1476,7 +1476,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_response(self):
         """
-        Respnose residuals.  The response residuals are defined as
+        Response residuals.  The response residuals are defined as
         `endog` - `fittedvalues`
         """
         return self._n_trials * (self._endog-self.mu)
@@ -1564,8 +1564,12 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def fittedvalues(self):
         """
-        Linear predicted values for the fitted model.
-        dot(exog, params)
+        The estimated mean response.
+
+        This is the value of the inverse of the link function at
+        lin_pred, where lin_pred is the linear predicted value
+        obtained by multiplying the design matrix by the coefficient
+        vector.
         """
         return self.mu
 

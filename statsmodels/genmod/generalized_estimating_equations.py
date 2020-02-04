@@ -37,7 +37,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.genmod import cov_struct as cov_structs
 
 import statsmodels.genmod.families.varfuncs as varfuncs
@@ -475,7 +475,7 @@ def _check_args(endog, exog, groups, time, offset, exposure):
         raise ValueError("'exposure' and 'endog' should have the same size")
 
 
-class GEE(base.Model):
+class GEE(GLM):
 
     __doc__ = (
         "    Marginal Regression Model using Generalized Estimating "
@@ -534,7 +534,7 @@ class GEE(base.Model):
                                   time=time, offset=offset,
                                   exposure=exposure, weights=weights,
                                   dep_data=dep_data, missing=missing,
-                                  **kwargs)
+                                  family=family, **kwargs)
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])
@@ -557,21 +557,6 @@ class GEE(base.Model):
                                  "cov_struct instance")
 
         self.cov_struct = cov_struct
-
-        # Handle the offset and exposure
-        self._offset_exposure = None
-        if offset is not None:
-            self._offset_exposure = self.offset.copy()
-            self.offset = offset
-        if exposure is not None:
-            if not isinstance(self.family.link, families.links.Log):
-                raise ValueError(
-                    "exposure can only be used with the log link function")
-            if self._offset_exposure is not None:
-                self._offset_exposure += np.log(exposure)
-            else:
-                self._offset_exposure = np.log(exposure)
-            self.exposure = exposure
 
         # Handle the constraint
         self.constraint = None
@@ -625,10 +610,12 @@ class GEE(base.Model):
                  for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
-        if self._offset_exposure is not None:
-            self.offset_li = self.cluster_list(self._offset_exposure)
-        else:
+        if (self._offset_exposure is None or
+            (np.isscalar(self._offset_exposure) and
+             self._offset_exposure == 0.)):
             self.offset_li = None
+        else:
+            self.offset_li = self.cluster_list(self._offset_exposure)
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
                 self.cluster_list(self.constraint.exog_fulltrans)
@@ -748,10 +735,16 @@ class GEE(base.Model):
                 dep_data = data[dep_data]
             kwargs["dep_data"] = np.asarray(dep_data)
 
+        family = None
+        if "family" in kwargs:
+            family = kwargs["family"]
+            del kwargs["family"]
+
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
+                                             family=family,
                                              *args, **kwargs)
 
         if dep_data_names is not None:
@@ -1164,98 +1157,15 @@ class GEE(base.Model):
 
         return cov_robust_bc
 
-    def predict(self, params, exog=None, offset=None,
-                exposure=None, linear=False):
-        """
-        Return predicted values for a marginal regression model fit
-        using GEE.
-
-        Parameters
-        ----------
-        params : array_like
-            Parameters / coefficients of a marginal regression model.
-        exog : array_like, optional
-            Design / exogenous data. If exog is None, model exog is
-            used.
-        offset : array_like, optional
-            Offset for exog if provided.  If offset is None, model
-            offset is used.
-        exposure : array_like, optional
-            Exposure for exog, if exposure is None, model exposure is
-            used.  Only allowed if link function is the logarithm.
-        linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the value of the inverse of the model's link
-            function at the linear predicted values.
-
-        Returns
-        -------
-        An array of fitted values
-
-        Notes
-        -----
-        Using log(V) as the offset is equivalent to using V as the
-        exposure.  If exposure U and offset V are both provided, then
-        log(U) + V is added to the linear predictor.
-        """
-
-        # TODO: many paths through this, not well covered in tests
-
-        if exposure is not None:
-            if not isinstance(self.family.link, families.links.Log):
-                raise ValueError(
-                    "exposure can only be used with the log link function")
-
-        # This is the combined offset and exposure
-        _offset = 0.
-
-        # Using model exog
-        if exog is None:
-            exog = self.exog
-
-            if not isinstance(self.family.link, families.links.Log):
-                # Do not need to worry about exposure
-                if offset is None:
-                    if self._offset_exposure is not None:
-                        _offset = self._offset_exposure.copy()
-                else:
-                    _offset = offset
-
-            else:
-                if offset is None and exposure is None:
-                    if self._offset_exposure is not None:
-                        _offset = self._offset_exposure
-                elif offset is None and exposure is not None:
-                    _offset = np.log(exposure)
-                    if hasattr(self, "offset"):
-                        _offset = _offset + self.offset
-                elif offset is not None and exposure is None:
-                    _offset = offset
-                    if hasattr(self, "exposure"):
-                        _offset = offset + np.log(self.exposure)
-                else:
-                    _offset = offset + np.log(exposure)
-
-        # exog is provided: this is simpler than above because we
-        # never use model exog or exposure if exog is provided.
-        else:
-            if offset is not None:
-                _offset = _offset + offset
-            if exposure is not None:
-                _offset += np.log(exposure)
-
-        lin_pred = _offset + np.dot(exog, params)
-
-        if not linear:
-            return self.family.link.inverse(lin_pred)
-
-        return lin_pred
-
     def _starting_params(self):
 
+        if np.isscalar(self._offset_exposure):
+            offset = None
+        else:
+            offset = self._offset_exposure
+
         model = GLM(self.endog, self.exog, family=self.family,
-                    offset=self._offset_exposure,
-                    freq_weights=self.weights)
+                    offset=offset, freq_weights=self.weights)
         result = model.fit()
         return result.params
 
@@ -1778,7 +1688,7 @@ class GEE(base.Model):
         return ql, qic, qicu
 
 
-class GEEResults(base.LikelihoodModelResults):
+class GEEResults(GLMResults):
 
     __doc__ = (
         "This class summarizes the fit of a marginal regression model "
@@ -1825,6 +1735,13 @@ class GEEResults(base.LikelihoodModelResults):
                 raise ValueError('cov_type in argument is different from '
                                  'already attached cov_type')
 
+    @cache_readonly
+    def resid(self):
+        """
+        The response residuals.
+        """
+        return self.resid_response
+
     def standard_errors(self, cov_type="robust"):
         """
         This is a convenience function that returns the standard
@@ -1862,14 +1779,6 @@ class GEEResults(base.LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         return self.standard_errors(self.cov_type)
-
-    @cache_readonly
-    def resid(self):
-        """
-        Returns the residuals, the endogeneous data minus the fitted
-        values from the model.
-        """
-        return self.model.endog - self.fittedvalues
 
     def score_test(self):
         """
@@ -1970,38 +1879,6 @@ class GEEResults(base.LikelihoodModelResults):
     split_resid = resid_split
     centered_resid = resid_centered
     split_centered_resid = resid_centered_split
-
-    @cache_readonly
-    def resid_response(self):
-        return self.model.endog - self.fittedvalues
-
-    @cache_readonly
-    def resid_pearson(self):
-        val = self.model.endog - self.fittedvalues
-        val = val / np.sqrt(self.family.variance(self.fittedvalues))
-        return val
-
-    @cache_readonly
-    def resid_working(self):
-        val = self.resid_response
-        val = val * self.family.link.deriv(self.fittedvalues)
-        return val
-
-    @cache_readonly
-    def resid_anscombe(self):
-        return self.family.resid_anscombe(self.model.endog, self.fittedvalues)
-
-    @cache_readonly
-    def resid_deviance(self):
-        return self.family.resid_dev(self.model.endog, self.fittedvalues)
-
-    @cache_readonly
-    def fittedvalues(self):
-        """
-        Returns the fitted values from the model.
-        """
-        return self.model.family.link.inverse(np.dot(self.model.exog,
-                                                     self.params))
 
     @Appender(_plot_added_variable_doc % {'extra_params_doc': ''})
     def plot_added_variable(self, focus_exog, resid_type=None,
@@ -2472,9 +2349,10 @@ class OrdinalGEE(GEE):
         return endog_out, exog_out, groups_out, time_out, offset_out
 
     def _starting_params(self):
+        exposure = getattr(self, "exposure", None)
         model = GEE(self.endog, self.exog, self.groups,
                     time=self.time, family=families.Binomial(),
-                    offset=self.offset, exposure=self.exposure)
+                    offset=self.offset, exposure=exposure)
         result = model.fit()
         return result.params
 
@@ -2677,9 +2555,10 @@ class NominalGEE(GEE):
             offset, dep_data, constraint)
 
     def _starting_params(self):
+        exposure = getattr(self, "exposure", None)
         model = GEE(self.endog, self.exog, self.groups,
                     time=self.time, family=families.Binomial(),
-                    offset=self.offset, exposure=self.exposure)
+                    offset=self.offset, exposure=exposure)
         result = model.fit()
         return result.params
 
