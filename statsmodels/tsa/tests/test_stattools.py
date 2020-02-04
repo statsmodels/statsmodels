@@ -69,10 +69,11 @@ class TestADFConstant(CheckADF):
     """
     Dickey-Fuller test for unit root
     """
+
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.x, regression="c", autolag=None,
-                maxlag=4)
+                            maxlag=4)
         cls.teststat = .97505319
         cls.pvalue = .99399563
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -81,30 +82,32 @@ class TestADFConstant(CheckADF):
 class TestADFConstantTrend(CheckADF):
     """
     """
+
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.x, regression="ct", autolag=None,
-                maxlag=4)
+                            maxlag=4)
         cls.teststat = -1.8566374
         cls.pvalue = .67682968
         cls.critvalues = [-4.007, -3.437, -3.137]
 
 
 # FIXME: do not leave commented-out
-#class TestADFConstantTrendSquared(CheckADF):
+# class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
 #    pass
-#TODO: get test values from R?
+# TODO: get test values from R?
 
 
 class TestADFNoConstant(CheckADF):
     """
     """
+
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.x, regression="nc", autolag=None,
-                maxlag=4)
+                            maxlag=4)
         cls.teststat = 3.5227498
 
         cls.pvalue = .99999
@@ -121,7 +124,7 @@ class TestADFConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.y, regression="c", autolag=None,
-                maxlag=1)
+                            maxlag=1)
         cls.teststat = -4.3346988
         cls.pvalue = .00038661
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -131,7 +134,7 @@ class TestADFConstantTrend2(CheckADF):
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.y, regression="ct", autolag=None,
-                maxlag=1)
+                            maxlag=1)
         cls.teststat = -4.425093
         cls.pvalue = .00199633
         cls.critvalues = [-4.006, -3.437, -3.137]
@@ -141,14 +144,14 @@ class TestADFNoConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
         cls.res1 = adfuller(cls.y, regression="nc", autolag=None,
-                maxlag=1)
+                            maxlag=1)
         cls.teststat = -2.4511596
         cls.pvalue = 0.013747
         # Stata does not return a p-value for noconstant
         # this value is just taken from our results
-        cls.critvalues = [-2.587,-1.950,-1.617]
+        cls.critvalues = [-2.587, -1.950, -1.617]
         _, _1, _2, cls.store = adfuller(cls.y, regression="nc", autolag=None,
-                                         maxlag=1, store=True)
+                                        maxlag=1, store=True)
 
     def test_store_str(self):
         assert_equal(self.store.__str__(), 'Augmented Dickey-Fuller Test Results')
@@ -168,19 +171,20 @@ class TestACF(CheckCorrGram):
     """
     Test Autocorrelation Function
     """
+
     @classmethod
     def setup_class(cls):
         cls.acf = cls.results['acvar']
-        #cls.acf = np.concatenate(([1.], cls.acf))
+        # cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results['Q1']
         cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05, fft=False)
-        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].values
+        cls.confint_res = cls.results[['acvar_lb', 'acvar_ub']].values
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 
     def test_confint(self):
-        centered = self.res1[1] - self.res1[1].mean(1)[:,None]
+        centered = self.res1[1] - self.res1[1].mean(1)[:, None]
         assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
     def test_qstat(self):
@@ -188,7 +192,7 @@ class TestACF(CheckCorrGram):
         # 3 decimal places because of stata rounding
 
     # FIXME: enable/xfail/skip or delete
-    #def pvalue(self):
+    # def pvalue(self):
     #    pass
     # NOTE: should not need testing if Q stat is correct
 
@@ -205,7 +209,7 @@ class TestACF_FFT(CheckCorrGram):
         assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
 
     def test_qstat(self):
-        #todo why is res1/qstat 1 short
+        # todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
 
 
@@ -213,8 +217,8 @@ class TestACFMissing(CheckCorrGram):
     # Test Autocorrelation Function using Missing
     @classmethod
     def setup_class(cls):
-        cls.x = np.concatenate((np.array([np.nan]),cls.x))
-        cls.acf = cls.results['acvar'] # drop and conservative
+        cls.x = np.concatenate((np.array([np.nan]), cls.x))
+        cls.acf = cls.results['acvar']  # drop and conservative
         cls.qstat = cls.results['Q1']
         cls.res_drop = acf(cls.x, nlags=40, qstat=True, alpha=.05,
                            missing='drop', fft=False)
@@ -241,8 +245,9 @@ class TestACFMissing(CheckCorrGram):
                             DECIMAL_8)
 
     def test_qstat_none(self):
-        #todo why is res1/qstat 1 short
+        # todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
+
 
 # FIXME: enable/xfail/skip or delete
 # how to do this test? the correct q_stat depends on whether nobs=len(x) is
@@ -260,7 +265,7 @@ class TestPACF(CheckCorrGram):
     def test_ols(self):
         pacfols, confint = pacf(self.x, nlags=40, alpha=.05, method="ols")
         assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
-        centered = confint - confint.mean(1)[:,None]
+        centered = confint - confint.mean(1)[:, None]
         # from edited Stata ado file
         res = [[-.1375625, .1375625]] * 40
         assert_almost_equal(centered[1:41], res, DECIMAL_6)
@@ -310,7 +315,7 @@ class CheckCoint(object):
     y2 = data.data['realgdp'].values
 
     def test_tstat(self):
-        assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
+        assert_almost_equal(self.coint_t, self.teststat, DECIMAL_4)
 
 
 # this does not produce the old results anymore
@@ -318,9 +323,10 @@ class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
     """
+
     @classmethod
     def setup_class(cls):
-        #cls.coint_t = coint(cls.y1, cls.y2, trend="c")[0]
+        # cls.coint_t = coint(cls.y1, cls.y2, trend="c")[0]
         cls.coint_t = coint(cls.y1, cls.y2, trend="c", maxlag=0, autolag=None)[0]
         cls.teststat = -1.8208817
         cls.teststat = -1.830170986148
@@ -338,7 +344,7 @@ def test_coint():
     y = np.round(y, 4)
 
     # FIXME: enable/xfail/skip or delete
-    for trend in []:#['c', 'ct', 'ctt', 'nc']:
+    for trend in []:  # ['c', 'ct', 'ctt', 'nc']:
         print('\n', trend)
         print(coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None))
         print(coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4, autolag=None))
@@ -349,37 +355,37 @@ def test_coint():
     res_egranger = {}
     # trend = 'ct'
     res = res_egranger['ct'] = {}
-    res[0]  = [-5.615251442239, -4.406102369132,  -3.82866685109, -3.532082997903]
-    res[1]  = [-5.63591313706, -4.758609717199, -4.179130554708, -3.880909696863]
-    res[2]  = [-2.892029275027, -4.758609717199, -4.179130554708, -3.880909696863]
-    res[3]  = [-5.626932544079,  -5.08363327039, -4.502469783057,   -4.2031051091]
+    res[0] = [-5.615251442239, -4.406102369132, -3.82866685109, -3.532082997903]
+    res[1] = [-5.63591313706, -4.758609717199, -4.179130554708, -3.880909696863]
+    res[2] = [-2.892029275027, -4.758609717199, -4.179130554708, -3.880909696863]
+    res[3] = [-5.626932544079, -5.08363327039, -4.502469783057, -4.2031051091]
 
     # trend = 'c'
     res = res_egranger['c'] = {}
     # first critical value res[0][1] has a discrepancy starting at 4th decimal
-    res[0]  = [-5.760696844656, -3.952043522638, -3.367006313729, -3.065831247948]
+    res[0] = [-5.760696844656, -3.952043522638, -3.367006313729, -3.065831247948]
     # manually adjusted to have higher precision as in other cases
     res[0][1] = -3.952321293401682
-    res[1]  = [-5.781087068772, -4.367111915942, -3.783961136005, -3.483501524709]
-    res[2]  = [-2.477444137366, -4.367111915942, -3.783961136005, -3.483501524709]
-    res[3]  = [-5.778205811661, -4.735249216434, -4.152738973763, -3.852480848968]
+    res[1] = [-5.781087068772, -4.367111915942, -3.783961136005, -3.483501524709]
+    res[2] = [-2.477444137366, -4.367111915942, -3.783961136005, -3.483501524709]
+    res[3] = [-5.778205811661, -4.735249216434, -4.152738973763, -3.852480848968]
 
     # trend = 'ctt'
     res = res_egranger['ctt'] = {}
-    res[0]  = [-5.644431269946, -4.796038299708, -4.221469431008, -3.926472577178]
-    res[1]  = [-5.665691609506, -5.111158174219,  -4.53317278104,  -4.23601008516]
-    res[2]  = [-3.161462374828, -5.111158174219,  -4.53317278104,  -4.23601008516]
-    res[3]  = [-5.657904558563, -5.406880189412, -4.826111619543, -4.527090164875]
+    res[0] = [-5.644431269946, -4.796038299708, -4.221469431008, -3.926472577178]
+    res[1] = [-5.665691609506, -5.111158174219, -4.53317278104, -4.23601008516]
+    res[2] = [-3.161462374828, -5.111158174219, -4.53317278104, -4.23601008516]
+    res[3] = [-5.657904558563, -5.406880189412, -4.826111619543, -4.527090164875]
 
     # The following for 'nc' are only regression test numbers
     # trend = 'nc' not allowed in egranger
     # trend = 'nc'
     res = res_egranger['nc'] = {}
     nan = np.nan  # shortcut for table
-    res[0]  = [-3.7146175989071137, nan, nan, nan]
-    res[1]  = [-3.8199323012888384, nan, nan, nan]
-    res[2]  = [-1.6865000791270679, nan, nan, nan]
-    res[3]  = [-3.7991270451873675, nan, nan, nan]
+    res[0] = [-3.7146175989071137, nan, nan, nan]
+    res[1] = [-3.8199323012888384, nan, nan, nan]
+    res[2] = [-1.6865000791270679, nan, nan, nan]
+    res[3] = [-3.7991270451873675, nan, nan, nan]
 
     for trend in ['c', 'ct', 'ctt', 'nc']:
         res1 = {}
@@ -653,16 +659,16 @@ def test_arma_order_select_ic():
     y = arma_generate_sample(arparams, maparams, nobs)
     res = arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
     # regression tests in case we change algorithm to minic in sas
-    aic_x = np.array([[       np.nan,  552.7342255 ,  484.29687843],
-                      [ 562.10924262,  485.5197969 ,  480.32858497],
-                      [ 507.04581344,  482.91065829,  481.91926034],
-                      [ 484.03995962,  482.14868032,  483.86378955],
-                      [ 481.8849479 ,  483.8377379 ,  485.83756612]])
-    bic_x = np.array([[       np.nan,  559.77714733,  494.86126118],
-                      [ 569.15216446,  496.08417966,  494.41442864],
-                      [ 517.61019619,  496.99650196,  499.52656493],
-                      [ 498.12580329,  499.75598491,  504.99255506],
-                      [ 499.49225249,  504.96650341,  510.48779255]])
+    aic_x = np.array([[np.nan, 552.7342255, 484.29687843],
+                      [562.10924262, 485.5197969, 480.32858497],
+                      [507.04581344, 482.91065829, 481.91926034],
+                      [484.03995962, 482.14868032, 483.86378955],
+                      [481.8849479, 483.8377379, 485.83756612]])
+    bic_x = np.array([[np.nan, 559.77714733, 494.86126118],
+                      [569.15216446, 496.08417966, 494.41442864],
+                      [517.61019619, 496.99650196, 499.52656493],
+                      [498.12580329, 499.75598491, 504.99255506],
+                      [499.49225249, 504.96650341, 510.48779255]])
     aic = DataFrame(aic_x, index=lrange(5), columns=lrange(3))
     bic = DataFrame(bic_x, index=lrange(5), columns=lrange(3))
     assert_almost_equal(res.aic.values, aic.values, 5)
@@ -694,16 +700,16 @@ def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
     # returns, likely platform dependent failure...
     # looks like AR roots may be cancelling out for 4, 1?
-    y = np.array([ 0.86074377817203640006,  0.85316549067906921611,
-        0.87104653774363305363,  0.60692382068987393851,
-        0.69225941967301307667,  0.73336177248909339976,
-        0.03661329261479619179,  0.15693067239962379955,
-        0.12777403512447857437, -0.27531446294481976   ,
-       -0.24198139631653581283, -0.23903317951236391359,
-       -0.26000241325906497947, -0.21282920015519238288,
-       -0.15943768324388354896,  0.25169301564268781179,
-        0.1762305709151877342 ,  0.12678133368791388857,
-        0.89755829086753169399,  0.82667068795350151511])
+    y = np.array([0.86074377817203640006, 0.85316549067906921611,
+                  0.87104653774363305363, 0.60692382068987393851,
+                  0.69225941967301307667, 0.73336177248909339976,
+                  0.03661329261479619179, 0.15693067239962379955,
+                  0.12777403512447857437, -0.27531446294481976,
+                  -0.24198139631653581283, -0.23903317951236391359,
+                  -0.26000241325906497947, -0.21282920015519238288,
+                  -0.15943768324388354896, 0.25169301564268781179,
+                  0.1762305709151877342, 0.12678133368791388857,
+                  0.89755829086753169399, 0.82667068795350151511])
     import warnings
     with warnings.catch_warnings():
         # catch a hessian inversion and convergence failure warning
@@ -721,12 +727,11 @@ def test_acf_fft_dataframe():
 def test_levinson_durbin_acov():
     rho = 0.9
     m = 20
-    acov = rho**np.arange(200)
+    acov = rho ** np.arange(200)
     sigma2_eps, ar, pacf, _, _ = levinson_durbin(acov, m, isacov=True)
     assert_allclose(sigma2_eps, 1 - rho ** 2)
     assert_allclose(ar, np.array([rho] + [0] * (m - 1)), atol=1e-8)
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
-
 
 
 @pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
@@ -827,7 +832,7 @@ def test_pacf_burg():
 
 def test_pacf_burg_error():
     with pytest.raises(ValueError):
-        pacf_burg(np.empty((20,2)), 10)
+        pacf_burg(np.empty((20, 2)), 10)
     with pytest.raises(ValueError):
         pacf_burg(np.empty(100), 101)
 
@@ -924,7 +929,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
 
     theta, v = innovations_algo(acovf)
     u = innovations_filter(endog, theta)
-    llf_obs = -0.5 * u**2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
+    llf_obs = -0.5 * u ** 2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
 
     # Kalman filter apparoach
     mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
