@@ -2312,3 +2312,9 @@ autosummary
 hsd
 standardizations
 dtypes
+chandrasekhar
+arXiv
+multithreaded
+Intr
+lmerMod
+multithreading

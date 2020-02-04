@@ -4,8 +4,9 @@
     per year.
 '''
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
+
 import statsmodels.api as sm
 
 dta = sm.datasets.sunspots.load_pandas().data

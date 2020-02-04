@@ -4,8 +4,9 @@
     regression.  Observations with high leverage, or large residuals will be
     labeled in the plot to show potential influence points.
 '''
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 crime_data = sm.datasets.statecrime.load_pandas()

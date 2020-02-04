@@ -11,9 +11,10 @@ Author: Padarn Wilson
 #    'poverty' and 'hs_grad' as variables and 'murder' as the response
 
 
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
+
+import statsmodels.api as sm
 
 data = sm.datasets.statecrime.load_pandas().data
 murder = data['murder']

@@ -1,5 +1,6 @@
-import statsmodels.api as sm
 import pandas as pd
+
+import statsmodels.api as sm
 
 dta = sm.datasets.elnino.load_pandas().data
 dta['YEAR'] = dta.YEAR.astype(int).astype(str)

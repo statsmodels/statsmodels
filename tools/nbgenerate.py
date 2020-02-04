@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argparse
+from functools import partial
+import hashlib
 import io
+import json
 import os
 import sys
 
-from colorama import init, Fore
-
-from functools import partial
+from colorama import Fore, init
+from nbconvert import HTMLExporter, RSTExporter
+from nbconvert.preprocessors import ExecutePreprocessor
+import nbformat
 
 try:
     from concurrent import futures
@@ -16,9 +20,6 @@ try:
 except ImportError:
     has_futures = False
 
-import nbformat
-from nbconvert import HTMLExporter, RSTExporter
-from nbconvert.preprocessors import ExecutePreprocessor
 
 init()
 
@@ -44,7 +45,7 @@ for dname in [EXECUTED_DIR, DST_DIR]:
 
 
 def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
-    '''
+    """
     Execute notebook in `src` and write the output to `dst`
 
     Parameters
@@ -59,7 +60,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     Returns
     -------
     dst: str
-    '''
+    """
     with io.open(src, encoding='utf-8') as f:
         nb = nbformat.read(f, as_version=4)
 
@@ -74,7 +75,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
 
 
 def convert(src, dst, to='rst'):
-    '''
+    """
     Convert a notebook `src`.
 
     Parameters
@@ -83,7 +84,7 @@ def convert(src, dst, to='rst'):
         filepaths
     to: {'rst', 'html'}
         format to export to
-    '''
+    """
     dispatch = {'rst': RSTExporter, 'html': HTMLExporter}
     exporter = dispatch[to.lower()]()
 
@@ -111,8 +112,16 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
     os.chdir(SOURCE_DIR)
     name = os.path.basename(nb)
     dst = os.path.join(EXECUTED_DIR, name)
-    update_needed = True
-    if skip_existing and os.path.exists(dst):
+    hash_file = f"{os.path.splitext(dst)[0]}.json"
+    existing_hash = ""
+    if os.path.exists(hash_file):
+        with open(hash_file, encoding="utf-8") as hf:
+            existing_hash = json.load(hf)
+    with io.open(nb, mode="rb") as f:
+        current_hash = hashlib.sha512(f.read()).hexdigest()
+    update_needed = existing_hash != current_hash
+
+    if skip_existing and os.path.exists(dst) and not update_needed:
         update_needed = (os.path.getmtime(dst) <= os.path.getmtime(nb))
         if not update_needed:
             print('Skipping {0}'.format(nb))
@@ -131,6 +140,8 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
                 raise
 
     if execute_only:
+        with open(hash_file, encoding="utf-8", mode="w") as hf:
+            json.dump(current_hash, hf)
         return dst
 
     dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
@@ -142,7 +153,8 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
         msg = ('Could not find kernel named `%s`, Available kernels:\n %s'
                % kernel_name, kernels)
         raise ValueError(msg)
-
+    with open(hash_file, encoding="utf-8", mode="w") as hf:
+        json.dump(current_hash, hf)
     return dst
 
 

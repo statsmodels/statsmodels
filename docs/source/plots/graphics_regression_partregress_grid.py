@@ -7,10 +7,11 @@ regression plots.
 
 '''
 
-from statsmodels.graphics.regressionplots import plot_partregress_grid
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from statsmodels.graphics.regressionplots import plot_partregress_grid
 
 fig = plt.figure(figsize=(8, 6))
 crime_data = sm.datasets.statecrime.load_pandas()

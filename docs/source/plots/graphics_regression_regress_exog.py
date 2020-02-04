@@ -11,8 +11,9 @@ and CCPR plot for poverty rate.
 
 '''
 
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 fig = plt.figure(figsize=(8, 6))

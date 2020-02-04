@@ -13,13 +13,14 @@
 # serve to show the default.
 
 import contextlib
+from distutils.version import LooseVersion
 import os
-import sys
-import yaml
 from os.path import dirname, join
+import sys
+
+import yaml
 
 import sphinx_material
-
 from statsmodels import __version__
 
 # -- Monkey Patch ----------------------------------------------------------
@@ -95,7 +96,6 @@ autoclass_content = 'class'
 #
 
 release = __version__
-from distutils.version import LooseVersion
 
 lv = LooseVersion(release)
 commit = ''

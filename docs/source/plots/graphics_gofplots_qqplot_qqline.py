@@ -3,8 +3,9 @@
     x-axis and household income on y-axis.  Use qqline to add regression line
     into the plot.
 '''
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
+
+import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqline
 
 foodexp = sm.datasets.engel.load(as_pandas=False)

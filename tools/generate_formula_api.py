@@ -11,8 +11,8 @@ usage
 generate_formula_api /home/skipper/statsmodels/statsmodels/
 """
 
-import sys
 import os
+import sys
 
 
 def iter_subclasses(cls, _seen=None, template_classes=[]):

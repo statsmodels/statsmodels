@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+from itertools import product
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from itertools import product
-import matplotlib.pyplot as plt
+
 from statsmodels.graphics.mosaicplot import mosaic
 
 # The most simple use case is to take a dictionary and plot the result

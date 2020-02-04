@@ -5,8 +5,9 @@
     another type of correlation, for example Pearson (linear) and Spearman,
     Kendall (nonlinear) correlations) for the same variables.
 '''
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
 
 hie_data = sm.datasets.randhie.load_pandas()

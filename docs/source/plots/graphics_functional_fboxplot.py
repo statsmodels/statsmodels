@@ -10,9 +10,11 @@ Author: Ralf Gommers
 #Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
 #surface temperature data.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
+
 data = sm.datasets.elnino.load(as_pandas=False)
 
 #Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
