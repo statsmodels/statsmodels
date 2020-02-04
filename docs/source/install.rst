@@ -15,7 +15,7 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.5, 3.6 and 3.7.
+statsmodels supports Python 3.6, 3.7 and 3.8.
 
 Anaconda
 --------
