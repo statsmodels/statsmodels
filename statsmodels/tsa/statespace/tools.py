@@ -928,6 +928,8 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
     endog : array_like
         Sample data on which to compute sample autocovariances. Shaped
         `nobs` x `k_endog`.
+    maxlag : int
+        Maximum lag to use when computing the sample autocovariances.
 
     Returns
     -------
@@ -950,8 +952,8 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
     References
     ----------
     .. [*] Wei, William. 1990.
-        Time Series Analysis : Univariate and Multivariate Methods.
-       Boston: Pearson.
+       Time Series Analysis : Univariate and Multivariate Methods. Boston:
+       Pearson.
     """
     # Get the (demeaned) data as an array
     endog = np.array(endog)

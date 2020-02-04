@@ -6,7 +6,6 @@ dist: bionic
 language: python
 cache:
   - directories:
-    - $HOME/.cache/pip
     - $TRAVIS_BUILD_DIR/docs/source/datasets/generated
     - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
 
