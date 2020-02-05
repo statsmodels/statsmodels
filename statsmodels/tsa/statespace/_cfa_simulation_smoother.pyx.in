@@ -141,6 +141,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         # for linalg.cholesky_banded for details of the storage format
         cdef:
             int t, i, j, rows, ld, info
+            int reset_missing = 0
             int inc = 1
             {{cython_type}} alpha = 1.0
             {{cython_type}} beta = 0.0
@@ -169,6 +170,12 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         for t in range(self.model.nobs):
             # Update the model representation to the current time point
             self.model.seek(t, False, False)
+
+            # Check if we need to reset arrays based on Z for missing data
+            reset_missing = 0
+            if t > 0:
+                for i in range(self.model.k_endog):
+                    reset_missing = reset_missing + (not self.model.missing[i,t] == self.model.missing[i, t - 1])
 
             # Invert selected_state_cov
             # (again, we actually need the inverse itself)
@@ -204,10 +211,10 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                 blas.{{prefix}}axpy(&self.model._k_states2, &alpha, self._TQiT, &inc, self._TQiTpQ, &inc)
 
             # Z (Hi) Z
-            if t == 0 or time_varying_design or time_varying_obs_cov:
+            if t == 0 or reset_missing or time_varying_design or time_varying_obs_cov:
 
                 # Cholesky of obs_cov
-                if t == 0 or time_varying_obs_cov:
+                if t == 0 or reset_missing or time_varying_obs_cov:
                     blas.{{prefix}}copy(&self.model._k_endog2, self.model._obs_cov, &inc, self._obs_cov_fac, &inc)
                     lapack.{{prefix}}potrf("L", &self.model._k_endog, self._obs_cov_fac, &self.model._k_endog, &info)
                     if info > 0:
@@ -218,13 +225,13 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                 # HiZ = Hi Z
                 blas.{{prefix}}copy(&self.model._k_endogstates, self.model._design, &inc, self._HiZ, &inc)
                 lapack.{{prefix}}potrs("L", &self.model._k_endog, &self.model._k_states,
-                                       self._obs_cov_fac, &self.model.k_endog,
-                                       self._HiZ, &self.model.k_endog, &info)
+                                       self._obs_cov_fac, &self.model._k_endog,
+                                       self._HiZ, &self.model._k_endog, &info)
 
                 # ZHiZ = Z.T @ HiZ
                 blas.{{prefix}}gemm("T", "N", &self.model._k_states, &self.model._k_states, &self.model._k_endog,
                                     &alpha, self.model._design, &self.model._k_endog,
-                                        self._HiZ, &self.model.k_endog,
+                                        self._HiZ, &self.model._k_endog,
                                     &beta, self._ZHiZ, &self.model.k_states)
 
             # Fill in K and posterior_cov_inv_chol (which is right now just
@@ -281,12 +288,15 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                                     &alpha, &self.prior_mean[0, t], &inc)
 
             # (Hi Z)' (y - d)
-            blas.{{prefix}}copy(&self.model._k_endog, &self.model.obs[0, t], &inc, &self.ymd[0], &inc)
-            blas.{{prefix}}axpy(&self.model._k_endog, &gamma, self.model._obs_intercept, &inc, &self.ymd[0], &inc)
-            blas.{{prefix}}gemv("T", &self.model._k_endog, &self.model._k_states,
-                                    &alpha, self._HiZ, &self.model.k_endog,
-                                            &self.ymd[0], &inc,
-                                    &beta, &self.posterior_mean[0, t], &inc)
+            if self.model.nmissing[t] == self.model.k_endog:
+                self.posterior_mean[:, t] = 0
+            else:
+                blas.{{prefix}}copy(&self.model._k_endog, self.model._obs, &inc, &self.ymd[0], &inc)
+                blas.{{prefix}}axpy(&self.model._k_endog, &gamma, self.model._obs_intercept, &inc, &self.ymd[0], &inc)
+                blas.{{prefix}}gemv("T", &self.model._k_endog, &self.model._k_states,
+                                         &alpha, self._HiZ, &self.model._k_endog,
+                                                &self.ymd[0], &inc,
+                                         &beta, &self.posterior_mean[0, t], &inc)
 
         # Orders of sparse matrices
         order = self.model.nobs * self.model.k_states
