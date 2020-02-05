@@ -5,6 +5,11 @@
 """
 "Cholesky Factor Algorithm" (CFA) simulation smoothing
 
+TODO:
+
+- Allow fewer simulations than nobs / unlimited simulations in time-varying
+  case
+
 References
 ----------
 .. [*] McCausland, William J., Shirley Miller, and Denis Pelletier.
@@ -85,6 +90,12 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         self.model = model
         self.order = self.model.nobs * self.model.k_states
         self.lower_bandwidth = 2 * self.model.k_states - 1
+
+        # Validate that our model is acceptable
+        if self.model.nobs == 1:
+            # TODO: this is probably easily fixable
+            raise NotImplementedError('Cannot use CFA simulation smoothing'
+                                      ' with a single observation.')
 
         # Posterior mean vector
         # Note: we'll define this as two-dimensional, although we'll want to
