@@ -7,6 +7,7 @@ License: Simplified-BSD
 
 import numpy as np
 from .kalman_smoother import KalmanSmoother
+from .cfa_simulation_smoother import CFASimulationSmoother
 from . import tools
 
 SIMULATION_STATE = 0x01
@@ -199,7 +200,7 @@ class SimulationSmoother(KalmanSmoother):
             simulated_state[:, :nsimulations].T
         )
 
-    def simulation_smoother(self, simulation_output=None,
+    def simulation_smoother(self, simulation_output=None, cfa=False,
                             results_class=None, prefix=None, **kwargs):
         r"""
         Retrieve a simulation smoother for the statespace model.
@@ -209,6 +210,10 @@ class SimulationSmoother(KalmanSmoother):
         simulation_output : int, optional
             Determines which simulation smoother output is calculated.
             Default is all (including state and disturbances).
+        cfa : bool, optional
+            Whether or not to use the Cholesky factor algorithm simulation
+            smoother. Is not applicable to all state space models, but can be
+            faster for the cases in which it is supported.
         simulation_smooth_results_class : class, optional
             Default results class to use to save output of simulation
             smoothing. Default is `SimulationSmoothResults`. If specified,
@@ -223,6 +228,12 @@ class SimulationSmoother(KalmanSmoother):
         -------
         SimulationSmoothResults
         """
+        # Short-circuit for CFA
+        if cfa:
+            if simulation_output not in [None, 1, -1]:
+                raise ValueError('Can only retrieve simulations of the state'
+                                 ' vector using the CFA simulation smoother.')
+            return CFASimulationSmoother(self)
 
         # Set the class to be the default results class, if None provided
         if results_class is None:

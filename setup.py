@@ -172,6 +172,7 @@ statespace_exts = [
     'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
     'statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx.in',
     'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
+    'statsmodels/tsa/statespace/_cfa_simulation_smoother.pyx.in',
     'statsmodels/tsa/statespace/_tools.pyx.in',
 ]
 

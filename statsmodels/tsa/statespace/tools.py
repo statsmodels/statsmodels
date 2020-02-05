@@ -12,7 +12,8 @@ from statsmodels.compat.pandas import Appender
 from statsmodels.tools.data import _is_using_pandas
 from scipy.linalg.blas import find_best_blas_type
 from . import (_initialization, _representation, _kalman_filter,
-               _kalman_smoother, _simulation_smoother, _tools)
+               _kalman_smoother, _simulation_smoother,
+               _cfa_simulation_smoother, _tools)
 
 
 compatibility_mode = False
@@ -47,6 +48,12 @@ prefix_simulation_smoother_map = {
     'd': _simulation_smoother.dSimulationSmoother,
     'c': _simulation_smoother.cSimulationSmoother,
     'z': _simulation_smoother.zSimulationSmoother
+}
+prefix_cfa_simulation_smoother_map = {
+    's': _cfa_simulation_smoother.sCFASimulationSmoother,
+    'd': _cfa_simulation_smoother.dCFASimulationSmoother,
+    'c': _cfa_simulation_smoother.cCFASimulationSmoother,
+    'z': _cfa_simulation_smoother.zCFASimulationSmoother
 }
 prefix_pacf_map = {
     's': _tools._scompute_coefficients_from_multivariate_pacf,
