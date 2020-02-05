@@ -6,7 +6,7 @@ dist: bionic
 language: python
 cache:
   - directories:
-    - $TRAVIS_BUILD_DIR/docs/source/datasets/generated
+    - $HOME/.cache/pip
     - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
 
 
@@ -35,6 +35,7 @@ env:
     - secure: "AzwB23FWdilHKVcEJnj57AsoY5yKTWT8cQKzsH2ih9i08wIXvZXP/Ui8XRDygV9tDKfqGVltC7HpBBDE3C4ngeMlis4uuKWlkp0O1757YQe+OdDnimuDZhrh3ILEk7xW3ab5YizjLeyv3iiBW7cNS5z8W3Yu8HeJPkr6Ck30gAA="
     - SM_CYTHON_COVERAGE=false # Run takes > 1 hour and so not feasible
     - PYTEST_OPTIONS=--skip-slow  # skip slow on travis since tested on azure
+    - XDIST_OPTS=""
 
 matrix:
   fast_finish: true
@@ -45,6 +46,7 @@ matrix:
         - BUILD_INIT=tools/ci/travis_pip.sh
         - USE_MATPLOTLIB=false
         - USE_CVXOPT=false
+        - LINT=true
     - python: 3.7
       env:
         - PYTHON=3.7
@@ -56,7 +58,6 @@ matrix:
         - PANDAS=0.25
         - NUMPY=1.17
         - SCIPY=1.3
-        - LINT=true
         - COVERAGE=true
         - PYTEST_OPTIONS=
     # Python 3.6 + legacy blas + older pandas
@@ -139,21 +140,21 @@ install:
 
 before_script:
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export XDIST_OPTS="-n 2"; fi
 
 script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
-  # docbuild and exit, if required
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
-  # Run tests
+  # docbuild or run tests
   - |
-    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        export XDIST_OPTS="-n2"
+    if [ ${DOCBUILD} = true ]; then
+      cd ${SRCDIR}/docs
+      source ${SRCDIR}/tools/ci/docbuild.sh;
     else
-        export XDIST_OPTS=""
+      echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
+      pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
     fi
-  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
-  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples ${XDIST_OPTS} ${PYTEST_OPTIONS}
+  - cd $SRCDIR
   - ./lint.sh
 
 after_success:

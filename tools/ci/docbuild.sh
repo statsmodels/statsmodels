@@ -5,10 +5,6 @@ cd "$SRCDIR"/docs
 pytest ../statsmodels/examples/tests
 
 set -e
-# Clean up
-echo '================================= Clean ================================='
-make clean
-git clean -xdf
 
 # Build documentation
 echo '========================================================================'
