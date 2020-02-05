@@ -185,7 +185,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             if (t == 0 or time_varying_transition or
                     time_varying_selected_state_cov):
                 # QiT = (RQRi) @ T
-                blas.{{prefix}}gemm("N", "N", &self.model._k_states, &self.model._k_states, &self.model._k_states,
+                blas.{{prefix}}symm("L", "L", &self.model._k_states, &self.model._k_states,
                                     &alpha, self._selected_state_cov_inv, &self.model.k_states,
                                         self.model._transition, &self.model._k_states,
                                     &beta, self._QiT, &self.model.k_states)
@@ -197,6 +197,9 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                                     &beta, self._TQiT, &self.model.k_states)
 
                 # TQiTpQ = TQiT + RQRi
+                # Note: there will not be correct entries in the upper triangle, because
+                # selected_state_cov was only set in the lower triangle. However, that's
+                # okay because we only reference the lower triangle, below
                 blas.{{prefix}}copy(&self.model._k_states2, self._selected_state_cov_inv, &inc, self._TQiTpQ, &inc)
                 blas.{{prefix}}axpy(&self.model._k_states2, &alpha, self._TQiT, &inc, self._TQiTpQ, &inc)
 
