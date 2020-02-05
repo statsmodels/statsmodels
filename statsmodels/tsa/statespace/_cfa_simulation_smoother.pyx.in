@@ -152,6 +152,8 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             int time_varying_transition = self.model.transition.shape[2] > 1
             int time_varying_selected_state_cov = self.model.selection.shape[2] > 1 or self.model.state_cov.shape[2] > 1
 
+        self.model.seek(0, False, False)
+
         # Invert initial state covariance matrix
         # (we actually need the inverse here)
         blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
