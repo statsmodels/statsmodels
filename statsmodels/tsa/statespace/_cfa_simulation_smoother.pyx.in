@@ -144,6 +144,56 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         self._HiZ = &self.HiZ[0, 0]
         self._ymd = &self.ymd[0]
 
+    def __reduce__(self):
+        args = (self.model,)
+        state = {'order': self.order,
+                 'lower_bandwidth': self.lower_bandwidth,
+                 'prior_mean': np.array(self.prior_mean, copy=True, order='F'),
+                 'posterior_mean': np.array(self.posterior_mean, copy=True, order='F'),
+                 'posterior_cov_inv_chol': np.array(self.posterior_cov_inv_chol, copy=True, order='F'),
+                 'K': np.array(self.K, copy=True, order='F'),
+                 'initial_state_cov_inv': np.array(self.initial_state_cov_inv, copy=True, order='F'),
+                 'obs_cov_fac': np.array(self.obs_cov_fac, copy=True, order='F'),
+                 'selected_state_cov_inv': np.array(self.selected_state_cov_inv, copy=True, order='F'),
+                 'QiT': np.array(self.QiT, copy=True, order='F'),
+                 'TQiT': np.array(self.TQiT, copy=True, order='F'),
+                 'TQiTpQ': np.array(self.TQiTpQ, copy=True, order='F'),
+                 'ZHiZ': np.array(self.ZHiZ, copy=True, order='F'),
+                 'HiZ': np.array(self.HiZ, copy=True, order='F'),
+                 'ymd': np.array(self.ymd, copy=True, order='F'),
+                 }
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.order = state['order']
+        self.lower_bandwidth = state['lower_bandwidth']
+        self.prior_mean = state['prior_mean']
+        self.posterior_mean = state['posterior_mean']
+        self.posterior_cov_inv_chol = state['posterior_cov_inv_chol']
+        self.K = state['K']
+        self.initial_state_cov_inv = state['initial_state_cov_inv']
+        self.obs_cov_fac = state['obs_cov_fac']
+        self.selected_state_cov_inv = state['selected_state_cov_inv']
+        self.QiT = state['QiT']
+        self.TQiT = state['TQiT']
+        self.TQiTpQ = state['TQiTpQ']
+        self.ZHiZ = state['ZHiZ']
+        self.HiZ = state['HiZ']
+        self.ymd = state['ymd']
+        self._reinitialize_pointers()
+
+    cdef void _reinitialize_pointers(self) except *:
+        self._K = &self.K[0, 0]
+        self._initial_state_cov_inv = &self.initial_state_cov_inv[0, 0]
+        self._obs_cov_fac = &self.obs_cov_fac[0, 0]
+        self._selected_state_cov_inv = &self.selected_state_cov_inv[0, 0]
+
+        self._QiT = &self.QiT[0, 0]
+        self._TQiT = &self.TQiT[0, 0]
+        self._TQiTpQ = &self.TQiTpQ[0, 0]
+        self._ZHiZ = &self.ZHiZ[0, 0]
+        self._HiZ = &self.HiZ[0, 0]
+        self._ymd = &self.ymd[0]
 
     cpdef int update_sparse_posterior_moments(self) except *:
         # Update the computation of posterior moments for the entire state
