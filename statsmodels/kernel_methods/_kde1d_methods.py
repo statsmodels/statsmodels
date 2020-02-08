@@ -157,7 +157,7 @@ class KDE1DMethod(KDEMethod):
 
     def __init__(self):
         KDEMethod.__init__(self)
-        self._kernel = kernels.normal1d()
+        self._kernel = kernels.Gaussian1D()
 
     @property
     def axis_type(self):
@@ -1513,7 +1513,7 @@ class Reflection1D(KDE1DMethod):
 
 class Renormalization(Cyclic1D):
     r"""
-    This method consists in using the normal kernel method, but renormalize
+    This method consists in using the Gaussian kernel method, but renormalize
     to only take into account the part of the kernel within the domain of the
     density.
 

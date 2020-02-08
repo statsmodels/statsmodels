@@ -144,7 +144,7 @@ class KDEnDMethod(KDEMethod):
         self._inv_bw = None
         self._det_inv_bw = None
         self.base_p2 = 10
-        self._kernel = kernels.normal()
+        self._kernel = kernels.Gaussian()
 
     def fit(self, kde, compute_bandwidth=True):
         """
