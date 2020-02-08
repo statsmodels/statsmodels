@@ -40,7 +40,7 @@ class TestBandwidth(object):
         yield self.methods, bandwidths.scotts
 
     def test_botev(self):
-        bws = np.array([bandwidths.botev()(FakeModel(v)) for v in self.vs])
+        bws = np.array([bandwidths.Botev()(FakeModel(v)) for v in self.vs])
         assert_equal(bws.shape, (3,))
         rati = bws / self.ss
         assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
@@ -169,7 +169,7 @@ class TestKDE1D(KDETester):
         k.bandwidth = 0.1
         est = k.fit()
         assert_allclose(est.bandwidth, 0.1)
-        k.bandwidth = bandwidths.botev()
+        k.bandwidth = bandwidths.Botev()
         est = k.fit()
         assert est.bandwidth > 0
 

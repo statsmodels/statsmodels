@@ -293,7 +293,7 @@ class CVFunc(object):
         raise NotImplementedError()
 
 
-class CV_IMSE(CVFunc):
+class CVIMSE(CVFunc):
     """
     Compute the integrated mean square error by cross-validation
 
@@ -340,7 +340,7 @@ class CV_IMSE(CVFunc):
             L += np.sum(vals)
         return F - 2 * L / self.LSO.nb_tests
 
-class CV_LogLikelihood(CVFunc):
+class CVLogLikelihood(CVFunc):
     """
     Compute the log-likelihood of the data by cross-validation
 
@@ -393,7 +393,7 @@ class CV_LogLikelihood(CVFunc):
         return L
 
 
-class crossvalidation(object):
+class CrossValidation(object):
     r"""
     Implement the Cross-Validation Least Square bandwidth estimation method.
 
@@ -430,7 +430,7 @@ class crossvalidation(object):
     estimate of the bandwidth.
     """
 
-    def __init__(self, func=CV_LogLikelihood, *func_args, **func_kwargs):
+    def __init__(self, func=CVLogLikelihood, *func_args, **func_kwargs):
         self.func = func
         self.func_args = func_args
         self.func_kwargs = func_kwargs

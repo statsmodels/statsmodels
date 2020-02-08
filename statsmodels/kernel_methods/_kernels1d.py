@@ -2,7 +2,7 @@ from .kernels import Kernel1D, rfftfreq, dctfreq
 from . import _cy_kernels
 import numpy as np
 
-class tricube(Kernel1D):
+class TriCube(Kernel1D):
     r"""
     Return the kernel corresponding to a tri-cube distribution, whose expression is.
     The tri-cube function is given by:
@@ -227,7 +227,7 @@ class Epanechnikov(Kernel1D):
         z = dctfreq(N, dx)
         return _cy_kernels.epanechnikov_fft(z, out)
 
-class Epanechnikov_order4(Kernel1D):
+class EpanechnikovOrder4(Kernel1D):
     r"""
     Order 4 Epanechnikov kernel. That is:
 
@@ -256,7 +256,7 @@ class Epanechnikov_order4(Kernel1D):
         return _cy_kernels.epanechnikov_o4_pm2(xs, out)
 
 
-class normal_order4(Kernel1D):
+class GaussianOrder4(Kernel1D):
     r"""
     Order 4 Normal kernel. That is:
 
@@ -264,7 +264,7 @@ class normal_order4(Kernel1D):
 
         \phi_{[4]}(x) = \frac{3}{2} \phi(x) + \frac{1}{2} x \phi'(x) = \frac{1}{2}(3-x^2)\phi(x)
 
-    where :math:`\phi` is the normal kernel.
+    where :math:`\phi` is the Gaussian kernel.
 
     """
 

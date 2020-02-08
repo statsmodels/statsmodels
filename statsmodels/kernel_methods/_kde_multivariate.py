@@ -59,7 +59,7 @@ class Multivariate(KDEMethod):
         self.base_p2 = 16
         self._methods = {}
         self._kernels = {}
-        self._kernels_type = dict(C=kernels.normal1d(),
+        self._kernels_type = dict(C=kernels.Gaussian1D(),
                                   O=kernels.WangRyzin(),
                                   U=kernels.AitchisonAitken())
         self._methods_type = dict(C=_kde1d_methods.Unbounded1D(),

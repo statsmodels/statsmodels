@@ -78,7 +78,7 @@ class KDEMethod(object):
     :py:class:`kernels.Kernel1D` for 1D kernels. It is recommended to inherit
     one of these classes to provide numerical approximation for all methods.
 
-    By default, the kernel class is :py:class:`pyqt_fit.kernels.normal`
+    By default, the kernel class is :py:class:`pyqt_fit.kernels.Gaussian`
     """
     def __init__(self):
         self._exog = None

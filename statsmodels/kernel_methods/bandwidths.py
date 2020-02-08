@@ -146,7 +146,7 @@ def _botev_fixed_point(t, M, I, a2):
     return t - (2 * M * np.sqrt(np.pi) * f) ** (-2 / 5)
 
 
-class botev(object):
+class Botev(object):
     """
     Implementation of the KDE bandwidth selection method outline in:
 
@@ -159,7 +159,7 @@ class botev(object):
     """
     def __init__(self, N=None, **kword):
         if 'lower' in kword or 'upper' in kword:
-            print("Warning, using 'lower' and 'upper' for botev bandwidth is "
+            print("Warning, using 'lower' and 'upper' for Botev bandwidth is "
                   "deprecated. Argument is ignored")
         self.N = N
 
@@ -352,4 +352,4 @@ class Multivariate(object):
                 res[d] = float(bw)
         return res
 
-from .bw_crossvalidation import crossvalidation, CVFunc, CV_IMSE, CV_LogLikelihood, leave_some_out  # NoQA
+from .bw_crossvalidation import CrossValidation, CVFunc, CVIMSE, CVLogLikelihood, leave_some_out  # NoQA
