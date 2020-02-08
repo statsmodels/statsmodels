@@ -7,7 +7,6 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, optimize, linalg
 from .kde_utils import large_float, finite, atleast_2df, AxesType
-from ..compat.python import range
 
 def _spread(X):
     """

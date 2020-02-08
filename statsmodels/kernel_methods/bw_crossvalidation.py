@@ -1,6 +1,5 @@
 from __future__ import print_function, absolute_import, division
 import numpy as np
-from ..compat.python import range
 from scipy import optimize
 from ._grid_interpolation import GridInterpolator
 

@@ -10,9 +10,6 @@ from scipy import fftpack, integrate
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
-from ..compat.python import range, long
-from ..compat.numpy import np_meshgrid
-from ..compat.scipy import sp_integrate_nquad as nquad
 
 S2PI = np.sqrt(2 * np.pi)
 
@@ -67,7 +64,7 @@ def rfftfreq(n, d=1.0):
     array([  0.,  10.,  20.,  30.,  40.,  50.])
 
     """
-    if not isinstance(n, (int, long)):
+    if not isinstance(n, int):
         raise ValueError("n should be an integer")
     val = 1.0/(n*d)
     N = n//2 + 1
@@ -127,8 +124,8 @@ def rfftnfreq(Ns, dx=None):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
     fs.append(rfftfreq(Ns[-1], dx[-1]))
     if trans is None:
-        return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
-    grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
+        return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    grid = np.asarray(np.meshgrid(*fs, indexing='ij', sparse=False))
     return np.tensordot(trans, grid, axes=([1], [0]))
 
 def fftsamples(N, dx=1.0):
@@ -178,7 +175,7 @@ def fftnsamples(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [fftsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctfreq(N, dx=1.0):
     """
@@ -223,7 +220,7 @@ def dctnfreq(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [dctfreq(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctsamples(N, dx=1.0):
     """
@@ -267,7 +264,7 @@ def dctnsamples(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [dctsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 class Kernel1D(object):
     r"""
@@ -740,7 +737,7 @@ class KernelnD(object):
         """
         CDF of the kernel.
 
-        By default, use :py:func:`numpy.nquad` to integrate the PDF from the
+        By default, use :py:func:`scipy.integrate.nquad` to integrate the PDF from the
         lower bounds to the upper bound.
         """
         try:
@@ -757,7 +754,7 @@ class KernelnD(object):
                 if any(x <= lower for x in xs):
                     return 0
                 xs = np.minimum(xs, upper)
-                return nquad(pdf, [(lower, x) for x in xs])[0]
+                return integrate.nquad(pdf, [(lower, x) for x in xs])[0]
             self.__comp_cdf = comp_cdf
         z = np.atleast_2d(z)
         if out is None:

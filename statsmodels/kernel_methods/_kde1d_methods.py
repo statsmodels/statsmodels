@@ -1904,13 +1904,24 @@ class LinearCombination(Cyclic1D):
 
         return Grid(grid), density
 
-_Transform_doc = "Named tuple storing the three function needed to transform an axis"
-_Transform_field_docs = ["Map coordinates from the original axis to the transformed axis.",
-                         "Map coordinates from the transformed axis back to the original one.",
-                         "Derivative of the inverse transform function."]
-Transform = namedtuple('Transform', ['__call__', 'inv', 'Dinv'],
-                       doc=_Transform_doc,
-                       field_docs=_Transform_field_docs)
+# Note: We cannot use namedtuple, because we are defining __call__.
+class Transform(tuple):
+    """Named tuple storing the three function needed to transform an axis."""
+    __slots__ = ()
+    def __new__(cls, call, inv, Dinv):
+        return tuple.__new__(cls, [call, inv, Dinv])
+    @property
+    def __call__(self):
+        """Map coordinates from the original axis to the transformed axis."""
+        return self[0]
+    @property
+    def inv(self):
+        """Map coordinates from the transformed axis back to the original one."""
+        return self[1]
+    @property
+    def Dinv(self):
+        """Derivative of the inverse transform function."""
+        return self[2]
 
 def _inverse(x, out=None):
     return np.divide(1, x, out)
