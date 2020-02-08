@@ -6,12 +6,12 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport exp, sqrt, M_PI, pow, sin, cos, fabs
 from numpy.math cimport isfinite, copysign
-from math cimport erf
+
+cdef extern from "s_erf.h" nogil:
+    double sm_erf(double)
+    double sm_erfc(double)
 
 np.import_array()
-
-def sm_erf(double a):
-    return erf(a)
 
 ctypedef np.npy_float64 float64_t
 ctypedef np.npy_complex128 complex128_t
@@ -80,7 +80,7 @@ def norm1d_convolution(object z, object out = None):
     return vectorize(z, out, _norm1d_convolution)
 
 cdef float64_t _norm1d_cdf(float64_t z):
-    return erf(z/S2) / 2 + 0.5
+    return sm_erf(z/S2) / 2 + 0.5
 
 def norm1d_cdf(object z, object out = None):
     return vectorize(z, out, _norm1d_cdf)
@@ -93,8 +93,8 @@ def norm1d_pm1(object z, object out = None):
 
 cdef float64_t _norm1d_pm2(float64_t z):
     if isfinite(z):
-        return 0.5*erf(z/S2) + 0.5 - z/S2PI*exp(-z*z/2)
-    return 0.5*erf(z/S2)+0.5
+        return 0.5*sm_erf(z/S2) + 0.5 - z/S2PI*exp(-z*z/2)
+    return 0.5*sm_erf(z/S2)+0.5
 
 def norm1d_pm2(object z, object out = None):
     return vectorize(z, out, _norm1d_pm2)
