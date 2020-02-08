@@ -19,8 +19,11 @@ class TestContinuousBinning1D(object):
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bounds = [-3, 3]
 
-    @pytest.mark.parametrize("fct,M,bin_type,weighted",
-                             product(binfcts, (64, 128, 159), 'CRB', [True, False]))
+
+    @pytest.mark.parametrize("fct", binfcts)
+    @pytest.mark.parametrize("M", (64, 128, 159))
+    @pytest.mark.parametrize("bin_type", list('CRB'))
+    @pytest.mark.parametrize("weighted", [True, False])
     def test_validity(self, fct, M, bin_type, weighted):
         data = self.data
         bounds = self.bounds
@@ -107,8 +110,11 @@ class TestContinuousBinningnD(object):
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bounds = [[-3, 3]]
 
-    @pytest.mark.parametrize("fct,d,M,bin_type,weighted",
-                             product(binfcts_nd, [2, 3, 4], (16, 32, 21), 'CRB', [True, False]))
+    @pytest.mark.parametrize("fct", binfcts_nd)
+    @pytest.mark.parametrize("d", [2, 3, 4])
+    @pytest.mark.parametrize("M", (16, 32, 21))
+    @pytest.mark.parametrize("bin_type", list('CRB'))
+    @pytest.mark.parametrize("weighted", [True, False])
     def test_validity(self, fct, d, M, bin_type, weighted):
         M = (M,)*d
         data = self.data[:, :d]
@@ -203,10 +209,10 @@ class TestDiscreteBinning(object):
         cls.real_upper = cls.data.max(axis=0)
         cls.test_upper = [12, 12]
 
-    binfcts = [linbin.fast_bin, linbin.fast_linbin]
-
-    @pytest.mark.parametrize("fct,M,use_real_bounds,weighted",
-                             product(binfcts, (16, 32, 21), [True, False], [True, False]))
+    @pytest.mark.parametrize("fct,M,use_real_bounds,weighted", binfcts)
+    @pytest.mark.parametrize("M", (16, 32, 21))
+    @pytest.mark.parametrize("use_real_bounds", [True, False])
+    @pytest.mark.parametrize("weighted", [True, False])
     def test_validity_1d(self, fct, M, use_real_bounds, weighted):
         if use_real_bounds:
             bounds = [0, self.real_upper[0]]
@@ -226,9 +232,3 @@ class TestDiscreteBinning(object):
         assert len(mesh.grid[0]) == bounds[1]+1
         npt.assert_allclose(bins.sum(), size, rtol=1e-8)
 
-    #def test_validity_1d(self):
-    #    for fct, s in product([linbin.fast_bin, linbin.fast_linbin], self.sizes):
-    #        yield self.validity_1d, fct, s, [0, self.real_upper[0]], True
-    #        yield self.validity_1d, fct, s, [0, self.real_upper[0]], False
-    #        yield self.validity_1d, fct, s, [0, self.test_upper[0]], True
-    #        yield self.validity_1d, fct, s, [0, self.test_upper[0]], False

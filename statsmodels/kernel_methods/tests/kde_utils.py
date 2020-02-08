@@ -4,49 +4,7 @@ from .. import kde_methods as km
 from ..kde_utils import Grid
 from scipy import stats, linalg
 from .. import kernels
-from ...compat.numpy import NumpyVersion
 import scipy
-
-class SpMultivariateNormal(object):
-    """
-    minimal version of multivariate_normal that just handle rvs and pdf with a covariance matrix
-    """
-    def __init__(self, mean=None, cov=1):
-        cov = np.atleast_2d(cov)
-        if cov.ndim != 2 or np.any(cov != cov.T):
-            raise ValueError("The covariance matrix must be a symmetric, positive, matrix")
-        if mean is None:
-            mean = np.array([0.]*cov.shape[0])
-        else:
-            mean = np.atleast_1d(mean)
-            if mean.ndim != 1:
-                raise ValueError("The mean must be at most a 1D array")
-            if cov.shape[0] != mean.shape[0]:
-                raise ValueError("Error, the dimension of the covariance and the mean must be the same")
-        self.trans = linalg.sqrtm(cov)
-        self.inv_cov = linalg.inv(cov)
-        ndim = cov.shape[0]
-        self.factor = 1. / np.sqrt((2*np.pi)**ndim * linalg.det(self.inv_cov))
-        self.ndim = ndim
-        self.norm = stats.norm(0, 1)
-        self.mean = mean[None, :]
-
-    def rvs(self, N):
-        xs = self.norm.rvs(N*self.ndim).reshape((N, self.ndim))
-        return self.mean + np.dot(xs, self.trans)
-
-    def pdf(self, xs):
-        xs = np.atleast_2d(xs)
-        if xs.ndim != 2 or xs.shape[1] != self.ndim:
-            raise ValueError("The evaluation points must have shape (N,D) or (D,), "
-                             " with D the dimension of the normal.")
-        xs = xs - self.mean
-        return self.factor * np.exp(-0.5*np.sum(xs * np.dot(xs, self.inv_cov), axis=1))
-
-if NumpyVersion(scipy.__version__) < NumpyVersion('0.14.0'):
-    multivariate_normal = SpMultivariateNormal
-else:
-    multivariate_normal = stats.multivariate_normal
 
 def generate(dist, N, low, high):
     start = dist.cdf(low)
@@ -65,75 +23,92 @@ def generate_nc(dist, N):
 def generate_multivariate(N, *dists):
     return np.vstack([d.rvs(N) for d in dists]).T
 
-def setupClass_norm(cls):
-    """
-    Setup the class for a 1D Gaussian distribution
-    """
-    cls.dist = stats.norm(0, 1)
-    cls.sizes = [128, 256, 201]
-    cls.vs = [generate(cls.dist, s, -5, 5) for s in cls.sizes]
-    cls.args = {}
-    cls.weights = [cls.dist.pdf(v) for v in cls.vs]
-    cls.adjust = [1 - ws for ws in cls.weights]
-    cls.xs = np.r_[-5:5:512j]
-    cls.lower = -5
-    cls.upper = 5
-    cls.methods = methods_1d
+class Parameters(object):
+    """Empty class to hold values."""
+    pass
 
-def setupClass_lognorm(cls):
-    cls.dist = stats.lognorm(1)
-    cls.sizes = [128, 256, 201]
-    cls.args = {}
-    cls.vs = [generate(cls.dist, s, 0.001, 20) for s in cls.sizes]
-    cls.vs = [v[v < 20] for v in cls.vs]
-    cls.xs = np.r_[0:20:512j]
-    cls.weights = [cls.dist.pdf(v) for v in cls.vs]
-    cls.adjust = [1 - ws for ws in cls.weights]
-    cls.lower = 0
-    cls.upper = 20
-    cls.methods = methods_log
+def createParams_norm():
+    """
+    Create the parameters to test using a 1D Gaussian distribution
+    """
+    params = Parameters()
+    params.dist = stats.norm(0, 1)
+    params.sizes = [128, 256, 201]
+    params.vs = [generate(params.dist, s, -5, 5) for s in params.sizes]
+    params.args = {}
+    params.weights = [params.dist.pdf(v) for v in params.vs]
+    params.adjust = [1 - ws for ws in params.weights]
+    params.xs = np.r_[-5:5:512j]
+    params.lower = -5
+    params.upper = 5
+    params.methods = methods_1d
+    return params
 
-def setupClass_normnd(cls, ndim):
+def createParams_lognorm():
     """
-    Setting up the class for a nD Gaussian distribution
+    Create the parameters to test using a 1D log normal distribution
     """
-    cls.dist = multivariate_normal(cov=np.eye(ndim))
-    cls.sizes = [32, 64, 128]
-    cls.vs = [generate_nd(cls.dist, s) for s in cls.sizes]
-    cls.weights = [cls.dist.pdf(v) for v in cls.vs]
-    cls.adjust = [1 - ws for ws in cls.weights]
-    cls.xs = [np.r_[-5:5:512j]] * ndim
-    cls.lower = [-5] * ndim
-    cls.upper = [5] * ndim
-    cls.methods = methods_nd
-    cls.args = {}
+    params = Parameters()
+    params.dist = stats.lognorm(1)
+    params.sizes = [128, 256, 201]
+    params.args = {}
+    params.vs = [generate(params.dist, s, 0.001, 20) for s in params.sizes]
+    params.vs = [v[v < 20] for v in params.vs]
+    params.xs = np.r_[0:20:512j]
+    params.weights = [params.dist.pdf(v) for v in params.vs]
+    params.adjust = [1 - ws for ws in params.weights]
+    params.lower = 0
+    params.upper = 20
+    params.methods = methods_log
+    return params
 
-def setupClass_nc(cls):
+def createParams_normnd(ndim):
     """
-    Setting up the class for a nC poisson distribution
+    Create the paramters to test using a nD Gaussian distribution
     """
-    cls.dist = stats.poisson(12)
-    cls.sizes = [128, 256, 201]
-    cls.vs = [generate_nc(cls.dist, s) for s in cls.sizes]
-    cls.weights = [cls.dist.pmf(v) for v in cls.vs]
-    cls.args = {}
-    cls.methods = methods_nc
+    params = Parameters()
+    params.dist = stats.multivariate_normal(cov=np.eye(ndim))
+    params.sizes = [32, 64, 128]
+    params.vs = [generate_nd(params.dist, s) for s in params.sizes]
+    params.weights = [params.dist.pdf(v) for v in params.vs]
+    params.adjust = [1 - ws for ws in params.weights]
+    params.xs = [np.r_[-5:5:512j]] * ndim
+    params.lower = [-5] * ndim
+    params.upper = [5] * ndim
+    params.methods = methods_nd
+    params.args = {}
+    return params
 
-def setupClass_multivariate(cls):
+def createParams_nc():
     """
-    Setting up the class with a poisson distribution and two normals
+    Create the parameters to test using  a nC poisson distribution
     """
-    cls.d1 = stats.norm(0, 3)
-    cls.d2 = stats.poisson(12)
-    cls.sizes = [64, 128, 101]
-    cls.vs = [generate_multivariate(s, cls.d1, cls.d2) for s in cls.sizes]
-    cls.weights = [cls.d1.pdf(v[:, 0]) for v in cls.vs]
-    cls.upper = [5, max(v[:, 1].max() for v in cls.vs)]
-    cls.lower = [-5, 0]
-    cls.args = {}
-    cls.methods1 = methods_1d + methods_nc + methods_nc
-    cls.methods2 = methods_nc + methods_1d + methods_nc[::-1]
-    cls.nb_methods = len(cls.methods1)
+    params = Parameters()
+    params.dist = stats.poisson(12)
+    params.sizes = [128, 256, 201]
+    params.vs = [generate_nc(params.dist, s) for s in params.sizes]
+    params.weights = [params.dist.pmf(v) for v in params.vs]
+    params.args = {}
+    params.methods = methods_nc
+    return params
+
+def createParams_multivariate():
+    """
+    Create the parameters to test using a poisson distribution and two normals
+    """
+    params = Parameters()
+    params.d1 = stats.norm(0, 3)
+    params.d2 = stats.poisson(12)
+    params.sizes = [64, 128, 101]
+    params.vs = [generate_multivariate(s, params.d1, params.d2) for s in params.sizes]
+    params.weights = [params.d1.pdf(v[:, 0]) for v in params.vs]
+    params.upper = [5, max(v[:, 1].max() for v in params.vs)]
+    params.lower = [-5, 0]
+    params.args = {}
+    params.methods1 = methods_1d + methods_nc + methods_nc
+    params.methods2 = methods_nc + methods_1d + methods_nc[::-1]
+    params.nb_methods = len(params.methods1)
+    return params
 
 test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
