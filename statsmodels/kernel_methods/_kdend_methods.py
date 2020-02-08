@@ -6,7 +6,6 @@ This module contains a set of methods to compute multivariates KDEs.
 
 import numpy as np
 from scipy import linalg
-from ..compat.python import range
 from .kde_utils import numpy_trans_method, atleast_2df, Grid
 from . import kernels
 from copy import copy as shallow_copy
