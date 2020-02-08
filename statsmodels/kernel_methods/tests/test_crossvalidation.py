@@ -30,25 +30,25 @@ class TestCV(object):
         kde_utils.setupClass_norm(cls)
 
     def loo(self, k, name):
-        k.bandwidth = bandwidths.crossvalidation()
+        k.bandwidth = bandwidths.CrossValidation()
         est = k.fit()
         assert est.bandwidth > 0
 
     def folds(self, k, name):
         imse_args = dict(use_grid=True, folding=5)
-        k.bandwidth = bandwidths.crossvalidation(**imse_args)
+        k.bandwidth = bandwidths.CrossValidation(**imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 
     def imse(self, k, name):
         imse_args = dict(use_grid=True, folding=5)
-        k.bandwidth = bandwidths.crossvalidation(bandwidths.CV_IMSE, **imse_args)
+        k.bandwidth = bandwidths.CrossValidation(bandwidths.CVIMSE, **imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 
     def sampling(self, k, name):
         imse_args = dict(sampling=100)
-        k.bandwidth = bandwidths.crossvalidation(**imse_args)
+        k.bandwidth = bandwidths.CrossValidation(**imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 

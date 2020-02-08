@@ -490,10 +490,10 @@ class Kernel1D(object):
         addition to the PDF.
         """
         if not hasattr(self, '_convolve_kernel'):
-            self._convolve_kernel = from1DPDF(self._convolution)
+            self._convolve_kernel = From1DPDF(self._convolution)
         return self._convolve_kernel
 
-class from1DPDF(Kernel1D):
+class From1DPDF(Kernel1D):
     """
     This class creates a kernel from a single function computing the PDF.
     """
@@ -508,9 +508,9 @@ class from1DPDF(Kernel1D):
 
     __call__ = pdf
 
-class normal1d(Kernel1D):
+class Gaussian1D(Kernel1D):
     """
-    1D normal density kernel with extra integrals for 1D bounded kernel estimation.
+    1D Gaussian density kernel with extra integrals for 1D bounded kernel estimation.
     """
     cut = 5.
 
@@ -520,7 +520,7 @@ class normal1d(Kernel1D):
         """
         if ndim == 1:
             return self
-        return normal(ndim)
+        return Gaussian(ndim)
 
     def pdf(self, z, out=None):
         r"""
@@ -537,7 +537,7 @@ class normal1d(Kernel1D):
 
     def convolution(self, z, out=None):
         r"""
-        Return the PDF of the normal convolution kernel, given by:
+        Return the PDF of the Gaussian convolution kernel, given by:
 
         .. math::
 
@@ -547,7 +547,7 @@ class normal1d(Kernel1D):
 
     def _pdf(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal1d.pdf`
+        Full-python implementation of :py:func:`Gaussian1D.pdf`
         """
         z = np.asarray(z)
         if out is None:
@@ -568,7 +568,7 @@ class normal1d(Kernel1D):
 
     def rfft(self, N, dx, out=None):
         """
-        Returns the FFT of the normal distribution
+        Returns the FFT of the Gaussian distribution
         """
         z = rfftfreq(N, dx)
         return self._ft(z, out)
@@ -593,7 +593,7 @@ class normal1d(Kernel1D):
 
     def dct(self, N, dx, out=None):
         """
-        Returns the FFT of the normal distribution
+        Returns the FFT of the Gaussian distribution
         """
         z = dctfreq(N, dx)
         return self._ft(z, out)
@@ -611,7 +611,7 @@ class normal1d(Kernel1D):
 
     def _cdf(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal1d.cdf`
+        Full-python implementation of :py:func:`Gaussian1D.cdf`
         """
         z = np.asarray(z)
         if out is None:
@@ -635,7 +635,7 @@ class normal1d(Kernel1D):
 
     def _pm1(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal1d.pm1`
+        Full-python implementation of :py:func:`Gaussian1D.pm1`
         """
         z = np.asarray(z)
         if out is None:
@@ -660,7 +660,7 @@ class normal1d(Kernel1D):
 
     def _pm2(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal1d.pm2`
+        Full-python implementation of :py:func:`Gaussian1D.pm2`
         """
         z = np.asarray(z, dtype=float)
         if out is None:
@@ -794,7 +794,7 @@ class KernelnD(object):
             out[:] = fftpack.dct(out, axis=a)
         return out
 
-class normal(KernelnD):
+class Gaussian(KernelnD):
     """
     Returns a function-object for the PDF of a Normal kernel of variance
     identity and average 0 in dimension ``dim``.
@@ -806,11 +806,11 @@ class normal(KernelnD):
         Return an equivalent kernel, but for `ndim` dimensions
         """
         if ndim == 1:
-            return normal1d()
-        return normal(ndim)
+            return Gaussian1D()
+        return Gaussian(ndim)
 
     def __init__(self, dim=2):
-        super(normal, self).__init__(dim)
+        super(Gaussian, self).__init__(dim)
         self.factor = 1 / np.sqrt(2 * np.pi) ** dim
 
     def pdf(self, xs, out=None):
@@ -831,7 +831,7 @@ class normal(KernelnD):
 
     def cdf(self, xs, out=None):
         """
-        Return the CDF of the normal kernel
+        Return the CDF of the Gaussian kernel
         """
         tmp = erf(xs / np.sqrt(2))
         tmp += 1
@@ -866,8 +866,8 @@ from ._kernelsnd import *  # noqa
 from ._kernelsnc import *  # noqa
 
 """ List of 1D kernels """
-kernels1D = [normal1d, tricube, Epanechnikov, Epanechnikov_order4, normal_order4]
+kernels1D = [Gaussian1D, TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4]
 """ List of nD kernels """
-kernelsnD = [normal]
+kernelsnD = [Gaussian]
 """ List of non-continuous kernels """
 kernelsNC = [AitchisonAitken, WangRyzin]

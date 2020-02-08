@@ -196,10 +196,10 @@ class TestKernels1D(object):
         kernels.rfftfreq(1.2)
 
 @attr("kernel_methods")
-class TestNormal1d(object):
+class TestGaussian1d(object):
     @classmethod
     def setUpClass(cls, lower=-np.inf):
-        cls.kernel = kernels.normal1d()
+        cls.kernel = kernels.Gaussian1D()
         test_width = cls.kernel.cut
         cls.norm_ref = stats.norm(loc=0, scale=1)
         cls.xs = np.r_[-test_width / 2:test_width / 2:17j]

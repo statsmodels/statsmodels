@@ -6,7 +6,7 @@ from .. import kernels
 from ...compat.numpy import NumpyVersion
 import scipy
 
-class sp_multivariate_normal(object):
+class SpMultivariateNormal(object):
     """
     minimal version of multivariate_normal that just handle rvs and pdf with a covariance matrix
     """
@@ -43,7 +43,7 @@ class sp_multivariate_normal(object):
         return self.factor * np.exp(-0.5*np.sum(xs * np.dot(xs, self.inv_cov), axis=1))
 
 if NumpyVersion(scipy.__version__) < NumpyVersion('0.14.0'):
-    multivariate_normal = sp_multivariate_normal
+    multivariate_normal = SpMultivariateNormal
 else:
     multivariate_normal = stats.multivariate_normal
 
@@ -66,7 +66,7 @@ def generate_multivariate(N, *dists):
 
 def setupClass_norm(cls):
     """
-    Setup the class for a 1D normal distribution
+    Setup the class for a 1D Gaussian distribution
     """
     cls.dist = stats.norm(0, 1)
     cls.sizes = [128, 256, 201]
@@ -94,7 +94,7 @@ def setupClass_lognorm(cls):
 
 def setupClass_normnd(cls, ndim):
     """
-    Setting up the class for a nD normal distribution
+    Setting up the class for a nD Gaussian distribution
     """
     cls.dist = multivariate_normal(cov=np.eye(ndim))
     cls.sizes = [32, 64, 128]
@@ -154,13 +154,13 @@ methods_nc = [test_method(km.Ordered, 1e-5, 1e-4, 1e-5, False, False),
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 
-kernels1d = [test_kernel(kernels.normal1d, 1, 1, True),
-             test_kernel(kernels.tricube, 1, 1, True),
+kernels1d = [test_kernel(kernels.Gaussian1D, 1, 1, True),
+             test_kernel(kernels.TriCube, 1, 1, True),
              test_kernel(kernels.Epanechnikov, 10, 1, True),
-             test_kernel(kernels.normal_order4, 10, 0, False),  # Bad for precision because of high frequencies
-             test_kernel(kernels.Epanechnikov_order4, 1000, 0, False)]  # Bad for precision because of high frequencies
+             test_kernel(kernels.GaussianOrder4, 10, 0, False),  # Bad for precision because of high frequencies
+             test_kernel(kernels.EpanechnikovOrder4, 1000, 0, False)]  # Bad for precision because of high frequencies
 
 kernelsnc = [test_kernel(kernels.AitchisonAitken, 1, 1, True),
              test_kernel(kernels.WangRyzin, 1, 1, True)]
 
-kernelsnd = [test_kernel(kernels.normal, 1, 1, True)]
+kernelsnd = [test_kernel(kernels.Gaussian, 1, 1, True)]
