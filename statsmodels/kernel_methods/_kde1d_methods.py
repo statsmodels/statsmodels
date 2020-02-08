@@ -33,10 +33,10 @@ References:
     estimation. Statistics and Computing 3: 135--146.
 """
 
-from __future__ import division, absolute_import, print_function
+from collections import namedtuple
 import numpy as np
 from scipy import fftpack, integrate, optimize
-from .kde_utils import make_ufunc, namedtuple, numpy_trans1d_method, numpy_trans1d, finite, AxesType, Grid
+from .kde_utils import make_ufunc, numpy_trans1d_method, numpy_trans1d, finite, AxesType, Grid
 from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from .kernels import Kernel1D

@@ -1,11 +1,9 @@
 from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
-from nose.plugins.attrib import attr
 from .. import kde
 from .. import bandwidths
 
-@attr("kernel_methods")
 class TestCV(object):
     def createKDE(self, data, method, **args):
         all_args = dict(self.args)
@@ -26,7 +24,7 @@ class TestCV(object):
         return k
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         kde_utils.setupClass_norm(cls)
 
     def loo(self, k, name):

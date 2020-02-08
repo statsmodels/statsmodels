@@ -1,6 +1,7 @@
 import numpy as np
+from collections import namedtuple
 from .. import kde_methods as km
-from ..kde_utils import namedtuple, Grid
+from ..kde_utils import Grid
 from scipy import stats, linalg
 from .. import kernels
 from ...compat.numpy import NumpyVersion

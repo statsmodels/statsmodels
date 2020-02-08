@@ -4,13 +4,12 @@
 This module contains the multi-variate KDE meta-method.
 """
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
-from ..compat.python import range
+from collections import namedtuple
 from copy import copy as shallow_copy
 from . import kernels
 from . import _kde1d_methods, _kdenc_methods
-from .kde_utils import numpy_trans_method, AxesType, namedtuple
+from .kde_utils import numpy_trans_method, AxesType
 from ._kde_methods import KDEMethod, filter_exog
 from .bandwidths import KDE1DAdaptor
 from .fast_linbin import fast_linbin_nd as fast_bin_nd
