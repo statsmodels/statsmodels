@@ -5,11 +5,9 @@ Module contained a variety of small useful functions.
 """
 
 from __future__ import division, print_function, absolute_import
-from ..compat.python import string_types, range
 import numpy as np
 import inspect
 import functools
-from .namedtuple import namedtuple  # NOQA need to be defined here
 from ._grid import Grid  # noqa
 from ._grid_interpolation import GridInterpolator  # noqa
 
@@ -248,14 +246,14 @@ def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     if output_dim <= 0:
         raise ValueError("Error, the number of output dimension must be strictly more than 0.")
     # Resolve how to get input dimension
-    if isinstance(input_dim, string_types):
+    if isinstance(input_dim, str):
         def get_input_dim(self):
             return getattr(self, input_dim)
     else:
         def get_input_dim(self):
             return input_dim
     # Resolve how to get output dimension
-    if isinstance(output_dim, string_types):
+    if isinstance(output_dim, str):
         def get_output_dim(self):
             return getattr(self, output_dim)
     else:
@@ -367,8 +365,8 @@ class AxesType(object):
         return self._types != other
 
 #
-from scipy import sqrt
 from numpy import finfo, asarray, asfarray, zeros
+from numpy.lib.scimath import sqrt
 
 _epsilon = sqrt(finfo(float).eps)
 
