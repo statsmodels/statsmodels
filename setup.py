@@ -145,6 +145,10 @@ COMPILER_DIRECTIVES = {'linetrace': CYTHON_COVERAGE}
 DEFINE_MACROS = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 
+from numpy.distutils.misc_util import get_info
+
+npymath_info = get_info("npymath")
+
 exts = dict(
     _stl={'source': 'statsmodels/tsa/_stl.pyx'},
     _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
@@ -157,16 +161,19 @@ exts = dict(
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},
-    _cy_kernels = {"name" : "statsmodels/kernel_methods/_cy_kernels.c",
-                   "depends" : [],
-                   "sources" : []},
-    _cy_fast_linbin = {"name" : "statsmodels/kernel_methods/_cy_fast_linbin.c",
-                       "depends" : [],
-                       "sources" : []},
-    _cy_grid_interpolation = {"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c",
-                              "depends" : ["statsmodels/nonparametric/grid_inter.h",
-                                           "statsmodels/nonparametric/grid_inter.pxd"],
-                              "sources" : ["statsmodels/nonparametric/grid_interp.c"]})
+    _cy_kernels = {'source' : 'statsmodels/kernel_methods/_cy_kernels.pyx',
+                    'include_dirs': ['statsmodels/kernel_methods'],
+                   'depends' : ['statsmodels/kernel_methods/s_erf.h'],
+                   'include_dirs': npymath_info['include_dirs'],
+                   'libraries': npymath_info['libraries'],
+                   'library_dirs': npymath_info['library_dirs']},
+    _cy_fast_linbin = {'source' : 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},
+    _cy_grid_interpolation = {'source' : 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx',
+                              'depends' : ['statsmodels/nonparametric/grid_inter.h',
+                                           'statsmodels/nonparametric/grid_inter.pxd'],
+                              'include_dirs': npymath_info['include_dirs'],
+                              'libraries': npymath_info['libraries'],
+                              'library_dirs': npymath_info['library_dirs']})
 
 statespace_exts = [
     'statsmodels/tsa/statespace/_initialization.pyx.in',
