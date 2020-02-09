@@ -6,7 +6,7 @@ from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
 from .kde_utils import kde_tester, datasets
-from ..kde_utils import GridInterpolator, numpy_trans1d_method
+from ..kde_utils import GridInterpolator
 
 class FakeModel(object):
     lower = -np.inf
@@ -398,4 +398,3 @@ class TestCumHazard(object):
         h_ref = -np.log(sf)
         # Only tests for sf big enough or error is too large
         npt.assert_allclose(h_comp[sel], h_ref, method.accuracy, method.accuracy)
-

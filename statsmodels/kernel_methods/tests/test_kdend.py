@@ -1,7 +1,6 @@
 import pytest
 from . import kde_utils
 from .kde_utils import kde_tester, datasets
-from .. import kde
 import numpy.testing as npt
 
 all_methods_data = kde_utils.generate_methods_data(['norm2d'])

@@ -1,7 +1,6 @@
 import pytest
 
 from . import kde_utils
-from .. import kde
 from .. import bandwidths
 from .kde_utils import kde_tester, datasets
 
@@ -35,4 +34,3 @@ class TestCV(object):
         k.bandwidth = bandwidths.CrossValidation(**imse_args)
         est = k.fit()
         assert est.bandwidth > 0
-

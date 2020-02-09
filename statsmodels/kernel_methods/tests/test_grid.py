@@ -3,7 +3,6 @@ from ..kde_utils import Grid, GridInterpolator
 import numpy as np
 import numpy.testing as npt
 from scipy.interpolate import interp2d
-import scipy
 
 class TestBasics(object):
     @classmethod
@@ -372,4 +371,3 @@ class TestInterpolation(object):
         interp_test = interp(test_values)
         interp_comp = self.np_interpolate_2d(ax1, ax2, val2, real_values)
         npt.assert_allclose(interp_test, interp_comp)
-
