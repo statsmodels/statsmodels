@@ -3,7 +3,6 @@ from .. import fast_linbin as linbin
 import numpy.testing as npt
 import pytest
 from scipy import stats
-from itertools import product
 import numpy as np
 
 binfcts = [linbin.fast_bin, linbin.fast_linbin]
@@ -229,4 +228,3 @@ class TestDiscreteBinning(object):
         assert mesh.grid[0][-1] == bounds[1]
         assert len(mesh.grid[0]) == bounds[1]+1
         npt.assert_allclose(bins.sum(), size, rtol=1e-8)
-

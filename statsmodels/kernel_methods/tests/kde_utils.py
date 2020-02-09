@@ -2,10 +2,8 @@ import pytest
 import numpy as np
 from collections import namedtuple
 from .. import kde_methods as km
-from ..kde_utils import Grid
-from scipy import stats, linalg
-from .. import kernels, kde, kde_methods
-import scipy
+from scipy import stats
+from .. import kernels, kde
 
 def generate(dist, N, low, high):
     start = dist.cdf(low)
@@ -61,7 +59,7 @@ class Parameters(object):
         self.name = name
 
     def __str__(self):
-        return 'Parameters({0}, ...)'.format(name)
+        return 'Parameters({0}, ...)'.format(self.name)
 
 dataset = namedtuple('dataset', ['vs', 'weights', 'adjust', 'lower', 'upper'])
 
@@ -76,11 +74,13 @@ def createParams_norm():
     params.xs = np.r_[-5:5:512j]
     params.methods = methods_1d
     params.can_adjust = True
+
     def create_dataset():
         vs = [generate(params.dist, s, -5, 5) for s in params.sizes]
         weights = [params.dist.pdf(v) for v in vs]
         adjust = [1 - ws for ws in weights]
         return dataset(vs, weights, adjust, lower=-5, upper=5)
+
     params.create_dataset = create_dataset
     return params
 
@@ -95,12 +95,14 @@ def createParams_lognorm():
     params.methods = methods_log
     params.xs = np.r_[0:20:512j]
     params.can_adjust = True
+
     def create_dataset():
         vs = [generate(params.dist, s, 0.001, 20) for s in params.sizes]
         vs = [v[v < 20] for v in vs]
         weights = [params.dist.pdf(v) for v in vs]
         adjust = [1 - ws for ws in weights]
         return dataset(vs, weights, adjust, lower=0, upper=20)
+
     params.create_dataset = create_dataset
     return params
 
@@ -115,10 +117,12 @@ def createParams_normnd(ndim):
     params.methods = methods_nd
     params.args = {}
     params.can_adjust = False
+
     def create_dataset():
         vs = [generate_nd(params.dist, s) for s in params.sizes]
         weights = [params.dist.pdf(v) for v in vs]
         return dataset(vs, weights, adjust=None, lower=[-5]*ndim, upper=[5]*ndim)
+
     params.create_dataset = create_dataset
     return params
 
@@ -132,10 +136,12 @@ def createParams_nc():
     params.args = {}
     params.methods = methods_nc
     params.can_adjust = False
+
     def create_dataset():
         vs = [generate_nc(params.dist, s) for s in params.sizes]
         weights = [params.dist.pmf(v) for v in vs]
         return dataset(vs, weights, adjust=None, lower=None, upper=None)
+
     params.create_dataset = create_dataset
     return params
 
@@ -153,12 +159,14 @@ def createParams_multivariate():
     params.methods = zip(params.methods1, params.methods2)
     params.nb_methods = len(params.methods1)
     params.can_adjust = False
+
     def create_dataset():
         vs = [generate_multivariate(s, params.d1, params.d2) for s in params.sizes]
         weights = [params.d1.pdf(v[:, 0]) for v in vs]
         upper = [5, max(v[:, 1].max() for v in vs)]
         lower = [-5, 0]
         return dataset(vs, weights, adjust=None, lower=lower, upper=upper)
+
     params.create_dataset = create_dataset
     return params
 
@@ -197,7 +205,7 @@ def createKDE(parameters, data, vs, method):
         else:
             del k.upper
     else:
-        mv = kde_methods.Multivariate()
+        mv = km.Multivariate()
         k.method = mv
 
         n = len(method)
@@ -287,4 +295,3 @@ def datasets(request):
             cache[name] = knownParameters[name].create_dataset()
         return cache[name]
     return make
-

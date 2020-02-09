@@ -289,4 +289,3 @@ class TestKernelnc(object):
         k = kernelnc.cls()
         dst = k.from_binned(self.mesh, self.bins, 0.2)
         assert dst.sum() <= self.ds.shape[0] + tol*kernelnc.precision_factor
-

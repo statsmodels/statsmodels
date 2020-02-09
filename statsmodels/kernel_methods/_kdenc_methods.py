@@ -274,7 +274,7 @@ class Unordered(KDEMethod):
         ----------
         """
         if self.adjust.ndim:
-            raise NotImplemented("This method cannot handle adjustments")
+            raise NotImplementedError("This method cannot handle adjustments")
         points = points[:, None]
         kpdf = self.kernel.pdf(points, self.exog, self.bandwidth, self.num_levels)
         kpdf *= self.weights
@@ -291,7 +291,7 @@ class Unordered(KDEMethod):
         compatibility with the continuous version.
         """
         if self.adjust.ndim:
-            raise NotImplemented("This method cannot handle adjustments")
+            raise NotImplementedError("This method cannot handle adjustments")
         weights = self.weights
         mesh, bins = fast_bin(self._exog, [self.lower, self.upper], self.num_levels, weights=weights, bin_type='D')
         return mesh, self.from_binned(mesh, bins, True)
