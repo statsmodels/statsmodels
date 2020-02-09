@@ -4,8 +4,6 @@
 This module contains all the methods for computing the KDE.
 """
 
-from __future__ import division, absolute_import, print_function
-
 from ._kde_methods import KDEMethod, filter_exog  # noqa
 
 def _import_methods(module):

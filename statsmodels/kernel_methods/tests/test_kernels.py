@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import, print_function
-
 import pytest
 from .. import kernels
 from scipy import stats, integrate

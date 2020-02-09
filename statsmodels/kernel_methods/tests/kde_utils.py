@@ -170,6 +170,17 @@ knownParameters = dict(
     multivariate = createParams_multivariate())
 
 def createKDE(parameters, data, vs, method):
+    """
+    Create a new KDE object.
+
+    Arguments:
+        parameters: A value stored in `knownParameters`.
+        data: an instance of `dataset`, filled properly, and consistent with
+            the parameters given.
+        vs: an ndarray containing the data points.
+        method: Either an instance of `test_method` or a list of instances (for
+            multivariate KDE), defining the methods to use for the KDE.
+    """
     all_args = dict(parameters.args)
     k = kde.KDE(vs, **all_args)
     if isinstance(method, test_method):
@@ -210,6 +221,19 @@ def createKDE(parameters, data, vs, method):
     return k
 
 def kde_tester(check):
+    """
+    Decorator for a method needing a created KDE as input.
+
+    The decorated method must accept three arguments:
+
+        1. The KDE itself, pre-built with the data.
+        2. The `test_method` object used to generate the KDE.
+        3. The `dataset` object containing the data used to generate the KDE.
+
+    The produced function is meant to be parametrized by the output of
+    `generate_methods_data`, using the list of arguments in `kde_tester_args`.
+    In addition, the `datasets` fixture must be imported in the local scope.
+    """
     def fct(self, name, datasets, index, method, with_adjust, with_weights, method_name):
         params = knownParameters[name]
         data = datasets(name)
@@ -253,6 +277,9 @@ def generate_methods_data(parameter_names, indices=None):
 
 @pytest.fixture(scope='class')
 def datasets(request):
+    """
+    Fixture generating, on demand, datasets, unique for each class.
+    """
     request.cls.datasets_cache = {}
     def make(name):
         cache = request.cls.datasets_cache

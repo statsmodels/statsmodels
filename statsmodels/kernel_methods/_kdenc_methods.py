@@ -4,7 +4,6 @@
 This modules contains a set of methods to compute KDEs on non-continuous data.
 """
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
 from .kde_utils import numpy_trans1d_method, finite
 from .fast_linbin import fast_linbin as fast_bin
