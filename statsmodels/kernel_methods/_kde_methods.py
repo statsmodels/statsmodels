@@ -4,7 +4,6 @@
 This module contains the multi-variate KDE meta-method.
 """
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
 from .kde_utils import atleast_2df, AxesType
 from . import bandwidths

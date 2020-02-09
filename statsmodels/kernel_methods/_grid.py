@@ -1,4 +1,3 @@
-from __future__ import division, print_function, absolute_import
 import numpy as np
 from numpy.lib.stride_tricks import broadcast_arrays
 

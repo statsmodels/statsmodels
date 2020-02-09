@@ -3,7 +3,6 @@ Module containing the methods to compute the bandwidth of the KDE.
 
 :Author: Barbier de Reuille, Pierre
 """
-from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, optimize, linalg
 from .kde_utils import large_float, finite, atleast_2df, AxesType

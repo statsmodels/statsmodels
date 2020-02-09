@@ -3,7 +3,7 @@ r"""
 
 Module providing a set of kernels for use within the kernel_methods package.
 """
-from __future__ import division, absolute_import, print_function
+
 import numpy as np
 from scipy.special import erf
 from scipy import fftpack, integrate
