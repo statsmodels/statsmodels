@@ -51,7 +51,7 @@ def make_ufunc(nin=None, nout=1):
     """
     def f(fct):
         if nin is None:
-            Nin = len(inspect.getargspec(fct).args)
+            Nin = len(inspect.signature(fct).parameters)
         else:
             Nin = nin
         return np.frompyfunc(fct, Nin, nout)

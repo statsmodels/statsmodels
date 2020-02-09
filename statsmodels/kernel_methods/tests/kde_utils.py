@@ -29,7 +29,7 @@ class Parameters(object):
 
 def createParams_norm():
     """
-    Create the parameters to test using a 1D Gaussian distribution
+    Create the parameters to test using a 1D Gaussian distribution dataset.
     """
     params = Parameters()
     params.dist = stats.norm(0, 1)
@@ -46,7 +46,7 @@ def createParams_norm():
 
 def createParams_lognorm():
     """
-    Create the parameters to test using a 1D log normal distribution
+    Create the parameters to test using a 1D log normal distribution dataset.
     """
     params = Parameters()
     params.dist = stats.lognorm(1)
@@ -64,7 +64,7 @@ def createParams_lognorm():
 
 def createParams_normnd(ndim):
     """
-    Create the paramters to test using a nD Gaussian distribution
+    Create the paramters to test using a nD Gaussian distribution dataset.
     """
     params = Parameters()
     params.dist = stats.multivariate_normal(cov=np.eye(ndim))
@@ -81,7 +81,7 @@ def createParams_normnd(ndim):
 
 def createParams_nc():
     """
-    Create the parameters to test using  a nC poisson distribution
+    Create the parameters to test using  a nC poisson distribution dataset.
     """
     params = Parameters()
     params.dist = stats.poisson(12)
@@ -94,7 +94,7 @@ def createParams_nc():
 
 def createParams_multivariate():
     """
-    Create the parameters to test using a poisson distribution and two normals
+    Create the parameters to test using a poisson distribution and two normals as dataset.
     """
     params = Parameters()
     params.d1 = stats.norm(0, 3)
