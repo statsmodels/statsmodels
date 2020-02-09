@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import, print_function
-
 import pytest
 from . import kde_utils
 from .. import kde, kde_methods

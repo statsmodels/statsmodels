@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import, print_function
-
 __all__ = ['kde', 'KDE', 'bandwidths', 'kde_methods', 'kernels', 'Grid', 'kde_utils']
 
 from . import kde

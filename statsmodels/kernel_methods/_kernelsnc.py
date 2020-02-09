@@ -6,7 +6,6 @@ This module contains kernels for non-continuous data.
 Unlike with continuous kernels, these ones require explicitely the evaluation point and the bandwidth.
 """
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
 
 class AitchisonAitken(object):

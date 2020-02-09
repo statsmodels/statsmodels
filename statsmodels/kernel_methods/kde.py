@@ -46,7 +46,6 @@ where :math:`\hat{K}` is a modified kernel that depends on the exact method
 used. Currently, only 1D KDE supports bounded domains.
 """
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
 from .kde_utils import atleast_2df, AxesType
 from . import kernels, bandwidths  # noqa

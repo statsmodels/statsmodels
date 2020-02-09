@@ -3,7 +3,6 @@
 
 This module defines functions to deal with binning data on regular grids.
 """
-from __future__ import division, absolute_import, print_function
 import numpy as np
 from . import _cy_fast_linbin
 from .kde_utils import Grid

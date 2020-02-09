@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import, print_function
-
 import pytest
 from ..kde_utils import Grid, GridInterpolator
 import numpy as np

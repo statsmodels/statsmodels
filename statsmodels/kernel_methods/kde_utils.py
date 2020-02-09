@@ -4,7 +4,6 @@
 Module contained a variety of small useful functions.
 """
 
-from __future__ import division, print_function, absolute_import
 import numpy as np
 import inspect
 import functools
