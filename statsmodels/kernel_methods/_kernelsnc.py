@@ -169,5 +169,5 @@ class WangRyzin(object):
         selector = [slice(None)] * mesh.ndim
         for i, level in enumerate(mesh.grid[dim]):
             selector[dim] = i
-            result[selector] += factor * np.sum(bw ** abs(grid - level) * bins, axis=dim)
+            result[tuple(selector)] += factor * np.sum(bw ** abs(grid - level) * bins, axis=dim)
         return result
