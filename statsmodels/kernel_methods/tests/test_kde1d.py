@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import, print_function
-
 import pytest
 from .. import kde, kde_methods, bandwidths
 import numpy as np
@@ -7,6 +5,7 @@ import numpy.testing as npt
 from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
+from .kde_utils import kde_tester, datasets
 from ..kde_utils import GridInterpolator, numpy_trans1d_method
 
 class FakeModel(object):
@@ -42,64 +41,13 @@ class TestBandwidth(object):
         rati = bws / bws[0]
         npt.assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
 
-def createKDE(parameters, data, method):
-    all_args = dict(parameters.args)
-    k = kde.KDE(data, **all_args)
-    if method.instance is None:
-        del k.method
-    else:
-        k.method = method.instance
-    if method.bound_low:
-        k.lower = parameters.lower
-    else:
-        del k.lower
-    if method.bound_high:
-        k.upper = parameters.upper
-    else:
-        del k.upper
-    return k
-
-parameters_norm = kde_utils.createParams_norm()
-parameters_lognorm = kde_utils.createParams_lognorm()
-
-def kde_tester(check):
-    def fct(self, parameters, index, method, with_adjust, with_weights, name):
-        k = createKDE(parameters, parameters.vs[index], method)
-        if with_adjust:
-            k.adjust = parameters.adjust[index]
-        if with_weights:
-            k.weights = parameters.weights[index]
-        # We expect a lot of division by zero, and that is fine.
-        with np.errstate(divide='ignore'):
-            check(self, k, method)
-    return fct
-
 def make_name(param_name, method):
     return "{0}_{1}".format(param_name, method.instance.name)
 
-def generate_methods_data(parameter_names):
-    result = []
-    for name in parameter_names:
-        params = globals()["parameters_" + name]
-        result += [(params, index, method, make_name(name, method))
-                    for index in range(len(params.vs))
-                    for method in params.methods]
-    return result
+all_methods_data = kde_utils.generate_methods_data(['norm', 'lognorm'])
+all_methods_small_data = kde_utils.generate_methods_data(['norm', 'lognorm'], indices=[0])
 
-all_methods_data = generate_methods_data(['norm', 'lognorm'])
-
-def generate_methods(parameter_names):
-    result = []
-    for name in parameter_names:
-        params = globals()["parameters_" + name]
-        result += [(params, 0, method, make_name(name, method)) for method in params.methods]
-    return result
-
-all_methods = generate_methods(['norm', 'lognorm'])
-
-@pytest.mark.parametrize('parameters,index,method,name', all_methods_data)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_data)
 class TestKDE1D(object):
 
     @kde_tester
@@ -134,34 +82,37 @@ class TestKDE1DExtra(object):
 
     @staticmethod
     @pytest.fixture
-    def small_kde(request):
+    def small_kde(request, datasets):
         obj = request.instance
         try:
             method = request.param
         except AttributeError:
             method = obj.method
-        return createKDE(parameters_norm, obj.small_data, method), method
+        return kde_utils.createKDE(obj.params, obj.data, obj.small_vs, method), method
 
     @staticmethod
     @pytest.fixture
-    def large_kde(request):
+    def large_kde(request, datasets):
         obj = request.instance
         try:
             method = request.param
         except AttributeError:
             method = obj.method
-        return createKDE(parameters_norm, obj.large_data, method), method
+        return kde_utils.createKDE(obj.params, obj.data, obj.large_vs, method), method
 
     @classmethod
     def setup_class(cls):
-        cls.method = parameters_norm.methods[0]
-        cls.small_data = parameters_norm.vs[0]
-        cls.large_data = parameters_norm.vs[1]
+        params = kde_utils.knownParameters['norm']
+        cls.params = params
+        cls.method = params.methods[0]
+        cls.data = params.create_dataset()
+        cls.small_vs = cls.data.vs[0]
+        cls.large_vs = cls.data.vs[1]
 
     def test_copy(self, small_kde):
         k, _ = small_kde
         k.bandwidth = bandwidths.silverman
-        xs = np.r_[parameters_norm.xs.min():parameters_norm.xs.max():512j]
+        xs = np.r_[self.params.xs.min():self.params.xs.max():512j]
         est = k.fit()
         ys = est(xs)
         k1 = k.copy()
@@ -201,18 +152,18 @@ class TestKDE1DExtra(object):
         npt.assert_allclose(tot, 1, rtol=acc, atol=acc)
         npt.assert_equal(type(est.kernel), type(k.kernel.for_ndim(1)))
 
-    @pytest.mark.parametrize('small_kde', parameters_norm.methods, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
     def test_bad_set_axis(self, small_kde):
         k, _ = small_kde
         with pytest.raises(ValueError):
             k.method.axis_type = 'O'
 
-    @pytest.mark.parametrize('small_kde', parameters_norm.methods, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
     def test_set_axis(self, small_kde):
         k, _ = small_kde
         k.method.axis_type = 'C'
 
-    @pytest.mark.parametrize('small_kde', parameters_norm.methods, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
     def test_force_span(self, small_kde):
         k, m = small_kde
         est = k.fit()
@@ -236,7 +187,7 @@ class TestKDE1DExtra(object):
             k.fit()
 
     def test_bad_axis_type(self):
-        k = kde.KDE(self.small_data, method=kde_methods.Reflection1D, axis_type='O')
+        k = kde.KDE(self.small_vs, method=kde_methods.Reflection1D, axis_type='O')
         with pytest.raises(ValueError):
             k.fit()
 
@@ -244,9 +195,9 @@ class TestKDE1DExtra(object):
         k, _ = small_kde
         est = k.fit()
         xs1, ys1 = est.grid()
-        est.exog = self.small_data*3
+        est.exog = self.small_vs*3
         xs2, ys2 = est.grid()
-        est.exog = self.small_data
+        est.exog = self.small_vs
         xs3, ys3 = est.grid()
 
         assert sum((ys1 - ys2)**2) > 0
@@ -254,54 +205,54 @@ class TestKDE1DExtra(object):
         npt.assert_allclose(xs1.full(), xs3.full(), rtol=1e-8, atol=1e-8)
 
     def test_bad_change_exog(self):
-        k = createKDE(parameters_norm, self.small_data, self.method)
+        k = kde_utils.createKDE(self.params, self.data, self.small_vs, self.method)
         est = k.fit()
         with pytest.raises(ValueError):
-            est.exog = self.large_data
+            est.exog = self.large_vs
 
-    @pytest.mark.parametrize('large_kde', parameters_norm.methods, indirect=True)
+    @pytest.mark.parametrize('large_kde', kde_utils.methods_1d, indirect=True)
     def test_update_inputs(self, large_kde):
         k, m = large_kde
-        k.weights = parameters_norm.weights[1]
-        k.adjust = parameters_norm.adjust[1]
+        k.weights = self.data.weights[1]
+        k.adjust = self.data.adjust[1]
         est = k.fit()
-        est.update_inputs(parameters_norm.vs[1][:-5],
-                          weights=parameters_norm.weights[1][:-5],
-                          adjust=parameters_norm.adjust[1][:-5])
+        est.update_inputs(self.data.vs[1][:-5],
+                          weights=self.data.weights[1][:-5],
+                          adjust=self.data.adjust[1][:-5])
         xs, ys = est.grid()
         tot = xs.integrate(ys)
         npt.assert_allclose(tot, 1, rtol=m.grid_accuracy, atol=m.grid_accuracy)
 
-    @pytest.mark.parametrize('large_kde', parameters_norm.methods, indirect=True)
+    @pytest.mark.parametrize('large_kde', kde_utils.methods_1d, indirect=True)
     def test_bad_update_inputs1(self, large_kde):
         k, _ = large_kde
-        k.weights = parameters_norm.weights[1]
-        k.adjust = parameters_norm.adjust[1]
+        k.weights = self.data.weights[1]
+        k.adjust = self.data.adjust[1]
         est = k.fit()
         with pytest.raises(ValueError):
-            est.update_inputs(parameters_norm.vs[1][:-5],
-                              weights=parameters_norm.weights[1],
-                              adjust=parameters_norm.adjust[1][:-5])
+            est.update_inputs(self.data.vs[1][:-5],
+                              weights=self.data.weights[1],
+                              adjust=self.data.adjust[1][:-5])
 
     def test_bad_update_inputs2(self, large_kde):
         k, _ = large_kde
-        k.weights = parameters_norm.weights[1]
-        k.adjust = parameters_norm.adjust[1]
+        k.weights = self.data.weights[1]
+        k.adjust = self.data.adjust[1]
         est = k.fit()
         with pytest.raises(ValueError):
-            est.update_inputs(parameters_norm.vs[1][:-5],
-                              weights=parameters_norm.weights[1][:-5],
-                              adjust=parameters_norm.adjust[1])
+            est.update_inputs(self.data.vs[1][:-5],
+                              weights=self.data.weights[1][:-5],
+                              adjust=self.data.adjust[1])
 
     def test_bad_update_inputs3(self, large_kde):
         k, _ = large_kde
-        k.weights = parameters_norm.weights[1]
-        k.adjust = parameters_norm.adjust[1]
+        k.weights = self.data.weights[1]
+        k.adjust = self.data.adjust[1]
         est = k.fit()
         with pytest.raises(ValueError):
             est.update_inputs([[1, 2], [2, 3], [3, 4]],
-                              weights=parameters_norm.weights[1][:-5],
-                              adjust=parameters_norm.adjust[1])
+                              weights=self.data.weights[1][:-5],
+                              adjust=self.data.adjust[1])
 
     def test_transform(self):
         tr = kde_methods.create_transform(np.log, np.exp)
@@ -329,9 +280,7 @@ class TestKDE1DExtra(object):
             kde_methods.create_transform(np.log)
 
 
-@pytest.mark.parametrize('parameters,index,method,name', all_methods)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestSF(object):
     @kde_tester
     def test_method_works(self, k, method):
@@ -348,9 +297,7 @@ class TestSF(object):
         _, cdf = est.cdf_grid()
         npt.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
 
-@pytest.mark.parametrize('parameters,index,method,name', all_methods)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestISF(object):
 
     @kde_tester
@@ -372,9 +319,7 @@ class TestISF(object):
         acc = max(method.grid_accuracy, method.normed_accuracy)
         npt.assert_allclose(comp_sf, ref_sf, acc, acc)
 
-@pytest.mark.parametrize('parameters,index,method,name', all_methods)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestICDF(object):
 
     @kde_tester
@@ -397,9 +342,7 @@ class TestICDF(object):
         npt.assert_allclose(comp_cdf, ref_cdf, acc, acc)
 
 
-@pytest.mark.parametrize('parameters,index,method,name', all_methods)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestHazard(object):
 
     @kde_tester
@@ -429,9 +372,7 @@ class TestHazard(object):
         npt.assert_allclose(h_comp[sel], h_ref, method.accuracy, method.accuracy)
 
 
-@pytest.mark.parametrize('parameters,index,method,name', all_methods)
-@pytest.mark.parametrize('with_adjust', [False, True])
-@pytest.mark.parametrize('with_weights', [False, True])
+@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestCumHazard(object):
 
     @kde_tester
