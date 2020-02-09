@@ -345,7 +345,7 @@ class Grid(object):
         if self._ndim == 1:
             return self._grid[0]
         m = broadcast_arrays(*np.meshgrid(*self._grid, indexing='ij', sparse='True', copy='False'))
-        if order is 'C':
+        if order == 'C':
             return np.asarray(m)
         return np.concatenate([mm[..., None] for mm in m], axis=-1)
 

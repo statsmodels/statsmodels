@@ -33,7 +33,6 @@ References:
     estimation. Statistics and Computing 3: 135--146.
 """
 
-from collections import namedtuple
 import numpy as np
 from scipy import fftpack, integrate, optimize
 from .kde_utils import make_ufunc, numpy_trans1d_method, numpy_trans1d, finite, AxesType, Grid

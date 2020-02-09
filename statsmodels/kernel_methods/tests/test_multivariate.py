@@ -1,7 +1,5 @@
 import pytest
 from . import kde_utils
-from .. import kde, kde_methods
-import numpy as np
 import numpy.testing as npt
 from .kde_utils import kde_tester, datasets
 
