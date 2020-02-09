@@ -22,7 +22,7 @@ class TestContinuousBinning1D(object):
 
     @pytest.mark.parametrize("fct", binfcts)
     @pytest.mark.parametrize("M", (64, 128, 159))
-    @pytest.mark.parametrize("bin_type", list('CRB'))
+    @pytest.mark.parametrize("bin_type", 'CRB')
     @pytest.mark.parametrize("weighted", [True, False])
     def test_validity(self, fct, M, bin_type, weighted):
         data = self.data
@@ -113,7 +113,7 @@ class TestContinuousBinningnD(object):
     @pytest.mark.parametrize("fct", binfcts_nd)
     @pytest.mark.parametrize("d", [2, 3, 4])
     @pytest.mark.parametrize("M", (16, 32, 21))
-    @pytest.mark.parametrize("bin_type", list('CRB'))
+    @pytest.mark.parametrize("bin_type", 'CRB')
     @pytest.mark.parametrize("weighted", [True, False])
     def test_validity(self, fct, d, M, bin_type, weighted):
         M = (M,)*d
@@ -209,7 +209,7 @@ class TestDiscreteBinning(object):
         cls.real_upper = cls.data.max(axis=0)
         cls.test_upper = [12, 12]
 
-    @pytest.mark.parametrize("fct,M,use_real_bounds,weighted", binfcts)
+    @pytest.mark.parametrize("fct", binfcts)
     @pytest.mark.parametrize("M", (16, 32, 21))
     @pytest.mark.parametrize("use_real_bounds", [True, False])
     @pytest.mark.parametrize("weighted", [True, False])
