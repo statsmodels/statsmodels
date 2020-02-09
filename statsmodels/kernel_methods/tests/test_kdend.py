@@ -10,7 +10,7 @@ all_methods_data = kde_utils.generate_methods_data(['norm2d'])
 class TestKDE2D(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         """
         Enure the sum of the kernel over its domain is unity
         """
@@ -24,7 +24,7 @@ class TestKDE2D(object):
         npt.assert_equal(est.adjust, 1.)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         """
         Enure the sum of the kernel over its domain is unity
         """

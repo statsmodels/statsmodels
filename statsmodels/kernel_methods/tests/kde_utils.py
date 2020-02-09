@@ -4,7 +4,7 @@ from collections import namedtuple
 from .. import kde_methods as km
 from ..kde_utils import Grid
 from scipy import stats, linalg
-from .. import kernels, kde
+from .. import kernels, kde, kde_methods
 import scipy
 
 def generate(dist, N, low, high):
@@ -150,6 +150,7 @@ def createParams_multivariate():
     params.args = {}
     params.methods1 = methods_1d + methods_nc + methods_nc
     params.methods2 = methods_nc + methods_1d + methods_nc[::-1]
+    params.methods = zip(params.methods1, params.methods2)
     params.nb_methods = len(params.methods1)
     params.can_adjust = False
     def create_dataset():
@@ -171,18 +172,41 @@ knownParameters = dict(
 def createKDE(parameters, data, vs, method):
     all_args = dict(parameters.args)
     k = kde.KDE(vs, **all_args)
-    if method.instance is None:
-        del k.method
+    if isinstance(method, test_method):
+        if method.instance is None:
+            del k.method
+        else:
+            k.method = method.instance
+        if method.bound_low:
+            k.lower = data.lower
+        else:
+            del k.lower
+        if method.bound_high:
+            k.upper = data.upper
+        else:
+            del k.upper
     else:
-        k.method = method.instance
-    if method.bound_low:
-        k.lower = data.lower
-    else:
-        del k.lower
-    if method.bound_high:
-        k.upper = data.upper
-    else:
-        del k.upper
+        mv = kde_methods.Multivariate()
+        k.method = mv
+
+        n = len(method)
+        axis_type = ''
+        lower = [-np.inf]*n
+        upper = [np.inf]*n
+        for i, m in enumerate(method):
+            method_instance = m.instance()
+            mv.methods[i] = method_instance
+            axis_type += str(method_instance.axis_type)
+            if method_instance.axis_type != 'C':
+                vs[:, i] = np.round(vs[:, i])
+            if m.bound_low:
+                lower[i] = data.lower[i]
+            if m.bound_high:
+                upper[i] = data.upper[i]
+        k.exog = vs
+        k.axis_type = axis_type
+        k.lower = lower
+        k.upper = upper
     return k
 
 def kde_tester(check):
@@ -196,13 +220,15 @@ def kde_tester(check):
             k.weights = data.weights[index]
         # We expect a lot of division by zero, and that is fine.
         with np.errstate(divide='ignore'):
-            check(self, k, method)
+            check(self, k, method, data)
     return fct
 
 kde_tester_args = 'name,index,method,with_adjust,with_weights,method_name'
 
-def make_name(param_name, method):
-    return "{0}_{1}".format(param_name, method.instance.name)
+def make_name(method):
+    if isinstance(method, test_method):
+        return method.instance.name
+    return ":".join(m.instance.name for m  in method)
 
 def generate_methods_data(parameter_names, indices=None):
     """Generate the set of parameters needed to create tests for all these types of distributions."""
@@ -218,7 +244,7 @@ def generate_methods_data(parameter_names, indices=None):
             except (KeyError, TypeError):
                 local_indices = indices
         adjusts = [False, True] if params.can_adjust else [False]
-        result += [(name, index, method, with_adjust, with_weights, method.instance.name)
+        result += [(name, index, method, with_adjust, with_weights, make_name(method))
                     for index in local_indices
                     for method in params.methods
                     for with_adjust in adjusts

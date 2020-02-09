@@ -10,7 +10,7 @@ all_methods_data = kde_utils.generate_methods_data(['nc'])
 class TestNonContinuous(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         k.axis_type = k.method.axis_type
         k.bandwidth = 0.2
         est = k.fit()
@@ -20,7 +20,7 @@ class TestNonContinuous(object):
         npt.assert_allclose(tot, 1, rtol=1e-3)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         k.axis_type = k.method.axis_type
         k.bandwidth = 0.2
         est = k.fit()
