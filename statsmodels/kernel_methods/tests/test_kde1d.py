@@ -51,7 +51,7 @@ all_methods_small_data = kde_utils.generate_methods_data(['norm', 'lognorm'], in
 class TestKDE1D(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         npt.assert_equal(est.ndim, 1)
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
@@ -71,7 +71,7 @@ class TestKDE1D(object):
         npt.assert_equal(est.upper, float(k.upper))
 
     @kde_tester
-    def grid_method_works(self, k, method):
+    def grid_method_works(self, k, method, data):
         est = k.fit()
         xs, ys = est.grid()
         tot = xs.integrate(ys)
@@ -283,7 +283,7 @@ class TestKDE1DExtra(object):
 @pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
 class TestSF(object):
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         xs = kde_methods.generate_grid1d(est, N=32)
         sf = est.sf(xs.linear())
@@ -291,7 +291,7 @@ class TestSF(object):
         npt.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         est = k.fit()
         xs, sf = est.sf_grid()
         _, cdf = est.cdf_grid()
@@ -301,7 +301,7 @@ class TestSF(object):
 class TestISF(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         sf = np.linspace(0, 1, 32)
         sf_xs = est.isf(sf)
@@ -310,7 +310,7 @@ class TestISF(object):
         npt.assert_allclose(sf_xs, cdf_xs, acc, acc)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         est = k.fit()
         comp_sf, xs = est.isf_grid()
         step = len(xs) // 16
@@ -323,7 +323,7 @@ class TestISF(object):
 class TestICDF(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         quant = np.linspace(0, 1, 32)
         xs = est.icdf(quant)
@@ -332,7 +332,7 @@ class TestICDF(object):
         npt.assert_allclose(cdf_quant, quant, acc, acc)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         est = k.fit()
         comp_cdf, xs = est.icdf_grid()
         step = len(xs) // 16
@@ -346,7 +346,7 @@ class TestICDF(object):
 class TestHazard(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         xs = kde_methods.generate_grid1d(est, N=32)
         h_comp = est.hazard(xs.linear())
@@ -360,7 +360,7 @@ class TestHazard(object):
         npt.assert_allclose(h_comp[sel], h_ref, method.accuracy, method.accuracy)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         est = k.fit()
         xs, h_comp = est.hazard_grid()
         xs, sf = est.sf_grid()
@@ -376,7 +376,7 @@ class TestHazard(object):
 class TestCumHazard(object):
 
     @kde_tester
-    def test_method_works(self, k, method):
+    def test_method_works(self, k, method, data):
         est = k.fit()
         xs = kde_methods.generate_grid1d(est, N=32)
         h_comp = est.cumhazard(xs.linear())
@@ -388,7 +388,7 @@ class TestCumHazard(object):
         npt.assert_allclose(h_comp[sel], h_ref, method.accuracy, method.accuracy)
 
     @kde_tester
-    def test_grid_method_works(self, k, method):
+    def test_grid_method_works(self, k, method, data):
         est = k.fit()
         xs, h_comp = est.cumhazard_grid()
         xs, sf = est.sf_grid()
