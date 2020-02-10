@@ -43,6 +43,13 @@ class CFASimulationSmoother(object):
 
         self._simulated_state = None
 
+    @property
+    def _simulation_smoother(self):
+        prefix = self.model.prefix
+        if prefix in self._simulation_smoothers:
+            return self._simulation_smoothers[prefix]
+        return None
+
     def simulate(self, variates=None, update_posterior=True):
         r"""
         Perform simulation smoothing (via Cholesky factor algorithm)
@@ -58,14 +65,15 @@ class CFASimulationSmoother(object):
             or for testing. If not specified, random variates are drawn. Must
             be shaped (nobs, k_states).
         """
+        # (Re) initialize the _statespace representation
+        prefix, dtype, create = self.model._initialize_representation()
+
+        # Validate variates and get in required datatype
         if variates is not None:
             tools.validate_matrix_shape('variates', variates.shape,
                                         self.model.nobs,
                                         self.model.k_states, 1)
-            variates = variates.ravel()
-
-        # (Re) initialize the _statespace representation
-        prefix, _, create = self.model._initialize_representation()
+            variates = variates.ravel().astype(dtype)
 
         # (Re) initialize the state
         self.model._initialize_state(prefix=prefix)
