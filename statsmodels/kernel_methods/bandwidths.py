@@ -240,8 +240,8 @@ def _add_fwd_list_attr(cls, attr):
     def getter(self):
         value = getattr(self._kde, attr)
         try:
-            return getattr(self._kde, attr)[self._axis]
-        except:
+            return value[self._axis]
+        except (TypeError, IndexError):
             return value
     setattr(cls, attr, property(getter))
 

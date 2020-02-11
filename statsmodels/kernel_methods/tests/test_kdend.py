@@ -1,11 +1,11 @@
 import pytest
-from . import kde_utils
-from .kde_utils import kde_tester, datasets
+from . import kde_test_utils
+from .kde_test_utils import kde_tester, datasets
 import numpy.testing as npt
 
-all_methods_data = kde_utils.generate_methods_data(['norm2d'])
+all_methods_data = kde_test_utils.generate_methods_data(['norm2d'])
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_data)
 class TestKDE2D(object):
 
     @kde_tester

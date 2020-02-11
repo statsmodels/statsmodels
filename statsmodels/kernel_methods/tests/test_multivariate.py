@@ -1,11 +1,11 @@
 import pytest
-from . import kde_utils
+from ..kde_utils import Grid
 import numpy.testing as npt
-from .kde_utils import kde_tester, datasets
+from .kde_test_utils import kde_tester, datasets, generate_methods_data, kde_tester_args
 
-all_methods_data = kde_utils.generate_methods_data(['multivariate'])
+all_methods_data = generate_methods_data(['multivariate'])
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_data)
+@pytest.mark.parametrize(kde_tester_args, all_methods_data)
 class TestMultivariate(object):
 
     @kde_tester
@@ -37,7 +37,7 @@ class TestMultivariate(object):
             else:
                 high = est.exog[:, 1].max() + 5*est.bandwidth[1]
             bounds[1] = [low, high]
-        grid = kde_utils.Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
+        grid = Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
         values = est(grid.linear()).reshape(grid.shape)
         tot = grid.integrate(values)
         # Note: the precision is quite bad as we use small number of values!

@@ -72,7 +72,6 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
     z_empty = False
     if input_dim <= 0:
         npts = input_shape[0]
-        input_dim = input_shape[-1]
     else:
         if input_shape[-1] == input_dim:
             npts = input_shape[0]
@@ -160,9 +159,6 @@ def _process_trans1d_args(z, out, in_dtype, out_dtype):
     z = np.asarray(z)
     if in_dtype is not None:
         z = z.astype(in_dtype)
-    npts = np.prod(z.shape)
-    if npts == 0:
-        npts = 1
     if out is None:
         if out_dtype is None:
             dtype = z.dtype

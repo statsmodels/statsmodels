@@ -1,12 +1,11 @@
 import pytest
 
-from . import kde_utils
 from .. import bandwidths
-from .kde_utils import kde_tester, datasets
+from .kde_test_utils import kde_tester, datasets, generate_methods_data, kde_tester_args
 
-all_methods_small_data = kde_utils.generate_methods_data(['norm'], indices=[0])
+all_methods_small_data = generate_methods_data(['norm'], indices=[0])
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_tester_args, all_methods_small_data)
 class TestCV(object):
     @kde_tester
     def test_loo(self, k, method, data):
