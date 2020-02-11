@@ -49,8 +49,8 @@ class CFASimulationSmoother(object):
     terms directly into account when constructing the posterior covariance
     matrix, but this has not yet been implemented.
 
-    Similarly, the state space form of SARIMA and VARMA models typically makes
-    the observation equation an identity. This is not compatible with the CFA
+    Similarly, some state space forms of SARIMA and VARMA models make
+    the observation equation an identity, which is not compatible with the CFA
     simulation smoothing approach.
 
     This simulation smoother has so-far found most of its use with dynamic
