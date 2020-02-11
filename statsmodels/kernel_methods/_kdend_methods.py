@@ -186,6 +186,7 @@ class KDEnDMethod(KDEMethod):
         return self.fit_nd(kde, compute_bandwidth)
 
     def fit_nd(self, kde, compute_bandwidth=True):
+        ndim = kde.ndim
         kde = filter_exog(kde, self.bin_type)
         fitted = self.copy()
         fitted._fitted = True
