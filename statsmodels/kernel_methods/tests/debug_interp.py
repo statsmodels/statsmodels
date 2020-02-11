@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
 
+
 def interpolate2d(grid, values, test_values):
     interp = interp2d(grid.grid[0], grid.grid[1], values.T)
     res = np.empty_like(test_values[:, 0])
@@ -12,11 +13,13 @@ def interpolate2d(grid, values, test_values):
         res[i] = interp(test_values[i, 0], test_values[i, 1])
     return res
 
+
 def draw_triangulation(xs, ys, values):
     trs = Triangulation(20 * xs, ys)
     trs.x = xs
     plt.tripcolor(trs, values, shading='gouraud')
     plt.colorbar()
+
 
 def run():
     N = 4096
@@ -61,6 +64,7 @@ def run():
     draw_triangulation(fg[0].flatten(), fg[1].flatten(), grid_val.flatten())
     plt.tripcolor(trs2, grid_val.flatten(), shading='gouraud')
     plt.title('Original Grid')
+
 
 if __name__ == '__main__':
     run()

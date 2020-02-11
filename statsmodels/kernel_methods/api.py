@@ -1,4 +1,6 @@
-__all__ = ['kde', 'KDE', 'bandwidths', 'kde_methods', 'kernels', 'Grid', 'kde_utils']
+__all__ = [
+    'kde', 'KDE', 'bandwidths', 'kde_methods', 'kernels', 'Grid', 'kde_utils'
+]
 
 from . import kde
 from .kde import KDE

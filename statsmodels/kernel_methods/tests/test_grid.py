@@ -4,27 +4,32 @@ import numpy as np
 import numpy.testing as npt
 from scipy.interpolate import interp2d
 
+
 class TestBasics(object):
     @classmethod
     def setup_class(cls):
         cls.sparse_grid = np.ogrid[0:11, 1:100:100j, -5.5:5.5:12j, 0:124]
         cls.sparse_grid[-1] = (cls.sparse_grid[-1] + 0.5) * 2 * np.pi / 124
         cls.axes_def = [g.squeeze() for g in cls.sparse_grid]
-        cls.full_grid_c = np.array(np.meshgrid(*cls.sparse_grid, indexing='ij'))
-        cls.full_grid_f = np.concatenate([g[..., None] for g in np.meshgrid(*cls.sparse_grid, indexing='ij')], axis=-1)
+        cls.full_grid_c = np.array(np.meshgrid(*cls.sparse_grid,
+                                               indexing='ij'))
+        cls.full_grid_f = np.concatenate([
+            g[..., None] for g in np.meshgrid(*cls.sparse_grid, indexing='ij')
+        ],
+                                         axis=-1)
         cls.bin_type = 'DBRC'
         cls.ndim = 4
         cls.shape = cls.full_grid_c.shape[1:]
-        cls.bounds = np.asarray([[-.5, 10.5],
-                                 [0.5, 100.5],
-                                 [-6, 6],
+        cls.bounds = np.asarray([[-.5, 10.5], [0.5, 100.5], [-6, 6],
                                  [0, 2 * np.pi]])
-        cls.edges = [np.r_[-0.5:10.5:12j],
-                     np.r_[0.5:100.5:101j],
-                     np.r_[-6:6:13j],
-                     np.r_[0:2 * np.pi:125j]]
+        cls.edges = [
+            np.r_[-0.5:10.5:12j], np.r_[0.5:100.5:101j], np.r_[-6:6:13j],
+            np.r_[0:2 * np.pi:125j]
+        ]
         cls.start_interval = np.array([e[1] - e[0] for e in cls.edges])
-        cls.reference = Grid(cls.axes_def, bounds=cls.bounds, bin_type=cls.bin_type,
+        cls.reference = Grid(cls.axes_def,
+                             bounds=cls.bounds,
+                             bin_type=cls.bin_type,
                              edges=cls.edges)
 
     def test_interval(self):
@@ -84,23 +89,33 @@ class TestBasics(object):
         Grid(self.axes_def[0], bounds=self.bounds[0])
 
     def test_from_axes(self):
-        g = Grid(self.axes_def, bin_type=self.bin_type,
-                 edges=self.edges, bounds=self.bounds)
+        g = Grid(self.axes_def,
+                 bin_type=self.bin_type,
+                 edges=self.edges,
+                 bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_sparse(self):
-        g = Grid.fromSparse(self.sparse_grid, bin_type=self.bin_type,
-                            edges=self.edges, bounds=self.bounds)
+        g = Grid.fromSparse(self.sparse_grid,
+                            bin_type=self.bin_type,
+                            edges=self.edges,
+                            bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_full_C(self):
-        g = Grid.fromFull(self.full_grid_c, order='C', bin_type=self.bin_type,
-                          edges=self.edges, bounds=self.bounds)
+        g = Grid.fromFull(self.full_grid_c,
+                          order='C',
+                          bin_type=self.bin_type,
+                          edges=self.edges,
+                          bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_full_F(self):
-        g = Grid.fromFull(self.full_grid_f, order='F', bin_type=self.bin_type,
-                          edges=self.edges, bounds=self.bounds)
+        g = Grid.fromFull(self.full_grid_f,
+                          order='F',
+                          bin_type=self.bin_type,
+                          edges=self.edges,
+                          bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_make_edges(self):
@@ -159,32 +174,36 @@ class TestBasics(object):
 
     def test_transform_all(self):
         g2 = self.reference.copy()
-        g2.transform(lambda x: x+1)
+        g2.transform(lambda x: x + 1)
         for i in range(g2.ndim):
-            npt.assert_equal(g2.edges[i], self.reference.edges[i]+1)
-            npt.assert_equal(g2.grid[i], self.reference.grid[i]+1)
-        npt.assert_equal(g2.bounds, self.reference.bounds+1)
+            npt.assert_equal(g2.edges[i], self.reference.edges[i] + 1)
+            npt.assert_equal(g2.grid[i], self.reference.grid[i] + 1)
+        npt.assert_equal(g2.bounds, self.reference.bounds + 1)
 
     def test_transform_one(self):
         g2 = self.reference.copy()
-        g2.transform({1: lambda x: x+1})
+        g2.transform({1: lambda x: x + 1})
         for i in range(g2.ndim):
             if i == 1:
-                npt.assert_equal(g2.edges[i], self.reference.edges[i]+1)
-                npt.assert_equal(g2.grid[i], self.reference.grid[i]+1)
-                npt.assert_equal(g2.bounds[i], self.reference.bounds[i]+1)
+                npt.assert_equal(g2.edges[i], self.reference.edges[i] + 1)
+                npt.assert_equal(g2.grid[i], self.reference.grid[i] + 1)
+                npt.assert_equal(g2.bounds[i], self.reference.bounds[i] + 1)
             else:
                 npt.assert_equal(g2.edges[i], self.reference.edges[i])
                 npt.assert_equal(g2.grid[i], self.reference.grid[i])
                 npt.assert_equal(g2.bounds[i], self.reference.bounds[i])
 
     def test_unequal_bounds(self):
-        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_type=self.bin_type,
+        g1 = Grid(self.axes_def,
+                  bounds=self.bounds + 1,
+                  bin_type=self.bin_type,
                   edges=self.edges)
         assert g1 != self.reference
 
     def test_unequal_bintype(self):
-        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_type='CCCC',
+        g1 = Grid(self.axes_def,
+                  bounds=self.bounds + 1,
+                  bin_type='CCCC',
                   edges=self.edges)
         assert g1 != self.reference
 
@@ -202,8 +221,8 @@ class TestBasics(object):
 
     def test_integrate2(self):
         g = Grid(self.axes_def[:2])
-        val = g.integrate(0.5*np.ones(g.shape))
-        npt.assert_allclose(val, 0.5*g.bin_volumes().sum())
+        val = g.integrate(0.5 * np.ones(g.shape))
+        npt.assert_allclose(val, 0.5 * g.bin_volumes().sum())
 
     def test_cum_integrate1(self):
         g = Grid(self.axes_def[:2])
@@ -215,6 +234,7 @@ class TestBasics(object):
         values = 0.5 * np.ones(g.shape)
         val = g.cum_integrate(values)
         npt.assert_allclose(val[-1, -1], g.integrate(values))
+
 
 class TestInterpolation(object):
     @classmethod
@@ -243,8 +263,8 @@ class TestInterpolation(object):
             interp = GridInterpolator(self.grid1.sparse(), self.val1)
             test_values = np.array([[1.]])
             interp_test = interp(test_values)
-            interp_comp = np.interp(test_values, self.grid1.full(),
-                                    self.val1, self.val1[0], self.val1[-1])
+            interp_comp = np.interp(test_values, self.grid1.full(), self.val1,
+                                    self.val1[0], self.val1[-1])
             np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_bad_pts_2d_1(self):
@@ -279,8 +299,8 @@ class TestInterpolation(object):
         interp = GridInterpolator(self.grid1.sparse(), self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         interp_test = interp(test_values)
-        interp_comp = np.interp(test_values, self.grid1.full(),
-                                self.val1, self.val1[0], self.val1[-1])
+        interp_comp = np.interp(test_values, self.grid1.full(), self.val1,
+                                self.val1[0], self.val1[-1])
         npt.assert_allclose(interp_test, interp_comp)
 
     def test_1d_bounded(self):
@@ -288,8 +308,8 @@ class TestInterpolation(object):
         interp = GridInterpolator(self.grid1, self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         interp_test = interp(test_values)
-        interp_comp = np.interp(test_values, self.grid1.full(),
-                                self.val1, self.val1[0], self.val1[-1])
+        interp_comp = np.interp(test_values, self.grid1.full(), self.val1,
+                                self.val1[0], self.val1[-1])
         npt.assert_allclose(interp_test, interp_comp)
 
     def test_1d_cyclic(self):
@@ -299,8 +319,8 @@ class TestInterpolation(object):
         # Compute equivalent values
         real_values = test_values % (2 * np.pi)
         interp_test = interp(test_values)
-        interp_comp = np.interp(real_values, self.grid1.full(),
-                                self.val1, self.val1[0], self.val1[-1])
+        interp_comp = np.interp(real_values, self.grid1.full(), self.val1,
+                                self.val1[0], self.val1[-1])
         npt.assert_allclose(interp_test, interp_comp)
 
     def test_1d_reflection(self):
@@ -309,11 +329,12 @@ class TestInterpolation(object):
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         # Compute equivalent values
         real_values = test_values % (4 * np.pi)
-        real_values[real_values > 2 * np.pi] = 4 * np.pi - real_values[real_values > 2 * np.pi]
+        real_values[real_values > 2 *
+                    np.pi] = 4 * np.pi - real_values[real_values > 2 * np.pi]
 
         interp_test = interp(test_values)
-        interp_comp = np.interp(real_values, self.grid1.full(),
-                                self.val1, self.val1[0], self.val1[-1])
+        interp_comp = np.interp(real_values, self.grid1.full(), self.val1,
+                                self.val1[0], self.val1[-1])
         npt.assert_allclose(interp_test, interp_comp)
 
     @staticmethod
@@ -342,7 +363,8 @@ class TestInterpolation(object):
         real_values[real_values[:, 1] > max_val1, 1] = max_val1
 
         interp_test = interp(test_values)
-        interp_comp = self.np_interpolate_2d(grid.grid[0], grid.grid[1], self.val2, real_values)
+        interp_comp = self.np_interpolate_2d(grid.grid[0], grid.grid[1],
+                                             self.val2, real_values)
         npt.assert_allclose(interp_test, interp_comp)
 
     def test_2d_cyclic(self):
@@ -360,11 +382,15 @@ class TestInterpolation(object):
         delta_val1 = max_val1 - min_val1
 
         real_values = test_values.copy()
-        real_values[:, 0] = (real_values[:, 0] - min_val0) % delta_val0 + min_val0
-        real_values[:, 1] = (real_values[:, 1] - min_val1) % delta_val1 + min_val1
+        real_values[:,
+                    0] = (real_values[:, 0] - min_val0) % delta_val0 + min_val0
+        real_values[:,
+                    1] = (real_values[:, 1] - min_val1) % delta_val1 + min_val1
 
-        ax1 = np.concatenate([grid.grid[0], [grid.grid[0][-1] + grid.start_interval[0]]])
-        ax2 = np.concatenate([grid.grid[1], [grid.grid[1][-1] + grid.start_interval[1]]])
+        ax1 = np.concatenate(
+            [grid.grid[0], [grid.grid[0][-1] + grid.start_interval[0]]])
+        ax2 = np.concatenate(
+            [grid.grid[1], [grid.grid[1][-1] + grid.start_interval[1]]])
         val2 = self.val2
         val2 = np.concatenate([val2, val2[:1, :]], axis=0)
         val2 = np.concatenate([val2, val2[:, :1]], axis=1)
