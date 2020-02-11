@@ -1,13 +1,13 @@
 import pytest
 from ..kde_utils import Grid
 import numpy.testing as npt
-from .kde_test_utils import kde_tester, datasets, generate_methods_data, kde_tester_args
+from .kde_test_utils import kde_tester, generate_methods_data, kde_tester_args
 
 all_methods_data = generate_methods_data(['multivariate'])
 
+
 @pytest.mark.parametrize(kde_tester_args, all_methods_data)
 class TestMultivariate(object):
-
     @kde_tester
     def test_method_works(self, k, methods, data):
         est = k.fit()
@@ -19,11 +19,11 @@ class TestMultivariate(object):
             if methods[0].bound_low:
                 low = data.lower[0]
             else:
-                low = est.exog[:, 0].min() - 5*est.bandwidth[0]
+                low = est.exog[:, 0].min() - 5 * est.bandwidth[0]
             if methods[0].bound_high:
                 high = data.upper[0]
             else:
-                high = est.exog[:, 0].max() + 5*est.bandwidth[0]
+                high = est.exog[:, 0].max() + 5 * est.bandwidth[0]
             bounds[0] = [low, high]
         if est.methods[1].bin_type == 'D':
             bounds[1] = [est.lower[1], est.upper[1]]
@@ -31,17 +31,17 @@ class TestMultivariate(object):
             if methods[1].bound_low:
                 low = data.lower[1]
             else:
-                low = est.exog[:, 1].min() - 5*est.bandwidth[1]
+                low = est.exog[:, 1].min() - 5 * est.bandwidth[1]
             if methods[1].bound_high:
                 high = data.upper[1]
             else:
-                high = est.exog[:, 1].max() + 5*est.bandwidth[1]
+                high = est.exog[:, 1].max() + 5 * est.bandwidth[1]
             bounds[1] = [low, high]
         grid = Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
         values = est(grid.linear()).reshape(grid.shape)
         tot = grid.integrate(values)
         # Note: the precision is quite bad as we use small number of values!
-        acc = 100*max(m.normed_accuracy for m in methods)
+        acc = 100 * max(m.normed_accuracy for m in methods)
         npt.assert_allclose(tot, 1., rtol=acc)
         del k.weights
         del k.adjust

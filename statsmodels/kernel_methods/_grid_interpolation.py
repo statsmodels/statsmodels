@@ -2,6 +2,7 @@ import numpy as np
 from . import _cy_grid_interpolation
 from ._grid import Grid
 
+
 class GridInterpolator(object):
     def __init__(self, grid, values):
         """
@@ -16,7 +17,9 @@ class GridInterpolator(object):
         """
         if not isinstance(grid, Grid):
             grid = Grid.fromArrays(grid)
-        self._grid = [np.ascontiguousarray(grid[i], float) for i in range(grid.ndim)]
+        self._grid = [
+            np.ascontiguousarray(grid[i], float) for i in range(grid.ndim)
+        ]
         self._values = np.asarray(values, float)
         if self._values.shape != grid.shape:
             raise ValueError("The values must have the same shape as the grid")
@@ -47,9 +50,9 @@ class GridInterpolator(object):
             raise ValueError("Error, the input array must be a float or 1D")
         if out is None:
             out = np.zeros(pts.shape, dtype=float)
-        _cy_grid_interpolation.interp1d(pts, self._bounds[0, 0], self._bounds[0, 1],
-                                        self._grid, self._values, self._bin_type,
-                                        out)
+        _cy_grid_interpolation.interp1d(pts, self._bounds[0, 0],
+                                        self._bounds[0, 1], self._grid,
+                                        self._values, self._bin_type, out)
         return out.squeeze()
 
     def evalnd(self, pts, out=None):
@@ -62,12 +65,14 @@ class GridInterpolator(object):
         elif pts.ndim != 2:
             raise ValueError("Error, the input array must be 1 or 2D array")
         if pts.shape[-1] != self.ndim:
-            raise ValueError("Error, {0} dimensions expected, but pts has {1}".format(self.ndim, pts.shape[-1]))
+            raise ValueError(
+                "Error, {0} dimensions expected, but pts has {1}".format(
+                    self.ndim, pts.shape[-1]))
         if out is None:
             out = np.zeros(pts.shape[:-1], dtype=float)
-        _cy_grid_interpolation.interpnd(pts, self._bounds[:, 0], self._bounds[:, 1],
-                                        self._grid, self._values, self._bin_type,
-                                        out)
+        _cy_grid_interpolation.interpnd(pts, self._bounds[:, 0],
+                                        self._bounds[:, 1], self._grid,
+                                        self._values, self._bin_type, out)
         return out.squeeze()
 
     def __call__(self, pts, out=None):
@@ -77,7 +82,8 @@ class GridInterpolator(object):
         Parameters
         ----------
         pts: ndarray
-            (N,D) array for N points in D dimension with the list of points to interpolate the data on
+            (N,D) array for N points in D dimension with the list of points to
+            interpolate the data on.
 
         Returns
         -------

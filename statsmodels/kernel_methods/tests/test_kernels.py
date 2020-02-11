@@ -7,17 +7,21 @@ from . import kde_test_utils
 from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
 
+
 @pytest.fixture(params=kde_test_utils.kernels1d)
 def kernel1d(request):
     return request.param
+
 
 @pytest.fixture(params=kde_test_utils.kernelsnd)
 def kernelnd(request):
     return request.param
 
+
 @pytest.fixture(params=kde_test_utils.kernelsnc)
 def kernelnc(request):
     return request.param
+
 
 class RefKernel1D(kernels.Kernel1D):
     """
@@ -47,8 +51,10 @@ class RefKernelnD(kernels.KernelnD):
     def pdf(self, z, out=None):
         return self.real_kernel.pdf(z, out)
 
+
 tol = 1e-8
 nd_tol = 1e-5
+
 
 class TestKernels1D(object):
     @classmethod
@@ -60,7 +66,7 @@ class TestKernels1D(object):
         bw = 0.2
         R = 10
         N = 2**16
-        dx = R/(bw*N)
+        dx = R / (bw * N)
         cls.dx = dx
         cls.N = N
         cls.small = np.array([-5, -1, -0.5, 0, 0.5, 1, 5])
@@ -68,23 +74,25 @@ class TestKernels1D(object):
     def test_unity(self, kernel1d):
         ker = kernel1d.cls()
         total = integrate.quad(ker.pdf, -np.inf, np.inf)[0]
-        npt.assert_allclose(total, 1, rtol=tol*kernel1d.precision_factor)
+        npt.assert_allclose(total, 1, rtol=tol * kernel1d.precision_factor)
 
     def test_mean(self, kernel1d):
         ker = kernel1d.cls()
 
         def f(x):
-            return x*ker.pdf(x)
+            return x * ker.pdf(x)
+
         total = integrate.quad(f, -np.inf, np.inf)[0]
-        npt.assert_allclose(total, 0, atol=tol*kernel1d.precision_factor)
+        npt.assert_allclose(total, 0, atol=tol * kernel1d.precision_factor)
 
     def test_variance(self, kernel1d):
         ker = kernel1d.cls()
 
         def f(x):
-            return x*x*ker.pdf(x)
+            return x * x * ker.pdf(x)
+
         total = integrate.quad(f, -np.inf, np.inf)[0]
-        acc = tol*kernel1d.precision_factor
+        acc = tol * kernel1d.precision_factor
         npt.assert_allclose(total, kernel1d.var, rtol=acc, atol=acc)
 
     def test_cdf(self, kernel1d):
@@ -162,6 +170,7 @@ class TestKernels1D(object):
         with pytest.raises(ValueError):
             kernels.rfftfreq(1.2)
 
+
 class TestGaussian1d(object):
     @classmethod
     def setup_class(cls, lower=-np.inf):
@@ -186,57 +195,64 @@ class TestGaussian1d(object):
         tst_vals = getattr(ker, attr)(self.xs)
         npt.assert_allclose(ref_vals, tst_vals, rtol=tol, atol=tol)
 
+
 class TestKernelsnd(object):
     @classmethod
     def setup_class(cls):
         dist = stats.norm(0, 1)
-        cls.ds = np.c_[dist.rvs(200),
-                       dist.rvs(200),
-                       dist.rvs(200)]
+        cls.ds = np.c_[dist.rvs(200), dist.rvs(200), dist.rvs(200)]
         bw = 0.2
         R = 10
 
         N = 2**8
-        dx = R/(bw*N)
+        dx = R / (bw * N)
         cls.dx2 = (dx, dx)
         cls.N2 = (N, N)
 
         N = 2**6
-        dx = R/(bw*N)
+        dx = R / (bw * N)
         cls.dx3 = (dx, dx, dx)
         cls.N3 = (N, N, N)
 
         cut = 5
         cls.grid2d = Grid.fromSparse(np.ogrid[-cut:cut:512j, -cut:cut:512j])
-        cls.grid3d = Grid.fromSparse(np.ogrid[-cut:cut:128j,
-                                              -cut:cut:128j,
+        cls.grid3d = Grid.fromSparse(np.ogrid[-cut:cut:128j, -cut:cut:128j,
                                               -cut:cut:128j])
 
     def test_unity2d(self, kernelnd):
         ker = kernelnd.cls().for_ndim(2)
         vals = ker(self.grid2d.full())
         total = self.grid2d.integrate(vals)
-        npt.assert_allclose(total, 1, rtol=nd_tol*kernelnd.precision_factor)
+        npt.assert_allclose(total, 1, rtol=nd_tol * kernelnd.precision_factor)
 
     def test_unity3d(self, kernelnd):
         ker = kernelnd.cls().for_ndim(3)
         vals = ker(self.grid3d.full())
         total = self.grid3d.integrate(vals)
-        npt.assert_allclose(total, 1, rtol=nd_tol*kernelnd.precision_factor)
+        npt.assert_allclose(total, 1, rtol=nd_tol * kernelnd.precision_factor)
 
     def test_cdf2d(self, kernelnd):
         ker = kernelnd.cls().for_ndim(2)
         ref_ker = RefKernelnD(ker)
-        acc = tol*kernelnd.precision_factor
+        acc = tol * kernelnd.precision_factor
         npt.assert_allclose(ker.cdf([-np.inf, -np.inf]), 0, rtol=acc, atol=acc)
         npt.assert_allclose(ker.cdf([np.inf, np.inf]), 1, rtol=acc, atol=acc)
-        npt.assert_allclose(ker.cdf([0, 0]), ref_ker.cdf([0, 0]), rtol=acc, atol=acc)
+        npt.assert_allclose(ker.cdf([0, 0]),
+                            ref_ker.cdf([0, 0]),
+                            rtol=acc,
+                            atol=acc)
 
     def test_cdf3d(self, kernelnd):
         ker = kernelnd.cls().for_ndim(3)
-        acc = tol*kernelnd.precision_factor
-        npt.assert_allclose(ker.cdf([-np.inf, -np.inf, -np.inf]), 0, rtol=acc, atol=acc)
-        npt.assert_allclose(ker.cdf([np.inf, np.inf, np.inf]), 1, rtol=acc, atol=acc)
+        acc = tol * kernelnd.precision_factor
+        npt.assert_allclose(ker.cdf([-np.inf, -np.inf, -np.inf]),
+                            0,
+                            rtol=acc,
+                            atol=acc)
+        npt.assert_allclose(ker.cdf([np.inf, np.inf, np.inf]),
+                            1,
+                            rtol=acc,
+                            atol=acc)
 
     def test_rfft2d(self, kernelnd):
         ker = kernelnd.cls().for_ndim(2)
@@ -251,7 +267,7 @@ class TestKernelsnd(object):
         ref_ker = RefKernelnD(ker)
         ref = ref_ker.rfft(self.N3, self.dx3)
         val = ker.rfft(self.N3, self.dx3)
-        acc = 100*kernelnd.precision_factor * nd_tol
+        acc = 100 * kernelnd.precision_factor * nd_tol
         npt.assert_allclose(val, ref, rtol=acc, atol=acc)
 
     def test_dct2d(self, kernelnd):
@@ -267,25 +283,28 @@ class TestKernelsnd(object):
         ref_ker = RefKernelnD(ker)
         ref = ref_ker.dct(self.N3, self.dx3)
         val = ker.dct(self.N3, self.dx3)
-        acc = 100*kernelnd.precision_factor * nd_tol
+        acc = 100 * kernelnd.precision_factor * nd_tol
         npt.assert_allclose(val, ref, rtol=acc, atol=acc)
+
 
 class TestKernelnc(object):
     @classmethod
     def setup_class(cls):
         dist = stats.poisson(10)
         cls.ds = dist.rvs(10)
-        cls.xs = np.arange(0, cls.ds.max()+1)[:, None]
-        cls.num_levels = cls.ds.max()+1
-        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels], cls.num_levels, bin_type='D')
+        cls.xs = np.arange(0, cls.ds.max() + 1)[:, None]
+        cls.num_levels = cls.ds.max() + 1
+        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels],
+                                         cls.num_levels,
+                                         bin_type='D')
 
     def test_pdf(self, kernelnc):
         k = kernelnc.cls()
         npt.assert_equal(k.ndim, 1)
         dst = k.pdf(self.xs, self.ds, 0.2, self.num_levels)
-        assert dst.sum() <= self.ds.shape[0] + tol*kernelnc.precision_factor
+        assert dst.sum() <= self.ds.shape[0] + tol * kernelnc.precision_factor
 
     def test_from_binned(self, kernelnc):
         k = kernelnc.cls()
         dst = k.from_binned(self.mesh, self.bins, 0.2)
-        assert dst.sum() <= self.ds.shape[0] + tol*kernelnc.precision_factor
+        assert dst.sum() <= self.ds.shape[0] + tol * kernelnc.precision_factor

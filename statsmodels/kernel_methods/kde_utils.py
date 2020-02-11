@@ -4,6 +4,8 @@
 Module contained a variety of small useful functions.
 """
 
+from numpy.lib.scimath import sqrt
+from numpy import finfo, asarray, asfarray, zeros
 import numpy as np
 import inspect
 import functools
@@ -18,13 +20,15 @@ elif hasattr(np, 'float96'):
 else:
     large_float = np.float64
 
+
 def finite(val):
     return val is not None and np.isfinite(val)
 
 
 def atleast_2df(*arys):
     """
-    Return at least a 2D array, fortran style (e.g. adding dimensions at the end)
+    Return at least a 2D array, fortran style (e.g. adding dimensions at the
+    end)
     """
     res = []
     for ary in arys:
@@ -37,6 +41,7 @@ def atleast_2df(*arys):
     if len(res) == 1:
         return res[0]
     return res
+
 
 def make_ufunc(nin=None, nout=1):
     """
@@ -54,7 +59,9 @@ def make_ufunc(nin=None, nout=1):
         else:
             Nin = nin
         return np.frompyfunc(fct, Nin, nout)
+
     return f
+
 
 def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
     """
@@ -80,7 +87,8 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
             need_transpose = True
         else:
             raise ValueError("Error, the input array is of dimension {0} "
-                             "(expected: {1})".format(input_shape[-1], input_dim))
+                             "(expected: {1})".format(input_shape[-1],
+                                                      input_dim))
     # Allocate the output
     if out is None:
         # Compute the output shape
@@ -90,7 +98,7 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
             else:
                 output_shape = (npts, output_dim)
         else:
-            output_shape = (npts,)
+            output_shape = (npts, )
         if out_dtype is None:
             out_dtype = z.dtype
             if issubclass(out_dtype.type, np.integer):
@@ -107,53 +115,66 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
         z = z.T
     return z, write_out, out
 
+
 def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
-    Decorator to create a function taking a single array-like argument and return a numpy array with the same number of
-    points.
+    Decorator to create a function taking a single array-like argument and
+    return a numpy array with the same number of points.
 
-    The function will always get an input and output with the last index corresponding to the dimension of the problem.
+    The function will always get an input and output with the last index
+    corresponding to the dimension of the problem.
 
     Parameters
     ----------
     input_dim: int
         Number of dimensions of the input. The behavior depends on the value:
-            > 0 : There is a dimension, and its size is known. The dimension should be the first or last index. If it is
-                  on the first, the arrays are transposed before being sent to the function.
-            else: The last index is the dimension, but it may be any number. A 1D array will be considered n points in
-                  1D.
+            > 0 : There is a dimension, and its size is known. The dimension
+                  should be the first or last index. If it is on the first, the
+                  arrays are transposed before being sent to the function.
+            else: The last index is the dimension, but it may be any number. A
+                  1D array will be considered n points in 1D.
 
     output_dim: int
-        Dimension of the output. If more than 1, the last index of the output array is the dimension. It cannot be 0 or
-        less.
+        Dimension of the output. If more than 1, the last index of the output
+        array is the dimension. It cannot be 0 or less.
 
     out_dtype: dtype or None
         Expected types of the output array.
-        If the output array is created by this function, dtype specifies its type. If dtype is None, the output array is
-        given the same as the input array, unless it is an integer, in which case the output will be a float64.
+        If the output array is created by this function, dtype specifies its
+        type. If dtype is None, the output array is given the same as the input
+        array, unless it is an integer, in which case the output will be a
+        float64.
 
     in_dtype: dtype or None
-        If not None, the input array will be converted to this type before being passed on.
+        If not None, the input array will be converted to this type before
+        being passed on.
 
     Notes
     -----
-    If input_dim is not 0, the function will always receive a 2D array with the second index for the dimension.
+    If input_dim is not 0, the function will always receive a 2D array with the
+    second index for the dimension.
     """
     if out_dtype is not None:
         out_dtype = np.dtype(out_dtype)
     if in_dtype is not None:
         in_dtype = np.dtype(in_dtype)
     if output_dim <= 0:
-        raise ValueError("Error, the number of output dimension must be strictly more than 0.")
+        raise ValueError("Error, the number of output dimension must be "
+                         "strictly more than 0.")
+
     def decorator(fct):
         @functools.wraps(fct)
         def f(z, out=None):
-            z, write_out, out = _process_trans_args(z, out, input_dim, output_dim,
-                                                    in_dtype, out_dtype)
+            z, write_out, out = _process_trans_args(z, out, input_dim,
+                                                    output_dim, in_dtype,
+                                                    out_dtype)
             fct(z, out=write_out)
             return out
+
         return f
+
     return decorator
+
 
 def _process_trans1d_args(z, out, in_dtype, out_dtype):
     z = np.asarray(z)
@@ -169,19 +190,23 @@ def _process_trans1d_args(z, out, in_dtype, out_dtype):
         out = np.empty(z.shape, dtype=dtype)
     return z, out, out
 
+
 def numpy_trans1d(out_dtype=None, in_dtype=None):
     """
-    This decorator helps provide a uniform interface to 1D numpy transformation functions.
+    This decorator helps provide a uniform interface to 1D numpy transformation
+    functions.
 
-    The returned function takes any array-like argument and transform it as a 1D ndarray sent to the decorated function.
-    If the `out` argument is not provided, it will be allocated with the same size and shape as the first argument. And
-    as with the first argument, it will be reshaped as a 1D ndarray before being sent to the function.
+    The returned function takes any array-like argument and transform it as a
+    1D ndarray sent to the decorated function. If the `out` argument is not
+    provided, it will be allocated with the same size and shape as the first
+    argument. And as with the first argument, it will be reshaped as a 1D
+    ndarray before being sent to the function.
 
     Examples
     --------
 
-    The following example illustrate how a 2D array will be passed as 1D, and the output allocated as the input
-    argument:
+    The following example illustrate how a 2D array will be passed as 1D, and
+    the output allocated as the input argument:
 
     >>> @numpy_trans1d()
     ... def broadsum(z, out):
@@ -198,62 +223,79 @@ def numpy_trans1d(out_dtype=None, in_dtype=None):
     def decorator(fct):
         @functools.wraps(fct)
         def f(z, out=None):
-            z, out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            z, out, write_out = _process_trans1d_args(z, out, in_dtype,
+                                                      out_dtype)
             fct(z, write_out)
             return out
+
         return f
+
     return decorator
+
 
 def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
-    Decorator to create a method taking a single array-like argument and return a numpy array with the same number of
-    points.
+    Decorator to create a method taking a single array-like argument and return
+    a numpy array with the same number of points.
 
-    The function will always get an input and output with the last index corresponding to the dimension of the problem.
+    The function will always get an input and output with the last index
+    corresponding to the dimension of the problem.
 
     Parameters
     ----------
     input_dim: int or str
         Number of dimensions of the input. The behavior depends on the value:
-            > 0 : There is a dimension, and its size is known. The dimension should be the first or last index. If it is
-                  on the first, the arrays are transposed before being sent to the function.
-            else: The last index is the dimension, but it may be any number. A 1D array will be considered n points in
-                  1D.
-        If a string, it should be the name of an attribute containing the input dimension.
+            > 0 : There is a dimension, and its size is known. The dimension
+                  should be the first or last index. If it is on the first, the
+                  arrays are transposed before being sent to the function.
+            else: The last index is the dimension, but it may be any number. A
+                  1D array will be considered n points in 1D.
+        If a string, it should be the name of an attribute containing the input
+        dimension.
 
     output_dim: int or str
-        Dimension of the output. If more than 1, the last index of the output array is the dimension. If cannot be 0 or
-        less.
-        If a string, it should be the name of an attribute containing the output dimension
+        Dimension of the output. If more than 1, the last index of the output
+        array is the dimension. If cannot be 0 or less. If a string, it should
+        be the name of an attribute containing the output dimension
 
     out_dtype: dtype or None
-        Expected types of the output array.
-        If the output array is created by this function, dtype specifies its type. If dtype is None, the output array is
-        given the same as the input array, unless it is an integer, in which case the output will be a float64.
+        Expected types of the output array. If the output array is created by
+        this function, dtype specifies its type. If dtype is None, the output
+        array is given the same as the input array, unless it is an integer, in
+        which case the output will be a float64.
 
     in_dtype: dtype or None
-        If not None, the input array will be converted to this type before being passed on.
+        If not None, the input array will be converted to this type before
+        being passed on.
 
     Notes
     -----
-    If input_dim is not 0, the function will always receive a 2D array with the second index for the dimension.
+    If input_dim is not 0, the function will always receive a 2D array with the
+    second index for the dimension.
     """
     if output_dim <= 0:
-        raise ValueError("Error, the number of output dimension must be strictly more than 0.")
+        raise ValueError("Error, the number of output dimension must be "
+                         "strictly more than 0.")
     # Resolve how to get input dimension
     if isinstance(input_dim, str):
+
         def get_input_dim(self):
             return getattr(self, input_dim)
     else:
+
         def get_input_dim(self):
             return input_dim
+
     # Resolve how to get output dimension
     if isinstance(output_dim, str):
+
         def get_output_dim(self):
             return getattr(self, output_dim)
     else:
+
         def get_output_dim(self):
             return output_dim
+
     if out_dtype is not None:
         out_dtype = np.dtype(out_dtype)
     if in_dtype is not None:
@@ -263,12 +305,17 @@ def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     def decorator(fct):
         @functools.wraps(fct)
         def f(self, z, out=None):
-            z, write_out, out = _process_trans_args(z, out, get_input_dim(self), get_output_dim(self),
+            z, write_out, out = _process_trans_args(z, out,
+                                                    get_input_dim(self),
+                                                    get_output_dim(self),
                                                     in_dtype, out_dtype)
             fct(self, z, out=write_out)
             return out
+
         return f
+
     return decorator
+
 
 def numpy_trans1d_method(out_dtype=None, in_dtype=None):
     '''
@@ -282,11 +329,15 @@ def numpy_trans1d_method(out_dtype=None, in_dtype=None):
     def decorator(fct):
         @functools.wraps(fct)
         def f(self, z, out=None):
-            z, real_out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            z, real_out, write_out = _process_trans1d_args(
+                z, out, in_dtype, out_dtype)
             fct(self, z, out=write_out)
             return real_out
+
         return f
+
     return decorator
+
 
 class AxesType(object):
     """
@@ -359,9 +410,8 @@ class AxesType(object):
             return self._types != other._types
         return self._types != other
 
+
 #
-from numpy import finfo, asarray, asfarray, zeros
-from numpy.lib.scimath import sqrt
 
 _epsilon = sqrt(finfo(float).eps)
 
@@ -372,7 +422,8 @@ def approx_jacobian(x, func, epsilon, *args):
 
     :param ndarray x: The state vector at which the Jacobian matrix is desired
     :param callable func: A vector-valued function of the form f(x,*args)
-    :param ndarray epsilon: The peturbation used to determine the partial derivatives
+    :param ndarray epsilon: The peturbation used to determine the partial
+        derivatives
     :param tuple args: Additional arguments passed to func
 
     :returns: An array of dimensions (lenf, lenx) where lenf is the length
@@ -386,11 +437,11 @@ def approx_jacobian(x, func, epsilon, *args):
     x0 = asarray(x)
     x0 = asfarray(x0, dtype=x0.dtype)
     epsilon = x0.dtype.type(epsilon)
-    f0 = func(*((x0,) + args))
+    f0 = func(*((x0, ) + args))
     jac = zeros([len(x0), len(f0)], dtype=x0.dtype)
     dx = zeros(len(x0), dtype=x0.dtype)
     for i in range(len(x0)):
         dx[i] = epsilon
-        jac[i] = (func(*((x0 + dx,) + args)) - f0) / epsilon
+        jac[i] = (func(*((x0 + dx, ) + args)) - f0) / epsilon
         dx[i] = 0.0
     return jac.transpose()

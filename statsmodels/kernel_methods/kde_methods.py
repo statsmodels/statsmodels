@@ -11,10 +11,16 @@ from . import _kdenc_methods
 from . import _kdend_methods
 from . import _kde_multivariate
 
-from ._kde1d_methods import (LogTransform, ExpTransform, Transform, create_transform,  # noqa
-                             convolve, generate_grid1d)  # noqa
+from ._kde1d_methods import (
+    LogTransform,
+    ExpTransform,
+    Transform,
+    create_transform,  # noqa
+    convolve,
+    generate_grid1d)  # noqa
 
 from ._kdend_methods import generate_grid  # noqa
+
 
 def _import_methods(module):
     module_variables = globals()
@@ -22,6 +28,7 @@ def _import_methods(module):
         obj = getattr(module, name)
         if isinstance(obj, type) and issubclass(obj, KDEMethod):
             module_variables[name] = obj
+
 
 _import_methods(_kde1d_methods)
 _import_methods(_kdenc_methods)
