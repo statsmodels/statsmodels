@@ -1165,7 +1165,7 @@ class Cyclic1D(KDE1DMethod):
 
         return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N, self.weights, self.total_weights)
 
-    def from_binned(self, mesh, binned, normed=False, dim=-1):
+    def from_binned(self, mesh, bins, normed=False, dim=-1):
         """
         Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
         data.
@@ -1188,7 +1188,7 @@ class Cyclic1D(KDE1DMethod):
         """
         if self.adjust.ndim:
             raise ValueError("Error, cannot use binned data with non-constant adjustment.")
-        return fftdensity_from_binned(mesh, binned, self.kernel.rfft, self.adjust*self.bandwidth,
+        return fftdensity_from_binned(mesh, bins, self.kernel.rfft, self.adjust*self.bandwidth,
                                       normed, self.total_weights, dim)
 
     def grid_size(self, N=None):
@@ -1474,7 +1474,7 @@ class Reflection1D(KDE1DMethod):
 
         return dctdensity(exog, self.kernel.dct, bw, lower, upper, N, weights, self.total_weights)
 
-    def from_binned(self, mesh, binned, normed=False, dim=-1):
+    def from_binned(self, mesh, bins, normed=False, dim=-1):
         """
         Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
         data.
@@ -1497,7 +1497,7 @@ class Reflection1D(KDE1DMethod):
         """
         if self.adjust.ndim:
             raise ValueError("Error, cannot use binned data with non-constant adjustment.")
-        return dctdensity_from_binned(mesh, binned, self.kernel.dct, self.bandwidth*self.adjust,
+        return dctdensity_from_binned(mesh, bins, self.kernel.dct, self.bandwidth*self.adjust,
                                       normed, self.total_weights, dim=dim)
 
     def grid_size(self, N=None):
@@ -1691,7 +1691,7 @@ class _LinearCombinationKernel(Kernel1D):
     def __init__(self, ker):
         self._kernel = ker
 
-    def pdf(self, x, out=None):
+    def pdf(self, points, out=None):
         """
         Compute the PDF of the estimated distribution.
 
@@ -1708,8 +1708,8 @@ class _LinearCombinationKernel(Kernel1D):
             Returns the PDF for each point. The default is to use the formula
             for unbounded pdf computation using the :py:func:`convolve` function.
         """
-        out = self._kernel(x, out)
-        out *= x
+        out = self._kernel(points, out)
+        out *= points
         return out
 
     __call__ = pdf

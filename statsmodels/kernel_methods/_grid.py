@@ -32,8 +32,7 @@ class Grid(object):
                 bin_type = grid_axes.bin_type
             if edges is None and grid_axes._edges is not None:
                 edges = grid_axes._edges
-            self.__init__(grid_axes.grid, bounds, bin_type, edges, dtype)
-            return
+            grid_axes = grid_axes.grid
         first_elemt = np.asarray(grid_axes[0])
         if first_elemt.ndim == 0:
             ndim = 1
@@ -260,7 +259,7 @@ class Grid(object):
         """
         if self._edges is None:
             edges = [np.empty((s + 1,), dtype=self.dtype) for s in self._shape]
-            for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_type)):
+            for _, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_type)):
                 if bn == 'D':
                     es[:] = np.arange(len(ax) + 1) - 0.5
                 else:

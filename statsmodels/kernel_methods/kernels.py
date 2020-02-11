@@ -268,14 +268,14 @@ def dctnsamples(Ns, dx=None):
 
 class Kernel1D(object):
     r"""
-    A 1D kernel :math:`K(z)` is a function with the following properties:
+    A 1D kernel :math:`K(x)` is a function with the following properties:
 
     .. math::
 
         \begin{array}{rcl}
-        \int_\mathbb{R} K(z) &=& 1 \\
-        \int_\mathbb{R} zK(z)dz &=& 0 \\
-        \int_\mathbb{R} z^2K(z) dz &<& \infty \quad (\approx 1)
+        \int_\mathbb{R} K(x) &=& 1 \\
+        \int_\mathbb{R} zK(x)dz &=& 0 \\
+        \int_\mathbb{R} x^2K(x) dz &<& \infty \quad (\approx 1)
         \end{array}
 
     Which translates into the function should have:
@@ -307,34 +307,34 @@ class Kernel1D(object):
         assert ndim == 1, "Error, this kernel only works in 1D"
         return self
 
-    def pdf(self, z, out=None):
+    def pdf(self, xs, out=None):
         r"""
-        Returns the density of the kernel on the points `z`. This is the funtion :math:`K(z)` itself.
+        Returns the density of the kernel on the points `xs`. This is the funtion :math:`K(xs)` itself.
 
         Parameters
         ----------
-        z : ndarray
+        xs : ndarray
             Array of points to evaluate the function on. The method should accept any shape of array.
         out: ndarray
-            If provided, it will be of the same shape as `z` and the result should be stored in it.
+            If provided, it will be of the same shape as `xs` and the result should be stored in it.
             Ideally, it should be used for as many intermediate computation as possible.
         """
         raise NotImplementedError()
 
-    def __call__(self, z, out=None):
+    def __call__(self, xs, out=None):
         """
         Alias for :py:meth:`Kernel1D.pdf`
         """
-        return self.pdf(z, out=out)
+        return self.pdf(xs, out=out)
 
     @numpy_trans1d_method()
-    def cdf(self, z, out):
+    def cdf(self, xs, out):
         r"""
-        Returns the cumulative density function on the points `z`, i.e.:
+        Returns the cumulative density function on the points `xs`, i.e.:
 
         .. math::
 
-            K_0(z) = \int_{-\infty}^z K(t) dt
+            K_0(x) = \int_{-\infty}^x K(t) dt
         """
         try:
             comp_cdf = self.__comp_cdf
@@ -351,16 +351,16 @@ class Kernel1D(object):
                     x = upper
                 return integrate.quad(pdf, lower, x)[0]
             self.__comp_cdf = comp_cdf
-        return comp_cdf(z, out=out)
+        return comp_cdf(xs, out=out)
 
     @numpy_trans1d_method()
-    def pm1(self, z, out):
+    def pm1(self, xs, out):
         r"""
         Returns the first moment of the density function, i.e.:
 
         .. math::
 
-            K_1(z) = \int_{-\infty}^z z K(t) dt
+            K_1(x) = \int_{-\infty}^x x K(t) dt
         """
         try:
             comp_pm1 = self.__comp_pm1
@@ -379,16 +379,16 @@ class Kernel1D(object):
                     x = upper
                 return integrate.quad(pm1, lower, x)[0]
             self.__comp_pm1 = comp_pm1
-        return comp_pm1(z, out=out)
+        return comp_pm1(xs, out=out)
 
     @numpy_trans1d_method()
-    def pm2(self, z, out):
+    def pm2(self, xs, out):
         r"""
         Returns the second moment of the density function, i.e.:
 
         .. math::
 
-            K_2(z) = \int_{-\infty}^z z^2 K(t) dt
+            K_2(x) = \int_{-\infty}^x x^2 K(t) dt
         """
         try:
             comp_pm2 = self.__comp_pm2
@@ -407,11 +407,11 @@ class Kernel1D(object):
                     x = upper
                 return integrate.quad(pm2, lower, x)[0]
             self.__comp_pm2 = comp_pm2
-        return comp_pm2(z, out=out)
+        return comp_pm2(xs, out=out)
 
     def rfft(self, N, dx, out=None):
         """
-        FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
+        FFT of the kernel on the points of ``x``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
         samples = fftsamples(N, dx)
@@ -437,7 +437,7 @@ class Kernel1D(object):
 
     def dct(self, N, dx, out=None):
         r"""
-        DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
+        DCT of the kernel on the points of ``x``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
         samples = dctsamples(N, dx)
@@ -447,7 +447,7 @@ class Kernel1D(object):
         return out
 
     @numpy_trans1d_method()
-    def _convolution(self, z, out):
+    def _convolution(self, xs, out):
         try:
             comp_conv = self.__comp_conv
         except AttributeError:
@@ -467,7 +467,7 @@ class Kernel1D(object):
             self.__comp_conv = comp_conv
         sup = np.linspace(-2.5*self.cut, 2.5*self.cut, 2**16)
         sup_out = np.empty(sup.shape, sup.dtype)
-        return comp_conv(z, sup, sup_out, out=out)
+        return comp_conv(xs, sup, sup_out, out=out)
 
     @property
     def convolution(self):
@@ -497,11 +497,11 @@ class From1DPDF(Kernel1D):
     def __init__(self, pdf):
         self._pdf = pdf
 
-    def pdf(self, z, out=None):
+    def pdf(self, xs, out=None):
         """
         Call the pdf function set at construction time
         """
-        return self._pdf(z, out)
+        return self._pdf(xs, out)
 
     __call__ = pdf
 
@@ -519,20 +519,20 @@ class Gaussian1D(Kernel1D):
             return self
         return Gaussian(ndim)
 
-    def pdf(self, z, out=None):
+    def pdf(self, xs, out=None):
         r"""
         Return the probability density of the function. The formula used is:
 
         .. math::
 
-            \phi(z) = \frac{1}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}
+            \phi(x) = \frac{1}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}
 
         :param ndarray xs: Array of any shape
         :returns: an array of shape identical to ``xs``
         """
-        return _cy_kernels.norm1d_pdf(z, out)
+        return _cy_kernels.norm1d_pdf(xs, out)
 
-    def convolution(self, z, out=None):
+    def convolution(self, xs, out=None):
         r"""
         Return the PDF of the Gaussian convolution kernel, given by:
 
@@ -540,16 +540,16 @@ class Gaussian1D(Kernel1D):
 
             \bar{K}(x) = \frac{1}{2\sqrt{\pi}} e^{-\frac{x^2}{4}}
         """
-        return _cy_kernels.norm1d_convolution(z, out)
+        return _cy_kernels.norm1d_convolution(xs, out)
 
-    def _pdf(self, z, out=None):
+    def _pdf(self, xs, out=None):
         """
         Full-python implementation of :py:func:`Gaussian1D.pdf`
         """
-        z = np.asarray(z)
+        xs = np.asarray(xs)
         if out is None:
-            out = np.empty(z.shape, dtype=z.dtype)
-        np.multiply(z, z, out)
+            out = np.empty(xs.shape, dtype=xs.dtype)
+        np.multiply(xs, xs, out)
         out *= -0.5
         np.exp(out, out)
         out /= S2PI
@@ -557,8 +557,8 @@ class Gaussian1D(Kernel1D):
 
     __call__ = pdf
 
-    def _ft(self, z, out):
-        out = np.multiply(z, z, out)
+    def _ft(self, xs, out):
+        out = np.multiply(xs, xs, out)
         out *= -2*np.pi**2
         np.exp(out, out)
         return out
@@ -567,8 +567,8 @@ class Gaussian1D(Kernel1D):
         """
         Returns the FFT of the Gaussian distribution
         """
-        z = rfftfreq(N, dx)
-        return self._ft(z, out)
+        xs = rfftfreq(N, dx)
+        return self._ft(xs, out)
 
     def rfft_xfx(self, N, dx, out=None):
         r"""
@@ -578,13 +578,13 @@ class Gaussian1D(Kernel1D):
 
             \text{FFT}(x \mathcal{N}(x)) = -e^{-\frac{\omega^2}{2}}\omega i
         """
-        z = rfftfreq(N, dx)
+        xs = rfftfreq(N, dx)
         if out is None:
-            out = np.empty(z.shape, dtype=complex)
-        np.multiply(z, z, out)
+            out = np.empty(xs.shape, dtype=complex)
+        np.multiply(xs, xs, out)
         out *= -2*np.pi**2
         np.exp(out, out)
-        out *= z
+        out *= xs
         out *= -2j*np.pi
         return out
 
@@ -592,85 +592,85 @@ class Gaussian1D(Kernel1D):
         """
         Returns the FFT of the Gaussian distribution
         """
-        z = dctfreq(N, dx)
-        return self._ft(z, out)
+        xs = dctfreq(N, dx)
+        return self._ft(xs, out)
 
-    def cdf(self, z, out=None):
+    def cdf(self, xs, out=None):
         r"""
         Cumulative density of probability. The formula used is:
 
         .. math::
 
-            \text{cdf}(z) \triangleq \int_{-\infty}^z \phi(z)
-                dz = \frac{1}{2}\text{erf}\left(\frac{z}{\sqrt{2}}\right) + \frac{1}{2}
+            \text{cdf}(x) \triangleq \int_{-\infty}^x \phi(x)
+                dz = \frac{1}{2}\text{erf}\left(\frac{x}{\sqrt{2}}\right) + \frac{1}{2}
         """
-        return _cy_kernels.norm1d_cdf(z, out)
+        return _cy_kernels.norm1d_cdf(xs, out)
 
-    def _cdf(self, z, out=None):
+    def _cdf(self, xs, out=None):
         """
         Full-python implementation of :py:func:`Gaussian1D.cdf`
         """
-        z = np.asarray(z)
+        xs = np.asarray(xs)
         if out is None:
-            out = np.empty(z.shape, dtype=z.dtype)
-        np.divide(z, S2, out)
+            out = np.empty(xs.shape, dtype=xs.dtype)
+        np.divide(xs, S2, out)
         erf(out, out)
         out *= 0.5
         out += 0.5
         return out
 
-    def pm1(self, z, out=None):
+    def pm1(self, xs, out=None):
         r"""
         Partial moment of order 1:
 
         .. math::
 
-            \text{pm1}(z) \triangleq \int_{-\infty}^z z\phi(z) dz
-                = -\frac{1}{\sqrt{2\pi}}e^{-\frac{z^2}{2}}
+            \text{pm1}(x) \triangleq \int_{-\infty}^x x\phi(x) dz
+                = -\frac{1}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}
         """
-        return _cy_kernels.norm1d_pm1(z, out)
+        return _cy_kernels.norm1d_pm1(xs, out)
 
-    def _pm1(self, z, out=None):
+    def _pm1(self, xs, out=None):
         """
         Full-python implementation of :py:func:`Gaussian1D.pm1`
         """
-        z = np.asarray(z)
+        xs = np.asarray(xs)
         if out is None:
-            out = np.empty(z.shape, dtype=z.dtype)
-        np.multiply(z, z, out)
+            out = np.empty(xs.shape, dtype=xs.dtype)
+        np.multiply(xs, xs, out)
         out *= -0.5
         np.exp(out, out)
         out /= -S2PI
         return out
 
-    def pm2(self, z, out=None):
+    def pm2(self, xs, out=None):
         r"""
         Partial moment of order 2:
 
         .. math::
 
-            \text{pm2}(z) \triangleq \int_{-\infty}^z z^2\phi(z) dz
-                = \frac{1}{2}\text{erf}\left(\frac{z}{2}\right) - \frac{z}{\sqrt{2\pi}}
-                e^{-\frac{z^2}{2}} + \frac{1}{2}
+            \text{pm2}(x) \triangleq \int_{-\infty}^x x^2\phi(x) dz
+                = \frac{1}{2}\text{erf}\left(\frac{x}{2}\right) - \frac{x}{\sqrt{2\pi}}
+                e^{-\frac{x^2}{2}} + \frac{1}{2}
         """
-        return _cy_kernels.norm1d_pm2(z, out)
+        return _cy_kernels.norm1d_pm2(xs, out)
 
-    def _pm2(self, z, out=None):
+    def _pm2(self, xs, out=None):
         """
         Full-python implementation of :py:func:`Gaussian1D.pm2`
         """
-        z = np.asarray(z, dtype=float)
+        xs = np.asarray(xs, dtype=float)
         if out is None:
-            out = np.empty(z.shape)
-        np.divide(z, S2, out)
+            out = np.empty(xs.shape)
+        np.divide(xs, S2, out)
         erf(out, out)
         out /= 2
-        if z.shape:
-            zz = np.isfinite(z)
-            sz = z[zz]
+        if xs.shape:
+            zz = np.isfinite(xs)
+            sz = xs[zz]
             out[zz] -= sz * np.exp(-0.5 * sz * sz) / S2PI
-        elif np.isfinite(z):
-            out -= z * np.exp(-0.5 * z * z) / S2PI
+        elif np.isfinite(xs):
+            out -= xs * np.exp(-0.5 * xs * xs) / S2PI
         out += 0.5
         return out
 
@@ -714,26 +714,26 @@ class KernelnD(object):
 
     def pdf(self, y, out=None):
         r"""
-        Returns the density of the kernel on the points `z`. This is the funtion :math:`K(z)` itself.
+        Returns the density of the kernel on the points `xs`. This is the funtion :math:`K(x)` itself.
 
         Parameters
         ----------
-        z: ndarray
+        xs: ndarray
             Array of points to evaluate the function on. This should be at least a 2D array, with the last dimension
             corresponding to the dimension of the problem.
         out: ndarray
-            If provided, it will be of the same shape as `z` and the result should be stored in it. Ideally, it should
+            If provided, it will be of the same shape as `xs` and the result should be stored in it. Ideally, it should
             be used for as many intermediate computation as possible.
         """
         raise NotImplementedError()
 
-    def __call__(self, z, out=None):
+    def __call__(self, xs, out=None):
         """
         Alias for :py:meth:`KernelnD.pdf`
         """
-        return self.pdf(z, out=out)
+        return self.pdf(xs, out=out)
 
-    def cdf(self, z, out=None):
+    def cdf(self, xs, out=None):
         """
         CDF of the kernel.
 
@@ -756,14 +756,14 @@ class KernelnD(object):
                 xs = np.minimum(xs, upper)
                 return integrate.nquad(pdf, [(lower, x) for x in xs])[0]
             self.__comp_cdf = comp_cdf
-        z = np.atleast_2d(z)
+        xs = np.atleast_2d(xs)
         if out is None:
-            out = np.empty(z.shape[:-1], dtype=float)
-        return comp_cdf(*z.T, out=out)
+            out = np.empty(xs.shape[:-1], dtype=float)
+        return comp_cdf(*xs.T, out=out)
 
     def rfft(self, N, dx, out=None):
         """
-        FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
+        FFT of the kernel on the points of ``xs``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
         samples = (s[..., None] for s in fftnsamples(N, dx))
@@ -777,7 +777,7 @@ class KernelnD(object):
 
     def dct(self, N, dx, out=None):
         """
-        DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
+        DCT of the kernel on the points of ``xs``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
         samples = (s[..., None] for s in dctnsamples(N, dx))
