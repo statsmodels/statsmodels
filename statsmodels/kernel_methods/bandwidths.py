@@ -137,7 +137,7 @@ def scotts_full(model):
     return full_variance((n * (d + 2.) / 4.)**(-1. / (d + 4.)), exog)
 
 
-def _botev_fixed_point(t, M, I, a2):
+def _botev_fixed_point(t, M, II, a2):
     n = 7
     II = large_float(II)
     M = large_float(M)
