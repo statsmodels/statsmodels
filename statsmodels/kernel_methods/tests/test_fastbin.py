@@ -8,6 +8,7 @@ import numpy as np
 binfcts = [linbin.fast_bin, linbin.fast_linbin]
 binfcts_nd = [linbin.fast_bin_nd, linbin.fast_linbin_nd]
 
+
 class TestContinuousBinning1D(object):
     @classmethod
     def setup_class(cls):
@@ -15,7 +16,6 @@ class TestContinuousBinning1D(object):
         cls.data = dst.rvs(2000)
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bounds = [-3, 3]
-
 
     @pytest.mark.parametrize("fct", binfcts)
     @pytest.mark.parametrize("M", (64, 128, 159))
@@ -37,7 +37,7 @@ class TestContinuousBinning1D(object):
             weights = self.weights
             size = weights.sum()
         mesh, bins = fct(data, bounds, M, weights, bin_type)
-        npt.assert_equal(mesh.shape, (M,))
+        npt.assert_equal(mesh.shape, (M, ))
         assert mesh.grid[0][0] >= bounds[0]
         assert mesh.grid[0][-1] <= bounds[1]
         npt.assert_allclose(bins.sum(), size, rtol=1e-8)
@@ -90,7 +90,7 @@ class TestContinuousBinning1D(object):
     @pytest.mark.parametrize("fct", binfcts)
     def test_bad_out1(self, fct):
         with pytest.raises(ValueError):
-            out = np.empty((1,), dtype=float)
+            out = np.empty((1, ), dtype=float)
             fct(self.data, self.bounds, 4, 1., 'B', out)
 
     @pytest.mark.parametrize("fct", binfcts)
@@ -99,11 +99,12 @@ class TestContinuousBinning1D(object):
             out = np.empty(self.weights.shape, dtype=int)
             fct(self.data, self.bounds, 4, 1., 'B', out)
 
+
 class TestContinuousBinningnD(object):
     @classmethod
     def setup_class(cls):
         dst = stats.norm(0, 1)
-        cls.data = dst.rvs(4*2000).reshape(2000, 4)
+        cls.data = dst.rvs(4 * 2000).reshape(2000, 4)
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bounds = [[-3, 3]]
 
@@ -113,13 +114,15 @@ class TestContinuousBinningnD(object):
     @pytest.mark.parametrize("bin_type", 'CRB')
     @pytest.mark.parametrize("weighted", [True, False])
     def test_validity(self, fct, d, M, bin_type, weighted):
-        M = (M,)*d
+        M = (M, ) * d
         data = self.data[:, :d]
         weights = 1.
         size = data.shape[0]
-        bounds = self.bounds*d
+        bounds = self.bounds * d
         if bin_type == 'B':
-            sel = np.all([(data[:, i] >= bounds[i][0]) & (data[:, i] < bounds[i][1]) for i in range(d)], axis=0)
+            sel = np.all([(data[:, i] >= bounds[i][0]) &
+                          (data[:, i] < bounds[i][1]) for i in range(d)],
+                         axis=0)
             if weighted:
                 weights = self.weights
                 size = weights[sel].sum()
@@ -128,7 +131,7 @@ class TestContinuousBinningnD(object):
         elif weighted:
             weights = self.weights
             size = weights.sum()
-        bin_type = bin_type*d
+        bin_type = bin_type * d
         mesh, bins = fct(data, bounds, M, weights, bin_type)
         npt.assert_equal(mesh.shape, M)
         for d in range(len(bounds)):
@@ -186,7 +189,7 @@ class TestContinuousBinningnD(object):
     def test_bad_out1(self, fct):
         with pytest.raises(ValueError):
             bounds = self.bounds * 4
-            out = np.empty((1,), dtype=float)
+            out = np.empty((1, ), dtype=float)
             fct(self.data, bounds, 4, 1., 'BBBB', out)
 
     @pytest.mark.parametrize("fct", binfcts_nd)
@@ -195,6 +198,7 @@ class TestContinuousBinningnD(object):
             bounds = self.bounds * 4
             out = np.empty(self.weights.shape, dtype=int)
             fct(self.data, bounds, 4, 1., 'BBBB', out)
+
 
 class TestDiscreteBinning(object):
     @classmethod
@@ -226,5 +230,5 @@ class TestDiscreteBinning(object):
         mesh, bins = fct(data, bounds, M, weights, 'D')
         assert mesh.grid[0][0] == 0
         assert mesh.grid[0][-1] == bounds[1]
-        assert len(mesh.grid[0]) == bounds[1]+1
+        assert len(mesh.grid[0]) == bounds[1] + 1
         npt.assert_allclose(bins.sum(), size, rtol=1e-8)

@@ -13,6 +13,7 @@ from .fast_linbin import fast_linbin_nd as fast_bin_nd
 from ._kde_methods import KDEMethod, _array_arg, filter_exog
 from ._kde1d_methods import Reflection1D, Cyclic1D
 
+
 def generate_grid(kde, N=None, cut=None):
     r"""
     Helper method returning a regular grid on the domain of the KDE.
@@ -35,7 +36,8 @@ def generate_grid(kde, N=None, cut=None):
     if N.ndim == 0:
         N = N * np.ones(kde.ndim, dtype=int)
     elif N.ndim != 1 or N.shape[0] != kde.ndim:
-        raise ValueError("N must be a single integer, or a 1D array with as many element as dimensions in the KDE")
+        raise ValueError("N must be a single integer, or a 1D array with "
+                         "as many element as dimensions in the KDE")
     if cut is None:
         cut = kde.kernel.cut
     if kde.bandwidth.ndim == 0:
@@ -56,9 +58,11 @@ def generate_grid(kde, N=None, cut=None):
         axes[i] = np.linspace(lower[i], upper[i], N[i])
     return Grid(axes)
 
+
 def _compute_bandwidth(kde, default):
     """
-    Compute the bandwidth and covariance for the estimated model, based of its exog attribute
+    Compute the bandwidth and covariance for the estimated model, based of its
+    exog attribute
     """
     if kde.bandwidth is not None:
         bw = kde.bandwidth
@@ -68,7 +72,9 @@ def _compute_bandwidth(kde, default):
         bw = bw(kde)
     return bw
 
-def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weights):
+
+def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights,
+               total_weights):
     """
     Compute the density estimate using a FFT approximation.
 
@@ -100,7 +106,11 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='C')
+    mesh, DataHist = fast_bin_nd(exog,
+                                 np.c_[lower, upper],
+                                 N,
+                                 weights=weights,
+                                 bin_type='C')
     DataHist /= total_weights * mesh.start_volume
     FFTData = np.fft.rfftn(DataHist)
 
@@ -119,15 +129,17 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
 
 class KDEnDMethod(KDEMethod):
     """
-    Base class providing a default grid method and a default method for unbounded evaluation of the PDF and CDF. It also
-    provides default methods for the other metrics, based on PDF and CDF calculations.
+    Base class providing a default grid method and a default method for
+    unbounded evaluation of the PDF and CDF. It also provides default methods
+    for the other metrics, based on PDF and CDF calculations.
 
     The default class can only deal with open, continuous, multivariate data.
 
     :Note:
-        - It is expected that all grid methods will return the same grid if used with the same arguments.
-        - It is fair to assume all array-like arguments will be at least 2D arrays, with the first dimension denoting
-        the dimension.
+        - It is expected that all grid methods will return the same grid if
+          used with the same arguments.
+        - It is fair to assume all array-like arguments will be at least 2D
+          arrays, with the first dimension denoting the dimension.
 
 
     Attributes
@@ -147,8 +159,8 @@ class KDEnDMethod(KDEMethod):
 
     def fit(self, kde, compute_bandwidth=True):
         """
-        Extract the parameters required for the computation and returns a stand-alone estimator capable of performing
-        most computations.
+        Extract the parameters required for the computation and returns a
+        stand-alone estimator capable of performing most computations.
 
         Parameters
         ----------
@@ -163,21 +175,25 @@ class KDEnDMethod(KDEMethod):
 
         Notes
         -----
-        By default, most values can be adjusted after estimation. However, it is not allowed to change the number of
-        exogenous variables or the dimension of the problem.
+        By default, most values can be adjusted after estimation. However, it
+        is not allowed to change the number of exogenous variables or the
+        dimension of the problem.
         """
         ndim = kde.ndim
         if ndim == 1:
             method = Reflection1D()
             return method.fit(kde, compute_bandwidth)
+        return self.fit_nd(kde, compute_bandwidth)
 
+    def fit_nd(self, kde, compute_bandwidth=True):
         kde = filter_exog(kde, self.bin_type)
         fitted = self.copy()
         fitted._fitted = True
         fitted._exog = kde.exog
         fitted._upper = _array_arg(kde.upper, 'upper', ndim)
         fitted._lower = _array_arg(kde.lower, 'lower', ndim)
-        if np.any(kde.axis_type != 'C') or np.any(fitted.axis_type != kde.axis_type):
+        if np.any(kde.axis_type != 'C') or np.any(
+                fitted.axis_type != kde.axis_type):
             raise ValueError("Error, all axis must be continuous")
         if kde.kernel is not None:
             fitted._kernel = kde.kernel.for_ndim(ndim)
@@ -205,14 +221,15 @@ class KDEnDMethod(KDEMethod):
 
     @property
     def bin_type(self):
-        return 'B'*self.ndim
+        return 'B' * self.ndim
 
     @property
     def bandwidth(self):
         """
         Selected bandwidth.
 
-        Unlike the bandwidth for the KDE, this must be an actual value and not a method.
+        Unlike the bandwidth for the KDE, this must be an actual value and not
+        a method.
         """
         return self._bandwidth
 
@@ -222,7 +239,7 @@ class KDEnDMethod(KDEMethod):
             bw = np.asarray(bw).squeeze()
             if bw.ndim == 0:
                 inv_bw = 1 / bw
-                det_inv_bw = inv_bw ** self.ndim
+                det_inv_bw = inv_bw**self.ndim
             elif bw.ndim == 1:
                 assert bw.shape[0] == self.ndim
                 inv_bw = 1 / bw
@@ -232,7 +249,8 @@ class KDEnDMethod(KDEMethod):
                 inv_bw = linalg.inv(bw)
                 det_inv_bw = linalg.det(inv_bw)
             else:
-                raise ValueError("Error, specified bandiwdth has more than 2 dimension")
+                raise ValueError("Error, specified bandiwdth has more than "
+                                 " 2 dimension")
             self._bandwidth = bw
             self._inv_bw = inv_bw
             self._det_inv_bw = det_inv_bw
@@ -259,10 +277,10 @@ class KDEnDMethod(KDEMethod):
             raise ValueError("Error, exog must be at most a 2D array")
         weights = np.asarray(weights)
         adjust = np.asarray(adjust)
-        if weights.ndim != 0 and weights.shape != (exog.shape[0],):
+        if weights.ndim != 0 and weights.shape != (exog.shape[0], ):
             raise ValueError("Error, weights must be either a single number, "
                              "or a 1D array with the same length as exog")
-        if adjust.ndim != 0 and adjust.shape != (exog.shape[0],):
+        if adjust.ndim != 0 and adjust.shape != (exog.shape[0], ):
             raise ValueError("Error, adjust must be either a single number, "
                              "or a 1D array with the same length as exog")
         self._exog = exog
@@ -332,6 +350,7 @@ class KDEnDMethod(KDEMethod):
 
         def matrix_inv_bw(pts):
             return np.dot(pts, inv_bw)
+
         if inv_bw.ndim == 2:
             inv_bw_fct = matrix_inv_bw
         else:
@@ -344,7 +363,7 @@ class KDEnDMethod(KDEMethod):
         if self.npts > m:
             factor = weights * det_inv_bw / adjust
             # There are fewer points that data: loop over points
-            energy = np.empty((exog.shape[0],), dtype=out.dtype)
+            energy = np.empty((exog.shape[0], ), dtype=out.dtype)
             for idx in range(m):
                 diff = inv_bw_fct(points[idx] - exog)
                 kernel.pdf(diff, out=energy)
@@ -361,7 +380,7 @@ class KDEnDMethod(KDEMethod):
             na = 0
             nw = 0
             n = self.npts
-            energy = np.empty((points.shape[0],), dtype=out.dtype)
+            energy = np.empty((points.shape[0], ), dtype=out.dtype)
             for idx in range(n):
                 diff = inv_bw_fct(points - exog[idx])
                 kernel.pdf(diff, out=energy)
@@ -408,8 +427,9 @@ class KDEnDMethod(KDEMethod):
             p2 = self.base_p2 // self.ndim
             if self.base_p2 % self.ndim > 0:
                 p2 += 1
-            return 2 ** p2
+            return 2**p2
         return N
+
 
 class Cyclic(KDEnDMethod):
 
@@ -419,17 +439,18 @@ class Cyclic(KDEnDMethod):
         if kde.ndim == 1:
             cyc = Cyclic1D()
             return cyc.fit(kde, compute_bandwidth)
-        return super(Cyclic, self).fit(kde, compute_bandwidth)
+        return self.fit_nd(kde, compute_bandwidth)
 
     @property
     def bin_type(self):
-        return 'C'*self.ndim
+        return 'C' * self.ndim
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
         for i in range(self.ndim):
             if self.bounded(i) and not self.closed(i):
-                raise ValueError("Error, cyclic method requires all dimensions to be closed or not bounded")
+                raise ValueError("Error, cyclic method requires all "
+                                 "dimensions to be closed or not bounded")
         if not self.bounded():
             return super(Cyclic, self).pdf(points, out)
         exog = self.exog
@@ -451,8 +472,6 @@ class Cyclic(KDEnDMethod):
         else:
             inv_bw_fct = scalar_inv_bw
 
-        # if inv_bw.ndim == 2:
-            # raise ValueError("Error, this method cannot handle non-diagonal bandwidth matrix.")
         det_inv_bw = self.det_inv_bandwidth
         weights = self.weights
         adjust = self.adjust
@@ -462,7 +481,7 @@ class Cyclic(KDEnDMethod):
         if self.npts > m:
             factor = weights * det_inv_bw / adjust
             # There are fewer points that data: loop over points
-            energy = np.empty((exog.shape[0],), dtype=out.dtype)
+            energy = np.empty((exog.shape[0], ), dtype=out.dtype)
             # print("iterate on points")
             for idx in range(m):
                 diff = inv_bw_fct(points[idx] - exog)
@@ -484,7 +503,7 @@ class Cyclic(KDEnDMethod):
             na = 0
             nw = 0
             n = self.npts
-            energy = np.empty((points.shape[0],), dtype=out.dtype)
+            energy = np.empty((points.shape[0], ), dtype=out.dtype)
             # print("iterate on exog")
             for idx in range(n):
                 diff = inv_bw_fct(points - exog[idx]) / adjust[na]
@@ -508,7 +527,8 @@ class Cyclic(KDEnDMethod):
             return KDEnDMethod.grid(self, N, cut)
         for i in range(self.ndim):
             if self.bounded(i) and not self.closed(i):
-                raise ValueError("Error, cyclic method requires all dimensions to be closed or not bounded")
+                raise ValueError("Error, cyclic method requires all "
+                                 "dimensions to be closed or not bounded")
         bw_inv = self.inv_bandwidth / self.adjust
         exog = self.exog
         N = self.grid_size(N)
@@ -532,4 +552,5 @@ class Cyclic(KDEnDMethod):
 
         weights = self.weights
 
-        return fftdensity(exog, self.kernel.rfft, bw_inv, lower, upper, N, weights, self.total_weights)
+        return fftdensity(exog, self.kernel.rfft, bw_inv, lower, upper, N,
+                          weights, self.total_weights)

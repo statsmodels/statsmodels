@@ -66,9 +66,8 @@ class KDE(object):
     exog: ndarray
         2D array DxN with the N input points in D dimension.
     kwords: dict
-        setting attributes at construction time.
-        Any named argument will be equivalent to setting the property
-        after the fact. For example::
+        setting attributes at construction time. Any named argument will be
+        equivalent to setting the property after the fact. For example::
 
             >>> xs = [1,2,3]
             >>> k = KDE1D(xs, lower=0)
@@ -81,11 +80,12 @@ class KDE(object):
     Notes
     -----
 
-    This is the object from which you define and prepare your model. Once prepared, the model needs to be fitted, which
-    returns an estimator object.
+    This is the object from which you define and prepare your model. Once
+    prepared, the model needs to be fitted, which returns an estimator object.
 
-    The model knows about a set number of parameters that all methods must account for. However, check on the method's
-    documentation to make sure if there aren't other parameters.
+    The model knows about a set number of parameters that all methods must
+    account for. However, check on the method's documentation to make sure if
+    there aren't other parameters.
     """
     def __init__(self, exog, **kwords):
         self._exog = None
@@ -104,7 +104,8 @@ class KDE(object):
             if hasattr(self, n):
                 setattr(self, n, kwords[n])
             else:
-                raise AttributeError("Error, unknown attribute: '{}'".format(n))
+                raise AttributeError(
+                    "Error, unknown attribute: '{}'".format(n))
 
         if self._method is None:
             self._method = default_method()
@@ -123,7 +124,8 @@ class KDE(object):
     @property
     def lower(self):
         """
-        List with the lower bound for the domain on each dimension. None for automatic computation of the bound.
+        List with the lower bound for the domain on each dimension. None for
+        automatic computation of the bound.
         """
         return self._lower
 
@@ -133,12 +135,13 @@ class KDE(object):
 
     @lower.deleter
     def lower(self):
-        self._lower = -np.inf*np.ones(self.ndim, dtype=float)
+        self._lower = -np.inf * np.ones(self.ndim, dtype=float)
 
     @property
     def upper(self):
         """
-        List with the upper bound for the domain on each dimension. None for automatic computation of the bound.
+        List with the upper bound for the domain on each dimension. None for
+        automatic computation of the bound.
         """
         return self._upper
 
@@ -148,12 +151,13 @@ class KDE(object):
 
     @upper.deleter
     def upper(self):
-        self._upper = np.inf*np.ones(self.ndim, dtype=float)
+        self._upper = np.inf * np.ones(self.ndim, dtype=float)
 
     @property
     def exog(self):
         """
-        2D array with exogenous data. The array has shape NxD for N points in D dimension.
+        2D array with exogenous data. The array has shape NxD for N points in D
+        dimension.
         """
         return self._exog
 
@@ -227,7 +231,8 @@ class KDE(object):
     def weights(self, value):
         value = np.asarray(value, dtype=float)
         if value.ndim > 1:
-            raise ValueError("Error, the weights must be a scalar or a 1D array")
+            raise ValueError(
+                "Error, the weights must be a scalar or a 1D array")
         if value.ndim == 0:
             del self.weights
         else:
@@ -240,7 +245,8 @@ class KDE(object):
     @property
     def adjust(self):
         """
-        Multiplicating factor to apply to the bandwidth: it can be a single value or a 1D array.
+        Multiplicating factor to apply to the bandwidth: it can be a single
+        value or a 1D array.
         """
         return self._adjust
 
@@ -279,7 +285,8 @@ class KDE(object):
 
     def fit(self):
         """
-        Compute the bandwidths and find the proper KDE method for the current dataset.
+        Compute the bandwidths and find the proper KDE method for the current
+        dataset.
 
         Returns
         -------
@@ -291,8 +298,8 @@ class KDE(object):
         -----
         The returned object doesn't maintain any reference to the
         :py:class:`KDE` object, which can therefore be modified freely.
-        However, the data are not (always) copied either, so modifying the data in place
-        may modify the returned object.
+        However, the data are not (always) copied either, so modifying the data
+        in place may modify the returned object.
         """
         return self.method.fit(self)
 
