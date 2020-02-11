@@ -162,7 +162,6 @@ exts = dict(
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},
     _cy_kernels = {'source' : 'statsmodels/kernel_methods/_cy_kernels.pyx',
-                   'include_dirs': ['statsmodels/kernel_methods'],
                    'include_dirs': npymath_info['include_dirs'],
                    'libraries': npymath_info['libraries'],
                    'library_dirs': npymath_info['library_dirs']},
