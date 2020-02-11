@@ -183,7 +183,7 @@ class Botev(object):
         if not weights.shape:
             weights = None
         M = len(data)
-        DataHist, bins = np.histogram(data, bins=N, range=(lower, upper), weights=weights)
+        DataHist, _ = np.histogram(data, bins=N, range=(lower, upper), weights=weights)
         DataHist = DataHist / M
         DCTData = fftpack.dct(DataHist, norm=None)
 
@@ -350,4 +350,4 @@ class Multivariate(object):
                 res[d] = float(bw)
         return res
 
-from .bw_crossvalidation import CrossValidation, CVFunc, CVIMSE, CVLogLikelihood, leave_some_out  # NoQA
+from .bw_crossvalidation import CrossValidation, CVFunc, CVIMSE, CVLogLikelihood, leave_some_out  # noqa

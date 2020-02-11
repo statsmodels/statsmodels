@@ -26,8 +26,8 @@ class TriCube(Kernel1D):
 
     """
 
-    def pdf(self, z, out=None):
-        return _cy_kernels.tricube_pdf(z, out)
+    def pdf(self, xs, out=None):
+        return _cy_kernels.tricube_pdf(xs, out)
 
     __call__ = pdf
 
@@ -35,7 +35,7 @@ class TriCube(Kernel1D):
     lower = -upper
     cut = upper
 
-    def cdf(self, z, out=None):
+    def cdf(self, xs, out=None):
         r"""
         CDF of the distribution:
 
@@ -48,9 +48,9 @@ class TriCube(Kernel1D):
                 1 & \text{, if} x > 1/a
                 \end{array}\right.
         """
-        return _cy_kernels.tricube_cdf(z, out)
+        return _cy_kernels.tricube_cdf(xs, out)
 
-    def pm1(self, z, out=None):
+    def pm1(self, xs, out=None):
         r"""
         Partial moment of order 1:
 
@@ -63,9 +63,9 @@ class TriCube(Kernel1D):
                 0 & \text{, otherwise}
                 \end{array}\right.
         """
-        return _cy_kernels.tricube_pm1(z, out)
+        return _cy_kernels.tricube_pm1(xs, out)
 
-    def pm2(self, z, out=None):
+    def pm2(self, xs, out=None):
         r"""
         Partial moment of order 2:
 
@@ -78,9 +78,9 @@ class TriCube(Kernel1D):
             1 & \text{, if } x > 1/a
             \end{array}\right.
         """
-        return _cy_kernels.tricube_pm2(z, out)
+        return _cy_kernels.tricube_pm2(xs, out)
 
-    def convolution(self, z, out=None):
+    def convolution(self, xs, out=None):
         r"""
         Tricube convolution kernel:
 
@@ -104,7 +104,7 @@ class TriCube(Kernel1D):
                     & 0<x<1
              \end{array} \right.
         """
-        return _cy_kernels.tricube_convolution(z, out)
+        return _cy_kernels.tricube_convolution(xs, out)
 
 
 class Epanechnikov(Kernel1D):

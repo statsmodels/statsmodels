@@ -167,7 +167,7 @@ class KDEnDMethod(KDEMethod):
         exogenous variables or the dimension of the problem.
         """
         ndim = kde.ndim
-        if ndim == 1 and type(self) == KDEnDMethod:
+        if ndim == 1:
             method = Reflection1D()
             return method.fit(kde, compute_bandwidth)
 
