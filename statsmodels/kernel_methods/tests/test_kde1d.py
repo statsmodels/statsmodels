@@ -4,8 +4,8 @@ import numpy as np
 import numpy.testing as npt
 from numpy.random import randn
 from scipy import integrate
-from . import kde_utils as kde_utils
-from .kde_utils import kde_tester, datasets
+from . import kde_test_utils
+from .kde_test_utils import kde_tester, datasets, generate_methods_data, kde_tester_args
 from ..kde_utils import GridInterpolator
 
 class FakeModel(object):
@@ -44,10 +44,10 @@ class TestBandwidth(object):
 def make_name(param_name, method):
     return "{0}_{1}".format(param_name, method.instance.name)
 
-all_methods_data = kde_utils.generate_methods_data(['norm', 'lognorm'])
-all_methods_small_data = kde_utils.generate_methods_data(['norm', 'lognorm'], indices=[0])
+all_methods_data = generate_methods_data(['norm', 'lognorm'])
+all_methods_small_data = generate_methods_data(['norm', 'lognorm'], indices=[0])
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_data)
+@pytest.mark.parametrize(kde_tester_args, all_methods_data)
 class TestKDE1D(object):
 
     @kde_tester
@@ -88,7 +88,7 @@ class TestKDE1DExtra(object):
             method = request.param
         except AttributeError:
             method = obj.method
-        return kde_utils.createKDE(obj.params, obj.data, obj.small_vs, method), method
+        return kde_test_utils.createKDE(obj.params, obj.data, obj.small_vs, method), method
 
     @staticmethod
     @pytest.fixture
@@ -98,11 +98,11 @@ class TestKDE1DExtra(object):
             method = request.param
         except AttributeError:
             method = obj.method
-        return kde_utils.createKDE(obj.params, obj.data, obj.large_vs, method), method
+        return kde_test_utils.createKDE(obj.params, obj.data, obj.large_vs, method), method
 
     @classmethod
     def setup_class(cls):
-        params = kde_utils.knownParameters['norm']
+        params = kde_test_utils.knownParameters['norm']
         cls.params = params
         cls.method = params.methods[0]
         cls.data = params.create_dataset()
@@ -132,7 +132,7 @@ class TestKDE1DExtra(object):
         est = k.fit()
         assert est.bandwidth > 0
 
-    @pytest.mark.parametrize('ker', kde_utils.kernels1d)
+    @pytest.mark.parametrize('ker', kde_test_utils.kernels1d)
     def test_kernels(self, large_kde, ker):
         k, _ = large_kde
         k.kernel = ker.cls()
@@ -141,7 +141,7 @@ class TestKDE1DExtra(object):
         acc = self.method.normed_accuracy * ker.precision_factor
         npt.assert_allclose(tot, 1, rtol=acc, atol=acc)
 
-    @pytest.mark.parametrize('ker', kde_utils.kernels1d)
+    @pytest.mark.parametrize('ker', kde_test_utils.kernels1d)
     def test_grid_kernels(self, large_kde, ker):
         k, _ = large_kde
         k.kernel = ker.cls()
@@ -152,18 +152,18 @@ class TestKDE1DExtra(object):
         npt.assert_allclose(tot, 1, rtol=acc, atol=acc)
         npt.assert_equal(type(est.kernel), type(k.kernel.for_ndim(1)))
 
-    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_test_utils.methods_1d, indirect=True)
     def test_bad_set_axis(self, small_kde):
         k, _ = small_kde
         with pytest.raises(ValueError):
             k.method.axis_type = 'O'
 
-    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_test_utils.methods_1d, indirect=True)
     def test_set_axis(self, small_kde):
         k, _ = small_kde
         k.method.axis_type = 'C'
 
-    @pytest.mark.parametrize('small_kde', kde_utils.methods_1d, indirect=True)
+    @pytest.mark.parametrize('small_kde', kde_test_utils.methods_1d, indirect=True)
     def test_force_span(self, small_kde):
         k, m = small_kde
         est = k.fit()
@@ -205,12 +205,12 @@ class TestKDE1DExtra(object):
         npt.assert_allclose(xs1.full(), xs3.full(), rtol=1e-8, atol=1e-8)
 
     def test_bad_change_exog(self):
-        k = kde_utils.createKDE(self.params, self.data, self.small_vs, self.method)
+        k = kde_test_utils.createKDE(self.params, self.data, self.small_vs, self.method)
         est = k.fit()
         with pytest.raises(ValueError):
             est.exog = self.large_vs
 
-    @pytest.mark.parametrize('large_kde', kde_utils.methods_1d, indirect=True)
+    @pytest.mark.parametrize('large_kde', kde_test_utils.methods_1d, indirect=True)
     def test_update_inputs(self, large_kde):
         k, m = large_kde
         k.weights = self.data.weights[1]
@@ -223,7 +223,7 @@ class TestKDE1DExtra(object):
         tot = xs.integrate(ys)
         npt.assert_allclose(tot, 1, rtol=m.grid_accuracy, atol=m.grid_accuracy)
 
-    @pytest.mark.parametrize('large_kde', kde_utils.methods_1d, indirect=True)
+    @pytest.mark.parametrize('large_kde', kde_test_utils.methods_1d, indirect=True)
     def test_bad_update_inputs1(self, large_kde):
         k, _ = large_kde
         k.weights = self.data.weights[1]
@@ -280,7 +280,7 @@ class TestKDE1DExtra(object):
             kde_methods.create_transform(np.log)
 
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_small_data)
 class TestSF(object):
     @kde_tester
     def test_method_works(self, k, method, data):
@@ -297,7 +297,7 @@ class TestSF(object):
         _, cdf = est.cdf_grid()
         npt.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_small_data)
 class TestISF(object):
 
     @kde_tester
@@ -319,7 +319,7 @@ class TestISF(object):
         acc = max(method.grid_accuracy, method.normed_accuracy)
         npt.assert_allclose(comp_sf, ref_sf, acc, acc)
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_small_data)
 class TestICDF(object):
 
     @kde_tester
@@ -342,7 +342,7 @@ class TestICDF(object):
         npt.assert_allclose(comp_cdf, ref_cdf, acc, acc)
 
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_small_data)
 class TestHazard(object):
 
     @kde_tester
@@ -372,7 +372,7 @@ class TestHazard(object):
         npt.assert_allclose(h_comp[sel], h_ref, method.accuracy, method.accuracy)
 
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_small_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_small_data)
 class TestCumHazard(object):
 
     @kde_tester

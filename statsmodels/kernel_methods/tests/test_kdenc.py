@@ -1,12 +1,12 @@
 import pytest
-from . import kde_utils
+from . import kde_test_utils
 import numpy as np
 import numpy.testing as npt
-from .kde_utils import kde_tester, datasets
+from .kde_test_utils import kde_tester, datasets
 
-all_methods_data = kde_utils.generate_methods_data(['nc'])
+all_methods_data = kde_test_utils.generate_methods_data(['nc'])
 
-@pytest.mark.parametrize(kde_utils.kde_tester_args, all_methods_data)
+@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_data)
 class TestNonContinuous(object):
 
     @kde_tester
