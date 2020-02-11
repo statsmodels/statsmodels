@@ -260,7 +260,7 @@ kde_tester_args = 'name,index,method,with_adjust,with_weights,method_name'
 def make_name(method):
     if isinstance(method, test_method):
         return method.instance.name
-    return ":".join(m.instance.name for m  in method)
+    return ":".join(m.instance.name for m in method)
 
 def generate_methods_data(parameter_names, indices=None):
     """Generate the set of parameters needed to create tests for all these types of distributions."""
