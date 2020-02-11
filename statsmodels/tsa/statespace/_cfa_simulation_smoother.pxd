@@ -15,6 +15,7 @@ cdef class sCFASimulationSmoother(object):
     # Statespace object
     cdef readonly sStatespace model
     cdef readonly int order, lower_bandwidth
+    cdef readonly int k_states, k_states2
 
     cdef readonly np.float32_t [::1, :] prior_mean, posterior_mean
     cdef readonly np.float32_t [::1, :] posterior_cov_inv_chol, K
@@ -43,6 +44,7 @@ cdef class dCFASimulationSmoother(object):
     # Statespace object
     cdef readonly dStatespace model
     cdef readonly int order, lower_bandwidth
+    cdef readonly int k_states, k_states2
 
     cdef readonly np.float64_t [::1, :] prior_mean, posterior_mean
     cdef readonly np.float64_t [::1, :] posterior_cov_inv_chol, K
@@ -72,6 +74,7 @@ cdef class cCFASimulationSmoother(object):
     # Statespace object
     cdef readonly cStatespace model
     cdef readonly int order, lower_bandwidth
+    cdef readonly int k_states, k_states2
 
     cdef readonly np.complex64_t [::1, :] prior_mean, posterior_mean
     cdef readonly np.complex64_t [::1, :] posterior_cov_inv_chol, K
@@ -101,6 +104,7 @@ cdef class zCFASimulationSmoother(object):
     # Statespace object
     cdef readonly zStatespace model
     cdef readonly int order, lower_bandwidth
+    cdef readonly int k_states, k_states2
 
     cdef readonly np.complex128_t [::1, :] prior_mean, posterior_mean
     cdef readonly np.complex128_t [::1, :] posterior_cov_inv_chol, K
