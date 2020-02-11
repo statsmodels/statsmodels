@@ -74,36 +74,38 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
 def fast_linbin(X, bounds, M, weights=1., bin_type='B', out=None):
     return _fast_bin(_cy_fast_linbin.fast_linbin, X, bounds, M, weights, bin_type, out)
 
-fast_linbin.__doc__ = """
-    Linear Binning as described in Fan and Marron (1994)
-    """ + _fast_bin.__doc__ + r"""
+if _fast_bin.__doc__:
+    fast_linbin.__doc__ = """
+        Linear Binning as described in Fan and Marron (1994)
+        """ + _fast_bin.__doc__ + r"""
 
-    Unless the bin is discrete, for a point :math:`x` between bins :math:`b_i` and :math:`b_{i+1}` at positions
-    :math:`p_i` and :math:`p_{i+1}`, the bins will be updated as:
+        Unless the bin is discrete, for a point :math:`x` between bins :math:`b_i` and :math:`b_{i+1}` at positions
+        :math:`p_i` and :math:`p_{i+1}`, the bins will be updated as:
 
-    .. math::
+        .. math::
 
-        b_i = b_i + \frac{b_{i+1} - x}{b_{i+1} - b_i}
+            b_i = b_i + \frac{b_{i+1} - x}{b_{i+1} - b_i}
 
-        b_{i+1} = b_{i+1} + \frac{x - b_i}{b_{i+1} - b_i}
+            b_{i+1} = b_{i+1} + \frac{x - b_i}{b_{i+1} - b_i}
 
-    The placement of the bin depends on the bin type:
-    - For continuous bins, the bins are placed at :math:`\{a+\delta/2, \ldots, a+k \delta + \delta/1, \ldots
-    b-\delta/2\}` with :math:`delta = \frac{M-1}{b-a}`.
-    - For discrete bins, the bins are placed on the integer numbers
+        The placement of the bin depends on the bin type:
+        - For continuous bins, the bins are placed at :math:`\{a+\delta/2, \ldots, a+k \delta + \delta/1, \ldots
+        b-\delta/2\}` with :math:`delta = \frac{M-1}{b-a}`.
+        - For discrete bins, the bins are placed on the integer numbers
 
 
-    If cyclic is true, then the bins are placed at :math:`\{a, \ldots, a+k \delta, \ldots, b-\delta\}` with
-    :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
-    """
+        If cyclic is true, then the bins are placed at :math:`\{a, \ldots, a+k \delta, \ldots, b-\delta\}` with
+        :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
+        """
 
 
 def fast_bin(X, bounds, M, weights=1., bin_type='B', out=None):
     return _fast_bin(_cy_fast_linbin.fast_bin, X, bounds, M, weights, bin_type, out)
 
-fast_bin.__doc__ = """
-    Fast Binning on regular grid
-    """ + _fast_bin.__doc__
+if _fast_bin.__doc__:
+    fast_bin.__doc__ = """
+        Fast Binning on regular grid
+        """ + _fast_bin.__doc__
 
 def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     r"""
@@ -195,32 +197,34 @@ def fast_linbin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
         return _fast_bin_nd(_cy_fast_linbin.fast_linbin_3d, X, bounds, M, weights, bin_type, out)
     return _fast_bin_nd(_cy_fast_linbin.fast_linbin_nd, X, bounds, M, weights, bin_type, out)
 
-fast_linbin_nd.__doc__ = r"""
-    Linear Binning in nD as described in Fan and Marron (1994)
-    """ + _fast_bin_nd.__doc__ + r"""
+if _fast_bin_nd.__doc__:
+    fast_linbin_nd.__doc__ = r"""
+        Linear Binning in nD as described in Fan and Marron (1994)
+        """ + _fast_bin_nd.__doc__ + r"""
 
-    Unless the bin is non-continuous, for a point :math:`x` between bins :math:`b_i` and :math:`b_{i+1}` at positions
-    :math:`p_i` and :math:`p_{i+1}`, the bins will be updated as:
+        Unless the bin is non-continuous, for a point :math:`x` between bins :math:`b_i` and :math:`b_{i+1}` at positions
+        :math:`p_i` and :math:`p_{i+1}`, the bins will be updated as:
 
-    .. math::
+        .. math::
 
-        b_i = b_i + \frac{b_{i+1} - x}{b_{i+1} - b_i}
+            b_i = b_i + \frac{b_{i+1} - x}{b_{i+1} - b_i}
 
-        b_{i+1} = b_{i+1} + \frac{x - b_i}{b_{i+1} - b_i}
+            b_{i+1} = b_{i+1} + \frac{x - b_i}{b_{i+1} - b_i}
 
-    The placement of the bin depends on the bin type:
-    - For reflected or un-bounded bins, the bins are placed at :math:`\{a+\delta/2, \ldots, a+k \delta + \delta/1,
-    \ldots b-\delta/2\}` with :math:`delta = \frac{M-1}{b-a}`.
-    - For cyclic bins, the bins are placed at :math:`\{a,\ldots,\}
+        The placement of the bin depends on the bin type:
+        - For reflected or un-bounded bins, the bins are placed at :math:`\{a+\delta/2, \ldots, a+k \delta + \delta/1,
+        \ldots b-\delta/2\}` with :math:`delta = \frac{M-1}{b-a}`.
+        - For cyclic bins, the bins are placed at :math:`\{a,\ldots,\}
 
 
-    If cyclic is true, then the bins are placed at :math:`\{a, \ldots, a+k \delta, \ldots, b-\delta\}` with
-    :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
-    """
+        If cyclic is true, then the bins are placed at :math:`\{a, \ldots, a+k \delta, \ldots, b-\delta\}` with
+        :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
+        """
 
 def fast_bin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
     return _fast_bin_nd(_cy_fast_linbin.fast_bin_nd, X, bounds, M, weights, bin_type, out)
 
-fast_bin_nd.__doc__ = r"""
-    Simple Binning in nD
-    """ + _fast_bin_nd.__doc__
+if _fast_bin_nd.__doc__:
+    fast_bin_nd.__doc__ = r"""
+        Simple Binning in nD
+        """ + _fast_bin_nd.__doc__

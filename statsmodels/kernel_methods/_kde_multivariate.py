@@ -336,7 +336,7 @@ class Multivariate(KDEMethod):
         exog = np.atleast_2d(exog)
         if exog.ndim > 2 or exog.shape[1] != self.ndim:
             raise ValueError("Error, wrong number of dimensions for exog, this cannot be changed after fitting!")
-        npts, ndim = exog.shape
+        npts, _ = exog.shape
         weights = np.asarray(weights, dtype=float).squeeze()
         if weights.ndim > 1:
             raise ValueError("Error, weights must be at most a 1D array")
