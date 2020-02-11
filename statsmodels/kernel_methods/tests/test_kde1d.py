@@ -93,7 +93,7 @@ class TestKDE1D(object):
 class TestKDE1DExtra(object):
     @staticmethod
     @pytest.fixture
-    def small_kde(request, datasets):
+    def small_kde(request):
         obj = request.instance
         try:
             method = request.param
@@ -105,7 +105,7 @@ class TestKDE1DExtra(object):
 
     @staticmethod
     @pytest.fixture
-    def large_kde(request, datasets):
+    def large_kde(request):
         obj = request.instance
         try:
             method = request.param
