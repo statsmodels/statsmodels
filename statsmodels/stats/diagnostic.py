@@ -824,7 +824,7 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
-def het_breuschpagan(resid, exog_het, robust=False):
+def het_breuschpagan(resid, exog_het, robust=True):
     r"""
     Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
@@ -878,7 +878,7 @@ def het_breuschpagan(resid, exog_het, robust=False):
 
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
-    (Greene, section 11.4.3), unless `robust` is set to True.
+    (Greene, section 11.4.3), unless `robust` is set to False.
     The degrees of freedom for the p-value assume x is full rank.
 
     References
@@ -894,13 +894,13 @@ def het_breuschpagan(resid, exog_het, robust=False):
 
     x = np.asarray(exog_het)
     y = np.asarray(resid) ** 2
-    if robust:
+    if not robust:
         y = y / np.mean(y)
     nobs, nvars = x.shape
     resols = OLS(y, x).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
-    lm = nobs * resols.rsquared if not robust else resols.ess/2
+    lm = nobs * resols.rsquared if robust else resols.ess / 2
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
