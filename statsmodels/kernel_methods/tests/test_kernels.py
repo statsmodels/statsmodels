@@ -3,22 +3,22 @@ from .. import kernels
 from scipy import stats, integrate
 import numpy as np
 import numpy.testing as npt
-from . import kde_test_utils
+from . import kde_datasets
 from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
 
 
-@pytest.fixture(params=kde_test_utils.kernels1d)
+@pytest.fixture(params=kde_datasets.kernels1d)
 def kernel1d(request):
     return request.param
 
 
-@pytest.fixture(params=kde_test_utils.kernelsnd)
+@pytest.fixture(params=kde_datasets.kernelsnd)
 def kernelnd(request):
     return request.param
 
 
-@pytest.fixture(params=kde_test_utils.kernelsnc)
+@pytest.fixture(params=kde_datasets.kernelsnc)
 def kernelnc(request):
     return request.param
 

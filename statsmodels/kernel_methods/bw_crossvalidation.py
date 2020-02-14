@@ -415,7 +415,7 @@ class CVLogLikelihood(CVFunc):
                 vals = interp(exog[i])
             else:
                 vals = LSO_est.pdf(exog[i])
-            L -= np.sum(np.log(vals))
+            L -= np.sum(np.log(vals[vals>0]))
         return L
 
 
