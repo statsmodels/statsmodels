@@ -1,16 +1,14 @@
 import pytest
-from . import kde_test_utils
 import numpy as np
 import numpy.testing as npt
-from .kde_test_utils import kde_tester
+from .kde_datasets import DataSets, createKDE
 
-all_methods_data = kde_test_utils.generate_methods_data(['nc'])
+all_methods_data = DataSets.poissonnc()
 
-
-@pytest.mark.parametrize(kde_test_utils.kde_tester_args, all_methods_data)
+@pytest.mark.parametrize('data', all_methods_data)
 class TestNonContinuous(object):
-    @kde_tester
-    def test_method_works(self, k, method, data):
+    def test_method_works(self, data):
+        k = createKDE(data)
         k.axis_type = k.method.axis_type
         k.bandwidth = 0.2
         est = k.fit()
@@ -19,8 +17,8 @@ class TestNonContinuous(object):
         tot = ys.sum()
         npt.assert_allclose(tot, 1, rtol=1e-3)
 
-    @kde_tester
-    def test_grid_method_works(self, k, method, data):
+    def test_grid_method_works(self, data):
+        k = createKDE(data)
         k.axis_type = k.method.axis_type
         k.bandwidth = 0.2
         est = k.fit()

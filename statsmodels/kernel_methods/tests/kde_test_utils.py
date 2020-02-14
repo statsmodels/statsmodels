@@ -86,116 +86,143 @@ class Parameters(object):
 dataset = namedtuple('dataset', ['vs', 'weights', 'adjust', 'lower', 'upper'])
 
 
-def createTestSets_norm():
+def make_name(method):
+    if isinstance(method, test_method):
+        return method.instance.name
+    return ":".join(m.instance.name for m in method)
+
+testset = namedtuple('testset', ['method', 'xs', 'vs', 'lower', 'upper', 'adjust', 'weights'])
+
+def generate_testsets(, indices=None):
     """
-    Create the parameters to test using a 1D Gaussian distribution dataset.
+    Generate the set of parameters needed to create tests for all these types
+    of distributions.
     """
-    params = Parameters('norm')
-    dist = stats.norm(0, 1)
-    params.sizes = [128, 256, 201]
-    params.xs = np.r_[-5:5:512j]
-    params.methods = methods_1d
-    params.can_adjust = True
+    global parameters
+    result = []
+    for name in parameter_names:
+        params = knownTestSets[name]
+        if indices is None:
+            local_indices = range(len(params.sizes))
+        else:
+            try:
+                local_indices = indices[name]
+            except (KeyError, TypeError):
+                local_indices = indices
+        adjusts = [False, True] if params.can_adjust else [False]
+        result += [(name, index, params.dataset, method, with_adjust,
+                    with_weights, make_name(method)) for index in local_indices
+                   for method in params.methods for with_adjust in adjusts
+                   for with_weights in [False, True]]
+    return result
 
-    vs = [generate(dist, s, -5, 5) for s in params.sizes]
-    weights = [dist.pdf(v) for v in vs]
-    adjust = [1 - ws for ws in weights]
-    params.dataset = dataset(vs, weights, adjust, lower=-5, upper=5)
+class TestSets(object):
+    """Class grouping static methods to generate the various test sets."""
 
-    return params
+    @staticmethod
+    def norm(size=None):
+        """
+        Create the parameters to test using a 1D Gaussian distribution dataset.
+        """
+        params = Parameters('norm')
+        dist = stats.norm(0, 1)
+        params.sizes = [128, 256, 201]
+        params.xs = np.r_[-5:5:512j]
+        params.methods = methods_1d
+        params.can_adjust = True
 
+        vs = [generate(dist, s, -5, 5) for s in params.sizes]
+        weights = [dist.pdf(v) for v in vs]
+        adjust = [1 - ws for ws in weights]
+        params.dataset = dataset(vs, weights, adjust, lower=-5, upper=5)
 
-def createTestSets_lognorm():
-    """
-    Create the parameters to test using a 1D log normal distribution dataset.
-    """
-    params = Parameters('lognorm')
-    dist = stats.lognorm(1)
-    params.sizes = [128, 256, 201]
-    params.methods = methods_log
-    params.xs = np.r_[0:20:513j][1:]
-    params.can_adjust = True
-    vs = [generate(dist, s, 0.001, 20) for s in params.sizes]
-    vs = [v[v < 20] for v in vs]
-    weights = [dist.pdf(v) for v in vs]
-    adjust = [1 - ws for ws in weights]
-    params.dataset = dataset(vs, weights, adjust, lower=0, upper=20)
-    return params
+        return params
 
+    @staticmethod
+    def lognorm(size=None):
+        """
+        Create the parameters to test using a 1D log normal distribution dataset.
+        """
+        params = Parameters('lognorm')
+        dist = stats.lognorm(1)
+        params.sizes = [128, 256, 201]
+        params.methods = methods_log
+        params.xs = np.r_[0:20:513j][1:]
+        params.can_adjust = True
+        vs = [generate(dist, s, 0.001, 20) for s in params.sizes]
+        vs = [v[v < 20] for v in vs]
+        weights = [dist.pdf(v) for v in vs]
+        adjust = [1 - ws for ws in weights]
+        params.dataset = dataset(vs, weights, adjust, lower=0, upper=20)
+        return params
 
-def createTestSets_normnd(ndim):
-    """
-    Create the parameters to test using a nD Gaussian distribution dataset.
-    """
-    params = Parameters('normnd{0}'.format(ndim))
-    dist = stats.multivariate_normal(cov=np.eye(ndim))
-    params.sizes = [32, 64, 128]
-    params.xs = [np.r_[-5:5:512j]] * ndim
-    params.methods = methods_nd
-    params.can_adjust = False
+    @staticmethod
+    def normnd(ndim, size=None):
+        """
+        Create the parameters to test using a nD Gaussian distribution dataset.
+        """
+        params = Parameters('normnd{0}'.format(ndim))
+        dist = stats.multivariate_normal(cov=np.eye(ndim))
+        params.sizes = [32, 64, 128]
+        params.xs = [np.r_[-5:5:512j]] * ndim
+        params.methods = methods_nd
+        params.can_adjust = False
 
-    vs = [generate_nd(dist, s) for s in params.sizes]
-    weights = [dist.pdf(v) for v in vs]
-    params.dataset = dataset(vs,
-                             weights,
-                             adjust=None,
-                             lower=[-5] * ndim,
-                             upper=[5] * ndim)
+        vs = [generate_nd(dist, s) for s in params.sizes]
+        weights = [dist.pdf(v) for v in vs]
+        params.dataset = dataset(vs,
+                                 weights,
+                                 adjust=None,
+                                 lower=[-5] * ndim,
+                                 upper=[5] * ndim)
 
-    return params
-
-
-def createTestSets_nc():
-    """
-    Create the parameters to test using  a nC poisson distribution dataset.
-    """
-    params = Parameters('nc')
-    dist = stats.poisson(12)
-    params.sizes = [128, 256, 201]
-    params.methods = methods_nc
-    params.can_adjust = False
-
-    vs = [generate_nc(dist, s) for s in params.sizes]
-    weights = [dist.pmf(v) for v in vs]
-    params.dataset = dataset(vs, weights, adjust=None, lower=None, upper=None)
-
-    return params
-
-
-def createTestSets_multivariate():
-    """
-    Create the parameters to test using a poisson distribution and two normals
-    as dataset.
-    """
-    params = Parameters('multivariate')
-    params.d1 = stats.norm(0, 3)
-    params.d2 = stats.poisson(12)
-    params.sizes = [64, 128, 101]
-    params.args = {}
-    params.methods1 = methods_1d + methods_nc + methods_nc
-    params.methods2 = methods_nc + methods_1d + methods_nc[::-1]
-    params.methods = zip(params.methods1, params.methods2)
-    params.nb_methods = len(params.methods1)
-    params.can_adjust = False
-
-    vs = [generate_multivariate(s, params.d1, params.d2) for s in params.sizes]
-    weights = [params.d1.pdf(v[:, 0]) for v in vs]
-    upper = [5, max(v[:, 1].max() for v in vs)]
-    lower = [-5, 0]
-    params.dataset = dataset(vs,
-                             weights,
-                             adjust=None,
-                             lower=lower,
-                             upper=upper)
-
-    return params
+        return params
 
 
-knownTestSets = dict(norm=createTestSets_norm(),
-                     norm2d=createTestSets_normnd(2),
-                     lognorm=createTestSets_lognorm(),
-                     nc=createTestSets_nc(),
-                     multivariate=createTestSets_multivariate())
+    @staticmethod
+    def poissonnC(size=None):
+        """
+        Create the parameters to test using  a nC poisson distribution dataset.
+        """
+        dist = stats.poisson(12)
+        sizes = [128, 256, 201]
+        methods = methods_nc
+        can_adjust = False
+
+        vs = [generate_nc(dist, s) for s in params.sizes]
+        weights = [dist.pmf(v) for v in vs]
+        params.dataset = dataset(vs, weights, adjust=None, lower=None, upper=None)
+
+        return params
+
+
+    @staticmethod
+    def multivariate(size=None):
+        """
+        Create the parameters to test using a poisson distribution and two normals
+        as dataset.
+        """
+        d1 = stats.norm(0, 3)
+        d2 = stats.poisson(12)
+        sizes = [64, 128, 101]
+        args = {}
+        methods1 = methods_1d + methods_nc + methods_nc
+        methods2 = methods_nc + methods_1d + methods_nc[::-1]
+        methods = zip(params.methods1, params.methods2)
+        nb_methods = len(params.methods1)
+        can_adjust = False
+
+        vs = [generate_multivariate(s, params.d1, params.d2) for s in params.sizes]
+        weights = [params.d1.pdf(v[:, 0]) for v in vs]
+        upper = [5, max(v[:, 1].max() for v in vs)]
+        lower = [-5, 0]
+        params.dataset = dataset(vs,
+                                 weights,
+                                 adjust=None,
+                                 lower=lower,
+                                 upper=upper)
+
+        return params
 
 
 def createKDE(vs, lower, upper, method):
@@ -280,32 +307,3 @@ def kde_tester(check):
 
 kde_tester_args = 'name,index,data,method,with_adjust,with_weights,method_name'
 
-
-def make_name(method):
-    if isinstance(method, test_method):
-        return method.instance.name
-    return ":".join(m.instance.name for m in method)
-
-
-def generate_methods_data(parameter_names, indices=None):
-    """
-    Generate the set of parameters needed to create tests for all these types
-    of distributions.
-    """
-    global parameters
-    result = []
-    for name in parameter_names:
-        params = knownTestSets[name]
-        if indices is None:
-            local_indices = range(len(params.sizes))
-        else:
-            try:
-                local_indices = indices[name]
-            except (KeyError, TypeError):
-                local_indices = indices
-        adjusts = [False, True] if params.can_adjust else [False]
-        result += [(name, index, params.dataset, method, with_adjust,
-                    with_weights, make_name(method)) for index in local_indices
-                   for method in params.methods for with_adjust in adjusts
-                   for with_weights in [False, True]]
-    return result
