@@ -137,18 +137,18 @@ def scotts_full(model):
     return full_variance((n * (d + 2.) / 4.)**(-1. / (d + 4.)), exog)
 
 
-def _botev_fixed_point(t, M, II, a2):
+def _botev_fixed_point(t, M, J, a2):
     n = 7
-    II = large_float(II)
+    J = large_float(J)
     M = large_float(M)
     a2 = large_float(a2)
-    f = 2 * np.pi**(2 * n) * np.sum(II**n * a2 * np.exp(-II * np.pi**2 * t))
+    f = 2 * np.pi**(2 * n) * np.sum(J**n * a2 * np.exp(-J * np.pi**2 * t))
     for s in range(n, 1, -1):
         K0 = np.prod(np.arange(1, 2 * s, 2)) / np.sqrt(2 * np.pi)
         const = (1 + (1 / 2)**(s + 1 / 2)) / 3
         time = (2 * const * K0 / M / f)**(2 / (3 + 2 * s))
         f = 2 * np.pi ** (2 * s) * \
-            np.sum(II ** s * a2 * np.exp(-II * np.pi ** 2 * time))
+            np.sum(J ** s * a2 * np.exp(-J * np.pi ** 2 * time))
     return t - (2 * M * np.sqrt(np.pi) * f)**(-2 / 5)
 
 
@@ -173,7 +173,7 @@ class Botev(object):
         """
         Returns the optimal bandwidth based on the data
         """
-        data = model.exog
+        data = np.squeeze(model.exog)
         N = 2**10 if self.N is None else int(2**np.ceil(np.log2(self.N)))
         lower = getattr(model, 'lower', None)
         upper = getattr(model, 'upper', None)
@@ -198,7 +198,7 @@ class Botev(object):
         DataHist = DataHist / M
         DCTData = fftpack.dct(DataHist, norm=None)
 
-        II = np.arange(1, N, dtype=int)**2
+        J = np.arange(1, N, dtype=int)**2
         SqDCTData = (DCTData[1:] / 2)**2
         guess = 0.1
 
@@ -206,7 +206,7 @@ class Botev(object):
             t_star = optimize.brentq(_botev_fixed_point,
                                      0,
                                      guess,
-                                     args=(M, II, SqDCTData))
+                                     args=(M, J, SqDCTData))
         except ValueError:
             t_star = .28 * N**(-.4)
 
