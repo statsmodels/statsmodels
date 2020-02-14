@@ -845,10 +845,11 @@ def het_breuschpagan(resid, exog_het, robust=True):
     exog_het : array_like
         This contains variables suspected of being related to
         heteroscedasticity in resid.
-    robust : bool, default False
+    robust : bool, default True
         Flag indicating whether to use the Koenker version of the
         test (default) which assumes independent and identically distributed
-        error terms, or the original Breusch–Pagan version.
+        error terms, or the original Breusch-Pagan version which assumes
+        residuals are normally distributed.
 
     Returns
     -------
