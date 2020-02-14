@@ -194,6 +194,15 @@ class TestDiagnosticG(object):
         bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_to_reference(bp, bptest, decimal=(12, 12))
 
+    def test_het_breusch_pagan_nonrobust(self):
+        res = self.res
+
+        bptest = dict(statistic=1.302014063483341, pvalue=0.5215203247110649,
+                      parameters=(2,), distr='f')
+
+        bp = smsdia.het_breuschpagan(res.resid, res.model.exog, robust=False)
+        compare_to_reference(bp, bptest, decimal=(12, 12))
+
     def test_het_white(self):
         res = self.res
 

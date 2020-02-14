@@ -824,7 +824,7 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
-def het_breuschpagan(resid, exog_het):
+def het_breuschpagan(resid, exog_het, robust=True):
     r"""
     Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
@@ -845,12 +845,17 @@ def het_breuschpagan(resid, exog_het):
     exog_het : array_like
         This contains variables suspected of being related to
         heteroscedasticity in resid.
+    robust : bool, default True
+        Flag indicating whether to use the Koenker version of the
+        test (default) which assumes independent and identically distributed
+        error terms, or the original Breusch-Pagan version which assumes
+        residuals are normally distributed.
 
     Returns
     -------
     lm : float
         lagrange multiplier statistic
-    lm_pvalue :float
+    lm_pvalue : float
         p-value of lagrange multiplier test
     fvalue : float
         f-statistic of the hypothesis that the error variance does not depend
@@ -874,7 +879,7 @@ def het_breuschpagan(resid, exog_het):
 
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
-    (Greene, section 11.4.3).
+    (Greene, section 11.4.3), unless `robust` is set to False.
     The degrees of freedom for the p-value assume x is full rank.
 
     References
@@ -884,15 +889,19 @@ def het_breuschpagan(resid, exog_het):
     .. [2]  Breusch, T. S.; Pagan, A. R. (1979). "A Simple Test for
        Heteroskedasticity and Random Coefficient Variation". Econometrica.
        47 (5): 1287–1294.
+    .. [3] Koenker, R. (1981). "A note on studentizing a test for
+       heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
     """
 
     x = np.asarray(exog_het)
     y = np.asarray(resid) ** 2
+    if not robust:
+        y = y / np.mean(y)
     nobs, nvars = x.shape
     resols = OLS(y, x).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
-    lm = nobs * resols.rsquared
+    lm = nobs * resols.rsquared if robust else resols.ess / 2
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
