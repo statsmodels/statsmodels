@@ -205,14 +205,14 @@ class DataSets(object):
                              upper=upper)
 
 
-def createKDE(data):
+def createKDE(data, **kde_kwargs):
     """
     Create a new KDE object.
 
     Arguments:
         data: An instance of `dataset`.
     """
-    k = kde.KDE(data.exog)
+    k = kde.KDE(data.exog, **kde_kwargs)
     if isinstance(data.method, test_method):
         if data.method.instance is None:
             del k.method

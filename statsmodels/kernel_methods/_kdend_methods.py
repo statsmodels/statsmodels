@@ -20,7 +20,7 @@ def generate_grid(kde, N=None, cut=None):
 
     Parameters
     ----------
-    kde: KDE1DMethod
+    kde: KDEnDMethod
         Fitted KDE object
     N: int or list of int
         Number of points in the grid

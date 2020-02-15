@@ -66,6 +66,17 @@ def make_ufunc(nin=None, nout=1):
 def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
     """
     This function is the heart of the numpy_trans* functions.
+
+    The input array is made into a 2D floating point array with the last
+    axis being of of the number of dimensions of the problem.
+
+    If specified, the output array must follow the same convention as the input
+    array. That is, if the input array needs to be transposed, the output array
+    must also need to be transposed.
+
+    If the output array is not specified, then a new array is created with the
+    correct dimensions and type. If the input array needs to be transposed, the
+    created output will also need to be transposed.
     """
     z = np.asarray(z)
     if in_dtype is not None:
