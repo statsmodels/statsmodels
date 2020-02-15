@@ -56,3 +56,17 @@ class TestMultivariate(object):
         tot = mesh.integrate(values)
         acc = max(m.grid_accuracy for m in data.method)
         npt.assert_allclose(tot, 1., rtol=acc)
+
+def TestMultivariateExtra(object):
+    @pytest.fixture(scope='class')
+    @staticmethod
+    def data():
+        return next(d for d in all_methods_data if d.weights is not None)
+
+    def test_set_incorrect_property(self, data):
+        with pytest.raises('ValueError'):
+            kde.Multivariate(data.exog, bad_attr=1)
+
+    def test_set_bandwidth(self, data):
+        k = createKDE(data, bandwidth=[2, 2])
+        est = k.fit()

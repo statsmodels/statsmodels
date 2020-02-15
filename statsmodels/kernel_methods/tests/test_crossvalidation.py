@@ -3,7 +3,7 @@ import pytest
 from .. import bandwidths
 from .kde_datasets import DataSets, createKDE
 
-all_methods_small_data = DataSets.norm([128])
+all_methods_small_data = DataSets.norm([64])
 
 
 @pytest.mark.parametrize('data', all_methods_small_data)
