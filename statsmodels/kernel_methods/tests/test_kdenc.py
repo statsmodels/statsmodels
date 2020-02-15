@@ -5,6 +5,7 @@ from .kde_datasets import DataSets, createKDE
 
 all_methods_data = DataSets.poissonnc()
 
+
 @pytest.mark.parametrize('data', all_methods_data)
 class TestNonContinuous(object):
     def test_method_works(self, data):
