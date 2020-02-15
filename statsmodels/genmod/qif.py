@@ -2,6 +2,7 @@ import numpy as np
 from collections import defaultdict
 import statsmodels.base.model as base
 from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import links
 from statsmodels.genmod.families import varfuncs
 import statsmodels.regression.linear_model as lm
@@ -361,7 +362,9 @@ class QIF(base.Model):
             self.ddof_scale = ddof_scale
 
         if start_params is None:
-            params = np.zeros(self.exog.shape[1])
+            model = GLM(self.endog, self.exog, family=self.family)
+            result = model.fit()
+            params = result.params
         else:
             params = start_params
 
