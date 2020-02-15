@@ -168,7 +168,7 @@ def select_bandwidth(x, bw, kernel):
     if bw not in bandwidth_funcs:
         raise ValueError("Bandwidth %s not understood" % bw)
     bandwidth = bandwidth_funcs[bw](x, kernel)
-    if bandwidth == 0:
+    if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.
         err = "Selected KDE bandwidth is 0. Cannot estimate density."
         raise RuntimeError(err)
