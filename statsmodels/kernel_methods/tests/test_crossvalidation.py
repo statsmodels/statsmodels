@@ -5,6 +5,7 @@ from .kde_datasets import DataSets, createKDE
 
 all_methods_small_data = DataSets.norm([128])
 
+
 @pytest.mark.parametrize('data', all_methods_small_data)
 class TestCV(object):
     def test_loo(self, data):

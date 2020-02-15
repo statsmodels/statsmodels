@@ -14,6 +14,7 @@ def numpy_warning():
     with np.errstate(divide='ignore'):
         yield
 
+
 class FakeModel(object):
     lower = -np.inf
     upper = np.inf
@@ -65,7 +66,6 @@ all_methods_small_data = DataSets.norm([128]) + DataSets.lognorm([128])
 
 @pytest.mark.parametrize('data', all_methods_data)
 class TestKDE1D(object):
-
     def test_method_works(self, data):
         k = createKDE(data)
         est = k.fit()
@@ -121,10 +121,12 @@ class TestKDE1DExtra(object):
 
     @classmethod
     def setup_class(cls):
-        cls.small_data = next(d for d in DataSets.norm([128])
-                              if d.weights is not None and d.adjust is not None)
-        cls.large_data = next(d for d in DataSets.norm([256])
-                              if d.weights is not None and d.adjust is not None)
+        cls.small_data = next(
+            d for d in DataSets.norm([128])
+            if d.weights is not None and d.adjust is not None)
+        cls.large_data = next(
+            d for d in DataSets.norm([256])
+            if d.weights is not None and d.adjust is not None)
         cls.method = kde_datasets.methods_1d[0]
 
     def test_copy(self, small_kde):
@@ -250,7 +252,9 @@ class TestKDE1DExtra(object):
                           adjust=data.adjust[:-5])
         xs, ys = est.grid()
         tot = xs.integrate(ys)
-        npt.assert_allclose(tot, 1, rtol=data.method.grid_accuracy,
+        npt.assert_allclose(tot,
+                            1,
+                            rtol=data.method.grid_accuracy,
                             atol=data.method.grid_accuracy)
 
     @pytest.mark.parametrize('large_kde',
@@ -320,14 +324,16 @@ class TestSF(object):
         xs = kde_methods.generate_grid1d(est, N=32)
         sf = est.sf(xs.linear())
         cdf = est.cdf(xs.linear())
-        npt.assert_allclose(sf, 1 - cdf, data.method.accuracy, data.method.accuracy)
+        npt.assert_allclose(sf, 1 - cdf, data.method.accuracy,
+                            data.method.accuracy)
 
     def test_grid_method_works(self, data):
         k = createKDE(data)
         est = k.fit()
         xs, sf = est.sf_grid()
         _, cdf = est.cdf_grid()
-        npt.assert_allclose(sf, 1 - cdf, data.method.accuracy, data.method.accuracy)
+        npt.assert_allclose(sf, 1 - cdf, data.method.accuracy,
+                            data.method.accuracy)
 
 
 @pytest.mark.parametrize('data', all_methods_small_data)
