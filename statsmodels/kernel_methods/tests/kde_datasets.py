@@ -82,12 +82,15 @@ kernelsnd = [test_kernel(kernels.Gaussian, 1, 1, True)]
 # * lower - A lower bound for vs
 # * upper - An upper bound for vs
 dataset = namedtuple(
-    'dataset', ['name', 'method', 'xs', 'exog', 'weights', 'adjust', 'lower', 'upper'])
+    'dataset',
+    ['name', 'method', 'xs', 'exog', 'weights', 'adjust', 'lower', 'upper'])
+
 
 def _boolean_selector(data):
     if data is None:
         return [False]
     return [False, True]
+
 
 def _make_name(method, size, has_weights, has_adjust):
     if isinstance(method, test_method):
@@ -95,23 +98,23 @@ def _make_name(method, size, has_weights, has_adjust):
     else:
         method_name = ":".join(m.instance.name for m in method)
     return "{0}/{1}{2}w{3}a".format(method_name, size,
-                                     "+" if has_weights else "-",
-                                     "+" if has_adjust else "-")
+                                    "+" if has_weights else "-",
+                                    "+" if has_adjust else "-")
+
 
 def _make_dataset(methods, xs, exogs, weights, adjusts, lower, upper):
-    return [dataset(_make_name(method, len(exogs[i]), has_weights, has_adjust),
-                    method, xs, exogs[i],
-                    weights[i] if has_weights else None,
-                    adjusts[i] if has_adjust else None,
-                    lower, upper)
-            for method in methods
-            for i in range(len(exogs))
-            for has_weights in _boolean_selector(weights)
-            for has_adjust in _boolean_selector(adjusts)]
+    return [
+        dataset(_make_name(method, len(exogs[i]), has_weights, has_adjust),
+                method, xs, exogs[i], weights[i] if has_weights else None,
+                adjusts[i] if has_adjust else None, lower, upper)
+        for method in methods for i in range(len(exogs))
+        for has_weights in _boolean_selector(weights)
+        for has_adjust in _boolean_selector(adjusts)
+    ]
+
 
 class DataSets(object):
     """Class grouping static methods generating known test sets."""
-
     def norm(sizes=(128, 256, 201)):
         """
         Create the parameters to test using a 1D Gaussian distribution dataset.
@@ -121,9 +124,13 @@ class DataSets(object):
         exogs = [generate(dist, s, -5, 5) for s in sizes]
         weights = [dist.pdf(v) for v in exogs]
         adjusts = [1 - ws for ws in weights]
-        return _make_dataset(methods_1d, np.r_[-5:5:512j],
-                             exogs, weights, adjusts, lower=-5, upper=5)
-
+        return _make_dataset(methods_1d,
+                             np.r_[-5:5:512j],
+                             exogs,
+                             weights,
+                             adjusts,
+                             lower=-5,
+                             upper=5)
 
     def lognorm(sizes=(128, 256, 201)):
         """
@@ -135,9 +142,13 @@ class DataSets(object):
         vs = [v[v < 20] for v in vs]
         weights = [dist.pdf(v) for v in vs]
         adjusts = [1 - ws for ws in weights]
-        return _make_dataset(methods_log, xs, vs, weights, adjusts, lower=0,
+        return _make_dataset(methods_log,
+                             xs,
+                             vs,
+                             weights,
+                             adjusts,
+                             lower=0,
                              upper=20)
-
 
     def normnd(ndim, sizes=(32, 64, 128)):
         """
@@ -147,22 +158,30 @@ class DataSets(object):
         xs = [np.r_[-5:5:512j]] * ndim
         vs = [generate_nd(dist, s) for s in sizes]
         weights = [dist.pdf(v) for v in vs]
-        return _make_dataset(methods_nd, xs, vs, weights, adjusts=None,
-                             lower=[-5]*ndim, upper=[5]*ndim)
+        return _make_dataset(methods_nd,
+                             xs,
+                             vs,
+                             weights,
+                             adjusts=None,
+                             lower=[-5] * ndim,
+                             upper=[5] * ndim)
 
-
-    def poissonnc(sizes = (128, 256, 201)):
+    def poissonnc(sizes=(128, 256, 201)):
         """
         Create the parameters to test using  a nC poisson distribution dataset.
         """
         dist = stats.poisson(12)
         vs = [generate_nc(dist, s) for s in sizes]
         weights = [dist.pmf(v) for v in vs]
-        return _make_dataset(methods_nc, None, vs, weights, adjusts=None,
-                             lower=None, upper=None)
+        return _make_dataset(methods_nc,
+                             None,
+                             vs,
+                             weights,
+                             adjusts=None,
+                             lower=None,
+                             upper=None)
 
-
-    def multivariate(sizes = (64, 128, 101)):
+    def multivariate(sizes=(64, 128, 101)):
         """
         Create the parameters to test using a poisson distribution and two normals
         as dataset.
@@ -177,8 +196,13 @@ class DataSets(object):
         weights = [d1.pdf(v[:, 0]) for v in vs]
         upper = [5, max(v[:, 1].max() for v in vs)]
         lower = [-5, 0]
-        return _make_dataset(methods, None, vs, weights, adjusts=None,
-                             lower=lower, upper=upper)
+        return _make_dataset(methods,
+                             None,
+                             vs,
+                             weights,
+                             adjusts=None,
+                             lower=lower,
+                             upper=upper)
 
 
 def createKDE(data):
@@ -230,4 +254,3 @@ def createKDE(data):
     if data.adjust is not None:
         k.adjust = data.adjust
     return k
-
