@@ -74,21 +74,22 @@ class TestTriweight(CheckNormalReferenceConstant):
 
 
 class BandwidthZero(object):
-    
+
     def test_bandwidth_zero(self):
-        
+
         kern = kernels.Gaussian()
-        for bw in ['scott', 'silverman', 'normal_reference']:     
-            with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
+        for bw in ['scott', 'silverman', 'normal_reference']:
+            with pytest.raises(RuntimeError,
+                               match="Selected KDE bandwidth is 0"):
                 select_bandwidth(self.xx, bw, kern)
 
 
 class TestAllBandwidthZero(BandwidthZero):
-    
+
     xx = np.ones((100, 3))
 
-    
+
 class TestAnyBandwidthZero(BandwidthZero):
-    
+
     xx = np.random.normal(size=(100, 3))
     xx[:, 0] = 1.0
