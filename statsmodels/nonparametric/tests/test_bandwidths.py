@@ -75,7 +75,7 @@ class TestTriweight(CheckNormalReferenceConstant):
 
 class BandwidthZero(object):
     
-    def test_bandwidth_zero(self, x):
+    def test_bandwidth_zero(self):
         
         kern = kernels.Gaussian()
         for bw in ['scott', 'silverman', 'normal_reference']:     
