@@ -119,7 +119,7 @@ class RegressionFDR(object):
         else:
             raise ValueError("Invalid design_method")
 
-        nobs, nvar = exog1.shape
+        nobs = exog1.shape[0]
         self.exog = np.concatenate((exog1, exog2), axis=1)
         self.exog1 = exog1
         self.exog2 = exog2
@@ -210,7 +210,7 @@ class RegressionFDR(object):
         sl = np.asarray(sol['x']).ravel()
 
         xcov = np.dot(exog.T, exog)
-        exogn = self._get_knmat(exog, xcov, sl)
+        exogn = self._get_komat(exog, xcov, sl)
 
         return exog, exogn, sl
 
