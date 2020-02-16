@@ -158,6 +158,8 @@ class GLMGamResults(GLMResults):
         exog_transformed : ndarray
             design matrix for the prediction
         """
+        if exog_smooth is not None:
+            exog_smooth = np.asarray(exog_smooth)
         exog_index = None
         if transform is False:
             # the following allows that either or both exog are not None
@@ -526,7 +528,7 @@ class GLMGam(PenalizedMixin, GLM):
         if xnames_linear is None:
             xnames_linear = self.data_linear.xnames
         if exog is not None:
-            exog_linear = np.asarray(exog)
+            exog_linear = self.data_linear.exog
             k_exog_linear = exog_linear.shape[1]
         else:
             exog_linear = None

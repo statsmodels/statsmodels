@@ -327,7 +327,7 @@ class TestGAM6ExogBfgs(object):
         nobs = data_mcycle['times'].shape[0]
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6],
                                 constraints='center')
-        gam_cc = GLMGam(data_mcycle['accel'], np.ones((nobs, 1)),
+        gam_cc = GLMGam(data_mcycle['accel'], np.ones(nobs),
                         smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit(method='bfgs')
 
@@ -585,7 +585,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
 
         # linpred = res1.predict(self.exog[2:4], res1.model.smoother.x[2:4],
         #                        linear=True)
-        linpred = res1.predict(df_autos.iloc[2:4], res1.model.smoother.x[2:4],
+        xp = pd.DataFrame(res1.model.smoother.x[2:4])
+        linpred = res1.predict(df_autos.iloc[2:4], xp,
                                linear=True)
         assert_allclose(linpred, res2.linear_predictors[2:4],
                         rtol=self.rtol_fitted)
