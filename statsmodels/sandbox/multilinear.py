@@ -284,7 +284,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     >>> url = url + "Rdatasets/csv/HistData/Guerry.csv"
     >>> df = pd.read_csv(url, index_col='dept')
 
-    evaluate the relationship between the variuos paramenters whith the Wealth
+    evaluate the relationship between the various paramenters whith the Wealth
     >>> pvals = multiOLS('Wealth', df)['adj_pvals', '_f_test']
 
     define the groups
