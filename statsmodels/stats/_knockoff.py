@@ -119,7 +119,6 @@ class RegressionFDR(object):
         else:
             raise ValueError("Invalid design_method")
 
-        nobs = exog1.shape[0]
         self.exog = np.concatenate((exog1, exog2), axis=1)
         self.exog1 = exog1
         self.exog2 = exog2
