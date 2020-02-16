@@ -158,6 +158,8 @@ class GLMGamResults(GLMResults):
         exog_transformed : ndarray
             design matrix for the prediction
         """
+        if exog_smooth is not None:
+            exog_smooth = np.asarray(exog_smooth)
         exog_index = None
         if transform is False:
             # the following allows that either or both exog are not None
