@@ -327,7 +327,7 @@ class TestGAM6ExogBfgs(object):
         nobs = data_mcycle['times'].shape[0]
         cc = CyclicCubicSplines(data_mcycle['times'].values, df=[6],
                                 constraints='center')
-        gam_cc = GLMGam(data_mcycle['accel'], np.ones((nobs, 1)),
+        gam_cc = GLMGam(data_mcycle['accel'], np.ones(nobs),
                         smoother=cc, alpha=1 / s_scale / 2)
         cls.res1 = gam_cc.fit(method='bfgs')
 
