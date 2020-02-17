@@ -1,7 +1,9 @@
 import pytest
 from ..kde_utils import Grid
+import numpy as np
 import numpy.testing as npt
 from .kde_datasets import DataSets, createKDE
+from .. import bandwidths, kde_methods, kde
 
 all_methods_data = DataSets.multivariate()
 
@@ -57,16 +59,118 @@ class TestMultivariate(object):
         acc = max(m.grid_accuracy for m in data.method)
         npt.assert_allclose(tot, 1., rtol=acc)
 
-def TestMultivariateExtra(object):
-    @pytest.fixture(scope='class')
+class MyOrdered(kde_methods.Ordered):
+    pass
+
+class MyUnordered(kde_methods.Unordered):
+    pass
+
+class TestMultivariateExtra(object):
     @staticmethod
+    @pytest.fixture(scope='class')
     def data():
         return next(d for d in all_methods_data if d.weights is not None)
 
+    def test_set_wrong_axis_type(self, data):
+        k = kde.KDE(data.exog, axis_type='COCO')
+        with pytest.raises(ValueError):
+            est = k.fit()
+
+    def test_fallback_continuous(self, data):
+        k = kde.KDE(data.exog[:, [1]], axis_type='C')
+        est = k.fit()
+        assert isinstance(est, type(k.method.continuous_method))
+
+    def test_fallback_unordered(self, data):
+        k = kde.KDE(data.exog[:, [1]].round().astype(int), axis_type='U')
+        est = k.fit()
+        assert isinstance(est, type(k.method.unordered_method))
+
+    def test_fallback_ordered(self, data):
+        k = kde.KDE(data.exog[:, [1]].round().astype(int), axis_type='O')
+        est = k.fit()
+        assert isinstance(est, type(k.method.ordered_method))
+
     def test_set_incorrect_property(self, data):
-        with pytest.raises('ValueError'):
-            kde.Multivariate(data.exog, bad_attr=1)
+        with pytest.raises(ValueError):
+            kde.Multivariate(bad_attr=1)
 
     def test_set_bandwidth(self, data):
-        k = createKDE(data, bandwidth=[2, 2])
+        k = kde.KDE(data.exog, bandwidth=[2, 2])
         est = k.fit()
+        npt.assert_equal(est.bandwidth, [2, 2])
+
+    def test_compute_bandwidth(self, data):
+        k = kde.KDE(data.exog,
+                    method=kde.Multivariate(
+                        methods=[kde_methods.Unbounded1D(),
+                                 kde_methods.Unbounded1D()]
+                    ))
+        k.bandwidth = [bandwidths.scotts, 2.]
+        est = k.fit()
+        assert est.bandwidth[1] == 2.
+
+    def test_compute_bandwidth_bad_size(self, data):
+        k = kde.KDE(data.exog,
+                    method=kde.Multivariate(
+                        methods=[kde_methods.Unbounded1D(),
+                                 kde_methods.Unbounded1D()]
+                    ))
+        k.bandwidth = [1, 2, 3]
+        with pytest.raises(ValueError):
+            est = k.fit()
+
+    def test_continuous_method(self, data):
+        k = kde.KDE(data.exog, axis_type='CC')
+        k.method.continuous_method = kde_methods.Reflection1D()
+        assert isinstance(k.method.continuous_method, kde_methods.Reflection1D)
+        est = k.fit()
+        assert isinstance(est.methods[0], kde_methods.Reflection1D)
+        assert isinstance(est.methods[1], kde_methods.Reflection1D)
+
+    def test_ordered_method(self, data):
+        k = kde.KDE(data.exog, axis_type='OO')
+        k.method.ordered_method = MyOrdered()
+        assert isinstance(k.method.ordered_method, MyOrdered)
+        est = k.fit()
+        assert isinstance(est.methods[0], MyOrdered)
+        assert isinstance(est.methods[1], MyOrdered)
+
+    def test_unordered_method(self, data):
+        k = kde.KDE(data.exog, axis_type='UU')
+        k.method.unordered_method = MyUnordered()
+        assert isinstance(k.method.unordered_method, MyUnordered)
+        est = k.fit()
+        assert isinstance(est.methods[0], MyUnordered)
+        assert isinstance(est.methods[1], MyUnordered)
+
+    def test_adjust(self, data):
+        k = kde.KDE(data.exog, axis_type='C')
+        est = k.fit()
+        est.adjust = 2.
+        est.adjust = np.r_[1:2:1j*est.npts]
+
+    def test_adjust_wrong_shape(self, data):
+        k = kde.KDE(data.exog, axis_type='CC')
+        est = k.fit()
+        with pytest.raises(ValueError):
+            est.adjust = np.ones((2,2))
+
+    def test_set_bandwidth_after_fit(self, data):
+        k = kde.KDE(data.exog, axis_type='C')
+        est = k.fit()
+        est.bandwidth = [1, 2]
+        npt.assert_equal(est.bandwidth, [1, 2])
+
+    def test_to_bin_exog_if_possible(self, data):
+        k = kde.KDE(data.exog, axis_type='C')
+        est = k.fit()
+        assert est.to_bin is est.exog
+
+#    def test_to_bin_transformed(self, data):
+#        exog = abs(data.exog) + 0.1
+#        k = kde.KDE(data.exog, axis_type='C')
+#        k.continuous_method = kde_methods.Transform1D(kde_methods.LogTransform)
+#        est = k.fit()
+#        npt.assert_allclose(est.to_bin, np.log(exog), 1e-5, 1e-5)
+
