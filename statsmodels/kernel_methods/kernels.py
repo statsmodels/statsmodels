@@ -10,9 +10,6 @@ from scipy import fftpack, integrate
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
-from ._kernels1d import TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4
-from ._kernelsnc import AitchisonAitken, WangRyzin
-# from ._kernelsnd import Gaussian
 
 S2PI = np.sqrt(2 * np.pi)
 
@@ -912,6 +909,10 @@ class Gaussian(KernelnD):
     __call__ = pdf
 
 
+# Note: these must be at the end of the module.
+from ._kernels1d import TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4
+# from ._kernelsnd import Gaussian
+from ._kernelsnc import AitchisonAitken, WangRyzin
 """ List of 1D kernels """
 kernels1D = [
     Gaussian1D, TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4

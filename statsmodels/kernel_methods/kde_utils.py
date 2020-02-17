@@ -87,7 +87,7 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
     input_shape = z.shape
     need_transpose = False
     # Compute data shape (i.e. input without the dimension)
-    z_empty = False
+    z_empty = z.shape == ()
     if input_dim <= 0:
         npts = input_shape[0]
     else:
