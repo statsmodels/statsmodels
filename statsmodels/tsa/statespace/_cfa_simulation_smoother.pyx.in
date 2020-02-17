@@ -222,13 +222,16 @@ cdef class {{prefix}}CFASimulationSmoother(object):
 
         # Invert initial state covariance matrix
         # (we actually need the inverse here)
-        blas.{{prefix}}copy(&self.k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
-        lapack.{{prefix}}potrf("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
-        if info > 0:
-            raise np.linalg.LinAlgError('Non-positive-definite initial state covariance matrix.')
-        elif info < 0:
-            raise np.linalg.LinAlgError('Invalid value in initial state covariance matrix.')
-        lapack.{{prefix}}potri("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
+        if self.model.initialized_diffuse:
+            self.initial_state_cov_inv[:] = 0.
+        else:
+            blas.{{prefix}}copy(&self.k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
+            lapack.{{prefix}}potrf("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
+            if info > 0:
+                raise np.linalg.LinAlgError('Non-positive-definite initial state covariance matrix.')
+            elif info < 0:
+                raise np.linalg.LinAlgError('Invalid value in initial state covariance matrix.')
+            lapack.{{prefix}}potri("L", &self.k_states, self._initial_state_cov_inv, &self.k_states, &info)
 
         # Iterate over periods
         j = 0  # this will be a column counter
@@ -410,6 +413,6 @@ cdef class {{prefix}}CFASimulationSmoother(object):
         # Add in the posterior mean
         blas.{{prefix}}axpy(&self.order, &alpha, &self.posterior_mean[0, 0], &inc, &u[0], &inc)
 
-        return np.array(u).reshape(self.model.nobs, self.k_states)
+        return np.array(u).reshape(self.model.nobs, self.k_states).T
 
 {{endfor}}

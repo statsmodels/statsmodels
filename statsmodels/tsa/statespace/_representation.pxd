@@ -26,7 +26,7 @@ cdef class sStatespace(object):
 
     # Flags
     cdef readonly int time_invariant
-    cdef readonly int initialized
+    cdef readonly int initialized, initialized_diffuse, initialized_stationary
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
@@ -103,7 +103,7 @@ cdef class dStatespace(object):
 
     # Flags
     cdef readonly int time_invariant
-    cdef readonly int initialized
+    cdef readonly int initialized, initialized_diffuse, initialized_stationary
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
@@ -180,7 +180,7 @@ cdef class cStatespace(object):
 
     # Flags
     cdef readonly int time_invariant
-    cdef readonly int initialized
+    cdef readonly int initialized, initialized_diffuse, initialized_stationary
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
@@ -257,7 +257,7 @@ cdef class zStatespace(object):
 
     # Flags
     cdef readonly int time_invariant
-    cdef readonly int initialized
+    cdef readonly int initialized, initialized_diffuse, initialized_stationary
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
