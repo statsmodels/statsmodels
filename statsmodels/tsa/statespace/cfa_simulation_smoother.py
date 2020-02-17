@@ -230,9 +230,9 @@ class CFASimulationSmoother(object):
         # Validate variates and get in required datatype
         if variates is not None:
             tools.validate_matrix_shape('variates', variates.shape,
-                                        self.model.nobs,
-                                        self.model.k_states, 1)
-            variates = variates.ravel().astype(dtype)
+                                        self.model.k_states,
+                                        self.model.nobs, 1)
+            variates = np.ravel(variates, order='F').astype(dtype)
 
         # (Re) initialize the state
         self.model._initialize_state(prefix=prefix)
