@@ -436,7 +436,7 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
         constr = 'x1 = 2.8'
         cls.res1m = mod1.fit_constrained(constr)
 
-        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        R, q = cls.res1m.constraints
         cls.res1 = fit_constrained(mod1, R, q)
 
 
@@ -453,6 +453,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         constr = 'x1 - x3 = 0'
         cls.res1m = mod1.fit_constrained(constr, atol=1e-10)
 
+        # patsy compatible constraints
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
         cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10})
         cls.constraints_rq = (R, q)
@@ -472,6 +473,9 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()
         assert_('linear equality constraints' in summ.extra_txt)
+
+        lc_string = str(self.res1m.constraints)
+        assert lc_string == "x1 - x3 = 0.0"
 
     @pytest.mark.smoke
     def test_summary2(self):
@@ -509,7 +513,7 @@ class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
         cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
                                          cov_kwds=cov_kwds, atol=1e-10)
 
-        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        R, q = cls.res1m.constraints
         cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10,
                                                          'cov_type': cov_type,
                                                          'cov_kwds': cov_kwds})
