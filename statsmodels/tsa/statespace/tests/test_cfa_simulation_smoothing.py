@@ -2,7 +2,7 @@
 Tests for CFA simulation smoothing
 
 Author: Chad Fulton
-License: Simplified-BSD
+License: BSD-3
 """
 import os
 
@@ -187,5 +187,5 @@ def test_dfm(missing=None):
     res = mod.ssm.smooth()
 
     # Test zero variates
-    sim_cfa.simulate(np.zeros((mod.nobs, mod.k_states)))
-    assert_allclose(sim_cfa.simulated_state, res.smoothed_state.T)
+    sim_cfa.simulate(np.zeros((mod.k_states, mod.nobs)))
+    assert_allclose(sim_cfa.simulated_state, res.smoothed_state)
