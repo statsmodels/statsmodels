@@ -76,8 +76,8 @@ class Multivariate(KDEMethod):
             else:
                 raise ValueError("Error, unknown attribute '{}'".format(k))
 
-    def fit(self, kde, compute_bandwidth=True):
-        return self.fit_nd(kde, compute_bandwidth)
+    #def fit(self, kde, compute_bandwidth=True):
+    #    return self.fit_nd(kde, compute_bandwidth)
 
     def copy(self):
         """
@@ -219,13 +219,36 @@ class Multivariate(KDEMethod):
         """
         return self._methods
 
-    def fit(self, kde):
+    @methods.setter
+    def methods(self, value):
+        """
+        Set all the methods.
+
+        Before fitting, the value can be:
+
+        * A dictionnary, mapping the index of the dimension to the method used
+          for that dimension.
+        * An interable, in which case it will be converted into a dictionnary,
+          mapping the index to the values.
+        * A single value, which will then be used for all axes.
+
+        After fitting, this cannot be changed anymore.
+
+        :raises: RuntimeError if called after fitting.
+        """
+        if self._fitted:
+            raise RuntimeError('The methods cannot be changed after fitting.')
+        if not isinstance(value, dict):
+            value = {i: v for i, v in enumerate(value)}
+        self._methods = value
+
+    def fit(self, kde, compute_bandwidth=True):
         if len(kde.axis_type) == 1:
             axis_type = AxesType(kde.axis_type[0] * kde.ndim)
         else:
             axis_type = AxesType(kde.axis_type)
         if len(axis_type) != kde.ndim:
-            raise ValueError("You must specify exacltly one axis type, or "
+            raise ValueError("You must specify exactly one axis type, or "
                              "as many as there are axis")
         methods, kernels = self.get_methods(axis_type)
         ndim = kde.ndim
@@ -243,7 +266,11 @@ class Multivariate(KDEMethod):
         self._bin_type = bin_type
         kde = filter_exog(kde, bin_type)
 
-        bw = _compute_bandwidth(kde, self.bandwidth)
+        if compute_bandwidth:
+            k = kde.copy()
+            bw = _compute_bandwidth(k, self.bandwidth)
+        else:
+            bw = kde.bandwidth
 
         new_kde = kde.copy()
         new_kde.bandwidth = bw
@@ -257,7 +284,7 @@ class Multivariate(KDEMethod):
                 bin_data = True
 
         fitted = self.copy()
-        if hasattr(fitted, 'bandwidth'):
+        if hasattr(fitted, '_bandwidth'):
             del fitted._bandwidth
         fitted._axis_type = axis_type
         fitted._kernels = kernels
@@ -332,7 +359,7 @@ class Multivariate(KDEMethod):
     def to_bin(self):
         """
         Property holding the data to be binned. It is different from
-        :py:attr:`exog` if any method provide this.
+        :py:attr:`exog` if any method needs to transform their data.
         """
         if self._bin_data is not None:
             if self._bin_data is True:
