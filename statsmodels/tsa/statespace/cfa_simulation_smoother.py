@@ -247,6 +247,9 @@ class CFASimulationSmoother(object):
         # Update posterior moments, if requested
         if update_posterior:
             sim.update_sparse_posterior_moments()
+            self._posterior_mean = None
+            self._posterior_cov_inv_chol = None
+            self._posterior_cov = None
 
         # Perform simulation smoothing
         self.simulated_state = sim.simulate(variates=variates)
