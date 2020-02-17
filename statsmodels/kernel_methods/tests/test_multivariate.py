@@ -59,11 +59,14 @@ class TestMultivariate(object):
         acc = max(m.grid_accuracy for m in data.method)
         npt.assert_allclose(tot, 1., rtol=acc)
 
+
 class MyOrdered(kde_methods.Ordered):
     pass
 
+
 class MyUnordered(kde_methods.Unordered):
     pass
+
 
 class TestMultivariateExtra(object):
     @staticmethod
@@ -74,7 +77,7 @@ class TestMultivariateExtra(object):
     def test_set_wrong_axis_type(self, data):
         k = kde.KDE(data.exog, axis_type='COCO')
         with pytest.raises(ValueError):
-            est = k.fit()
+            k.fit()
 
     def test_fallback_continuous(self, data):
         k = kde.KDE(data.exog[:, [1]], axis_type='C')
@@ -101,24 +104,24 @@ class TestMultivariateExtra(object):
         npt.assert_equal(est.bandwidth, [2, 2])
 
     def test_compute_bandwidth(self, data):
-        k = kde.KDE(data.exog,
-                    method=kde.Multivariate(
-                        methods=[kde_methods.Unbounded1D(),
-                                 kde_methods.Unbounded1D()]
-                    ))
+        k = kde.KDE(
+            data.exog,
+            method=kde.Multivariate(
+                methods=[kde_methods.Unbounded1D(),
+                         kde_methods.Unbounded1D()]))
         k.bandwidth = [bandwidths.scotts, 2.]
         est = k.fit()
         assert est.bandwidth[1] == 2.
 
     def test_compute_bandwidth_bad_size(self, data):
-        k = kde.KDE(data.exog,
-                    method=kde.Multivariate(
-                        methods=[kde_methods.Unbounded1D(),
-                                 kde_methods.Unbounded1D()]
-                    ))
+        k = kde.KDE(
+            data.exog,
+            method=kde.Multivariate(
+                methods=[kde_methods.Unbounded1D(),
+                         kde_methods.Unbounded1D()]))
         k.bandwidth = [1, 2, 3]
         with pytest.raises(ValueError):
-            est = k.fit()
+            k.fit()
 
     def test_continuous_method(self, data):
         k = kde.KDE(data.exog, axis_type='CC')
@@ -148,13 +151,13 @@ class TestMultivariateExtra(object):
         k = kde.KDE(data.exog, axis_type='C')
         est = k.fit()
         est.adjust = 2.
-        est.adjust = np.r_[1:2:1j*est.npts]
+        est.adjust = np.r_[1:2:1j * est.npts]
 
     def test_adjust_wrong_shape(self, data):
         k = kde.KDE(data.exog, axis_type='CC')
         est = k.fit()
         with pytest.raises(ValueError):
-            est.adjust = np.ones((2,2))
+            est.adjust = np.ones((2, 2))
 
     def test_set_bandwidth_after_fit(self, data):
         k = kde.KDE(data.exog, axis_type='C')
@@ -167,10 +170,10 @@ class TestMultivariateExtra(object):
         est = k.fit()
         assert est.to_bin is est.exog
 
+
 #    def test_to_bin_transformed(self, data):
 #        exog = abs(data.exog) + 0.1
 #        k = kde.KDE(data.exog, axis_type='C')
 #        k.continuous_method = kde_methods.Transform1D(kde_methods.LogTransform)
 #        est = k.fit()
 #        npt.assert_allclose(est.to_bin, np.log(exog), 1e-5, 1e-5)
-
