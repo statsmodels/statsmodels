@@ -76,9 +76,6 @@ class Multivariate(KDEMethod):
             else:
                 raise ValueError("Error, unknown attribute '{}'".format(k))
 
-    #def fit(self, kde, compute_bandwidth=True):
-    #    return self.fit_nd(kde, compute_bandwidth)
-
     def copy(self):
         """
         Creates a shallow copy of the object
