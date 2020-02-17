@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from collections import namedtuple
 from .. import kde_methods as km
@@ -77,7 +76,7 @@ kernelsnd = [test_kernel(kernels.Gaussian, 1, 1, True)]
 # * method - Method to use for the KDE
 # * xs - Points on which the KDE can be safely evaluated
 # * exog - The dataset itself
-# * weights - A list of valid weights, None if the method doesn't handle weights
+# * weights - A list of valid weights, None if no weights are to be used.
 # * adjust - A list of valid adjustments, None if the method doesn't handle it.
 # * lower - A lower bound for vs
 # * upper - An upper bound for vs
@@ -134,7 +133,8 @@ class DataSets(object):
 
     def lognorm(sizes=(128, 256, 201)):
         """
-        Create the parameters to test using a 1D log normal distribution dataset.
+        Create the parameters to test using a 1D log normal distribution
+        dataset.
         """
         dist = stats.lognorm(1)
         xs = np.r_[0:20:513j][1:]
@@ -183,8 +183,8 @@ class DataSets(object):
 
     def multivariate(sizes=(64, 128, 101)):
         """
-        Create the parameters to test using a poisson distribution and two normals
-        as dataset.
+        Create the parameters to test using a poisson distribution and two
+        normals as dataset.
         """
         d1 = stats.norm(0, 3)
         d2 = stats.poisson(12)

@@ -909,9 +909,9 @@ class Gaussian(KernelnD):
     __call__ = pdf
 
 
-from ._kernels1d import *  # noqa
-from ._kernelsnd import *  # noqa
-from ._kernelsnc import *  # noqa
+from ._kernels1d import TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4
+# from ._kernelsnd import Gaussian
+from ._kernelsnc import AitchisonAitken, WangRyzin
 """ List of 1D kernels """
 kernels1D = [
     Gaussian1D, TriCube, Epanechnikov, EpanechnikovOrder4, GaussianOrder4
