@@ -1124,7 +1124,8 @@ class Poisson(CountModel):
         #       patched version
         # TODO: decide whether to move the imports
         from patsy import DesignInfo
-        from statsmodels.base._constraints import fit_constrained
+        from statsmodels.base._constraints import (fit_constrained,
+                                                   LinearConstraints)
 
         # same pattern as in base.LikelihoodModel.t_test
         lc = DesignInfo(self.exog_names).linear_constraint(constraints)
@@ -1152,11 +1153,10 @@ class Poisson(CountModel):
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr
-        res._results.constraints = lc
+        res._results.constraints = LinearConstraints.from_patsy(lc)
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
-
 
     def score(self, params):
         """

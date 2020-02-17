@@ -252,6 +252,16 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         assert 'bic' in res._cache
 
 
+class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
+
+    def setup(self):
+        # fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y = x.sum(1) + np.random.randn(x.shape[0])
+        self.results = sm.GLM(y, self.exog).fit_constrained("x1=x2")
+
+
 class TestPickleFormula(RemoveDataPickle):
     @classmethod
     def setup_class(cls):

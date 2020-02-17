@@ -182,8 +182,12 @@ def score_test(self, exog_extra=None, params_constrained=None,
     if exog_extra is None:
 
         if hasattr(self, 'constraints'):
-            k_constraints = self.constraints.coefs.shape[0]
-            r_matrix = self.constraints.coefs
+            if isinstance(self.constraints, tuple):
+                r_matrix = self.constraints[0]
+            else:
+                r_matrix = self.constraints.coefs
+            k_constraints = r_matrix.shape[0]
+
         else:
             if k_constraints is None:
                 raise ValueError('if exog_extra is None, then k_constraints'
