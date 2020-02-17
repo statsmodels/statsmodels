@@ -500,8 +500,8 @@ class Grid(object):
         if any((g1 != g2).any() for (g1, g2) in zip(self.grid, other.grid)):
             return False
         if self._edges is not None or other._edges is not None:
-            if any(
-                (g1 != g2).any() for (g1, g2) in zip(self.edges, other.edges)):
+            if any((g1 != g2).any()
+                   for (g1, g2) in zip(self.edges, other.edges)):
                 return False
         return True
 
