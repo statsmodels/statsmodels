@@ -1983,9 +1983,9 @@ def test_tweedie_EQL():
         rtol=rtol, atol=atol)
 
     # Series of ridge fits using gradients
-    ev = (np.array([1.00186882, -0.99213087, 0.00717758, 0.50610942]),
-          np.array([0.98560143, -0.96976442, 0.00727526, 0.49749763]),
-          np.array([0.20643362, -0.16456528, 0.00023651, 0.10249308]))
+    ev = (np.array([1.001778, -0.99388, 0.00797, 0.506183]),
+          np.array([0.985841, -0.969124, 0.007319, 0.497649]),
+          np.array([0.206429, -0.164547, 0.000235, 0.102489]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
         result3 = model3.fit_regularized(L1_wt=0, alpha=alpha)
@@ -2092,6 +2092,34 @@ def testTweediePowerEstimate():
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
 
+def test_glm_lasso_6431():
+
+    # Based on issue #6431
+    # Fails with newton-cg as optimizer
+    np.random.seed(123)
+
+    from statsmodels.regression.linear_model import OLS
+
+    n = 50
+    x = np.ones((n, 2))
+    x[:, 1] = np.arange(0, n)
+    y = 1000 + x[:, 1] + np.random.normal(0, 1, n)
+
+    params = np.r_[999.82244338, 1.0077889]
+
+    for method in "bfgs", None:
+        for fun in [OLS, GLM]:
+
+            # Changing L1_wtValue from 0 to 1e-9 changes
+            # the algorithm from scipy gradient optimization
+            # to statsmodels coordinate descent
+            for L1_wtValue in [0, 1e-9]:
+                model = fun(y, x)
+                if fun == OLS:
+                    fit = model.fit_regularized(alpha=0, L1_wt=L1_wtValue)
+                else:
+                    fit = model._fit_ridge(alpha=0, start_params=None, method=method)
+                assert_allclose(params, fit.params, atol=1e-6, rtol=1e-6)
 
 class TestRegularized(object):
 
