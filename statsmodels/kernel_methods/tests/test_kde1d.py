@@ -1,5 +1,5 @@
 import pytest
-from .. import kde, kde_methods, bandwidths
+from .. import kde, kde_1d, bandwidths
 import numpy as np
 import numpy.testing as npt
 from numpy.random import randn
@@ -152,7 +152,7 @@ class TestKDE1DExtra(object):
         est = k.fit()
         assert est.bandwidth > 0
 
-    @pytest.mark.parametrize('ker', kde_datasets.kernels1d)
+    @pytest.mark.parametrize('ker', kde_datasets.kernels_1d)
     def test_kernels(self, large_kde, ker):
         k, data = large_kde
         k.kernel = ker.cls()
@@ -161,7 +161,7 @@ class TestKDE1DExtra(object):
         acc = data.method.normed_accuracy * ker.precision_factor
         npt.assert_allclose(tot, 1, rtol=acc, atol=acc)
 
-    @pytest.mark.parametrize('ker', kde_datasets.kernels1d)
+    @pytest.mark.parametrize('ker', kde_datasets.kernels_1d)
     def test_grid_kernels(self, large_kde, ker):
         k, data = large_kde
         k.kernel = ker.cls()
@@ -209,13 +209,13 @@ class TestKDE1DExtra(object):
 
     def test_non1d_data(self):
         d = np.array([[1, 2], [3, 4], [5, 6.]])
-        k = kde.KDE(d, method=kde_methods.Reflection1D)
+        k = kde.KDE(d, method=kde_1d.Reflection1D)
         with pytest.raises(ValueError):
             k.fit()
 
     def test_bad_axis_type(self):
         k = kde.KDE(self.small_data.exog,
-                    method=kde_methods.Reflection1D,
+                    method=kde_1d.Reflection1D,
                     axis_type='O')
         with pytest.raises(ValueError):
             k.fit()
@@ -291,8 +291,8 @@ class TestKDE1DExtra(object):
                               adjust=data.adjust)
 
     def test_transform(self):
-        tr = kde_methods.create_transform(np.log, np.exp)
-        log_tr = kde_methods.LogTransform
+        tr = kde_1d.create_transform(np.log, np.exp)
+        log_tr = kde_1d.LogTransform
 
         xs = np.r_[1:3:16j]
         tol = 1e-6
@@ -308,12 +308,12 @@ class TestKDE1DExtra(object):
             def Dinv(self, x):
                 return np.exp(x)
 
-        tr1 = kde_methods.create_transform(MyTransform())
+        tr1 = kde_1d.create_transform(MyTransform())
         npt.assert_allclose(tr1.Dinv(xs), log_tr.Dinv(xs), rtol=tol, atol=tol)
 
     def test_bad_transform(self):
         with pytest.raises(AttributeError):
-            kde_methods.create_transform(np.log)
+            kde_1d.create_transform(np.log)
 
 
 @pytest.mark.parametrize('data', all_methods_small_data)
@@ -321,7 +321,7 @@ class TestSF(object):
     def test_method_works(self, data):
         k = createKDE(data)
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=32)
+        xs = kde_1d.generate_grid1d(est, N=32)
         sf = est.sf(xs.linear())
         cdf = est.cdf(xs.linear())
         npt.assert_allclose(sf, 1 - cdf, data.method.accuracy,
@@ -385,7 +385,7 @@ class TestHazard(object):
     def test_method_works(self, data):
         k = createKDE(data)
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=32)
+        xs = kde_1d.generate_grid1d(est, N=32)
         h_comp = est.hazard(xs.linear())
         h_ref = est.pdf(xs.linear())
         sf = est.sf(xs.linear())
@@ -416,7 +416,7 @@ class TestCumHazard(object):
     def test_method_works(self, data):
         k = createKDE(data)
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=32)
+        xs = kde_1d.generate_grid1d(est, N=32)
         h_comp = est.cumhazard(xs.linear())
         sf = est.sf(xs.linear())
         # Only tests for sf big enough or error is too large

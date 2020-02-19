@@ -6,57 +6,12 @@ This module contains a set of methods to compute multivariates KDEs.
 
 import numpy as np
 from scipy import linalg
-from .kde_utils import numpy_trans_method, atleast_2df, Grid
-from . import kernels
+from .kde_utils import numpy_trans_method, atleast_2df
+from . import kernelsnd
 from copy import copy as shallow_copy
 from .fast_linbin import fast_linbin_nd as fast_bin_nd
-from ._kde_methods import KDEMethod, _array_arg, filter_exog
-from ._kde1d_methods import Reflection1D, Cyclic1D
-
-
-def generate_grid(kde, N=None, cut=None):
-    r"""
-    Helper method returning a regular grid on the domain of the KDE.
-
-    Parameters
-    ----------
-    kde: KDEnDMethod
-        Fitted KDE object
-    N: int or list of int
-        Number of points in the grid
-    cut: float
-        For unbounded domains, how far past the maximum should
-        the grid extend to, in term of KDE bandwidth
-
-    Returns
-    -------
-    A vector of N regularly spaced points
-    """
-    N = np.asarray(kde.grid_size(N), dtype=int)
-    if N.ndim == 0:
-        N = N * np.ones(kde.ndim, dtype=int)
-    elif N.ndim != 1 or N.shape[0] != kde.ndim:
-        raise ValueError("N must be a single integer, or a 1D array with "
-                         "as many element as dimensions in the KDE")
-    if cut is None:
-        cut = kde.kernel.cut
-    if kde.bandwidth.ndim == 0:
-        cut = kde.bandwidth * cut * np.ones(kde.ndim, dtype=float)
-    elif kde.bandwidth.ndim == 1:
-        cut = kde.bandwidth * cut
-    else:
-        cut = np.dot(kde.bandwidth, cut * np.ones(kde.ndim, dtype=float))
-    lower = np.array(kde.lower)
-    upper = np.array(kde.upper)
-    ndim = kde.ndim
-    axes = [None] * ndim
-    for i in range(ndim):
-        if lower[i] == -np.inf:
-            lower[i] = np.min(kde.exog[:, i]) - cut[i]
-        if upper[i] == np.inf:
-            upper[i] = np.max(kde.exog[:, i]) + cut[i]
-        axes[i] = np.linspace(lower[i], upper[i], N[i])
-    return Grid(axes)
+from .kde_methods import KDEMethod, _array_arg, filter_exog, generate_grid
+from .kde_1d import Reflection1D, Cyclic1D
 
 
 def _compute_bandwidth(kde, default):
@@ -155,7 +110,7 @@ class KDEnDMethod(KDEMethod):
         self._inv_bw = None
         self._det_inv_bw = None
         self.base_p2 = 10
-        self._kernel = kernels.Gaussian()
+        self._kernel = kernelsnd.Gaussian()
 
     def fit(self, kde, compute_bandwidth=True):
         """

@@ -8,8 +8,8 @@ import numpy as np
 from .kde_utils import numpy_trans1d_method, finite
 from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
-from ._kde_methods import KDEMethod, filter_exog
-from . import kernels
+from .kde_methods import KDEMethod, filter_exog
+from . import kernelsnc
 
 
 def _compute_bandwidth(kde):
@@ -37,7 +37,7 @@ class Unordered(KDEMethod):
         self._weights = None
         self._total_weights = None
         self._bw = None
-        self._kernel = kernels.AitchisonAitken()
+        self._kernel = kernelsnc.AitchisonAitken()
         self._epsilon = 1e-6
 
     name = 'unordered'
@@ -336,7 +336,7 @@ class Ordered(Unordered):
     """
     def __init__(self):
         Unordered.__init__(self)
-        self._kernel = kernels.WangRyzin()
+        self._kernel = kernelsnc.WangRyzin()
 
     name = "ordered"
 

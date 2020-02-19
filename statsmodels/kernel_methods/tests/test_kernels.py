@@ -1,5 +1,5 @@
 import pytest
-from .. import kernels
+from .. import kernels1d, kernelsnd, kernels_utils
 from scipy import stats, integrate
 import numpy as np
 import numpy.testing as npt
@@ -8,22 +8,22 @@ from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
 
 
-@pytest.fixture(params=kde_datasets.kernels1d)
+@pytest.fixture(params=kde_datasets.kernels_1d)
 def kernel1d(request):
     return request.param
 
 
-@pytest.fixture(params=kde_datasets.kernelsnd)
+@pytest.fixture(params=kde_datasets.kernels_nd)
 def kernelnd(request):
     return request.param
 
 
-@pytest.fixture(params=kde_datasets.kernelsnc)
+@pytest.fixture(params=kde_datasets.kernels_nc)
 def kernelnc(request):
     return request.param
 
 
-class RefKernel1D(kernels.Kernel1D):
+class RefKernel1D(kernels1d.Kernel1D):
     """
     Reference kernel: force use of explicit integration
     """
@@ -37,7 +37,7 @@ class RefKernel1D(kernels.Kernel1D):
         return self.real_kernel.pdf(z, out)
 
 
-class RefKernelnD(kernels.KernelnD):
+class RefKernelnD(kernelsnd.KernelnD):
     """
     Reference kernel: force use of explicit integration
     """
@@ -168,13 +168,13 @@ class TestKernels1D(object):
 
     def test_rfftfreq_bad(self):
         with pytest.raises(ValueError):
-            kernels.rfftfreq(1.2)
+            kernels_utils.rfftfreq(1.2)
 
 
 class TestGaussian1d(object):
     @classmethod
     def setup_class(cls, lower=-np.inf):
-        cls.kernel = kernels.Gaussian1D()
+        cls.kernel = kernels1d.Gaussian1D()
         test_width = cls.kernel.cut
         cls.norm_ref = stats.norm(loc=0, scale=1)
         cls.xs = np.r_[-test_width / 2:test_width / 2:17j]

@@ -182,8 +182,8 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     if np.any(M < 2):
         raise ValueError(
             "You need to specify at least 2 elements per dimension")
-    if (bounds.ndim != 2 or bounds.shape[0] != D or bounds.shape[1] != 2
-            or M.ndim != 1 or M.shape[0] != D):
+    if (bounds.ndim != 2 or bounds.shape[0] != D or bounds.shape[1] != 2 or
+            M.ndim != 1 or M.shape[0] != D):
         raise ValueError("Error, incompatible dimensions for bounds, M and X")
 
     try:
