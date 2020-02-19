@@ -161,6 +161,9 @@
   - img: ../_static/images/statespace_tvpvar_mcmc_cfa.png
     target: notebooks/generated/statespace_tvpvar_mcmc_cfa.html
     text: TVP-VAR, MCMC, and sparse simulation smoothing
+  - img: ../_static/images/statespace_bayesian_sarimax.png
+    target: bayesian_est_SARIMAX.html
+    text: 'SARIMAX estimation with Bayesian methods'
 - header: State space models - Technical notes
   id: statespace_notes
   links:
