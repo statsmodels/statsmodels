@@ -59,7 +59,7 @@ def trimboth(a, proportiontocut, axis=0):
 
     sl = [slice(None)] * a.ndim
     sl[axis] = slice(lowercut, uppercut)
-    return a[sl]
+    return a[tuple(sl)]
 
 
 def trim_mean(a, proportiontocut, axis=0):
@@ -121,7 +121,7 @@ class TrimmedMean(object):
     @property
     def data_trimmed(self):
         # returns a view
-        return self.data_sorted[self.sl]
+        return self.data_sorted[tuple(self.sl)]
 
     @property #cache
     def data_winsorized(self):
@@ -129,7 +129,7 @@ class TrimmedMean(object):
 
     @property
     def mean_trimmed(self):
-        return np.mean(self.data_sorted[self.sl], self.axis)
+        return np.mean(self.data_sorted[tuple(self.sl)], self.axis)
 
     @property
     def mean_winsorized(self):
@@ -151,6 +151,7 @@ class TrimmedMean(object):
     def std_mean_winsorized(self):
         '''standard error of winsorized mean
         '''
+        tm = self
         # formula from an old SAS manual page, simplified
         std_ = np.sqrt(tm.var_winsorized / (tm.nobs_reduced - 1) *
                        (tm.nobs - 1.) / tm.nobs)
@@ -197,7 +198,7 @@ def anova_oneway(data, trim_frac=0):
 
     another implementation
     '''
-    args = map(np.asarray, data)
+    args = list(map(np.asarray, data))
     if any([x.ndim != 1 for x in args]):
         raise ValueError('data arrays have to be one-dimensional')
 
@@ -271,7 +272,7 @@ def anova_bfm(args, trim_frac=0):
     doi:10.1080/03610919708813431.
 
     '''
-    args = map(np.asarray, args)
+    args = list(map(np.asarray, args))
     if any([x.ndim != 1 for x in args]):
         raise ValueError('data arrays have to be one-dimensional')
 
@@ -366,7 +367,7 @@ def anova_welch(args, trim_frac=0):
 
     '''
 
-    args = map(np.asarray, args)
+    args = list(map(np.asarray, args))
     if any([x.ndim != 1 for x in args]):
         raise ValueError('data arrays have to be one-dimensional')
 
@@ -453,13 +454,13 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     return res
 
 def anova_scale(data, method='bfm', center='median', transform='abs', trim_frac=0.2):
-    print method, center, transform, trim_frac
+    print(method, center, transform, trim_frac)
     data = map(np.asarray, data)
     #print [x.mean() for x in data]
     xxd = [scale_transform(x, center=center, transform=transform,
                            trim_frac=trim_frac) for x in data]
-    print [x.mean() for x in xxd]
-    print method, method == 'bfm'
+    print([x.mean() for x in xxd])
+    print(method, method == 'bfm')
     if method == 'bfm':
         res = anova_bfm(xxd)
     elif method == 'levene':
@@ -470,108 +471,3 @@ def anova_scale(data, method='bfm', center='median', transform='abs', trim_frac=
         raise ValueError('method "%s" not supported' % method)
 
     return res, xxd
-
-
-
-
-if __name__ == '__main__':
-    examples = ['mc', 'anova', 'trimmed', 'none'][-1]
-    if 'mc' in examples:
-        np.random.seed(19864256)
-        nrep = 100
-        nobs = np.array([5,10,5,5]) * 3
-        mm = (1, 1, 1, 1)
-        ss = (0.8, 1, 1, 2)
-        #ss = (1, 1, 1, 1)
-
-        # run a Monte Carlo simulation to check size and power of tests
-        res_v = np.zeros((nrep, 3))  # without levene
-        res_v = np.zeros((nrep, 5))  # with levene
-        res = np.zeros((nrep, 6))
-        res_w = np.zeros((nrep, 4))
-        for ii in range(nrep):
-            #xx = [m + s * np.random.randn(n) for n, m, s in zip(nobs, mm, ss)]
-            #xx = [m + s * stats.t.rvs(3, size=n) for n, m, s in zip(nobs, mm, ss)]
-            xx = [m + s * (stats.lognorm.rvs(1.5, size=n) - stats.lognorm.mean(1.5)) for n, m, s in zip(nobs, mm, ss)]
-            #xx = [m + s * (stats.chi2.rvs(3, size=n) - stats.chi2.mean(3)) for n, m, s in zip(nobs, mm, ss)]
-            #xxd = [np.abs(x - np.median(x)) for x in xx]
-            xxd = [scale_transform(x, center='trimmed', transform='abs',
-                                   trim_frac=0.1) for x in xx]
-            #print bf_anova(*xx)[:2], bf_anova(*xxd)[:2]
-            # levene raises exception with unbalanced
-            res_v[ii] = np.concatenate((stats.levene(*xx), anova_bfm(xxd)[:3]))
-            #res_v[ii] = anova_bfm(xxd)[:3]
-            res[ii] = np.concatenate((anova_bfm(xx)[:3],
-                                      anova_bfm(xx, trim_frac=0.2)[:3]))
-            res_w[ii] = np.concatenate((anova_welch(xx)[:2],
-                                        anova_welch(xx, trim_frac=0.2)[:2]))
-
-        #print res[:5]
-        print nobs
-        print mm
-        print ss
-        print '\nlevene BF scale'
-        #print (res_v[:, [1, 2]] < 0.05).mean(0) # without levene
-        print (res_v[:, [1, 3, 4]] < 0.05).mean(0) # with levene
-        print '\nBF'
-        print (res[:, [1, 2, 4, 5]] < 0.05).mean(0)
-        print '\nWelch'
-        print (res_w[:, [1, 3]] < 0.05).mean(0)
-        print
-
-    if 'anova' in examples:
-        np.random.seed(19864256)
-        nobs = np.array([5,10,5,5]) * 3
-        mm = (1, 1, 1, 2)
-        ss = (0.8, 1, 1, 2)
-
-        xx = [m + s * np.random.randn(n) for n, m, s in zip(nobs, mm, ss)]
-        print anova_bfm(xx)
-        print anova_welch(xx)
-
-        npk_yield = np.array([
-         49.5, 62.8, 46.8, 57, 59.8, 58.5, 55.5, 56, 62.8, 55.8, 69.5, 55, 62,
-         48.8, 45.5, 44.2, 52, 51.5, 49.8, 48.8, 57.2, 59, 53.2, 56
-        ])
-        npk_block = np.array([
-         1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
-         6 ])
-        xyield = [npk_yield[npk_block == idx] for idx in range(1,7)]
-        print anova_bfm(xyield)
-        print anova_welch(xyield)
-        idx_include = range(24)
-        del idx_include[15]
-        del idx_include[2]
-        # unbalanced sample sizes
-        npk_block_ub = npk_block[idx_include]
-        npk_yield_ub = npk_yield[idx_include]
-        xyield_ub = [npk_yield_ub[npk_block_ub == idx] for idx in range(1,7)]
-        print anova_bfm(xyield_ub)
-        print anova_welch(xyield_ub)
-        print anova_welch(xyield_ub, trim_frac=0.01)
-        print anova_welch(xyield_ub, trim_frac=0.25)
-
-
-    if 'trimmed' in examples:
-        #x = np.random.permutation(np.arange(10))
-        x = np.array([4, 9, 3, 1, 6, 5, 7, 10, 2, 8, 50])
-        tm = TrimmedMean(x, 0.2)
-        print vars(tm)
-        print tm.data_winsorized
-        print tm.data_trimmed
-        print tm.mean_trimmed
-        print tm.mean_winsorized
-        print tm.var_winsorized
-        tm2 = tm.reset_fraction(0.1)
-        print tm2.data_winsorized
-        print tm2.data_trimmed
-
-        tm = tm.reset_fraction(0)
-        import statsmodels.stats.weightstats as smws
-        print smws._tstat_generic(tm.mean_trimmed, 0, tm.std_mean_trimmed,
-                                  tm.nobs_reduced - 1,
-                                  alternative='two-sided', diff=3)
-        print smws.DescrStatsW(x).ttest_mean(3)
-        print tm.ttest_mean(3, transform='winsorized')
-
-x = np.asarray("7.79 9.16 7.64 10.28 9.12 9.24 8.40 8.60 8.04 8.45 9.51 8.15 7.69 8.84 9.92 7.20 9.25 9.45 9.14 9.99 9.21 9.06 8.65 10.70 10.24 8.62 9.94 10.55 10.13 9.78 9.01".split(), float)
