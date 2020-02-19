@@ -1,7 +1,4 @@
 import numpy as np
-from scipy.special import erf
-from scipy import fftpack, integrate
-from . import _cy_kernels
 
 
 def rfftfreq(n, d=1.0):

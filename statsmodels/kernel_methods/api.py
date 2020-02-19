@@ -8,5 +8,5 @@ from . import kde_utils
 
 __all__ = [
     'kde', 'KDE', 'bandwidths', 'kde_1d', 'kde_nd', 'kde_nc', 'kernels1d',
-    'kernelsnc', 'kernelsnd', 'Grid', 'kde_utils'
+    'kernelsnc', 'kde_multivariate', 'kernelsnd', 'Grid', 'kde_utils'
 ]
