@@ -48,8 +48,7 @@ used. Currently, only 1D KDE supports bounded domains.
 
 import numpy as np
 from .kde_utils import atleast_2df, AxesType
-from . import kernels, bandwidths  # noqa
-from ._kde_multivariate import Multivariate
+from .kde_multivariate import Multivariate
 from copy import copy as shallow_copy
 
 # default_method = kde1d_methods.Reflection
