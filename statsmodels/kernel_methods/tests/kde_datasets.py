@@ -121,7 +121,6 @@ class DataSets(object):
         Create the parameters to test using a 1D Gaussian distribution dataset.
         """
         dist = stats.norm(0, 1)
-        methods = methods_1d
         exogs = [generate(dist, s, -5, 5) for s in sizes]
         weights = [dist.pdf(v) for v in exogs]
         adjusts = [1 - ws for ws in weights]

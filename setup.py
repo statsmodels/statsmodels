@@ -18,6 +18,7 @@ from setuptools import Extension, find_packages, setup
 from setuptools.dist import Distribution
 
 import versioneer
+from numpy.distutils.misc_util import get_info
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
@@ -145,33 +146,45 @@ COMPILER_DIRECTIVES = {'linetrace': CYTHON_COVERAGE}
 DEFINE_MACROS = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 
-from numpy.distutils.misc_util import get_info
-
 npymath_info = get_info("npymath")
 
 exts = dict(
     _stl={'source': 'statsmodels/tsa/_stl.pyx'},
-    _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
+    _exponential_smoothers={
+        'source': 'statsmodels/tsa/_exponential_smoothers.pyx'
+    },
     _innovations={'source': 'statsmodels/tsa/_innovations.pyx'},
-    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa: E501
-    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
-    _arma_innovations={'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'},  # noqa: E501
+    _hamilton_filter={
+        'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'
+    },
+    _kim_smoother={
+        'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'
+    },
+    _arma_innovations={
+        'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'
+    },
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
-    _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
+    _smoothers_lowess={
+        'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'
+    },
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},
-    _cy_kernels = {'source' : 'statsmodels/kernel_methods/_cy_kernels.pyx',
-                   'include_dirs': npymath_info['include_dirs'],
-                   'libraries': npymath_info['libraries'],
-                   'library_dirs': npymath_info['library_dirs']},
-    _cy_fast_linbin = {'source' : 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},
-    _cy_grid_interpolation = {'source' : 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx',
-                              'depends' : ['statsmodels/nonparametric/grid_inter.h',
-                                           'statsmodels/nonparametric/grid_inter.pxd'],
-                              'include_dirs': npymath_info['include_dirs'],
-                              'libraries': npymath_info['libraries'],
-                              'library_dirs': npymath_info['library_dirs']})
+    _cy_kernels={'source': 'statsmodels/kernel_methods/_cy_kernels.pyx',
+                 'include_dirs': npymath_info['include_dirs'],
+                 'libraries': npymath_info['libraries'],
+                 'library_dirs': npymath_info['library_dirs']},
+    _cy_fast_linbin={
+        'source': 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'
+    },
+    _cy_grid_interpolation={
+        'source': 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx',
+        'depends': ['statsmodels/nonparametric/grid_inter.h',
+                    'statsmodels/nonparametric/grid_inter.pxd'],
+        'include_dirs': npymath_info['include_dirs'],
+        'libraries': npymath_info['libraries'],
+        'library_dirs': npymath_info['library_dirs']
+    })
 
 statespace_exts = [
     'statsmodels/tsa/statespace/_initialization.pyx.in',
