@@ -39,9 +39,8 @@ from .kde_utils import (make_ufunc, numpy_trans1d_method, numpy_trans1d,
                         finite, AxesType, Grid)
 from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
-from .kernels import Kernel1D
-from ._kde_methods import KDEMethod, filter_exog
-from . import kernels
+from .kernels1d import Kernel1D, Gaussian1D
+from .kde_methods import KDEMethod, filter_exog
 
 
 def generate_grid1d(kde, N=None, cut=None, span=None):
@@ -94,14 +93,8 @@ def _compute_bandwidth(kde, default):
     return bw
 
 
-def convolve(exog,
-             point,
-             fct,
-             out=None,
-             scaling=1.,
-             weights=1.,
-             factor=1.,
-             dim=-1):
+def convolve(exog, point, fct, out=None, scaling=1.,
+             weights=1., factor=1., dim=-1):
     """
     Convolve a set of weighted point with a function
 
@@ -170,7 +163,7 @@ class KDE1DMethod(KDEMethod):
 
     def __init__(self):
         KDEMethod.__init__(self)
-        self._kernel = kernels.Gaussian1D()
+        self._kernel = Gaussian1D()
 
     @property
     def axis_type(self):

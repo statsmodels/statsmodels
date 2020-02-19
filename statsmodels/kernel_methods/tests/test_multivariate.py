@@ -3,7 +3,7 @@ from ..kde_utils import Grid
 import numpy as np
 import numpy.testing as npt
 from .kde_datasets import DataSets, createKDE
-from .. import bandwidths, kde_methods, kde
+from .. import bandwidths, kde, kde_1d, kde_nc
 
 all_methods_data = DataSets.multivariate()
 
@@ -60,11 +60,11 @@ class TestMultivariate(object):
         npt.assert_allclose(tot, 1., rtol=acc)
 
 
-class MyOrdered(kde_methods.Ordered):
+class MyOrdered(kde_nc.Ordered):
     pass
 
 
-class MyUnordered(kde_methods.Unordered):
+class MyUnordered(kde_nc.Unordered):
     pass
 
 
@@ -107,8 +107,8 @@ class TestMultivariateExtra(object):
         k = kde.KDE(
             data.exog,
             method=kde.Multivariate(
-                methods=[kde_methods.Unbounded1D(),
-                         kde_methods.Unbounded1D()]))
+                methods=[kde_1d.Unbounded1D(),
+                         kde_1d.Unbounded1D()]))
         k.bandwidth = [bandwidths.scotts, 2.]
         est = k.fit()
         assert est.bandwidth[1] == 2.
@@ -117,19 +117,19 @@ class TestMultivariateExtra(object):
         k = kde.KDE(
             data.exog,
             method=kde.Multivariate(
-                methods=[kde_methods.Unbounded1D(),
-                         kde_methods.Unbounded1D()]))
+                methods=[kde_1d.Unbounded1D(),
+                         kde_1d.Unbounded1D()]))
         k.bandwidth = [1, 2, 3]
         with pytest.raises(ValueError):
             k.fit()
 
     def test_continuous_method(self, data):
         k = kde.KDE(data.exog, axis_type='CC')
-        k.method.continuous_method = kde_methods.Reflection1D()
-        assert isinstance(k.method.continuous_method, kde_methods.Reflection1D)
+        k.method.continuous_method = kde_1d.Reflection1D()
+        assert isinstance(k.method.continuous_method, kde_1d.Reflection1D)
         est = k.fit()
-        assert isinstance(est.methods[0], kde_methods.Reflection1D)
-        assert isinstance(est.methods[1], kde_methods.Reflection1D)
+        assert isinstance(est.methods[0], kde_1d.Reflection1D)
+        assert isinstance(est.methods[1], kde_1d.Reflection1D)
 
     def test_ordered_method(self, data):
         k = kde.KDE(data.exog, axis_type='OO')
@@ -174,6 +174,6 @@ class TestMultivariateExtra(object):
 #    def test_to_bin_transformed(self, data):
 #        exog = abs(data.exog) + 0.1
 #        k = kde.KDE(data.exog, axis_type='C')
-#        k.continuous_method = kde_methods.Transform1D(kde_methods.LogTransform)
+#        k.continuous_method = kde_1d.Transform1D(kde_1d.LogTransform)
 #        est = k.fit()
 #        npt.assert_allclose(est.to_bin, np.log(exog), 1e-5, 1e-5)

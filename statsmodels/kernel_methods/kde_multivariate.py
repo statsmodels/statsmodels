@@ -7,10 +7,10 @@ This module contains the multi-variate KDE meta-method.
 import numpy as np
 from collections import namedtuple
 from copy import copy as shallow_copy
-from . import kernels
-from . import _kde1d_methods, _kdenc_methods
+from . import kernels1d, kernelsnc
+from . import kde_1d, kde_nc
 from .kde_utils import numpy_trans_method, AxesType
-from ._kde_methods import KDEMethod, filter_exog
+from .kde_methods import KDEMethod, filter_exog
 from .bandwidths import KDE1DAdaptor
 from .fast_linbin import fast_linbin_nd as fast_bin_nd
 
@@ -61,14 +61,14 @@ class Multivariate(KDEMethod):
         self._methods = {}
         self._kernels = {}
         self._kernels_type = {
-            'C': kernels.Gaussian1D(),
-            'O': kernels.WangRyzin(),
-            'U': kernels.AitchisonAitken()
+            'C': kernels1d.Gaussian1D(),
+            'O': kernelsnc.WangRyzin(),
+            'U': kernelsnc.AitchisonAitken()
         }
         self._methods_type = {
-            'C': _kde1d_methods.Unbounded1D(),
-            'O': _kdenc_methods.Ordered(),
-            'U': _kdenc_methods.Unordered()
+            'C': kde_1d.Unbounded1D(),
+            'O': kde_nc.Ordered(),
+            'U': kde_nc.Unordered()
         }
         for k in kwords:
             if hasattr(self, k):

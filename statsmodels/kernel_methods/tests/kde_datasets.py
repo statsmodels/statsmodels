@@ -1,8 +1,8 @@
 import numpy as np
 from collections import namedtuple
-from .. import kde_methods as km
+from .. import kde_1d, kde_nd, kde_nc, kde_multivariate
 from scipy import stats
-from .. import kernels, kde
+from .. import kernelsnd, kernels1d, kernelsnc, kde
 
 
 def generate(dist, N, low, high):
@@ -32,45 +32,47 @@ test_method = namedtuple('test_method', [
 ])
 
 methods_1d = [
-    test_method(km.KDE1DMethod, 1e-5, 1e-4, 1e-5, False, False),
-    test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True),
-    test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True),
-    test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True),
-    test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
+    test_method(kde_1d.KDE1DMethod, 1e-5, 1e-4, 1e-5, False, False),
+    test_method(kde_1d.Reflection1D, 1e-5, 1e-4, 1e-5, True, True),
+    test_method(kde_1d.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True),
+    test_method(kde_1d.Renormalization, 1e-5, 1e-4, 1e-2, True, True),
+    test_method(kde_1d.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
 ]
+
 methods_log = [
-    test_method(km.Transform1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)
+    test_method(kde_1d.Transform1D(kde_1d.LogTransform), 1e-5, 1e-4, 1e-5,
+                True, False)
 ]
 
 methods_nd = [
-    test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True),
-    test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, False, False),
-    test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)
+    test_method(kde_nd.Cyclic, 1e-5, 1e-4, 1e-5, True, True),
+    test_method(kde_nd.Cyclic, 1e-5, 1e-4, 1e-5, False, False),
+    test_method(kde_nd.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)
 ]
 
 methods_nc = [
-    test_method(km.Ordered, 1e-5, 1e-4, 1e-5, False, False),
-    test_method(km.Unordered, 1e-5, 1e-4, 1e-5, False, False)
+    test_method(kde_nc.Ordered, 1e-5, 1e-4, 1e-5, False, False),
+    test_method(kde_nc.Unordered, 1e-5, 1e-4, 1e-5, False, False)
 ]
 
 test_kernel = namedtuple('test_kernel',
                          ['cls', 'precision_factor', 'var', 'positive'])
 
-kernels1d = [
-    test_kernel(kernels.Gaussian1D, 1, 1, True),
-    test_kernel(kernels.TriCube, 1, 1, True),
-    test_kernel(kernels.Epanechnikov, 10, 1, True),
-    test_kernel(kernels.GaussianOrder4, 10, 0,
+kernels_1d = [
+    test_kernel(kernels1d.Gaussian1D, 1, 1, True),
+    test_kernel(kernels1d.TriCube, 1, 1, True),
+    test_kernel(kernels1d.Epanechnikov, 10, 1, True),
+    test_kernel(kernels1d.GaussianOrder4, 10, 0,
                 False),  # Bad for precision because of high frequencies
-    test_kernel(kernels.EpanechnikovOrder4, 1000, 0, False)
+    test_kernel(kernels1d.EpanechnikovOrder4, 1000, 0, False)
 ]  # Bad for precision because of high frequencies
 
-kernelsnc = [
-    test_kernel(kernels.AitchisonAitken, 1, 1, True),
-    test_kernel(kernels.WangRyzin, 1, 1, True)
+kernels_nc = [
+    test_kernel(kernelsnc.AitchisonAitken, 1, 1, True),
+    test_kernel(kernelsnc.WangRyzin, 1, 1, True)
 ]
 
-kernelsnd = [test_kernel(kernels.Gaussian, 1, 1, True)]
+kernels_nd = [test_kernel(kernelsnd.Gaussian, 1, 1, True)]
 
 # Tuple to store datasets
 # * method - Method to use for the KDE
@@ -227,7 +229,7 @@ def createKDE(data, **kde_kwargs):
         else:
             del k.upper
     else:
-        mv = km.Multivariate()
+        mv = kde_multivariate.Multivariate()
         k.method = mv
         exog = data.exog[...]
 

@@ -2,7 +2,7 @@ import pytest
 from .kde_datasets import DataSets, createKDE
 import numpy as np
 import numpy.testing as npt
-from .. import kde_methods, kde
+from .. import kde_nd, kde, kde_1d
 
 all_methods_data = DataSets.normnd(2)
 
@@ -46,7 +46,7 @@ class TestKDE2D(object):
 
 class TestKDE2DExtra(object):
 
-    methods = [kde_methods.KDEnDMethod, kde_methods.Cyclic]
+    methods = [kde_nd.KDEnDMethod, kde_nd.Cyclic]
 
     @staticmethod
     @pytest.fixture
@@ -85,61 +85,61 @@ class TestKDE2DExtra(object):
 
     def test_fallback_1d(self, data):
         exog1d = data.exog[:, [0]]
-        k = kde.KDE(exog1d, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(exog1d, method=kde_nd.KDEnDMethod)
         est = k.fit()
-        assert isinstance(est, kde_methods.Reflection1D)
+        assert isinstance(est, kde_1d.Reflection1D)
 
     def test_fallback_1d_cyclic(self, data):
         exog1d = data.exog[:, [0]]
-        k = kde.KDE(exog1d, method=kde_methods.Cyclic)
+        k = kde.KDE(exog1d, method=kde_nd.Cyclic)
         est = k.fit()
-        assert isinstance(est, kde_methods.Cyclic1D)
+        assert isinstance(est, kde_1d.Cyclic1D)
 
     def test_set_bandwidth(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         est.bandwidth = 2.
         assert est.bandwidth == 2.
 
     def test_set_bandwidth_bad_dimensions(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         with pytest.raises(ValueError):
             est.bandwidth = np.ones((2, 2, 2))
 
     def test_set_bandwidth_bad_shape(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         with pytest.raises(AssertionError):
             est.bandwidth = np.ones((5, 5))
 
     def test_update_inputs(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         ws = np.arange(est.npts)
         est.update_inputs(data.exog, weights=ws, adjust=ws)
         assert est.total_weights == ws.sum()
 
     def test_update_inputs_bad_exog(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         with pytest.raises(ValueError):
             est.update_inputs(np.ones((2, 2, 2)))
 
     def test_update_inputs_bad_weights(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         with pytest.raises(ValueError):
             est.update_inputs(data.exog, np.ones((2, 2)))
 
     def test_update_inputs_bad_adjust(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         with pytest.raises(ValueError):
             est.update_inputs(data.exog, adjust=np.ones((2, 2)))
 
     def test_closed(self, data):
-        k = kde.KDE(data.exog, bandwidth=1, method=kde_methods.KDEnDMethod)
+        k = kde.KDE(data.exog, bandwidth=1, method=kde_nd.KDEnDMethod)
         est = k.fit()
         assert est.closed
 
