@@ -14,6 +14,7 @@ from statsmodels.stats.robust_compare import (
         TrimmedMean, anova_bfm, anova_oneway, anova_scale, anova_welch,
         scale_transform, trim_mean, trimboth)
 
+
 # taken from scipy and adjusted
 class Test_Trim(object):
     # test trim functions
@@ -28,34 +29,34 @@ class Test_Trim(object):
         a = np.arange(11)
         a2 = np.arange(24).reshape(6, 4)
         a3 = np.arange(24).reshape(6, 4, order='F')
-        assert_equal(trimboth(a, 3/11.), np.arange(3,8))
+        assert_equal(trimboth(a, 3/11.), np.arange(3, 8))
         assert_equal(trimboth(a, 0.2), np.array([2, 3, 4, 5, 6, 7, 8]))
 
         assert_equal(trimboth(a2, 0.2),
-                     np.arange(4,20).reshape(4,4))
+                     np.arange(4, 20).reshape(4, 4))
         assert_equal(trimboth(a3, 2/6.),
-               np.array([[2, 8, 14, 20],[3, 9, 15, 21]]))
+                     np.array([[2, 8, 14, 20], [3, 9, 15, 21]]))
         assert_raises(ValueError, trimboth,
-               np.arange(24).reshape(4,6).T, 4/6.)
+                      np.arange(24).reshape(4, 6).T, 4/6.)
 
     def test_trim_mean(self):
-        a = np.array([ 4,  8,  2,  0,  9,  5, 10,  1,  7,  3,  6])
+        a = np.array([4, 8, 2, 0, 9, 5, 10, 1, 7, 3, 6])
         idx = np.array([3, 5, 0, 1, 2, 4])
         a2 = np.arange(24).reshape(6, 4)[idx, :]
         a3 = np.arange(24).reshape(6, 4, order='F')[idx, :]
         assert_equal(trim_mean(a3, 2/6.),
-                        np.array([2.5, 8.5, 14.5, 20.5]))
+                     np.array([2.5, 8.5, 14.5, 20.5]))
         assert_equal(trim_mean(a2, 2/6.),
-                        np.array([10., 11., 12., 13.]))
+                     np.array([10., 11., 12., 13.]))
         idx4 = np.array([1, 0, 3, 2])
         a4 = np.arange(24).reshape(4, 6)[idx4, :]
         assert_equal(trim_mean(a4, 2/6.),
-                        np.array([9., 10., 11., 12., 13., 14.]))
+                     np.array([9., 10., 11., 12., 13., 14.]))
         # shuffled arange(24)
-        a = np.array([ 7, 11, 12, 21, 16,  6, 22,  1,  5,  0, 18, 10, 17,  9,
-                      19, 15, 23, 20,  2, 14,  4, 13,  8,  3])
+        a = np.array([7, 11, 12, 21, 16, 6, 22, 1, 5, 0, 18, 10, 17, 9,
+                      19, 15, 23, 20, 2, 14, 4, 13, 8, 3])
         assert_equal(trim_mean(a, 2/6.), 11.5)
-        assert_equal(trim_mean([5,4,3,1,2,0], 2/6.), 2.5)
+        assert_equal(trim_mean([5, 4, 3, 1, 2, 0], 2/6.), 2.5)
 
         # check axis argument
         np.random.seed(1234)
@@ -69,17 +70,18 @@ class Test_Trim(object):
         res2 = trim_mean(a.ravel(), 2/6.)
         assert_equal(res1, res2)
 
+
 def test_example_smoke():
     # cut and paste from `robust_compare.__main__`` without printing
 
-    examples = ['mc', 'anova', 'trimmed', 'none'] #[-1]
+    examples = ['mc', 'anova', 'trimmed', 'none']
     if 'mc' in examples:
         np.random.seed(19864256)
         nrep = 100
-        nobs = np.array([5,10,5,5]) * 3
+        nobs = np.array([5, 10, 5, 5]) * 3
         mm = (1, 1, 1, 1)
         ss = (0.8, 1, 1, 2)
-        #ss = (1, 1, 1, 1)
+        # ss = (1, 1, 1, 1)
 
         # run a Monte Carlo simulation to check size and power of tests
         res_v = np.zeros((nrep, 3))  # without levene
@@ -148,9 +150,8 @@ def test_example_smoke():
         anova_welch(xyield_ub, trim_frac=0.01)
         anova_welch(xyield_ub, trim_frac=0.25)
 
-
     if 'trimmed' in examples:
-        #x = np.random.permutation(np.arange(10))
+        # x = np.random.permutation(np.arange(10))
         x = np.array([4, 9, 3, 1, 6, 5, 7, 10, 2, 8, 50])
         tm = TrimmedMean(x, 0.2)
         vars(tm)
@@ -166,10 +167,12 @@ def test_example_smoke():
         tm = tm.reset_fraction(0)
         import statsmodels.stats.weightstats as smws
         smws._tstat_generic(tm.mean_trimmed, 0, tm.std_mean_trimmed,
-                                  tm.nobs_reduced - 1,
-                                  alternative='two-sided', diff=3)
+                            tm.nobs_reduced - 1,
+                            alternative='two-sided', diff=3)
         smws.DescrStatsW(x).ttest_mean(3)
         tm.ttest_mean(3, transform='winsorized')
 
-    x = np.asarray("7.79 9.16 7.64 10.28 9.12 9.24 8.40 8.60 8.04 8.45 9.51 8.15 7.69 8.84 9.92 7.20 9.25 9.45 9.14 9.99 9.21 9.06 8.65 10.70 10.24 8.62 9.94 10.55 10.13 9.78 9.01".split(), float)
-
+    x = np.asarray("7.79 9.16 7.64 10.28 9.12 9.24 8.40 8.60 8.04 8.45 9.51 "
+                   "8.15 7.69 8.84 9.92 7.20 9.25 9.45 9.14 9.99 9.21 9.06 "
+                   "8.65 10.70 10.24 8.62 9.94 10.55 10.13 9.78 9.01".split(),
+                   float)

@@ -11,6 +11,8 @@ from scipy import stats
 
 # the trimboth and trim_mean are taken from scipy.stats.stats
 # and enhanced by axis
+
+
 def trimboth(a, proportiontocut, axis=0):
     """
     Slices off a proportion of items from both ends of an array.
@@ -91,6 +93,7 @@ def trim_mean(a, proportiontocut, axis=0):
     newa = trimboth(np.sort(a, axis), proportiontocut, axis=axis)
     return np.mean(newa, axis=axis)
 
+
 class TrimmedMean(object):
     '''class for trimmed and winsorized one sample statistics
 
@@ -98,7 +101,7 @@ class TrimmedMean(object):
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):
         self.data = np.asarray(data)
-        #TODO: add pandas handling, maybe not if this stays internal
+        # TODO: add pandas handling, maybe not if this stays internal
         self.fraction = fraction
         self.axis = axis
         self.nobs = nobs = self.data.shape[axis]
@@ -123,7 +126,7 @@ class TrimmedMean(object):
         # returns a view
         return self.data_sorted[tuple(self.sl)]
 
-    @property #cache
+    @property  # cache
     def data_winsorized(self):
         return np.clip(self.data_sorted, self.lowerbound, self.upperbound)
 
@@ -139,7 +142,7 @@ class TrimmedMean(object):
     def var_winsorized(self):
         # hardcoded ddof = 1
         return np.var(self.data_winsorized - self.mean_winsorized,
-                        ddof=1 + 2 * self.lowercut, axis=self.axis)
+                      ddof=1 + 2 * self.lowercut, axis=self.axis)
 
     @property
     def std_mean_trimmed(self):
@@ -157,7 +160,8 @@ class TrimmedMean(object):
                        (tm.nobs - 1.) / tm.nobs)
         return std_
 
-    def ttest_mean(self, value=0, transform='trimmed', alternative='two-sided'):
+    def ttest_mean(self, value=0, transform='trimmed',
+                   alternative='two-sided'):
         '''One sample ttest for trimmed mean
 
         p-value is based on the approximate t-distribution of the test
@@ -179,7 +183,6 @@ class TrimmedMean(object):
                                   df, alternative=alternative, diff=value)
         return res + (df,)
 
-
     def reset_fraction(self, frac):
         '''create a TrimmedMean instance with a new trimming fraction
 
@@ -192,6 +195,7 @@ class TrimmedMean(object):
         #       in __init__,
         #       for example storing a pandas DataFrame or Series index
         return tm
+
 
 def anova_oneway(data, trim_frac=0):
     '''one-way anova assuming equal variances, unequal sample size
@@ -212,16 +216,15 @@ def anova_oneway(data, trim_frac=0):
         tms = [TrimmedMean(x, trim_frac) for x in args]
         means = np.array([tm.mean_trimmed for tm in tms])
         vars_ = np.array([tm.var_winsorized for tm in tms])
-        nobs_original = nobs # store just in case
+        nobs_original = nobs  # store just in case
         nobs = np.array([tm.nobs_reduced for tm in tms])
-
 
     nobs_t = nobs.sum()
     mean_t = (nobs * means).sum() / nobs_t
 
     # variance of group demeaned total sample
     tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
-    #print 'tmp', tmp
+    # print 'tmp', tmp
     statistic = 1. * (nobs * (means - mean_t)**2).sum() / (n_groups - 1)
     statistic /= tmp
 
@@ -230,7 +233,6 @@ def anova_oneway(data, trim_frac=0):
 
     pval = stats.f.sf(statistic, df_num, df_denom)
     return statistic, pval, (df_num, df_denom)
-
 
 
 def anova_bfm(args, trim_frac=0):
@@ -286,28 +288,27 @@ def anova_bfm(args, trim_frac=0):
         tms = [TrimmedMean(x, trim_frac) for x in args]
         means = np.array([tm.mean_trimmed for tm in tms])
         vars_ = np.array([tm.var_winsorized for tm in tms])
-        nobs_original = nobs # store just in case
+        nobs_original = nobs  # store just in case
         nobs = np.array([tm.nobs_reduced for tm in tms])
-
 
     nobs_t = nobs.sum()
     mean_t = (nobs * means).sum() / nobs_t
 
     tmp = ((1. - nobs / nobs_t) * vars_).sum()
-    #print 'tmp', tmp
+    # print 'tmp', tmp
     statistic = 1. * (nobs * (means - mean_t)**2).sum()
     statistic /= tmp
 
     df_num = len(nobs) - 1
     df_denom = tmp**2 / ((1. - nobs / nobs_t)**2 * vars_**2 / (nobs - 1)).sum()
     df_num2 = tmp**2 / ((vars_**2).sum() +
-                          (nobs / nobs_t * vars_).sum()**2 -
-                           2 * (nobs / nobs_t * vars_**2).sum())
-
+                        (nobs / nobs_t * vars_).sum()**2 -
+                        2 * (nobs / nobs_t * vars_**2).sum())
 
     pval = stats.f.sf(statistic, df_num, df_denom)
     pval2 = stats.f.sf(statistic, df_num2, df_denom)
     return statistic, pval, pval2, (df_num, df_denom, df_num2)
+
 
 def anova_welch(args, trim_frac=0):
     '''Welch's one-way Anova for samples with heterogeneous variances
@@ -373,7 +374,8 @@ def anova_welch(args, trim_frac=0):
 
     n_groups = len(args)
 
-    # the next block can be replaced by different implementation for groupsstats
+    # the next block can be replaced by different implementation
+    #   for groupsstats
     nobs = np.array([len(x) for x in args], float)
     if trim_frac == 0:
         means = np.array([x.mean() for x in args])
@@ -382,17 +384,18 @@ def anova_welch(args, trim_frac=0):
         tms = [TrimmedMean(x, trim_frac) for x in args]
         means = np.array([tm.mean_trimmed for tm in tms])
         vars_ = np.array([tm.var_winsorized for tm in tms])
-        nobs_original = nobs # store just in case
+        nobs_original = nobs  # store just in case
         nobs = np.array([tm.nobs_reduced for tm in tms])
 
     nobs_t = nobs.sum()
-    #mean_t = (nobs * means).sum() / nobs_t
+    # mean_t = (nobs * means).sum() / nobs_t
     weights = nobs / vars_
     weights_t = weights.sum()
     meanw_t = (weights * means).sum() / weights_t
 
     statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
-    tmp =  ((1 - weights / weights_t)**2 / (nobs - 1)).sum() / (n_groups**2 - 1)
+    tmp = ((1 - weights / weights_t)**2 / (nobs - 1)).sum()
+    tmp /= (n_groups**2 - 1)
     statistic /= 1 + 2 * (n_groups - 2) * tmp
 
     df_num = n_groups - 1.
@@ -431,11 +434,11 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     if transform == 'abs':
         tfunc = np.abs
     elif transform == 'square':
-        tfunc = lambda x : x * x
+        tfunc = lambda x: x * x  #noqa
     elif transform == 'exp':
-        tfunc = lambda x : np.exp(np.abs(x))
+        tfunc = lambda x: np.exp(np.abs(x))  #noqa
     elif transform == 'identity':
-        tfunc = lambda x : x
+        tfunc = lambda x: x  #noqa
     else:
         raise ValueError('transform should be abs, square or exp')
 
@@ -453,10 +456,12 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
 
     return res
 
-def anova_scale(data, method='bfm', center='median', transform='abs', trim_frac=0.2):
+
+def anova_scale(data, method='bfm', center='median', transform='abs',
+                trim_frac=0.2):
     print(method, center, transform, trim_frac)
     data = map(np.asarray, data)
-    #print [x.mean() for x in data]
+    # print [x.mean() for x in data]
     xxd = [scale_transform(x, center=center, transform=transform,
                            trim_frac=trim_frac) for x in data]
     print([x.mean() for x in xxd])
