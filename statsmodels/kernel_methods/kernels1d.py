@@ -4,6 +4,7 @@ import numpy as np
 from scipy import integrate, fftpack
 from scipy.special import erf
 from .kde_utils import make_ufunc, numpy_trans1d_method
+from . import kernelsnd
 
 S2PI = np.sqrt(2 * np.pi)
 
@@ -275,7 +276,7 @@ class Gaussian1D(Kernel1D):
         """
         if ndim == 1:
             return self
-        return Gaussian(ndim)
+        return kernelsnd.Gaussian(ndim)
 
     def pdf(self, xs, out=None):
         r"""

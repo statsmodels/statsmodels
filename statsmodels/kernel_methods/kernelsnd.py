@@ -9,6 +9,7 @@ from .kernels_utils import (rfftnfreq, rfftnsize, dctnfreq, dctnsamples,
 from copy import copy as shallowcopy
 from scipy.special import erf
 from .kde_utils import make_ufunc
+from . import kernels1d
 
 
 class KernelnD(object):
@@ -148,7 +149,7 @@ class Gaussian(KernelnD):
         Return an equivalent kernel, but for `ndim` dimensions
         """
         if ndim == 1:
-            return Gaussian1D()
+            return kernels1d.Gaussian1D()
         return Gaussian(ndim)
 
     def __init__(self, dim=2):
