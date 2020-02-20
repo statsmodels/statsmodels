@@ -200,7 +200,7 @@ class SimulationSmoother(KalmanSmoother):
             simulated_state[:, :nsimulations].T
         )
 
-    def simulation_smoother(self, simulation_output=None, cfa=False,
+    def simulation_smoother(self, simulation_output=None, method='kfs',
                             results_class=None, prefix=None, **kwargs):
         r"""
         Retrieve a simulation smoother for the statespace model.
@@ -210,9 +210,12 @@ class SimulationSmoother(KalmanSmoother):
         simulation_output : int, optional
             Determines which simulation smoother output is calculated.
             Default is all (including state and disturbances).
-        cfa : bool, optional
-            Whether or not to use the Cholesky factor algorithm simulation
-            smoother. Is not applicable to all state space models, but can be
+        method : {'kfs', 'cfa'}, optional
+            Method for simulation smoothing. If `method='kfs'`, then the
+            simulation smoother is based on Kalman filtering and smoothing
+            recursions. If `method='cfa'`, then the simulation smoother is
+            based on the Cholesky Factor Algorithm (CFA) approach. The CFA
+            approach is not applicable to all state space models, but can be
             faster for the cases in which it is supported.
         simulation_smooth_results_class : class, optional
             Default results class to use to save output of simulation
@@ -228,12 +231,17 @@ class SimulationSmoother(KalmanSmoother):
         -------
         SimulationSmoothResults
         """
+        method = method.lower()
+
         # Short-circuit for CFA
-        if cfa:
+        if method == 'cfa':
             if simulation_output not in [None, 1, -1]:
                 raise ValueError('Can only retrieve simulations of the state'
                                  ' vector using the CFA simulation smoother.')
             return CFASimulationSmoother(self)
+        elif method != 'kfs':
+            raise ValueError('Invalid simulation smoother method "%s". Valid'
+                             ' methods are "kfs" or "cfa".' % method)
 
         # Set the class to be the default results class, if None provided
         if results_class is None:
