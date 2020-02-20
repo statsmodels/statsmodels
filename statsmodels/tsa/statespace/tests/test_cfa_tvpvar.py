@@ -110,7 +110,7 @@ def test_tvpvar():
 
     # Create the model and the CFA simulation smoother
     mod = TVPVAR(endog.iloc[2:])
-    sim = mod.simulation_smoother(cfa=True)
+    sim = mod.simulation_smoother(method='cfa')
 
     # Prior hyperparameters
     v10 = mod.k_endog + 3

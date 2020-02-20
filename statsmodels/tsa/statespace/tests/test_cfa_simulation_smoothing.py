@@ -51,7 +51,7 @@ class CheckPosteriorMoments(object):
             params = params + 0j
         cls.res = cls.mod.smooth(params)
 
-        cls.sim_cfa = cls.mod.simulation_smoother(cfa=True)
+        cls.sim_cfa = cls.mod.simulation_smoother(method='cfa')
         cls.sim_cfa.simulate()
         prefix = 'z' if use_complex else 'd'
         cls._sim_cfa = cls.sim_cfa._simulation_smoothers[prefix]
@@ -183,7 +183,7 @@ class TestUnobservedComponentsMissing(TestUnobservedComponents):
 def test_dfm(missing=None):
     mod = dynamic_factor.DynamicFactor(dta, k_factors=2, factor_order=1)
     mod.update(mod.start_params)
-    sim_cfa = mod.simulation_smoother(cfa=True)
+    sim_cfa = mod.simulation_smoother(method='cfa')
     res = mod.ssm.smooth()
 
     # Test zero variates
