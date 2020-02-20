@@ -113,6 +113,8 @@ class TrimmedMean(object):
 
         self.sl = [slice(None)] * self.data.ndim
         self.sl[axis] = slice(self.lowercut, self.uppercut)
+        # numpy requires now tuple for indexing, not list
+        self.sl = tuple(self.sl)
         if not is_sorted:
             self.data_sorted = np.sort(self.data, axis=axis)
         else:
@@ -141,6 +143,7 @@ class TrimmedMean(object):
     @property
     def var_winsorized(self):
         # hardcoded ddof = 1
+        return np.var(self.data_winsorized, ddof=1)
         return np.var(self.data_winsorized - self.mean_winsorized,
                       ddof=1 + 2 * self.lowercut, axis=self.axis)
 
@@ -148,16 +151,25 @@ class TrimmedMean(object):
     def std_mean_trimmed(self):
         '''standard error of trimmed mean
         '''
-        return np.sqrt(self.var_winsorized / self.nobs_reduced)
+        se = np.sqrt(self.var_winsorized / self.nobs_reduced)
+        # trimming creates correlation across trimmed observations
+        # trimming is based on order statistics of the data
+        # wilcox 2012, p.61
+        se *= np.sqrt(self.nobs / self.nobs_reduced)
+        return se
 
     @property
     def std_mean_winsorized(self):
         '''standard error of winsorized mean
         '''
-        tm = self
+        # the following matches Wilcox, WRS2
+        std_ = np.sqrt(self.var_winsorized / self.nobs)
+        std_ *= (self.nobs - 1) / (self.nobs_reduced - 1)
+        # old version
+        # tm = self
         # formula from an old SAS manual page, simplified
-        std_ = np.sqrt(tm.var_winsorized / (tm.nobs_reduced - 1) *
-                       (tm.nobs - 1.) / tm.nobs)
+        # std_ = np.sqrt(tm.var_winsorized / (tm.nobs_reduced - 1) *
+        #               (tm.nobs - 1.) / tm.nobs)
         return std_
 
     def ttest_mean(self, value=0, transform='trimmed',
@@ -459,7 +471,7 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
 
 def anova_scale(data, method='bfm', center='median', transform='abs',
                 trim_frac=0.2):
-    print(method, center, transform, trim_frac)
+    # print(method, center, transform, trim_frac)
     data = map(np.asarray, data)
     # print [x.mean() for x in data]
     xxd = [scale_transform(x, center=center, transform=transform,
