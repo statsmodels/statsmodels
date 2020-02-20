@@ -7,13 +7,14 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_equal, assert_raises
+from numpy.testing import assert_equal, assert_allclose, assert_raises
 
 from scipy import stats
 from statsmodels.stats.robust_compare import (
         TrimmedMean, anova_bfm, anova_oneway, anova_scale, anova_welch,
         scale_transform, trim_mean, trimboth)
 
+from scipy.stats import trim1
 
 # taken from scipy and adjusted
 class Test_Trim(object):
@@ -69,6 +70,60 @@ class Test_Trim(object):
         res1 = trim_mean(a, 2/6., axis=None)
         res2 = trim_mean(a.ravel(), 2/6.)
         assert_equal(res1, res2)
+
+
+class TestTrimmedR1(object):
+    k = 1
+
+    @classmethod
+    def setup_class(cls):
+        x = np.array([77, 87, 88, 114, 151, 210, 219, 246, 253, 262, 296, 299,
+                      306, 376, 428, 515, 666, 1310, 2611])
+
+        cls.get_results()  # attach k and results
+        cls.tm = TrimmedMean(x, cls.k / 19)
+
+    @classmethod
+    def get_results(cls):
+        cls.k = 1
+        # results from R WRS2
+        cls.res_basic = np.array([
+            342.705882352941, 92.3342348150314, 380.157894736842,
+            92.9416968861829, 129679.029239766
+            ])
+
+        class Holder(object):
+            pass
+        # results from R PairedData
+        ytt1 = Holder()
+        ytt1.statistic = 3.71157981694944
+        ytt1.parameter = 16
+        ytt1.p_value = 0.00189544440273015
+        ytt1.conf_int = np.array([
+            146.966048669017, 538.445716036866
+            ])
+        ytt1.estimate = 342.705882352941
+        ytt1.null_value = 0
+        ytt1.alternative = 'two.sided'
+        ytt1.method = 'One sample Yuen test, trim=0.0526315789473684'
+        ytt1.data_name = 'x'
+        cls.ytt1 = ytt1
+
+    def test_basic(self):
+        tm = self.tm
+        res = [tm.mean_trimmed, tm.std_mean_trimmed, tm.mean_winsorized,
+               tm.std_mean_winsorized, tm.var_winsorized]
+        assert_allclose(res, self.res_basic, rtol=1e-15)
+
+    def test_inference(self):
+        ytt1 = self.ytt1
+        tm = self.tm
+
+        ttt = tm.ttest_mean()
+        assert_allclose(ttt[0], ytt1.statistic, rtol=1e-13)
+        assert_allclose(ttt[1], ytt1.p_value, rtol=1e-13)
+        assert_equal(ttt[2], ytt1.parameter)
+        assert_allclose(tm.mean_trimmed, ytt1.estimate, rtol=1e-13)
 
 
 def test_example_smoke():
