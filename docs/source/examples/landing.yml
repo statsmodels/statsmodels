@@ -158,6 +158,9 @@
   - img: ../_static/images/statespace_fixed_params.png
     target: notebooks/generated/statespace_fixed_params.html
     text: Fixed / constrained parameters in state space models
+  - img: ../_static/images/statespace_tvpvar_mcmc_cfa.png
+    target: notebooks/generated/statespace_tvpvar_mcmc_cfa.html
+    text: TVP-VAR, MCMC, and sparse simulation smoothing
 - header: State space models - Technical notes
   id: statespace_notes
   links:

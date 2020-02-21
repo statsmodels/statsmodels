@@ -235,8 +235,10 @@ cdef class {{prefix}}Statespace(object):
             self.state_cov.shape[2] == 1
         )
 
-        # Set the flag for initialization to be false
+        # Set the flags for initialization to be false
         self.initialized = False
+        self.initialized_diffuse = False
+        self.initialized_stationary = False
 
         self.diagonal_obs_cov = diagonal_obs_cov
         self._diagonal_obs_cov = -1
@@ -307,6 +309,8 @@ cdef class {{prefix}}Statespace(object):
                 np.array(self.selection, copy=True, order='F'), np.array(self.state_cov, copy=True, order='F'),
                 self.diagonal_obs_cov)
         state = {'initialized': self.initialized,
+                 'initialized_diffuse': self.initialized_diffuse,
+                 'initialized_stationary': self.initialized_stationary,
                  'initial_state': None,
                  'initial_state_cov': None,
                  'initial_diffuse_state_cov': None,
@@ -343,6 +347,8 @@ cdef class {{prefix}}Statespace(object):
         self.initial_state_cov = state['initial_state_cov']
         self.initial_diffuse_state_cov = state['initial_diffuse_state_cov']
         self.initialized = state['initialized']
+        self.initialized_diffuse = state['initialized_diffuse']
+        self.initialized_stationary = state['initialized_stationary']
         self.selected_state_cov = state['selected_state_cov']
         self.missing = state['missing']
         self.nmissing =state['nmissing']
@@ -375,6 +381,8 @@ cdef class {{prefix}}Statespace(object):
 
         # If using global initialization, compute the actual elements and
         # return them
+        self.initialized_diffuse = False
+        self.initialized_stationary = False
         if init.initialization_type is not None:
             init._initialize_initialization(prefix='{{prefix}}')
             _init = init._initializations['{{prefix}}']
@@ -382,6 +390,10 @@ cdef class {{prefix}}Statespace(object):
                              self.initial_state,
                              self.initial_diffuse_state_cov,
                              self.initial_state_cov, complex_step)
+            if init.initialization_type == 'diffuse':
+                self.initialized_diffuse = True
+            if init.initialization_type == 'stationary':
+                self.initialized_stationary = True
         # Otherwise, if using blocks, initialize each of the blocks
         else:
             for block_index, block_init in init.blocks.items():
