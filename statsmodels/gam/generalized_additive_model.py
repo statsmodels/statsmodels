@@ -526,7 +526,7 @@ class GLMGam(PenalizedMixin, GLM):
         if xnames_linear is None:
             xnames_linear = self.data_linear.xnames
         if exog is not None:
-            exog_linear = np.asarray(exog)
+            exog_linear = self.data_linear.exog
             k_exog_linear = exog_linear.shape[1]
         else:
             exog_linear = None

@@ -1295,6 +1295,8 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
     pvalues = get_tukey_pvalue(n_means, df_total, st_range)
+    # we need pvalues to be atleast_1d for iteration. see #6132
+    pvalues = np.atleast_1d(pvalues)
 
     reject = st_range > q_crit
     crit_int = std_pairs * q_crit
