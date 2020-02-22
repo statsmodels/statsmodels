@@ -209,6 +209,47 @@ class TrimmedMean(object):
         return tm
 
 
+def anova_generic(means, vars_, nobs, use_var="unequal",
+                  welch_correction=True):
+    nobs_t = nobs.sum()
+    n_groups = len(means)
+    # mean_t = (nobs * means).sum() / nobs_t
+    if use_var == "separate":
+        weights = nobs / vars_
+    else:
+        weights = nobs
+
+    w_total = weights.sum()
+    w_rel = weights / w_total
+    # meanw_t = (weights * means).sum() / w_total
+    meanw_t = w_rel @ means
+
+    statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
+
+    if use_var == "unequal":
+        use_satt = True
+        tmp = ((1 - w_rel)**2 / (nobs - 1)).sum() / (n_groups**2 - 1)
+        if welch_correction:
+            statistic /= 1 + 2 * (n_groups - 2) * tmp
+        df_denom = 1. / (3. * tmp)
+
+    else:
+        use_satt = False
+        # variance of group demeaned total sample, pooled var_resid
+        tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
+        statistic /= tmp
+        df_denom = 1. / (3. * tmp)
+
+    df_num = n_groups - 1.
+    if use_satt:  # Satterthwaite/Welch degrees of freedom
+        df_denom = 1. / (3. * tmp)
+    else:
+        df_denom = nobs_t - n_groups
+
+    pval = stats.f.sf(statistic, df_num, df_denom)
+    return statistic, pval, df_num, df_denom
+
+
 def anova_oneway(data, trim_frac=0):
     '''one-way anova assuming equal variances, unequal sample size
 
@@ -322,7 +363,7 @@ def anova_bfm(args, trim_frac=0):
     return statistic, pval, pval2, (df_num, df_denom, df_num2)
 
 
-def anova_welch(args, trim_frac=0):
+def anova_welch(args, trim_frac=0, welch_correction=True):
     '''Welch's one-way Anova for samples with heterogeneous variances
 
     Welch's anova is correctly sized (not liberal or conservative) in smaller
@@ -395,7 +436,9 @@ def anova_welch(args, trim_frac=0):
     else:
         tms = [TrimmedMean(x, trim_frac) for x in args]
         means = np.array([tm.mean_trimmed for tm in tms])
-        vars_ = np.array([tm.var_winsorized for tm in tms])
+        # vars_ = np.array([tm.var_winsorized for tm in tms])
+        vars_ = np.array([tm.var_winsorized * (tm.nobs - 1) /
+                          (tm.nobs_reduced - 1) for tm in tms])
         nobs_original = nobs  # store just in case
         nobs = np.array([tm.nobs_reduced for tm in tms])
 
@@ -408,7 +451,8 @@ def anova_welch(args, trim_frac=0):
     statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
     tmp = ((1 - weights / weights_t)**2 / (nobs - 1)).sum()
     tmp /= (n_groups**2 - 1)
-    statistic /= 1 + 2 * (n_groups - 2) * tmp
+    if welch_correction:
+        statistic /= 1 + 2 * (n_groups - 2) * tmp
 
     df_num = n_groups - 1.
     df_denom = 1. / (3. * tmp)
