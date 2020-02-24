@@ -61,20 +61,36 @@ TODO
 
 
 '''
-from statsmodels.compat.python import lzip, lrange
-
 import copy
 import math
+from collections import defaultdict
 
 import numpy as np
+import networkx as nx
+import pandas as pd
 from numpy.testing import assert_almost_equal, assert_equal
 from scipy import stats, interpolate
 
+from statsmodels.compat.python import lzip, lrange
 from statsmodels.iolib.table import SimpleTable
-#temporary circular import
-from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.stats.libqsturng import psturng, qsturng
+#temporary circular import
+from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
+
+GROUP_1_COL = 'group1'
+GROUP_2_COL = 'group2'
+MEAN_DIFFERENCE_COL = "mean_difference"
+DEGREES_FREEDOM_COL = "degrees_freedom"
+P_VALUE_COL = "p_value"
+ADJ_P_VALUE_COL = "p_adj"
+STANDARD_ERROR_COL = "standard_error"
+STAT_COL = "stat"
+Q_COL = "q"
+CI_LOWER_LIMIT_COL = "lower"
+CI_UPPER_LIMIT_COL = "upper"
+REJECT_COL = "reject"
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -363,7 +379,6 @@ def maxzerodown(x):
     return maxz, allzeros
 
 
-
 def rejectionline(n, alpha=0.5):
     '''reference line for rejection in multiple tests
 
@@ -374,10 +389,6 @@ def rejectionline(n, alpha=0.5):
     t = np.arange(n)/float(n)
     frej = t/( t * (1-alpha) + alpha)
     return frej
-
-
-
-
 
 
 #I do not remember what I changed or why 2 versions,
@@ -394,7 +405,6 @@ def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
 
     '''
     pvals = np.asarray(pvals)
-
 
     pvals_sortind = np.argsort(pvals)
     pvals_sorted = pvals[pvals_sortind]
@@ -499,7 +509,7 @@ def tiecorrect(xranks):
 
 
 class GroupsStats(object):
-    '''
+    """
     statistics by groups (another version)
 
     groupstats as a class with lazy evaluation (not yet - decorators are still
@@ -511,7 +521,7 @@ class GroupsStats(object):
 
     TODO: incomplete doc strings
 
-    '''
+    """
 
     def __init__(self, x, useranks=False, uni=None, intlab=None):
         '''descriptive statistics by groups
@@ -536,14 +546,12 @@ class GroupsStats(object):
 
         self.useranks = useranks
 
-
         self.uni = uni
         self.intlab = intlab
         self.groupnobs = groupnobs = np.bincount(intlab)
 
         #temporary until separated and made all lazy
         self.runbasic(useranks=useranks)
-
 
 
     def runbasic_old(self, useranks=False):
@@ -585,18 +593,19 @@ class GroupsStats(object):
         self.groupmeanfilter = grouprankmean[self.intlab]
         #return grouprankmean[intlab]
 
-    def groupdemean(self):
-        """groupdemean"""
+    def groupedmean(self):
+        """groupedmean"""
         return self.xx - self.groupmeanfilter
 
     def groupsswithin(self):
         """groupsswithin"""
-        xtmp = self.groupdemean()
+        xtmp = self.groupedmean()
         return np.bincount(self.intlab, weights=xtmp**2)
 
     def groupvarwithin(self):
         """groupvarwithin"""
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
+
 
 class TukeyHSDResults(object):
     """Results from Tukey HSD test, with additional plot methods
@@ -648,7 +657,6 @@ class TukeyHSDResults(object):
         '''Summary table that can be printed
         '''
         return self._results_table
-
 
     def _simultaneous_ci(self):
         """Compute simultaneous confidence intervals for comparison of means.
@@ -729,7 +737,6 @@ class TukeyHSDResults(object):
             self._simultaneous_ci()
         means = self._multicomp.groupstats.groupmean
 
-
         sigidx = []
         nsigidx = []
         minrange = [means[i] - self.halfwidths[i] for i in range(len(means))]
@@ -777,6 +784,88 @@ class TukeyHSDResults(object):
         ax1.set_xlabel(xlabel if xlabel is not None else '')
         ax1.set_ylabel(ylabel if ylabel is not None else '')
         return fig
+
+class GamesHowellResults():
+    def __init__(self, mc_object, gh_results):
+
+        self._multicomp = mc_object
+        self._results = gh_results
+        # Taken out of _multicomp for ease of access for unknowledgeable users
+        self.data = self._multicomp.data
+        self.groups = self._multicomp.groups
+        self.groupsunique = self._multicomp.groupsunique
+        self.groupmeans = self._multicomp.groupstats.groupmean
+
+    def summary(self):
+        """
+
+        :return:
+        """
+        return pd.DataFrame(self._results)
+
+    def summary_stats_table(self):
+            """Summary table that can be printed
+            """
+            results_table = SimpleTable(self._results, headers=results.dtype.names)
+            results_table.title = f"Multiple Comparison of Means - Games Howell, FWER={alpha}"
+            return str(self._results_table)
+
+    def connecting_letters(self, sig_level = 0.05):
+        """
+        Table that illustrates significant and non-significant comparisons with connecting numbers.
+        Levels not connected by the same number are significantly different. Levels connected by the
+        same number are not significantly different. JMP uses letters rather than numbers and we follow
+        that naming convention.
+        Args:
+            df (pd.DataFrame: data frame containg grp_col and obs_col which is the comparison data.
+            grp_col (str): the name of the column of df with the levels or group names.
+            obs_col (str): the column of df with the observations.
+            posthoc_df (pd.DataFrame): the dataframe returned by games_howell or a tukeyHSD function.
+            sig_level (float): The significance cut-off.
+
+        Returns (pd.DataFrame): The numbered are such that if strains in the grp_col do not share a
+            number they are significantly different.
+
+        """
+        posthoc_df = self.summary()
+        not_different = posthoc_df[posthoc_df[ADJ_P_VALUE_COL] > sig_level]
+        not_diff_pairs = not_different[[GROUP_1_COL, GROUP_2_COL]].drop_duplicates()
+        letters_graph = nx.Graph()
+
+        # The posthoc df defines a graph where nodes are group names (strains) and an edge connects two groups
+        # if they are not statistically significantly different.
+        # First add nodes (necessary in case there are nodes without any edges)
+        for group in self.groupsunique:
+            letters_graph.add_node(group)
+        # Then add edges
+        for _, pair_row in not_diff_pairs.iterrows():
+            letters_graph.add_edge(pair_row[GROUP_1_COL], pair_row[GROUP_2_COL])
+
+        # Each connecting letters group is equivalent to a maximal clique in this graph.
+        # Finding these cliques returns quickly for the scale of data we're looking at currently.
+        # However, if this changes, we could
+        # try to leverage the structure of the graph to make this search smarter (since labels are associated with
+        # one-dimensional observations there is some kind of linear ordering structure that could help determine which
+        # edges are possible or not in this graph)
+        cliques = sorted(list(nx.find_cliques(letters_graph)))
+        label_to_connecting_letters = defaultdict(list)
+        for i, clique in enumerate(cliques):
+            # Each clique is just a list of group names
+            for label in clique:
+                label_to_connecting_letters[label].append(i + 1)
+
+        connecting_letters_df_rows = []
+        for label, connecting_letters in label_to_connecting_letters.items():
+            label_idx = np.where(self.groupsunique == label)
+            mean = self.groupmeans[label_idx][0] #remove list level for dataframe
+            row = {"group": label, "mean": mean}
+            for connecting_letter in connecting_letters:
+                row[str(connecting_letter)] = str(connecting_letter)
+            connecting_letters_df_rows.append(row)
+
+        letter_frame = pd.DataFrame(connecting_letters_df_rows).sort_values(["group"])
+        letter_frame.replace(np.NaN, "", inplace=True)
+        return letter_frame
 
 
 class MultiComparison(object):
@@ -931,23 +1020,23 @@ class MultiComparison(object):
                                   np.round(res[:,0],4),
                                   np.round(res[:,1],4),
                                   reject),
-                       dtype=[('group1', object),
-                              ('group2', object),
-                              ('stat',float),
-                              ('pval',float),
-                              ('reject', np.bool8)])
+                       dtype=[(GROUP_1_COL, object),
+                              (GROUP_2_COL, object),
+                              (STAT_COL,float),
+                              (P_VALUE_COL,float),
+                              (REJECT_COL, np.bool8)])
         else:
             resarr = np.array(lzip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
                                   np.round(res[:,1],4),
                                   np.round(pvals_corrected,4),
                                   reject),
-                       dtype=[('group1', object),
-                              ('group2', object),
-                              ('stat',float),
-                              ('pval',float),
-                              ('pval_corr',float),
-                              ('reject', np.bool8)])
+                       dtype=[(GROUP_1_COL, object),
+                              (GROUP_2_COL, object),
+                              (STAT_COL,float),
+                              (P_VALUE_COL,float),
+                              (ADJ_P_VALUE_COL,float),
+                              (REJECT_COL, np.bool8)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
             'Test Multiple Comparison %s \n%s%4.2f method=%s'
@@ -981,7 +1070,7 @@ class MultiComparison(object):
         gnobs = self.groupstats.groupnobs
         # var_ = self.groupstats.groupvarwithin()
         # #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        var_ = np.var(self.groupstats.groupedmean(), ddof=len(gmeans))
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
@@ -993,19 +1082,68 @@ class MultiComparison(object):
                                np.round(res[4][:, 0], 4),
                                np.round(res[4][:, 1], 4),
                                res[1]),
-                          dtype=[('group1', object),
-                                 ('group2', object),
-                                 ('meandiff', float),
-                                 ('p-adj', float),
-                                 ('lower', float),
-                                 ('upper', float),
-                                 ('reject', np.bool8)])
+                          dtype=[(GROUP_1_COL, object),
+                                 (GROUP_2_COL, object),
+                                 (MEAN_DIFFERENCE_COL, float),
+                                 (ADJ_P_VALUE_COL, float),
+                                 (CI_LOWER_LIMIT_COL, float),
+                                 (CI_UPPER_LIMIT_COL, float),
+                                 (REJECT_COL, np.bool8)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, ' + \
                               'FWER=%4.2f' % alpha
 
         return TukeyHSDResults(self, results_table, res[5], res[1], res[2],
                                res[3], res[4], res[6], res[7], var_, res[8])
+
+    def games_howell(self, alpha=0.05):
+        self.groupstats = GroupsStats(
+            np.column_stack([self.data, self.groupintlab]), useranks=False
+        )
+
+        # These return the right values and we should revisit the groupstats class to clean up.
+        groupmeans = self.groupstats.groupmean
+        groupvars = self.groupstats.groupvarwithin()
+        groupnobs = self.groupstats.groupnobs
+
+        (
+            idx,
+            difference_pairs,
+            stderr_pairs,
+            q_crit_values,
+            degrees_freedom_pairs,
+            p_values,
+            ci_lower_limits,
+            ci_upper_limits,
+        )= games_howell(groupmeans, groupvars, groupnobs)
+
+
+        results = np.array(
+            lzip(
+                self.groupsunique[idx[0]],
+                self.groupsunique[idx[1]],
+                np.round(difference_pairs, 4),
+                np.round(stderr_pairs, 4),
+                np.round(q_crit_values, 4),
+                np.round(degrees_freedom_pairs, 4),
+                np.round(p_values, 4),
+                np.round(ci_lower_limits, 4),
+                np.round(ci_upper_limits, 4)
+            ),
+            dtype=[
+                (GROUP_1_COL, object),
+                (GROUP_2_COL, object),
+                (MEAN_DIFFERENCE_COL, float),
+                (STANDARD_ERROR_COL, float),
+                (Q_COL, float),
+                (DEGREES_FREEDOM_COL, float),
+                (ADJ_P_VALUE_COL, float),
+                (CI_LOWER_LIMIT_COL, float),
+                (CI_UPPER_LIMIT_COL, float),
+            ],
+        )
+
+        return GamesHowellResults(self, results)
 
 
 def rankdata(x):
@@ -1425,6 +1563,70 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 
     return st_range, meandiffs, std_pairs, (idx1,idx2)  #return square arrays
+
+def stderr_pairs_unequal(std_all, nobs_all):
+    """
+
+    :param std_all:
+    :param nobs_all:
+    :return:
+    """
+    std_1, std_2 = np.meshgrid(std_all, std_all)
+    n_1, n_2 = np.meshgrid(nobs_all, nobs_all)
+    return np.sqrt(0.5 * ((std_1 ** 2) / n_1 + (std_2 ** 2) / n_2))
+
+def games_howell(mean_all, var_all, nobs_all, alpha=0.05):
+    """
+    Parameters
+    ----------
+    """
+    n_means = len(mean_all)
+    df_all = 1./(nobs_all - 1)
+    var_pairs, degrees_freedom = varcorrection_pairs_unequal(var_all, nobs_all, df_all)
+
+    std_all = np.sqrt(var_all)
+    stderrs = stderr_pairs_unequal(std_all, nobs_all)
+
+    m_1, m_2 = np.meshgrid(mean_all, mean_all)
+    differences = m_1 - m_2
+
+    q_stats = abs(differences)/stderrs
+
+    idx1, idx2 = np.triu_indices(n_means, 1)
+    difference_pairs = differences[idx1, idx2]
+    degrees_freedom_pairs = degrees_freedom[idx1, idx2]
+    q_stat_pairs = q_stats[idx1, idx2]
+    stderr_pairs = stderrs[idx1, idx2]
+
+    print(q_stat_pairs)
+    print(degrees_freedom_pairs)
+
+    num_groups = len(difference_pairs)
+
+    # psturng takes in q value, number of groups, and degrees of freedom and returns p(X > q)
+    # qsturng takes in probability, number of groups and degrees of freedom and returns q st.
+    # P(X < q) = p
+    psturng_vec = np.vectorize(psturng)
+    qsturng_vec = np.vectorize(qsturng)
+
+    # This might be where my troubles are since qsturng is already vectorized on degrees_freedom_pairs.
+    q_crit_values = qsturng_vec(1 - alpha, num_groups, degrees_freedom_pairs)
+    p_values = psturng_vec(q_stat_pairs, num_groups, degrees_freedom_pairs)
+
+    ci_lower_limits = difference_pairs - stderr_pairs * q_crit_values
+    ci_upper_limits = difference_pairs + stderr_pairs * q_crit_values
+
+    return (
+        (idx1, idx2),
+        difference_pairs,
+        stderr_pairs,
+        q_stat_pairs,
+        degrees_freedom_pairs,
+        p_values,
+        ci_lower_limits,
+        ci_upper_limits
+    )
+
 
 
 def contrast_allpairs(nm):
