@@ -67,13 +67,18 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
 
     # Take the inverse of the forecast error covariance matrix
     if not kfilter.converged:
-        determinant = kfilter._forecast_error_cov[0]
+        determinant = {{combined_prefix}}log(kfilter._forecast_error_cov[0])
     try:
+        # If we're close to singular, switch to univariate version even if the
+        # following doesn't trigger a ZeroDivisionError
+        if kfilter._forecast_error_cov[0]{{if combined_prefix == 'z'}}.real{{endif}} < 1e-12:
+            raise Exception
+
         scalar = 1.0 / kfilter._forecast_error_cov[0]
     except:
         raise np.linalg.LinAlgError('Non-positive-definite forecast error'
-                                   ' covariance matrix encountered at'
-                                   ' period %d' % kfilter.t)
+                                    ' covariance matrix encountered at'
+                                    ' period %d' % kfilter.t)
     kfilter._tmp2[0] = scalar * kfilter._forecast_error[0]
     blas.{{prefix}}copy(&model._k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
     blas.{{prefix}}scal(&model._k_endogstates, &scalar, kfilter._tmp3, &inc)
@@ -118,10 +123,10 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
 
         # Calculate the determinant (just the squared product of the
         # diagonals, in the Cholesky decomposition case)
-        determinant = 1.0
+        determinant = 0.0
         for i in range(model._k_endog):
-            determinant = determinant * kfilter.forecast_error_fac[i, i]
-        determinant = determinant**2
+            determinant = determinant + {{combined_prefix}}log(kfilter.forecast_error_fac[i, i])
+        determinant = 2 * determinant
 
     return determinant
 
@@ -167,6 +172,7 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{pr
                 determinant *= -1*kfilter.forecast_error_fac[i, i]
             else:
                 determinant *= kfilter.forecast_error_fac[i, i]
+        determinant = {{combined_prefix}}log(determinant)
 
     return determinant
 

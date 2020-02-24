@@ -651,7 +651,7 @@ class Representation(object):
 
         return self.clone(endog, **kwargs)
 
-    def diff_endog(self, new_endog):
+    def diff_endog(self, new_endog, tolerance=1e-10):
         # TODO: move this function to tools?
         endog = self.endog.T
         if len(new_endog) < len(endog):
@@ -664,16 +664,15 @@ class Representation(object):
 
         new_nan = np.isnan(new_endog)
         existing_nan = np.isnan(endog)
+        diff = np.abs(new_endog - endog)
+        diff[new_nan ^ existing_nan] = np.inf
+        diff[new_nan & existing_nan] = 0.
 
-        if np.any(new_nan & ~existing_nan):
-            raise ValueError('New data cannot have missing values for'
-                             ' observations that are non-missing in model'
-                             ' data.')
-
-        is_revision = ~existing_nan & ~(new_endog == endog)
-        revision_ix = list(zip(*np.where(is_revision)))
-
+        is_revision = (diff > tolerance)
         is_new = existing_nan & ~new_nan
+        is_revision[is_new] = False
+
+        revision_ix = list(zip(*np.where(is_revision)))
         new_ix = list(zip(*np.where(is_new)))
 
         return revision_ix, new_ix

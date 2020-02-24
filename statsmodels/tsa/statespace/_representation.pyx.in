@@ -886,14 +886,14 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate the determinant (just the squared product of the
             # diagonals, in the Cholesky decomposition case)
-            self.transform_determinant = 1.0
+            self.transform_determinant = 0.
             for i in range(self._k_endog):
                 j = i * (self._k_endog + 1)
                 k = j % self.k_endog
                 l = j // self.k_endog
                 if not self.transform_cholesky[k, l] == 0:
-                    self.transform_determinant = self.transform_determinant * self.transform_cholesky[k, l]
-            self.transform_determinant = self.transform_determinant**2
+                    self.transform_determinant = self.transform_determinant + {{combined_prefix}}log(self.transform_cholesky[k, l])
+            self.transform_determinant = 2 * self.transform_determinant
 
         # Get $Z_t \equiv C^{-1}$, if necessary  
         if t == 0 or self.obs_cov.shape[2] > 1 or self.design.shape[2] > 1 or reset_missing or reset:
@@ -1001,7 +1001,7 @@ cdef class {{prefix}}Statespace(object):
             self.collapse_loglikelihood = (
                 self.collapse_loglikelihood +
                 (self._k_endog - k_states)*{{combined_prefix}}log(2*NPY_PI) + 
-                {{combined_prefix}}log(self.transform_determinant)
+                self.transform_determinant
             )
 
             # -0.5 * ...

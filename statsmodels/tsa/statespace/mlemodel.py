@@ -28,7 +28,7 @@ import statsmodels.tsa.base.prediction as pred
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 
-from .news import NewsResults, NewsResultsWrapper
+from .news import NewsResults
 from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
@@ -574,7 +574,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             The `method` determines which solver from `scipy.optimize`
             is used, and it can be chosen from among the following strings:
 
-            - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
+            - 'newton' for Newton-Raphson
+            - 'nm' for Nelder-Mead
             - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
             - 'lbfgs' for limited-memory BFGS with optional box constraints
             - 'powell' for modified Powell's method
@@ -2163,6 +2164,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         if irfs.shape[1] == 1:
             irfs = irfs[:, 0]
 
+        # Wrap data / squeeze where appropriate
+        use_pandas = isinstance(self.data, PandasData)
+        if use_pandas:
+            if self.k_endog == 1:
+                irfs = pd.Series(irfs, name=self.endog_names)
+            else:
+                irfs = pd.DataFrame(irfs, columns=self.endog_names)
         return irfs
 
     @classmethod
@@ -3570,6 +3578,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             irfs = self.model.impulse_responses(self.params, steps, impulse,
                                                 orthogonalized, cumulative,
                                                 **kwargs)
+            # These are wrapped automatically, so just return the array
+            if isinstance(irfs, (pd.Series, pd.DataFrame)):
+                irfs = irfs.values
         return irfs
 
     def _apply(self, mod, refit=False, fit_kwargs=None, **kwargs):
@@ -3593,15 +3604,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                  ' in `fit_kwargs` unless refitting'
                                  ' parameters (not available in extend).')
 
-            fit_kwargs['cov_type'] = 'custom'
-            fit_kwargs['cov_kwds'] = {
-                'custom_cov_type': self.cov_type,
-                'custom_cov_params': self.cov_params_default,
-                'custom_description': ('Parameters and standard errors'
-                                       ' were estimated using a different'
-                                       ' dataset and were then applied to this'
-                                       ' dataset. %s'
-                                       % self.cov_kwds['description'])}
+            if self.cov_type == 'none':
+                fit_kwargs['cov_type'] = 'none'
+            else:
+                fit_kwargs['cov_type'] = 'custom'
+                fit_kwargs['cov_kwds'] = {
+                    'custom_cov_type': self.cov_type,
+                    'custom_cov_params': self.cov_params_default,
+                    'custom_description': ('Parameters and standard errors'
+                                           ' were estimated using a different'
+                                           ' dataset and were then applied to'
+                                           ' this dataset. %s'
+                                           % self.cov_kwds['description'])}
 
             if self.smoother_results is not None:
                 func = mod.smooth
@@ -3634,8 +3648,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         updated = self.apply(endog, exog=exog, copy_initialization=True)
         return self._news_updated_results(updated, start, end, periods)
 
-    def news(self, comparison, start=None, end=None, periods=None, exog=None,
-             return_raw=False, comparison_type=None, **kwargs):
+    def news(self, comparison, impact_date=None, impacted_variable=None,
+             start=None, end=None, periods=None, exog=None,
+             comparison_type=None, return_raw=False, tolerance=1e-10,
+             **kwargs):
         """
         Compute impacts from updated data (news and revisions)
 
@@ -3645,6 +3661,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             An updated dataset with updated and/or revised data from which the
             news can be computed, or an updated or previous results object
             to use in computing the news.
+        impact_date : int, str, or datetime, optional
+            A single specific period of impacts from news and revisions to
+            compute. Can also be a date string to parse or a datetime type.
+            This argument cannot be used in combination with `start`, `end`, or
+            `periods`. Default is the first out-of-sample observation.
+        impacted_variable : str, list, array, or slice, optional
+            Observation variable label or slice of labels specifying that only
+            specific impacted variables should be shown in the News output. The
+            impacted variable(s) describe the variables that were *affected* by
+            the news. If you do not know the labels for the variables, check
+            the `endog_names` attribute of the model instance.
         start : int, str, or datetime, optional
             The first period of impacts from news and revisions to compute.
             Can also be a date string to parse or a datetime type. Default is
@@ -3659,10 +3686,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
+        comparison_type : {None, 'previous', 'updated'}
+            This denotes whether the `comparison` argument represents a
+            *previous* results object or dataset or an *updated* results object
+            or dataset. If not specified, then an attempt is made to determine
+            the comparison type.
         return_raw : bool, optional
             Whether or not to return only the specific output or a full
             results object. Default is to return a full results object.
-        comparison_type : {None, 'previous', 'updated'}
+        tolerance : float, optional
+            The numerical threshold for determining zero impact. Default is
+            that any impact less than 1e-10 is assumed to be zero.
 
         References
         ----------
@@ -3718,12 +3752,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         nmissing_comparison = comparison.filter_results.missing.sum()
         if (comparison_type == 'updated' or (comparison_type is None and (
                 comparison.nobs > self.nobs or
-                nmissing > nmissing_comparison))):
+                (comparison.nobs == self.nobs and
+                 nmissing > nmissing_comparison)))):
             updated = comparison
             previous = self
         elif (comparison_type == 'previous' or (comparison_type is None and (
                 comparison.nobs < self.nobs or
-                nmissing < nmissing_comparison))):
+                (comparison.nobs == self.nobs and
+                 nmissing < nmissing_comparison)))):
             updated = self
             previous = comparison
         else:
@@ -3755,6 +3791,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # sense for all data update combinations, and (b) work with both
         # time-invariant and time-varying models. So we require that the user
         # specify exactly two of start, end, periods.
+        if impact_date is not None:
+            if not (start is None and end is None and periods is None):
+                raise ValueError('Cannot use the `impact_date` argument in'
+                                 ' combination with `start`, `end`, or'
+                                 ' `periods`.')
+            start = impact_date
+            periods = 1
         if start is None and end is None and periods is None:
             start = previous.nobs - 1
             end = previous.nobs - 1
@@ -3833,12 +3876,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             updated._news_previous_results(previous, start, end + 1, periods))
 
         if not return_raw:
-            news_results = NewsResultsWrapper(
-                NewsResults(news_results, self, updated, previous,
-                            row_labels=prediction_index))
+            news_results = NewsResults(
+                news_results, self, updated, previous, impacted_variable,
+                tolerance, row_labels=prediction_index)
         return news_results
 
-    def append(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
+    def append(self, endog, exog=None, refit=False, fit_kwargs=None,
+               copy_initialization=False, **kwargs):
         """
         Recreate the results object with new data appended to the original data
 
@@ -3856,9 +3900,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Whether to re-fit the parameters, based on the combined dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
+        copy_initialization : bool, optional
+            Whether or not to copy the initialization from the current results
+            set to the new model. Default is False
         fit_kwargs : dict, optional
             Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
             `smooth`.
+        copy_initialization : bool, optional
         **kwargs
             Keyword arguments may be used to modify model specification
             arguments when created the new model object.
@@ -3872,7 +3920,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
-        the same was (e.g. Pandas Series versus Numpy array) as were the
+        the same way (e.g. Pandas Series versus Numpy array) as were the
         `endog` and `exog` arrays passed to the original model.
 
         The `endog` argument to this method should consist of new observations
@@ -3962,6 +4010,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             if new_exog is not None:
                 new_exog = pd.DataFrame(new_exog, index=new_index,
                                         columns=self.model.exog_names)
+
+        if copy_initialization:
+            res = self.filter_results
+            init = Initialization(
+                self.model.k_states, 'known', constant=res.initial_state,
+                stationary_cov=res.initial_state_cov)
+            kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
@@ -4085,8 +4140,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Default is False (so parameters from the current results object
             are used to create the new results object).
         copy_initialization : bool, optional
-            Whether or not to copy the current model's initialization to the
-            new model. Default is True.
+            Whether or not to copy the initialization from the current results
+            set to the new model. Default is False
         fit_kwargs : dict, optional
             Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
             `smooth`.
@@ -4108,9 +4163,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Notes
         -----
         The `endog` argument to this method should consist of new observations
-        that are unrelated to the original model's `endog` dataset. For
-        observations that continue that original dataset by follow directly
-        after its last element, see the `append` and `extend` methods.
+        that are not necessarily related to the original model's `endog`
+        dataset. For observations that continue that original dataset by follow
+        directly after its last element, see the `append` and `extend` methods.
 
         Examples
         --------
@@ -4148,13 +4203,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Freq: A-DEC, dtype: float64
         """
         mod = self.model.clone(endog, exog=exog, **kwargs)
+
         if copy_initialization:
-            mod.ssm.initialization = self.model.initialization
+            res = self.filter_results
+            init = Initialization(
+                self.model.k_states, 'known', constant=res.initial_state,
+                stationary_cov=res.initial_state_cov)
+            mod.ssm.initialization = init
+
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
 
         return res
 
-    def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
+    def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None,
+                         truncate_endog_names=24):
         """
         Diagnostic plots for standardized residuals of one endogenous variable
 
@@ -4199,23 +4261,34 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         fig = create_mpl_fig(fig, figsize)
         # Eliminate residuals associated with burned or diffuse likelihoods
         d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-        resid = self.filter_results.standardized_forecasts_error[variable, d:]
+
+        # If given a variable name, find the index
+        if isinstance(variable, str):
+            variable = self.model.endog_names.index(variable)
+
+        # Get residuals
+        if hasattr(self.data, 'dates') and self.data.dates is not None:
+            ix = self.data.dates[d:]
+        else:
+            ix = np.arange(self.nobs - d)
+        resid = pd.Series(
+            self.filter_results.standardized_forecasts_error[variable, d:],
+            index=ix)
 
         # Top-left: residuals vs time
         ax = fig.add_subplot(221)
-        if hasattr(self.data, 'dates') and self.data.dates is not None:
-            x = self.data.dates[d:]._mpl_repr()
-        else:
-            x = np.arange(len(resid))
-        ax.plot(x, resid)
-        ax.hlines(0, x[0], x[-1], alpha=0.5)
-        ax.set_xlim(x[0], x[-1])
-        ax.set_title('Standardized residual')
+        resid.dropna().plot(ax=ax)
+        ax.hlines(0, ix[0], ix[-1], alpha=0.5)
+        ax.set_xlim(ix[0], ix[-1])
+        name = self.model.endog_names[variable]
+        if len(name) > truncate_endog_names:
+            name = name[:truncate_endog_names - 3] + '...'
+        ax.set_title(f'Standardized residual for "{name}"')
 
         # Top-right: histogram, Gaussian kernel density, Normal density
         # Can only do histogram and Gaussian kernel density on the non-null
         # elements
-        resid_nonmissing = resid[~(np.isnan(resid))]
+        resid_nonmissing = resid.dropna()
         ax = fig.add_subplot(222)
 
         # gh5792: Remove  except after support for matplotlib>2.1 required
@@ -4251,7 +4324,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return fig
 
     def summary(self, alpha=.05, start=None, title=None, model_name=None,
-                display_params=True):
+                display_params=True, display_diagnostics=True,
+                truncate_endog_names=None, display_max_endog=None,
+                extra_top_left=None, extra_top_right=None):
         """
         Summarize the Model
 
@@ -4275,6 +4350,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.iolib.summary.Summary
         """
         from statsmodels.iolib.summary import Summary
+        from statsmodels.iolib.table import SimpleTable
+        from statsmodels.iolib.tableformatting import fmt_params
 
         # Model specification results
         model = self.model
@@ -4296,21 +4373,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if model_name is None:
             model_name = model.__class__.__name__
 
-        # Diagnostic tests results
-        try:
-            het = self.test_heteroskedasticity(method='breakvar')
-        except Exception:  # FIXME: catch something specific
-            het = np.array([[np.nan]*2])
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=FutureWarning)
-                lb = self.test_serial_correlation(method='ljungbox')
-        except Exception:  # FIXME: catch something specific
-            lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
-        try:
-            jb = self.test_normality(method='jarquebera')
-        except Exception:  # FIXME: catch something specific
-            jb = np.array([[np.nan]*4])
+        # Truncate endog names
+        if truncate_endog_names is None:
+            truncate_endog_names = False if self.model.k_endog == 1 else 24
+        endog_names = self.model.endog_names
+        if not isinstance(endog_names, list):
+            endog_names = [endog_names]
+        endog_names = [str(name) for name in endog_names]
+        if truncate_endog_names is not False:
+            n = truncate_endog_names
+            endog_names = [name if len(name) <= n else name[:n] + '...'
+                           for name in endog_names]
+
+        # Shorten the endog name list if applicable
+        if display_max_endog is None:
+            display_max_endog = np.inf
+        yname = None
+        if self.model.k_endog > display_max_endog:
+            k = self.model.k_endog - 1
+            yname = '"' + endog_names[0] + f'", and {k} more'
 
         # Create the tables
         if not isinstance(model_name, list):
@@ -4342,31 +4423,78 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
-            top_left.append(('Covariance Type:', [self.cov_type]))
+            cov_type = self.cov_type
+            if cov_type == 'none':
+                cov_type = 'Not computed'
+            top_left.append(('Covariance Type:', [cov_type]))
 
-        format_str = lambda array: [  # noqa:E731
-            ', '.join(['{0:.2f}'.format(i) for i in array])
-        ]
-        diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
-                      ('Prob(Q):', format_str(lb[:, 1, -1])),
-                      ('Heteroskedasticity (H):', format_str(het[:, 0])),
-                      ('Prob(H) (two-sided):', format_str(het[:, 1]))
-                      ]
-
-        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
-                       ('Prob(JB):', format_str(jb[:, 1])),
-                       ('Skew:', format_str(jb[:, 2])),
-                       ('Kurtosis:', format_str(jb[:, 3]))
-                       ]
+        if extra_top_left is not None:
+            top_left += extra_top_left
+        if extra_top_right is not None:
+            top_right += extra_top_right
 
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
-                                title=title)
+                                title=title, yname=yname)
+        table_ix = 1
         if len(self.params) > 0 and display_params:
             summary.add_table_params(self, alpha=alpha,
                                      xname=self.param_names, use_t=False)
-        summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                                title="")
+            table_ix += 1
+
+        # Diagnostic tests results
+        if display_diagnostics:
+            try:
+                het = self.test_heteroskedasticity(method='breakvar')
+            except Exception:  # FIXME: catch something specific
+                het = np.zeros((self.model.k_endog, 2)) * np.nan
+            try:
+                lb = self.test_serial_correlation(method='ljungbox', lags=[1])
+            except Exception:  # FIXME: catch something specific
+                lb = np.zeros((self.model.k_endog, 2, 1)) * np.nan
+            try:
+                jb = self.test_normality(method='jarquebera')
+            except Exception:  # FIXME: catch something specific
+                jb = np.zeros((self.model.k_endog, 4)) * np.nan
+
+            if self.model.k_endog <= display_max_endog:
+                format_str = lambda array: [  # noqa:E731
+                    ', '.join(['{0:.2f}'.format(i) for i in array])
+                ]
+                diagn_left = [
+                    ('Ljung-Box (L1) (Q):', format_str(lb[:, 0, -1])),
+                    ('Prob(Q):', format_str(lb[:, 1, -1])),
+                    ('Heteroskedasticity (H):', format_str(het[:, 0])),
+                    ('Prob(H) (two-sided):', format_str(het[:, 1]))]
+
+                diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
+                               ('Prob(JB):', format_str(jb[:, 1])),
+                               ('Skew:', format_str(jb[:, 2])),
+                               ('Kurtosis:', format_str(jb[:, 3]))
+                               ]
+
+                summary.add_table_2cols(self, gleft=diagn_left,
+                                        gright=diagn_right, title="")
+            else:
+                columns = ['LjungBox\n(L1) (Q)', 'Prob(Q)',
+                           'Het.(H)', 'Prob(H)',
+                           'Jarque\nBera(JB)', 'Prob(JB)', 'Skew', 'Kurtosis']
+                data = pd.DataFrame(
+                    np.c_[lb[:, :2, -1], het[:, :2], jb[:, :4]],
+                    index=endog_names, columns=columns).applymap(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num)
+                data.index.name = 'Residual of\nDep. variable'
+                data = data.reset_index()
+
+                params_data = data.values
+                params_header = data.columns.tolist()
+                params_stubs = None
+
+                title = 'Residual diagnostics:'
+                table = SimpleTable(
+                    params_data, params_header, params_stubs,
+                    txt_fmt=fmt_params, title=title)
+                summary.tables.insert(table_ix, table)
 
         # Add warnings/notes, added to text format only
         etext = []
@@ -4464,11 +4592,25 @@ class PredictionResults(pred.PredictionResults):
                                                 dist='norm',
                                                 row_labels=row_labels)
 
+    @property
+    def se_mean(self):
+        # Replace negative values with np.nan to avoid a RuntimeWarning
+        var_pred_mean = self.var_pred_mean.copy()
+        var_pred_mean[var_pred_mean < 0] = np.nan
+        if var_pred_mean.ndim == 1:
+            se_mean = np.sqrt(var_pred_mean)
+        else:
+            se_mean = np.sqrt(var_pred_mean.T.diagonal())
+        return se_mean
+
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
         #       by attach_* methods. However, they do not currently support
         #       this use case.
+        _use_pandas = self._use_pandas
+        self._use_pandas = False
         conf_int = super(PredictionResults, self).conf_int(alpha, **kwds)
+        self._use_pandas = _use_pandas
 
         # Create a dataframe
         if self._row_labels is not None:
@@ -4489,6 +4631,8 @@ class PredictionResults(pred.PredictionResults):
         # import pandas as pd
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
+        _use_pandas = self._use_pandas
+        self._use_pandas = False
         to_include = {}
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames
@@ -4500,6 +4644,7 @@ class PredictionResults(pred.PredictionResults):
             to_include['mean'] = self.predicted_mean[:, endog]
             to_include['mean_se'] = self.se_mean[:, endog]
             k_endog = self.predicted_mean.shape[1]
+        self._use_pandas = _use_pandas
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 

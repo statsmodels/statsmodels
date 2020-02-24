@@ -90,7 +90,7 @@ cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilt
     # Since the inverse of the forecast error covariance matrix is not
     # stored, we do not need to fill it (e.g. with NPY_NAN values). Instead,
     # just do a noop here and return a zero determinant ($|0|$).
-    return 0.0
+    return -np.inf
 
 cdef {{cython_type}} {{prefix}}loglikelihood_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
     return 0.0
@@ -381,7 +381,7 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
-    loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + {{combined_prefix}}log(determinant))
+    loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + determinant)
 
     if not kfilter.filter_method & FILTER_CONCENTRATED:
         {{if combined_prefix == 'd'}}

@@ -295,7 +295,7 @@ cdef int {{prefix}}updating_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
     return 0
 
 cdef {{cython_type}} {{prefix}}inverse_noop_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant) except *:
-    return 0
+    return -np.inf
 
 cdef {{cython_type}} {{prefix}}loglikelihood_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
     return 0
