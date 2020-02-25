@@ -287,15 +287,37 @@ class Unordered(KDEMethod):
         Parameters
         ----------
         """
-        if self.adjust.ndim:
-            raise NotImplementedError("This method cannot handle adjustments")
-        points = points[:, None]
-        kpdf = self.kernel.pdf(points, self.exog, self.bandwidth,
-                               self.num_levels)
-        kpdf *= self.weights
+        kpdf = self.pdf_contribution(points)
         kpdf.sum(axis=-1, out=out)
         out /= self.total_weights
         return out
+
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution of each exog point to the PDF at the given
+        points.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on.
+        out: ndarray or None
+            Result object. It must have the dimensions (N,M) where N is the
+            size of `points` and M is the number of exog points.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the contribution to each exog point to the PDF at the given
+            points.
+        """
+        if self.adjust.ndim:
+            raise NotImplementedError("This method cannot handle adjustments")
+        points = points[..., None]
+        kpdf = self.kernel.pdf(points, self.exog, self.bandwidth,
+                               self.num_levels, out=out)
+        kpdf *= self.weights
+        return kpdf
 
     def __call__(self, points, out=None):
         return self.pdf(points, out)
