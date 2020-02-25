@@ -170,7 +170,7 @@ class CustomKernel(object):
         def isInDomain(xy):
             """Used for filter to check if point is in the domain"""
             u = (xy[0]-x)/self.h
-            return u >= self.domain[0] and u <= self.domain[1]
+            return np.all((u >= self.domain[0]) & (u <= self.domain[1]))
 
         if self.domain is None:
             return (xs, ys)
