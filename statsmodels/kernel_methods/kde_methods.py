@@ -287,6 +287,28 @@ class KDEMethod(object):
     def upper(self):
         self._upper = np.inf * np.ones((self.ndim, ), dtype=float)
 
+    @property
+    def for_multivariate(self):
+        """
+        True if this method can be used in a Multivariate KDE estimation.
+
+        To be available, the method must be separable, such that it is possible
+        to compute the values for one axis using this method, and on the other
+        axis using any other of the :py:func:`for_multivariate` method.
+
+        The multivariate KDE needs two extra methods:
+
+        - `pdf_contribution(self, points, out)` computes the contribution of
+          each of the exogenous points to the value of the pdf at the given
+          points, placing the output in `out`. If `points` is an array of `M`
+          values and there are `N` exogenous points, `out` must be of shape
+          `(N,M)`
+        - `from_binned(self, mesh, binned, dim)` computes the KDE using the
+          method on the already binned data (whose mesh is given), on the
+          dimension `d`.
+        """
+        return hasattr(self, "pdf_contribution") and hasattr(self, "from_binned")
+
 
 def generate_grid(kde, N=None, cut=None):
     r"""
