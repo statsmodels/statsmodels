@@ -726,8 +726,48 @@ class TestHoltWinters(object):
         )
 
     def test_simulate(self):
-        fit = ExponentialSmoothing(self.aust, seasonal_periods=4)
+        """
+        Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults``.
 
+        The tests are using the implementation in the R package ``forecast`` as
+        reference, and example data is taken from ``fpp2`` (package and book).
+
+        Each method is tested, the methods are prepended with a comment
+        describing the R code that was used to obtain the reference results.
+
+        Each test should also set the seed back to 0, so the same ``innov``
+        values can be used in R.
+        """
+        # ETS(M, A, M) with parameters obtained from R:
+        #
+        # fit <- ets(austourists, model = "MAM")
+        # innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
+        # sim <- simulate(fit, innov = innov*fit$sigma)
+        expected = [78.06170, 49.01698, 61.71652, 67.60118]
+
+        fit = ExponentialSmoothing(
+            self.austourists, seasonal_periods=4, trend="add", seasonal="mul"
+        ).fit(
+            smoothing_level=0.3156, smoothing_slope=1e-4, smoothing_seasonal=1e-4,
+            # optimized=False
+            # use_basinhopping=True
+        )
+
+        print(fit.summary())
+
+        np.random.seed(0)
+        sim = fit.simulate(4, error="mul")
+        print(sim)
+        n = len(self.austourists)
+        import matplotlib.pyplot as plt
+        plt.plot(range(n), self.austourists)
+        plt.plot(range(n), fit.fittedvalues)
+        plt.plot(range(n, n+4), expected)
+        plt.plot(range(n, n+4), sim)
+        plt.savefig("test.png")
+        plt.show()
+
+        assert_almost_equal(expected, sim)
 
 @pytest.mark.parametrize(
     "trend_seasonal", (("mul", None), (None, "mul"), ("mul", "mul"))

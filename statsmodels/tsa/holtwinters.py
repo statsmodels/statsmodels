@@ -430,6 +430,78 @@ class HoltWintersResults(Results):
 
         return smry
 
+    def simulate(self, steps, error="add"):
+        """
+        Out-of-sample simulations using the state space formulation.
+
+        This randomly generates a simulation of future values based on the
+        state space model.
+
+        Parameters
+        ----------
+        steps : int
+            The number of out of sample simulation steps from the end of the
+            sample.
+        error : {"add", "mul", "additive", "multiplicative", None}, optional
+            Error model for state space formulation.
+
+        Returns
+        -------
+        forecast : ndarray
+            Array of out of sample forecasts
+        """
+        if error in ['additive', 'multiplicative']:
+            error = {'additive': 'add', 'multiplicative': 'mul'}[error]
+        trend = self.model.trend
+        damped = self.model.damped
+        seasonal = self.model.seasonal
+
+        alpha = self.params['smoothing_level']
+        beta = self.params['smoothing_slope']
+        gamma = self.params['smoothing_seasonal']
+        m = self.model.seasonal_periods
+
+        # estimate error variance from residuals
+        if error == 'add':
+            resid = self.resid
+        else:
+            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
+        # number of parameters parameters:
+        # - initial level + alpha = 2
+        # - initial trend + beta = 2 * trending
+        # - initial seasons + gamma = m * seasoning
+        n_params = (
+            2 + 2 * self.model.trending + self.model.seasoning * m + damped
+            )
+        sigma = np.sum(resid**2) / (len(resid) - n_params)
+        eps = np.random.randn(steps) * sigma
+
+        # notation as in https://otexts.com/fpp2/ets.html
+        # in the following I use python's index wrapping
+        y = np.empty(steps + 1)
+        l = np.empty(steps + 1)
+        b = np.empty(steps + 1)
+        s = np.empty(steps + m)
+
+        y[-1] = self.model._y[-1]
+        l[-1] = self.level[-1]
+        b[-1] = self.slope[-1]
+        s[-m:] = self.season[-m:]
+
+
+        # ETS(M, A, M)
+        if error == "mul" and trend == "add" and not damped and seasonal == "mul":
+            for t in range(steps):
+                y[t] = l[t-1] * s[t-m] * (1 + eps[t])
+                l[t] = (l[t-1] + b[t-1]) * (1 + alpha * eps[t])
+                b[t] = b[t-1] + beta * (l[t-1] + b[t-1]) * eps[t]
+                s[t] = s[t-m] * (1 + gamma*eps[t])
+        else:
+            raise NotImplementedError()
+
+        return y[:-1]
+
+
 
 class HoltWintersResultsWrapper(ResultsWrapper):
     _attrs = {'fittedvalues': 'rows',
