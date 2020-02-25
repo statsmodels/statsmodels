@@ -10,5 +10,9 @@ sudo apt-get install graphviz libgfortran3 enchant pandoc -qq
 echo pip install sphinx jupyter nbconvert numpydoc pyyaml doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling nbsphinx
 pip install sphinx sphinx-material jupyter nbconvert numpydoc pyyaml doctr pandas-datareader simplegeneric seaborn sphinxcontrib-spelling nbsphinx
 
+# Add pymc3 and theano for statespace_sarimax_pymc3.
+echo conda install theano pymc3 -y
+conda install theano pymc3 -y
+
 # TODO: Remove after numpydoc merger of #221
 pip install git+https://github.com/thequackdaddy/numpydoc.git@getdoc --upgrade || true
