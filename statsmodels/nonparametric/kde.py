@@ -244,12 +244,12 @@ class KDEUnivariate(object):
 
     def evaluate(self, point):
         """
-        Evaluate density at a single point.
+        Evaluate density at a point or points.
 
         Parameters
         ----------
-        point : float
-            Point at which to evaluate the density.
+        point : {float, ndarray}
+            Point(s) at which to evaluate the density.
         """
         _checkisfit(self)
         return self.kernel.density(self.endog, point)
