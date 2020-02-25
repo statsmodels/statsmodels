@@ -259,6 +259,11 @@ class Multivariate(KDEMethod):
                 else:
                     kde.bandwidth = self.bandwidth.continuous
             return methods[0].fit(kde)
+
+        for m in methods:
+            if not m.for_multivariate:
+                raise ValueError("Method {0} cannot be used for multivariate "
+                                 "estimation.".format(m))
         bin_type = ''.join(m.bin_type for m in methods)
         self._bin_type = bin_type
         kde = filter_exog(kde, bin_type)
@@ -340,10 +345,16 @@ class Multivariate(KDEMethod):
         out: ndarray of shape (M,)
             For each input point, the value of the PDF on that point
         """
-        full_out = np.empty_like(points)
-        for i in range(self.ndim):
-            self._methods[i].pdf(points[:, i], out=full_out[:, i])
-        np.prod(full_out, axis=1, out=out)
+        tmp_out = np.empty((self.npts,self.ndim))
+
+        for j in range(len(points)):
+            for i in range(self.ndim):
+                self._methods[i].pdf_contribution(points[j, i],
+                                                  out=tmp_out[:, i])
+            out[j] = np.prod(tmp_out, axis=1).sum()
+
+        out /= self.total_weights
+
         return out
 
     def __call__(self, points, out=None):
