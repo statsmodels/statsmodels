@@ -190,8 +190,9 @@ class DataSets(object):
         d1 = stats.norm(0, 3)
         d2 = stats.poisson(12)
         sizes = [64, 128, 101]
-        methods1 = methods_1d + methods_nc + methods_nc
-        methods2 = methods_nc + methods_1d + methods_nc[::-1]
+        m1d = methods_1d[:-1] # Remove Linear combination
+        methods1 = m1d + methods_nc + methods_nc
+        methods2 = methods_nc + m1d + methods_nc[::-1]
         methods = zip(methods1, methods2)
         vs = [generate_multivariate(s, d1, d2) for s in sizes]
         weights = [d1.pdf(v[:, 0]) for v in vs]
