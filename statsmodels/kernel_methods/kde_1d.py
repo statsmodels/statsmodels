@@ -35,8 +35,8 @@ References:
 
 import numpy as np
 from scipy import fftpack, integrate, optimize
-from .kde_utils import (make_ufunc, numpy_trans1d_method, numpy_trans1d,
-                        finite, AxesType, Grid)
+from .kde_utils import (make_ufunc, numpy_trans_method, numpy_trans1d_method,
+                        numpy_trans1d, finite, AxesType, Grid)
 from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from .kernels1d import Kernel1D, Gaussian1D
@@ -103,7 +103,8 @@ def convolve(exog, point, fct, out=None, scaling=1.,
     exog: ndarray
         Points to convolve. Must be a 1D array.
     point: float or ndarray
-        Points where the convolution is evaluated.
+        Points where the convolution is evaluated. If an ndarray, this should
+        be a 2D array for which the second dimension is of size 1.
     fct: fun
         Function used for the convolution
     out: ndarray
@@ -125,8 +126,8 @@ def convolve(exog, point, fct, out=None, scaling=1.,
     Notes
     -----
 
-    The basic idea is to evaluate the convolution of of a function on the exog
-    on a point. Anything can be an array if you are careful to choose your
+    The basic idea is to evaluate the convolution of a function on the exog at
+    a given point. Anything can be an array if you are careful to choose your
     dimensions. Just remember than the list of exog values will be the last
     dimension.
     """
@@ -134,7 +135,10 @@ def convolve(exog, point, fct, out=None, scaling=1.,
 
     terms = fct(z)
 
-    terms = (terms * weights) / scaling
+    terms *= weights
+    terms /= scaling
+
+    #terms = (terms * weights) / scaling
 
     if out is None or np.isscalar(out):
         out = terms.sum(axis=dim)
@@ -143,6 +147,49 @@ def convolve(exog, point, fct, out=None, scaling=1.,
     out /= factor
 
     return out
+
+def semi_convolve(exog, point, fct, out=None, scaling=1., weights=1., dim=-1):
+    """
+    Compute the contribution of each point to the convolution, but do not sum
+    it all up.
+
+    Parameters
+    ----------
+    exog: ndarray
+        Points to convolve. Must be a 1D array.
+    point: float or ndarray
+        Points where the convolution is evaluated. If an ndarray, this should
+        be a 2D array for which the second dimension is of size 1.
+    fct: fun
+        Function used for the convolution, should accept an optional 'out'
+        argument.
+    out: ndarray
+        Array of same size as `point`, in which the result will be stored.
+    scaling: float or ndarray
+        Scaling of the convolution function. It may be an array the same size
+        as exog.
+    weights: float or ndarray
+        Weights for the exog points.
+
+    Returns
+    -------
+    ndarray
+        Contribution of each point to the convolution. This will be an array
+        with 3 dimensions: 
+
+    """
+    z = (point - exog) / scaling
+
+    if out is None:
+        out = fct(z)
+    else:
+        fct(z, out=out)
+
+    out *= weights
+    out /= scaling
+
+    return out
+
 
 
 class KDE1DMethod(KDEMethod):
@@ -340,7 +387,7 @@ class KDE1DMethod(KDEMethod):
         points: ndarray
             Points to evaluate the distribution on
         out: ndarray
-            Result object. If must have the same shapes as ``points``
+            Result object. It must have the same shapes as ``points``
 
         Returns
         -------
@@ -352,6 +399,28 @@ class KDE1DMethod(KDEMethod):
         return convolve(self.exog, points[..., None], self.kernel.pdf, out,
                         self.bandwidth * self.adjust, self.weights,
                         self.total_weights)
+
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution of each exog point to the PDF at the given
+        points.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on.
+        out: ndarray or None
+            Result object. It must have the dimensions (N,M) where N is the
+            size of `points` and M is the number of exog points.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the contribution to each exog point to the PDF at the given
+            points.
+        """
+        return semi_convolve(self.exog, points[...,None], self.kernel.pdf, out,
+                             self.bandwidth*self.adjust, self.weights)
 
     def __call__(self, points, out=None):
         """
@@ -1079,6 +1148,31 @@ class Cyclic1D(KDE1DMethod):
             for unbounded pdf computation using the :py:func:`convolve`
             function.
         """
+        terms = self.pdf_contribution(points)
+        terms.sum(axis=-1, out=out)
+        out /= self.total_weights
+
+        return out
+
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution to the PDf for each exog point.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. It must have the shape ``(points.shape[0],
+            self.npts)``.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
+        """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
         if not self.closed:
@@ -1105,14 +1199,11 @@ class Cyclic1D(KDE1DMethod):
 
         kernel = self.kernel
 
-        terms = kernel(z)
-        terms += kernel(z + span)  # Add points to the left
-        terms += kernel(z - span)  # Add points to the right
+        out = kernel(z, out=out)
+        out += kernel(z + span)  # Add points to the left
+        out += kernel(z - span)  # Add points to the right
 
-        terms *= self.weights / bw
-        terms.sum(axis=-1, out=out)
-        out /= self.total_weights
-
+        out *= self.weights / bw
         return out
 
     @numpy_trans1d_method()
@@ -1409,6 +1500,31 @@ class Reflection1D(KDE1DMethod):
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
 
+        terms = self.pdf_contribution(points)
+        terms.sum(axis=-1, out=out)
+        out /= self.total_weights
+
+        return out
+
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution to the PDf for each exog point.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. It must have the shape ``(points.shape[0],
+            self.npts)``.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
+        """
         exog = self.exog
         points = points[..., np.newaxis]
 
@@ -1429,18 +1545,15 @@ class Reflection1D(KDE1DMethod):
 
         kernel = self.kernel
 
-        terms = kernel(z)
+        out = kernel(z, out=out)
 
         if L > -np.inf:
-            terms += kernel(z1 - (2 * L / bw))
+            out += kernel(z1 - (2 * L / bw))
 
         if U < np.inf:
-            terms += kernel(z1 - (2 * U / bw))
+            out += kernel(z1 - (2 * U / bw))
 
-        terms *= self.weights / bw
-        terms.sum(axis=-1, out=out)
-        out /= self.total_weights
-
+        out *= self.weights / bw
         return out
 
     @numpy_trans1d_method()
@@ -1640,6 +1753,32 @@ class Renormalization(Cyclic1D):
         if not self.bounded:
             return Cyclic1D.pdf(self, points, out)
 
+        terms = self.pdf_contribution(points)
+
+        terms.sum(axis=-1, out=out)
+        out /= self.total_weights
+
+        return out
+
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution to the PDf for each exog point.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. It must have the shape ``(points.shape[0],
+            self.npts)``.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve`
+            function.
+        """
         exog = self.exog
         points = points[..., np.newaxis]
 
@@ -1653,11 +1792,8 @@ class Renormalization(Cyclic1D):
 
         a1 = (kernel.cdf(local_lower) - kernel.cdf(local_upper))
 
-        terms = kernel(z) * ((self.weights / bw) / a1)
-
-        terms.sum(axis=-1, out=out)
-        out /= self.total_weights
-
+        out = kernel(z, out=out)
+        out *= (self.weights / bw) / a1
         return out
 
     @property
@@ -1820,6 +1956,12 @@ class LinearCombination(Cyclic1D):
     .. math::
 
         z = \frac{x-X}{h} \qquad l = \frac{L-x}{h} \qquad u = \frac{U-x}{h}
+
+    Note
+    ----
+
+    This method doesn't compose well in the multi-variate case, as this is not
+    a normal convolution.
 
     .. [KM1] Jones, M. C. 1993. Simple boundary correction for kernel density
         estimation. Statistics and Computing 3: 135--146.
@@ -1996,6 +2138,14 @@ class LinearCombination(Cyclic1D):
         density /= a2 * a0 - a1 * a1
 
         return Grid(grid), density
+
+    @property
+    def for_multivariate(self):
+        """
+        The linear combination method cannot be combined with others in a
+        multivariate system. The math just doesn't work out.
+        """
+        return False
 
 
 # Note: We cannot use namedtuple, because we are defining __call__.
@@ -2345,6 +2495,33 @@ class Transform1D(KDE1DMethod):
         self.method(pts, out=pdf)
         return transform_distribution(pts, pdf, trans.Dinv, out=out)
 
+    def pdf_contribution(self, points, out=None):
+        """
+        Compute the contribution of each exog point to the PDF at the given
+        points. The axis must have been transformed already.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on.
+        out: ndarray or None
+            Result object. It must have the dimensions (N,M) where N is the
+            size of `points` and M is the number of exog points.
+
+        Returns
+        -------
+        out: ndarray
+            Returns the contribution to each exog point to the PDF at the given
+            points.
+        """
+        trans = self.trans
+        pts = trans(points)
+        pdf = np.empty(points.shape + (self.npts,))
+        self.method.pdf_contribution(pts, out=pdf)
+        if out is None:
+            out = np.empty_like(pdf)
+        return transform_distribution(pts, pdf, trans.Dinv, out=out)
+
     def grid(self, N=None, cut=None, span=None):
         """
         Evaluate the PDF of the distribution on a regular grid with at least
@@ -2378,6 +2555,32 @@ class Transform1D(KDE1DMethod):
         transform_distribution(xs.full(), ys, trans.Dinv, out=out)
         xs.transform(self.trans.inv)
         return xs, out
+
+    def from_binned(self, mesh, bins, normed=False, dim=-1):
+        """
+        Evaluate the PDF from data already binned. The binning might have been
+        high-dimensional but must be of the same data. The binning must have
+        been done on the transformed axis.
+
+        Parameters
+        ----------
+        mesh: grid.Grid
+            Grid of the binning
+        bins: ndarray
+            Array of the same shape as the mesh with the values per bin
+        normed: bool
+            If true, the result will be normed w.r.t. the total weight of the
+            exog
+        dim: int
+            Dimension along which the estimation must be done
+
+        Returns
+        -------
+        ndarray
+            Array of same size as bins, but with the estimated of the PDF for
+            each line along the dimension `dim`
+        """
+        return self.method.from_binned(mesh, bins, normed, dim)
 
     def cdf(self, points, out=None):
         r"""
