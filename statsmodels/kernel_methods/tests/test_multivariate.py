@@ -21,11 +21,11 @@ class TestMultivariate(object):
             if data.method[0].bound_low:
                 low = data.lower[0]
             else:
-                low = est.exog[:, 0].min() - 5 * est.bandwidth[0]
+                low = est.exog[:, 0].min() - 3 * est.bandwidth[0]
             if data.method[0].bound_high:
                 high = data.upper[0]
             else:
-                high = est.exog[:, 0].max() + 5 * est.bandwidth[0]
+                high = est.exog[:, 0].max() + 3 * est.bandwidth[0]
             bounds[0] = [low, high]
         if est.methods[1].bin_type == 'D':
             bounds[1] = [est.lower[1], est.upper[1]]
@@ -33,18 +33,18 @@ class TestMultivariate(object):
             if data.method[1].bound_low:
                 low = data.lower[1]
             else:
-                low = est.exog[:, 1].min() - 5 * est.bandwidth[1]
+                low = est.exog[:, 1].min() - 3 * est.bandwidth[1]
             if data.method[1].bound_high:
                 high = data.upper[1]
             else:
-                high = est.exog[:, 1].max() + 5 * est.bandwidth[1]
+                high = est.exog[:, 1].max() + 3 * est.bandwidth[1]
             bounds[1] = [low, high]
         grid = Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
         values = est(grid.linear()).reshape(grid.shape)
         tot = grid.integrate(values)
         # Note: the precision is quite bad as we use small number of values!
         acc = 100 * max(m.normed_accuracy for m in data.method)
-        npt.assert_allclose(tot, 1., rtol=acc)
+        assert abs(tot-1) < acc
         del k.weights
         del k.adjust
         est = k.fit()

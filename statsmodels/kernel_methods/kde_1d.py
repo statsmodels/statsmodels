@@ -131,14 +131,9 @@ def convolve(exog, point, fct, out=None, scaling=1.,
     dimensions. Just remember than the list of exog values will be the last
     dimension.
     """
-    z = (point - exog) / scaling
+    z = (point[..., np.newaxis] - exog) / scaling
 
-    terms = fct(z)
-
-    terms *= weights
-    terms /= scaling
-
-    #terms = (terms * weights) / scaling
+    terms = fct(z) * weights / scaling
 
     if out is None or np.isscalar(out):
         out = terms.sum(axis=dim)
@@ -147,49 +142,6 @@ def convolve(exog, point, fct, out=None, scaling=1.,
     out /= factor
 
     return out
-
-def semi_convolve(exog, point, fct, out=None, scaling=1., weights=1., dim=-1):
-    """
-    Compute the contribution of each point to the convolution, but do not sum
-    it all up.
-
-    Parameters
-    ----------
-    exog: ndarray
-        Points to convolve. Must be a 1D array.
-    point: float or ndarray
-        Points where the convolution is evaluated. If an ndarray, this should
-        be a 2D array for which the second dimension is of size 1.
-    fct: fun
-        Function used for the convolution, should accept an optional 'out'
-        argument.
-    out: ndarray
-        Array of same size as `point`, in which the result will be stored.
-    scaling: float or ndarray
-        Scaling of the convolution function. It may be an array the same size
-        as exog.
-    weights: float or ndarray
-        Weights for the exog points.
-
-    Returns
-    -------
-    ndarray
-        Contribution of each point to the convolution. This will be an array
-        with 3 dimensions: 
-
-    """
-    z = (point - exog) / scaling
-
-    if out is None:
-        out = fct(z)
-    else:
-        fct(z, out=out)
-
-    out *= weights
-    out /= scaling
-
-    return out
-
 
 
 class KDE1DMethod(KDEMethod):
@@ -396,9 +348,12 @@ class KDE1DMethod(KDEMethod):
             for unbounded pdf computation using the :py:func:`convolve`
             function.
         """
-        return convolve(self.exog, points[..., None], self.kernel.pdf, out,
-                        self.bandwidth * self.adjust, self.weights,
-                        self.total_weights)
+        terms = self.pdf_contribution(points)
+        terms *= self.weights
+        terms.sum(axis=-1, out=out)
+        out /= self.total_weights
+
+        return out
 
     def pdf_contribution(self, points, out=None):
         """
@@ -419,8 +374,17 @@ class KDE1DMethod(KDEMethod):
             Returns the contribution to each exog point to the PDF at the given
             points.
         """
-        return semi_convolve(self.exog, points[...,None], self.kernel.pdf, out,
-                             self.bandwidth*self.adjust, self.weights)
+        exog = self.exog
+        points = points[..., np.newaxis]
+
+        bw = self.bandwidth * self.adjust
+
+        z = (points - exog) / bw
+
+        out = self.kernel(z, out=out)
+
+        out /= bw
+        return out
 
     def __call__(self, points, out=None):
         """
@@ -730,10 +694,7 @@ class KDE1DMethod(KDEMethod):
         pdf = self.kernel.pdf
         if mesh.ndim == 1:
             pts = mesh.grid[dim]
-            convolve(pts,
-                     pts[..., None],
-                     pdf,
-                     result,
+            convolve(pts, pts, pdf, result,
                      scaling=self.bandwidth * self.adjust,
                      weights=bins)
         else:
@@ -745,9 +706,7 @@ class KDE1DMethod(KDEMethod):
                 len(pts), ) + (1, ) * (mesh.ndim - dim - 1)
             for i, p in enumerate(mesh.grid[dim]):
                 access = left + (i, ) + right
-                convolve(pts,
-                         p,
-                         pdf,
+                convolve(pts, p, pdf,
                          result[access],
                          scaling=self.bandwidth * self.adjust,
                          weights=bins,
@@ -1149,6 +1108,7 @@ class Cyclic1D(KDE1DMethod):
             function.
         """
         terms = self.pdf_contribution(points)
+        terms *= self.weights
         terms.sum(axis=-1, out=out)
         out /= self.total_weights
 
@@ -1203,7 +1163,7 @@ class Cyclic1D(KDE1DMethod):
         out += kernel(z + span)  # Add points to the left
         out += kernel(z - span)  # Add points to the right
 
-        out *= self.weights / bw
+        out /= bw
         return out
 
     @numpy_trans1d_method()
@@ -1501,6 +1461,7 @@ class Reflection1D(KDE1DMethod):
             return KDE1DMethod.pdf(self, points, out)
 
         terms = self.pdf_contribution(points)
+        terms *= self.weights
         terms.sum(axis=-1, out=out)
         out /= self.total_weights
 
@@ -1553,7 +1514,7 @@ class Reflection1D(KDE1DMethod):
         if U < np.inf:
             out += kernel(z1 - (2 * U / bw))
 
-        out *= self.weights / bw
+        out /= bw
         return out
 
     @numpy_trans1d_method()
@@ -1754,6 +1715,7 @@ class Renormalization(Cyclic1D):
             return Cyclic1D.pdf(self, points, out)
 
         terms = self.pdf_contribution(points)
+        terms *= self.weights
 
         terms.sum(axis=-1, out=out)
         out /= self.total_weights
@@ -1793,7 +1755,7 @@ class Renormalization(Cyclic1D):
         a1 = (kernel.cdf(local_lower) - kernel.cdf(local_upper))
 
         out = kernel(z, out=out)
-        out *= (self.weights / bw) / a1
+        out /= bw / a1
         return out
 
     @property

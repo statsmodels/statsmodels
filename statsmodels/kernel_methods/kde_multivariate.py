@@ -345,13 +345,13 @@ class Multivariate(KDEMethod):
         out: ndarray of shape (M,)
             For each input point, the value of the PDF on that point
         """
-        tmp_out = np.empty((self.npts,self.ndim))
+        tmp_out = np.empty((self.npts, self.ndim))
 
         for j in range(len(points)):
             for i in range(self.ndim):
                 self._methods[i].pdf_contribution(points[j, i],
                                                   out=tmp_out[:, i])
-            out[j] = np.prod(tmp_out, axis=1).sum()
+            out[j] = (np.prod(tmp_out, axis=1) * self.weights).sum()
 
         out /= self.total_weights
 

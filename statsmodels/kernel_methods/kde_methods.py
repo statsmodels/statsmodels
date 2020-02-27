@@ -307,7 +307,8 @@ class KDEMethod(object):
           method on the already binned data (whose mesh is given), on the
           dimension `d`.
         """
-        return hasattr(self, "pdf_contribution") and hasattr(self, "from_binned")
+        return hasattr(self, "pdf_contribution") and \
+            hasattr(self, "from_binned")
 
 
 def generate_grid(kde, N=None, cut=None):
