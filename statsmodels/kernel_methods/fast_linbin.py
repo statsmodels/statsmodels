@@ -138,7 +138,8 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
         Array of same size as X with weights for each point, or None if all
         weights are 1
     bin_type: str
-        Type of bin as a string (see Notes)
+        Type of bins as a string. Either a single letter (if all dimensions are
+        the same), or one letter per dimension (see Notes)
 
     Returns
     -------
@@ -150,11 +151,11 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     Notes
     -----
 
-    The bin can be:
+    The bin type can be:
         - Bounded ('B')
         - Reflected ('R')
         - Cyclic ('C')
-        - Non-Continuous ('N')
+        - Discrete ('D')
     """
     M = np.asarray(M).astype(int)
     X = np.atleast_2d(X).astype(np.float)
