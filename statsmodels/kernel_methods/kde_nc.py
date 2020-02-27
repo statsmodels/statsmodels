@@ -288,6 +288,7 @@ class Unordered(KDEMethod):
         ----------
         """
         kpdf = self.pdf_contribution(points)
+        kpdf *= self.weights
         kpdf.sum(axis=-1, out=out)
         out /= self.total_weights
         return out
@@ -316,7 +317,6 @@ class Unordered(KDEMethod):
         points = points[..., None]
         kpdf = self.kernel.pdf(points, self.exog, self.bandwidth,
                                self.num_levels, out=out)
-        kpdf *= self.weights
         return kpdf
 
     def __call__(self, points, out=None):

@@ -190,7 +190,7 @@ class DataSets(object):
         d1 = stats.norm(0, 3)
         d2 = stats.poisson(12)
         sizes = [64, 128, 101]
-        m1d = methods_1d[:-1] # Remove Linear combination
+        m1d = methods_1d[:-1]  # Remove Linear combination
         methods1 = m1d + methods_nc + methods_nc
         methods2 = methods_nc + m1d + methods_nc[::-1]
         methods = zip(methods1, methods2)
