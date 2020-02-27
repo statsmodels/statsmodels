@@ -149,6 +149,10 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
     if endog.shape[0] != exog.shape[0] :
         raise ValueError('exog and endog must have same length')
 
+    if exog_predict is not None:
+        if exog_predict.ndim != 1:
+            raise ValueError('exog_predict must be a vector')
+
     if missing in ['drop', 'raise']:
         mask_valid = (np.isfinite(exog) & np.isfinite(endog))
         all_valid = np.all(mask_valid)
@@ -193,16 +197,18 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
             if exog_predict_all_valid:
                 xvals = exog_predict
             else:
-                if missing == 'drop':
-                    xvals = exog_predict[exog_predict_mask_valid]
-                else:
+                if missing == 'raise':
                     raise ValueError("nan or inf found in exog_predict")
+
+                xvals = exog_predict[exog_predict_mask_valid]
+        else:
+            # missing must be 'none' now so assume no nans
+            xvals = exog_predict
+            exog_predict_all_valid = True
 
         if not is_sorted:
             sort_index = np.argsort(xvals)
             xvals = np.array(xvals[sort_index])
-        else:
-            exog_predict_all_valid = True
 
     if not given_exog_predict:
         # Run LOWESS on the data points
