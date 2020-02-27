@@ -10,8 +10,8 @@ Author : Josef Perktold
 import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
-def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=False,
-           missing='drop', return_sorted=True):
+def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
+           missing='drop', return_sorted=True, exog_predict=None):
     '''LOWESS (Locally Weighted Scatterplot Smoothing)
 
     A lowess function that outs smoothed estimates of endog
@@ -32,13 +32,12 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     delta : float
         Distance within which to use linear-interpolation
         instead of weighted regression.
-    xvals: 1-D numpy array
+    exog_predict: 1-D numpy array
         Values of the exogenous variable at which to evaluate the regression.
-        If supplied, cannot use delta.
     is_sorted : bool
         If False (default), then the data will be sorted by exog before
         calculating lowess. If True, then it is assumed that the data is
-        already sorted by exog. If xvals is specified, then it too must be
+        already sorted by exog. If exog_predict is specified, then it too must be
         sorted if is_sorted is True.
     missing : str
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
@@ -60,9 +59,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         the associated estimated y (endog) values.
         If return_sorted is False, then only the fitted values are returned,
         and the observations will be in the same order as the input arrays.
-        If xvals is provided, then return_sorted is ignored and the returned
+        If exog_predict is provided, then return_sorted is ignored and the returned
         array is always one dimensional, containing the y values fitted at
-        the x values provided by xvals.
+        the x values provided by exog_predict.
 
     Notes
     -----
@@ -96,7 +95,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     Judicious choice of delta can cut computation time considerably
     for large data (N > 5000). A good choice is ``delta = 0.01 * range(exog)``.
 
-    If `xvals` is provided, the regression is then computed at those points
+    If `exog_predict` is provided, the regression is then computed at those points
     and the fit values are returned. Otherwise, the regression is run
     at points of `exog`.
 
@@ -138,8 +137,8 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     endog = np.asarray(endog, float)
     exog = np.asarray(exog, float)
 
-    # Whether xvals argument was provided
-    given_xvals = (xvals is not None)
+    # Whether exog_predict argument was provided
+    given_exog_predict = (exog_predict is not None)
 
     # Inputs should be vectors (1-D arrays) of the
     # same length.
@@ -175,37 +174,37 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         x = np.array(x[sort_index])
         y = np.array(y[sort_index])
 
-    if not given_xvals:
+    if not given_exog_predict:
         # If given no explicit x values, we use the x-values in the exog array
-        xvals = exog
-        xvalues = x
+        exog_predict = exog
+        xvals = x
 
-        xvals_all_valid = all_valid
+        exog_predict_all_valid = all_valid
         if missing == 'drop':
-            xvals_mask_valid = mask_valid
+            exog_predict_mask_valid = mask_valid
     else:
-        # With explicit xvals, we ignore 'return_sorted' and always
+        # With explicit exog_predict, we ignore 'return_sorted' and always
         # use the order provided
         return_sorted = False
 
         if missing in ['drop', 'raise']:
-            xvals_mask_valid = np.isfinite(xvals)
-            xvals_all_valid = np.all(xvals_mask_valid)
-            if xvals_all_valid:
-                xvalues = xvals
+            exog_predict_mask_valid = np.isfinite(exog_predict)
+            exog_predict_all_valid = np.all(exog_predict_mask_valid)
+            if exog_predict_all_valid:
+                xvals = exog_predict
             else:
                 if missing == 'drop':
-                    xvalues = xvals[xvals_mask_valid]
+                    xvals = exog_predict[exog_predict_mask_valid]
                 else:
-                    raise ValueError("nan or inf found in xvals")
+                    raise ValueError("nan or inf found in exog_predict")
 
         if not is_sorted:
-            sort_index = np.argsort(xvalues)
-            xvalues = np.array(xvalues[sort_index])
+            sort_index = np.argsort(xvals)
+            xvals = np.array(xvals[sort_index])
         else:
-            xvals_all_valid = True
+            exog_predict_all_valid = True
 
-    if not given_xvals:
+    if not given_exog_predict:
         # Run LOWESS on the data points
         res, _ = _lowess(y, x, x, np.ones_like(x),
                         frac=frac, it=it, delta=delta, given_xvals=False)
@@ -218,9 +217,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         else:
             weights = np.ones_like(x)
 
-        # Then run once more using those supplied weights at the points provided by xvals
+        # Then run once more using those supplied weights at the points provided by exog_predict
         # No extra iterations are performed here since weights are fixed
-        res, _ = _lowess(y, x, xvalues, weights,
+        res, _ = _lowess(y, x, xvals, weights,
                         frac=frac, it=0, delta=delta, given_xvals=True)
 
     _, yfitted = res.T
@@ -232,17 +231,17 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         # rebuild yfitted with original indices
         # a bit messy: y might have been selected twice
         if not is_sorted:
-            yfitted_ = np.empty_like(xvalues)
+            yfitted_ = np.empty_like(xvals)
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
         else:
             yfitted = yfitted
 
-        if not xvals_all_valid:
-            yfitted_ = np.empty_like(xvals)
+        if not exog_predict_all_valid:
+            yfitted_ = np.empty_like(exog_predict)
             yfitted_.fill(np.nan)
-            yfitted_[xvals_mask_valid] = yfitted
+            yfitted_[exog_predict_mask_valid] = yfitted
             yfitted = yfitted_
 
         # we do not need to return exog anymore

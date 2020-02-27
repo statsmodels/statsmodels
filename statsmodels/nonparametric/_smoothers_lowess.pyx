@@ -24,7 +24,7 @@ cdef inline double fmax(double x, double y): return x if x >= y else y
 
 DTYPE = np.double
 ctypedef np.double_t DTYPE_t
-cdef double NAN = float("NaN")
+cdef DTYPE_t NAN = np.nan
 
 def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
            np.ndarray[DTYPE_t, ndim = 1] exog,
@@ -46,8 +46,10 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         The y-values of the observed points
     exog : 1-D numpy array
         The x-values of the observed points. exog has to be increasing.
-    weights : 1-D numpy array
-        The weightings of the observed points
+    xvals : ndarray, 1d
+        The x-values of the points at which to perform the regression
+    resid_weights : 1-D numpy array
+        The initial weightings of the observed points based off residuals
     frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
@@ -67,9 +69,9 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         A numpy array with two columns. The first column
         is the sorted x values and the second column the
         associated estimated y-values.
-    resid_weights: numpy array
-        A numpy array with the residual weights on the data points
-        computed from the iterations performed
+    resid_weights: ndarray
+        A numpy array containing the final residual weightings
+        of the data points
 
     Notes
     -----
@@ -444,7 +446,7 @@ cdef void interpolate_skipped_fits(np.ndarray[DTYPE_t, ndim = 1] xvals,
 
     Parameters
     ----------
-    xvals: 1-D numpy array
+    xvals: ndarray, 1d
         The vector of x-values where regression is performed.
     y_fit: 1-D numpy array
         The vector of fitted y-values
@@ -477,7 +479,7 @@ def update_indices(np.ndarray[DTYPE_t, ndim = 1] xvals,
 
     Parameters
     ----------
-    xvals : 1-D numpy array
+    xvals: ndarray, 1d
         The vector of x-values where regression is performed.
     y_fit : 1-D numpy array
         The vector of fitted y-values

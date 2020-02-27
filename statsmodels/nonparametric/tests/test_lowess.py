@@ -120,13 +120,13 @@ class TestLowess(object):
         assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
         assert_(actual_lowess.dtype is np.dtype(float))
 
-        # Test specifying xvals explicitly
+        # Test specifying exog_predict explicitly
         perm_idx = np.arange(len(x)//2)
         np.random.shuffle(perm_idx)
-        actual_lowess2 = lowess(y, x, xvals = x[perm_idx], return_sorted=False)
+        actual_lowess2 = lowess(y, x, exog_predict = x[perm_idx], return_sorted=False)
         assert_almost_equal(actual_lowess[perm_idx,1], actual_lowess2, decimal=13)
 
-        actual_lowess3 = lowess(y, x, xvals = x[perm_idx], return_sorted=False, it=0)
+        actual_lowess3 = lowess(y, x, exog_predict = x[perm_idx], return_sorted=False, it=0)
         actual_lowess_it0 = lowess(y, x, return_sorted=False, it=0)
         assert_almost_equal(actual_lowess_it0[perm_idx], actual_lowess3, decimal=13)
 
@@ -157,9 +157,9 @@ class TestLowess(object):
         yhat = yhat[np.isfinite(yhat)]
         assert_almost_equal(yhat, actual_lowess2[:,1], decimal=13)
 
-        # Test specifying xvals explicitly, now with nans
+        # Test specifying exog_predict explicitly, now with nans
         perm_idx = np.arange(actual_lowess.shape[0])
-        actual_lowess4 = lowess(y, x, xvals = actual_lowess[perm_idx,0], return_sorted=False)
+        actual_lowess4 = lowess(y, x, exog_predict = actual_lowess[perm_idx,0], return_sorted=False)
         assert_almost_equal(actual_lowess[perm_idx,1], actual_lowess4, decimal=13)
 
 
