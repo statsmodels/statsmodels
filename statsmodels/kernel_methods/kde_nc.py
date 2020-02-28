@@ -160,7 +160,8 @@ class Unordered(KDEMethod):
     @bandwidth.setter
     def bandwidth(self, val):
         val = float(val)
-        assert val > 0, "The bandwidth must be strictly positive"
+        if val <= 0:
+            raise ValueError("The bandwidth must be strictly positive")
         self._bw = val
 
     def update_inputs(self, exog, weights=1., adjust=1.):
@@ -237,7 +238,7 @@ class Unordered(KDEMethod):
             self._total_weights = val.sum()
         else:
             self._weights = np.asarray(1.)
-            self._total_weights = None
+            self._total_weights = self.npts
 
     @property
     def total_weights(self):
@@ -423,6 +424,6 @@ class Ordered(Unordered):
             The default implementation uses the formula for unbounded CDF
             computation.
         """
-        _, bins = self.grid_cdf()
-        out[...] = bins[points]
+        mesh, bins = self.grid_cdf()
+        out[...] = bins[points - int(mesh.bounds[0][0])]
         return out
