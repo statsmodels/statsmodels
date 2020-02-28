@@ -120,4 +120,3 @@ class TestNonContinuous(object):
             xs = mesh.full().astype(int)
             values2 = est.cdf(xs[::2])
             npt.assert_allclose(values[::2], values2, 1e-5, 1e-5)
-
