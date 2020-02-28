@@ -468,8 +468,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return x
 
     def _wrap_prediction(self, prediction, start, end):
+        n_values = end - start
         if not isinstance(self.data.orig_endog, (pd.Series, pd.DataFrame)):
-            return prediction
+            return prediction[-n_values:]
         index = self.data.orig_endog.index
         if end > self.endog.shape[0]:
             freq = getattr(index, 'freq', None)
@@ -478,6 +479,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             else:
                 index = pd.RangeIndex(end)
         index = index[start:end]
+        prediction = prediction[-n_values:]
         return pd.Series(prediction, index=index)
 
     def _dynamic_predict(self, params, start, end, dynamic, num_oos, exog,
