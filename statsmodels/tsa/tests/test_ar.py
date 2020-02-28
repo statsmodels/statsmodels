@@ -1203,3 +1203,13 @@ def test_forecast_start_end_equiv(dynamic):
     dates = pd.date_range("1-1-1950", periods=1021, freq="M")
     pred_dates = res.predict(dates[1000], dates[1020], dynamic=dynamic)
     assert_series_equal(pred_int, pred_dates)
+
+
+@pytest.mark.parametrize("start", [21, 25])
+def test_autoreg_start(start):
+    y_train = pd.Series(np.random.normal(size=20))
+    m = AutoReg(y_train, lags=2)
+    mf = m.fit()
+    end = start + 5
+    pred = mf.predict(start=start, end=end)
+    assert pred.shape[0] == end - start + 1
