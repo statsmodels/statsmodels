@@ -430,28 +430,130 @@ class HoltWintersResults(Results):
 
         return smry
 
-    def simulate(self, steps, error="add"):
-        """
-        Out-of-sample simulations using the state space formulation.
-
-        This randomly generates a simulation of future values based on the
-        state space model.
+    def simulate(self, steps, start=-1, nsim=1, error="add"):
+        r"""
+        Random simulations using the state space formulation.
 
         Parameters
         ----------
         steps : int
-            The number of out of sample simulation steps from the end of the
-            sample.
-        error : {"add", "mul", "additive", "multiplicative", None}, optional
-            Error model for state space formulation.
+            The number of simulation steps.
+        start : int, optional
+            The start index of the simulation. Defaults to -1, i.e. the last
+            data point.
+        nsim : int, optional
+            Number of simulations to perform. Default is 1.
+        error : {"add", "mul", "additive", "multiplicative"}, optional
+            Error model for state space formulation. Default is ``"add"``.
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts
+        sim : ndarray
+            Array of simulated values with shape ``(steps,nsim)``.
+
+        Notes
+        -----
+        The simulation is based on the state space model of the Holt-Winter's
+        methods. The state space model assumes that the true value at time
+        :math:`t` is randomly distributed around the prediction value.
+        If using the additive error model, this means:
+
+        .. math::
+
+            y_t &= \hat{y}_{t|t-1} + e_t\\
+            e_t &\sim \mathcal{N}(0, \sigma^2)
+
+        Using the multiplicative error model:
+
+        .. math::
+
+            y_t &= \hat{y}_{t|t-1} \cdot (1 + e_t)\\
+            e_t &\sim \mathcal{N}(0, \sigma^2)
+
+        Inserting these equations into the smoothing equation formulation leads
+        to the state space equations. The notation used here follows
+        [1]_. Additionally, let :math:`\circ_b` be the operation linking level
+        and trend (i.e. + if the trend is additive, :math:`\cdot` if the trend
+        is multiplicative) and similar :math:`\circ_s` be the operation linking
+        seasonal value and :math:`l \circ_b \phi b`.
+
+        Then the state space equations with additive error model are:
+
+        .. math::
+
+            y_t &= (l_{t-1} \circ_b \phi b_{t-1}) \circ_s s_{t-m} + e_t\\
+            l_t &= l_{t-1} \circ_b \phi b_{t-1} + \alpha e_{l,t}\\
+            b_t &= \phi b_{t-1} + \beta e_{b,t}\\
+            s_t &= s_{t-m} + \gamma e_{s,t}
+
+        with
+
+        .. math::
+
+            e_{l,t} = \begin{cases}
+                          \frac{e_t}{s_{t-m}}\quad
+                          \text{if seasonal is multiplicative}\\
+                          e_t\quad\text{else}
+                      \end{cases}
+
+            e_{b,t} = \begin{cases}
+                          \frac{e_{l,t}}{l_{t-1}}\quad
+                          \text{if trend is multiplicative}\\
+                          e_{l,t}\quad\text{else}
+                      \end{cases}
+
+            e_{s,t} = \begin{cases}
+                          \frac{e_t}{l_{t-1}\circ_b\phi b_{t-1}}\quad
+                          \text{if seasonal is multiplicative}\\
+                          e_{t}\quad\text{else}
+                      \end{cases}
+
+        Using a multiplicative error model, the state space equations are:
+
+        .. math::
+
+            y_t = ((l_{t-1} \circ_b \phi b_{t-1}) \circ_s s_{t-m})
+                  \cdot (1 + e_t)\\\\
+            l_t = (l_{t-1} \circ_b \phi b_{t-1}) (1 + \alpha e_t)
+                  +  \alpha varepsilon_{l,t}\\\\
+            b_t = \phi b_{t-1} (1 + \beta e_t)
+                  + \beta e_{b,t}\\\\
+            s_t = s_{t-m} (1 + \gamma e_t) + \gamma e_{s,t}
+
+        with
+
+        .. math::
+
+            e_{l,t} = \begin{cases}
+                          0\quad\text{if seasonal is multiplicative}\\\\
+                          e_t\cdot s_{t-m} \quad\text{else}
+                      \end{cases}\\\\
+            e_{b,t} = \begin{cases}
+                          \frac{e_{l,t}}{l_{t-1}}\quad
+                          \text{if trend is multiplicative}\\\\
+                          e_t\cdot l_{t-1} + e_{l,t}
+                          \quad\text{else}
+                      \end{cases}\\\\
+            e_{s,t} = \begin{cases}
+                          0\quad\text{if seasonal is multiplicative}\\\\
+                          e_{t}(l_{t-1}\circ_b\phi b_{t-1})
+                          \quad\text{else}
+                      \end{cases}
+
+        References
+        ----------
+        .. [1] Hyndman, R.J., & Athanasopoulos, G. (2018) *Forecasting:
+           principles and practice*, 2nd edition, OTexts: Melbourne,
+           Australia. OTexts.com/fpp2. Accessed on February 28th 2020.
         """
+
+        # check inputs
         if error in ['additive', 'multiplicative']:
             error = {'additive': 'add', 'multiplicative': 'mul'}[error]
+        if error not in ['add', 'mul']:
+            raise ValueError("Unknown error model")
+
+        # get Holt-Winters settings and parameters
         trend = self.model.trend
         damped = self.model.damped
         seasonal = self.model.seasonal
@@ -459,47 +561,94 @@ class HoltWintersResults(Results):
         alpha = self.params['smoothing_level']
         beta = self.params['smoothing_slope']
         gamma = self.params['smoothing_seasonal']
+        phi = self.params['damping_slope']
         m = self.model.seasonal_periods
 
-        # estimate error variance from residuals
-        if error == 'add':
-            resid = self.resid
-        else:
-            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
-        # number of parameters parameters:
-        # - initial level + alpha = 2
-        # - initial trend + beta = 2 * trending
-        # - initial seasons + gamma = m * seasoning
+        mul_seasonal = seasonal == "mul"
+        mul_trend = trend == "mul"
+
         n_params = (
-            2 + 2 * self.model.trending + self.model.seasoning * m + damped
+            2 + 2 * self.model.trending + self.model.seasoning * (m + 1) + damped
             )
-        sigma = np.sum(resid**2) / (len(resid) - n_params)
-        eps = np.random.randn(steps) * sigma
 
-        # notation as in https://otexts.com/fpp2/ets.html
-        # in the following I use python's index wrapping
-        y = np.empty(steps + 1)
-        l = np.empty(steps + 1)
-        b = np.empty(steps + 1)
-        s = np.empty(steps + m)
+        # set initial values
+        # (notation as in https://otexts.com/fpp2/ets.html)
+        y = np.empty((steps, nsim))
+        l = np.empty((steps + 1, nsim))
+        b = np.empty((steps + 1, nsim))
+        s = np.empty((steps + m, nsim))
 
-        y[-1] = self.model._y[-1]
-        l[-1] = self.level[-1]
-        b[-1] = self.slope[-1]
-        s[-m:] = self.season[-m:]
-
-
-        # ETS(M, A, M)
-        if error == "mul" and trend == "add" and not damped and seasonal == "mul":
-            for t in range(steps):
-                y[t] = l[t-1] * s[t-m] * (1 + eps[t])
-                l[t] = (l[t-1] + b[t-1]) * (1 + alpha * eps[t])
-                b[t] = b[t-1] + beta * (l[t-1] + b[t-1]) * eps[t]
-                s[t] = s[t-m] * (1 + gamma*eps[t])
+        # uses python's index wrapping
+        l[-1,:] = self.level[start]
+        b[-1,:] = self.slope[start]
+        if start == -1:
+            s[-m:,:] = np.tile(self.season[-m:], (nsim, 1)).T
         else:
-            raise NotImplementedError()
+            s[-m:,:] = np.tile(self.season[start-m+1:start+1], (nsim, 1)).T
 
-        return y[:-1]
+        # define trend and seasonality operations
+        def operation_and_neutral(op):
+            if op == "mul":
+                return np.multiply, 1
+            else:
+                return np.add, 0
+        op_b, neutral_b = operation_and_neutral(trend)
+        op_s, neutral_s = operation_and_neutral(seasonal)
+
+        if trend is None:
+            b[:,:] = neutral_b
+            phi = 1
+        if seasonal is None:
+            s[:,:] = neutral_s
+        if not damped:
+            phi = 1
+
+        if error == 'add':
+            # estimate error variance from residuals
+            sigma = np.sqrt(np.sum(self.resid**2) / (len(self.resid) - n_params))
+            eps = np.random.randn(steps, nsim) * sigma
+
+            # generate simulation
+            for t in range(steps):
+                eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
+                eps_b = eps_l/l[t-1,:] if mul_trend else eps_l
+                eps_s = (
+                    eps[t,:]/op_b(l[t-1,:], phi*b[t-1,:])
+                    if mul_seasonal
+                    else eps[t,:]
+                )
+
+                y[t,:] = op_s(op_b(l[t-1,:], phi*b[t-1,:]), s[t-m,:]) + eps[t,:]
+                l[t,:] = op_b(l[t-1,:], phi*b[t-1,:]) + alpha * eps_l
+                b[t,:] = phi*b[t-1,:] + beta*eps_b
+                s[t,:] = s[t-m,:] + gamma*eps_s
+
+        else:
+            # estimate error variance from residuals
+            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
+            sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
+            eps = np.random.randn(steps, nsim) * sigma
+
+            # generate simulation
+            for t in range(steps):
+                eps_l = 0 if mul_seasonal else eps[t,:]*s[t-m,:]
+                eps_b = (
+                    eps_l/l[t-1,:] if mul_trend else eps[t,:]*l[t-1,:]+eps_l
+                )
+                eps_s = (
+                    0 if mul_seasonal else eps[t,:]*(op_b(l[t-1,:], phi*b[t-1,:]))
+                )
+
+                y[t,:] = (
+                    op_s(op_b(l[t-1,:], phi*b[t-1,:]), s[t-m,:]) * (1+eps[t,:])
+                )
+                l[t,:] = (
+                    op_b(l[t-1,:], phi*b[t-1,:])*(1+alpha*eps[t,:]) + alpha*eps_l
+                )
+                b[t,:] = phi*b[t-1,:]*(1+beta*eps[t,:]) + beta*eps_b
+                s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
+
+        return y
 
 
 

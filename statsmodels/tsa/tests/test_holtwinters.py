@@ -738,6 +738,12 @@ class TestHoltWinters(object):
         Each test should also set the seed back to 0, so the same ``innov``
         values can be used in R.
         """
+
+        # TODO:
+        # - test input parameters
+        # - test all stable models
+
+
         # ETS(M, A, M) with parameters obtained from R:
         #
         # fit <- ets(austourists, model = "MAM")
@@ -746,26 +752,25 @@ class TestHoltWinters(object):
         expected = [78.06170, 49.01698, 61.71652, 67.60118]
 
         fit = ExponentialSmoothing(
-            self.austourists, seasonal_periods=4, trend="add", seasonal="mul"
-        ).fit(
-            smoothing_level=0.3156, smoothing_slope=1e-4, smoothing_seasonal=1e-4,
-            # optimized=False
-            # use_basinhopping=True
-        )
-
-        print(fit.summary())
+            self.austourists, seasonal_periods=4, trend="add", seasonal="mul",
+            damped=False
+        ).fit()
 
         np.random.seed(0)
-        sim = fit.simulate(4, error="mul")
-        print(sim)
-        n = len(self.austourists)
+        nsim = 100
+        steps = 20
+        sim = fit.simulate(steps, nsim=nsim, error="mul")
+
         import matplotlib.pyplot as plt
+        n = len(self.austourists)
+        plt.figure(figsize=(9, 6), dpi=100)
         plt.plot(range(n), self.austourists)
-        plt.plot(range(n), fit.fittedvalues)
+        plt.plot(range(n), fit.fittedvalues, '--')
+        for i in range(nsim):
+            plt.plot(range(n, n+steps), sim[:,i], 'm-', alpha=0.1)
         plt.plot(range(n, n+4), expected)
-        plt.plot(range(n, n+4), sim)
-        plt.savefig("test.png")
-        plt.show()
+        plt.grid()
+        plt.savefig('test.png')
 
         assert_almost_equal(expected, sim)
 
