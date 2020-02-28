@@ -284,7 +284,7 @@ def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     If input_dim is not 0, the function will always receive a 2D array with the
     second index for the dimension.
     """
-    if output_dim <= 0:
+    if isinstance(output_dim, int) and output_dim <= 0:
         raise ValueError("Error, the number of output dimension must be "
                          "strictly more than 0.")
     # Resolve how to get input dimension
@@ -400,13 +400,10 @@ class AxesType(object):
         else:
             self._types[idx] = value
 
-    def __delitem__(self, idx):
-        del self._types[idx]
-
     def resize(self, nl, default='C'):
         cur_l = len(self)
         if nl < cur_l:
-            self._types = self._types[nl:]
+            self._types = self._types[:nl]
         elif nl > cur_l:
             self._types = np.resize(self._types, nl)
             self._types[cur_l:] = default
