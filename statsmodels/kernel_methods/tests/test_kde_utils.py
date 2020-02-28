@@ -151,7 +151,7 @@ def test_numpy_trans_method_bad_args():
                 pass
 
 
-def test_numpy_trans_method_bad_args():
+def test_numpy_trans_method_bad_args2():
     with pytest.raises(ValueError):
 
         class Foo(object):
