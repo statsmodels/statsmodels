@@ -32,8 +32,6 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
     delta : float
         Distance within which to use linear-interpolation
         instead of weighted regression.
-    exog_predict: 1-D numpy array
-        Values of the exogenous variable at which to evaluate the regression.
     is_sorted : bool
         If False (default), then the data will be sorted by exog before
         calculating lowess. If True, then it is assumed that the data is
@@ -48,6 +46,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
         missing (nan or infinite) observations removed.
         If False, then the returned array is in the same length and the same
         sequence of observations as the input array.
+    exog_predict: ndarray, 1d
+        Values of the exogenous variable at which to evaluate the regression.
+        If not provided, then defaults to using the points of `exog`.
 
     Returns
     -------
