@@ -83,7 +83,9 @@ class TestNonContinuous(object):
         k.bandwidth = 0.2
         est = k.fit()
         est.update_inputs(data.exog[:-2], data.exog[:-2])
-        npt.assert_allclose(est.total_weights, data.exog[:-2].sum(), 1e-5, 1e-5)
+        npt.assert_allclose(est.total_weights,
+                            data.exog[:-2].sum(),
+                            1e-5, 1e-5)
 
         with pytest.raises(ValueError):
             est.update_inputs([[1, 2],[3, 4]])

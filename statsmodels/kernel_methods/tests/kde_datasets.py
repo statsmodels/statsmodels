@@ -116,6 +116,7 @@ def _make_dataset(methods, xs, exogs, weights, adjusts, lower, upper):
 
 class DataSets(object):
     """Class grouping static methods generating known test sets."""
+    @staticmethod
     def norm(sizes=(128, 256, 201)):
         """
         Create the parameters to test using a 1D Gaussian distribution dataset.
@@ -132,6 +133,7 @@ class DataSets(object):
                              lower=-5,
                              upper=5)
 
+    @staticmethod
     def lognorm(sizes=(128, 256, 201)):
         """
         Create the parameters to test using a 1D log normal distribution
@@ -151,6 +153,7 @@ class DataSets(object):
                              lower=0,
                              upper=20)
 
+    @staticmethod
     def normnd(ndim, sizes=(32, 64, 128)):
         """
         Create the parameters to test using a nD Gaussian distribution dataset.
@@ -167,6 +170,7 @@ class DataSets(object):
                              lower=[-5] * ndim,
                              upper=[5] * ndim)
 
+    @staticmethod
     def poissonnc(sizes=(128, 256, 201)):
         """
         Create the parameters to test using  a nC poisson distribution dataset.
@@ -182,6 +186,7 @@ class DataSets(object):
                              lower=None,
                              upper=None)
 
+    @staticmethod
     def multivariate(sizes=(64, 128, 101)):
         """
         Create the parameters to test using a poisson distribution and two
