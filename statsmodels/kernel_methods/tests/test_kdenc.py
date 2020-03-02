@@ -88,7 +88,7 @@ class TestNonContinuous(object):
                             1e-5, 1e-5)
 
         with pytest.raises(ValueError):
-            est.update_inputs([[1, 2],[3, 4]])
+            est.update_inputs([[1, 2], [3, 4]])
 
         with pytest.raises(ValueError):
             est.update_inputs([1, 2, 3], [2, 3])
