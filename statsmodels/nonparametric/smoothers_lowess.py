@@ -226,8 +226,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
 
         # Then run once more using those supplied weights at the points provided by exog_predict
         # No extra iterations are performed here since weights are fixed
+        # delta=0.0 here since we want to run the regression on every point of exog_predict
         res, _ = _lowess(y, x, xvals, weights,
-                        frac=frac, it=0, delta=delta, given_xvals=True)
+                        frac=frac, it=0, delta=0.0, given_xvals=True)
 
     _, yfitted = res.T
 
