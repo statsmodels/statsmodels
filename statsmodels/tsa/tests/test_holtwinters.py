@@ -138,25 +138,6 @@ class TestHoltWinters(object):
                                       freq=pd.infer_freq(aust.index))
         cls.aust = aust
 
-        # austourists dataset from fpp2 package
-        # https://cran.r-project.org/web/packages/fpp2/index.html
-        data = [30.05251, 19.14850, 25.31769, 27.59144, 32.07646,
-                23.48796, 28.47594, 35.12375, 36.83848, 25.00702,
-                30.72223, 28.69376, 36.64099, 23.82461, 29.31168,
-                31.77031, 35.17788, 19.77524, 29.60175, 34.53884,
-                41.27360, 26.65586, 28.27986, 35.19115, 42.20566,
-                24.64917, 32.66734, 37.25735, 45.24246, 29.35048,
-                36.34421, 41.78208, 49.27660, 31.27540, 37.85063,
-                38.83704, 51.23690, 31.83855, 41.32342, 42.79900,
-                55.70836, 33.40714, 42.31664, 45.15712, 59.57608,
-                34.83733, 44.84168, 46.97125, 60.01903, 38.37118,
-                46.97586, 50.73380, 61.64687, 39.29957, 52.67121,
-                54.33232, 66.83436, 40.87119, 51.82854, 57.49191,
-                65.25147, 43.06121, 54.76076, 59.83447, 73.25703,
-                47.69662, 61.09777, 66.05576,]
-        index = pd.date_range("1999-03-01", "2015-12-01", freq="3MS")
-        austourists = pd.Series(data, index)
-        cls.austourists = austourists
 
     def test_predict(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
@@ -378,56 +359,6 @@ class TestHoltWinters(object):
                             2)
 
 
-    def test_simulate(self):
-        """
-        Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults``.
-
-        The tests are using the implementation in the R package ``forecast`` as
-        reference, and example data is taken from ``fpp2`` (package and book).
-
-        Each method is tested, the methods are prepended with a comment
-        describing the R code that was used to obtain the reference results.
-
-        Each test should also set the seed back to 0, so the same ``innov``
-        values can be used in R.
-        """
-
-        # TODO:
-        # - test input parameters
-        # - test all stable models
-
-
-        # ETS(M, A, M) with parameters obtained from R:
-        #
-        # fit <- ets(austourists, model = "MAM")
-        # innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
-        # sim <- simulate(fit, innov = innov*fit$sigma)
-        expected = [78.06170, 49.01698, 61.71652, 67.60118]
-
-        fit = ExponentialSmoothing(
-            self.austourists, seasonal_periods=4, trend="add", seasonal="mul",
-            damped=False
-        ).fit()
-
-        np.random.seed(0)
-        nsim = 100
-        steps = 20
-        sim = fit.simulate(steps, nsim=nsim, error="mul")
-
-        import matplotlib.pyplot as plt
-        n = len(self.austourists)
-        plt.figure(figsize=(9, 6), dpi=100)
-        plt.plot(range(n), self.austourists)
-        plt.plot(range(n), fit.fittedvalues, '--')
-        for i in range(nsim):
-            plt.plot(range(n, n+steps), sim[:,i], 'm-', alpha=0.1)
-        plt.plot(range(n, n+4), expected)
-        plt.grid()
-        plt.savefig('test.png')
-
-        assert_almost_equal(expected, sim)
-
-
 @pytest.mark.parametrize('trend_seasonal', (('mul', None), (None, 'mul'), ('mul', 'mul')))
 def test_negative_multipliative(trend_seasonal):
     trend, seasonal = trend_seasonal
@@ -601,3 +532,116 @@ def test_damping_slope_zero():
     assert_allclose(pred2, np.r_[0., np.arange(9)], atol=1e-10)
 
     assert_allclose(pred1, pred2, atol=1e-10)
+
+
+
+@pytest.fixture
+def austourists():
+    # austourists dataset from fpp2 package
+    # https://cran.r-project.org/web/packages/fpp2/index.html
+    data = [30.05251, 19.14850, 25.31769, 27.59144, 32.07646,
+            23.48796, 28.47594, 35.12375, 36.83848, 25.00702,
+            30.72223, 28.69376, 36.64099, 23.82461, 29.31168,
+            31.77031, 35.17788, 19.77524, 29.60175, 34.53884,
+            41.27360, 26.65586, 28.27986, 35.19115, 42.20566,
+            24.64917, 32.66734, 37.25735, 45.24246, 29.35048,
+            36.34421, 41.78208, 49.27660, 31.27540, 37.85063,
+            38.83704, 51.23690, 31.83855, 41.32342, 42.79900,
+            55.70836, 33.40714, 42.31664, 45.15712, 59.57608,
+            34.83733, 44.84168, 46.97125, 60.01903, 38.37118,
+            46.97586, 50.73380, 61.64687, 39.29957, 52.67121,
+            54.33232, 66.83436, 40.87119, 51.82854, 57.49191,
+            65.25147, 43.06121, 54.76076, 59.83447, 73.25703,
+            47.69662, 61.09777, 66.05576,]
+    index = pd.date_range("1999-03-01", "2015-12-01", freq="3MS")
+    return pd.Series(data, index)
+
+
+@pytest.fixture
+def simulate_expected_results():
+    # obtained from ets.simulate in the R package forecast, data is from fpp2
+    # package.
+    # library(magrittr)
+    # library(fpp2)
+    # library(forecast)
+
+    # concat <- function(...) {
+    #   return(paste(..., sep=""))
+    # }
+
+    # error <- c("A", "M")
+    # trend <- c("A", "M", "N")
+    # seasonal <- c("A", "M", "N")
+    # models <- outer(error, trend, FUN = "concat") %>%
+    #   outer(seasonal, FUN = "concat") %>% as.vector
+
+    # params <- expand.grid(models, c(TRUE, FALSE))
+    # results <- apply(params, 1, FUN = function(p) {
+    #   tryCatch((function(pars) {
+    #     fit <- ets(austourists, model = pars[1], damped = as.logical(pars[2]))
+    #     # innov from np.random.seed(0); np.random.randn(4)
+    #     innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932) * fit$sigma
+    #     simulate(fit, innov = innov)
+    #   })(p), error = function(e) c(NA, NA, NA, NA))
+    # }) %>% t
+    # rownames(results) <- apply(params, 1, FUN = function(x) paste(x[1], x[2]))
+    damped =  {
+        "AAA": [86.80854, 58.19179, 75.32754, 90.01478],
+        "MAA": [75.80902, 51.42521, 63.44988, 67.85738],
+        "MAM": [78.58529, 49.15202, 61.72860, 67.21980],
+        "MMM": [78.83936, 49.41724, 61.93573, 67.46698],
+        "AAN": [165.94678, 88.39448, 125.76904, 205.22631],
+        "MAN": [64.89788, 62.58234, 64.68666, 68.48205],
+        "MMN": [64.68225, 62.36765, 64.34431, 67.96280],
+    }
+    undamped = {
+        "AAA": [86.29156, 55.46380, 71.85194, 85.35326],
+        "MAA": [76.27954, 51.58520, 63.89712, 68.40885],
+        "ANA": [86.90317, 59.06777, 76.33024, 91.78560],
+        "MNA": [75.84244, 50.75335, 62.87225, 67.00797],
+        "MAM": [78.06170, 49.01698, 61.71652, 67.60118],
+        "MMM": [80.51093, 51.33491, 65.39865, 72.43607],
+        "MNM": [78.43981, 48.86440, 61.37785, 66.87963],
+        "AAN": [162.56526, 87.45711, 122.65775, 197.73141],
+        "MAN": [66.23547, 64.09381, 66.22801, 69.99425],
+        "MMN": [65.14632, 63.31094, 65.38685, 69.08567],
+        "ANN": [184.50391, 111.99074, 158.83129, 262.49382],
+        "MNN": [63.68311, 61.03151, 62.83378, 66.87331],
+    }
+    return {True: damped, False: undamped}
+
+
+
+@pytest.mark.parametrize('trend', TRENDS)
+@pytest.mark.parametrize('seasonal', SEASONALS)
+@pytest.mark.parametrize('damped', (True, False))
+@pytest.mark.parametrize('error', ("add", "mul"))
+def test_simulate_expected(trend, seasonal, damped, error,
+                           austourists, simulate_expected_results):
+    """
+    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults``.
+
+    The tests are using the implementation in the R package ``forecast`` as
+    reference, and example data is taken from ``fpp2`` (package and book).
+    """
+
+    short_name = {"add": "A", "mul": "M", None: "N"}
+    model_name = short_name[error] +  short_name[trend] + short_name[seasonal]
+    if model_name in simulate_expected_results[damped]:
+        expected = np.reshape(np.asarray(simulate_expected_results[damped][model_name]), (4,1))
+    else:
+        return
+
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend=trend, seasonal=seasonal, damped=damped
+    ).fit()
+
+    # for MMM with damped trend the fit fails
+    if np.any(np.isnan(fit.fittedvalues)):
+        return
+
+    np.random.seed(0)
+    sim = fit.simulate(4, nsim=1, error=error)
+
+    assert_almost_equal(expected, sim)

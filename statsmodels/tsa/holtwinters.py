@@ -562,7 +562,8 @@ class HoltWintersResults(Results):
         beta = self.params['smoothing_slope']
         gamma = self.params['smoothing_seasonal']
         phi = self.params['damping_slope']
-        m = self.model.seasonal_periods
+        # if model has no seasonal component, use 1 as period length
+        m = max(self.model.seasonal_periods, 1)
 
         mul_seasonal = seasonal == "mul"
         mul_trend = trend == "mul"
@@ -598,8 +599,10 @@ class HoltWintersResults(Results):
         if trend is None:
             b[:,:] = neutral_b
             phi = 1
+            beta = 0
         if seasonal is None:
             s[:,:] = neutral_s
+            gamma = 0
         if not damped:
             phi = 1
 
