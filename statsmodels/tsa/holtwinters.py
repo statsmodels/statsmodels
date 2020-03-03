@@ -430,7 +430,8 @@ class HoltWintersResults(Results):
 
         return smry
 
-    def simulate(self, steps, start=-1, nsim=1, error="add"):
+    def simulate(self, steps, start=-1, nsim=1, error="add",
+                 random_errors=None, seed=None, estimate_error_variance=False):
         r"""
         Random simulations using the state space formulation.
 
@@ -445,11 +446,32 @@ class HoltWintersResults(Results):
             Number of simulations to perform. Default is 1.
         error : {"add", "mul", "additive", "multiplicative"}, optional
             Error model for state space formulation. Default is ``"add"``.
+        random_errors : optional
+            Specifies how the random errors should be obtained. Can be one of
+            the following::
+
+            - ``None``: Random normally distributed values with variance
+              estimated from the fit errors drawn from numpy's standard
+              RNG (can be seeded with the `seed` argument). This is the default
+              option.
+            - A distribution function from ``scipy.stats``: Draws random errors
+              from the given distribution function.
+            - A ``np.ndarray`` with shape (`steps`, `nsim`): Uses the given
+              values as random errors.
+            - "bootstrap": Samples the random errors from the fit errors.
+
+        seed : int or np.random.RandomState, optional
+            A seed for the random number generator. Only used if
+            `random_errors` is ``None``. Default is ``None``.
+        estimate_error_variance : bool, optional
+            Whether to estimate the variance of the error distribution from the
+            fit errors. This is only used when `random_errors` is a
+            `scipy.stats` distribution function. Default is False.
 
         Returns
         -------
         sim : ndarray
-            Array of simulated values with shape ``(steps,nsim)``.
+            Array of simulated values with shape (`steps`,`nsim`).
 
         Notes
         -----
@@ -476,7 +498,8 @@ class HoltWintersResults(Results):
         and trend (i.e. + if the trend is additive, :math:`\cdot` if the trend
         is multiplicative) and similar :math:`\circ_s` be the operation linking
         seasonal value to trend and level, as well as :math:`\circ_d` be the
-        operation that links :math:`\phi` and :math:`b`.
+        operation that links :math:`\phi` and :math:`b` (multiplication for
+        additive trend, power for multiplicative trend).
 
         Then the state space equations with additive error model are:
 
@@ -552,7 +575,7 @@ class HoltWintersResults(Results):
         if error in ['additive', 'multiplicative']:
             error = {'additive': 'add', 'multiplicative': 'mul'}[error]
         if error not in ['add', 'mul']:
-            raise ValueError("Unknown error model")
+            raise ValueError("error must be 'add' or 'mul'!")
 
         # get Holt-Winters settings and parameters
         trend = self.model.trend
@@ -614,12 +637,37 @@ class HoltWintersResults(Results):
         if not damped:
             phi = 1
 
+        # get errors
         if error == 'add':
-            # estimate error variance from residuals
-            sigma = np.sqrt(np.sum(self.resid**2) / (len(self.resid) - n_params))
-            eps = np.random.randn(steps, nsim) * sigma
+            resid = self.resid
+        else:
+            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
+        sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
-            # generate simulation
+        # get random error eps
+        if isinstance(random_errors, np.ndarray):
+            if random_errors.shape != (steps, nsim):
+                raise ValueError("If random is an ndarray, it must have shape (steps, nsim)!")
+            eps = random_errors
+        elif random_errors == "bootstrap":
+            eps = np.random.choice(resid, size=(steps, nsim), replace=True)
+        elif random_errors is None:
+            if seed is None:
+                eps = np.random.randn(steps, nsim) * sigma
+            else:
+                rng = np.random.RandomState(seed)
+                eps = rng.randn(steps, nsim) * sigma
+        elif hasattr(random_errors, "rvs"):
+            if estimate_error_variance:
+                loc = sigma
+            else:
+                loc = random_errors.loc
+            eps = random_errors.rvs(loc=loc, size=(steps, nsim))
+        else:
+            raise ValueError("Argument random_errors has unexpected value!")
+
+        # generate simulation
+        if error == 'add':
             for t in range(steps):
                 eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
                 eps_b = eps_l/l[t-1,:] if mul_trend else eps_l
@@ -633,14 +681,7 @@ class HoltWintersResults(Results):
                 l[t,:] = op_b(l[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
                 b[t,:] = op_d(b[t-1,:], phi) + beta*eps_b
                 s[t,:] = s[t-m,:] + gamma*eps_s
-
         else:
-            # estimate error variance from residuals
-            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
-            sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
-            eps = np.random.randn(steps, nsim) * sigma
-
-            # generate simulation
             for t in range(steps):
                 eps_l = 0 if mul_seasonal else eps[t,:]*s[t-m,:]
                 eps_b = (
