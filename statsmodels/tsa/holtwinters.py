@@ -475,15 +475,16 @@ class HoltWintersResults(Results):
         [1]_. Additionally, let :math:`\circ_b` be the operation linking level
         and trend (i.e. + if the trend is additive, :math:`\cdot` if the trend
         is multiplicative) and similar :math:`\circ_s` be the operation linking
-        seasonal value and :math:`l \circ_b \phi b`.
+        seasonal value to trend and level, as well as :math:`\circ_d` be the
+        operation that links :math:`\phi` and :math:`b`.
 
         Then the state space equations with additive error model are:
 
         .. math::
 
-            y_t &= (l_{t-1} \circ_b \phi b_{t-1}) \circ_s s_{t-m} + e_t\\
-            l_t &= l_{t-1} \circ_b \phi b_{t-1} + \alpha e_{l,t}\\
-            b_t &= \phi b_{t-1} + \beta e_{b,t}\\
+            y_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d \phi) \circ_s s_{t-m} + e_t\\
+            l_t &= l_{t-1} \circ_b (b_{t-1} \circ_d \phi) + \alpha e_{l,t}\\
+            b_t &= (b_{t-1} \circ_d \phi) + \beta e_{b,t}\\
             s_t &= s_{t-m} + \gamma e_{s,t}
 
         with
@@ -503,7 +504,7 @@ class HoltWintersResults(Results):
                       \end{cases}
 
             e_{s,t} = \begin{cases}
-                          \frac{e_t}{l_{t-1}\circ_b\phi b_{t-1}}\quad
+                          \frac{e_t}{l_{t-1}\circ_b (b_{t-1}\circ_d\phi}\quad
                           \text{if seasonal is multiplicative}\\
                           e_{t}\quad\text{else}
                       \end{cases}
@@ -512,11 +513,11 @@ class HoltWintersResults(Results):
 
         .. math::
 
-            y_t = ((l_{t-1} \circ_b \phi b_{t-1}) \circ_s s_{t-m})
+            y_t = ((l_{t-1} \circ_b (b_{t-1}\circ_d\phi)) \circ_s s_{t-m})
                   \cdot (1 + e_t)\\\\
-            l_t = (l_{t-1} \circ_b \phi b_{t-1}) (1 + \alpha e_t)
+            l_t = (l_{t-1} \circ_b (b_{t-1} \circ_d\phi) (1 + \alpha e_t)
                   +  \alpha varepsilon_{l,t}\\\\
-            b_t = \phi b_{t-1} (1 + \beta e_t)
+            b_t = (b_{t-1}\circ_d\phi) (1 + \beta e_t)
                   + \beta e_{b,t}\\\\
             s_t = s_{t-m} (1 + \gamma e_t) + \gamma e_{s,t}
 
@@ -536,7 +537,7 @@ class HoltWintersResults(Results):
                       \end{cases}\\\\
             e_{s,t} = \begin{cases}
                           0\quad\text{if seasonal is multiplicative}\\\\
-                          e_{t}(l_{t-1}\circ_b\phi b_{t-1})
+                          e_{t}(l_{t-1}\circ_b(b_{t-1}\circ_d\phi))
                           \quad\text{else}
                       \end{cases}
 
@@ -587,14 +588,21 @@ class HoltWintersResults(Results):
         else:
             s[-m:,:] = np.tile(self.season[start-m+1:start+1], (nsim, 1)).T
 
-        # define trend and seasonality operations
-        def operation_and_neutral(op):
-            if op == "mul":
-                return np.multiply, 1
-            else:
-                return np.add, 0
-        op_b, neutral_b = operation_and_neutral(trend)
-        op_s, neutral_s = operation_and_neutral(seasonal)
+        # define trend, damping and seasonality operations
+        if trend == "mul":
+            op_b = np.multiply
+            op_d = np.power
+            neutral_b = 1
+        else:
+            op_b = np.add
+            op_d = np.multiply
+            neutral_b = 0
+        if seasonal == "mul":
+            op_s = np.multiply
+            neutral_s = 1
+        else:
+            op_s = np.add
+            neutral_s = 0
 
         if trend is None:
             b[:,:] = neutral_b
@@ -616,14 +624,14 @@ class HoltWintersResults(Results):
                 eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
                 eps_b = eps_l/l[t-1,:] if mul_trend else eps_l
                 eps_s = (
-                    eps[t,:]/op_b(l[t-1,:], phi*b[t-1,:])
+                    eps[t,:]/op_b(l[t-1,:], op_d(b[t-1,:], phi))
                     if mul_seasonal
                     else eps[t,:]
                 )
 
-                y[t,:] = op_s(op_b(l[t-1,:], phi*b[t-1,:]), s[t-m,:]) + eps[t,:]
-                l[t,:] = op_b(l[t-1,:], phi*b[t-1,:]) + alpha * eps_l
-                b[t,:] = phi*b[t-1,:] + beta*eps_b
+                y[t,:] = op_s(op_b(l[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) + eps[t,:]
+                l[t,:] = op_b(l[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
+                b[t,:] = op_d(b[t-1,:], phi) + beta*eps_b
                 s[t,:] = s[t-m,:] + gamma*eps_s
 
         else:
@@ -639,16 +647,16 @@ class HoltWintersResults(Results):
                     eps_l/l[t-1,:] if mul_trend else eps[t,:]*l[t-1,:]+eps_l
                 )
                 eps_s = (
-                    0 if mul_seasonal else eps[t,:]*(op_b(l[t-1,:], phi*b[t-1,:]))
+                    0 if mul_seasonal else eps[t,:]*(op_b(l[t-1,:], op_d(b[t-1,:], phi)))
                 )
 
                 y[t,:] = (
-                    op_s(op_b(l[t-1,:], phi*b[t-1,:]), s[t-m,:]) * (1+eps[t,:])
+                    op_s(op_b(l[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) * (1+eps[t,:])
                 )
                 l[t,:] = (
-                    op_b(l[t-1,:], phi*b[t-1,:])*(1+alpha*eps[t,:]) + alpha*eps_l
+                    op_b(l[t-1,:], op_d(b[t-1,:], phi))*(1+alpha*eps[t,:]) + alpha*eps_l
                 )
-                b[t,:] = phi*b[t-1,:]*(1+beta*eps[t,:]) + beta*eps_b
+                b[t,:] = op_d(b[t-1,:], phi)*(1+beta*eps[t,:]) + beta*eps_b
                 s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
 
         return y
