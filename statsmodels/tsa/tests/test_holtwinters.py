@@ -7,6 +7,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.stats
 import pytest
 from numpy.testing import assert_almost_equal, assert_allclose
 
@@ -827,3 +828,30 @@ def test_simulate_expected_R(trend, seasonal, damped, error,
     sim = fit.simulate(4, nsim=1, error=error, random_errors=innov)
 
     assert_almost_equal(expected, sim, 5)
+
+
+def test_simulate_keywords(austourists):
+    """
+    check whether all keywords are accepted and work without throwing errors.
+    """
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend="add", seasonal="add", damped=True
+    ).fit()
+
+    fit.simulate(4, start=0, nsim=4)
+
+    # test different random error options
+    rv = scipy.stats.norm()
+    fit.simulate(4, nsim=10, random_errors=scipy.stats.norm)
+    fit.simulate(4, nsim=10, random_errors=scipy.stats.norm())
+
+    fit.simulate(4, nsim=10, random_errors=np.random.randn(4,10))
+    fit.simulate(4, nsim=10, random_errors="bootstrap")
+
+    # test seeding
+    res = fit.simulate(4, nsim=10, seed=10)
+    res2 = fit.simulate(4, nsim=10, seed=np.random.RandomState(10))
+    assert np.all(res == res2)
+
+

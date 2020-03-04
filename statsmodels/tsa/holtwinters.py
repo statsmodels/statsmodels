@@ -17,6 +17,9 @@ from scipy.optimize import basinhopping, brute, minimize
 from scipy.spatial.distance import sqeuclidean
 from scipy.special import inv_boxcox
 from scipy.stats import boxcox
+from scipy.stats import (
+    _distn_infrastructure, rv_continuous, rv_discrete
+)
 
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import (populate_wrapper, union_dicts,
@@ -454,19 +457,22 @@ class HoltWintersResults(Results):
               estimated from the fit errors drawn from numpy's standard
               RNG (can be seeded with the `seed` argument). This is the default
               option.
-            - A distribution function from ``scipy.stats``: Draws random errors
-              from the given distribution function.
+            - A distribution function from ``scipy.stats``, e.g.
+              ``scipy.stats.norm``: Fits the distribution function to the fit
+              errors and draws from the fitted distribution.
+              Note the difference between ``scipy.stats.norm`` and
+              ``scipy.stats.norm()``, the latter one is a frozen distribution
+              function.
+            - A frozen distribution function from ``scipy.stats``, e.g.
+              ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
+              function.
             - A ``np.ndarray`` with shape (`steps`, `nsim`): Uses the given
               values as random errors.
-            - "bootstrap": Samples the random errors from the fit errors.
+            - ``"bootstrap"``: Samples the random errors from the fit errors.
 
         seed : int or np.random.RandomState, optional
             A seed for the random number generator. Only used if
             `random_errors` is ``None``. Default is ``None``.
-        estimate_error_variance : bool, optional
-            Whether to estimate the variance of the error distribution from the
-            fit errors. This is only used when `random_errors` is a
-            `scipy.stats` distribution function. Default is False.
 
         Returns
         -------
@@ -608,6 +614,11 @@ class HoltWintersResults(Results):
         b[-1,:] = self.slope[start]
         if start == -1:
             s[-m:,:] = np.tile(self.season[-m:], (nsim, 1)).T
+        elif 0 <= start and start < m:
+            initial_seasons = self.params["initial_seasons"]
+            _s = np.concatenate((initial_seasons[start+1:],
+                                self.season[0:start+1]))
+            s[-m:,:] = np.tile(_s, (nsim, 1)).T
         else:
             s[-m:,:] = np.tile(self.season[start-m+1:start+1], (nsim, 1)).T
 
@@ -654,15 +665,19 @@ class HoltWintersResults(Results):
         elif random_errors is None:
             if seed is None:
                 eps = np.random.randn(steps, nsim) * sigma
-            else:
+            elif isinstance(seed, int):
                 rng = np.random.RandomState(seed)
                 eps = rng.randn(steps, nsim) * sigma
-        elif hasattr(random_errors, "rvs"):
-            if estimate_error_variance:
-                loc = sigma
+            elif isinstance(seed, np.random.RandomState):
+                eps = seed.randn(steps, nsim) * sigma
             else:
-                loc = random_errors.loc
-            eps = random_errors.rvs(loc=loc, size=(steps, nsim))
+                raise ValueError("Argument seed must be None, an integer, "
+                                 "or an instance of np.random.RandomState")
+        elif isinstance(random_errors, (rv_continuous,rv_discrete)):
+            params = random_errors.fit(resid)
+            eps = random_errors.rvs(*params, size=(steps, nsim))
+        elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
+            eps = random_errors.rvs(size=(steps, nsim))
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 
