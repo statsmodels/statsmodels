@@ -2319,3 +2319,15 @@ def test_non_invertible_hessian_fails_summary():
         mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
         res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
         res.summary()
+
+
+def test_glm_bic():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
+                         delimiter=",", skip_header=1)
+    X = np.c_[np.ones(100), iris[50:, :4]]
+    y = np.array(iris)[50:, 4].astype(np.int32)
+    y -= 1
+    model = GLM(y, X, family=sm.families.Binomial()).fit()
+    # 34.9244 is what glm() of R yields
+    assert_almost_equal(model.bic, 34.9244, decimal=3)
