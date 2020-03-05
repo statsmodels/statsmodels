@@ -1687,7 +1687,7 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Bayes Information Criterion
         Old: `deviance` - `df_resid` * log(`nobs`)
-        New: -2 * `llf` + df_model*log*(n)
+        New: -2 * `llf` + (df_model+1)*log*(n)
         """
         return -2*self.llf + (self.df_model+1)*np.log(
             self.df_model+self.df_resid+1
