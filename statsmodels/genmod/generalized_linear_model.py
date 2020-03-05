@@ -1686,11 +1686,12 @@ class GLMResults(base.LikelihoodModelResults):
     def bic(self):
         """
         Bayes Information Criterion
-        `deviance` - `df_resid` * log(`nobs`)
+        Old: `deviance` - `df_resid` * log(`nobs`)
+        New: -2 * `llf` + df_model*log*(n)
         """
-        return (self.deviance -
-                (self.model.wnobs - self.df_model - 1) *
-                np.log(self.model.wnobs))
+        return -2*self.llf + (self.df_model+1)*np.log(
+            self.df_model+self.df_resid+1
+        )
 
     @Appender(pred.get_prediction_glm.__doc__)
     def get_prediction(self, exog=None, exposure=None, offset=None,

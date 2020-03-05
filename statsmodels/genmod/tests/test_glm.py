@@ -2320,6 +2320,7 @@ def test_non_invertible_hessian_fails_summary():
         res.summary()
 
 
+
 def test_int_scale():
     # GH-6627, make sure it works with int scale
     data = longley.load(as_pandas=True)
@@ -2339,3 +2340,15 @@ def test_int_exog(dtype):
     mod = GLM(y, x, exposure=exposure, family=sm.families.Poisson())
     res = mod.fit(method='bfgs', max_start_irls=0)
     assert isinstance(res.params, np.ndarray)
+
+
+def test_glm_bic():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
+                         delimiter=",", skip_header=1)
+    X = np.c_[np.ones(100), iris[50:, :4]]
+    y = np.array(iris)[50:, 4].astype(np.int32)
+    y -= 1
+    model = GLM(y, X, family=sm.families.Binomial()).fit()
+    # 34.9244 is what glm() of R yields
+    assert_almost_equal(model.bic, 34.9244, decimal=3)
