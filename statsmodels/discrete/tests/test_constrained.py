@@ -410,7 +410,12 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
         # see issue GH#1733
         assert_allclose(res1.aic, res2.infocrit[4], rtol=1e-10)
 
-        assert_allclose(res1.bic, res2.bic, rtol=1e-10)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            # FutureWarning for BIC changes
+            assert_allclose(res1.bic, res2.bic, rtol=1e-10)
         # bic is deviance based
         # FIXME: dont leave commented-out
         #  assert_allclose(res1.bic, res2.infocrit[5], rtol=1e-10)
@@ -480,7 +485,13 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
     @pytest.mark.smoke
     def test_summary2(self):
         # trailing text in summary, assumes it's the first extra string
-        summ = self.res1m.summary2()
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            # FutureWarning for BIC changes
+            summ = self.res1m.summary2()
+
         assert_('linear equality constraints' in summ.extra_txt[0])
 
     def test_fit_constrained_wrap(self):

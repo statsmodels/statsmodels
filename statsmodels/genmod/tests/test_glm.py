@@ -12,7 +12,7 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
-from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
@@ -44,6 +44,13 @@ def close_or_save(pdf, fig):
 def teardown_module():
     if pdf_output:
         pdf.close()
+
+
+@pytest.fixture(scope="module")
+def iris():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    return np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
+                         delimiter=",", skip_header=1)
 
 
 class CheckModelResultsMixin(object):
@@ -150,8 +157,11 @@ class CheckModelResultsMixin(object):
 
     decimal_bic = DECIMAL_4
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic_Stata,
-                self.decimal_bic)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            assert_almost_equal(self.res1.bic,
+                                self.res2.bic_Stata,
+                                self.decimal_bic)
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_resid,self.res2.df_resid)
@@ -845,10 +855,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_almost_equal(pred2, pred1+offset)
 
 
-def test_perfect_pred():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
-                         delimiter=",", skip_header=1)
+def test_perfect_pred(iris):
     y = iris[:, -1]
     X = iris[:, :-1]
     X = X[y != 2]
@@ -1403,7 +1410,9 @@ class CheckWtdDuplicationMixin(object):
     decimal_bic = DECIMAL_4
 
     def test_bic(self):
-        assert_allclose(self.res1.bic, self.res2.bic,  atol=1e-6, rtol=1e-6)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            assert_allclose(self.res1.bic, self.res2.bic,  atol=1e-6, rtol=1e-6)
 
     decimal_fittedvalues = DECIMAL_4
 
@@ -2320,7 +2329,6 @@ def test_non_invertible_hessian_fails_summary():
         res.summary()
 
 
-
 def test_int_scale():
     # GH-6627, make sure it works with int scale
     data = longley.load(as_pandas=True)
@@ -2342,13 +2350,24 @@ def test_int_exog(dtype):
     assert isinstance(res.params, np.ndarray)
 
 
-def test_glm_bic():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
-                         delimiter=",", skip_header=1)
+def test_glm_bic(iris):
+    X = np.c_[np.ones(100), iris[50:, :4]]
+    y = np.array(iris)[50:, 4].astype(np.int32)
+    y -= 1
+    SET_USE_BIC_LLF(True)
+    model = GLM(y, X, family=sm.families.Binomial()).fit()
+    # 34.9244 is what glm() of R yields
+    assert_almost_equal(model.bic, 34.9244, decimal=3)
+    assert_almost_equal(model.bic_llf, 34.9244, decimal=3)
+    SET_USE_BIC_LLF(False)
+    assert_almost_equal(model.bic, model.bic_deviance, decimal=3)
+    SET_USE_BIC_LLF(None)
+
+
+def test_glm_bic_warning(iris):
     X = np.c_[np.ones(100), iris[50:, :4]]
     y = np.array(iris)[50:, 4].astype(np.int32)
     y -= 1
     model = GLM(y, X, family=sm.families.Binomial()).fit()
-    # 34.9244 is what glm() of R yields
-    assert_almost_equal(model.bic, 34.9244, decimal=3)
+    with pytest.warns(FutureWarning, match="The bic"):
+        assert isinstance(model.bic, float)

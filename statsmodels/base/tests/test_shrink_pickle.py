@@ -52,7 +52,7 @@ class RemoveDataPickle(object):
         pred1 = results.predict(xf, **pred_kwds)
         # create some cached attributes
         results.summary()
-        res = results.summary2()  # SMOKE test also summary2
+        results.summary2()  # SMOKE test also summary2
 
         # uncomment the following to check whether tests run (7 failures now)
         # np.testing.assert_equal(res, 1)
@@ -237,8 +237,13 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         for name in names:
             assert name in res._cache
             assert res._cache[name] is not None
+        import warnings
 
-        res.remove_data()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            # FutureWarning for BIC changes
+            res.remove_data()
+
         for name in names:
             assert res._cache[name] is None
 
@@ -249,7 +254,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         assert res._cache == {}
         with pytest.warns(FutureWarning, match="Anscombe residuals"):
             res.remove_data()
-        assert 'bic' in res._cache
+        assert 'aic' in res._cache
 
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
