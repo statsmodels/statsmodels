@@ -451,24 +451,24 @@ class HoltWintersResults(Results):
             Error model for state space formulation. Default is ``"add"``.
         random_errors : optional
             Specifies how the random errors should be obtained. Can be one of
-            the following::
+            the following:
 
-            - ``None``: Random normally distributed values with variance
+            * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
               RNG (can be seeded with the `seed` argument). This is the default
               option.
-            - A distribution function from ``scipy.stats``, e.g.
+            * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
               errors and draws from the fitted distribution.
               Note the difference between ``scipy.stats.norm`` and
               ``scipy.stats.norm()``, the latter one is a frozen distribution
               function.
-            - A frozen distribution function from ``scipy.stats``, e.g.
+            * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function.
-            - A ``np.ndarray`` with shape (`steps`, `nsim`): Uses the given
+            * A ``np.ndarray`` with shape (`steps`, `nsim`): Uses the given
               values as random errors.
-            - ``"bootstrap"``: Samples the random errors from the fit errors.
+            * ``"bootstrap"``: Samples the random errors from the fit errors.
 
         seed : int or np.random.RandomState, optional
             A seed for the random number generator. Only used if
@@ -511,7 +511,7 @@ class HoltWintersResults(Results):
 
         .. math::
 
-            y_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d \phi) \circ_s s_{t-m} + e_t\\
+            y_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d \phi)) \circ_s s_{t-m} + e_t\\
             l_t &= l_{t-1} \circ_b (b_{t-1} \circ_d \phi) + \alpha e_{l,t}\\
             b_t &= (b_{t-1} \circ_d \phi) + \beta e_{b,t}\\
             s_t &= s_{t-m} + \gamma e_{s,t}
@@ -520,20 +520,18 @@ class HoltWintersResults(Results):
 
         .. math::
 
-            e_{l,t} = \begin{cases}
+            e_{l,t} &= \begin{cases}
                           \frac{e_t}{s_{t-m}}\quad
                           \text{if seasonal is multiplicative}\\
                           e_t\quad\text{else}
-                      \end{cases}
-
-            e_{b,t} = \begin{cases}
+                      \end{cases}\\
+            e_{b,t} &= \begin{cases}
                           \frac{e_{l,t}}{l_{t-1}}\quad
                           \text{if trend is multiplicative}\\
                           e_{l,t}\quad\text{else}
-                      \end{cases}
-
-            e_{s,t} = \begin{cases}
-                          \frac{e_t}{l_{t-1}\circ_b (b_{t-1}\circ_d\phi}\quad
+                      \end{cases}\\
+            e_{s,t} &= \begin{cases}
+                          \frac{e_t}{l_{t-1}\circ_b (b_{t-1}\circ_d\phi)}\quad
                           \text{if seasonal is multiplicative}\\
                           e_{t}\quad\text{else}
                       \end{cases}
@@ -542,30 +540,30 @@ class HoltWintersResults(Results):
 
         .. math::
 
-            y_t = ((l_{t-1} \circ_b (b_{t-1}\circ_d\phi)) \circ_s s_{t-m})
-                  \cdot (1 + e_t)\\\\
-            l_t = (l_{t-1} \circ_b (b_{t-1} \circ_d\phi) (1 + \alpha e_t)
-                  +  \alpha varepsilon_{l,t}\\\\
-            b_t = (b_{t-1}\circ_d\phi) (1 + \beta e_t)
-                  + \beta e_{b,t}\\\\
-            s_t = s_{t-m} (1 + \gamma e_t) + \gamma e_{s,t}
+            y_t &= ((l_{t-1} \circ_b (b_{t-1}\circ_d\phi)) \circ_s s_{t-m})
+                  \cdot (1 + e_t)\\
+            l_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d\phi)) (1 + \alpha e_t)
+                  +  \alpha e_{l,t}\\
+            b_t &= (b_{t-1}\circ_d\phi) (1 + \beta e_t)
+                  + \beta e_{b,t}\\
+            s_t &= s_{t-m} (1 + \gamma e_t) + \gamma e_{s,t}
 
         with
 
         .. math::
 
-            e_{l,t} = \begin{cases}
-                          0\quad\text{if seasonal is multiplicative}\\\\
+            e_{l,t} &= \begin{cases}
+                          0\quad\text{if seasonal is multiplicative}\\
                           e_t\cdot s_{t-m} \quad\text{else}
-                      \end{cases}\\\\
-            e_{b,t} = \begin{cases}
+                      \end{cases}\\
+            e_{b,t} &= \begin{cases}
                           \frac{e_{l,t}}{l_{t-1}}\quad
-                          \text{if trend is multiplicative}\\\\
+                          \text{if trend is multiplicative}\\
                           e_t\cdot l_{t-1} + e_{l,t}
                           \quad\text{else}
-                      \end{cases}\\\\
-            e_{s,t} = \begin{cases}
-                          0\quad\text{if seasonal is multiplicative}\\\\
+                      \end{cases}\\
+            e_{s,t} &= \begin{cases}
+                          0\quad\text{if seasonal is multiplicative}\\
                           e_{t}(l_{t-1}\circ_b(b_{t-1}\circ_d\phi))
                           \quad\text{else}
                       \end{cases}
