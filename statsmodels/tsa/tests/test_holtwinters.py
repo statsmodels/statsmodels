@@ -849,6 +849,6 @@ def test_simulate_keywords(austourists):
     fit.simulate(4, nsim=10, random_errors="bootstrap")
 
     # test seeding
-    res = fit.simulate(4, nsim=10, seed=10)
-    res2 = fit.simulate(4, nsim=10, seed=np.random.RandomState(10))
+    res = fit.simulate(4, nsim=10, random_state=10)
+    res2 = fit.simulate(4, nsim=10, random_state=np.random.RandomState(10))
     assert np.all(res == res2)

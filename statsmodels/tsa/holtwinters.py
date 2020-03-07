@@ -434,7 +434,7 @@ class HoltWintersResults(Results):
         return smry
 
     def simulate(self, steps, start=-1, nsim=1, error="add",
-                 random_errors=None, seed=None):
+                 random_errors=None, random_state=None):
         r"""
         Random simulations using the state space formulation.
 
@@ -455,8 +455,8 @@ class HoltWintersResults(Results):
 
             * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
-              RNG (can be seeded with the `seed` argument). This is the default
-              option.
+              RNG (can be seeded with the `random_state` argument). This is the
+              default option.
             * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
               errors and draws from the fitted distribution.
@@ -470,9 +470,10 @@ class HoltWintersResults(Results):
               values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        seed : int or np.random.RandomState, optional
-            A seed for the random number generator. Only used if
-            `random_errors` is ``None``. Default is ``None``.
+        random_state : int or np.random.RandomState, optional
+            A seed for the random number generator or a
+            ``np.random.RandomState`` object. Only used if `random_errors` is
+            ``None``. Default is ``None``.
 
         Returns
         -------
@@ -661,15 +662,15 @@ class HoltWintersResults(Results):
         elif random_errors == "bootstrap":
             eps = np.random.choice(resid, size=(steps, nsim), replace=True)
         elif random_errors is None:
-            if seed is None:
+            if random_state is None:
                 eps = np.random.randn(steps, nsim) * sigma
-            elif isinstance(seed, int):
-                rng = np.random.RandomState(seed)
+            elif isinstance(random_state, int):
+                rng = np.random.RandomState(random_state)
                 eps = rng.randn(steps, nsim) * sigma
-            elif isinstance(seed, np.random.RandomState):
-                eps = seed.randn(steps, nsim) * sigma
+            elif isinstance(random_state, np.random.RandomState):
+                eps = random_state.randn(steps, nsim) * sigma
             else:
-                raise ValueError("Argument seed must be None, an integer, "
+                raise ValueError("Argument random_state must be None, an integer, "
                                  "or an instance of np.random.RandomState")
         elif isinstance(random_errors, (rv_continuous,rv_discrete)):
             params = random_errors.fit(resid)
