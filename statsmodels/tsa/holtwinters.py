@@ -434,7 +434,7 @@ class HoltWintersResults(Results):
         return smry
 
     def simulate(self, steps, start=-1, nsim=1, error="add",
-                 random_errors=None, seed=None, estimate_error_variance=False):
+                 random_errors=None, seed=None):
         r"""
         Random simulations using the state space formulation.
 
