@@ -842,7 +842,6 @@ def test_simulate_keywords(austourists):
     fit.simulate(4, start=0, nsim=4)
 
     # test different random error options
-    rv = scipy.stats.norm()
     fit.simulate(4, nsim=10, random_errors=scipy.stats.norm)
     fit.simulate(4, nsim=10, random_errors=scipy.stats.norm())
 
@@ -853,5 +852,3 @@ def test_simulate_keywords(austourists):
     res = fit.simulate(4, nsim=10, seed=10)
     res2 = fit.simulate(4, nsim=10, seed=np.random.RandomState(10))
     assert np.all(res == res2)
-
-
