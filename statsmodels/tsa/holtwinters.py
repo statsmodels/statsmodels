@@ -603,13 +603,14 @@ class HoltWintersResults(Results):
 
         # set initial values
         # (notation as in https://otexts.com/fpp2/ets.html)
+        # using lvl instead of l because of E741
         y = np.empty((steps, nsim))
-        l = np.empty((steps + 1, nsim))
+        lvl = np.empty((steps + 1, nsim))
         b = np.empty((steps + 1, nsim))
         s = np.empty((steps + m, nsim))
 
         # uses python's index wrapping
-        l[-1,:] = self.level[start]
+        lvl[-1,:] = self.level[start]
         b[-1,:] = self.slope[start]
         if start == -1:
             s[-m:,:] = np.tile(self.season[-m:], (nsim, 1)).T
@@ -684,32 +685,32 @@ class HoltWintersResults(Results):
         if error == 'add':
             for t in range(steps):
                 eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
-                eps_b = eps_l/l[t-1,:] if mul_trend else eps_l
+                eps_b = eps_l/lvl[t-1,:] if mul_trend else eps_l
                 eps_s = (
-                    eps[t,:]/op_b(l[t-1,:], op_d(b[t-1,:], phi))
+                    eps[t,:]/op_b(lvl[t-1,:], op_d(b[t-1,:], phi))
                     if mul_seasonal
                     else eps[t,:]
                 )
 
-                y[t,:] = op_s(op_b(l[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) + eps[t,:]
-                l[t,:] = op_b(l[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
+                y[t,:] = op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) + eps[t,:]
+                lvl[t,:] = op_b(lvl[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
                 b[t,:] = op_d(b[t-1,:], phi) + beta*eps_b
                 s[t,:] = s[t-m,:] + gamma*eps_s
         else:
             for t in range(steps):
                 eps_l = 0 if mul_seasonal else eps[t,:]*s[t-m,:]
                 eps_b = (
-                    eps_l/l[t-1,:] if mul_trend else eps[t,:]*l[t-1,:]+eps_l
+                    eps_l/lvl[t-1,:] if mul_trend else eps[t,:]*lvl[t-1,:]+eps_l
                 )
                 eps_s = (
-                    0 if mul_seasonal else eps[t,:]*(op_b(l[t-1,:], op_d(b[t-1,:], phi)))
+                    0 if mul_seasonal else eps[t,:]*(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)))
                 )
 
                 y[t,:] = (
-                    op_s(op_b(l[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) * (1+eps[t,:])
+                    op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) * (1+eps[t,:])
                 )
-                l[t,:] = (
-                    op_b(l[t-1,:], op_d(b[t-1,:], phi))*(1+alpha*eps[t,:]) + alpha*eps_l
+                lvl[t,:] = (
+                    op_b(lvl[t-1,:], op_d(b[t-1,:], phi))*(1+alpha*eps[t,:]) + alpha*eps_l
                 )
                 b[t,:] = op_d(b[t-1,:], phi)*(1+beta*eps[t,:]) + beta*eps_b
                 s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
