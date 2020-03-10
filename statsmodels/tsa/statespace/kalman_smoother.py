@@ -709,6 +709,201 @@ class SmootherResults(FilterResults):
             self.scaled_smoothed_estimator_cov /= self.scale
             self.smoothing_error /= self.scale
 
+    def smoothed_state_autocovariance(self, lag=1, t=None, start=None,
+                                      end=None, forward_autocovariances=False,
+                                      extend_kwargs=None):
+        r"""
+        Compute state vector autocovariances, conditional on the full dataset
+
+        Parameters
+        ----------
+        lag : int, optional
+            The lag of the autocovariance, must be at least 1. Default is 1.
+        t : int, optional
+            A specific period for which to compute and return the
+            autocovariance. Cannot be used in combination with `start` or
+            `end`. See the Returns section for details on how this
+            parameter affects what is what is returned.
+        start : int, optional
+            The first period to compute and return the autocovariance for.
+            Cannot be used in combination with the `t` argument. See the
+            Returns section for details on how this parameter affects what
+            is what is returned. Default is 0.
+        end : int, optional
+            The last period to compute and return autocovariances. Cannot be
+            used in combination with the `t` argument. Default is `nobs + 1`.
+        forward_autocovariances : bool, optional
+            Flag to return forward autocovariances, Cov(t, t+j), rather than
+            the default backward covariances, Cov(t, t-j). See the Notes
+            section for more details on this difference. Default is False (so
+            that backward autocovariances are returned by default).
+        extend_kwargs : dict, optional
+            Keyword arguments to pass to `Representation.extend` when handling
+            out-of-sample autocovariance computations for time-varying state
+            space models.
+
+        Returns
+        -------
+        acov : ndarray
+            Autocovariances, shaped `(k_states, k_states, n)`, if `t` is None,
+            or `(k_states, k_states)` if the argument `t` is not None. In the
+            default case (when `t`, `start`, and `end` are all None), then
+            `n = nobs + 1`, and the third axis runs from `i=0` to `i=mod.nobs`.
+
+            For example, if `lag=1` and `forward_autocovariances=False`, then
+            `acov[..., 1]` (or the result of calling this method with `t=1`) is
+            :math:`Cov(\alpha_2 - \hat \alpha_2, \alpha_1 - \hat \alpha_1)`.
+
+            As a second example, if `lag=2` and `forward_autocovariances=True`,
+            then `acov[..., i]` (or the result of calling this method
+            with `t=0`) is
+            :math:`Cov(\alpha_1 - \hat \alpha_1, \alpha_3 - \hat \alpha_3)`.
+
+        Notes
+        -----
+        By default, this method computes:
+
+        .. math::
+
+            Cov(\alpha_t - \hat \alpha_t, \alpha_{t - j} - \hat \alpha_{t - j})
+
+        where the `lag` argument determines the autocovariance order :math:`j`.
+        This method cannot compute values associated with time points prior to
+        the sample, and so it returns a matrix of NaN values for these time
+        points. Specifically, for any call, the first `lag` entries in the time
+        dimension will be set to NaN vlaues. For example, if `lag=2` and the
+        output is saved as `acov`, then `acov[..., 0]` and `acov[..., 1]` will
+        be matrices filled with NaN values.
+
+        If the argument `forward_autocovariances=True` is used, then this
+        method instead computes:
+
+        .. math::
+
+            Cov(\alpha_t - \hat \alpha_t, \alpha_{t + j} - \hat \alpha_{t + j})
+
+        This method currently does not compute values associated with time
+        points that are two observations after the end of the sample or more,
+        and so, similarly to the backwards case, it will return a matrix of
+        NaNs for these time points. For
+        example,  or if `forward_autocovariances=True`, `lag=2`, and the
+        output is saved as `acov`, then `acov[..., -2]` and `acov[..., -1]`
+        will be matrices filled with NaN values.
+
+        See [1]_, Chapter 4.7, for all details.
+
+        The `t` and `start`/`end` parameters compute and return only the
+        requested autocovariances. As a result, using these parameters is
+        recommended to reduce the computational burden, particularly if the
+        number of observations and/or the dimension of the state vector is
+        large.
+
+        References
+        ----------
+        .. [1] Durbin, James, and Siem Jan Koopman. 2012.
+               Time Series Analysis by State Space Methods: Second Edition.
+               Oxford University Press.
+        """
+        if t is not None and (start is not None or end is not None):
+            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+        if t is not None:
+            start = t
+            end = t + 1
+        elif start is None and end is None:
+            start = 0
+            end = self.nobs + 1
+
+        if start is not None and end is None:
+            end = self.nobs + 1
+        if end is not None and start is None:
+            start = 0
+
+        if start < 0 or end < 0:
+            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+        if end < start:
+            raise ValueError('`end` must be after `start`')
+
+        if extend_kwargs is None:
+            extend_kwargs = {}
+
+        # We already have smoothed lag-one autocovariances
+        if (lag == 1 and self.smoothed_state_autocov is not None and
+                end < self.nobs + 2):
+            nans = np.zeros((self.k_states, self.k_states, 1)) * np.nan
+            if forward_autocovariances:
+                acov = np.concatenate(
+                    (self.smoothed_state_autocov, nans), axis=2).T
+            else:
+                acov = np.concatenate((nans, self.smoothed_state_autocov),
+                                      axis=2).transpose(2, 0, 1)
+        else:
+            # We only want to compute what's actually necessary, but the input
+            # arrays, especially P, below, require values outside of the range
+            # that is actually being requested
+            # So we need to figure out the range that will be passed to the
+            # computation, which is (_start, _end) and then translate the
+            # original range to be in that terms, which is the newly
+            # computed (start, end).
+            n = end - start
+            _start = max(0, start - lag)
+            _end = end + lag
+            start -= _start
+            end = start + n
+
+            # Get the required arrays, in-sample
+            LT = self.innovations_transition.transpose(2, 1, 0)[_start:_end]
+            _start_P = min(_start, self.nobs)
+            _end_P = _end if _end is None else _end + 1
+            P = self.predicted_state_cov.T[_start_P:_end_P]
+            N = self.scaled_smoothed_estimator_cov.T[_start:_end]
+
+            # If applicable, get the required arrays, out-of-sample
+            if _end - lag > self.nobs + 2:
+                oos_nobs = (_end - 1 - lag) - self.nobs
+                oos_endog = np.zeros((oos_nobs, self.k_endog)) * np.nan
+
+                oos_mod = self.model.extend(oos_endog, start=self.nobs,
+                                            **extend_kwargs)
+                oos_mod.initialize_known(
+                    self.predicted_state[..., self.nobs],
+                    self.predicted_state_cov[..., self.nobs])
+                oos_res = oos_mod.smooth()
+
+                LT = np.concatenate(
+                    (LT, oos_res.innovations_transition.transpose(2, 1, 0)),
+                    axis=0)
+                P = np.concatenate((P, oos_res.predicted_state_cov.T[1:]),
+                                   axis=0)
+                N = np.concatenate(
+                    (N, oos_res.scaled_smoothed_estimator_cov.T), axis=0)
+
+            # Intermediate computations
+            tmpLT = np.eye(self.k_states)[None, :, :]
+            length = P.shape[0] - lag  # this is the required length of LT
+            for i in range(1, lag + 1):
+                tmpLT = LT[lag - i:length + lag - i] @ tmpLT
+            eye = np.eye(self.k_states)[None, ...]
+
+            acov = np.zeros_like(P)
+            if forward_autocovariances:
+                # Cov(t, t + lag)
+                acov[-lag:] = np.nan
+                acov[:-lag] = P[:-lag] @ tmpLT @ (eye - N[lag - 1:] @ P[lag:])
+            else:
+                # Cov(t, t - lag)
+                acov[:lag] = np.nan
+                acov[lag:] = np.transpose(
+                    P[:-lag] @ tmpLT @ (eye - N[lag - 1:] @ P[lag:]),
+                    (0, 2, 1))
+
+        # Select only the requested autocovariances
+        if t is not None:
+            acov = acov[start]
+        else:
+            acov = acov[start:end].transpose(1, 2, 0)
+
+        return acov
+
     def _get_smoothed_forecasts(self):
         if self._smoothed_forecasts is None:
             # Initialize empty arrays

@@ -8,6 +8,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from scipy.stats import ortho_group
 import pytest
 from numpy.testing import assert_, assert_allclose
 
@@ -332,20 +333,36 @@ class TVSS(mlemodel.MLEModel):
     system matrices. When used in a test, that test should use
     `reset_randomstate` to ensure consistent test runs.
     """
-    def __init__(self, endog):
+    def __init__(self, endog, _k_states=None):
         k_states = 2
         k_posdef = 2
-        super(TVSS, self).__init__(endog, k_states=k_states, k_posdef=k_posdef,
-                                   initialization='diffuse')
+        # Allow subcasses to add additional states
+        if _k_states is None:
+            _k_states = k_states
+        super(TVSS, self).__init__(endog, k_states=_k_states,
+                                   k_posdef=k_posdef, initialization='diffuse')
 
         self['obs_intercept'] = np.random.normal(
             size=(self.k_endog, self.nobs))
-        self['design'] = np.random.normal(
-            size=(self.k_endog, self.k_states, self.nobs))
-        self['transition'] = np.random.normal(
-            size=(self.k_states, self.k_states, self.nobs))
-        self['selection'] = np.random.normal(
-            size=(self.k_states, self.ssm.k_posdef, self.nobs))
+        self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
+        self['transition'] = np.zeros(
+            (self.k_states, self.k_states, self.nobs))
+        self['selection'] = np.zeros(
+            (self.k_states, self.ssm.k_posdef, self.nobs))
+        self['design', :, :k_states, :] = np.random.normal(
+            size=(self.k_endog, k_states, self.nobs))
+        # For the transition matrices, enforce eigenvalues not too far outside
+        # unit circle. Otherwise, the random draws will often lead to large
+        # eigenvalues that cause the covariance matrices to blow up to huge
+        # values during long periods of missing data, which leads to numerical
+        # problems and essentially spurious test failures
+        D = [np.diag(d)
+             for d in np.random.uniform(-1.1, 1.1, size=(self.nobs, k_states))]
+        Q = ortho_group.rvs(k_states, size=self.nobs)
+        self['transition', :k_states, :k_states, :] = (
+            Q @ D @ Q.transpose(0, 2, 1)).transpose(1, 2, 0)
+        self['selection', :k_states, :, :] = np.random.normal(
+            size=(k_states, self.ssm.k_posdef, self.nobs))
 
         # Need to make sure the covariances are positive definite
         H05 = np.random.normal(size=(self.k_endog, self.k_endog, self.nobs))
