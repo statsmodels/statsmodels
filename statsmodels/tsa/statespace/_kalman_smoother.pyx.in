@@ -296,6 +296,10 @@ cdef class {{prefix}}KalmanSmoother(object):
         dim3[0] = self.kfilter.k_posdef; dim3[1] = self.kfilter.k_posdef; dim3[2] = self.model.nobs;
         self.smoothed_state_disturbance_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
+        # Innovations transition matrix (L_t = T_t - K_t Z_t)
+        dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs
+        self.innovations_transition = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
         # Smoothed state autocovariance arrays
         dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs
         self.smoothed_state_autocov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
@@ -357,6 +361,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             'smoothed_measurement_disturbance_cov': np.array(self.smoothed_measurement_disturbance_cov, copy=True, order='F'),
             'smoothed_state_disturbance_cov': np.array(self.smoothed_state_disturbance_cov, copy=True, order='F'),
             'smoothed_state_autocov': np.array(self.smoothed_state_autocov, copy=True, order='F'),
+            'innovations_transition': np.array(self.smoothed_state_autocov, copy=True, order='F'),
             'tmp_autocov': np.array(self.tmp_autocov, copy=True, order='F'),
             'scaled_smoothed_diffuse_estimator': np.array(self.scaled_smoothed_diffuse_estimator, copy=True, order='F'),
             'scaled_smoothed_diffuse1_estimator_cov': np.array(self.scaled_smoothed_diffuse1_estimator_cov, copy=True, order='F'),
@@ -383,6 +388,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         self.smoothed_measurement_disturbance_cov = state['smoothed_measurement_disturbance_cov']
         self.smoothed_state_disturbance_cov = state['smoothed_state_disturbance_cov']
         self.smoothed_state_autocov = state['smoothed_state_autocov']
+        self.innovations_transition = state['innovations_transition']
         self.tmp_autocov = state['tmp_autocov']
         self.scaled_smoothed_diffuse_estimator = state['scaled_smoothed_diffuse_estimator']
         self.scaled_smoothed_diffuse1_estimator_cov = state['scaled_smoothed_diffuse1_estimator_cov']
@@ -512,7 +518,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         """
         Perform an iteration of the Kalman smoother
         """
-        cdef int t
+        cdef int t, inc = 1
         cdef int diffuse = self.t < self.kfilter.nobs_diffuse
 
         # Get time subscript, and stop the iterator if at the end
@@ -554,6 +560,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
         # Smoothed state autocovariance matrix
+        blas.{{prefix}}copy(&self.kfilter.k_states2, self._tmpL, &inc, self._innovations_transition, &inc)
         if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
             if diffuse:
                 {{prefix}}smoothed_state_autocov_univariate_diffuse(self, self.kfilter, self.model)
@@ -698,6 +705,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         self._smoothed_measurement_disturbance_cov = &self.smoothed_measurement_disturbance_cov[0, 0, t]
         self._smoothed_state_disturbance_cov = &self.smoothed_state_disturbance_cov[0, 0, t]
 
+        self._innovations_transition = &self.innovations_transition[0, 0, t]
         self._smoothed_state_autocov = &self.smoothed_state_autocov[0, 0, t]
 
         # Diffuse

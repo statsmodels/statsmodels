@@ -548,7 +548,7 @@ class SmootherResults(FilterResults):
         'smoothed_state', 'smoothed_state_cov', 'smoothed_state_autocov',
         'smoothed_measurement_disturbance', 'smoothed_state_disturbance',
         'smoothed_measurement_disturbance_cov',
-        'smoothed_state_disturbance_cov'
+        'smoothed_state_disturbance_cov', 'innovations_transition'
     ]
 
     _smoother_options = KalmanSmoother.smoother_outputs
@@ -658,6 +658,9 @@ class SmootherResults(FilterResults):
                             np.array(getattr(smoother, name, None), copy=True))
             else:
                 setattr(self, name, None)
+
+        self.innovations_transition = (
+            np.array(smoother.innovations_transition, copy=True))
 
         # Diffuse objects
         self.scaled_smoothed_diffuse_estimator = None
