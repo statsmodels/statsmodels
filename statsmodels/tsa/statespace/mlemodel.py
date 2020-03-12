@@ -213,9 +213,17 @@ class MLEModel(tsbase.TimeSeriesModel):
             else:
                 raise NotImplementedError
         elif isinstance(self._index, pd.RangeIndex):
-            index = pd.RangeIndex(
-                self._index.start, self._index.stop + self._index.step,
-                self._index.step)
+            # COMPAT: pd.RangeIndex does not have start, stop, step prior to
+            #         pandas 0.25
+            try:
+                start = self._index.start
+                stop = self._index.stop
+                step = self._index.step
+            except AttributeError:
+                start = self._index._start
+                stop = self._index._stop
+                step = self._index._step
+            index = pd.RangeIndex(start, stop + step, step)
         elif isinstance(self._index, pd.Int64Index):
             # The only valid Int64Index is a full, incrementing index, so this
             # is general
