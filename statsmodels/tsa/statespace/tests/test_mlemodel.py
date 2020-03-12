@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace import (sarimax, varmax, kalman_filter,
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.datasets import nile
 from numpy.testing import (
-    assert_almost_equal, assert_equal, assert_allclose, assert_raises)
+    assert_, assert_almost_equal, assert_equal, assert_allclose, assert_raises)
 from statsmodels.tsa.statespace.tests.results import (
     results_sarimax, results_var_misc)
 
@@ -1108,3 +1108,101 @@ def test_integer_params():
     res = mod.filter([1, 0])
     p = res.predict(end=5, dynamic=True, exog=[3, 3, 4])
     assert_equal(p.dtype, np.float64)
+
+
+def check_states_index(states, ix, predicted_ix, cols):
+    predicted_cov_ix = pd.MultiIndex.from_product(
+        [predicted_ix, cols]).swaplevel()
+    filtered_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
+    smoothed_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
+
+    # Predicted
+    assert_(states.predicted.index.equals(predicted_ix))
+    assert_(states.predicted.columns.equals(cols))
+
+    assert_(states.predicted_cov.index.equals(predicted_cov_ix))
+    assert_(states.predicted.columns.equals(cols))
+
+    # Filtered
+    assert_(states.filtered.index.equals(ix))
+    assert_(states.filtered.columns.equals(cols))
+
+    assert_(states.filtered_cov.index.equals(filtered_cov_ix))
+    assert_(states.filtered.columns.equals(cols))
+
+    # Smoothed
+    assert_(states.smoothed.index.equals(ix))
+    assert_(states.smoothed.columns.equals(cols))
+
+    assert_(states.smoothed_cov.index.equals(smoothed_cov_ix))
+    assert_(states.smoothed.columns.equals(cols))
+
+
+def test_states_index_periodindex():
+    nobs = 10
+    ix = pd.period_range(start='2000', periods=nobs, freq='M')
+    endog = pd.Series(np.zeros(nobs), index=ix)
+
+    mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
+    res = mod.smooth([0.5, 0.1, 1.0])
+
+    predicted_ix = pd.period_range(start=ix[0], periods=nobs + 1, freq='M')
+    cols = pd.Index(['state.0', 'state.1'])
+
+    check_states_index(res.states, ix, predicted_ix, cols)
+
+
+def test_states_index_dateindex():
+    nobs = 10
+    ix = pd.date_range(start='2000', periods=nobs, freq='M')
+    endog = pd.Series(np.zeros(nobs), index=ix)
+
+    mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
+    res = mod.smooth([0.5, 0.1, 1.0])
+
+    predicted_ix = pd.date_range(start=ix[0], periods=nobs + 1, freq='M')
+    cols = pd.Index(['state.0', 'state.1'])
+
+    check_states_index(res.states, ix, predicted_ix, cols)
+
+
+def test_states_index_int64index():
+    nobs = 10
+    ix = pd.Int64Index(np.arange(10))
+    endog = pd.Series(np.zeros(nobs), index=ix)
+
+    mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
+    res = mod.smooth([0.5, 0.1, 1.0])
+
+    predicted_ix = pd.Int64Index(np.arange(11))
+    cols = pd.Index(['state.0', 'state.1'])
+
+    check_states_index(res.states, ix, predicted_ix, cols)
+
+
+def test_states_index_rangeindex():
+    nobs = 10
+
+    # Basic range index
+    ix = pd.RangeIndex(10)
+    endog = pd.Series(np.zeros(nobs), index=ix)
+
+    mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
+    res = mod.smooth([0.5, 0.1, 1.0])
+
+    predicted_ix = pd.RangeIndex(11)
+    cols = pd.Index(['state.0', 'state.1'])
+
+    check_states_index(res.states, ix, predicted_ix, cols)
+
+    # More complex range index
+    ix = pd.RangeIndex(2, 32, 3)
+    endog = pd.Series(np.zeros(nobs), index=ix)
+
+    mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
+    res = mod.smooth([0.5, 0.1, 1.0])
+
+    predicted_ix = pd.RangeIndex(2, 35, 3)
+    cols = pd.Index(['state.0', 'state.1'])
+
+    check_states_index(res.states, ix, predicted_ix, cols)
