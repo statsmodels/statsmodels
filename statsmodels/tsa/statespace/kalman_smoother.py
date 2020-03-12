@@ -858,8 +858,8 @@ class SmootherResults(FilterResults):
             N = self.scaled_smoothed_estimator_cov.T[_start:_end]
 
             # If applicable, get the required arrays, out-of-sample
-            if _end - lag > self.nobs + 2:
-                oos_nobs = (_end - 1 - lag) - self.nobs
+            oos_nobs = (_end - 1 - lag) - self.nobs
+            if oos_nobs > 0:
                 oos_endog = np.zeros((oos_nobs, self.k_endog)) * np.nan
 
                 oos_mod = self.model.extend(oos_endog, start=self.nobs,
