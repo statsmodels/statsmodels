@@ -1016,8 +1016,8 @@ class GEE(GLM):
                 wresid = resid
                 wdmat = dmat
 
-            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
-                                                           sdev, (wdmat, wresid))
+            rslt = self.cov_struct.covariance_matrix_solve(
+                    expval, i, sdev, (wdmat, wresid))
             if rslt is None:
                 return None, None
             vinv_d, vinv_resid = tuple(rslt)
