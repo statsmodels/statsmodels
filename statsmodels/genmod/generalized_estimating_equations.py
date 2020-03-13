@@ -213,9 +213,7 @@ _gee_init_doc = """
         If true, the dependence parameters are optimized, otherwise
         they are held fixed at their starting values.
     weights : array_like
-        An array of weights to use in the analysis.  The weights must
-        be constant within each group.  These correspond to
-        probability weights (pweights) in Stata.
+        An array of case weights to use in the analysis.
     %(extra_params)s
 
     See Also
@@ -593,8 +591,6 @@ class GEE(GLM):
 
         if self.weights is not None:
             self.weights_li = self.cluster_list(self.weights)
-            self.weights_li = [x[0] for x in self.weights_li]
-            self.weights_li = np.asarray(self.weights_li)
 
         self.num_group = len(self.endog_li)
 
@@ -914,14 +910,16 @@ class GEE(GLM):
                 continue
 
             expval, _ = cached_means[i]
-
-            f = self.weights_li[i] if self.weights is not None else 1.
-
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
 
-            scale += f * np.sum(resid ** 2)
-            fsum += f * len(endog[i])
+            if self.weights is not None:
+                f = self.weights_li[i]
+                scale += np.sum(f * (resid ** 2))
+                fsum += f.sum()
+            else:
+                scale += np.sum(resid ** 2)
+                fsum += len(resid)
 
         scale /= (fsum * (nobs - self.ddof_scale) / float(nobs))
 
@@ -996,6 +994,7 @@ class GEE(GLM):
 
         endog = self.endog_li
         exog = self.exog_li
+        weights = getattr(self, "weights_li", None)
 
         cached_means = self.cached_means
 
@@ -1009,16 +1008,22 @@ class GEE(GLM):
             dmat = self.mean_deriv(exog[i], lpr)
             sdev = np.sqrt(varfunc(expval))
 
+            if weights is not None:
+                w = weights[i]
+                wresid = resid * w
+                wdmat = dmat * w[:, None]
+            else:
+                wresid = resid
+                wdmat = dmat
+
             rslt = self.cov_struct.covariance_matrix_solve(expval, i,
-                                                           sdev, (dmat, resid))
+                                                           sdev, (wdmat, wresid))
             if rslt is None:
                 return None, None
             vinv_d, vinv_resid = tuple(rslt)
 
-            f = self.weights_li[i] if self.weights is not None else 1.
-
-            bmat += f * np.dot(dmat.T, vinv_d)
-            score += f * np.dot(dmat.T, vinv_resid)
+            bmat += np.dot(dmat.T, vinv_d)
+            score += np.dot(dmat.T, vinv_resid)
 
         update = np.linalg.solve(bmat, score)
 
@@ -1077,6 +1082,7 @@ class GEE(GLM):
 
         endog = self.endog_li
         exog = self.exog_li
+        weights = getattr(self, "weights_li", None)
         varfunc = self.family.variance
         cached_means = self.cached_means
 
@@ -1090,16 +1096,22 @@ class GEE(GLM):
             dmat = self.mean_deriv(exog[i], lpr)
             sdev = np.sqrt(varfunc(expval))
 
+            if weights is not None:
+                w = weights[i]
+                wresid = resid * w
+                wdmat = dmat * w[:, None]
+            else:
+                wresid = resid
+                wdmat = dmat
+
             rslt = self.cov_struct.covariance_matrix_solve(
-                expval, i, sdev, (dmat, resid))
+                expval, i, sdev, (wdmat, wresid))
             if rslt is None:
                 return None, None, None, None
             vinv_d, vinv_resid = tuple(rslt)
 
-            f = self.weights_li[i] if self.weights is not None else 1.
-
-            bmat += f * np.dot(dmat.T, vinv_d)
-            dvinv_resid = f * np.dot(dmat.T, vinv_resid)
+            bmat += np.dot(dmat.T, vinv_d)
+            dvinv_resid = np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
 
         scale = self.estimate_scale()
