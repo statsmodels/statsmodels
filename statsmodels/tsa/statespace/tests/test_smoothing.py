@@ -1066,7 +1066,8 @@ def get_acov_model(missing, filter_univariate, tvp, oos=None, params=None,
         endog = endog.reindex(new_ix)
 
     if not tvp:
-        mod = varmax.VARMAX(endog, order=(4, 0, 0), measurement_error=True)
+        mod = varmax.VARMAX(endog, order=(4, 0, 0), measurement_error=True,
+                            tolerance=0)
         mod.ssm.filter_univariate = filter_univariate
         if params is None:
             params = mod.start_params
@@ -1096,15 +1097,15 @@ def test_smoothed_state_autocovariances_backwards(missing, filter_univariate,
 
     # Test all "backward" autocovariances: Cov(t, t-lag)
     acov1 = res.smoothed_state_autocovariance(1).transpose(2, 0, 1)
-    assert_allclose(acov1[1:, :2, :2], desired_acov1[1:], atol=1e-11)
+    assert_allclose(acov1[1:, :2, :2], desired_acov1[1:])
     assert_equal(acov1[:1], np.nan)
 
     acov2 = res.smoothed_state_autocovariance(2).transpose(2, 0, 1)
-    assert_allclose(acov2[2:, :2, :2], desired_acov2[2:], atol=1e-11)
+    assert_allclose(acov2[2:, :2, :2], desired_acov2[2:])
     assert_equal(acov2[:2], np.nan)
 
     acov3 = res.smoothed_state_autocovariance(3).transpose(2, 0, 1)
-    assert_allclose(acov3[3:, :2, :2], desired_acov3[3:], atol=1e-10)
+    assert_allclose(acov3[3:, :2, :2], desired_acov3[3:])
     assert_equal(acov3[:3], np.nan)
 
     # Test for specific autocovariances
@@ -1178,18 +1179,18 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate,
     # For Cov(t, t+lag), the first out-of-sample forward covariance,
     # Cov(T, T+1), is already available, so we dno't need extend kwaargs
     acov1 = res.smoothed_state_autocovariance(-1).transpose(2, 0, 1)
-    assert_allclose(acov1[:-1, :2, :2], desired_acov1[1:], atol=1e-10)
-    assert_allclose(acov1[-2:, :2, :2], oos_cov[-5:-3, 2:4, :2], atol=1e-10)
+    assert_allclose(acov1[:-1, :2, :2], desired_acov1[1:])
+    assert_allclose(acov1[-2:, :2, :2], oos_cov[-5:-3, 2:4, :2])
 
     acov2 = res.smoothed_state_autocovariance(
         -2, extend_kwargs=extend_kwargs1).transpose(2, 0, 1)
-    assert_allclose(acov2[:-2, :2, :2], desired_acov2[2:], atol=1e-10)
-    assert_allclose(acov2[-2:, :2, :2], oos_cov[-4:-2, 4:6, :2], atol=1e-10)
+    assert_allclose(acov2[:-2, :2, :2], desired_acov2[2:])
+    assert_allclose(acov2[-2:, :2, :2], oos_cov[-4:-2, 4:6, :2])
 
     acov3 = res.smoothed_state_autocovariance(
         -3, extend_kwargs=extend_kwargs2).transpose(2, 0, 1)
-    assert_allclose(acov3[:-3, :2, :2], desired_acov3[3:], atol=1e-10)
-    assert_allclose(acov3[-3:, :2, :2], oos_cov[-4:-1, 6:8, :2], atol=1e-10)
+    assert_allclose(acov3[:-3, :2, :2], desired_acov3[3:])
+    assert_allclose(acov3[-3:, :2, :2], oos_cov[-4:-1, 6:8, :2])
 
     # Test for specific autocovariances
     acov1 = res.smoothed_state_autocovariance(
@@ -1203,10 +1204,10 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate,
 
     acov2 = res.smoothed_state_autocovariance(
         -2, t=mod.nobs, extend_kwargs=extend_kwargs2)
-    assert_allclose(acov2[:2, :2], oos_cov[-2, 4:6, :2], atol=1e-10)
+    assert_allclose(acov2[:2, :2], oos_cov[-2, 4:6, :2])
     acov2 = res.smoothed_state_autocovariance(
         -2, t=mod.nobs - 1, extend_kwargs=extend_kwargs1)
-    assert_allclose(acov2[:2, :2], oos_cov[-3, 4:6, :2], atol=1e-10)
+    assert_allclose(acov2[:2, :2], oos_cov[-3, 4:6, :2])
     acov2 = res.smoothed_state_autocovariance(-2, t=0)
     assert_allclose(acov2[:2, :2], desired_acov2[0 + 2])
     acov2 = res.smoothed_state_autocovariance(
@@ -1265,7 +1266,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing,
     acov1 = res.smoothed_state_autocovariance(
         -1, end=mod_oos.nobs, extend_kwargs=extend_kwargs).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs, mod.k_states, mod.k_states))
-    assert_allclose(acov1[:, :2, :2], desired_acov1[1:], atol=1e-10)
+    assert_allclose(acov1[:, :2, :2], desired_acov1[1:])
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 1, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1279,7 +1280,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing,
         -2, end=mod_oos.nobs - 1,
         extend_kwargs=extend_kwargs).transpose(2, 0, 1)
     assert_equal(acov2.shape, (mod_oos.nobs - 1, mod.k_states, mod.k_states))
-    assert_allclose(acov2[:, :2, :2], desired_acov2[2:], atol=1e-10)
+    assert_allclose(acov2[:, :2, :2], desired_acov2[2:])
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 2, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1288,7 +1289,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing,
         -3, end=mod_oos.nobs - 2,
         extend_kwargs=extend_kwargs).transpose(2, 0, 1)
     assert_equal(acov3.shape, (mod_oos.nobs - 2, mod.k_states, mod.k_states))
-    assert_allclose(acov3[:, :2, :2], desired_acov3[3:], atol=1e-10)
+    assert_allclose(acov3[:, :2, :2], desired_acov3[3:])
 
 
 @pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])
@@ -1343,7 +1344,7 @@ def test_smoothed_state_autocovariances_backwards_oos(missing,
     acov1 = res.smoothed_state_autocovariance(
         1, end=end, extend_kwargs=extend_kwargs).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs + 1, mod.k_states, mod.k_states))
-    assert_allclose(acov1[1:, :2, :2], desired_acov1[1:], atol=1e-10)
+    assert_allclose(acov1[1:, :2, :2], desired_acov1[1:])
     # We cannot compute Cov(1, 0), so this is always NaNs
     assert_equal(acov1[:1], np.nan)
 
@@ -1352,7 +1353,7 @@ def test_smoothed_state_autocovariances_backwards_oos(missing,
     # is why we don't need to change `end` here relative to the lag=1 case
     acov2 = res.smoothed_state_autocovariance(
         2, end=end, extend_kwargs=extend_kwargs).transpose(2, 0, 1)
-    assert_allclose(acov2[2:, :2, :2], desired_acov2[2:], atol=1e-10)
+    assert_allclose(acov2[2:, :2, :2], desired_acov2[2:])
     # We cannot compute Cov(1, -1) or Cov(2, 0), so this is always NaNs
     assert_equal(acov2[:2], np.nan)
 
@@ -1362,7 +1363,7 @@ def test_smoothed_state_autocovariances_backwards_oos(missing,
     # cases
     acov3 = res.smoothed_state_autocovariance(
         3, end=end, extend_kwargs=extend_kwargs).transpose(2, 0, 1)
-    assert_allclose(acov3[3:, :2, :2], desired_acov3[3:], atol=1e-10)
+    assert_allclose(acov3[3:, :2, :2], desired_acov3[3:])
     # We cannot compute Cov(1, -2), Cov(2, -1), or Cov(3, 0), so this is always
     # NaNs
     assert_equal(acov3[:3], np.nan)
