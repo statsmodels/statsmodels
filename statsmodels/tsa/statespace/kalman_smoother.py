@@ -709,88 +709,200 @@ class SmootherResults(FilterResults):
             self.scaled_smoothed_estimator_cov /= self.scale
             self.smoothing_error /= self.scale
 
+    def _smoothed_state_autocovariance(self, shift, start, end,
+                                       extend_kwargs=None):
+        """
+        Parameters
+        ----------
+        shift : int
+            The number of period to shift forwards when computing the
+            autocovariance. This has the opposite sign as `lag` from the
+            `smoothed_state_autocovariance` method.
+        start : int, optional
+            The start of the interval (inclusive) of autocovariances to compute
+            and return.
+        end : int, optional
+            The end of the interval (exclusive) autocovariances to compute and
+            return. Note that since it is an exclusive endpoint, the returned
+            autocovariances do not include the value at this index.
+        extend_kwargs : dict, optional
+            Keyword arguments containing updated state space system matrices
+            for handling out-of-sample autocovariance computations in
+            time-varying state space models.
+
+        """
+        if extend_kwargs is None:
+            extend_kwargs = {}
+
+        # Size of returned array in the time dimension
+        n = end - start
+
+        n_presample = max(0, -start)
+        if shift == 0:
+            max_insample = self.nobs - shift
+        else:
+            max_insample = self.nobs - shift + 1
+        n_postsample = max(0, end - max_insample)
+
+        # Get full in-sample arrays
+        if shift != 0:
+            L = self.innovations_transition
+            P = self.predicted_state_cov
+            N = self.scaled_smoothed_estimator_cov
+        else:
+            acov = self.smoothed_state_cov
+
+        # If applicable, append out-of-sample arrays
+        if n_postsample > 0:
+            # Note: we need 1 less than the number of post
+            endog = np.zeros((n_postsample, self.k_endog)) * np.nan
+            mod = self.model.extend(endog, start=self.nobs, **extend_kwargs)
+            mod.initialize_known(self.predicted_state[..., self.nobs],
+                                 self.predicted_state_cov[..., self.nobs])
+            res = mod.smooth()
+
+            if shift != 0:
+                L = np.concatenate((L, res.innovations_transition), axis=2)
+                P = np.concatenate((P, res.predicted_state_cov[..., 1:]),
+                                   axis=2)
+                N = np.concatenate((N, res.scaled_smoothed_estimator_cov),
+                                   axis=2)
+            else:
+                acov = np.concatenate((acov, res.predicted_state_cov), axis=2)
+
+        if shift != 0:
+            # Subset to appropriate start, end
+            start_insample = max(0, start)
+            LT = L[..., start_insample:end + shift - 1].T
+            P = P[..., start_insample:end + shift].T
+            N = N[..., start_insample:end + shift - 1].T
+
+            # Intermediate computations
+            tmpLT = np.eye(self.k_states)[None, :, :]
+            length = P.shape[0] - shift  # this is the required length of LT
+            for i in range(1, shift + 1):
+                tmpLT = LT[shift - i:length + shift - i] @ tmpLT
+            eye = np.eye(self.k_states)[None, ...]
+
+            # Compute the autocovariance
+            acov = np.zeros((n, self.k_states, self.k_states))
+            acov[:start_insample - start] = np.nan
+            acov[start_insample - start:] = (
+                P[:-shift] @ tmpLT @ (eye - N[shift - 1:] @ P[shift:]))
+        else:
+            acov = acov.T[start:end]
+
+        return acov
+
     def smoothed_state_autocovariance(self, lag=1, t=None, start=None,
-                                      end=None, forward_autocovariances=False,
-                                      extend_kwargs=None):
+                                      end=None, extend_kwargs=None):
         r"""
         Compute state vector autocovariances, conditional on the full dataset
+
+        Computes:
+
+        .. math::
+
+            Cov(\alpha_t - \hat \alpha_t, \alpha_{t - j} - \hat \alpha_{t - j})
+
+        where the `lag` argument gives the value for :math:`j`. Thus when
+        the `lag` argument is positive, the autocovariance is between the
+        current and previous periods, while if `lag` is negative the
+        autocovariance is between the current and future periods.
 
         Parameters
         ----------
         lag : int, optional
-            The lag of the autocovariance, must be at least 1. Default is 1.
+            The number of period to shift when computing the autocovariance.
+            Default is 1.
         t : int, optional
             A specific period for which to compute and return the
             autocovariance. Cannot be used in combination with `start` or
             `end`. See the Returns section for details on how this
             parameter affects what is what is returned.
         start : int, optional
-            The first period to compute and return the autocovariance for.
-            Cannot be used in combination with the `t` argument. See the
-            Returns section for details on how this parameter affects what
-            is what is returned. Default is 0.
+            The start of the interval (inclusive) of autocovariances to compute
+            and return. Cannot be used in combination with the `t` argument.
+            See the Returns section for details on how this parameter affects
+            what is what is returned. Default is 0.
         end : int, optional
-            The last period to compute and return autocovariances. Cannot be
-            used in combination with the `t` argument. Default is `nobs + 1`.
-        forward_autocovariances : bool, optional
-            Flag to return forward autocovariances, Cov(t, t+j), rather than
-            the default backward covariances, Cov(t, t-j). See the Notes
-            section for more details on this difference. Default is False (so
-            that backward autocovariances are returned by default).
+            The end of the interval (exclusive) autocovariances to compute and
+            return. Note that since it is an exclusive endpoint, the returned
+            autocovariances do not include the value at this index. Cannot be
+            used in combination with the `t` argument. See the Returns section
+            for details on how this parameter affects what is what is returned
+            and what the default value is.
         extend_kwargs : dict, optional
-            Keyword arguments to pass to `Representation.extend` when handling
-            out-of-sample autocovariance computations for time-varying state
-            space models.
+            Keyword arguments containing updated state space system matrices
+            for handling out-of-sample autocovariance computations in
+            time-varying state space models.
 
         Returns
         -------
         acov : ndarray
-            Autocovariances, shaped `(k_states, k_states, n)`, if `t` is None,
-            or `(k_states, k_states)` if the argument `t` is not None. In the
-            default case (when `t`, `start`, and `end` are all None), then
-            `n = nobs + 1`, and the third axis runs from `i=0` to `i=mod.nobs`.
+            Array of autocovariance matrices. If the argument `t` is not
+            provided, then it is shaped `(k_states, k_states, n)`, while if `t`
+            given then the third axis is dropped and the array is shaped
+            `(k_states, k_states)`.
 
-            For example, if `lag=1` and `forward_autocovariances=False`, then
-            `acov[..., 1]` (or the result of calling this method with `t=1`) is
-            :math:`Cov(\alpha_2 - \hat \alpha_2, \alpha_1 - \hat \alpha_1)`.
+            The output under the default case differs somewhat based on the
+            state space model and the sign of the lag. To see how these cases
+            differ, denote the output at each time point as Cov(t, t-j). Then:
 
-            As a second example, if `lag=2` and `forward_autocovariances=True`,
-            then `acov[..., i]` (or the result of calling this method
-            with `t=0`) is
-            :math:`Cov(\alpha_1 - \hat \alpha_1, \alpha_3 - \hat \alpha_3)`.
+            - If `lag > 0` (and the model is either time-varying or
+              time-invariant), then the returned array is shaped `(*, *, nobs)`
+              and each entry [:, :, t] contains Cov(t, t-j). However, the model
+              does not have enough information to compute autocovariances in
+              the pre-sample period, so that we cannot compute Cov(1, 1-lag),
+              Cov(2, 2-lag), ..., Cov(lag, 0). Thus the first `lag` entries
+              have all values set to NaN.
+
+            - If the model is time-invariant and `lag < -1` or if `lag` is
+              0 or -1, and the model is either time-invariant or time-varying,
+              then the returned array is shaped `(*, *, nobs)` and each
+              entry [:, :, t] contains Cov(t, t+j). Moreover, all entries are
+              available (i.e. there are no NaNs).
+
+            - If the model is time-varying and `lag < -1` and `extend_kwargs`
+              is not provided, then the returned array is shaped
+              `(*, *, nobs - lag + 1)`.
+
+            - However, if the model is time-varying and `lag < -1`, then
+              `extend_kwargs` can be provided with `lag - 1` additional
+              matrices so that the returned array is shaped `(*, *, nobs)` as
+              usual.
+
+            More generally, the dimension of the last axis will be
+            `start - end`.
 
         Notes
         -----
-        By default, this method computes:
+        This method computes:
 
         .. math::
 
             Cov(\alpha_t - \hat \alpha_t, \alpha_{t - j} - \hat \alpha_{t - j})
 
-        where the `lag` argument determines the autocovariance order :math:`j`.
-        This method cannot compute values associated with time points prior to
-        the sample, and so it returns a matrix of NaN values for these time
-        points. Specifically, for any call, the first `lag` entries in the time
-        dimension will be set to NaN vlaues. For example, if `lag=2` and the
-        output is saved as `acov`, then `acov[..., 0]` and `acov[..., 1]` will
-        be matrices filled with NaN values.
+        where the `lag` argument determines the autocovariance order :math:`j`,
+        and `lag` is an integer (positive, zero, or negative). This method
+        cannot compute values associated with time points prior to the sample,
+        and so it returns a matrix of NaN values for these time points.
+        For example, if `start=0` and `lag=2`, then assuming the output is
+        assigned to the variable `acov`, we will have `acov[..., 0]` and
+        `acov[..., 1]` as matrices filled with NaN values.
 
-        If the argument `forward_autocovariances=True` is used, then this
-        method instead computes:
+        Based only on the "current" results object (i.e. the Kalman smoother
+        applied to the sample), there is not enough information to compute
+        Cov(t, t+j) for the last `lag - 1` observations of the sample. However,
+        the values can be computed for these time points using the transition
+        equation of the state space representation, and so for time-invariant
+        state space models we do compute these values. For time-varying models,
+        this can also be done, but updated state space matrices for the
+        out-of-sample time points must be provided via the `extend_kwargs`
+        argument.
 
-        .. math::
-
-            Cov(\alpha_t - \hat \alpha_t, \alpha_{t + j} - \hat \alpha_{t + j})
-
-        This method currently does not compute values associated with time
-        points that are two observations after the end of the sample or more,
-        and so, similarly to the backwards case, it will return a matrix of
-        NaNs for these time points. For
-        example,  or if `forward_autocovariances=True`, `lag=2`, and the
-        output is saved as `acov`, then `acov[..., -2]` and `acov[..., -1]`
-        will be matrices filled with NaN values.
-
-        See [1]_, Chapter 4.7, for all details.
+        See [1]_, Chapter 4.7, for all details about how these autocovariances
+        are computed.
 
         The `t` and `start`/`end` parameters compute and return only the
         requested autocovariances. As a result, using these parameters is
@@ -804,103 +916,82 @@ class SmootherResults(FilterResults):
                Time Series Analysis by State Space Methods: Second Edition.
                Oxford University Press.
         """
+        forward_autocovariances = False
+        if lag < 0:
+            lag = -lag
+            forward_autocovariances = True
+
+        # Handle `t`
         if t is not None and (start is not None or end is not None):
             raise ValueError('Cannot specify both `t` and `start` or `end`.')
         if t is not None:
             start = t
             end = t + 1
-        elif start is None and end is None:
-            start = 0
-            end = self.nobs + 1
 
-        if start is not None and end is None:
-            end = self.nobs + 1
-        if end is not None and start is None:
+        # Defaults
+        if start is None:
             start = 0
+        if end is None:
+            if forward_autocovariances and lag > 1 and extend_kwargs is None:
+                end = self.nobs - lag + 1
+            else:
+                end = self.nobs
+        if extend_kwargs is None:
+            extend_kwargs = {}
 
+        # Sanity checks
         if start < 0 or end < 0:
             raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
         if end < start:
             raise ValueError('`end` must be after `start`')
+        if lag == 0 and self.smoothed_state_cov is None:
+            raise RuntimeError('Cannot return smoothed state covariances'
+                               ' if those values have not been computed by'
+                               ' Kalman smoothing.')
 
-        if extend_kwargs is None:
-            extend_kwargs = {}
-
-        # We already have smoothed lag-one autocovariances
-        if (lag == 1 and self.smoothed_state_autocov is not None and
-                end < self.nobs + 2):
-            nans = np.zeros((self.k_states, self.k_states, 1)) * np.nan
-            if forward_autocovariances:
+        # We already have in-sample (+1 out-of-sample) smoothed covariances
+        if lag == 0 and end <= self.nobs + 1:
+            acov = self.smoothed_state_cov
+            if end == self.nobs + 1:
                 acov = np.concatenate(
-                    (self.smoothed_state_autocov, nans), axis=2).T
-            else:
-                acov = np.concatenate((nans, self.smoothed_state_autocov),
-                                      axis=2).transpose(2, 0, 1)
+                    (acov, self.predicted_state_cov[..., -1:]), axis=2)
+            acov = acov.T[start:end]
+        # In-sample, we can compute up to Cov(T, T+1) or Cov(T+1, T) and down
+        # to Cov(1, 2) or Cov(2, 1). So:
+        # - For lag=1 we set Cov(1, 0) = np.nan and then can compute up to T-1
+        #   in-sample values Cov(2, 1), ..., Cov(T, T-1) and the first
+        #   out-of-sample value Cov(T+1, T)
+        elif (lag == 1 and self.smoothed_state_autocov is not None and
+                not forward_autocovariances and end <= self.nobs + 1):
+            nans = np.zeros((self.k_states, self.k_states, lag)) * np.nan
+            acov = np.concatenate((nans, self.smoothed_state_autocov),
+                                  axis=2).transpose(2, 0, 1)[start:end]
+        # - For lag=-1 we can compute T in-sample values, Cov(1, 2), ...,
+        #   Cov(T, T+1) but we cannot compute the first out-of-sample value
+        #   Cov(T+1, T+2).
+        elif (lag == 1 and self.smoothed_state_autocov is not None and
+                forward_autocovariances and end < self.nobs + 1):
+            acov = self.smoothed_state_autocov.T[start:end]
+        # Otherwise, we need to compute additional values at the end of the
+        # sample
         else:
-            # We only want to compute what's actually necessary, but the input
-            # arrays, especially P, below, require values outside of the range
-            # that is actually being requested
-            # So we need to figure out the range that will be passed to the
-            # computation, which is (_start, _end) and then translate the
-            # original range to be in that terms, which is the newly
-            # computed (start, end).
-            n = end - start
-            _start = max(0, start - lag)
-            _end = end + lag
-            start -= _start
-            end = start + n
-
-            # Get the required arrays, in-sample
-            LT = self.innovations_transition.transpose(2, 1, 0)[_start:_end]
-            _start_P = min(_start, self.nobs)
-            _end_P = _end if _end is None else _end + 1
-            P = self.predicted_state_cov.T[_start_P:_end_P]
-            N = self.scaled_smoothed_estimator_cov.T[_start:_end]
-
-            # If applicable, get the required arrays, out-of-sample
-            oos_nobs = (_end - 1 - lag) - self.nobs
-            if oos_nobs > 0:
-                oos_endog = np.zeros((oos_nobs, self.k_endog)) * np.nan
-
-                oos_mod = self.model.extend(oos_endog, start=self.nobs,
-                                            **extend_kwargs)
-                oos_mod.initialize_known(
-                    self.predicted_state[..., self.nobs],
-                    self.predicted_state_cov[..., self.nobs])
-                oos_res = oos_mod.smooth()
-
-                LT = np.concatenate(
-                    (LT, oos_res.innovations_transition.transpose(2, 1, 0)),
-                    axis=0)
-                P = np.concatenate((P, oos_res.predicted_state_cov.T[1:]),
-                                   axis=0)
-                N = np.concatenate(
-                    (N, oos_res.scaled_smoothed_estimator_cov.T), axis=0)
-
-            # Intermediate computations
-            tmpLT = np.eye(self.k_states)[None, :, :]
-            length = P.shape[0] - lag  # this is the required length of LT
-            for i in range(1, lag + 1):
-                tmpLT = LT[lag - i:length + lag - i] @ tmpLT
-            eye = np.eye(self.k_states)[None, ...]
-
-            acov = np.zeros_like(P)
             if forward_autocovariances:
-                # Cov(t, t + lag)
-                acov[-lag:] = np.nan
-                acov[:-lag] = P[:-lag] @ tmpLT @ (eye - N[lag - 1:] @ P[lag:])
+                # Cov(t, t + lag), t = start, ..., end
+                acov = self._smoothed_state_autocovariance(
+                    lag, start, end, extend_kwargs=extend_kwargs)
             else:
-                # Cov(t, t - lag)
-                acov[:lag] = np.nan
-                acov[lag:] = np.transpose(
-                    P[:-lag] @ tmpLT @ (eye - N[lag - 1:] @ P[lag:]),
-                    (0, 2, 1))
+                # Cov(t, t + lag)' = Cov(t + lag, t),
+                # with t = start - lag, ..., end - lag
+                out = self._smoothed_state_autocovariance(
+                    lag, start - lag, end - lag, extend_kwargs=extend_kwargs)
+                acov = out.transpose(0, 2, 1)
 
-        # Select only the requested autocovariances
+        # Squeeze the last axis or else reshape to have the same axis
+        # definitions as e.g. smoothed_state_cov
         if t is not None:
-            acov = acov[start]
+            acov = acov[0]
         else:
-            acov = acov[start:end].transpose(1, 2, 0)
+            acov = acov.transpose(1, 2, 0)
 
         return acov
 
