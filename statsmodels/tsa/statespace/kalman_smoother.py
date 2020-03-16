@@ -712,6 +712,8 @@ class SmootherResults(FilterResults):
     def _smoothed_state_autocovariance(self, shift, start, end,
                                        extend_kwargs=None):
         """
+        Compute "forward" autocovariances, Cov(t, t+j)
+
         Parameters
         ----------
         shift : int
@@ -737,7 +739,8 @@ class SmootherResults(FilterResults):
         # Size of returned array in the time dimension
         n = end - start
 
-        n_presample = max(0, -start)
+        # Get number of post-sample periods we need to create an extended
+        # model to compute
         if shift == 0:
             max_insample = self.nobs - shift
         else:
