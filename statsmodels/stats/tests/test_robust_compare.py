@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 
 Created on Fri Aug 16 13:41:12 2013
@@ -14,6 +15,9 @@ from statsmodels.stats.robust_compare import (
         TrimmedMean, anova_bfm, anova_oneway, anova_scale, anova_welch,
         scale_transform, trim_mean, trimboth)
 
+from statsmodels.tools.testing import Holder
+
+# TODO: scipy trim1 is not compatible anymore with my old unit tests
 from scipy.stats import trim1
 
 # taken from scipy and adjusted
@@ -73,7 +77,6 @@ class Test_Trim(object):
 
 
 class TestTrimmedR1(object):
-    k = 1
 
     @classmethod
     def setup_class(cls):
@@ -92,8 +95,6 @@ class TestTrimmedR1(object):
             92.9416968861829, 129679.029239766
             ])
 
-        class Holder(object):
-            pass
         # results from R PairedData
         ytt1 = Holder()
         ytt1.statistic = 3.71157981694944
@@ -124,6 +125,108 @@ class TestTrimmedR1(object):
         assert_allclose(ttt[1], ytt1.p_value, rtol=1e-13)
         assert_equal(ttt[2], ytt1.parameter)
         assert_allclose(tm.mean_trimmed, ytt1.estimate, rtol=1e-13)
+
+
+class TestTrimmedRAnova(object):
+
+    @classmethod
+    def setup_class(cls):
+        x = [np.array([452., 874., 554., 447., 356., 754., 558., 574., 664.,
+                       682., 547., 435., 245.]),
+             np.array([546., 547., 774., 465., 459., 665., 467., 365., 589.,
+                       534., 456., 651., 654., 665., 546., 537.]),
+             np.array([785., 458., 886., 536., 669., 857., 821., 772., 732.,
+                       689., 654., 597., 830., 827.])]
+
+        cls.x = x
+        cls.get_results()  # attach k and results
+
+    @classmethod
+    def get_results(cls):
+        cls.res_m = [549.3846153846154, 557.5, 722.3571428571429]
+        # results from R WRS2
+        # > t1w = t1way(y ~ g, df3, tr=1/13)
+        cls.res_oneway = Holder(test=8.81531710400927,
+                                df1=2,
+                                df2=19.8903710685394,
+                                p_value=0.00181464966984701,
+                                effsize=0.647137153056774,
+                                )
+
+        # > yt = yuen(y ~ g, df3[1:29, ], tr=1/13)  # WRS2
+        cls.res_2s = Holder(test = 0.161970203096559,
+                            conf_int = np.array([-116.437383793431,
+                                                 99.9568643129114]),
+                            p_value = 0.873436269777141,
+                            df = 15.3931262881751,
+                            diff = -8.24025974025983,
+                            effsize = 0.0573842557922749,
+                            )
+
+        # from library onewaytests
+        # > bft = bf.test(y ~ g, df3)
+        cls.res_bfm = Holder(statistic = 7.10900606421182,
+                             parameter = np.array([2, 31.4207256105052]),
+                             p_value = 0.00283841965791224,
+                             alpha = 0.05,
+                             method = 'Brown-Forsythe Test'
+                             )
+
+        # > oww = oneway.test(y ~ g, df3, var.equal = FALSE)
+        cls.res_wa = Holder(statistic = 8.02355212103924,
+                            parameter = np.array([2, 24.272320628139]),
+                            p_value = 0.00211423625518082,
+                            method = 'One-way analysis of means '
+                                     '(not assuming equal variances)'
+                            )
+
+        # > ow = oneway.test(y ~ g, df3, var.equal = TRUE)
+        cls.res_fa = Holder(statistic = 7.47403193349076,
+                            parameter = np.array([2, 40]),
+                            p_value = 0.00174643304119871,
+                            method = 'One-way analysis of means'
+                            )
+
+    def test_oneway(self):
+        r1 = self.res_oneway
+        r2s = self.res_2s
+        res_bfm = self.res_bfm
+        res_wa = self.res_wa
+        res_fa = self.res_fa
+
+        # check we got the correct data
+        m = [x_i.mean() for x_i in self.x]
+        assert_allclose(m, self.res_m, rtol=1e-13)
+
+        # 3 sample case
+        res = anova_welch(self.x, trim_frac=1/13)
+        assert_allclose(res[0], r1.test, rtol=1e-13)
+        assert_allclose(res[1], r1.p_value, rtol=1e-13)
+        assert_allclose(res[2], [r1.df1, r1.df2], rtol=1e-13)
+
+        # 2-sample against yuen t-test
+        res = anova_welch(self.x[:2], trim_frac=1/13)
+        # assert_allclose(res[0], r1.test, rtol=1e-13)
+        assert_allclose(res[1], r2s.p_value, rtol=1e-13)
+        assert_allclose(res[2][1], r2s.df, rtol=1e-13)
+
+        # no trimming bfm
+        res = anova_bfm(self.x)
+        assert_allclose(res[0], res_bfm.statistic, rtol=1e-13)
+        assert_allclose(res[1], res_bfm.p_value, rtol=1e-13)
+        assert_allclose(res[-1][:2], res_bfm.parameter, rtol=1e-13)  # df
+
+        # no trimming welch
+        res = anova_welch(self.x)
+        assert_allclose(res[0], res_wa.statistic, rtol=1e-13)
+        assert_allclose(res[1], res_wa.p_value, rtol=1e-13)
+        assert_allclose(res[-1][:2], res_wa.parameter, rtol=1e-13)  # df
+
+        # no trimming bfm
+        res = anova_oneway(self.x)
+        assert_allclose(res[0], res_fa.statistic, rtol=1e-13)
+        assert_allclose(res[1], res_fa.p_value, rtol=1e-13)
+        assert_allclose(res[-1][:2], res_fa.parameter, rtol=1e-13)  # df
 
 
 def test_example_smoke():

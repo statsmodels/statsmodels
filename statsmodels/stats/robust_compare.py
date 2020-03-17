@@ -214,7 +214,7 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
-    if use_var == "separate":
+    if use_var == "unequal":
         weights = nobs / vars_
     else:
         weights = nobs
@@ -520,11 +520,11 @@ def anova_scale(data, method='bfm', center='median', transform='abs',
     # print [x.mean() for x in data]
     xxd = [scale_transform(x, center=center, transform=transform,
                            trim_frac=trim_frac) for x in data]
-    print([x.mean() for x in xxd])
-    print(method, method == 'bfm')
+    # print([x.mean() for x in xxd])
+    # print(method, method == 'bfm')
     if method == 'bfm':
         res = anova_bfm(xxd)
-    elif method == 'levene':
+    elif method == 'foneway':
         res = anova_oneway(xxd)
     elif method == 'welch':
         res = anova_welch(xxd)
