@@ -195,32 +195,40 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Other dimensions, now that `ssm` is available
         self.k_endog = self.ssm.k_endog
 
-    def _get_index_with_initial_state(self):
+    def _get_index_with_final_state(self):
         # The index we inherit from `TimeSeriesModel` will only cover the
         # data sample itself, but we will also need an index value for the
-        # initial state which is the previous time step to the first datapoint.
+        # final state which is the next time step to the last datapoint.
         # This method figures out an appropriate value for the three types of
         # supported indexes: date-based, Int64Index, or RangeIndex
         if self._index_dates:
-            # value = self._index.shift(-1)[0]
             if isinstance(self._index, pd.DatetimeIndex):
                 index = pd.date_range(
-                    end=self._index[-1], periods=len(self._index) + 1,
+                    start=self._index[0], periods=len(self._index) + 1,
                     freq=self._index.freq)
             elif isinstance(self._index, pd.PeriodIndex):
                 index = pd.period_range(
-                    end=self._index[-1], periods=len(self._index) + 1,
+                    start=self._index[0], periods=len(self._index) + 1,
                     freq=self._index.freq)
             else:
                 raise NotImplementedError
+        elif isinstance(self._index, pd.RangeIndex):
+            # COMPAT: pd.RangeIndex does not have start, stop, step prior to
+            #         pandas 0.25
+            try:
+                start = self._index.start
+                stop = self._index.stop
+                step = self._index.step
+            except AttributeError:
+                start = self._index._start
+                stop = self._index._stop
+                step = self._index._step
+            index = pd.RangeIndex(start, stop + step, step)
         elif isinstance(self._index, pd.Int64Index):
             # The only valid Int64Index is a full, incrementing index, so this
             # is general
-            value = self._index[0] - 1
-            index = pd.Int64Index([value] + self._index.tolist())
-        elif isinstance(self._index, pd.RangeIndex):
-            index = pd.RangeIndex(self._index.start - self._index.step,
-                                  self._index.end, self._index.step)
+            value = self._index[-1] + 1
+            index = pd.Int64Index(self._index.tolist() + [value])
         else:
             raise NotImplementedError
         return index
@@ -2315,7 +2323,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 self.filter_results.memory_no_predicted_mean):
             self._states.predicted = None
         elif use_pandas:
-            extended_index = self.model._get_index_with_initial_state()
+            extended_index = self.model._get_index_with_final_state()
             self._states.predicted = pd.DataFrame(
                 self.predicted_state.T, index=extended_index, columns=columns)
         else:
@@ -2324,7 +2332,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 self.filter_results.memory_no_predicted_cov):
             self._states.predicted_cov = None
         elif use_pandas:
-            extended_index = self.model._get_index_with_initial_state()
+            extended_index = self.model._get_index_with_final_state()
             tmp = np.transpose(self.predicted_state_cov, (2, 0, 1))
             self._states.predicted_cov = pd.DataFrame(
                 np.reshape(tmp, (tmp.shape[0] * tmp.shape[1], tmp.shape[2])),
