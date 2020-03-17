@@ -109,7 +109,7 @@ class BaseIRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
 
-        figsize: (int, int), default (10, 10)
+        figsize: (float, float), default (10, 10)
             Figure size (width, height in inches)
         plot_stderr: bool, default True
             Plot standard impulse response error bands
@@ -195,7 +195,7 @@ class BaseIRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
 
-        figsize: (int, int), default (10, 10)
+        figsize: (float, float), default (10, 10)
             Figure size (width, height in inches)
         plot_stderr: bool, default True
             Plot standard impulse response error bands
