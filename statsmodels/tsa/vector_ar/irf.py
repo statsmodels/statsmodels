@@ -88,9 +88,9 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None,
-             signif=0.05, plot_params=None, figsize=(10,10), subplot_params=None,
-             plot_stderr=True, stderr_type='asym', repl=1000,
-             seed=None, component=None):
+             signif=0.05, plot_params=None, figsize=(10, 10),
+             subplot_params=None, plot_stderr=True, stderr_type='asym',
+             repl=1000, seed=None, component=None):
         """
         Plot impulse responses
 
