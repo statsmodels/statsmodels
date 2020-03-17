@@ -1012,11 +1012,14 @@ def test_nondiagonal_obs_cov(reset_randomstate):
     res2 = mod.smooth([])
 
     # Here we'll just test a few values
-    assert_allclose(res1.llf, res2.llf)
-    assert_allclose(res1.forecasts[0], res2.forecasts[0])
-    assert_allclose(res1.filtered_state, res2.filtered_state)
+    assert_allclose(res1.llf, res2.llf, rtol=1e-6, atol=1e-5)
+    assert_allclose(res1.forecasts[0], res2.forecasts[0],
+                    rtol=1e-6, atol=1e-5)
+    assert_allclose(res1.filtered_state, res2.filtered_state,
+                    rtol=1e-6, atol=1e-5)
     assert_allclose(res1.filtered_state_cov, res2.filtered_state_cov,
                     rtol=1e-6, atol=1e-5)
-    assert_allclose(res1.smoothed_state, res2.smoothed_state)
+    assert_allclose(res1.smoothed_state, res2.smoothed_state,
+                    rtol=1e-6, atol=1e-5)
     assert_allclose(res1.smoothed_state_cov, res2.smoothed_state_cov,
                     rtol=1e-6, atol=1e-5)
