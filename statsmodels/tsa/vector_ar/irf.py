@@ -88,7 +88,7 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None,
-             signif=0.05, plot_params=None, subplot_params=None,
+             signif=0.05, plot_params=None, figsize=(10,10), subplot_params=None,
              plot_stderr=True, stderr_type='asym', repl=1000,
              seed=None, component=None):
         """
@@ -109,6 +109,8 @@ class BaseIRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
 
+        figsize: (int, int), default (10, 10)
+            Figure size (width, height in inches)
         plot_stderr: bool, default True
             Plot standard impulse response error bands
         stderr_type: str
@@ -167,11 +169,12 @@ class BaseIRAnalysis(object):
                                      self.model.names, title, signif=signif,
                                      subplot_params=subplot_params,
                                      plot_params=plot_params,
+                                     figsize=figsize,
                                      stderr_type=stderr_type)
         return fig
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
-                         signif=0.05, plot_params=None,
+                         signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
                          stderr_type='asym', repl=1000, seed=None):
         """
@@ -192,6 +195,8 @@ class BaseIRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
 
+        figsize: (int, int), default (10, 10)
+            Figure size (width, height in inches)
         plot_stderr: bool, default True
             Plot standard impulse response error bands
         stderr_type: str
@@ -228,6 +233,7 @@ class BaseIRAnalysis(object):
                                      hlines=lr_effects,
                                      subplot_params=subplot_params,
                                      plot_params=plot_params,
+                                     figsize=figsize,
                                      stderr_type=stderr_type)
         return fig
 
