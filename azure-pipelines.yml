@@ -20,7 +20,7 @@ jobs:
 - template: tools/ci/azure_template.yml
   parameters:
     name: macOS
-    vmImage: xcode9-macos10.13
+    vmImage: macOS-10.14
 
 - template: tools/ci/azure_template.yml
   parameters:
