@@ -180,12 +180,14 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
 
     ci_f2 = ci_nc / nobs
     ci_res = convert_effectsize_fsqu(f2=ci_f2)
+    ci_res.ci_nc = ci_nc
     ci_res.ci_f = np.sqrt(ci_res.f2)
     ci_res.ci_eta = np.sqrt(ci_res.eta2)
-    ci_res.ci_nc = np.sqrt(ci_nc)
     ci_res.ci_f_corrected = np.sqrt(ci_res.f2 * (df1 + 1) / df1)
 
     return ci_res
+
+
 def anova_generic(means, vars_, nobs, use_var="unequal",
                   welch_correction=True):
     nobs_t = nobs.sum()
