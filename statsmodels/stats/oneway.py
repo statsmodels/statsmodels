@@ -8,6 +8,7 @@ License: BSD-3
 """
 
 import numpy as np
+from scipy import stats
 from scipy.special import ncfdtrinc
 
 from statsmodels.tools.testing import Holder
@@ -185,3 +186,42 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
     ci_res.ci_f_corrected = np.sqrt(ci_res.f2 * (df1 + 1) / df1)
 
     return ci_res
+def anova_generic(means, vars_, nobs, use_var="unequal",
+                  welch_correction=True):
+    nobs_t = nobs.sum()
+    n_groups = len(means)
+    # mean_t = (nobs * means).sum() / nobs_t
+    if use_var == "unequal":
+        weights = nobs / vars_
+    else:
+        weights = nobs
+
+    w_total = weights.sum()
+    w_rel = weights / w_total
+    # meanw_t = (weights * means).sum() / w_total
+    meanw_t = w_rel @ means
+
+    statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
+
+    if use_var == "unequal":
+        use_satt = True
+        tmp = ((1 - w_rel)**2 / (nobs - 1)).sum() / (n_groups**2 - 1)
+        if welch_correction:
+            statistic /= 1 + 2 * (n_groups - 2) * tmp
+        df_denom = 1. / (3. * tmp)
+
+    else:
+        use_satt = False
+        # variance of group demeaned total sample, pooled var_resid
+        tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
+        statistic /= tmp
+        df_denom = 1. / (3. * tmp)
+
+    df_num = n_groups - 1.
+    if use_satt:  # Satterthwaite/Welch degrees of freedom
+        df_denom = 1. / (3. * tmp)
+    else:
+        df_denom = nobs_t - n_groups
+
+    pval = stats.f.sf(statistic, df_num, df_denom)
+    return statistic, pval, df_num, df_denom
