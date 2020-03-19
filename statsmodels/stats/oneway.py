@@ -227,3 +227,46 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
 
     pval = stats.f.sf(statistic, df_num, df_denom)
     return statistic, pval, df_num, df_denom
+
+
+def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
+    nobs_mean = nobs.sum() / n_groups
+
+    es = f * (n_groups - 1) / nobs_mean
+    crit_f = stats.ncf.ppf(alpha, df[0], df[1], nobs_mean * eps**2)
+    crit_es = (n_groups - 1) / nobs_mean * crit_f
+    reject = (es < crit_es)
+
+    pv = stats.ncf.cdf(f, df[0], df[1], nobs_mean * eps**2)
+    pwr = stats.ncf.cdf(crit_f, df[0], df[1], nobs_mean * 1e-13)
+    res = Holder(es=es,
+                 pvalue=pv,
+                 crit_f=crit_f,
+                 crit_es=crit_es,
+                 reject=reject,
+                 power_zero=pwr,
+                 df=df,
+                 # es is currently hard coded, not correct for Welch anova `f`
+                 type_effectsize="Welleks psi_squared"
+                 )
+    return res
+
+
+def power_oneway_equivalence(f, n_groups, nobs, eps, df, alpha=0.05):
+    """
+
+    draft version, need specification of alternative
+    """
+
+    res = oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05)
+    # at effect size at alternative
+    # fn, pvn, dfn = oneway_equivalence_generic(f, n_groups, nobs, eps, df,
+    #                                          alpha=0.05)
+    # f, pv, df0, df1 = anova_generic(means, stds**2, nobs,
+    #                                use_var="equal")
+    nobs_mean = nobs.sum() / n_groups
+    fn = f  # post-hoc power, empirical power at estimate
+    esn = fn * (n_groups - 1) / nobs_mean  # Wellek psi
+    pow_ = stats.ncf.cdf(res.crit_f, df[0], df[1], nobs_mean * esn)
+
+    return pow_
