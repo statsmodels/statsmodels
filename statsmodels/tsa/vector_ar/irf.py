@@ -87,7 +87,7 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, impulse=None, response=None,
+    def plot(self, orth=False, *, impulse=None, response=None,
              signif=0.05, plot_params=None, figsize=(10, 10),
              subplot_params=None, plot_stderr=True, stderr_type='asym',
              repl=1000, seed=None, component=None):
@@ -173,7 +173,7 @@ class BaseIRAnalysis(object):
                                      stderr_type=stderr_type)
         return fig
 
-    def plot_cum_effects(self, orth=False, impulse=None, response=None,
+    def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
                          signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
                          stderr_type='asym', repl=1000, seed=None):
