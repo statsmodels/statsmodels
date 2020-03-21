@@ -104,7 +104,7 @@ statistic to see where the evidence for dependence is coming from.
 
     rslt = table.test_nominal_association()
     print(rslt.pvalue)
-    print(rslt.effect_size)
+    print(table.effect_size)
     print(table.chi2_contribs)
 
 For tables with ordered row and column factors, we can us the **linear
