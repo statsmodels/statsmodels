@@ -321,6 +321,38 @@ def test_cochranq():
     assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
 
 
+def test_effectsize():
+    """
+    Effect sizes checked with
+    chisq_to_phi and chisq_to_cramers_v
+    in R library(effectsize)
+    """
+
+    # Arthritis x vcd r dataset
+    table = np.asarray([[29, 7, 7], [13, 7, 21]])
+    eff_size = 0.3942295
+
+    tab = ctab.Table(table)
+    assert_allclose(tab.effect_size, eff_size,
+                    atol=1e-5, rtol=1e-5)
+
+    # Howell's reference on Aspirin and Placebo
+    table = np.asarray([[104, 10933], [189, 10845]])
+    tab = ctab.Table(table)
+
+    eff_size = 0.03366507
+    assert_allclose(tab.effect_size, eff_size,
+                    atol=1e-5, rtol=1e-5)
+
+    # Package example using chisq_to_phi in R library(effectsize)
+    table = np.asarray([[762, 327, 468], [484, 239, 477], [484, 239, 477]])
+    tab = ctab.Table(table)
+
+    eff_size = 0.07218172
+    assert_allclose(tab.effect_size, eff_size,
+                    atol=1e-5, rtol=1e-5)
+
+
 class CheckStratifiedMixin(object):
 
     @classmethod

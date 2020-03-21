@@ -239,14 +239,14 @@ class Table(object):
         n_obs = self.table.sum()
         rtot = self.table.sum(1)
         um = np.dot(row_scores, rtot)
-        u2m = np.dot(row_scores**2, rtot)
+        u2m = np.dot(row_scores ** 2, rtot)
         ctot = self.table.sum(0)
         vn = np.dot(col_scores, ctot)
-        v2n = np.dot(col_scores**2, ctot)
+        v2n = np.dot(col_scores ** 2, ctot)
 
         # The null mean and variance of the test statistic
         e_stat = um * vn / n_obs
-        v_stat = (u2m - um**2 / n_obs) * (v2n - vn**2 / n_obs) / (n_obs - 1)
+        v_stat = (u2m - um ** 2 / n_obs) * (v2n - vn ** 2 / n_obs) / (n_obs - 1)
         sd_stat = np.sqrt(v_stat)
 
         zscore = (statistic - e_stat) / sd_stat
@@ -348,7 +348,7 @@ class Table(object):
         are independent.
         """
 
-        return self.resid_pearson**2
+        return self.resid_pearson ** 2
 
     @cache_readonly
     def local_log_oddsratios(self):
@@ -424,6 +424,26 @@ class Table(object):
         """
 
         return np.exp(self.cumulative_log_oddsratios)
+
+    @cache_readonly
+    def effect_size(self):
+        """
+        Return effect size of chi^2 statistic for independence
+
+        Interpretation: For a 2x2 table, the effect size is phi,
+        synomynous with the correlation coefficient
+        for two dichotomous variables.
+
+        For larger tables, the effect size is Cramer's V,
+        a measure of association
+
+        References: Howell, D. C. (2012).
+        Statistical methods for psychology. Cengage Learning.
+        """
+
+        chi2 = self.chi2_contribs.sum()
+        n_rows, n_cols = self.table.shape
+        return np.sqrt(chi2 / (self.table.sum() * (min(n_rows, n_cols) - 1)))
 
 
 class SquareTable(Table):
@@ -502,11 +522,11 @@ class SquareTable(Table):
         k = self.table.shape[0]
         upp_idx = np.triu_indices(k, 1)
 
-        tril = self.table.T[upp_idx]   # lower triangle in column order
-        triu = self.table[upp_idx]     # upper triangle in row order
+        tril = self.table.T[upp_idx]  # lower triangle in column order
+        triu = self.table[upp_idx]  # upper triangle in row order
 
-        statistic = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
-        df = k * (k-1) / 2.
+        statistic = ((tril - triu) ** 2 / (tril + triu + 1e-20)).sum()
+        df = k * (k - 1) / 2.
         pvalue = stats.chi2.sf(statistic, df)
 
         b = _Bunch()
@@ -576,11 +596,11 @@ class SquareTable(Table):
 
         if method == "bhapkar":
             vmat = -(pr + pr.T) - np.outer(d, d)
-            dv = col + row - 2*np.diag(pr) - d**2
+            dv = col + row - 2 * np.diag(pr) - d ** 2
             np.fill_diagonal(vmat, dv)
         elif method == "stuart_maxwell":
             vmat = -(pr + pr.T)
-            dv = row + col - 2*np.diag(pr)
+            dv = row + col - 2 * np.diag(pr)
             np.fill_diagonal(vmat, dv)
 
         try:
@@ -804,7 +824,7 @@ class Table2x2(SquareTable):
 
         n = self.table.sum(1)
         p = self.table[:, 0] / n
-        va = np.sum((1 - p) / (n*p))
+        va = np.sum((1 - p) / (n * p))
         return np.sqrt(va)
 
     def riskratio_pvalue(self, null=1):
@@ -1042,9 +1062,9 @@ class StratifiedTable(object):
         statistic = np.abs(statistic)
         if correction:
             statistic -= 0.5
-        statistic = statistic**2
+        statistic = statistic ** 2
         denom = self._apb * self._apc * self._bpd * self._cpd
-        denom /= (self._n**2 * (self._n - 1))
+        denom /= (self._n ** 2 * (self._n - 1))
         denom = np.sum(denom)
         statistic /= denom
 
@@ -1110,14 +1130,14 @@ class StratifiedTable(object):
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
-        lor_va = np.sum(self._apd * self._ad / self._n**2) / adns**2
-        mid = self._apd * self._bc / self._n**2
+        lor_va = np.sum(self._apd * self._ad / self._n ** 2) / adns ** 2
+        mid = self._apd * self._bc / self._n ** 2
         mid += (1 - self._apd / self._n) * self._ad / self._n
         mid = np.sum(mid)
         mid /= (adns * bcns)
         lor_va += mid
         lor_va += np.sum((1 - self._apd / self._n) *
-                         self._bc / self._n) / bcns**2
+                         self._bc / self._n) / bcns ** 2
         lor_va /= 2
         lor_se = np.sqrt(lor_va)
         return lor_se
@@ -1209,19 +1229,19 @@ class StratifiedTable(object):
         c = -r * self._apb * self._apc
 
         # Expected value of first cell
-        dr = np.sqrt(b**2 - 4*a*c)
-        e11 = (-b + dr) / (2*a)
+        dr = np.sqrt(b ** 2 - 4 * a * c)
+        e11 = (-b + dr) / (2 * a)
 
         # Variance of the first cell
         v11 = (1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) +
                1 / (self._dma + e11))
         v11 = 1 / v11
 
-        statistic = np.sum((table[0, 0, :] - e11)**2 / v11)
+        statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
 
         if adjust:
             adj = table[0, 0, :].sum() - e11.sum()
-            adj = adj**2
+            adj = adj ** 2
             adj /= np.sum(v11)
             statistic -= adj
 
@@ -1343,7 +1363,7 @@ def mcnemar(table, exact=True, correction=True):
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
         corr = int(correction)  # convert bool to 0 or 1
-        statistic = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
+        statistic = (np.abs(n1 - n2) - corr) ** 2 / (1. * (n1 + n2))
         df = 1
         pvalue = stats.chi2.sf(statistic, df)
 
@@ -1407,8 +1427,8 @@ def cochrans_q(x, return_object=True):
     assert count_row_ss == count_col_ss  # just a calculation check
 
     # From the SAS manual
-    q_stat = ((k-1) * (k * np.sum(count_col_success**2) - count_col_ss**2)
-              / (k * count_row_ss - np.sum(count_row_success**2)))
+    q_stat = ((k - 1) * (k * np.sum(count_col_success ** 2) - count_col_ss ** 2)
+              / (k * count_row_ss - np.sum(count_row_success ** 2)))
 
     # Note: the denominator looks just like k times the variance of
     # the columns

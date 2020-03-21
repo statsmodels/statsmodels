@@ -95,7 +95,8 @@ treatment.
 
 If the rows and columns of a table are unordered (i.e. are nominal
 factors), then the most common approach for formally assessing
-independence is using Pearson's :math:`\chi^2` statistic.  It's often
+independence is using Pearson's :math:`\chi^2` statistic
+together with the corresponding p value and effect size. It's often
 useful to look at the cell-wise contributions to the :math:`\chi^2`
 statistic to see where the evidence for dependence is coming from.
 
@@ -103,6 +104,7 @@ statistic to see where the evidence for dependence is coming from.
 
     rslt = table.test_nominal_association()
     print(rslt.pvalue)
+    print(rslt.effect_size)
     print(table.chi2_contribs)
 
 For tables with ordered row and column factors, we can us the **linear
