@@ -794,10 +794,7 @@ def test_simulate_expected_R(trend, seasonal, damped, error,
     short_name = {"add": "A", "mul": "M", None: "N"}
     model_name = short_name[error] +  short_name[trend] + short_name[seasonal]
     if model_name in simulate_expected_results_R[damped]:
-        expected = np.reshape(
-            np.asarray(simulate_expected_results_R[damped][model_name]),
-            (4,1)
-        )
+        expected = np.asarray(simulate_expected_results_R[damped][model_name])
         state = simulate_fit_state_R[damped][model_name]
     else:
         return
@@ -827,7 +824,7 @@ def test_simulate_expected_R(trend, seasonal, damped, error,
     innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
     sim = fit.simulate(4, nsim=1, error=error, random_errors=innov)
 
-    assert_almost_equal(expected, sim, 5)
+    assert_almost_equal(expected, sim.values, 5)
 
 
 def test_simulate_keywords(austourists):
@@ -849,6 +846,22 @@ def test_simulate_keywords(austourists):
     fit.simulate(4, nsim=10, random_errors="bootstrap")
 
     # test seeding
-    res = fit.simulate(4, nsim=10, random_state=10)
-    res2 = fit.simulate(4, nsim=10, random_state=np.random.RandomState(10))
+    res = fit.simulate(4, nsim=10, random_state=10).values
+    res2 = fit.simulate(4, nsim=10, random_state=np.random.RandomState(10)).values
     assert np.all(res == res2)
+
+
+def test_simulate_boxcox(austourists):
+    """
+    check if simulation results with boxcox fits are reasonable
+    """
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend="add", seasonal="mul", damped=False
+    ).fit(use_boxcox=True)
+    expected = fit.forecast(4).values
+
+    res = fit.simulate(4, nsim=10).values
+    mean = np.mean(res, axis=1)
+
+    assert np.all(np.abs(mean - expected) < 5)

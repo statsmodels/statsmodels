@@ -586,30 +586,46 @@ class HoltWintersResults(Results):
         trend = self.model.trend
         damped = self.model.damped
         seasonal = self.model.seasonal
-
+        use_boxcox = self.params["use_boxcox"]
+        lamda = self.params["lamda"]
         alpha = self.params['smoothing_level']
         beta = self.params['smoothing_slope']
         gamma = self.params['smoothing_seasonal']
         phi = self.params['damping_slope']
         # if model has no seasonal component, use 1 as period length
         m = max(self.model.seasonal_periods, 1)
-
+        n_params = (
+            2 +
+            2 * self.model.trending +
+            (m + 1) * self.model.seasoning
+            + damped
+        )
         mul_seasonal = seasonal == "mul"
         mul_trend = trend == "mul"
 
-        n_params = (
-            2 + 2 * self.model.trending + self.model.seasoning * (m + 1) + damped
-            )
+        # define trend, damping and seasonality operations
+        if mul_trend:
+            op_b = np.multiply
+            op_d = np.power
+            neutral_b = 1
+        else:
+            op_b = np.add
+            op_d = np.multiply
+            neutral_b = 0
+        if mul_seasonal:
+            op_s = np.multiply
+            neutral_s = 1
+        else:
+            op_s = np.add
+            neutral_s = 0
 
         # set initial values
         # (notation as in https://otexts.com/fpp2/ets.html)
-        # using lvl instead of l because of E741
         y = np.empty((steps, nsim))
-        lvl = np.empty((steps + 1, nsim))
+        lvl = np.empty((steps + 1, nsim)) # lvl instead of l because of E741
         b = np.empty((steps + 1, nsim))
         s = np.empty((steps + m, nsim))
-
-        # uses python's index wrapping
+        # the following uses python's index wrapping
         lvl[-1,:] = self.level[start]
         b[-1,:] = self.slope[start]
         if start == -1:
@@ -622,22 +638,7 @@ class HoltWintersResults(Results):
         else:
             s[-m:,:] = np.tile(self.season[start-m+1:start+1], (nsim, 1)).T
 
-        # define trend, damping and seasonality operations
-        if trend == "mul":
-            op_b = np.multiply
-            op_d = np.power
-            neutral_b = 1
-        else:
-            op_b = np.add
-            op_d = np.multiply
-            neutral_b = 0
-        if seasonal == "mul":
-            op_s = np.multiply
-            neutral_s = 1
-        else:
-            op_s = np.add
-            neutral_s = 0
-
+        # set neutral values for unused features
         if trend is None:
             b[:,:] = neutral_b
             phi = 1
@@ -648,11 +649,15 @@ class HoltWintersResults(Results):
         if not damped:
             phi = 1
 
-        # get errors
-        if error == 'add':
-            resid = self.resid
+        # calculate residuals for error covariance estimation
+        if use_boxcox:
+            fitted = boxcox(self.fittedvalues, lamda)
         else:
-            resid = (self.model._y - self.fittedvalues)/self.fittedvalues
+            fitted = self.fittedvalues
+        if error == 'add':
+            resid = self.model._y - fitted
+        else:
+            resid = (self.model._y - fitted)/fitted
         sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
@@ -715,7 +720,20 @@ class HoltWintersResults(Results):
                 b[t,:] = op_d(b[t-1,:], phi)*(1+beta*eps[t,:]) + beta*eps_b
                 s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
 
-        return y
+        if use_boxcox:
+            y = inv_boxcox(y, lamda)
+
+        # wrap result in a pandas DataFrame or Series
+        freq = getattr(self.model._index, 'freq', 1)
+        start = self.model._index[-1] + freq
+        end = self.model._index[-1] + steps * freq
+        index = pd.date_range(start, end, freq=freq)
+
+        if nsim == 1:
+            res = pd.Series(y.ravel(), index=index)
+        else:
+            res = pd.DataFrame(y, index=index)
+        return res
 
 
 
@@ -1232,12 +1250,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         level = lvls[1:nobs + 1].copy()
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
-            level = inv_boxcox(level, lamda)
-            slope = detrend(trend[:nobs], level)
-            if seasonal == 'add':
-                season = (fitted - inv_boxcox(trend, lamda))[:nobs]
-            else:  # seasonal == 'mul':
-                season = (fitted / inv_boxcox(trend, lamda))[:nobs]
+            # level = inv_boxcox(level, lamda)
+            # slope = detrend(trend[:nobs], level)
+            # if seasonal == 'add':
+            #     season = (fitted - inv_boxcox(trend, lamda))[:nobs]
+            # else:  # seasonal == 'mul':
+            #     season = (fitted / inv_boxcox(trend, lamda))[:nobs]
         sse = sqeuclidean(fitted[:-h - 1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
