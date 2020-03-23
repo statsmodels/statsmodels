@@ -155,6 +155,13 @@ class Table(object):
         chi^2 testing.  The rows and columns are treated as nominal
         (unordered) categorical variables.
 
+        Also returns effect size of chi^2 statistic for independence
+        For a 2x2 table, the effect size is phi, synonymous with
+        the correlation coefficient for two dichotomous variables.
+        For larger tables, the effect size is Cramer's V, a measure
+        of association. References: Howell, D. C. (2012).
+        Statistical methods for psychology. Cengage Learning.
+
         Returns
         -------
         A bunch containing the following attributes:
@@ -165,15 +172,20 @@ class Table(object):
             The degrees of freedom of the reference distribution
         pvalue : float
             The p-value for the test.
+        effsize : float
+            The effect size of the statistic
         """
 
         statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
         pvalue = 1 - stats.chi2.cdf(statistic, df)
+        effsize = np.sqrt(statistic /
+                          (self.table.sum() * (min(self.table.shape) - 1)))
         b = _Bunch()
         b.statistic = statistic
         b.df = df
         b.pvalue = pvalue
+        b.effsize = effsize
         return b
 
     def test_ordinal_association(self, row_scores=None, col_scores=None):
@@ -424,26 +436,6 @@ class Table(object):
         """
 
         return np.exp(self.cumulative_log_oddsratios)
-
-    @cache_readonly
-    def effect_size(self):
-        """
-        Return effect size of chi^2 statistic for independence
-
-        Interpretation: For a 2x2 table, the effect size is phi,
-        synomynous with the correlation coefficient
-        for two dichotomous variables.
-
-        For larger tables, the effect size is Cramer's V,
-        a measure of association
-
-        References: Howell, D. C. (2012).
-        Statistical methods for psychology. Cengage Learning.
-        """
-
-        chi2 = self.chi2_contribs.sum()
-        n_rows, n_cols = self.table.shape
-        return np.sqrt(chi2 / (self.table.sum() * (min(n_rows, n_cols) - 1)))
 
 
 class SquareTable(Table):
