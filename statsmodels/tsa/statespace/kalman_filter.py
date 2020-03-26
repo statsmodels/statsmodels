@@ -1157,12 +1157,6 @@ class KalmanFilter(Representation):
             measurement_shocks = np.random.multivariate_normal(
                 mean=np.zeros(self.k_endog), cov=self['obs_cov'],
                 size=nsimulations)
-        elif state_shocks is not None:
-            measurement_shocks = np.zeros((nsimulations, self.k_endog))
-            for i in range(nsimulations):
-                measurement_shocks[i] = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_endog),
-                    cov=self['obs_cov', ..., i], size=nsimulations)
 
         # Check / generate state shocks
         if state_shocks is not None:
@@ -1183,12 +1177,22 @@ class KalmanFilter(Representation):
             state_shocks = np.random.multivariate_normal(
                 mean=np.zeros(self.k_posdef), cov=self['state_cov'],
                 size=nsimulations)
-        elif measurement_shocks is not None:
+
+        # Handle time-varying case
+        tvp = (self.shapes['obs_cov'][-1] > 1 or
+               self.shapes['state_cov'][-1] > 1)
+        if tvp and measurement_shocks is None:
+            measurement_shocks = np.zeros((nsimulations, self.k_endog))
+            for i in range(nsimulations):
+                measurement_shocks[i] = np.random.multivariate_normal(
+                    mean=np.zeros(self.k_endog),
+                    cov=self['obs_cov', ..., i])
+        if tvp and state_shocks is None:
             state_shocks = np.zeros((nsimulations, self.k_posdef))
             for i in range(nsimulations):
                 state_shocks[i] = np.random.multivariate_normal(
                     mean=np.zeros(self.k_posdef),
-                    cov=self['state_cov', ..., i], size=nsimulations)
+                    cov=self['state_cov', ..., i])
 
         # Get the initial states
         if initial_state is not None:

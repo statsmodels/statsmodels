@@ -539,7 +539,7 @@ class Initialization(object):
             state_intercept = model['state_intercept', ix1, 0]
             transition = model[('transition',) + ix2 + (0,)]
             selection = model['selection', ix1, :, 0]
-            state_cov = model['state_cov']
+            state_cov = model['state_cov', :, :, 0]
             selected_state_cov = np.dot(selection, state_cov).dot(selection.T)
 
         # Create output arrays if not given
