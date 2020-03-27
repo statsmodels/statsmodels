@@ -1140,6 +1140,7 @@ class OLS(WLS):
             params = q / sd
             params = np.dot(v, params)
         else:
+            alpha = np.asarray(alpha)
             vtav = self.nobs * np.dot(vt, alpha[:, None] * v)
             d = np.diag(vtav) + s2
             np.fill_diagonal(vtav, d)
