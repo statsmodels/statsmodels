@@ -501,73 +501,83 @@ class HoltWintersResults(Results):
 
         Inserting these equations into the smoothing equation formulation leads
         to the state space equations. The notation used here follows
-        [1]_. Additionally, let :math:`\circ_b` be the operation linking level
-        and trend (i.e. + if the trend is additive, :math:`\cdot` if the trend
-        is multiplicative) and similar :math:`\circ_s` be the operation linking
-        seasonal value to trend and level, as well as :math:`\circ_d` be the
-        operation that links :math:`\phi` and :math:`b` (multiplication for
-        additive trend, power for multiplicative trend).
+        [1]_.
 
-        Then the state space equations with additive error model are:
+        Additionally,
 
         .. math::
 
-            y_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d \phi)) \circ_s s_{t-m} + e_t\\
-            l_t &= l_{t-1} \circ_b (b_{t-1} \circ_d \phi) + \alpha e_{l,t}\\
-            b_t &= (b_{t-1} \circ_d \phi) + \beta e_{b,t}\\
-            s_t &= s_{t-m} + \gamma e_{s,t}
+           B_t = b_{t-1} \circ_d \phi\\
+           L_t = l_{t-1} \circ_b B_t\\
+           S_t = s_{t-m}\\
+           Y_t = L_t \circ_s S_t,
+
+        where :math:`\circ_d` is the operation linking trend and damping
+        parameter (multiplication if the trend is additive, power if the trend
+        is multiplicative), :math:`\circ_b` is the operation linking level and
+        trend (addition if the trend is additive, multiplication if the trend
+        is multiplicative), and :math:'\circ_s` is the operation linking
+        seasonality to the rest.
+
+        The state space equations can then be formulated as
+
+        .. math::
+
+           y_t = Y_t + \eta \cdot e_t\\
+           l_t = L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
+           b_t = B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
+           s_t = S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
 
         with
 
         .. math::
 
-            e_{l,t} &= \begin{cases}
-                          \frac{e_t}{s_{t-m}}\quad
-                          \text{if seasonal is multiplicative}\\
-                          e_t\quad\text{else}
-                      \end{cases}\\
-            e_{b,t} &= \begin{cases}
-                          \frac{e_{l,t}}{l_{t-1}}\quad
-                          \text{if trend is multiplicative}\\
-                          e_{l,t}\quad\text{else}
-                      \end{cases}\\
-            e_{s,t} &= \begin{cases}
-                          \frac{e_t}{l_{t-1}\circ_b (b_{t-1}\circ_d\phi)}\quad
-                          \text{if seasonal is multiplicative}\\
-                          e_{t}\quad\text{else}
-                      \end{cases}
+           \eta &= \begin{cases}
+                       Y_t\quad\text{if error is multiplicative}\\
+                       1\quad\text{else}
+                   \end{cases}\\
+           M_e &= \begin{cases}
+                       1\quad\text{if error is multiplicative}\\
+                       0\quad\text{else}
+                   \end{cases}\\
 
-        Using a multiplicative error model, the state space equations are:
+        and, when using the additve error model,
 
         .. math::
 
-            y_t &= ((l_{t-1} \circ_b (b_{t-1}\circ_d\phi)) \circ_s s_{t-m})
-                  \cdot (1 + e_t)\\
-            l_t &= (l_{t-1} \circ_b (b_{t-1} \circ_d\phi)) (1 + \alpha e_t)
-                  +  \alpha e_{l,t}\\
-            b_t &= (b_{t-1}\circ_d\phi) (1 + \beta e_t)
-                  + \beta e_{b,t}\\
-            s_t &= s_{t-m} (1 + \gamma e_t) + \gamma e_{s,t}
+           \kappa_l &= \begin{cases}
+                       \frac{1}{S_t}\quad
+                       \text{if seasonality is multiplicative}\\
+                       1\quad\text{else}
+                   \end{cases}\\
+           \kappa_b &= \begin{cases}
+                       \frac{\kappa_l}{l_{t-1}}\quad
+                       \text{if trend is multiplicative}\\
+                       \kappa_l\quad\text{else}
+                   \end{cases}\\
+           \kappa_s &= \begin{cases}
+                       \frac{1}{L_t}\quad\text{if seasonality is multiplicative}\\
+                       1\quad\text{else}
+                   \end{cases}
 
-        with
+        When using the multiplicative error model
 
         .. math::
 
-            e_{l,t} &= \begin{cases}
-                          0\quad\text{if seasonal is multiplicative}\\
-                          e_t\cdot s_{t-m} \quad\text{else}
-                      \end{cases}\\
-            e_{b,t} &= \begin{cases}
-                          \frac{e_{l,t}}{l_{t-1}}\quad
-                          \text{if trend is multiplicative}\\
-                          e_t\cdot l_{t-1} + e_{l,t}
-                          \quad\text{else}
-                      \end{cases}\\
-            e_{s,t} &= \begin{cases}
-                          0\quad\text{if seasonal is multiplicative}\\
-                          e_{t}(l_{t-1}\circ_b(b_{t-1}\circ_d\phi))
-                          \quad\text{else}
-                      \end{cases}
+           \kappa_l &= \begin{cases}
+                       0\quad
+                       \text{if seasonality is multiplicative}\\
+                       S_t\quad\text{else}
+                   \end{cases}\\
+           \kappa_b &= \begin{cases}
+                       \frac{\kappa_l}{l_{t-1}}\quad
+                       \text{if trend is multiplicative}\\
+                       \kappa_l + l_{t-1}\quad\text{else}
+                   \end{cases}\\
+           \kappa_s &= \begin{cases}
+                       0\quad\text{if seasonality is multiplicative}\\
+                       L_t\quad\text{else}
+                   \end{cases}
 
         References
         ----------
@@ -602,6 +612,7 @@ class HoltWintersResults(Results):
         )
         mul_seasonal = seasonal == "mul"
         mul_trend = trend == "mul"
+        mul_error = error == "mul"
 
         # define trend, damping and seasonality operations
         if mul_trend:
@@ -687,38 +698,61 @@ class HoltWintersResults(Results):
             raise ValueError("Argument random_errors has unexpected value!")
 
         # generate simulation
-        if error == 'add':
-            for t in range(steps):
-                eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
-                eps_b = eps_l/lvl[t-1,:] if mul_trend else eps_l
-                eps_s = (
-                    eps[t,:]/op_b(lvl[t-1,:], op_d(b[t-1,:], phi))
-                    if mul_seasonal
-                    else eps[t,:]
-                )
+        # if error == 'add':
+        #     for t in range(steps):
+        #         eps_l = eps[t,:]/s[t-m,:] if mul_seasonal else eps[t,:]
+        #         eps_b = eps_l/lvl[t-1,:] if mul_trend else eps_l
+        #         eps_s = (
+        #             eps[t,:]/op_b(lvl[t-1,:], op_d(b[t-1,:], phi))
+        #             if mul_seasonal
+        #             else eps[t,:]
+        #         )
 
-                y[t,:] = op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) + eps[t,:]
-                lvl[t,:] = op_b(lvl[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
-                b[t,:] = op_d(b[t-1,:], phi) + beta*eps_b
-                s[t,:] = s[t-m,:] + gamma*eps_s
-        else:
-            for t in range(steps):
-                eps_l = 0 if mul_seasonal else eps[t,:]*s[t-m,:]
-                eps_b = (
-                    eps_l/lvl[t-1,:] if mul_trend else eps[t,:]*lvl[t-1,:]+eps_l
-                )
-                eps_s = (
-                    0 if mul_seasonal else eps[t,:]*(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)))
-                )
+        #         y[t,:] = op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) + eps[t,:]
+        #         lvl[t,:] = op_b(lvl[t-1,:], op_d(b[t-1,:], phi)) + alpha * eps_l
+        #         b[t,:] = op_d(b[t-1,:], phi) + beta*eps_b
+        #         s[t,:] = s[t-m,:] + gamma*eps_s
+        # else:
+        #     for t in range(steps):
+        #         eps_l = 0 if mul_seasonal else eps[t,:]*s[t-m,:]
+        #         eps_b = (
+        #             eps_l/lvl[t-1,:] if mul_trend else eps[t,:]*lvl[t-1,:]+eps_l
+        #         )
+        #         eps_s = (
+        #             0 if mul_seasonal else eps[t,:]*(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)))
+        #         )
 
-                y[t,:] = (
-                    op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) * (1+eps[t,:])
+        #         y[t,:] = (
+        #             op_s(op_b(lvl[t-1,:], op_d(b[t-1,:], phi)), s[t-m,:]) * (1+eps[t,:])
+        #         )
+        #         lvl[t,:] = (
+        #             op_b(lvl[t-1,:], op_d(b[t-1,:], phi))*(1+alpha*eps[t,:]) + alpha*eps_l
+        #         )
+        #         b[t,:] = op_d(b[t-1,:], phi)*(1+beta*eps[t,:]) + beta*eps_b
+        #         s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
+        # new implementation
+        for t in range(steps):
+            B = op_d(b[t-1, :], phi)
+            L = op_b(lvl[t-1, :], B)
+            S = s[t-m, :]
+            Y = op_s(L, S)
+            if error == 'add':
+                eta = 1
+                kappa_l = 1/S if mul_seasonal else 1
+                kappa_b = kappa_l/lvl[t-1, :] if mul_trend else kappa_l
+                kappa_s = 1/L if mul_seasonal else 1
+            else:
+                eta = Y
+                kappa_l = 0 if mul_seasonal else S
+                kappa_b = (
+                    kappa_l/lvl[t-1, :] if mul_trend else kappa_l + lvl[t-1, :]
                 )
-                lvl[t,:] = (
-                    op_b(lvl[t-1,:], op_d(b[t-1,:], phi))*(1+alpha*eps[t,:]) + alpha*eps_l
-                )
-                b[t,:] = op_d(b[t-1,:], phi)*(1+beta*eps[t,:]) + beta*eps_b
-                s[t,:] = s[t-m,:]*(1+gamma*eps[t,:]) + gamma*eps_s
+                kappa_s = 0 if mul_seasonal else L
+
+            y[t, :] = Y + eta * eps[t, :]
+            lvl[t, :] = L + alpha * (mul_error * L + kappa_l) * eps[t, :]
+            b[t, :] = B + beta * (mul_error * B + kappa_b) * eps[t, :]
+            s[t, :] = S + gamma * (mul_error * S + kappa_s) * eps[t, :]
 
         if use_boxcox:
             y = inv_boxcox(y, lamda)
