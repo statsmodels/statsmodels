@@ -7,10 +7,11 @@ License: Simplified-BSD
 
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pytest
 from scipy.signal import lfilter
 
+from .test_impulse_responses import TVSS
 from statsmodels.tools.sm_exceptions import SpecificationWarning, \
     EstimationWarning
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
@@ -1740,3 +1741,46 @@ def test_pandas_anchor():
                           initial_state=np.zeros(1))
     assert_allclose(actual, desired)
     assert_(actual.index.equals(desired.index))
+
+
+@pytest.mark.smoke
+def test_time_varying(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+    mod.simulate([], 10)
+
+
+def test_time_varying_obs_cov(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+    mod['obs_cov'] = np.zeros((mod.k_endog, mod.k_endog, mod.nobs))
+    mod['obs_cov', ..., 9] = np.eye(mod.k_endog)
+    mod['state_intercept', :] = 0
+    mod['state_cov'] = mod['state_cov', :, :, 0] * 0
+    mod['selection'] = mod['selection', :, :, 0]
+    assert_equal(mod['state_cov'].shape, (mod.ssm.k_posdef, mod.ssm.k_posdef))
+    assert_equal(mod['selection'].shape, (mod.k_states, mod.ssm.k_posdef))
+
+    sim = mod.simulate([], 10, initial_state=np.zeros(mod.k_states))
+    assert_allclose(sim[:9], mod['obs_intercept', :, :9].T)
+
+
+def test_time_varying_state_cov(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+    mod['obs_cov'] = mod['obs_cov', :, :, 0] * 0
+    mod['selection'] = mod['selection', :, :, 0]
+    mod['state_intercept', :] = 0
+    mod['state_cov'] = np.zeros((mod.ssm.k_posdef, mod.ssm.k_posdef, mod.nobs))
+    mod['state_cov', ..., -1] = np.eye(mod.ssm.k_posdef)
+    assert_equal(mod['obs_cov'].shape, (mod.k_endog, mod.k_endog))
+    assert_equal(mod['selection'].shape, (mod.k_states, mod.ssm.k_posdef))
+    sim = mod.simulate([], 10)
+    assert_allclose(sim, mod['obs_intercept'].T)
+
+
+@pytest.mark.smoke
+def test_time_varying_selection(reset_randomstate):
+    mod = TVSS(np.zeros((10, 2)))
+    mod['obs_cov'] = mod['obs_cov', :, :, 0]
+    mod['state_cov'] = mod['state_cov', :, :, 0]
+    assert_equal(mod['obs_cov'].shape, (mod.k_endog, mod.k_endog))
+    assert_equal(mod['state_cov'].shape, (mod.ssm.k_posdef, mod.ssm.k_posdef))
+    mod.simulate([], 10)
