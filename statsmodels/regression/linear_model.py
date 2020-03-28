@@ -798,7 +798,7 @@ class WLS(RegressionModel):
         # Docstring attached below
 
         if np.size(alpha) == 1:
-	        alpha = np.asarray(alpha)
+            alpha = np.asarray(alpha)
 
         # Need to adjust since RSS/n in elastic net uses nominal n in
         # denominator
