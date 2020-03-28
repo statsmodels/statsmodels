@@ -70,10 +70,10 @@ cdef class sStatespace(object):
     cdef np.float32_t * _initial_diffuse_state_cov
 
     # Current location
-    cdef int t
+    cdef readonly int t
     cdef readonly int _previous_t
-    cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
-    cdef int _nmissing
+    cdef readonly int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
+    cdef readonly int _nmissing
 
     # Functions
     cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
@@ -147,10 +147,10 @@ cdef class dStatespace(object):
     cdef np.float64_t * _initial_diffuse_state_cov
 
     # Current location
-    cdef int t
+    cdef readonly int t
     cdef readonly int _previous_t
-    cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
-    cdef int _nmissing
+    cdef readonly int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
+    cdef readonly int _nmissing
 
     # Functions
     cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
@@ -224,10 +224,10 @@ cdef class cStatespace(object):
     cdef np.complex64_t * _initial_diffuse_state_cov
 
     # Current location
-    cdef int t
+    cdef readonly int t
     cdef readonly int _previous_t
-    cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
-    cdef int _nmissing
+    cdef readonly int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
+    cdef readonly int _nmissing
 
     # Functions
     cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
@@ -301,10 +301,10 @@ cdef class zStatespace(object):
     cdef np.complex128_t * _initial_diffuse_state_cov
 
     # Current location
-    cdef int t
+    cdef readonly int t
     cdef readonly int _previous_t
-    cdef int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
-    cdef int _nmissing
+    cdef readonly int _k_endog, _k_states, _k_posdef, _k_endog2, _k_states2, _k_posdef2, _k_endogstates, _k_statesposdef
+    cdef readonly int _nmissing
 
     # Functions
     cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
