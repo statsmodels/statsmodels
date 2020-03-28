@@ -616,7 +616,8 @@ class GLS(RegressionModel):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
 
-        alpha = np.asarray(alpha)
+        if np.size(alpha) == 1:
+            alpha = np.asarray(alpha)
 
         # Need to adjust since RSS/n term in elastic net uses nominal
         # n in denominator
@@ -795,6 +796,9 @@ class WLS(RegressionModel):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
         # Docstring attached below
+
+        if np.size(alpha) == 1:
+	        alpha = np.asarray(alpha)
 
         # Need to adjust since RSS/n in elastic net uses nominal n in
         # denominator
@@ -1025,6 +1029,9 @@ class OLS(WLS):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
 
+        if np.size(alpha) == 1:
+            alpha = np.asarray(alpha)
+
         # In the future we could add support for other penalties, e.g. SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
             msg = "Unknown method '%s' for fit_regularized" % method
@@ -1138,7 +1145,7 @@ class OLS(WLS):
         v = vt.T
         q = np.dot(u.T, self.endog) * s
         s2 = s * s
-        if np.isscalar(alpha):
+        if np.size(alpha) == 1:
             sd = s2 + alpha * self.nobs
             params = q / sd
             params = np.dot(v, params)
