@@ -14,6 +14,7 @@ import pytest
 import os
 
 from statsmodels import datasets
+from statsmodels.tsa.statespace import dynamic_factor
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_UNIVARIATE)
@@ -736,3 +737,18 @@ class TestDFMMeasurementDisturbance(TestDFM):
         assert_allclose(
             self.sim_a.simulated_state_disturbance,
             self.sim_b.simulated_state_disturbance, atol=1e-7)
+
+
+def test_dfm_missing(reset_randomstate):
+    # This test is not captured by the TestTrivariate and TestDFM tests above
+    # because it has k_states = 1
+    endog = np.random.normal(size=(100, 3))
+    endog[0, :1] = np.nan
+
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    mod.ssm.filter_collapsed = True
+    res = mod.smooth(mod.start_params)
+    mod.ssm.filter_collapsed = False
+    res2 = mod.smooth(mod.start_params)
+
+    assert_allclose(res.llf, res2.llf)
