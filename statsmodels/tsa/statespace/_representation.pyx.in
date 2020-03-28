@@ -824,7 +824,7 @@ cdef class {{prefix}}Statespace(object):
         # Note: this assumes that select_missing has *already* been done
         # TODO need unit tests, especially for the missing case
         cdef:
-            int i, j, inc=1
+            int i, j, k, l, inc=1
             int obs_cov_t, design_t
             int info
             int reset_missing
@@ -875,8 +875,7 @@ cdef class {{prefix}}Statespace(object):
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
             # Cholesky decomposition: $H = L L'$  
             blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
-            # Use LDA=self.k_endog so that we can use the memoryview slicing below
-            lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self.k_endog, &info)
+            lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self._k_endog, &info)
 
             # Check for errors
             if info > 0:
@@ -888,8 +887,11 @@ cdef class {{prefix}}Statespace(object):
             # diagonals, in the Cholesky decomposition case)
             self.transform_determinant = 1.0
             for i in range(self._k_endog):
-                if not self.transform_cholesky[i, i] == 0:
-                    self.transform_determinant = self.transform_determinant * self.transform_cholesky[i, i]
+                j = i * (self._k_endog + 1)
+                k = j % self.k_endog
+                l = j // self.k_endog
+                if not self.transform_cholesky[k, l] == 0:
+                    self.transform_determinant = self.transform_determinant * self.transform_cholesky[k, l]
             self.transform_determinant = self.transform_determinant**2
 
         # Get $Z_t \equiv C^{-1}$, if necessary  
@@ -897,7 +899,7 @@ cdef class {{prefix}}Statespace(object):
             # Calculate $H_t^{-1} Z_t \equiv (Z_t' H_t^{-1})'$ via Cholesky solver
             blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
             lapack.{{prefix}}potrs("L", &self._k_endog, &k_states,
-                            &self.transform_cholesky[0,0], &self.k_endog,
+                            &self.transform_cholesky[0,0], &self._k_endog,
                             &self.transform_design[0,0], &self._k_endog,
                             &info)
 
@@ -914,6 +916,11 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion  
             lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
+            # Check for errors
+            if info > 0:
+                raise np.linalg.LinAlgError('Non-positive-definite ZHZ matrix encountered at period %d' % t)
+            elif info < 0:
+                raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
             lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
 
             # Calculate $C_t$ (the upper triangular cholesky decomposition of $(Z_t' H_t^{-1} Z_t)^{-1}$)  
@@ -921,9 +928,9 @@ cdef class {{prefix}}Statespace(object):
 
             # Check for errors
             if info > 0:
-                raise np.linalg.LinAlgError('Non-positive-definite ZHZ matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Non-positive-definite C matrix encountered at period %d' % t)
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in C matrix encountered at period %d' % t)
 
             # Calculate $C_t'^{-1} \equiv Z_t$  
             # Do so by solving the system: $C_t' x = I$  
@@ -978,7 +985,7 @@ cdef class {{prefix}}Statespace(object):
             # We have $L$ in `transform_cholesky`, so we want to do a linear  
             # solve of $L x = e_t$  where L is lower triangular
             lapack.{{prefix}}trtrs("L", "N", "N", &self._k_endog, &inc,
-                        &self.transform_cholesky[0,0], &self.k_endog,
+                        &self.transform_cholesky[0,0], &self._k_endog,
                         &self.selected_obs[0], &self._k_endog,
                         &info)
 
