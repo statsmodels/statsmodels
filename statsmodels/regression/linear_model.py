@@ -616,7 +616,7 @@ class GLS(RegressionModel):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
 
-        if np.size(alpha) == 1:
+        if np.size(alpha) != 1:
             alpha = np.asarray(alpha)
 
         # Need to adjust since RSS/n term in elastic net uses nominal
@@ -797,7 +797,7 @@ class WLS(RegressionModel):
                         refit=False, **kwargs):
         # Docstring attached below
 
-        if np.size(alpha) == 1:
+        if np.size(alpha) != 1:
             alpha = np.asarray(alpha)
 
         # Need to adjust since RSS/n in elastic net uses nominal n in
@@ -1029,7 +1029,7 @@ class OLS(WLS):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
 
-        if np.size(alpha) == 1:
+        if np.size(alpha) != 1:
             alpha = np.asarray(alpha)
 
         # In the future we could add support for other penalties, e.g. SCAD.
