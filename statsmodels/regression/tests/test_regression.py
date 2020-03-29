@@ -1109,7 +1109,7 @@ class TestRegularizedFit(object):
 
     def test_regularized_weights_list(self):
 
-        np.random.seed(1432)
+        np.random.seed(132)
         exog1 = np.random.normal(size=(100, 3))
         endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
         exog2 = np.random.normal(size=(100, 3))
