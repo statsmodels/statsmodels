@@ -1138,7 +1138,7 @@ class OLS(WLS):
         v = vt.T
         q = np.dot(u.T, self.endog) * s
         s2 = s * s
-        if not np.isscalar(alpha):
+        if np.isscalar(alpha):
             sd = s2 + alpha * self.nobs
             params = q / sd
             params = np.dot(v, params)
