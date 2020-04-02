@@ -194,7 +194,7 @@ For examples of the use of this model, see the `example notebook <examples/noteb
 
    # We could further add a damped stochastic cycle as follows
    mod_cycle = sm.tsa.UnobservedComponents(endog, 'local level', cycle=True,
-                                           damped_cycle=true,
+                                           damped_cycle=True,
                                            stochastic_cycle=True)
    res_cycle = mod_cycle.fit()
 
