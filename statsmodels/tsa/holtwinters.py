@@ -21,6 +21,7 @@ from scipy.stats import (
     _distn_infrastructure, rv_continuous, rv_discrete
 )
 
+from statsmodels.base.data import PandasData
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import (populate_wrapper, union_dicts,
                                       ResultsWrapper)
@@ -433,20 +434,35 @@ class HoltWintersResults(Results):
 
         return smry
 
-    def simulate(self, steps, start=-1, nsim=1, error="add",
-                 random_errors=None, random_state=None):
+    def simulate(
+        self,
+        nsimulations,
+        anchor=None,
+        repetitions=1,
+        error="add",
+        random_errors=None,
+        random_state=None,
+    ):
         r"""
         Random simulations using the state space formulation.
 
         Parameters
         ----------
-        steps : int
+        nsimulations : int
             The number of simulation steps.
-        start : int, optional
-            The start index of the simulation. Defaults to -1, i.e. the last
-            data point.
-        nsim : int, optional
-            Number of simulations to perform. Default is 1.
+        anchor : int, str, or datetime, optional
+            First period for simulation. The simulation will be conditional on
+            all existing datapoints prior to the `anchor`.  Type depends on the
+            index of the given `endog` in the model. Two special cases are the
+            strings 'start' and 'end'. `start` refers to beginning the
+            simulation at the first period of the sample, and `end` refers to
+            beginning the simulation at the first period after the sample.
+            Integer values can run from 0 to `nobs`, or can be negative to
+            apply negative indexing. Finally, if a date/time index was provided
+            to the model, then this argument can be a date string to parse or a
+            datetime type. Default is 'end'.
+        repetitions : int, optional
+            Number of simulated paths to generate. Default is 1 simulated path.
         error : {"add", "mul", "additive", "multiplicative"}, optional
             Error model for state space formulation. Default is ``"add"``.
         random_errors : optional
@@ -466,8 +482,8 @@ class HoltWintersResults(Results):
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function.
-            * A ``np.ndarray`` with shape (`steps`, `nsim`): Uses the given
-              values as random errors.
+            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+              the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
         random_state : int or np.random.RandomState, optional
@@ -477,8 +493,16 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        sim : ndarray
-            Array of simulated values with shape (`steps`,`nsim`).
+        sim : pd.Series, pd.DataFrame or np.ndarray
+            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
+            values.
+            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
+            will be a ``pd.Series`` if `repetitions` is 1, and a
+            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
+            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
+            (`nsimulations`,) is returned, and if `repetitions` is not 1 a
+            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
+            returned.
 
         Notes
         -----
@@ -587,10 +611,24 @@ class HoltWintersResults(Results):
         """
 
         # check inputs
-        if error in ['additive', 'multiplicative']:
-            error = {'additive': 'add', 'multiplicative': 'mul'}[error]
-        if error not in ['add', 'mul']:
+        if error in ["additive", "multiplicative"]:
+            error = {"additive": "add", "multiplicative": "mul"}[error]
+        if error not in ["add", "mul"]:
             raise ValueError("error must be 'add' or 'mul'!")
+
+        # Get the starting location
+        if anchor is None or anchor == "end":
+            start_idx = self.model.nobs
+        elif anchor == "start":
+            start_idx = 0
+        else:
+            start_idx, _, _ = self.model._get_index_loc(anchor)
+            if isinstance(start_idx, slice):
+                start_idx = start_idx.start
+        if start_idx < 0:
+            start_idx += self.model.nobs
+        if start_idx > self.model.nobs:
+            raise ValueError("Cannot anchor simulation outside of the sample.")
 
         # get Holt-Winters settings and parameters
         trend = self.model.trend
@@ -598,16 +636,16 @@ class HoltWintersResults(Results):
         seasonal = self.model.seasonal
         use_boxcox = self.params["use_boxcox"]
         lamda = self.params["lamda"]
-        alpha = self.params['smoothing_level']
-        beta = self.params['smoothing_slope']
-        gamma = self.params['smoothing_seasonal']
-        phi = self.params['damping_slope']
+        alpha = self.params["smoothing_level"]
+        beta = self.params["smoothing_slope"]
+        gamma = self.params["smoothing_seasonal"]
+        phi = self.params["damping_slope"]
         # if model has no seasonal component, use 1 as period length
         m = max(self.model.seasonal_periods, 1)
         n_params = (
-            2 +
-            2 * self.model.trending +
-            (m + 1) * self.model.seasoning
+            2
+            + 2 * self.model.trending
+            + (m + 1) * self.model.seasoning
             + damped
         )
         mul_seasonal = seasonal == "mul"
@@ -632,30 +670,36 @@ class HoltWintersResults(Results):
 
         # set initial values
         # (notation as in https://otexts.com/fpp2/ets.html)
-        y = np.empty((steps, nsim))
-        lvl = np.empty((steps + 1, nsim)) # lvl instead of l because of E741
-        b = np.empty((steps + 1, nsim))
-        s = np.empty((steps + m, nsim))
+        y = np.empty((nsimulations, repetitions))
+        # lvl instead of l because of E741
+        lvl = np.empty((nsimulations + 1, repetitions))
+        b = np.empty((nsimulations + 1, repetitions))
+        s = np.empty((nsimulations + m, repetitions))
         # the following uses python's index wrapping
-        lvl[-1,:] = self.level[start]
-        b[-1,:] = self.slope[start]
-        if start == -1:
-            s[-m:,:] = np.tile(self.season[-m:], (nsim, 1)).T
-        elif 0 <= start and start < m:
-            initial_seasons = self.params["initial_seasons"]
-            _s = np.concatenate((initial_seasons[start+1:],
-                                self.season[0:start+1]))
-            s[-m:,:] = np.tile(_s, (nsim, 1)).T
+        if start_idx == 0:
+            lvl[-1, :] = self.params["initial_level"]
+            b[-1, :] = self.params["initial_slope"]
         else:
-            s[-m:,:] = np.tile(self.season[start-m+1:start+1], (nsim, 1)).T
+            lvl[-1, :] = self.level[start_idx - 1]
+            b[-1, :] = self.slope[start_idx - 1]
+        if 0 <= start_idx and start_idx <= m:
+            initial_seasons = self.params["initial_seasons"]
+            _s = np.concatenate(
+                (initial_seasons[start_idx:], self.season[:start_idx],)
+            )
+            s[-m:, :] = np.tile(_s, (repetitions, 1)).T
+        else:
+            s[-m:, :] = np.tile(
+                self.season[start_idx - m : start_idx], (repetitions, 1),
+            ).T
 
         # set neutral values for unused features
         if trend is None:
-            b[:,:] = neutral_b
+            b[:, :] = neutral_b
             phi = 1
             beta = 0
         if seasonal is None:
-            s[:,:] = neutral_s
+            s[:, :] = neutral_s
             gamma = 0
         if not damped:
             phi = 1
@@ -665,53 +709,62 @@ class HoltWintersResults(Results):
             fitted = boxcox(self.fittedvalues, lamda)
         else:
             fitted = self.fittedvalues
-        if error == 'add':
+        if error == "add":
             resid = self.model._y - fitted
         else:
-            resid = (self.model._y - fitted)/fitted
-        sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
+            resid = (self.model._y - fitted) / fitted
+        sigma = np.sqrt(np.sum(resid ** 2) / (len(resid) - n_params))
 
         # get random error eps
         if isinstance(random_errors, np.ndarray):
-            if random_errors.shape != (steps, nsim):
-                raise ValueError("If random is an ndarray, it must have shape (steps, nsim)!")
+            if random_errors.shape != (nsimulations, repetitions):
+                raise ValueError(
+                    "If random is an ndarray, it must have shape "
+                    "(nsimulations, repetitions)!"
+                )
             eps = random_errors
         elif random_errors == "bootstrap":
-            eps = np.random.choice(resid, size=(steps, nsim), replace=True)
+            eps = np.random.choice(
+                resid, size=(nsimulations, repetitions), replace=True
+            )
         elif random_errors is None:
             if random_state is None:
-                eps = np.random.randn(steps, nsim) * sigma
+                eps = np.random.randn(nsimulations, repetitions) * sigma
             elif isinstance(random_state, int):
                 rng = np.random.RandomState(random_state)
-                eps = rng.randn(steps, nsim) * sigma
+                eps = rng.randn(nsimulations, repetitions) * sigma
             elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(steps, nsim) * sigma
+                eps = random_state.randn(nsimulations, repetitions) * sigma
             else:
-                raise ValueError("Argument random_state must be None, an integer, "
-                                 "or an instance of np.random.RandomState")
-        elif isinstance(random_errors, (rv_continuous,rv_discrete)):
+                raise ValueError(
+                    "Argument random_state must be None, an integer, "
+                    "or an instance of np.random.RandomState"
+                )
+        elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(resid)
-            eps = random_errors.rvs(*params, size=(steps, nsim))
+            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
         elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
-            eps = random_errors.rvs(size=(steps, nsim))
+            eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 
-        for t in range(steps):
-            B = op_d(b[t-1, :], phi)
-            L = op_b(lvl[t-1, :], B)
-            S = s[t-m, :]
+        for t in range(nsimulations):
+            B = op_d(b[t - 1, :], phi)
+            L = op_b(lvl[t - 1, :], B)
+            S = s[t - m, :]
             Y = op_s(L, S)
-            if error == 'add':
+            if error == "add":
                 eta = 1
-                kappa_l = 1/S if mul_seasonal else 1
-                kappa_b = kappa_l/lvl[t-1, :] if mul_trend else kappa_l
-                kappa_s = 1/L if mul_seasonal else 1
+                kappa_l = 1 / S if mul_seasonal else 1
+                kappa_b = kappa_l / lvl[t - 1, :] if mul_trend else kappa_l
+                kappa_s = 1 / L if mul_seasonal else 1
             else:
                 eta = Y
                 kappa_l = 0 if mul_seasonal else S
                 kappa_b = (
-                    kappa_l/lvl[t-1, :] if mul_trend else kappa_l + lvl[t-1, :]
+                    kappa_l / lvl[t - 1, :]
+                    if mul_trend
+                    else kappa_l + lvl[t - 1, :]
                 )
                 kappa_s = 0 if mul_seasonal else L
 
@@ -723,18 +776,22 @@ class HoltWintersResults(Results):
         if use_boxcox:
             y = inv_boxcox(y, lamda)
 
-        # wrap result in a pandas DataFrame or Series
-        freq = getattr(self.model._index, 'freq', 1)
-        start = self.model._index[-1] + freq
-        end = self.model._index[-1] + steps * freq
-        index = pd.date_range(start, end, freq=freq)
-
-        if nsim == 1:
-            res = pd.Series(y.ravel(), index=index)
+        # Wrap data / squeeze where appropriate
+        use_pandas = isinstance(self.model.data, PandasData)
+        if use_pandas:
+            _, _, _, index = self.model._get_prediction_index(
+                start_idx, start_idx + nsimulations - 1
+            )
+        if repetitions == 1:
+            sim = y.ravel()
+            if use_pandas:
+                sim = pd.Series(sim, index=index, name=self.model.endog_names)
         else:
-            res = pd.DataFrame(y, index=index)
-        return res
+            sim = y
+            if use_pandas:
+                sim = pd.DataFrame(sim, index=index)
 
+        return sim
 
 
 class HoltWintersResultsWrapper(ResultsWrapper):

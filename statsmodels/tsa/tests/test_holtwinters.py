@@ -822,7 +822,7 @@ def test_simulate_expected_R(trend, seasonal, damped, error,
         return
 
     innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
-    sim = fit.simulate(4, nsim=1, error=error, random_errors=innov)
+    sim = fit.simulate(4, repetitions=1, error=error, random_errors=innov)
 
     assert_almost_equal(expected, sim.values, 5)
 
@@ -836,18 +836,32 @@ def test_simulate_keywords(austourists):
         trend="add", seasonal="add", damped=True
     ).fit()
 
-    fit.simulate(4, start=0, nsim=4)
+    # test anchor
+    assert_almost_equal(
+        fit.simulate(4, anchor=0, random_state=0).values,
+        fit.simulate(4, anchor="start", random_state=0).values
+    )
+    assert_almost_equal(
+        fit.simulate(4, anchor=-1, random_state=0).values,
+        fit.simulate(4, anchor="2015-12-01", random_state=0).values
+    )
+    assert_almost_equal(
+        fit.simulate(4, anchor="end", random_state=0).values,
+        fit.simulate(4, anchor="2016-03-01", random_state=0).values
+    )
 
     # test different random error options
-    fit.simulate(4, nsim=10, random_errors=scipy.stats.norm)
-    fit.simulate(4, nsim=10, random_errors=scipy.stats.norm())
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
 
-    fit.simulate(4, nsim=10, random_errors=np.random.randn(4,10))
-    fit.simulate(4, nsim=10, random_errors="bootstrap")
+    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4,10))
+    fit.simulate(4, repetitions=10, random_errors="bootstrap")
 
     # test seeding
-    res = fit.simulate(4, nsim=10, random_state=10).values
-    res2 = fit.simulate(4, nsim=10, random_state=np.random.RandomState(10)).values
+    res = fit.simulate(4, repetitions=10, random_state=10).values
+    res2 = fit.simulate(
+        4, repetitions=10, random_state=np.random.RandomState(10)
+    ).values
     assert np.all(res == res2)
 
 
@@ -861,7 +875,7 @@ def test_simulate_boxcox(austourists):
     ).fit(use_boxcox=True)
     expected = fit.forecast(4).values
 
-    res = fit.simulate(4, nsim=10).values
+    res = fit.simulate(4, repetitions=10).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
