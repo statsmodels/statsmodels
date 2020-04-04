@@ -2894,6 +2894,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
+    @cache_readonly
+    def rsquared(self):
+        """
+        (float) conventional R-squared, 1 - sse/ssm
+        """
+        ssm = np.var(self.endog) * len(self.endog)
+        return 1. - self.sse / ssm
+
+    @ cache_readonly
+    def rsquared_difference(self)：
+        """
+        (float) R-squared, 1 - SSE / SSDM
+        SSDM = sum of squares of first differences around mean
+        see eq. 5.5.14 in "Forecasting, structural time series
+        models and the Kalman filter" (Harvey, 1989)
+        """
+        ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
+        return 1. - self.sse / ssdm
+
     def test_normality(self, method):
         """
         Test for normality of standardized residuals.
