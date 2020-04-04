@@ -2902,7 +2902,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ssm = np.var(self.endog) * len(self.endog)
         return 1. - self.sse / ssm
 
-    @ cache_readonly
+    @cache_readonly
     def rsquared_difference(self)：
         """
         (float) R-squared, 1 - SSE / SSDM
