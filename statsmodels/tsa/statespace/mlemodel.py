@@ -2904,7 +2904,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return 1. - sse / ssm
 
     @cache_readonly
-    def rsquared_difference(self)：
+    def rsquared_difference(self):
         """
         (float) R-squared, 1 - SSE / SSDM
         SSDM = sum of squares of first differences around mean
