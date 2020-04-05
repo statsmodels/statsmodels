@@ -2044,6 +2044,3 @@ def test_grid_ar():
                     rtol=0.05)
     assert_allclose(result1.cov_struct.dep_params,
                     result3.cov_struct.dep_params[1], rtol=0.05)
-
-
-
