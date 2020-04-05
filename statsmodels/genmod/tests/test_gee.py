@@ -2009,6 +2009,7 @@ def test_quasipoisson(reg):
         assert_allclose(result2.cov_naive / result1.cov_naive,
                         result2.scale * np.ones_like(result2.cov_naive))
 
+
 def test_grid_ar():
 
     np.random.seed(243)
@@ -2029,7 +2030,8 @@ def test_grid_ar():
     x = np.random.normal(size=(ng*m, 3))
     y = np.dot(x, np.r_[1, -1, 0]) + e
 
-    model1 = gee.GEE(y, x, groups=grps, cov_struct=cov_struct.Autoregressive())
+    model1 = gee.GEE(y, x, groups=grps,
+                     cov_struct=cov_struct.Autoregressive())
     result1 = model1.fit()
 
     model2 = gee.GEE(y, x, groups=grps,
@@ -2040,7 +2042,8 @@ def test_grid_ar():
                      cov_struct=cov_struct.Stationary(max_lag=1))
     result3 = model3.fit()
 
-    assert_allclose(result1.cov_struct.dep_params, result2.cov_struct.dep_params,
+    assert_allclose(result1.cov_struct.dep_params,
+                    result2.cov_struct.dep_params,
                     rtol=0.05)
     assert_allclose(result1.cov_struct.dep_params,
                     result3.cov_struct.dep_params[1], rtol=0.05)
