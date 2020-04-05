@@ -452,7 +452,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
 
 
 def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
-              nbins=30):
+              nbins=30, alpha=0):
     """
     Calculate local FDR values for a list of Z-scores.
 
@@ -470,6 +470,9 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     nbins : int
         The number of bins for estimating the marginal density
         of Z-scores.
+    alpha : float
+        Use Poisson ridge regression with parameter alpha to estimate
+        the density of non-null Z-scores.
 
     Returns
     -------
@@ -514,11 +517,11 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     # The design matrix at bin centers
     dmat = np.vander(zbins, deg + 1)
 
-    # Use this to get starting values for Poisson regression
-    md = OLS(np.log(1 + zhist), dmat).fit()
-
     # Poisson regression
-    md = GLM(zhist, dmat, family=families.Poisson()).fit(start_params=md.params)
+    if alpha > 0:
+        md = GLM(zhist, dmat, family=families.Poisson()).fit_regularized(alpha=alpha)
+    else:
+        md = GLM(zhist, dmat, family=families.Poisson()).fit()
 
     # The design matrix for all Z-scores
     dmat_full = np.vander(zscores, deg + 1)
