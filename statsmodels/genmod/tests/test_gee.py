@@ -362,26 +362,26 @@ class TestGEE(object):
             assert_almost_equal(rslt1.params.values, rslt2.params.values)
             assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
 
-    def test_invalid_args(self):
-        # TODO: parametrize?
+    @pytest.mark.parametrize("k1", [False, True])
+    @pytest.mark.parametrize("k2", [False, True])
+    def test_invalid_args(self, k1, k2):
+
         for j in range(3):
-            for k1 in False, True:
-                for k2 in False, True:
 
-                    p = [20, 20, 20]
-                    p[j] = 18
+            p = [20, 20, 20]
+            p[j] = 18
 
-                    endog = np.zeros(p[0])
-                    exog = np.zeros((p[1], 2))
+            endog = np.zeros(p[0])
+            exog = np.zeros((p[1], 2))
 
-                    kwargs = {}
-                    kwargs["groups"] = np.zeros(p[2])
-                    if k1:
-                        kwargs["exposure"] = np.zeros(18)
-                    if k2:
-                        kwargs["time"] = np.zeros(18)
-                    with assert_raises(ValueError):
-                        gee.GEE(endog, exog, **kwargs)
+            kwargs = {}
+            kwargs["groups"] = np.zeros(p[2])
+            if k1:
+                kwargs["exposure"] = np.zeros(18)
+            if k2:
+                kwargs["time"] = np.zeros(18)
+            with assert_raises(ValueError):
+                gee.GEE(endog, exog, **kwargs)
 
     def test_default_time(self):
         # Check that the time defaults work correctly.
@@ -2008,3 +2008,42 @@ def test_quasipoisson(reg):
         # but the naive covariance does.
         assert_allclose(result2.cov_naive / result1.cov_naive,
                         result2.scale * np.ones_like(result2.cov_naive))
+
+def test_grid_ar():
+
+    np.random.seed(243)
+
+    r = 0.5
+    m = 10
+    ng = 100
+    ii = np.arange(m)
+    cov = r**np.abs(np.subtract.outer(ii, ii))
+    covr = np.linalg.cholesky(cov)
+
+    e = [np.dot(covr, np.random.normal(size=m)) for k in range(ng)]
+    e = 2 * np.concatenate(e)
+
+    grps = [[k]*m for k in range(ng)]
+    grps = np.concatenate(grps)
+
+    x = np.random.normal(size=(ng*m, 3))
+    y = np.dot(x, np.r_[1, -1, 0]) + e
+
+    model1 = gee.GEE(y, x, groups=grps, cov_struct=cov_struct.Autoregressive())
+    result1 = model1.fit()
+
+    model2 = gee.GEE(y, x, groups=grps,
+                     cov_struct=cov_struct.Autoregressive(grid=True))
+    result2 = model2.fit()
+
+    model3 = gee.GEE(y, x, groups=grps,
+                     cov_struct=cov_struct.Stationary(max_lag=1))
+    result3 = model3.fit()
+
+    assert_allclose(result1.cov_struct.dep_params, result2.cov_struct.dep_params,
+                    rtol=0.05)
+    assert_allclose(result1.cov_struct.dep_params,
+                    result3.cov_struct.dep_params[1], rtol=0.05)
+
+
+

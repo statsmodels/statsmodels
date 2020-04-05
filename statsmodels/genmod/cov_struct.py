@@ -709,14 +709,22 @@ class Autoregressive(CovStruct):
 
     def _update_grid(self, params):
 
+        cached_means = self.model.cached_means
+        scale = self.model.estimate_scale()
+        varfunc = self.model.family.variance
         endog = self.model.endog_li
 
         lag0, lag1 = 0.0, 0.0
-        for x in endog:
-            n = len(x)
+        for i in range(self.model.num_group):
+
+            expval, _ = cached_means[i]
+            stdev = np.sqrt(scale * varfunc(expval))
+            resid = (endog[i] - expval) / stdev
+
+            n = len(resid)
             if n > 1:
-                lag1 += np.sum(x[0:-1] * x[1:]) / n
-                lag0 += np.sum(x**2) / n
+                lag1 += np.sum(resid[0:-1] * resid[1:]) / (n - 1)
+                lag0 += np.sum(resid**2) / n
 
         self.dep_params = lag1 / lag0
 
