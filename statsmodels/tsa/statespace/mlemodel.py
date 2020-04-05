@@ -2895,15 +2895,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.params / self.bse
 
     @cache_readonly
-    def rsquared(self):
-        """
-        (float) conventional R-squared, 1 - sse/ssm
-        """
-        ssm = np.var(self.endog) * len(self.endog)
-        sse = np.sum(self.resid**2)
-        return 1. - sse / ssm
-
-    @cache_readonly
     def rsquared_difference(self):
         """
         (float) R-squared, 1 - SSE / SSDM
