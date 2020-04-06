@@ -615,6 +615,8 @@ class GLS(RegressionModel):
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
+        if not np.isscalar(alpha):
+            alpha = np.asarray(alpha)
         # Need to adjust since RSS/n term in elastic net uses nominal
         # n in denominator
         if self.sigma is not None:
@@ -792,7 +794,8 @@ class WLS(RegressionModel):
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
         # Docstring attached below
-
+        if not np.isscalar(alpha):
+            alpha = np.asarray(alpha)
         # Need to adjust since RSS/n in elastic net uses nominal n in
         # denominator
         alpha = alpha * np.sum(self.weights) / len(self.weights)
@@ -1140,6 +1143,7 @@ class OLS(WLS):
             params = q / sd
             params = np.dot(v, params)
         else:
+            alpha = np.asarray(alpha)
             vtav = self.nobs * np.dot(vt, alpha[:, None] * v)
             d = np.diag(vtav) + s2
             np.fill_diagonal(vtav, d)

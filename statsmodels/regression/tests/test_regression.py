@@ -1107,6 +1107,39 @@ class TestRegularizedFit(object):
                 assert_almost_equal(rslt1.params, rslt2.params, decimal=3)
                 assert_almost_equal(rslt1.params, rslt3.params, decimal=3)
 
+    def test_regularized_weights_list(self):
+
+        np.random.seed(132)
+        exog1 = np.random.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
+        exog2 = np.random.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+
+        exog_a = np.vstack((exog1, exog1, exog2))
+        endog_a = np.concatenate((endog1, endog1, endog2))
+
+        # Should be equivalent to exog_a, endog_a.
+        exog_b = np.vstack((exog1, exog2))
+        endog_b = np.concatenate((endog1, endog2))
+        wgts = np.ones(200)
+        wgts[0:100] = 2
+        sigma = np.diag(1/wgts)
+
+        for L1_wt in 0, 0.5, 1:
+            for alpha_element in 0, 1:
+                alpha = [alpha_element,] * 3
+
+                mod1 = OLS(endog_a, exog_a)
+                rslt1 = mod1.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod2 = WLS(endog_b, exog_b, weights=wgts)
+                rslt2 = mod2.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod3 = GLS(endog_b, exog_b, sigma=sigma)
+                rslt3 = mod3.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                assert_almost_equal(rslt1.params, rslt2.params, decimal=3)
+                assert_almost_equal(rslt1.params, rslt3.params, decimal=3)
 
 def test_formula_missing_cat():
     # gh-805
