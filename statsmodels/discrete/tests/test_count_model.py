@@ -235,7 +235,7 @@ class TestZeroInflatedPoisson_predict(object):
         endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zipoisson.pmf(np.arange(7)[:,None],
+        pr2 = sm.distributions.zipoisson.pmf(np.arange(pr.shape[1])[:,None],
             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
@@ -338,7 +338,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zinegbin.pmf(np.arange(12)[:,None],
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(pr.shape[1])[:,None],
             res.predict(), 0.5, 2, 0.5).T
         assert_allclose(pr, pr2, rtol=0.08, atol=0.05)
 
