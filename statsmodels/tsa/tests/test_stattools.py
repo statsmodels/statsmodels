@@ -994,6 +994,11 @@ class TestZivotAndrews(SetupZivotAndrews):
         with pytest.raises(ValueError):
             zivot_andrews(self.fail_mdl, autolag='None')
 
+    @pytest.mark.parametrize('autolag', ["AIC", "aic", "Aic"])
+    def test_autolag_case_sensitivity(self, autolag):
+        res = zivot_andrews(self.fail_mdl, autolag=autolag)
+        assert res[3] == 1
+
     # following tests compare results to R package urca.ur.za (1.13-0)
     def test_rgnp_case(self):
         res = zivot_andrews(self.fail_mdl, maxlag=8, regression='c',
