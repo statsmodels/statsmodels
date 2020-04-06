@@ -168,7 +168,7 @@ def test_survdiff():
     # Not stratified, >2 groups
     stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group, weight_type="fh",
                        fh_p=1)
-    assert_allclose(stat, 15.67247, atol=1e-4, rtol=1e-2)
+    assert_allclose(stat, 15.67247, atol=1e-4, rtol=1e-4)
 
     # 5 strata
     strata = np.arange(df.shape[0]) % 5
@@ -187,7 +187,7 @@ def test_survdiff():
     full_df["strata"] = full_strata
     stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group, strata=full_df.strata,
                        weight_type="fh", fh_p=0.5)
-    assert_allclose(stat, 13.56793, atol=1e-4, rtol=1e-1)
+    assert_allclose(stat, 13.56793, atol=1e-4, rtol=1e-4)
 
     # 8 strata
     df["strata"] = np.arange(df.shape[0]) % 8
