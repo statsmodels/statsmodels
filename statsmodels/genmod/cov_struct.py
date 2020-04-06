@@ -676,7 +676,7 @@ class Autoregressive(CovStruct):
     in medicine. Vol 7, 59-71, 1988.
     """
 
-    def __init__(self, dist_func=None):
+    def __init__(self, dist_func=None, grid=False):
 
         super(Autoregressive, self).__init__()
 
@@ -686,7 +686,10 @@ class Autoregressive(CovStruct):
         else:
             self.dist_func = dist_func
 
-        self.designx = None
+        self.grid = grid
+
+        if not grid:
+            self.designx = None
 
         # The autocorrelation parameter
         self.dep_params = 0.
@@ -698,6 +701,34 @@ class Autoregressive(CovStruct):
             warnings.warn("weights not implemented for autoregressive "
                           "cov_struct, using unweighted covariance estimate",
                           NotImplementedWarning)
+
+        if self.grid:
+            self._update_grid(params)
+        else:
+            self._update_nogrid(params)
+
+    def _update_grid(self, params):
+
+        cached_means = self.model.cached_means
+        scale = self.model.estimate_scale()
+        varfunc = self.model.family.variance
+        endog = self.model.endog_li
+
+        lag0, lag1 = 0.0, 0.0
+        for i in range(self.model.num_group):
+
+            expval, _ = cached_means[i]
+            stdev = np.sqrt(scale * varfunc(expval))
+            resid = (endog[i] - expval) / stdev
+
+            n = len(resid)
+            if n > 1:
+                lag1 += np.sum(resid[0:-1] * resid[1:]) / (n - 1)
+                lag0 += np.sum(resid**2) / n
+
+        self.dep_params = lag1 / lag0
+
+    def _update_nogrid(self, params):
 
         endog = self.model.endog_li
         time = self.model.time_li
