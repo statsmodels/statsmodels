@@ -211,7 +211,7 @@ class TestZeroInflatedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
-        np.random.seed(123)
+        np.random.seed(999)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
@@ -226,8 +226,21 @@ class TestZeroInflatedPoisson_predict(object):
                         atol=1e-2, rtol=1e-2)
 
     def test_var(self):
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            # the variance of the mixture is the mixture of the variances
+            # plus a non-negative term accounting for the (weighted) dispersion of the means
+            # see stats.stackexchange #16609 and Casella & Berger's Statistical Inference (Example 10.2.1)
+            prob_infl = 1-prob_main
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean() - (((1-prob_infl)*mu).mean())**2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
 
     def test_predict_prob(self):
@@ -235,7 +248,7 @@ class TestZeroInflatedPoisson_predict(object):
         endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zipoisson.pmf(np.arange(7)[:,None],
+        pr2 = sm.distributions.zipoisson.pmf(np.arange(pr.shape[1])[:,None],
             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
@@ -314,7 +327,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
-        np.random.seed(1234)
+        np.random.seed(999)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
@@ -329,8 +342,18 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
                         atol=1e-4, rtol=1e-4)
 
     def test_var(self):
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            prob_infl = 1-prob_main
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean() - (((1-prob_infl)*mu).mean())**2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), atol=0.05, rtol=0.1)
 
     def test_predict_prob(self):
@@ -338,7 +361,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zinegbin.pmf(np.arange(12)[:,None],
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(pr.shape[1])[:,None],
             res.predict(), 0.5, 2, 0.5).T
         assert_allclose(pr, pr2, rtol=0.08, atol=0.05)
 
@@ -426,7 +449,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
     def setup_class(cls):
 
         expected_params = [1, 1, 0.5]
-        np.random.seed(987123)
+        np.random.seed(999)
         nobs = 500
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 0
@@ -447,8 +470,18 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 
     def test_var(self):
         # todo check precision
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            prob_infl = 1 - prob_main
+            var = (dispersion_factor * (1 - prob_infl) * mu).mean()
+            var += (((1 - prob_infl) * mu) ** 2).mean() - (((1 - prob_infl) * mu).mean()) ** 2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), rtol=0.2)
 
     def test_predict_prob(self):
