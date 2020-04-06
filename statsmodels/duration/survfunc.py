@@ -633,6 +633,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
               **kwargs):
     # logrank test for one stratum
     # calculations based on https://web.stanford.edu/~lutian/coursepdf/unit6.pdf
+    # formula for variance better to take from https://web.stanford.edu/~lutian/coursepdf/survweek3.pdf
 
     # Get the unique times.
     if entry is None:
@@ -701,22 +702,23 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
         else:
             raise ValueError("weight_type not implemented")
 
+    dfs = len(gr) - 1
+    r = np.vstack(nrisk) / np.clip(nrisk_tot, 1e-10, np.inf)[None, :]  # timeseries of r's PER group
+
     # The variance of event counts in each group.
     groups_oe = []
     groups_var = []
 
-    dfs = len(gr) - 1
-    for g in range(dfs):
-        r = nrisk[g] / np.clip(nrisk_tot, 1e-10, np.inf)
+    for g in range(1, dfs+1):
         denom = nrisk_tot - 1
         denom = np.clip(denom, 1e-10, np.inf)
 
-        var_part = np.eye(1, dfs, g).ravel() - r[:, None]  # (1 - r) in multidim
-        var = obs * r * (nrisk_tot - obs) / denom  # missing (1-r). restore below
+        var_part = r[1:, :].T*(np.eye(1, dfs, g-1).ravel() - r[g, :, None])  # r*(1 - r) in multidim
+        var = obs * (nrisk_tot - obs) / denom  # missing r*(1-r). restore below
         var = var_part*var[:, None]
 
         # Difference between observed and  expected number of events in the group #g
-        oe = obsv[g] - r*obs
+        oe = obsv[g] - r[g]*obs
 
         if weights is not None:
             oe = weights * oe
