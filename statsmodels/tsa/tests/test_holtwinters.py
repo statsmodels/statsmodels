@@ -7,6 +7,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.stats
 import pytest
 from numpy.testing import assert_almost_equal, assert_allclose
 
@@ -137,6 +138,7 @@ class TestHoltWinters(object):
         aust.index = pd.DatetimeIndex(aust.index,
                                       freq=pd.infer_freq(aust.index))
         cls.aust = aust
+
 
     def test_predict(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
@@ -531,3 +533,349 @@ def test_damping_slope_zero():
     assert_allclose(pred2, np.r_[0., np.arange(9)], atol=1e-10)
 
     assert_allclose(pred1, pred2, atol=1e-10)
+
+
+
+@pytest.fixture
+def austourists():
+    # austourists dataset from fpp2 package
+    # https://cran.r-project.org/web/packages/fpp2/index.html
+    data = [30.05251, 19.14850, 25.31769, 27.59144, 32.07646,
+            23.48796, 28.47594, 35.12375, 36.83848, 25.00702,
+            30.72223, 28.69376, 36.64099, 23.82461, 29.31168,
+            31.77031, 35.17788, 19.77524, 29.60175, 34.53884,
+            41.27360, 26.65586, 28.27986, 35.19115, 42.20566,
+            24.64917, 32.66734, 37.25735, 45.24246, 29.35048,
+            36.34421, 41.78208, 49.27660, 31.27540, 37.85063,
+            38.83704, 51.23690, 31.83855, 41.32342, 42.79900,
+            55.70836, 33.40714, 42.31664, 45.15712, 59.57608,
+            34.83733, 44.84168, 46.97125, 60.01903, 38.37118,
+            46.97586, 50.73380, 61.64687, 39.29957, 52.67121,
+            54.33232, 66.83436, 40.87119, 51.82854, 57.49191,
+            65.25147, 43.06121, 54.76076, 59.83447, 73.25703,
+            47.69662, 61.09777, 66.05576,]
+    index = pd.date_range("1999-03-01", "2015-12-01", freq="3MS")
+    return pd.Series(data, index)
+
+
+@pytest.fixture
+def simulate_expected_results_R():
+    """
+    obtained from ets.simulate in the R package forecast, data is from fpp2
+    package.
+
+    library(magrittr)
+    library(fpp2)
+    library(forecast)
+    concat <- function(...) {
+      return(paste(..., sep=""))
+    }
+    error <- c("A", "M")
+    trend <- c("A", "M", "N")
+    seasonal <- c("A", "M", "N")
+    models <- outer(error, trend, FUN = "concat") %>%
+      outer(seasonal, FUN = "concat") %>% as.vector
+    # innov from np.random.seed(0); np.random.randn(4)
+    innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
+    params <- expand.grid(models, c(TRUE, FALSE))
+    results <- apply(params, 1, FUN = function(p) {
+      tryCatch(
+        simulate(ets(austourists, model = p[1], damped = as.logical(p[2])),
+                 innov = innov),
+        error = function(e) c(NA, NA, NA, NA))
+    }) %>% t
+    rownames(results) <- apply(params, 1, FUN = function(x) paste(x[1], x[2]))
+    """
+    damped = {
+        "AAA": [ 77.84173,  52.69818,  65.83254,  71.85204],
+        "MAA": [207.81653, 136.97700, 253.56234, 588.95800],
+        "MAM": [215.83822, 127.17132, 269.09483, 704.32105],
+        "MMM": [216.52591, 132.47637, 283.04889, 759.08043],
+        "AAN": [ 62.51423,  61.87381,  63.14735,  65.11360],
+        "MAN": [168.25189,  90.46201, 133.54769, 232.81738],
+        "MMN": [167.97747,  90.59675, 134.20300, 235.64502],
+    }
+    undamped = {
+        "AAA": [ 77.10860,  51.51669,  64.46857,   70.36349],
+        "MAA": [209.23158, 149.62943, 270.65579,  637.03828],
+        "ANA": [ 77.09320,  51.52384,  64.36231,   69.84786],
+        "MNA": [207.86986, 169.42706, 313.97960,  793.97948],
+        "MAM": [214.45750, 106.19605, 211.61304,  492.12223],
+        "MMM": [221.01861, 158.55914, 403.22625, 1389.33384],
+        "MNM": [215.00997, 140.93035, 309.92465,  875.07985],
+        "AAN": [ 63.66619,  63.09571,  64.45832,   66.51967],
+        "MAN": [172.37584,  91.51932, 134.11221,  230.98970],
+        "MMN": [169.88595,  97.33527, 142.97017,  252.51834],
+        "ANN": [ 60.53589,  59.51851,  60.17570,   61.63011],
+        "MNN": [163.01575, 112.58317, 172.21992,  338.93918],
+    }
+    return {True: damped, False: undamped}
+
+@pytest.fixture
+def simulate_fit_state_R():
+    """
+    The final state from the R model fits to get an exact comparison
+    Obtained with this R script:
+
+    library(magrittr)
+    library(fpp2)
+    library(forecast)
+
+    concat <- function(...) {
+      return(paste(..., sep=""))
+    }
+
+    as_dict_string <- function(named) {
+      string <- '{'
+      for (name in names(named)) {
+        string <- concat(string, "\"", name, "\": ", named[name], ", ")
+      }
+      string <- concat(string, '}')
+      return(string)
+    }
+
+    get_var <- function(named, name) {
+      if (name %in% names(named))
+        val <- c(named[name])
+      else
+        val <- c(NaN)
+      names(val) <- c(name)
+      return(val)
+    }
+
+    error <- c("A", "M")
+    trend <- c("A", "M", "N")
+    seasonal <- c("A", "M", "N")
+    models <- outer(error, trend, FUN = "concat") %>%
+      outer(seasonal, FUN = "concat") %>% as.vector
+
+    # innov from np.random.seed(0); np.random.randn(4)
+    innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
+    n <- length(austourists) + 1
+
+    # print fit parameters and final states
+    for (damped in c(TRUE, FALSE)) {
+      print(paste("damped =", damped))
+      for (model in models) {
+        state <- tryCatch((function(){
+          fit <- ets(austourists, model = model, damped = damped)
+          pars <- c()
+          # alpha, beta, gamma, phi
+          for (name in c("alpha", "beta", "gamma", "phi")) {
+            pars <- c(pars, get_var(fit$par, name))
+          }
+          # l, b, s1, s2, s3, s4
+          states <- c()
+          for (name in c("l", "b", "s1", "s2", "s3", "s4"))
+            states <- c(states, get_var(fit$states[n,], name))
+          c(pars, states)
+        })(),
+        error = function(e) rep(NA, 10))
+        cat(concat("\"", model, "\": ", as_dict_string(state), ",\n"))
+      }
+    }
+    """
+    damped = {
+        "AAA": {"alpha": 0.35445427317618, "beta": 0.0320074905894167,
+                "gamma": 0.399933869627979, "phi": 0.979999965983533,
+                "l": 62.003405788717, "b": 0.706524957599738,
+                "s1": 3.58786406600866, "s2": -0.0747450283892903,
+                "s3": -11.7569356589817, "s4": 13.3818805055271, },
+        "MAA": {"alpha": 0.31114284033284, "beta": 0.0472138763848083,
+                "gamma": 0.309502324693322, "phi": 0.870889202791893,
+                "l": 59.2902342851514, "b": 0.62538315801909,
+                "s1": 5.66660224738038, "s2": 2.16097311633352,
+                "s3": -9.20020909069337, "s4": 15.3505801601698, },
+        "MAM": {"alpha": 0.483975835390643, "beta": 0.00351728130401287,
+                "gamma": 0.00011309784353818, "phi": 0.979999998322032,
+                "l": 63.0042707536293, "b": 0.275035160634846,
+                "s1": 1.03531670491486, "s2": 0.960515682506077,
+                "s3": 0.770086097577864, "s4": 1.23412213281709, },
+        "MMM": {"alpha": 0.523526123191035, "beta": 0.000100021136675999,
+                "gamma": 0.000100013723372502, "phi": 0.971025672907157,
+                "l": 63.2030316675533, "b": 1.00458391644788,
+                "s1": 1.03476354353096, "s2": 0.959953222294316,
+                "s3": 0.771346403552048, "s4": 1.23394845160922, },
+        "AAN": {"alpha": 0.014932817259302, "beta": 0.0149327068053362,
+                "gamma": np.nan, "phi": 0.979919958387887,
+                "l": 60.0651024395378, "b": 0.699112782133822,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "MAN": {"alpha": 0.0144217343786778, "beta": 0.0144216994589862,
+                "gamma": np.nan, "phi": 0.979999719878659,
+                "l": 60.1870032363649, "b": 0.698421913047609,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "MMN": {"alpha": 0.015489181776072, "beta": 0.0154891632646377,
+                "gamma": np.nan, "phi": 0.975139118496093,
+                "l": 60.1855946424729, "b": 1.00999589024928,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        }
+    undamped = {
+        "AAA": {"alpha": 0.20281951627363, "beta": 0.000169786227368617,
+                "gamma": 0.464523797585052, "phi": np.nan,
+                "l": 62.5598121416791, "b": 0.578091734736357,
+                "s1": 2.61176734723357, "s2": -1.24386240029203,
+                "s3": -12.9575427049515, "s4": 12.2066400808086, },
+        "MAA": {"alpha": 0.416371920801538, "beta": 0.000100008012920072,
+                "gamma": 0.352943901103959, "phi": np.nan,
+                "l": 62.0497742976079, "b": 0.450130087198346,
+                "s1": 3.50368220490457, "s2": -0.0544297321113539,
+                "s3": -11.6971093199679, "s4": 13.1974985095916, },
+        "ANA": {"alpha": 0.54216694759434, "beta": np.nan,
+                "gamma": 0.392030170511872, "phi": np.nan,
+                "l": 57.606831186929, "b": np.nan,
+                "s1": 8.29613785790501, "s2": 4.6033791939889,
+                "s3": -7.43956343440823, "s4": 17.722316385643, },
+        "MNA": {"alpha": 0.532842556756286, "beta": np.nan,
+                "gamma": 0.346387433608713, "phi": np.nan,
+                "l": 58.0372808528325, "b": np.nan,
+                "s1": 7.70802088750111, "s2": 4.14885814748503,
+                "s3": -7.72115936226225, "s4": 17.1674660340923, },
+        "MAM": {"alpha": 0.315621390571192, "beta": 0.000100011993615961,
+                "gamma": 0.000100051297784532, "phi": np.nan,
+                "l": 62.4082004238551, "b": 0.513327867101983,
+                "s1": 1.03713425342421, "s2": 0.959607104686072,
+                "s3": 0.770172817592091, "s4": 1.23309264451638, },
+        "MMM": {"alpha": 0.546068965886, "beta": 0.0737816453485457,
+                "gamma": 0.000100031693302807, "phi": np.nan,
+                "l": 63.8203866275649, "b": 1.01833305374778,
+                "s1": 1.03725227137871, "s2": 0.961177239042923,
+                "s3": 0.771173487523454, "s4": 1.23036313932852, },
+        "MNM": {"alpha": 0.608993139624813, "beta": np.nan,
+                "gamma": 0.000167258612971303, "phi": np.nan,
+                "l": 63.1472153330648, "b": np.nan,
+                "s1": 1.0384840572776, "s2": 0.961456755855531,
+                "s3": 0.768427399477366, "s4": 1.23185085956321, },
+        "AAN": {"alpha": 0.0097430554119077, "beta": 0.00974302759255084,
+                "gamma": np.nan, "phi": np.nan,
+                "l": 61.1430969243248, "b": 0.759041621012503,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "MAN": {"alpha": 0.0101749952821338, "beta": 0.0101749138539332,
+                "gamma": np.nan, "phi": np.nan,
+                "l": 61.6020426238699, "b": 0.761407500773051,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "MMN": {"alpha": 0.0664382968951546, "beta": 0.000100001678373356,
+                "gamma": np.nan, "phi": np.nan,
+                "l": 60.7206911970871, "b": 1.01221899136391,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "ANN": {"alpha": 0.196432515825523, "beta": np.nan,
+                "gamma": np.nan, "phi": np.nan,
+                "l": 58.7718395431632, "b": np.nan,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+        "MNN": {"alpha": 0.205985314333856, "beta": np.nan,
+                "gamma": np.nan, "phi": np.nan,
+                "l": 58.9770839944419, "b": np.nan,
+                "s1": np.nan, "s2": np.nan,
+                "s3": np.nan, "s4": np.nan, },
+    }
+    return {True: damped, False: undamped}
+
+
+@pytest.mark.parametrize('trend', TRENDS)
+@pytest.mark.parametrize('seasonal', SEASONALS)
+@pytest.mark.parametrize('damped', (True, False))
+@pytest.mark.parametrize('error', ("add", "mul"))
+def test_simulate_expected_R(trend, seasonal, damped, error,
+                             austourists, simulate_expected_results_R,
+                             simulate_fit_state_R):
+    """
+    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults``.
+
+    The tests are using the implementation in the R package ``forecast`` as
+    reference, and example data is taken from ``fpp2`` (package and book).
+    """
+
+    short_name = {"add": "A", "mul": "M", None: "N"}
+    model_name = short_name[error] +  short_name[trend] + short_name[seasonal]
+    if model_name in simulate_expected_results_R[damped]:
+        expected = np.asarray(simulate_expected_results_R[damped][model_name])
+        state = simulate_fit_state_R[damped][model_name]
+    else:
+        return
+
+    # create HoltWintersResults object with same parameters as in R
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend=trend, seasonal=seasonal, damped=damped
+    ).fit(
+        smoothing_level=state["alpha"], smoothing_slope=state["beta"],
+        smoothing_seasonal=state["gamma"], damping_slope=state["phi"],
+        optimized=False
+    )
+
+    # set the same final state as in R
+    fit.level[-1] = state["l"]
+    fit.slope[-1] = state["b"]
+    fit.season[-1] = state["s1"]
+    fit.season[-2] = state["s2"]
+    fit.season[-3] = state["s3"]
+    fit.season[-4] = state["s4"]
+
+    # for MMM with damped trend the fit fails
+    if np.any(np.isnan(fit.fittedvalues)):
+        return
+
+    innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
+    sim = fit.simulate(4, repetitions=1, error=error, random_errors=innov)
+
+    assert_almost_equal(expected, sim.values, 5)
+
+
+def test_simulate_keywords(austourists):
+    """
+    check whether all keywords are accepted and work without throwing errors.
+    """
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend="add", seasonal="add", damped=True
+    ).fit()
+
+    # test anchor
+    assert_almost_equal(
+        fit.simulate(4, anchor=0, random_state=0).values,
+        fit.simulate(4, anchor="start", random_state=0).values
+    )
+    assert_almost_equal(
+        fit.simulate(4, anchor=-1, random_state=0).values,
+        fit.simulate(4, anchor="2015-12-01", random_state=0).values
+    )
+    assert_almost_equal(
+        fit.simulate(4, anchor="end", random_state=0).values,
+        fit.simulate(4, anchor="2016-03-01", random_state=0).values
+    )
+
+    # test different random error options
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
+    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
+
+    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4,10))
+    fit.simulate(4, repetitions=10, random_errors="bootstrap")
+
+    # test seeding
+    res = fit.simulate(4, repetitions=10, random_state=10).values
+    res2 = fit.simulate(
+        4, repetitions=10, random_state=np.random.RandomState(10)
+    ).values
+    assert np.all(res == res2)
+
+
+def test_simulate_boxcox(austourists):
+    """
+    check if simulation results with boxcox fits are reasonable
+    """
+    fit = ExponentialSmoothing(
+        austourists, seasonal_periods=4,
+        trend="add", seasonal="mul", damped=False
+    ).fit(use_boxcox=True)
+    expected = fit.forecast(4).values
+
+    res = fit.simulate(4, repetitions=10).values
+    mean = np.mean(res, axis=1)
+
+    assert np.all(np.abs(mean - expected) < 5)
