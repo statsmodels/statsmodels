@@ -669,6 +669,14 @@ class HoltWintersResults(Results):
             neutral_s = 0
 
         # set initial values
+        if use_boxcox:
+            level = self.model._untransformed_level
+            slope = self.model._untransformed_slope
+            season = self.model._untransformed_season
+        else:
+            level = self.level
+            slope = self.slope
+            season = self.season
         # (notation as in https://otexts.com/fpp2/ets.html)
         y = np.empty((nsimulations, repetitions))
         # lvl instead of l because of E741
@@ -680,17 +688,17 @@ class HoltWintersResults(Results):
             lvl[-1, :] = self.params["initial_level"]
             b[-1, :] = self.params["initial_slope"]
         else:
-            lvl[-1, :] = self.level[start_idx - 1]
-            b[-1, :] = self.slope[start_idx - 1]
+            lvl[-1, :] = level[start_idx - 1]
+            b[-1, :] = slope[start_idx - 1]
         if 0 <= start_idx and start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
             _s = np.concatenate(
-                (initial_seasons[start_idx:], self.season[:start_idx],)
+                (initial_seasons[start_idx:], season[:start_idx],)
             )
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T
         else:
             s[-m:, :] = np.tile(
-                self.season[start_idx - m : start_idx], (repetitions, 1),
+                season[start_idx - m : start_idx], (repetitions, 1),
             ).T
 
         # set neutral values for unused features
@@ -1306,13 +1314,19 @@ class ExponentialSmoothing(TimeSeriesModel):
             fitted = trend
         level = lvls[1:nobs + 1].copy()
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
+            # store untransformed values in private attribute, transforming
+            # here is probably a bug
+            self._untransformed_level = level
+            self._untransformed_slope = slope
+            self._untransformed_season = season
+
             fitted = inv_boxcox(fitted, lamda)
-            # level = inv_boxcox(level, lamda)
-            # slope = detrend(trend[:nobs], level)
-            # if seasonal == 'add':
-            #     season = (fitted - inv_boxcox(trend, lamda))[:nobs]
-            # else:  # seasonal == 'mul':
-            #     season = (fitted / inv_boxcox(trend, lamda))[:nobs]
+            level = inv_boxcox(level, lamda)
+            slope = detrend(trend[:nobs], level)
+            if seasonal == 'add':
+                season = (fitted - inv_boxcox(trend, lamda))[:nobs]
+            else:  # seasonal == 'mul':
+                season = (fitted / inv_boxcox(trend, lamda))[:nobs]
         sse = sqeuclidean(fitted[:-h - 1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
