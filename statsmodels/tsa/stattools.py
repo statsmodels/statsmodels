@@ -1978,7 +1978,7 @@ class ZivotAndrewsUnitRoot(object):
         regression = string_like(regression, 'regression',
                                  options=('c', 't', 'ct'))
         autolag = string_like(autolag, 'autolag',
-                              options=('AIC', 'BIC', 't-stat'), optional=True)
+                              options=('aic', 'bic', 't-stat'), optional=True)
         if trim < 0 or trim > (1. / 3.):
             raise ValueError('trim value must be a float in range [0, 1/3)')
         nobs = x.shape[0]
