@@ -212,7 +212,7 @@ class TestZeroInflatedPoisson_predict(object):
     def setup_class(cls):
         expected_params = [1, 0.5]
         np.random.seed(999)
-        nobs = 200
+        nobs = 2000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(expected_params)
@@ -342,7 +342,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
         np.random.seed(999)
-        nobs = 200
+        nobs = 2000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(expected_params[:-1])
@@ -479,7 +479,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 
         expected_params = [1, 1, 0.5]
         np.random.seed(999)
-        nobs = 500
+        nobs = 5000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 0
 
