@@ -720,7 +720,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
         if weights is not None:
             oe = weights * oe
-            var = weights**2 * var
+            var = (weights**2)[:, None] * var
 
         groups_oe.append(oe[ix].sum())
         groups_var.append(var[ix].sum(axis=0))
