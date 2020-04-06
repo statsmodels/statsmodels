@@ -399,10 +399,13 @@ def test_local_fdr():
     r = len(z1) / float(len(z0) + len(z1))
     f1 /= (1 - r) * f1 + r
 
-    fdr = local_fdr(zs)
-    fdr1 = fdr[len(z0):]
-
-    assert_allclose(f1, fdr1, rtol=0.05, atol=0.1)
+    for alpha in None, 0, 1e-8:
+        if alpha is None:
+            fdr = local_fdr(zs)
+        else:
+            fdr = local_fdr(zs, alpha=alpha)
+        fdr1 = fdr[len(z0):]
+        assert_allclose(f1, fdr1, rtol=0.05, atol=0.1)
 
 
 def test_null_distribution():
