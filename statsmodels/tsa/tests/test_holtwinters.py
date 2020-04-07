@@ -875,7 +875,7 @@ def test_simulate_boxcox(austourists):
     ).fit(use_boxcox=True)
     expected = fit.forecast(4).values
 
-    res = fit.simulate(4, repetitions=10).values
+    res = fit.simulate(4, repetitions=10, random_state=0).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)

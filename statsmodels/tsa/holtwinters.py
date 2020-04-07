@@ -531,26 +531,26 @@ class HoltWintersResults(Results):
 
         .. math::
 
-           B_t = b_{t-1} \circ_d \phi\\
-           L_t = l_{t-1} \circ_b B_t\\
-           S_t = s_{t-m}\\
-           Y_t = L_t \circ_s S_t,
+           B_t &= b_{t-1} \circ_d \phi\\
+           L_t &= l_{t-1} \circ_b B_t\\
+           S_t &= s_{t-m}\\
+           Y_t &= L_t \circ_s S_t,
 
         where :math:`\circ_d` is the operation linking trend and damping
         parameter (multiplication if the trend is additive, power if the trend
         is multiplicative), :math:`\circ_b` is the operation linking level and
         trend (addition if the trend is additive, multiplication if the trend
-        is multiplicative), and :math:'\circ_s` is the operation linking
+        is multiplicative), and :math:`\circ_s` is the operation linking
         seasonality to the rest.
 
         The state space equations can then be formulated as
 
         .. math::
 
-           y_t = Y_t + \eta \cdot e_t\\
-           l_t = L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
-           b_t = B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
-           s_t = S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
+           y_t &= Y_t + \eta \cdot e_t\\
+           l_t &= L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
+           b_t &= B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
+           s_t &= S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
 
         with
 
