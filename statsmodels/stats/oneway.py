@@ -123,7 +123,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 def convert_effectsize_fsqu(f2=None, eta2=None):
     """convert squared effect sizes in f family
 
-    f2 is signal to noise ration, var_explained / var_residual
+    f2 is signal to noise ratio, var_explained / var_residual
     eta2 is proportion of explained variance, var_explained / var_total
     omega2 is ...
 
@@ -132,7 +132,6 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
 
     """
     if f2 is not None:
-        # f2 = f**2
         eta2 = 1 / (1 + 1 / f2)
 
     elif eta2 is not None:
@@ -142,6 +141,36 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     return res
 
 
+def _fstat2effectsize(f_stat, df1, df2):
+    """Compute anova effect size from F-statistic
+
+    This might be combined with convert_effectsize_fsqu
+
+    Parameters
+    ----------
+    f_stat : array_like
+        F-statistic corresponding to an F-test
+    df1 : int or float
+        numerator degrees of freedom, number of constraints
+    df2 : int or float
+        denominator degrees of freedom, df_resid
+
+    Returns
+    -------
+    res : Holder instance
+        This instance contains effect size measures f2, eta2, omega2 and eps2
+        as attributes.
+    """
+    f2 = f_stat * df1 / df2
+    eta2 = f2 / (f2 + 1)
+    omega2_ = (f_stat - 1) / (f_stat + (df2 + 1) / df1)
+    omega2 = (f2 - df1 / df2) / (f2 + 2)  # rewrite
+    eps2_ = (f_stat - 1) / (f_stat + df2 / df1)
+    eps2 = (f2 - df1 / df2) / (f2 + 1)  # rewrite
+    return Holder(f2=f2, eta2=eta2, omega2=omega2, eps2=eps2, eps2_=eps2_,
+                  omega2_=omega2_)
+
+
 def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
                           alternative="two-sided"):
     """confidence interval for noncentality parameter in F-test
@@ -149,7 +178,22 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
     This does not yet handle non-negativity constraint on nc.
     Currently only two-sided alternative is supported.
 
+    Notes
+    -----
+    The algorithm inverts the cdf of the noncentral F distribution with
+    respect to the noncentrality parameters.
+    See Steiger 2004 and references cited in it.
 
+    References
+    ----------
+    Steiger, James H. 2004. “Beyond the F Test: Effect Size Confidence
+    Intervals and Tests of Close Fit in the Analysis of Variance and Contrast
+    Analysis.” Psychological Methods 9 (2): 164–82.
+    https://doi.org/10.1037/1082-989X.9.2.164.
+
+    See Also
+    --------
+    `confint_effectsize_oneway`
     """
 
     if alternative in ["two-sided", "2s", "ts"]:
@@ -171,6 +215,15 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
     returns an instance of a Holder class with effect size confidence
     intervals as attributes.
 
+    Notes
+    -----
+    The confidence interval for the noncentrality parameter is obtained by
+    inverting the cdf of the noncentral F distribution. Confidence intervals
+    for other effect sizes are computed by endpoint transformation.
+
+    See Also
+    --------
+    `confint_noncentrality`
 
     """
     if nobs is None:
@@ -190,6 +243,11 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
 
 def anova_generic(means, vars_, nobs, use_var="unequal",
                   welch_correction=True):
+    """oneway anova based on summary statistics
+
+    incompletely verified
+
+    """
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
@@ -230,6 +288,48 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
 
 
 def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
+    """Equivalence test for oneway anova (Wellek and extensions)
+
+    Warning: eps is currently defined as in Wellek, but will change to
+    signal to noise ration (Cohen's f family)
+
+    The null hypothesis is that the means differ by more than `eps` in the
+    anova distance measure.
+    If the Null is rejected, then the data supports that means are equivalent,
+    i.e. within a given distance.
+
+    Parameters
+    ----------
+    f, n_groups, nobs, eps, df, alpha
+
+    Returns
+    -------
+    results : instance of a Holder class
+
+
+
+    Notes
+    -----
+    Equivalence in this function is defined in terms of a squared distance
+    measure similar to Mahalanobis distance.
+    Alternative definitions for the oneway case are based on maximum difference
+    between pairs of means or similar pairwise distances.
+
+    References
+    ----------
+    Wellek book
+
+    Cribbie, Robert A., Chantal A. Arpin-Cribbie, and Jamie A. Gruman. 2009.
+    “Tests of Equivalence for One-Way Independent Groups Designs.” The Journal
+    of Experimental Education 78 (1): 1–13.
+    https://doi.org/10.1080/00220970903224552.
+
+    Jan, Show-Li, and Gwowen Shieh. 2019. “On the Extended Welch Test for
+    Assessing Equivalence of Standardized Means.” Statistics in
+    Biopharmaceutical Research 0 (0): 1–8.
+    https://doi.org/10.1080/19466315.2019.1654915.
+
+    """
     nobs_mean = nobs.sum() / n_groups
 
     es = f * (n_groups - 1) / nobs_mean
@@ -253,7 +353,12 @@ def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
 
 
 def power_oneway_equivalence(f, n_groups, nobs, eps, df, alpha=0.05):
-    """
+    """power for oneway equivalence test
+
+    This is incomplete and currently only returns post-hoc, empirical power.
+
+    Warning: eps is currently defined as in Wellek, but will change to
+    signal to noise ration (Cohen's f family)
 
     draft version, need specification of alternative
     """
