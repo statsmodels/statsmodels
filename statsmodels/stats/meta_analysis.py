@@ -18,6 +18,10 @@ class CombineResults(object):
         self.__dict__.update(kwds)
         self._ini_keys = list(kwds.keys())
 
+        # explained variance measures
+        self.h2 = self.q / (self.k - 1)
+        self.i2 = 1 - 1 / self.h2
+
     def summary_array(self):
         res = np.column_stack([self.smd_bc, self.sd_smdbc,
                                self.ci_low, self.ci_upp,

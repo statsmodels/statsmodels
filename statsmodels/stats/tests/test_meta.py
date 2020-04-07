@@ -80,3 +80,19 @@ class TestMetaK1(object):
 
         tau2 = _fit_tau_mm(eff, var_eff, 1 / var_eff)
         assert_allclose(tau2, res.tau2, atol=1e-10)
+
+        res3 = combine_effects(eff, var_eff)
+        assert_allclose(res3.tau2, res.tau2, atol=1e-10)
+        assert_allclose(res3.smd_effect_re, res.b, atol=1e-13)
+        assert_allclose(res3.sd_smd_w_re, res.se, atol=1e-10)
+        assert_allclose(res3.ci_low_smd_re, res.ci_lb, atol=1e-10)
+        assert_allclose(res3.ci_upp_smd_re, res.ci_ub, atol=1e-10)
+        assert_allclose(res3.q, res.QE, atol=1e-10)
+        assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
+        assert_allclose(res3.h2, res.H2, atol=1e-10)
+
+        res_fe = res = results_meta.exk1_fe
+        assert_allclose(res3.smd_effect_fe, res_fe.b, atol=1e-13)
+        assert_allclose(res3.sd_smd_w_fe, res_fe.se, atol=1e-10)
+        assert_allclose(res3.ci_low_smd_fe, res_fe.ci_lb, atol=1e-10)
+        assert_allclose(res3.ci_upp_smd_fe, res_fe.ci_ub, atol=1e-10)
