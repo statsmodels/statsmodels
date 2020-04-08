@@ -22,6 +22,10 @@ class CombineResults(object):
         self.h2 = self.q / (self.k - 1)
         self.i2 = 1 - 1 / self.h2
 
+    def test_heterogeneity(self):
+        pvalue = stats.chi2.sf(self.q, self.k - 1)
+        return self.q, pvalue, self.k - 1
+
     def summary_array(self):
         res = np.column_stack([self.smd_bc, self.sd_smdbc,
                                self.ci_low, self.ci_upp,
@@ -154,7 +158,10 @@ def combine_effects(effect, variance, row_names=None, alpha=0.05):
     ci_low_smd_re = smd_effect_re - crit * sd_smd_w_re
     ci_upp_smd_re = smd_effect_re + crit * sd_smd_w_re
 
-    scale_hksj = (weights_rel_re * (smd_bc - smd_effect_re)**2).sum()
+    scale_hksj_re = (weights_re * (smd_bc - smd_effect_re)**2).sum() / df
+    scale_hksj_fe = (weights_fe * (smd_bc - smd_effect_fe)**2).sum() / df
+    var_hksj_re = (weights_rel_re * (smd_bc - smd_effect_re)**2).sum() / df
+    var_hksj_fe = (weights_rel_fe * (smd_bc - smd_effect_fe)**2).sum() / df
 
     res = CombineResults(**locals())
     return res

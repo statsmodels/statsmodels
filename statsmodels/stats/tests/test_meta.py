@@ -74,6 +74,17 @@ class TestMetaK1(object):
         assert_equal(converged, True)
         assert_allclose(tau2, res.tau2, atol=1e-10)
 
+        # compare with WLS, PM weights
+        mod_wls = WLS(eff, np.ones(len(eff)), weights=1 / (var_eff + tau2))
+        res_wls = mod_wls.fit(cov_type="fixed_scale")
+
+        assert_allclose(res_wls.params, res.b, atol=1e-13)
+        assert_allclose(res_wls.bse, res.se, atol=1e-10)
+        ci_low, ci_upp = res_wls.conf_int()[0]
+        assert_allclose(ci_low, res.ci_lb, atol=1e-10)
+        assert_allclose(ci_upp, res.ci_ub, atol=1e-10)
+
+
     def test_dl(self):
         res = results_meta.exk1_dl
         eff, var_eff = self.eff, self.var_eff
@@ -90,9 +101,28 @@ class TestMetaK1(object):
         assert_allclose(res3.q, res.QE, atol=1e-10)
         assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         assert_allclose(res3.h2, res.H2, atol=1e-10)
+        q, pv, df = res3.test_heterogeneity()
+        assert_allclose(pv, res.QEp, atol=1e-10)
+        assert_allclose(q, res.QE, atol=1e-10)
+        assert_allclose(df, 9 - 1, atol=1e-10)
 
-        res_fe = res = results_meta.exk1_fe
+        res_fe = results_meta.exk1_fe
         assert_allclose(res3.smd_effect_fe, res_fe.b, atol=1e-13)
         assert_allclose(res3.sd_smd_w_fe, res_fe.se, atol=1e-10)
         assert_allclose(res3.ci_low_smd_fe, res_fe.ci_lb, atol=1e-10)
         assert_allclose(res3.ci_upp_smd_fe, res_fe.ci_ub, atol=1e-10)
+
+
+        # compare with HKSJ adjustment
+        res_dls = results_meta.exk1_dl_hksj
+        res_fes = results_meta.exk1_fe_hksj
+
+        assert_allclose(res3.smd_effect_re, res_dls.b, atol=1e-13)
+        assert_allclose(res3.smd_effect_fe, res_fes.b, atol=1e-13)
+
+        assert_allclose(res3.sd_smd_w_fe * np.sqrt(res3.scale_hksj_fe),
+                        res_fes.se, atol=1e-10)
+        assert_allclose(res3.sd_smd_w_re * np.sqrt(res3.scale_hksj_re),
+                        res_dls.se, atol=1e-10)
+        assert_allclose(np.sqrt(res3.var_hksj_fe), res_fes.se, atol=1e-10)
+        assert_allclose(np.sqrt(res3.var_hksj_re), res_dls.se, atol=1e-10)
