@@ -90,10 +90,9 @@ def effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1, row_names=None,
     return smd_bc, var_smdbc
 
 
-def combine_effects(effect, variance, row_names=None, alpha=0.05):
+def combine_effects(effect, variance, method_re="iterated", row_names=None,
+                    alpha=0.05, **kwds):
     """combining effect sizes for effect sizes using meta-analysis
-
-
 
     This does not have option yet.
     It uses standardized mean difference with bias correction as effect size.
@@ -112,6 +111,7 @@ def combine_effects(effect, variance, row_names=None, alpha=0.05):
 
 
     """
+
     k = len(effect)
     if row_names is None:
         row_names = list(range(k))
@@ -144,8 +144,12 @@ def combine_effects(effect, variance, row_names=None, alpha=0.05):
     q = (weights_fe * eff**2).sum(0)
     q -= (weights_fe * eff).sum()**2 / w_total_fe
     df = k - 1
-    c = w_total_fe - (weights_fe**2).sum() / w_total_fe
-    tau2 = (q - df) / c
+
+    if method_re.lower() in ["iterated", "pm"]:
+        tau2, _ = _fit_tau_iterative(eff, var_eff, **kwds)
+    elif method_re.lower() in ["chi2", "dl"]:
+        c = w_total_fe - (weights_fe**2).sum() / w_total_fe
+        tau2 = (q - df) / c
 
     weights_re = 1 / (var_eff + tau2) # no  bias_correction ?
     w_total_re = weights_re.sum(0)
