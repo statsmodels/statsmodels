@@ -22,22 +22,22 @@ class CombineResults(object):
         self.h2 = self.q / (self.k - 1)
         self.i2 = 1 - 1 / self.h2
 
-    def test_heterogeneity(self):
+    def test_homogeneity(self):
         pvalue = stats.chi2.sf(self.q, self.k - 1)
         return self.q, pvalue, self.k - 1
 
     def summary_array(self):
-        res = np.column_stack([self.smd_bc, self.sd_smdbc,
+        res = np.column_stack([self.eff, self.sd_eff,
                                self.ci_low, self.ci_upp,
                                self.weights_rel_fe, self.weights_rel_re])
 
-        res_fe = [[self.smd_effect_fe, self.sd_smd_w_fe,
-                  self.ci_low_smd_fe, self.ci_upp_smd_fe, 1, np.nan]]
-        res_re = [[self.smd_effect_re, self.sd_smd_w_re,
-                  self.ci_low_smd_re, self.ci_upp_smd_re, np.nan, 1]]
+        res_fe = [[self.mean_effect_fe, self.sd_eff_w_fe,
+                  self.ci_low_eff_fe, self.ci_upp_eff_fe, 1, np.nan]]
+        res_re = [[self.mean_effect_re, self.sd_eff_w_re,
+                  self.ci_low_eff_re, self.ci_upp_eff_re, np.nan, 1]]
 
         res = np.concatenate([res, res_fe, res_re], axis=0)
-        column_names = ['smd', "sd_smd", "ci_low", "ci_upp", "w_fe", "w_re"]
+        column_names = ['eff', "sd_eff", "ci_low", "ci_upp", "w_fe", "w_re"]
         return res, column_names
 
     def summary_frame(self):
@@ -76,9 +76,9 @@ def effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1, row_names=None,
     k = len(mean2)
     if row_names is None:
         row_names = list(range(k))
-    crit = stats.norm.isf(alpha / 2)
-
-    var_diff_uneq = sd2**2 / nobs2 + sd1**2 / nobs1
+    # crit = stats.norm.isf(alpha / 2)
+    # TODO: not used yet, design and options
+    # var_diff_uneq = sd2**2 / nobs2 + sd1**2 / nobs1
     var_diff = (sd2**2 * (nobs2 - 1) +
                 sd1**2 * (nobs2 - 1)) /  (nobs2 + nobs1 - 2)
     sd_diff = np.sqrt(var_diff)
@@ -118,50 +118,50 @@ def combine_effects(effect, variance, row_names=None, alpha=0.05):
     crit = stats.norm.isf(alpha / 2)
 
     # alias for initial version
-    smd_bc = effect
-    var_smdbc = variance
-    sd_smdbc = np.sqrt(var_smdbc)
+    eff = effect
+    var_eff = variance
+    sd_eff = np.sqrt(var_eff)
 
-    ci_low = smd_bc - 1.96 * sd_smdbc
-    ci_upp = smd_bc + 1.96 * sd_smdbc
+    ci_low = eff - 1.96 * sd_eff
+    ci_upp = eff + 1.96 * sd_eff
 
     # fixed effects computation
 
-    weights_fe = 1 / var_smdbc # no bias correction ?
+    weights_fe = 1 / var_eff # no bias correction ?
     w_total_fe = weights_fe.sum(0)
     weights_rel_fe = weights_fe / w_total_fe
 
-    smd_w_fe = weights_rel_fe * smd_bc
-    smd_effect_fe = smd_w_fe.sum()
-    var_smd_w_fe = 1 / w_total_fe
-    sd_smd_w_fe = np.sqrt(var_smd_w_fe)
+    eff_w_fe = weights_rel_fe * eff
+    mean_effect_fe = eff_w_fe.sum()
+    var_eff_w_fe = 1 / w_total_fe
+    sd_eff_w_fe = np.sqrt(var_eff_w_fe)
 
-    ci_low_smd_fe = smd_effect_fe - crit * sd_smd_w_fe
-    ci_upp_smd_fe = smd_effect_fe + crit * sd_smd_w_fe
+    ci_low_eff_fe = mean_effect_fe - crit * sd_eff_w_fe
+    ci_upp_eff_fe = mean_effect_fe + crit * sd_eff_w_fe
 
     # random effects computation
 
-    q = (weights_fe * smd_bc**2).sum(0)
-    q -= (weights_fe * smd_bc).sum()**2 / w_total_fe
+    q = (weights_fe * eff**2).sum(0)
+    q -= (weights_fe * eff).sum()**2 / w_total_fe
     df = k - 1
     c = w_total_fe - (weights_fe**2).sum() / w_total_fe
     tau2 = (q - df) / c
 
-    weights_re = 1 / (var_smdbc + tau2) # no  bias_correction ?
+    weights_re = 1 / (var_eff + tau2) # no  bias_correction ?
     w_total_re = weights_re.sum(0)
     weights_rel_re = weights_re / weights_re.sum(0)
 
-    smd_w_re = weights_rel_re * smd_bc
-    smd_effect_re = smd_w_re.sum()
-    var_smd_w_re = 1 / w_total_re
-    sd_smd_w_re = np.sqrt(var_smd_w_re)
-    ci_low_smd_re = smd_effect_re - crit * sd_smd_w_re
-    ci_upp_smd_re = smd_effect_re + crit * sd_smd_w_re
+    eff_w_re = weights_rel_re * eff
+    mean_effect_re = eff_w_re.sum()
+    var_eff_w_re = 1 / w_total_re
+    sd_eff_w_re = np.sqrt(var_eff_w_re)
+    ci_low_eff_re = mean_effect_re - crit * sd_eff_w_re
+    ci_upp_eff_re = mean_effect_re + crit * sd_eff_w_re
 
-    scale_hksj_re = (weights_re * (smd_bc - smd_effect_re)**2).sum() / df
-    scale_hksj_fe = (weights_fe * (smd_bc - smd_effect_fe)**2).sum() / df
-    var_hksj_re = (weights_rel_re * (smd_bc - smd_effect_re)**2).sum() / df
-    var_hksj_fe = (weights_rel_fe * (smd_bc - smd_effect_fe)**2).sum() / df
+    scale_hksj_re = (weights_re * (eff - mean_effect_re)**2).sum() / df
+    scale_hksj_fe = (weights_fe * (eff - mean_effect_fe)**2).sum() / df
+    var_hksj_re = (weights_rel_re * (eff - mean_effect_re)**2).sum() / df
+    var_hksj_fe = (weights_rel_fe * (eff - mean_effect_fe)**2).sum() / df
 
     res = CombineResults(**locals())
     return res
@@ -202,8 +202,8 @@ def _fit_tau_mm(eff, var_eff, weights):
     """method of moment estimate of between random effect variance
 
 
-    implementation follows DerSimonian and Kacker 2007 equation 6
-    see also Kacker 2004
+    implementation follows Kacker 2004 and DerSimonian and Kacker 2007 eq. 6
+
     """
     w = weights
 

@@ -94,35 +94,35 @@ class TestMetaK1(object):
 
         res3 = combine_effects(eff, var_eff)
         assert_allclose(res3.tau2, res.tau2, atol=1e-10)
-        assert_allclose(res3.smd_effect_re, res.b, atol=1e-13)
-        assert_allclose(res3.sd_smd_w_re, res.se, atol=1e-10)
-        assert_allclose(res3.ci_low_smd_re, res.ci_lb, atol=1e-10)
-        assert_allclose(res3.ci_upp_smd_re, res.ci_ub, atol=1e-10)
+        assert_allclose(res3.mean_effect_re, res.b, atol=1e-13)
+        assert_allclose(res3.sd_eff_w_re, res.se, atol=1e-10)
+        assert_allclose(res3.ci_low_eff_re, res.ci_lb, atol=1e-10)
+        assert_allclose(res3.ci_upp_eff_re, res.ci_ub, atol=1e-10)
         assert_allclose(res3.q, res.QE, atol=1e-10)
         assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         assert_allclose(res3.h2, res.H2, atol=1e-10)
-        q, pv, df = res3.test_heterogeneity()
+        q, pv, df = res3.test_homogeneity()
         assert_allclose(pv, res.QEp, atol=1e-10)
         assert_allclose(q, res.QE, atol=1e-10)
         assert_allclose(df, 9 - 1, atol=1e-10)
 
         res_fe = results_meta.exk1_fe
-        assert_allclose(res3.smd_effect_fe, res_fe.b, atol=1e-13)
-        assert_allclose(res3.sd_smd_w_fe, res_fe.se, atol=1e-10)
-        assert_allclose(res3.ci_low_smd_fe, res_fe.ci_lb, atol=1e-10)
-        assert_allclose(res3.ci_upp_smd_fe, res_fe.ci_ub, atol=1e-10)
+        assert_allclose(res3.mean_effect_fe, res_fe.b, atol=1e-13)
+        assert_allclose(res3.sd_eff_w_fe, res_fe.se, atol=1e-10)
+        assert_allclose(res3.ci_low_eff_fe, res_fe.ci_lb, atol=1e-10)
+        assert_allclose(res3.ci_upp_eff_fe, res_fe.ci_ub, atol=1e-10)
 
 
         # compare with HKSJ adjustment
         res_dls = results_meta.exk1_dl_hksj
         res_fes = results_meta.exk1_fe_hksj
 
-        assert_allclose(res3.smd_effect_re, res_dls.b, atol=1e-13)
-        assert_allclose(res3.smd_effect_fe, res_fes.b, atol=1e-13)
+        assert_allclose(res3.mean_effect_re, res_dls.b, atol=1e-13)
+        assert_allclose(res3.mean_effect_fe, res_fes.b, atol=1e-13)
 
-        assert_allclose(res3.sd_smd_w_fe * np.sqrt(res3.scale_hksj_fe),
+        assert_allclose(res3.sd_eff_w_fe * np.sqrt(res3.scale_hksj_fe),
                         res_fes.se, atol=1e-10)
-        assert_allclose(res3.sd_smd_w_re * np.sqrt(res3.scale_hksj_re),
+        assert_allclose(res3.sd_eff_w_re * np.sqrt(res3.scale_hksj_re),
                         res_dls.se, atol=1e-10)
         assert_allclose(np.sqrt(res3.var_hksj_fe), res_fes.se, atol=1e-10)
         assert_allclose(np.sqrt(res3.var_hksj_re), res_dls.se, atol=1e-10)
