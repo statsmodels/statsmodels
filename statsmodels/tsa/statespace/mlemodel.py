@@ -2894,17 +2894,57 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
+    def get_rsquared(self, baseline = "rwdrift"):
+        if self.model.k_endog > 1:
+            raise NotImplementedError(
+                "To be Implemented for Multivariate Model")
+        if baseline == "rwdrift":
+            return self.rsquared_rwdrift
+        elif baseline == "mean":
+            return self.rsquared_mean
+        elif baseline == "seasonal":
+            raise NotImplementedError(
+                "To be Implemented")
+        else:
+            raise NotImplementedError(
+                "baseline must be in ['rwdrife', 'mean', 'seasonal']")
+
+    @staticmethod
+    def sse_finite(
+            loglikelihood_burn, nobs_diffuse,
+            standardized_forecasts_error, forecasts_error_cov):
+        d = np.maximum(loglikelihood_burn, nobs_diffuse)
+        srss = np.sum(standardized_forecasts_error[0, d:]**2)
+        f_T = forecasts_error_cov[0, 0, -1]
+        return f_T * srss
+
     @cache_readonly
     def rsquared(self):
+        """
+        In state space models there is not a single comparison
+        model that will always be useful for rsquared computation.
+        However, we have implmented `rsquared_rwdrift` and `rsquared_mean`
+        It is recommended to use `rsquared_rwdrift`
+        """
+        raise NotImplementedError(
+            "model.rsquared is undefined. Use model.rsquared_rwdrift instead")
+
+    @cache_readonly
+    def rsquared_mean(self):
         """
         (float) conventional R-squared, 1 - sse/ssm
         """
         ssm = np.var(self.endog) * len(self.endog)
-        sse = np.sum(self.resid**2)
+        sse = sse_finite(
+                self.loglikelihood_burn,
+                self.nobs_diffuse,
+                self.standardized_forecasts_error,
+                self.forecasts_error_cov
+            )
         return 1. - sse / ssm
 
     @cache_readonly
-    def rsquared_difference(self):
+    def rsquared_rwdrift(self):
         """
         (float) R-squared, 1 - SSE / SSDM
         SSDM = sum of squares of first differences around mean
@@ -2912,7 +2952,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         models and the Kalman filter" (Harvey, 1989)
         """
         ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
-        sse = np.sum(self.resid**2)
+        sse = sse_finite(
+                self.loglikelihood_burn,
+                self.nobs_diffuse,
+                self.standardized_forecasts_error,
+                self.forecasts_error_cov
+            )
         return 1. - sse / ssdm
 
     def test_normality(self, method):
