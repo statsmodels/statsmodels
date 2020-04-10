@@ -2894,7 +2894,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def get_rsquared(self, baseline = "rwdrift"):
+    def get_rsquared(self, baseline="rwdrift"):
         if self.model.k_endog > 1:
             raise NotImplementedError(
                 "To be Implemented for Multivariate Model")
