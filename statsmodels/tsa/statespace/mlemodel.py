@@ -4098,7 +4098,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
         if hasattr(self, 'rsquared'):
-            top_right.append(('R-squared:', ["%#8.3f" % self.rsquared]))
+            top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared()]))
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
