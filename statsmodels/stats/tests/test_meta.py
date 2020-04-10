@@ -91,8 +91,11 @@ class TestMetaK1(object):
         assert_allclose(res3.tau2, res.tau2, atol=1e-10)
         assert_allclose(res3.mean_effect_re, res.b, atol=1e-13)
         assert_allclose(res3.sd_eff_w_re, res.se, atol=1e-10)
-        assert_allclose(res3.ci_low_eff_re, res.ci_lb, atol=1e-10)
-        assert_allclose(res3.ci_upp_eff_re, res.ci_ub, atol=1e-10)
+
+        ci = res3.conf_int(use_t=False)[1]
+        assert_allclose(ci[0], res.ci_lb, atol=1e-10)
+        assert_allclose(ci[1], res.ci_ub, atol=1e-10)
+
         assert_allclose(res3.q, res.QE, atol=1e-10)
         # the following doesn't pass yet
         # assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
@@ -115,8 +118,10 @@ class TestMetaK1(object):
         assert_allclose(res3.tau2, res.tau2, atol=1e-10)
         assert_allclose(res3.mean_effect_re, res.b, atol=1e-13)
         assert_allclose(res3.sd_eff_w_re, res.se, atol=1e-10)
-        assert_allclose(res3.ci_low_eff_re, res.ci_lb, atol=1e-10)
-        assert_allclose(res3.ci_upp_eff_re, res.ci_ub, atol=1e-10)
+        ci = res3.conf_int(use_t=False)  # fe, re, fe_wls, re_wls
+        assert_allclose(ci[1][0], res.ci_lb, atol=1e-10)
+        assert_allclose(ci[1][1], res.ci_ub, atol=1e-10)
+
         assert_allclose(res3.q, res.QE, atol=1e-10)
         assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         assert_allclose(res3.h2, res.H2, atol=1e-10)
@@ -125,14 +130,15 @@ class TestMetaK1(object):
         assert_allclose(q, res.QE, atol=1e-10)
         assert_allclose(df, 9 - 1, atol=1e-10)
 
+        # compare FE estimate
         res_fe = results_meta.exk1_fe
         assert_allclose(res3.mean_effect_fe, res_fe.b, atol=1e-13)
         assert_allclose(res3.sd_eff_w_fe, res_fe.se, atol=1e-10)
-        assert_allclose(res3.ci_low_eff_fe, res_fe.ci_lb, atol=1e-10)
-        assert_allclose(res3.ci_upp_eff_fe, res_fe.ci_ub, atol=1e-10)
 
+        assert_allclose(ci[0][0], res_fe.ci_lb, atol=1e-10)
+        assert_allclose(ci[0][1], res_fe.ci_ub, atol=1e-10)
 
-        # compare with HKSJ adjustment
+        # compare FE, RE with HKSJ adjustment
         res_dls = results_meta.exk1_dl_hksj
         res_fes = results_meta.exk1_fe_hksj
 
@@ -145,3 +151,10 @@ class TestMetaK1(object):
                         res_dls.se, atol=1e-10)
         assert_allclose(np.sqrt(res3.var_hksj_fe), res_fes.se, atol=1e-10)
         assert_allclose(np.sqrt(res3.var_hksj_re), res_dls.se, atol=1e-10)
+
+        # metafor uses t distribution for hksj
+        ci = res3.conf_int(use_t=True)  # fe, re, fe_wls, re_wls
+        assert_allclose(ci[3][0], res_dls.ci_lb, atol=1e-10)
+        assert_allclose(ci[3][1], res_dls.ci_ub, atol=1e-10)
+        assert_allclose(ci[2][0], res_fes.ci_lb, atol=1e-10)
+        assert_allclose(ci[2][1], res_fes.ci_ub, atol=1e-10)
