@@ -2910,7 +2910,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 "baseline must be in ['rwdrife', 'mean', 'seasonal']")
 
     @cache_readonly
-    def sse_finite:
+    def sse_finite(self):
         d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
         srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
         f_T = self.forecasts_error_cov[0, 0, -1]
