@@ -2909,13 +2909,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             raise NotImplementedError(
                 "baseline must be in ['rwdrife', 'mean', 'seasonal']")
 
-    @staticmethod
-    def sse_finite(
-            loglikelihood_burn, nobs_diffuse,
-            standardized_forecasts_error, forecasts_error_cov):
-        d = np.maximum(loglikelihood_burn, nobs_diffuse)
-        srss = np.sum(standardized_forecasts_error[0, d:]**2)
-        f_T = forecasts_error_cov[0, 0, -1]
+    @cache_readonly
+    def sse_finite:
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
+        f_T = self.forecasts_error_cov[0, 0, -1]
         return f_T * srss
 
     @cache_readonly
@@ -2935,12 +2933,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (float) conventional R-squared, 1 - sse/ssm
         """
         ssm = np.var(self.endog) * len(self.endog)
-        sse = sse_finite(
-                self.loglikelihood_burn,
-                self.nobs_diffuse,
-                self.standardized_forecasts_error,
-                self.forecasts_error_cov
-            )
+        sse = self.sse_finite
         return 1. - sse / ssm
 
     @cache_readonly
@@ -2952,12 +2945,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         models and the Kalman filter" (Harvey, 1989)
         """
         ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
-        sse = sse_finite(
-                self.loglikelihood_burn,
-                self.nobs_diffuse,
-                self.standardized_forecasts_error,
-                self.forecasts_error_cov
-            )
+        sse = self.sse_finite
         return 1. - sse / ssdm
 
     def test_normality(self, method):
@@ -4097,7 +4085,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
-        if hasattr(self, 'rsquared'):
+        if hasattr(self, 'rsquared_rwdrift'):
             top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared()]))
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
