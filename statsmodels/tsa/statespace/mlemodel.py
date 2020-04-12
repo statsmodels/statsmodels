@@ -2903,8 +2903,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         elif baseline == "mean":
             return self.rsquared_mean
         elif baseline == "seasonal":
-            raise NotImplementedError(
-                "To be Implemented")
+            raise self.rsquared_seasonal
         else:
             raise NotImplementedError(
                 "baseline must be in ['rwdrife', 'mean', 'seasonal']")
@@ -2947,6 +2946,22 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
         sse = self.sse_finite
         return 1. - sse / ssdm
+
+    @cache_readonly
+    def rsquared_seasonal(self, seasonal=12):
+        """
+        (float) R-squared, 1 - SSE / SSDSM
+        see eq. 5.5.16 in "Forecasting, structural time series
+        models and the Kalman filter" (Harvey, 1989)
+        """
+        import statsmodels.api as sm
+        x = np.zeros((len(self.endog), seasonal-1))
+        idx = [(i,j) for j in range(seasonal-1) for i in range(j, len(self.endog), seasonal)]
+        x[tuple(np.array(idx).T)]=1
+        seasonalmodel = sm.OLS(self.endog, sm.add_constant(x)).fit()
+        ssdsm = seasonalmodel.sse
+        sse = self.sse_finite
+        return 1. - sse / ssdsm
 
     def test_normality(self, method):
         """
