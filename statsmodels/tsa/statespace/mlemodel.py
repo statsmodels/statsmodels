@@ -2956,8 +2956,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         import statsmodels.api as sm
         x = np.zeros((len(self.endog), seasonal-1))
-        idx = [(i,j) for j in range(seasonal-1) for i in range(j, len(self.endog), seasonal)]
-        x[tuple(np.array(idx).T)]=1
+        idx = [(i, j) for j in range(seasonal-1)
+                for i in range(j, len(self.endog), seasonal)]
+        x[tuple(np.array(idx).T)] = 1
         seasonalmodel = sm.OLS(self.endog, sm.add_constant(x)).fit()
         ssdsm = seasonalmodel.sse
         sse = self.sse_finite
