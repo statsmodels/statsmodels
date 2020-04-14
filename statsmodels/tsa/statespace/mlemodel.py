@@ -2894,26 +2894,40 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def get_rsquared(self, baseline="rwdrift"):
+    def get_rsquared(self, baseline="rwdrift", **kwargs):
         if self.model.k_endog > 1:
             raise NotImplementedError(
                 "To be Implemented for Multivariate Model")
+        def sse_finite():
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
+            f_T = self.forecasts_error_cov[0, 0, -1]
+            return f_T * srss
+        sse = sse_finite()
         if baseline == "rwdrift":
-            return self.rsquared_rwdrift
+            ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
+            return 1. - sse / ssdm
         elif baseline == "mean":
-            return self.rsquared_mean
+            ssm = np.var(self.endog) * len(self.endog)
+            return 1. - sse / ssm
         elif baseline == "seasonal":
-            raise self.rsquared_seasonal
+            import statsmodels.api as sm
+            seasonal = 12 if not 'seasonal' in kwargs else kwargs['seasonal']
+            x = np.zeros((len(self.endog), seasonal-1))
+            idx = [(i, j) for j in range(seasonal-1)
+                   for i in range(j, len(self.endog), seasonal)]
+            x[tuple(np.array(idx).T)] = 1
+            seasonalmodel = sm.OLS(self.endog, sm.add_constant(x)).fit()
+            ssdsm = seasonalmodel.sse
+            return 1. - sse / ssdsm
         else:
             raise NotImplementedError(
-                "baseline must be in ['rwdrife', 'mean', 'seasonal']")
+                "In state space models there is not a single baseline " +
+                "model that will always be useful for rsquared computation. " +
+                "baseline must be in ['rwdrift', 'mean', 'seasonal']" +
+                "It is recommended to use MLEResult.rsquared_rwdrift "
+                )
 
-    @cache_readonly
-    def sse_finite(self):
-        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-        srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
-        f_T = self.forecasts_error_cov[0, 0, -1]
-        return f_T * srss
 
     @cache_readonly
     def rsquared(self):
@@ -2923,17 +2937,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         However, we have implmented `rsquared_rwdrift` and `rsquared_mean`
         It is recommended to use `rsquared_rwdrift`
         """
-        raise NotImplementedError(
-            "model.rsquared is undefined. Use model.rsquared_rwdrift instead")
+        return self.get_rsquared('')
 
     @cache_readonly
     def rsquared_mean(self):
         """
         (float) conventional R-squared, 1 - sse/ssm
         """
-        ssm = np.var(self.endog) * len(self.endog)
-        sse = self.sse_finite
-        return 1. - sse / ssm
+        return self.get_rsquared('mean')
 
     @cache_readonly
     def rsquared_rwdrift(self):
@@ -2943,26 +2954,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         see eq. 5.5.14 in "Forecasting, structural time series
         models and the Kalman filter" (Harvey, 1989)
         """
-        ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
-        sse = self.sse_finite
-        return 1. - sse / ssdm
+        return self.get_rsquared('rwdrift')
 
     @cache_readonly
-    def rsquared_seasonal(self, seasonal=12):
+    def rsquared_seasonal(self, **kwargs):
         """
         (float) R-squared, 1 - SSE / SSDSM
         see eq. 5.5.16 in "Forecasting, structural time series
         models and the Kalman filter" (Harvey, 1989)
         """
-        import statsmodels.api as sm
-        x = np.zeros((len(self.endog), seasonal-1))
-        idx = [(i, j) for j in range(seasonal-1)
-               for i in range(j, len(self.endog), seasonal)]
-        x[tuple(np.array(idx).T)] = 1
-        seasonalmodel = sm.OLS(self.endog, sm.add_constant(x)).fit()
-        ssdsm = seasonalmodel.sse
-        sse = self.sse_finite
-        return 1. - sse / ssdsm
+        return self.get_rsquared('seasonal', **kwargs)
+
 
     def test_normality(self, method):
         """
@@ -4101,7 +4103,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
-        if hasattr(self, 'rsquared_rwdrift'):
+        if hasattr(self, 'rsquared'):
             top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared()]))
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
