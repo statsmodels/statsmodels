@@ -2895,9 +2895,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.params / self.bse
 
     def get_rsquared(self, baseline="rwdrift", **kwargs):
-        if self.model.k_endog > 1:
-            raise NotImplementedError(
-                "To be Implemented for Multivariate Model")
+        # if self.model.k_endog > 1:
+        #     raise NotImplementedError(
+        #         "To be Implemented for Multivariate Model")
         def sse_finite():
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
             srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
