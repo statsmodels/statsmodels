@@ -4103,7 +4103,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
-        if hasattr(self, 'rsquared'):
+        if hasattr(self, 'rsquared_rwdrift'):
             top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared()]))
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
