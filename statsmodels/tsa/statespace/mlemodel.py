@@ -2912,7 +2912,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             return 1. - sse / ssm
         elif baseline == "seasonal":
             import statsmodels.api as sm
-            seasonal = 12 if not 'seasonal' in kwargs else kwargs['seasonal']
+            seasonal = 12 if 'seasonal' not in kwargs else kwargs['seasonal']
             x = np.zeros((len(self.endog), seasonal-1))
             idx = [(i, j) for j in range(seasonal-1)
                    for i in range(j, len(self.endog), seasonal)]
@@ -2927,7 +2927,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 "baseline must be in ['rwdrift', 'mean', 'seasonal']" +
                 "It is recommended to use MLEResult.rsquared_rwdrift "
                 )
-
 
     @cache_readonly
     def rsquared(self):
@@ -2964,7 +2963,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         models and the Kalman filter" (Harvey, 1989)
         """
         return self.get_rsquared('seasonal', **kwargs)
-
 
     def test_normality(self, method):
         """
