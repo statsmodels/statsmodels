@@ -600,7 +600,7 @@ def test_summary_rsquared():
     from statsmodels.regression.linear_model import OLS
     dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
     endog = pd.Series([1, 2, 3, 4, 5], index=dates)
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c')
+    mod = sarimax.SARIMAX(endog, np.array([1, 2, 3, 4, 5]), order=(0, 0, 0), trend='c')
     res = mod.fit(disp=-1)
 
     benchmark = OLS(endog, np.array([1, 2, 3, 4, 5]))
