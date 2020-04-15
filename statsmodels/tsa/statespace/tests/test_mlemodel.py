@@ -606,7 +606,7 @@ def test_summary_rsquared():
     benchmark = OLS(endog, np.array([1, 2, 3, 4, 5]))
     benchmark_res = benchmark.fit()
 
-    assert_equal(res.rsquared, benchmark.rsquared)
+    assert_equal(res.rsquared, benchmark_res.rsquared)
 
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
