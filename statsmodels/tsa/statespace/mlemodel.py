@@ -2898,26 +2898,33 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # if self.model.k_endog > 1:
         #     raise NotImplementedError(
         #         "To be Implemented for Multivariate Model")
-        def sse_finite():
-            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            srss = np.sum(self.standardized_forecasts_error[0, d:]**2)
-            f_T = self.forecasts_error_cov[0, 0, -1]
-            return f_T * srss
-        sse = sse_finite()
+
+        # calc sse finite estimation
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        srss = np.sum(self.standardized_forecasts_error[:, d:]**2, axis=1).T
+        f_T = np.array([self.forecasts_error_cov[i, i, -1]
+                       for i in range(self.model.k_endog)])
+        sse = f_T * srss
+        endog = self.endog
+
+        # calc rsquared wrt different baseline models
         if baseline == "rwdrift":
-            ssdm = np.var(np.diff(self.endog)) * (len(self.endog) - 1)
+            ssdm = np.var(np.diff(endog, axis=0), axis=0) * (len(endog) - 1)
             return 1. - sse / ssdm
         elif baseline == "mean":
-            ssm = np.var(self.endog) * len(self.endog)
+            ssm = np.var(endog, axis=0) * len(endog)
             return 1. - sse / ssm
         elif baseline == "seasonal":
-            import statsmodels.api as sm
-            seasonal = 12 if 'seasonal' not in kwargs else kwargs['seasonal']
-            x = np.zeros((len(self.endog), seasonal-1))
+            from statsmodels.regression.linear_model import OLS
+            if 'seasonal' not in kwargs:
+                raise ValueError(
+                    "kwarg seasonal required for rsquared_seasonal.")
+            seasonal = kwargs['seasonal']
+            x = np.zeros((len(endog), seasonal-1))
             idx = [(i, j) for j in range(seasonal-1)
-                   for i in range(j, len(self.endog), seasonal)]
+                   for i in range(j, len(endog), seasonal)]
             x[tuple(np.array(idx).T)] = 1
-            seasonalmodel = sm.OLS(self.endog, sm.add_constant(x)).fit()
+            seasonalmodel = OLS(endog, sm.add_constant(x)).fit()
             ssdsm = seasonalmodel.sse
             return 1. - sse / ssdsm
         else:

@@ -596,6 +596,20 @@ def test_summary():
         res.filter_results._standardized_forecasts_error = 'a'
         res.summary()
 
+def test_summary_rsquared():
+    from statsmodels.regression.linear_model import OLS
+    dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
+    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+    mod = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c')
+    res = mod.fit(disp=-1)
+    txt = str(res.summary())
+
+    benchmark = OLS(endog, np.array([1, 2, 3, 4, 5]))
+    benchmark_res = benchmark.fit()
+    benchmark_txt = str(benchmark_res.summary())
+
+    assert_equal(res.rsquared, benchmark.rsquared)
+
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
