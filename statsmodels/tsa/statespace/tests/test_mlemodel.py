@@ -600,14 +600,17 @@ def test_summary_rsquared():
     from statsmodels.regression.linear_model import OLS
     dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
     endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+
     mod = sarimax.SARIMAX(endog, np.array([1, 2, 3, 4, 5]), order=(0, 0, 0), trend='c')
     res = mod.fit(disp=-1)
-
     benchmark = OLS(endog, np.array([1, 2, 3, 4, 5]))
     benchmark_res = benchmark.fit()
 
-    assert_equal(res.rsquared_mean[0], benchmark_res.rsquared)
-
+    assert_equal(round(res.rsquared_mean[0], 4), round(benchmark_res.rsquared, 4))
+    assert_equal(0 < res.rsquared_rwdrift[0] < 1, True)
+    assert_equal(0 < res.rsquared_seasonal(seasonal=12)[0] < 1, True)
+    assert_raise(ValueError, res.rsquared_seasonal)
+    assert_raise(NotImplementedError, res.rsquared)
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
