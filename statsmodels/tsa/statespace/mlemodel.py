@@ -2938,7 +2938,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 "It is recommended to use MLEResult.rsquared_rwdrift "
                 )
 
-    @cache_readonly
     def rsquared(self):
         """
         In state space models there is not a single comparison
@@ -2965,7 +2964,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.get_rsquared('rwdrift')
 
-    @cache_readonly
     def rsquared_seasonal(self, **kwargs):
         """
         (float) R-squared, 1 - SSE / SSDSM
