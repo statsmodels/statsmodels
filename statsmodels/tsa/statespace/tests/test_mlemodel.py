@@ -608,8 +608,8 @@ def test_summary_rsquared():
 
     assert_equal(round(res.rsquared_mean[0], 6), round(benchmark_res.rsquared, 6))
     assert_equal(0 <= res.rsquared_rwdrift[0] <= 1, True)
-    assert_raise(ValueError, res.rsquared_seasonal)
-    assert_raise(NotImplementedError, res.rsquared)
+    assert_raises(ValueError, res.rsquared_seasonal)
+    assert_raises(NotImplementedError, res.rsquared)
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
