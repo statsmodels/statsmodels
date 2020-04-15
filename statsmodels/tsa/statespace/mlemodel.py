@@ -2916,6 +2916,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             return 1. - sse / ssm
         elif baseline == "seasonal":
             from statsmodels.regression.linear_model import OLS
+            from statsmodels.tools.tools import add_constant
             if 'seasonal' not in kwargs:
                 raise ValueError(
                     "kwarg seasonal required for rsquared_seasonal.")
@@ -2926,7 +2927,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             x[tuple(np.array(idx).T)] = 1
             ssdsm = np.zeros(self.model.k_endog)
             for i in range(self.model.k_endog):
-                seasonalmodel = OLS(endog[:, i], sm.add_constant(x)).fit()
+                seasonalmodel = OLS(endog[:, i], add_constant(x)).fit()
                 ssdsm[i] = seasonalmodel.sse
             return 1. - sse / ssdsm
         else:

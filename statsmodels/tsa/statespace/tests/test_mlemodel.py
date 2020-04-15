@@ -598,15 +598,16 @@ def test_summary():
 
 def test_summary_rsquared():
     from statsmodels.regression.linear_model import OLS
-    dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
-    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+    from statsmodels.tools.tools import add_constant
+    endog = np.array([1, 2, 4, 8, 16])
+    exog = np.array([1, 2, 4, 8, 16])
 
-    mod = sarimax.SARIMAX(endog, np.array([1, 2, 3, 4, 5]), order=(0, 0, 0), trend='c')
+    mod = sarimax.SARIMAX(endog, exog, order=(0, 0, 0), trend='c')
     res = mod.fit(disp=-1)
-    benchmark = OLS(endog, np.array([1, 2, 3, 4, 5]))
+    benchmark = OLS(endog, exog)
     benchmark_res = benchmark.fit()
 
-    assert_equal(round(res.rsquared_mean[0], 4), round(benchmark_res.rsquared, 4))
+    assert_equal(round(res.rsquared_mean[0], 6), round(benchmark_res.rsquared, 6))
     assert_equal(0 < res.rsquared_rwdrift[0] < 1, True)
     assert_equal(0 < res.rsquared_seasonal(seasonal=12)[0] < 1, True)
     assert_raise(ValueError, res.rsquared_seasonal)
