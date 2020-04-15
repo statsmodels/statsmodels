@@ -2928,7 +2928,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ssdsm = np.zeros(self.model.k_endog)
             for i in range(self.model.k_endog):
                 seasonalmodel = OLS(endog[:, i], add_constant(x)).fit()
-                ssdsm[i] = seasonalmodel.sse
+                ssdsm[i] = seasonalmodel.ssr
             return 1. - sse / ssdsm
         else:
             raise NotImplementedError(
