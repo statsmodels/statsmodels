@@ -2905,7 +2905,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         f_T = np.array([self.forecasts_error_cov[i, i, -1]
                        for i in range(self.model.k_endog)])
         sse = f_T * srss
-        endog = self.endog
+        endog = self.model.endog
 
         # calc rsquared wrt different baseline models
         if baseline == "rwdrift":
@@ -4109,7 +4109,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('Log Likelihood', ["%#5.3f" % self.llf]),
         ]
         if hasattr(self, 'rsquared_rwdrift'):
-            top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared()]))
+            top_right.append(('R-squared:', ["%#8.3f" % self.get_rsquared('rwdrift')]))
+        if hasattr(self, 'rsquared_mean'):
+            top_right.append(('R-squared(Mean):', ["%#8.3f" % self.get_rsquared('mean')]))
         top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
