@@ -56,6 +56,15 @@ class TestZIPoisson(object):
         zipoisson_logpmf = sm.distributions.zipoisson.logpmf(7, 3, 0.1)
         assert_allclose(poisson_logpmf, zipoisson_logpmf, rtol=5e-2, atol=5e-2)
 
+    def test_cdf_zero(self):
+        poisson_cdf = poisson.cdf(3, 2)
+        zipoisson_cdf = sm.distributions.zipoisson.cdf(3, 2, 0)
+        assert_allclose(poisson_cdf, zipoisson_cdf, rtol=1e-12)
+
+    def test_ppf_zero(self):
+        poisson_ppf = poisson.ppf(5, 1)
+        zipoisson_ppf = sm.distributions.zipoisson.ppf(5, 1, 0)
+        assert_allclose(poisson_ppf, zipoisson_ppf, rtol=1e-12)
 
 class TestZIGeneralizedPoisson(object):
     def test_pmf_zero(self):
@@ -95,6 +104,20 @@ class TestZiNBP(object):
         tnb_logpmf = sm.distributions.zinegbin.logpmf(200, 10, 1, 2, 0.01)
         assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
 
+    def test_cdf_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(30, 0.1, 2)
+        nbinom_cdf = nbinom.cdf(10, n, p)
+        zinbinom_cdf = sm.distributions.zinegbin.cdf(10, 30, 0.1, 2, 0)
+        print(nbinom_cdf, zinbinom_cdf)
+        assert_allclose(nbinom_cdf, zinbinom_cdf, rtol=1e-12, atol=1e-12)
+
+    def test_ppf_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(100, 1, 2)
+        nbinom_ppf = nbinom.ppf(0.27, n, p)
+        zinbinom_ppf = sm.distributions.zinegbin.ppf(0.27, 100, 1, 2, 0)
+        print(nbinom_ppf, zinbinom_ppf)
+        assert_allclose(nbinom_ppf, zinbinom_ppf, rtol=1e-12, atol=1e-12)
+
     def test_pmf(self):
         n, p = sm.distributions.zinegbin.convert_params(1, 0.9, 1)
         nb_logpmf = nbinom.pmf(2, n, p)
@@ -106,3 +129,26 @@ class TestZiNBP(object):
         nb_logpmf = nbinom.logpmf(2, n, p)
         tnb_logpmf = sm.distributions.zinegbin.logpmf(2, 5, 1, 1, 0.005)
         assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
+
+    def test_cdf(self):
+        n, p = sm.distributions.zinegbin.convert_params(1, 0.9, 1)
+        nbinom_cdf = nbinom.cdf(2, n, p)
+        zinbinom_cdf = sm.distributions.zinegbin.cdf(2, 1, 0.9, 2, 0)
+        assert_allclose(nbinom_cdf, zinbinom_cdf, rtol=1e-12, atol=1e-12)
+
+    def test_ppf(self):
+        n, p = sm.distributions.zinegbin.convert_params(5, 1, 1)
+        nbinom_ppf = nbinom.ppf(0.71, n, p)
+        zinbinom_ppf = sm.distributions.zinegbin.ppf(0.71, 5, 1, 1, 0)
+        assert_allclose(nbinom_ppf, zinbinom_ppf, rtol=1e-12, atol=1e-12)
+
+    def test_convert(self):
+        n, p = sm.distributions.zinegbin.convert_params(25, 0.85, 2)
+        n_true, p_true = 1.1764705882352942, 0.04494382022471911
+        assert_allclose(n, n_true, rtol=1e-12, atol=1e-12)
+        assert_allclose(p, p_true, rtol=1e-12, atol=1e-12)
+
+        n, p = sm.distributions.zinegbin.convert_params(7, 0.17, 1)
+        n_true, p_true = 41.17647058823529, 0.8547008547008547
+        assert_allclose(n, n_true, rtol=1e-12, atol=1e-12)
+        assert_allclose(p, p_true, rtol=1e-12, atol=1e-12)
