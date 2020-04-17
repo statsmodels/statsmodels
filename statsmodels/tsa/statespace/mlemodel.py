@@ -2939,7 +2939,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         else:
             return rsquared
 
-
     def rsquared(self):
         """
         In state space models there is not a single comparison
