@@ -4113,9 +4113,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ]
         if hasattr(self, 'rsquared_rwdrift'):
             r2 = self.rsquared_rwdrift
-            r2_str = (np.array_str(r2, precision=3)
-                      if isinstance(r2, (np.ndarray, np.generic))
-                      else "%#8.3f" % r2)
+            r2_str = ("%#8.3f" % r2
+                      if isinstance(r2, float)
+                      else np.array_str(r2, precision=3))
             top_right.append(('R-squared:',
                               [r2_str]))
 
