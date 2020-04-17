@@ -51,6 +51,14 @@ class zipoisson_gen(rv_discrete):
         x[q < w] = 0
         return x
 
+    def _mean(self, mu, w):
+        return (1 - w) * mu
+
+    def _var(self, mu, w):
+        dispersion_factor = 1 + w * mu
+        var = (dispersion_factor * self._mean(mu, w)).mean()
+        return var
+
 zipoisson = zipoisson_gen(name='zipoisson',
                           longname='Zero Inflated Poisson')
 
@@ -69,6 +77,15 @@ class zigeneralizedpoisson_gen(rv_discrete):
 
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
+
+    def _mean(self, mu, alpha, p, w):
+        return (1 - w) * mu
+
+    def _var(self, mu, alpha, p, w):
+        p = p - 1
+        dispersion_factor = (1 + alpha * mu ** p) ** 2 + w * mu
+        var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
+        return var
 
 zigenpoisson = zigeneralizedpoisson_gen(name='zigenpoisson',
     longname='Zero Inflated Generalized Poisson')
@@ -103,6 +120,14 @@ class zinegativebinomial_gen(rv_discrete):
         # set to zero if in the zi range
         x[q < w] = 0
         return x
+
+    def _mean(self, mu, alpha, p, w):
+        return (1 - w) * mu
+
+    def _var(self, mu, alpha, p, w):
+        dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
+        var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
+        return var
 
     def convert_params(self, mu, alpha, p):
         size = 1. / alpha * mu**(2-p)
