@@ -43,7 +43,7 @@ class zipoisson_gen(rv_discrete):
         # construct cdf from standard poisson's cdf and the w inflation of zero
         return w + poisson(mu=mu).cdf(x) * (1 - w)
 
-    def _pff(self, q, mu, w):
+    def _ppf(self, q, mu, w):
         # we just translated and stretched q to remove zi
         q_mod = (q - w) / (1 - w)
         x = poisson(mu=mu).ppf(q_mod)
@@ -58,6 +58,9 @@ class zipoisson_gen(rv_discrete):
         dispersion_factor = 1 + w * mu
         var = (dispersion_factor * self._mean(mu, w)).mean()
         return var
+
+    def _moment(self, n, mu, w):
+        return (1 - w) * poisson(mu).moment(n)
 
 zipoisson = zipoisson_gen(name='zipoisson',
                           longname='Zero Inflated Poisson')
@@ -112,7 +115,7 @@ class zinegativebinomial_gen(rv_discrete):
         # construct cdf from standard negative binomial cdf and the w inflation of zero
         return w + nbinom.cdf(x, s, p) * (1 - w)
 
-    def _pff(self, q, mu, alpha, p, w):
+    def _ppf(self, q, mu, alpha, p, w):
         s, p = self.convert_params(mu, alpha, p)
         # we just translated and stretched q to remove zi
         q_mod = (q - w) / (1 - w)
@@ -128,6 +131,10 @@ class zinegativebinomial_gen(rv_discrete):
         dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
         var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
         return var
+
+    def _moment(self, n, mu, alpha, p, w):
+        s, p = self.convert_params(mu, alpha, p, w)
+        return (1 - w) * nbinom.moment(n, s, p)
 
     def convert_params(self, mu, alpha, p):
         size = 1. / alpha * mu**(2-p)
