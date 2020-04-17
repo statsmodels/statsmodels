@@ -607,9 +607,9 @@ def test_summary_rsquared():
     benchmark = OLS(endog, exog)
     benchmark_res = benchmark.fit()
 
-    assert_equal(round(res.rsquared_mean[0], 6),
+    assert_equal(round(res.rsquared_mean, 6),
                  round(benchmark_res.rsquared, 6))
-    assert_equal(0 <= res.rsquared_rwdrift[0] <= 1, True)
+    assert_equal(0 <= res.rsquared_rwdrift <= 1, True)
     assert_raises(ValueError, res.rsquared_seasonal)
     assert_raises(NotImplementedError, res.rsquared)
 
