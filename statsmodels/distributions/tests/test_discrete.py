@@ -66,6 +66,23 @@ class TestZIPoisson(object):
         zipoisson_ppf = sm.distributions.zipoisson.ppf(5, 1, 0)
         assert_allclose(poisson_ppf, zipoisson_ppf, rtol=1e-12)
 
+    def test_mean_var(self):
+        poisson_mean, poisson_var = poisson.mean(12), poisson.var(12)
+        zipoisson_mean = sm.distributions.zipoisson.mean(12, 0)
+        zipoisson_var = sm.distributions.zipoisson.mean(12, 0)
+        assert_allclose(poisson_mean, zipoisson_mean, rtol=1e-10)
+        assert_allclose(poisson_var, zipoisson_var, rtol=1e-10)
+
+    def test_moments(self):
+        poisson_m1, poisson_m2 = poisson.moment(1, 12), poisson.moment(2, 12)
+        zip_m0 = sm.distributions.zipoisson.moment(0, 12, 0)
+        zip_m1 = sm.distributions.zipoisson.moment(1, 12, 0)
+        zip_m2 = sm.distributions.zipoisson.moment(2, 12, 0)
+        assert_allclose(1, zip_m0, rtol=1e-10)
+        assert_allclose(poisson_m1, zip_m1, rtol=1e-10)
+        assert_allclose(poisson_m2, zip_m2, rtol=1e-10)
+
+
 class TestZIGeneralizedPoisson(object):
     def test_pmf_zero(self):
         gp_pmf = sm.distributions.genpoisson_p.pmf(3, 2, 1, 1)
@@ -108,15 +125,31 @@ class TestZiNBP(object):
         n, p = sm.distributions.zinegbin.convert_params(30, 0.1, 2)
         nbinom_cdf = nbinom.cdf(10, n, p)
         zinbinom_cdf = sm.distributions.zinegbin.cdf(10, 30, 0.1, 2, 0)
-        print(nbinom_cdf, zinbinom_cdf)
         assert_allclose(nbinom_cdf, zinbinom_cdf, rtol=1e-12, atol=1e-12)
 
     def test_ppf_p2(self):
         n, p = sm.distributions.zinegbin.convert_params(100, 1, 2)
         nbinom_ppf = nbinom.ppf(0.27, n, p)
         zinbinom_ppf = sm.distributions.zinegbin.ppf(0.27, 100, 1, 2, 0)
-        print(nbinom_ppf, zinbinom_ppf)
         assert_allclose(nbinom_ppf, zinbinom_ppf, rtol=1e-12, atol=1e-12)
+
+    def test_mran_var_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(7, 1, 2)
+        nbinom_mean, nbinom_var = nbinom.mean(n, p), nbinom.var(n, p)
+        zinb_mean = sm.distributions.zinegbin.mean(7, 1, 2, 0)
+        zinb_var = sm.distributions.zinegbin.var(7, 1, 2, 0)
+        assert_allclose(nbinom_mean, zinb_mean, rtol=1e-10)
+        assert_allclose(nbinom_var, zinb_var, rtol=1e-10)
+
+    def test_moments_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(7, 1, 2)
+        nb_m1, nb_m2 = nbinom.moment(1, n, p), nbinom.moment(2, n, p)
+        zinb_m0 = sm.distributions.zinegbin.moment(0, 7, 1, 2, 0)
+        zinb_m1 = sm.distributions.zinegbin.moment(1, 7, 1, 2, 0)
+        zinb_m2 = sm.distributions.zinegbin.moment(2, 7, 1, 2, 0)
+        assert_allclose(1, zinb_m0, rtol=1e-10)
+        assert_allclose(nb_m1, zinb_m1, rtol=1e-10)
+        assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
 
     def test_pmf(self):
         n, p = sm.distributions.zinegbin.convert_params(1, 0.9, 1)
@@ -152,3 +185,21 @@ class TestZiNBP(object):
         n_true, p_true = 41.17647058823529, 0.8547008547008547
         assert_allclose(n, n_true, rtol=1e-12, atol=1e-12)
         assert_allclose(p, p_true, rtol=1e-12, atol=1e-12)
+
+    def test_mean_var(self):
+        n, p = sm.distributions.zinegbin.convert_params(9, 1, 1)
+        nbinom_mean, nbinom_var = nbinom.mean(n, p), nbinom.var(n, p)
+        zinb_mean = sm.distributions.zinegbin.mean(9, 1, 1, 0)
+        zinb_var = sm.distributions.zinegbin.var(9, 1, 1, 0)
+        assert_allclose(nbinom_mean, zinb_mean, rtol=1e-10)
+        assert_allclose(nbinom_var, zinb_var, rtol=1e-10)
+
+    def test_moments(self):
+        n, p = sm.distributions.zinegbin.convert_params(9, 1, 1)
+        nb_m1, nb_m2 = nbinom.moment(1, n, p), nbinom.moment(2, n, p)
+        zinb_m0 = sm.distributions.zinegbin.moment(0, 9, 1, 1, 0)
+        zinb_m1 = sm.distributions.zinegbin.moment(1, 9, 1, 1, 0)
+        zinb_m2 = sm.distributions.zinegbin.moment(2, 9, 1, 1, 0)
+        assert_allclose(1, zinb_m0, rtol=1e-10)
+        assert_allclose(nb_m1, zinb_m1, rtol=1e-10)
+        assert_allclose(nb_m2, zinb_m2, rtol=1e-10)

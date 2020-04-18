@@ -62,6 +62,7 @@ class zipoisson_gen(rv_discrete):
     def _moment(self, n, mu, w):
         return (1 - w) * poisson(mu).moment(n)
 
+
 zipoisson = zipoisson_gen(name='zipoisson',
                           longname='Zero Inflated Poisson')
 
@@ -90,8 +91,11 @@ class zigeneralizedpoisson_gen(rv_discrete):
         var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
         return var
 
-zigenpoisson = zigeneralizedpoisson_gen(name='zigenpoisson',
+
+zigenpoisson = zigeneralizedpoisson_gen(
+    name='zigenpoisson',
     longname='Zero Inflated Generalized Poisson')
+
 
 class zinegativebinomial_gen(rv_discrete):
     '''Zero Inflated Generalized Negative Binomial distribution
@@ -112,7 +116,8 @@ class zinegativebinomial_gen(rv_discrete):
 
     def _cdf(self, x, mu, alpha, p, w):
         s, p = self.convert_params(mu, alpha, p)
-        # construct cdf from standard negative binomial cdf and the w inflation of zero
+        # construct cdf from standard negative binomial cdf
+        # and the w inflation of zero
         return w + nbinom.cdf(x, s, p) * (1 - w)
 
     def _ppf(self, q, mu, alpha, p, w):
@@ -133,7 +138,7 @@ class zinegativebinomial_gen(rv_discrete):
         return var
 
     def _moment(self, n, mu, alpha, p, w):
-        s, p = self.convert_params(mu, alpha, p, w)
+        s, p = self.convert_params(mu, alpha, p)
         return (1 - w) * nbinom.moment(n, s, p)
 
     def convert_params(self, mu, alpha, p):
