@@ -82,6 +82,7 @@ class TestZIPoisson(object):
         assert_allclose(poisson_m1, zip_m1, rtol=1e-10)
         assert_allclose(poisson_m2, zip_m2, rtol=1e-10)
 
+
 class TestZIGeneralizedPoisson(object):
     def test_pmf_zero(self):
         gp_pmf = sm.distributions.genpoisson_p.pmf(3, 2, 1, 1)
