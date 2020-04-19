@@ -40,7 +40,22 @@ class CombineResults(object):
                          ci_func=None):
         """confidence interval for the overall mean estimate
 
+        Additional information needs to be provided for confidence intervals
+        that are not based on normal distribution using available variance.
+        This is likely to change in future.
 
+        Parameters
+        ----------
+        alpha : float in (0, 1)
+        use_t : None or bool
+        nobs : None or float
+        ci_func : None or callable
+
+        Returns
+        -------
+        ci_eff : tuple of ndarrays
+            Tuple (ci_low, ci_upp) with confidence interval computed for each
+            sample.
         """
         # this is a bit messy, we don't have enough information about
         # computing conf_int already in results for other than normal
@@ -54,13 +69,16 @@ class CombineResults(object):
         if ci_func is not None:
             kwds = {"use_t": use_t} if use_t is not None else {}
             ci_eff = ci_func(alpha=alpha, **kwds)
+            self.ci_sample_distr = "ci_func"
         else:
             if use_t is False:
                 crit = stats.norm.isf(alpha / 2)
+                self.ci_sample_distr = "normal"
             else:
                 if nobs is not None:
                     df_resid = nobs - 1
                     crit = stats.t.isf(alpha / 2, df_resid)
+                    self.ci_sample_distr = "t"
                 else:
                     msg = ("`use_t=True` requires `nobs` for each sample "
                            "or `ci_func`. Using normal distribution for "
@@ -68,6 +86,7 @@ class CombineResults(object):
                     import warnings
                     warnings.warn(msg)
                     crit = stats.norm.isf(alpha / 2)
+                    self.ci_sample_distr = "normal"
 
             # sgn = np.asarray([-1, 1])
             # ci_eff = self.eff + sgn * crit * self.sd_eff
@@ -106,7 +125,8 @@ class CombineResults(object):
     def test_homogeneity(self):
         """test whether the means of all samples are the same
 
-        currently no options test uses chisquare distribution
+        currently no options, test uses chisquare distribution
+        default might change depending on `use_t`
 
         Returns
         -------
@@ -120,17 +140,17 @@ class CombineResults(object):
         pvalue = stats.chi2.sf(self.q, self.k - 1)
         return self.q, pvalue, self.k - 1
 
-    def summary_array(self, use_t=None):
+    def summary_array(self, alpha=0.05, use_t=None):
         """Create array with sample statistics and mean estimates
 
         """
 
-        ci_low, ci_upp = self.conf_int_samples(use_t=use_t)
+        ci_low, ci_upp = self.conf_int_samples(alpha=alpha, use_t=use_t)
         res = np.column_stack([self.eff, self.sd_eff,
                                ci_low, ci_upp,
                                self.weights_rel_fe, self.weights_rel_re])
 
-        ci = self.conf_int(use_t=use_t)
+        ci = self.conf_int(alpha=alpha, use_t=use_t)
         res_fe = [[self.mean_effect_fe, self.sd_eff_w_fe,
                    ci[0][0], ci[0][1], 1, np.nan]]
         res_re = [[self.mean_effect_re, self.sd_eff_w_re,
@@ -145,7 +165,7 @@ class CombineResults(object):
         column_names = ['eff', "sd_eff", "ci_low", "ci_upp", "w_fe", "w_re"]
         return res, column_names
 
-    def summary_frame(self, use_t=None):
+    def summary_frame(self, alpha=0.05, use_t=None):
         """Create DataFrame with sample statistics and mean estimates
 
         """
@@ -154,7 +174,7 @@ class CombineResults(object):
         labels = (list(self.row_names) +
                   ["fixed effect", "random effect",
                    "fixed effect wls", "random effect wls"])
-        res, col_names = self.summary_array(use_t=use_t)
+        res, col_names = self.summary_array(alpha=alpha, use_t=use_t)
         results = pd.DataFrame(res, index=labels, columns=col_names)
         return results
 
@@ -167,14 +187,13 @@ class CombineResults(object):
         return fig
 
 
-def effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1, row_names=None,
-                   alpha=0.05):
+def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
     """effect sizes for mean difference for use in meta-analysis
 
     mean2, sd2, nobs2 are for treatment
     mean1, sd1, nobs1 are for control
 
-    Effect sizes are computed for the mean difference ``mean2 - mean1``
+    Effect sizes are computed for the mean difference ``mean1 - mean2``
     standardized by an estimate of the within variance.
 
     This does not have option yet.
@@ -185,18 +204,14 @@ def effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1, row_names=None,
 
     Parameters
     ----------
-    mean2 : array
+    mean1 : array
         mean of second sample, treatment groups
-    sd2 : array
+    sd1 : array
         standard deviation of residuals in treatment groups, within
-    nobs2 : array
+    nobs1 : array
         number of observations in treatment groups
-    mean1, sd1, nobs1 : arrays
+    mean2, sd2, nobs2 : arrays
         mean, standard deviation and number of observations of control groups
-    row_names : None or list of strings
-        names for samples to be used in summary tables
-    alpha : float in (0, 1)
-        currently not used
 
     Returns
     -------
@@ -220,21 +235,136 @@ def effectsize_smd(mean2, sd2, nobs2, mean1, sd1, nobs1, row_names=None,
         Boca Raton: CRC Press/Taylor & Francis Group.
 
     """
-    k = len(mean2)
-    if row_names is None:
-        row_names = list(range(k))
+    # TODO: not used yet, design and options ?
+    # k = len(mean1)
+    # if row_names is None:
+    #    row_names = list(range(k))
     # crit = stats.norm.isf(alpha / 2)
-    # TODO: not used yet, design and options
-    # var_diff_uneq = sd2**2 / nobs2 + sd1**2 / nobs1
-    var_diff = (sd2**2 * (nobs2 - 1) +
-                sd1**2 * (nobs2 - 1)) / (nobs2 + nobs1 - 2)
+    # var_diff_uneq = sd1**2 / nobs1 + sd2**2 / nobs2
+    var_diff = (sd1**2 * (nobs1 - 1) +
+                sd2**2 * (nobs2 - 1)) / (nobs1 + nobs2 - 2)
     sd_diff = np.sqrt(var_diff)
-    nobs = nobs2 + nobs1
+    nobs = nobs1 + nobs2
     bias_correction = 1 - 3 / (4 * nobs - 9)
-    smd = (mean2 - mean1) / sd_diff
+    smd = (mean1 - mean2) / sd_diff
     smd_bc = bias_correction * smd
-    var_smdbc = nobs / nobs2 / nobs1 + smd_bc**2 / 2 / (nobs - 3.94)
+    var_smdbc = nobs / nobs1 / nobs2 + smd_bc**2 / 2 / (nobs - 3.94)
     return smd_bc, var_smdbc
+
+
+def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
+                            zero_correction=None, zero_kwds=None):
+    """Effects sizes for two sample binomial proportions
+
+    Parameters
+    ----------
+    count1, nobs1, count2, nobs2 : array_like
+        data for two samples
+    statistic : {"diff", "odds-ratio", "risk-ratio", "sin-diff", "arcsine"}
+        statistic for the comparison of two proportions
+        Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
+    zero_correction : None or float or ...
+        Some statistics are not finite when zero counts are in the data.
+        The options to remove zeros are:
+        float : if zero_correction is a single float, then it will be added
+            to all count (cells) if the sample has any zeros.
+        "tac" : treatment arm continuity correction
+            see Ruecker et al 2009, section 3.2
+        "clip" : clip proportions without adding a value to all cells
+            The clip bounds can be set with zero_kwds["clip_bounds"]
+        ... ? not yet
+    zero_kwds : dict
+        additional options to handle zero counts
+        ? not yet
+
+    Returns
+    -------
+    effect size : array
+        effect size for each sample
+    var_smdbc : array
+        estimate of variance of smd_bc
+
+    Notes
+    -----
+    Status: API is experimental, Options for zero handling is incomplete.
+
+    The names for ``statistics`` keyword can be shortened to "rd", "rr", "or"
+    and "as".
+
+    The statistics are defined as:
+
+    risk difference = p1 - p2
+    log risk ratio = log(p1 / p2)
+    log odds_ratio = log(p1 / (1 - p1) * (1 - p2) / p2)
+    arcsine-sqrt = arcsin(sqrt(p1)) - arcsin(sqrt(p2))
+
+    where p1 and p2 are the estimated proportions in sample 1 (treatment) and
+    sample 2 (control).
+
+    log-odds-ratio and log-risk-ratio can be backtransformed to ``or`` and
+    `rr` using `exp` function.
+
+    See Also
+    --------
+    Contingency_tables
+
+    """
+    if zero_correction is None:
+        cc1 = cc2 = 0
+    elif zero_correction == "tac":
+        # treatment arm continuity correction Ruecker et al 2009, section 3.2
+        nobs_t = nobs1 + nobs2
+        cc1 = nobs2 / nobs_t
+        cc2 = nobs1 / nobs_t
+    elif zero_correction == "clip":
+        clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
+        cc1 = cc2 = 0
+    elif zero_correction:
+        # TODO: check is float_like
+        cc1 = cc2 = zero_correction
+    else:
+        msg = "zero_correction not recognized or supported"
+        raise NotImplementedError(msg)
+
+    zero_mask1 = (count1 == 0) | (count1 == nobs1)
+    zero_mask2 = (count2 == 0) | (count2 == nobs2)
+    zmask = np.logical_or(zero_mask1, zero_mask2)
+    n1 = nobs1 + (cc1 + cc2) * zmask
+    n2 = nobs2 + (cc1 + cc2) * zmask
+    p1 = (count1 + cc1) / (n1)
+    p2 = (count2 + cc2) / (n2)
+
+    if zero_correction == "clip":
+        p1 = np.clip(p1, *clip_bounds)
+        p2 = np.clip(p2, *clip_bounds)
+
+    if statistic in ["diff", "rd"]:
+        rd = p1 - p2
+        rd_var = p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2
+        eff = rd
+        var_eff = rd_var
+    elif statistic in ["risk-ratio", "rr"]:
+        # rr = p1 / p2
+        log_rr = np.log(p1) - np.log(p2)
+        log_rr_var = (1 - p1) / p1 / n1 + (1 - p2) / p2 / n2
+        eff = log_rr
+        var_eff = log_rr_var
+    elif statistic in ["odds-ratio", "or"]:
+        # or_ = p1 / (1 - p1) * (1 - p2) / p2
+        log_or = np.log(p1) - np.log(1 - p1) - np.log(p2) + np.log(1 - p2)
+        log_or_var = 1 / (p1 * (1 - p1) * n1) + 1 / (p2 * (1 - p2) * n2)
+        eff = log_or
+        var_eff = log_or_var
+    elif statistic in ["arcsine", "arcsin", "as"]:
+        as_ = np.arcsin(np.sqrt(p1)) - np.arcsin(np.sqrt(p2))
+        as_var = (1 / n1 + 1 / n2) / 4
+        eff = as_
+        var_eff = as_var
+    else:
+        msg = 'statistic not recognized, use one of "rd", "rr", "or", "as"'
+        raise NotImplementedError(msg)
+
+    return eff, var_eff
 
 
 def combine_effects(effect, variance, method_re="iterated", row_names=None,

@@ -7,6 +7,8 @@ License: BSD-3
 
 """
 
+import io
+
 import numpy as np
 import pandas as pd
 
@@ -16,10 +18,130 @@ from statsmodels.regression.linear_model import WLS
 from statsmodels.genmod.generalized_linear_model import GLM
 
 from statsmodels.stats.meta_analysis import (
-    effectsize_smd, combine_effects, _fit_tau_iterative,
-    _fit_tau_mm, _fit_tau_iter_mm)
+    effectsize_smd, effectsize_2proportions, combine_effects,
+    _fit_tau_iterative, _fit_tau_mm, _fit_tau_iter_mm)
 
 from .results import results_meta
+
+
+
+
+
+class TestEffectsizeBinom(object):
+
+    @classmethod
+    def setup_class(cls):
+        cls.results = results_meta.eff_prop1
+        ss = """\
+            study,nei,nci,e1i,c1i,e2i,c2i,e3i,c3i,e4i,c4i
+            1,19,22,16.0,20.0,11,12,4.0,8.0,4,3
+            2,34,35,22.0,22.0,18,12,15.0,8.0,15,6
+            3,72,68,44.0,40.0,21,15,10.0,3.0,3,0
+            4,22,20,19.0,12.0,14,5,5.0,4.0,2,3
+            5,70,32,62.0,27.0,42,13,26.0,6.0,15,5
+            6,183,94,130.0,65.0,80,33,47.0,14.0,30,11
+            7,26,50,24.0,30.0,13,18,5.0,10.0,3,9
+            8,61,55,51.0,44.0,37,30,19.0,19.0,11,15
+            9,36,25,30.0,17.0,23,12,13.0,4.0,10,4
+            10,45,35,43.0,35.0,19,14,8.0,4.0,6,0
+            11,246,208,169.0,139.0,106,76,67.0,42.0,51,35
+            12,386,141,279.0,97.0,170,46,97.0,21.0,73,8
+            13,59,32,56.0,30.0,34,17,21.0,9.0,20,7
+            14,45,15,42.0,10.0,18,3,9.0,1.0,9,1
+            15,14,18,14.0,18.0,13,14,12.0,13.0,9,12
+            16,26,19,21.0,15.0,12,10,6.0,4.0,5,1
+            17,74,75,,,42,40,,,23,30"""
+        df3 = pd.read_csv(io.StringIO(ss))
+        df_12y = df3[["e2i", "nei", "c2i", "nci"]]
+        # TODO: currently 1 is reference, switch labels
+        # cls.count2, cls.nobs2, cls.count1, cls.nobs1 = df_12y.values.T
+        cls.count1, cls.nobs1, cls.count2, cls.nobs2 = df_12y.values.T
+
+    def test_effectsize(self):
+        res2 = self.results
+        dta = (self.count1, self.nobs1, self.count2, self.nobs2)
+        # count1, nobs1, count2, nobs2 = dta
+
+        eff, var_eff = effectsize_2proportions(*dta)
+        assert_allclose(eff, res2.y_rd, rtol=1e-13)
+        assert_allclose(var_eff, res2.v_rd, rtol=1e-13)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="rr")
+        assert_allclose(eff, res2.y_rr, rtol=1e-13)
+        assert_allclose(var_eff, res2.v_rr, rtol=1e-13)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="or")
+        assert_allclose(eff, res2.y_or, rtol=1e-13)
+        assert_allclose(var_eff, res2.v_or, rtol=1e-13)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="as")
+        assert_allclose(eff, res2.y_as, rtol=1e-13)
+        assert_allclose(var_eff, res2.v_as, rtol=1e-13)
+
+
+class TestEffSmdMeta(object):
+
+    @classmethod
+    def setup_class(cls):
+        # example from book Applied Meta-Analysis with R
+        data = [
+            ["Carroll", 94, 22, 60, 92, 20, 60],
+            ["Grant", 98, 21, 65, 92, 22, 65],
+            ["Peck", 98, 28, 40, 88, 26, 40],
+            ["Donat", 94, 19, 200, 82, 17, 200],
+            ["Stewart", 98, 21, 50, 88, 22, 45],
+            ["Young", 96, 21, 85, 92, 22, 85]]
+        colnames = ["study", "mean_t", "sd_t", "n_t", "mean_c", "sd_c", "n_c"]
+        dframe = pd.DataFrame(data, columns=colnames)
+        cls.dta = np.asarray(dframe[["mean_t", "sd_t", "n_t",
+                                     "mean_c", "sd_c", "n_c"]]).T
+        cls.row_names = dframe["study"]
+
+    def test_smd(self):
+        # compare with metafor
+        yi = np.array([
+            0.09452415852032972, 0.27735586626551018, 0.36654442951591998,
+            0.66438496832691396, 0.46180628128769841, 0.18516443739910043])
+
+        vi_asy = np.array([
+            0.03337056173559990, 0.03106510106366112, 0.05083971761755720,
+            0.01055175923267344, 0.04334466980873156, 0.02363025255552155])
+        vi_ub = np.array([
+            0.03337176211751222, 0.03107388569950075, 0.05088098670518214,
+            0.01055698026322296, 0.04339077140867459, 0.02363252645927709])
+
+        eff, var_eff = effectsize_smd(*self.dta)
+        # agreement with metafor is lower, atol for var 2.5e-06
+        # It's likely a small difference in bias correction
+        assert_allclose(eff, yi, rtol=1e-5)
+        assert_allclose(var_eff, vi_ub, rtol=1e-4)
+
+        # with unequal variance, not available yet
+        # > r = escalc(measure="SMDH", m1i=m.t, sd1i=sd.t, n1i=n.t, m2i=m.c,
+        #             sd2i=sd.c, n2i=n.c, data=dat, vtype="UB")
+        yi = np.array([
+            0.09452415852032972, 0.27735586626551023, 0.36654442951591998,
+            0.66438496832691396, 0.46122883016705268, 0.18516443739910043])
+        vi_ub = np.array([
+            0.03350541862210323, 0.03118164624093491, 0.05114625874744853,
+            0.01057160214284120, 0.04368303906568672, 0.02369839436451885])
+
+        # compare with package `meta`
+        # high agreement, using smd function was written based on meta example
+
+        # > rm = metacont(n.t,m.t,sd.t,n.c,m.c,sd.c,
+        # +               data=dat,studlab=rownames(dat),sm="SMD")
+
+        # > rm$TE
+        yi_m = np.array([
+            0.09452437336063831, 0.27735640148036095, 0.36654634845797818,
+            0.66438509989113559, 0.46180797677414176, 0.18516464424648887])
+        # > rm$seTE**2
+        vi_m = np.array([
+            0.03337182573880991, 0.03107434965484927, 0.05088322525353587,
+            0.01055724834741877, 0.04339324466573324, 0.02363264537147130])
+        assert_allclose(eff, yi_m, rtol=1e-13)
+        assert_allclose(var_eff, vi_m, rtol=1e-13)
 
 
 class TestMetaK1(object):
@@ -105,8 +227,6 @@ class TestMetaK1(object):
         assert_allclose(q, res.QE, atol=1e-10)
         assert_allclose(df, 9 - 1, atol=1e-10)
 
-
-
     def test_dl(self):
         res = results_meta.exk1_dl
         eff, var_eff = self.eff, self.var_eff
@@ -158,3 +278,8 @@ class TestMetaK1(object):
         assert_allclose(ci[3][1], res_dls.ci_ub, atol=1e-10)
         assert_allclose(ci[2][0], res_fes.ci_lb, atol=1e-10)
         assert_allclose(ci[2][1], res_fes.ci_ub, atol=1e-10)
+
+        q, pv, df = res3.test_homogeneity()
+        assert_allclose(pv, res_dls.QEp, atol=1e-10)
+        assert_allclose(q, res_dls.QE, atol=1e-10)
+        assert_allclose(df, 9 - 1, atol=1e-10)
