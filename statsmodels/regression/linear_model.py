@@ -837,25 +837,36 @@ class OLS(WLS):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> Y = [1,3,4,5,2,3,4]
-    >>> X = range(1,8)
+    >>> import numpy as np
+    >>> duncan_prestige = sm.datasets.get_rdataset("Duncan", "carData")
+    >>> Y = duncan_prestige.data['income']
+    >>> X = duncan_prestige.data['education']
     >>> X = sm.add_constant(X)
     >>> model = sm.OLS(Y,X)
     >>> results = model.fit()
     >>> results.params
-    array([ 2.14285714,  0.25      ])
+    const        10.603498
+    education     0.594859
+    dtype: float64
 
     >>> results.tvalues
-    array([ 1.87867287,  0.98019606])
+    const        2.039813
+    education    6.892802
+    dtype: float64
 
     >>> print(results.t_test([1, 0]))
-    <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
+                                 Test for Constraints
+    ==============================================================================
+                     coef    std err          t      P>|t|      [0.025      0.975]
+    ------------------------------------------------------------------------------
+    c0            10.6035      5.198      2.040      0.048       0.120      21.087
+    ==============================================================================
+
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
+    <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20, df_denom=43, df_num=2>
     """ % {'params': base._model_params_doc,
            'extra_params': base._missing_param_doc + base._extra_param_doc}
 
-    # TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
         super(OLS, self).__init__(endog, exog, missing=missing,
