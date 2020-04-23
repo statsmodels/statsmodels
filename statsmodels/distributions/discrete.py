@@ -138,7 +138,7 @@ class zinegativebinomial_gen(rv_discrete):
         return var
 
     def _moment(self, n, mu, alpha, p, w):
-        s, p = self.convert_params(mu, alpha, p, w)
+        s, p = self.convert_params(mu, alpha, p)
         return (1 - w) * nbinom.moment(n, s, p)
 
     def convert_params(self, mu, alpha, p):
