@@ -25,8 +25,6 @@ from .results import results_meta
 
 
 
-
-
 class TestEffectsizeBinom(object):
 
     @classmethod
@@ -243,7 +241,8 @@ class TestMetaK1(object):
         assert_allclose(ci[1][1], res.ci_ub, atol=1e-10)
 
         assert_allclose(res3.q, res.QE, atol=1e-10)
-        assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
+        # I2 is in percent in metafor
+        assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)
         assert_allclose(res3.h2, res.H2, atol=1e-10)
         q, pv, df = res3.test_homogeneity()
         assert_allclose(pv, res.QEp, atol=1e-10)
@@ -283,3 +282,54 @@ class TestMetaK1(object):
         assert_allclose(pv, res_dls.QEp, atol=1e-10)
         assert_allclose(q, res_dls.QE, atol=1e-10)
         assert_allclose(df, 9 - 1, atol=1e-10)
+
+
+class TestMetaBinOR(object):
+    # testing against results from R package `meta`
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = res2 = results_meta.results_or_dl_hk
+        cls.dta = (res2.event_e, res2.n_e, res2.event_c, res2.n_c)
+
+        eff, var_eff = effectsize_2proportions(*cls.dta, statistic="or")
+        res1 = combine_effects(eff, var_eff, method_re="chi2", use_t=True)
+        cls.eff = eff
+        cls.var_eff = var_eff
+        cls.res1 = res1
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        assert_allclose(self.eff, res2.TE, rtol=1e-13)
+        assert_allclose(self.var_eff, res2.seTE**2, rtol=1e-13)
+
+        assert_allclose(res1.mean_effect_fe, res2.TE_fixed, rtol=1e-13)
+        # R meta does not adjust sd FE for HKSJ
+        assert_allclose(res1.sd_eff_w_fe, res2.seTE_fixed, rtol=1e-13)
+
+        assert_allclose(res1.q, res2.Q, rtol=1e-13)
+        assert_allclose(res1.tau2, res2.tau2, rtol=1e-10)
+
+        assert_allclose(res1.mean_effect_re, res2.TE_random, rtol=1e-13)
+        assert_allclose(res1.sd_eff_w_re_hksj, res2.seTE_random, rtol=1e-13)
+
+        q, pv, df = res1.test_homogeneity()
+        assert_allclose(q, res2.Q, rtol=1e-13)
+        assert_allclose(pv, res2.pval_Q, rtol=1e-13)
+        assert_allclose(df, res2.df_Q, rtol=1e-13)
+
+        assert_allclose(res1.i2, res2.I2, rtol=1e-13)
+        assert_allclose(res1.h2, res2.H**2, rtol=1e-13)
+
+        ci = res1.conf_int(use_t=True)  # fe, re, fe_wls, re_wls
+        # R meta does not adjust FE for HKSJ, still uses normal dist
+        # assert_allclose(ci[0][0], res2.lower_fixed, atol=1e-10)
+        # assert_allclose(ci[0][1], res2.upper_fixed, atol=1e-10)
+        assert_allclose(ci[3][0], res2.lower_random, rtol=1e-13)
+        assert_allclose(ci[3][1], res2.upper_random, rtol=1e-10)
+
+        ci = res1.conf_int(use_t=False)  # fe, re, fe_wls, re_wls
+        assert_allclose(ci[0][0], res2.lower_fixed, rtol=1e-13)
+        assert_allclose(ci[0][1], res2.upper_fixed, rtol=1e-13)
