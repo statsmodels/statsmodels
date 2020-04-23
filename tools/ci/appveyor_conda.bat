@@ -1,5 +1,6 @@
 REM Install required conda version and libraries
-curl -fsS -o c:\Miniconda.exe "https://repo.continuum.io/miniconda/Miniconda%PY_MAJOR_VER%-latest-Windows-%PYTHON_ARCH%.exe"
+@echo on
+curl -fsS -o c:\Miniconda.exe "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-%PYTHON_ARCH%.exe"
 START /WAIT C:\Miniconda.exe /S /D=C:\Py
 set PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
 conda config --set always_yes yes
