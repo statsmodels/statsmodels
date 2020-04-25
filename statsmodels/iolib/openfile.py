@@ -34,13 +34,14 @@ def _open(fname, mode, encoding):
 
 def get_file_obj(fname, mode='r', encoding=None):
     """
-    Light wrapper to handle strings and let files (anything else) pass through.
+    Light wrapper to handle strings, path objects and let files (anything else)
+    pass through.
 
     It also handle '.gz' files.
 
     Parameters
     ----------
-    fname : str or file-like object
+    fname : str, path object or file-like object
         File to open / forward
     mode : str
         Argument passed to the 'open' or 'gzip.open' function
