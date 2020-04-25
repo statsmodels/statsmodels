@@ -89,7 +89,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     Parameters
     ----------
     endog : array_like
-        A 1-d endogenous response variable. The independent variable.
+        A 1-d endogenous response variable. The dependent variable.
     lags : {int, list[int]}
         The number of lags to include in the model if an integer or the
         list of lag indices to include.  For example, [1, 4] will only
