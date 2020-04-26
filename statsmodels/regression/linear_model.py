@@ -1850,6 +1850,10 @@ class RegressionResults(base.LikelihoodModelResults):
                    scale[:, None] * self.model.pinv_wexog.T)
         return H
 
+    def _abat_diagonal(self, a, b):
+        # equivalent to np.diag(a @ b @ a.T)
+        return np.einsum('ij,ik,kj->i', a, a, b)
+
     @cache_readonly
     def cov_HC0(self):
         """
@@ -1873,9 +1877,8 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Heteroscedasticity robust covariance matrix. See HC2_se.
         """
-        # probably could be optimized
         wexog = self.model.wexog
-        h = np.diag(wexog @ self.normalized_cov_params @ wexog.T)
+        h = self._abat_diagonal(wexog, self.normalized_cov_params)
         self.het_scale = self.wresid**2/(1-h)
         cov_HC2 = self._HCCM(self.het_scale)
         return cov_HC2
@@ -1886,7 +1889,7 @@ class RegressionResults(base.LikelihoodModelResults):
         Heteroscedasticity robust covariance matrix. See HC3_se.
         """
         wexog = self.model.wexog
-        h = np.diag(wexog @ self.normalized_cov_params @ wexog.T)
+        h = self._abat_diagonal(wexog, self.normalized_cov_params)
         self.het_scale = (self.wresid / (1 - h))**2
         cov_HC3 = self._HCCM(self.het_scale)
         return cov_HC3
