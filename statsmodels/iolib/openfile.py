@@ -34,13 +34,14 @@ def _open(fname, mode, encoding):
 
 def get_file_obj(fname, mode='r', encoding=None):
     """
-    Light wrapper to handle strings and let files (anything else) pass through.
+    Light wrapper to handle strings, path objects and let files (anything else)
+    pass through.
 
     It also handle '.gz' files.
 
     Parameters
     ----------
-    fname : str or file-like object
+    fname : str, path object or file-like object
         File to open / forward
     mode : str
         Argument passed to the 'open' or 'gzip.open' function
@@ -56,11 +57,14 @@ def get_file_obj(fname, mode='r', encoding=None):
     if _is_string_like(fname):
         return _open(fname, mode, encoding)
     try:
-        # Make sure the object has the write methods
-        if 'r' in mode:
-            fname.read
-        if 'w' in mode or 'a' in mode:
-            fname.write
-    except AttributeError:
-        raise ValueError('fname must be a string or a file-like object')
-    return EmptyContextManager(fname)
+        return open(fname, mode, encoding=encoding)  # handle pathlib-like objs
+    except TypeError:
+        try:
+            # Make sure the object has the write methods
+            if "r" in mode:
+                fname.read
+            if "w" in mode or "a" in mode:
+                fname.write
+        except AttributeError:
+            raise ValueError("fname must be a string or a file-like object")
+        return EmptyContextManager(fname)
