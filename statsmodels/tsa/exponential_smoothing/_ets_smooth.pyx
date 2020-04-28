@@ -6,12 +6,12 @@ cimport numpy as np
 
 np.import_array()
 
-cdef _initialize_hw_smooth(np.float_t [:] params):
+cdef _initialize_hw_smooth(np.float_t [:] params, Py_ssize_t n):
     """Extracts parameters and initializes states xhat"""
     cdef np.float_t alpha, beta, gamma, phi, l0, b0, beta_star
     cdef np.float_t [:] s0
     cdef np.float_t [:,:] xhat
-    cdef Py_ssize_t i, n, m
+    cdef Py_ssize_t i, m
 
     # get params
     alpha, beta, gamma, phi, l0, b0 = params[0:6]
@@ -19,7 +19,6 @@ cdef _initialize_hw_smooth(np.float_t [:] params):
     s0 = params[6:]
 
     # initialize states
-    n = len(y)
     m = len(s0)
     # l = xhat[:,0], b = xhat[:,1], s = xhat[:,2]
     xhat = np.zeros((n, 3))
@@ -27,7 +26,7 @@ cdef _initialize_hw_smooth(np.float_t [:] params):
     xhat[-1, 1] = b0
     xhat[-m:, 2] = s0
 
-    return xhat, alpha, beta_star, gamma, phi, n, m
+    return xhat, alpha, beta_star, gamma, phi, m
 
 def _hw_smooth_add_add(np.float_t [:] params, np.float_t [:] y):
     """Smoothing with additive trend and additive season"""
@@ -37,7 +36,8 @@ def _hw_smooth_add_add(np.float_t [:] params, np.float_t [:] y):
     cdef Py_ssize_t i, n, m
 
     # get params
-    xhat, alpha, beta_star, gamma, phi, n, m = _initialize_hw_smooth(params)
+    n = len(y)
+    xhat, alpha, beta_star, gamma, phi, m = _initialize_hw_smooth(params, n)
     yhat = np.empty(n, dtype=np.float)
 
     # smooth
@@ -54,7 +54,7 @@ def _hw_smooth_add_add(np.float_t [:] params, np.float_t [:] y):
                       + (1 - gamma) * xhat[i-m, 2])
 
     return yhat, xhat
-        
+
 
 def _hw_smooth_add_mul(np.float_t [:] params, np.float_t [:] y):
     """Smoothing with additive trend and multiplicative season"""
@@ -64,7 +64,8 @@ def _hw_smooth_add_mul(np.float_t [:] params, np.float_t [:] y):
     cdef Py_ssize_t i, n, m
 
     # get params
-    xhat, alpha, beta_star, gamma, phi, n, m = _initialize_hw_smooth(params)
+    n = len(y)
+    xhat, alpha, beta_star, gamma, phi, m = _initialize_hw_smooth(params, n)
     yhat = np.empty(n, dtype=np.float)
 
     # smooth
@@ -91,7 +92,8 @@ def _hw_smooth_mul_add(np.float_t [:] params, np.float_t [:] y):
     cdef Py_ssize_t i, n, m
 
     # get params
-    xhat, alpha, beta_star, gamma, phi, n, m = _initialize_hw_smooth(params)
+    n = len(y)
+    xhat, alpha, beta_star, gamma, phi, m = _initialize_hw_smooth(params, n)
     yhat = np.empty(n, dtype=np.float)
 
     # smooth
@@ -118,7 +120,8 @@ def _hw_smooth_mul_mul(np.float_t [:] params, np.float_t [:] y):
     cdef Py_ssize_t i, n, m
 
     # get params
-    xhat, alpha, beta_star, gamma, phi, n, m = _initialize_hw_smooth(params)
+    n = len(y)
+    xhat, alpha, beta_star, gamma, phi, m = _initialize_hw_smooth(params, n)
     yhat = np.empty(n, dtype=np.float)
 
     # smooth
