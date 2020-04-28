@@ -139,17 +139,20 @@ References
    Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
 """
 
-import itertools
-import contextlib
-
+from collections import OrderedDict
 import numpy as np
+import pandas as pd
 
-from statsmodels.tsa.base.tsa_model import TimeSeriesModel, TimeSeriesModelResults
-from statsmodels.tools.validation import (array_like, bool_like, float_like,
-                                          string_like, int_like)
+from statsmodels.base.data import PandasData
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import (
+    array_like, bool_like, float_like, string_like, int_like
+)
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 from statsmodels.tsa.exponential_smoothing import initialization as es_init
+from statsmodels.tsa.tsatools import freq_to_period
+from statsmodels.tsa.exponential_smoothing import base
+import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 
 """
 Implementation details:
@@ -171,17 +174,63 @@ Implementation details:
 """
 
 
-class ETS(TimeSeriesModel):
+class ETSModel(base.StateSpaceMLEModel):
+    """
+    ETS models.
 
-    def __init__(self, endog, error=None, trend=None, damped_trend=False,
+    Parameters
+    ----------
+    endog : array_like
+        The observed time-series process :math:`y`
+    error: str, optional
+        The error model. "add" (default) or "mul".
+    trend : str or None, optional
+        The trend component model. "add", "mul", or None (default).
+    damped_trend : bool, optional
+        Whether or not an included trend component is damped. Default is False.
+    seasonal : str, optional
+        The seasonality model. "add", "mul", or None (default).
+    seasonal_periods: int, optional
+        The number of periods in a complete seasonal cycle for seasonal
+        (Holt-Winters) models. For example, 4 for quarterly data with an
+        annual cycle or 7 for daily data with a weekly cycle. Required if
+        `seasonal` is not None.
+    initialization_method : str, optional
+        Method for initialize the recursions. One of:
+
+        * 'estimated'
+        * 'known'
+
+        If 'known' initialization is used, then `initial_level` must be
+        passed, as well as `initial_slope` and `initial_seasonal` if
+        applicable. Default is 'estimated'.
+    initial_level : float, optional
+        The initial level component. Only used if initialization is 'known'.
+    initial_trend : float, optional
+        The initial trend component. Only used if initialization is 'known'.
+    initial_seasonal : array_like, optional
+        The initial seasonal component. An array of length `seasonal`.  Only
+        used if initialization is 'known'.
+    bounds : iterable[tuple], optional
+        An iterable containing bounds for the parameters. Must contain one
+        element for every smoothing parameter, and optionally an element for
+        every initial state, where each element is a tuple of the form (lower,
+        upper).  Default is (0.0001, 0.9999) for the level, trend, and seasonal
+        smoothing parameters and (0.8, 0.98) for the trend damping parameter,
+        and (None, None) for the initial states (if `initialization_method` is
+        'estimated').
+        If `initialization_method` is 'estimated', either no bounds for the
+        initial states should be given, or bounds for all initial states
+        (level, trend, seasonal, depending on chosen model).
+    """
+
+    def __init__(self, endog, error="add", trend=None, damped_trend=False,
                  seasonal=None, seasonal_periods=None,
                  initialization_method='estimated', initial_level=None,
                  initial_trend=None, initial_seasonal=None, bounds=None,
                  dates=None, freq=None, missing='none'):
 
-        super().__init__(endog, None, dates, freq, missing=missing)
-        self._y = array_like(endog, 'endog', contiguous=True, order='C')
-        self.nobs = len(self._y)
+        super().__init__(endog, exog=None, dates=dates, freq=freq, missing=missing)
 
         # MODEL DEFINITION
         # ================
@@ -218,7 +267,7 @@ class ETS(TimeSeriesModel):
             self.seasonal_periods = 1
 
         # reject invalid models
-        if np.any(self._y <= 0) and (
+        if np.any(self.endog <= 0) and (
             self.error == "mul"
             or self.trend == "mul"
             or self.seasonal == "mul"
@@ -227,7 +276,7 @@ class ETS(TimeSeriesModel):
                 "endog must be strictly positive when using"
                 "multiplicative error, trend or seasonal components."
             )
-        if self.damped and not self.has_trend:
+        if self.damped_trend and not self.has_trend:
             raise ValueError('Can only dampen the trend component')
 
 
@@ -249,31 +298,58 @@ class ETS(TimeSeriesModel):
                     ' for models with a trend component when'
                     ' initialization method is set to "known".'
                 )
-            if self.has_seaonal and initial_seasonal is None:
+            if self.has_seasonal and initial_seasonal is None:
                 raise ValueError(
                     '`initial_seasonal` argument must be provided'
                     ' for models with a seasonal component when'
                     ' initialization method is set to "known".'
+
                 )
 
         # BOUNDS
         # ======
-        if self.bounds is None:
-            ... # TODO
+        if bounds is None:
+            self.bounds = self._default_param_bounds()
+        else:
+            # first, check whether only smoothing parameter bounds or also
+            # initial state bounds are provided
+            if len(bounds) == self.k_params:
+                self.bounds = bounds
+            elif (self.initialization_method == 'estimated'
+                  and len(bounds) == self._k_smoothing_params):
+                self.bounds = bounds + [(None, None)] * self._k_initial_states
+
+        # SMOOTHER
+        # ========
+        if self.trend == "add" or self.trend is None:
+            if self.seasonal == "add" or self.seasonal is None:
+                self._smoothing_func = smooth._hw_smooth_add_add
+            else:
+                self._smoothing_func = smooth._hw_smooth_add_mul
+        else:
+            if self.seasonal == "add" or self.seasonal is None:
+                self._smoothing_func = smooth._hw_smooth_mul_add
+            else:
+                self._smoothing_func = smooth._hw_smooth_mul_mul
 
 
         # PARAMETER HANDLING
         # ==================
-        self._internal_params_index = {
-            zip(self._internal_param_names,
-                np.arange(self._k_params_internal))
-        }
-        self._params_index = {
-            zip(self._param_names,
-                np.arange(self.k_params))
-        }
-        self._has_fixed_params = False
-        self._fixed_params = {}
+        self._internal_params_index = OrderedDict(
+            zip(self._internal_param_names, np.arange(self._k_params_internal))
+        )
+        self._params_index = OrderedDict(
+            zip(self.param_names, np.arange(self.k_params))
+        )
+
+    def prepare_data(self):
+        """
+        Prepare data for use in the state space representation
+        """
+        endog = np.array(self.data.orig_endog, order='C')
+        if endog.ndim != 1:
+            raise ValueError('endog must be 1-dimensional')
+        return endog, None
 
     @property
     def param_names(self):
@@ -297,12 +373,6 @@ class ETS(TimeSeriesModel):
                 ]
         return param_names
 
-    def _validate_params(self, param_names):
-        for param_name in param_names:
-            if param_name not in self.param_names:
-                raise ValueError('Invalid parameter name passed: "%s".'
-                                 % param_name)
-
     @property
     def _internal_param_names(self):
         param_names = [
@@ -319,14 +389,29 @@ class ETS(TimeSeriesModel):
         return param_names
 
     @property
+    def _k_states(self):
+        return (
+            1  # level
+            + int(self.has_trend)
+            + int(self.has_seasonal)
+        )
+
+    @property
+    def _k_smoothing_params(self):
+        return self._k_states + int(self.damped_trend)
+
+    @property
+    def _k_initial_states(self):
+        return (
+            1 + int(self.has_trend) +
+            + int(self.has_seasonal) * self.seasonal_periods
+        )
+
+    @property
     def k_params(self):
-        k_params = (
-            1 + int(self.has_trend) + int(self.has_seasonal)
-            + int(self.damped_trend))
+        k_params = self._k_smoothing_params
         if self.initialization_method == 'estimated':
-            k_params += (
-                1 + int(self.has_trend) +
-                int(self.has_seasonal) * (self._seasonal_periods))
+            k_params += self._k_initial_states
         return k_params
 
     @property
@@ -342,7 +427,7 @@ class ETS(TimeSeriesModel):
         # which is one
         internal = np.zeros(self._k_params_internal)
         for i, name in enumerate(self.param_names):
-            internal_idx = self._internal_params_index(name)
+            internal_idx = self._internal_params_index[name]
             internal[internal_idx] = params[i]
         if not self.damped_trend:
             internal[3] = 1  # phi is 4th parameter
@@ -354,87 +439,43 @@ class ETS(TimeSeriesModel):
         """
         params = np.empty(self.k_params)
         for i, name in enumerate(self.param_names):
-            internal_idx = self._internal_params_index(name)
+            internal_idx = self._internal_params_index[name]
             params[i] = internal[internal_idx]
         return params
 
-    @contextlib.contextmanager
-    def fix_params(self, params):
-        """
-        Fix parameters to specific values (context manager)
-
-        Parameters
-        ----------
-        params : dict
-            Dictionary describing the fixed parameter values, of the form
-            `param_name: fixed_value`. See the `param_names` property for valid
-            parameter names.
-
-        Examples
-        --------
-        >>> mod = sm.tsa.ETS(endog, error='add', trend='add', seasonal='mul')
-        >>> with mod.fix_params({'smoothing_level': 0.5}):
-                res = mod.fit()
-        """
-        # Cache the current fixed parameters
-        cache_fixed_params = self._fixed_params.copy()
-        cache_has_fixed_params = self._has_fixed_params
-        cache_fixed_params_index = self._fixed_params_index
-        cache_free_params_index = self._free_params_index
-
-        # Validate parameter names and values
-        self._validate_params(set(params.keys()))
-
-        # Set the new fixed parameters, keeping the order as given by
-        # param_names
-        self._fixed_params.update(params)
-        self._fixed_params = {[
-            (name, self._fixed_params[name]) for name in self.param_names
-            if name in self._fixed_params
-        ]}
-
-        # Update associated values
-        self._has_fixed_params = True
-        self._fixed_params_index = [self._params_index[key]
-                                    for key in self._fixed_params.keys()]
-        self._free_params_index = list(
-            set(np.arange(self._k_params))
-            .difference(self._fixed_params_index)
-        )
-
-        try:
-            yield
-        finally:
-            # Reset the fixed parameters
-            self._has_fixed_params = cache_has_fixed_params
-            self._fixed_params = cache_fixed_params
-            self._fixed_params_index = cache_fixed_params_index
-            self._free_params_index = cache_free_params_index
-
     def _set_fixed_params(self, params):
-        for i, name in enumerate(self._fixed_params):
-            idx = self._fixed_params_index[i]
-            params[idx] = self._fixed_params[name]
+        if self._has_fixed_params:
+            for i, name in enumerate(self._fixed_params):
+                idx = self._fixed_params_index[i]
+                params[idx] = self._fixed_params[name]
 
     @property
-    def start_params(self):
+    def _start_params(self):
         # Make sure starting parameters aren't beyond or right on the bounds
-        bounds = [(x[0] + 1e-3, x[1] - 1e-3) for x in self.bounds]
+        bounds = []
+        for b in self.bounds:
+            lb = b[0] + 1e-3 if b[0] is not None else None
+            ub = b[1] + 1e-3 if b[1] is not None else None
+            bounds.append((lb, ub))
 
         # See Hyndman p.24
         start_params = [np.clip(0.1, *bounds[0])]
+        idx = 1
         if self.trend:
-            start_params += [np.clip(0.01, *bounds[1])]
+            start_params += [np.clip(0.01, *bounds[idx])]
+            idx += 1
         if self.seasonal:
-            start_params += [np.clip(0.01, *bounds[2])]
+            start_params += [np.clip(0.01, *bounds[idx])]
+            idx += 1
         if self.damped_trend:
-            start_params += [np.clip(0.98, *bounds[3])]
+            start_params += [np.clip(0.98, *bounds[idx])]
+            idx += 1
 
         # Initialization
         if self.initialization_method == 'estimated':
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_simple(
-                    self.endog[:, 0],
+                    self.endog,
                     trend=self.trend,
                     seasonal=self.seasonal,
                     seasonal_periods=self.seasonal_periods))
@@ -442,25 +483,25 @@ class ETS(TimeSeriesModel):
             if self.has_trend:
                 start_params += [initial_trend]
             if self.has_seasonal:
-                start_params += initial_seasonal.tolist()[:-1]
+                start_params += initial_seasonal.tolist()
 
         return np.array(start_params)
 
-    def default_param_bounds(self):
+    def _default_param_bounds(self):
         """
         Default lower and upper bounds for model parameters
         """
         # traditional bounds: alpha, beta*, gamma in (0, 1), phi in [0.8, 0.98]
-        n = 1 + int(self.has_trend) + int(self.has_seaonal)
+        n = 1 + int(self.has_trend) + int(self.has_seasonal)
         bounds = [(1e-4, 1-1e-4)] * n
-        if self.has_trend:
+        if self.damped_trend:
             bounds += [(0.8, 0.98)]
         if self.initialization_method == 'estimated':
             n = (
                 1 + int(self.has_trend)
                 + int(self.has_seasonal) * self.seasonal_periods
             )
-            bounds += [(None, None)]
+            bounds += [(None, None)] * n
         return bounds
 
     def _internal_bounds(self):
@@ -478,13 +519,14 @@ class ETS(TimeSeriesModel):
                 # all other internal-only parameters are 0
                 bounds.append((0, 0))
         # set fixed parameters bounds
-        for i, name in enumerate(self._fixed_params):
-            idx = self._fixed_params_index[i]
-            val = self._fixed_params[name]
-            bounds[idx] = (val, val)
+        if self._has_fixed_params:
+            for i, name in enumerate(self._fixed_params):
+                idx = self._fixed_params_index[i]
+                val = self._fixed_params[name]
+                bounds[idx] = (val, val)
+        return bounds
 
-
-    def fit(self, start_params=None, maxiter=None, full_output=True,
+    def fit(self, start_params=None, maxiter=100, full_output=True,
             disp=5, callback=None, return_params=False, **kwargs):
         r"""
         Fit an ETS model by maximizing log-likelihood.
@@ -543,24 +585,28 @@ class ETS(TimeSeriesModel):
         """
 
         if start_params is None:
-            start_params = self.start_params()
+            start_params = self.start_params
 
         # set fixed params
         self._set_fixed_params(start_params)
 
-        if len(self._free_params_index) == 0:
+        if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = start_params
-            # mlefit = Bunch(params=start_params, mle_retvals=None,
-            #                mle_settings=None)
+            mlefit = Bunch(params=start_params, mle_retvals=None,
+                           mle_settings=None)
         else:
             # transform parameters to internal parameters
             start_params = self._internal_params(start_params)
             bounds = self._internal_bounds()
 
+            # add 'approx_grad' to solver kwargs
+            kwargs['approx_grad'] = True
+            kwargs['bounds'] = bounds
+
             mlefit = super().fit(
-                start_params, fargs={"_internal_params": True}, method=method,
+                start_params, fargs=(True,), method='lbfgs',
                 maxiter=maxiter, full_output=full_output, disp=disp,
-                callback=callback, bounds=bounds, **kwargs
+                callback=callback, skip_hessian=True, **kwargs
             )
             # convert params back
             final_params = self._model_params(mlefit.params)
@@ -569,7 +615,7 @@ class ETS(TimeSeriesModel):
             return final_params
         else:
 
-            result = ETSResults()
+            result = ETSResults(self, final_params)
 
             return result
 
@@ -608,7 +654,7 @@ class ETS(TimeSeriesModel):
         """
         if not _internal_params:
             params = self._internal_params(params)
-        yhat, _ = self._smooth(params)
+        yhat, _ = self._smoothing_func(params, self.endog)
         res = self._residuals(yhat)
         logL =  - self.nobs/2 * (np.log(2*np.pi*np.mean(res**2)) + 1)
         if self.error == 'mul':
@@ -619,27 +665,53 @@ class ETS(TimeSeriesModel):
     def _residuals(self, yhat):
         """Calculates residuals of a prediction"""
         if self.error == 'mul':
-            return (yhat - self._y) / self._y
+            return (yhat - self.endog) / self.endog
         else:
-            return yhat - self._y
+            return yhat - self.endog
 
-    def _smooth(self, params):
-        """Holt-Winters smoothing based on all data"""
+    def smooth(self, params):
+        """
+        Exponential smoothing with given parameters
 
-        # figure out which smoother to use
-        if self.trend == "add" or self.trend is None:
-            if self.seasonal == "add" or self.seasonal is None:
-                yhat, xhat = smoothers._hw_smooth_add_add(params, self._y)
-            else:
-                yhat, xhat = smoothers._hw_smooth_add_mul(params, self._y)
-        else:
-            if self.seasonal == "add" or self.seasonal is None:
-                yhat, xhat = smoothers._hw_smooth_mul_add(params, self._y)
-            else:
-                yhat, xhat = smoothers._hw_smooth_mul_mul(params, self._y)
+        Parameters
+        ----------
+        params : array_like
+            Model parameters
+
+        Returns
+        -------
+        yhat : pd.Series or np.ndarray
+            Predicted values from exponential smoothing. If original data was a
+            ``pd.Series``, returns a ``pd.Series``, else a ``np.ndarray``.
+        xhat : pd.DataFrame or np.ndarray
+            Internal states of exponential smoothing. If original data was a
+            ``pd.Series``, returns a ``pd.DataFrame``, else a ``np.ndarray``.
+        """
+        internal_params = self._internal_params(params)
+        yhat, _xhat = self._smoothing_func(internal_params, self.endog)
+
+        # remove states that are only internal
+        xhat = np.empty((self.nobs, self._k_states))
+        state_names = ['level']
+        xhat[:, 0] = _xhat[:, 0]
+        idx = 1
+        if self.has_trend:
+            state_names.append('trend')
+            xhat[:, idx] = _xhat[:, 1]
+            idx += 1
+        if self.has_seasonal:
+            state_names.append('seasonal')
+            xhat[:, idx] = _xhat[:, 2]
+            idx += 1
+        # TODO: think about if and how to integrate initial states here
+        # 1) Add something at the start, make everything invalid None
+        # 2) Don't add this here, users can get this on their own
+
+        if isinstance(self.data, PandasData):
+            _, _, _, index = self._get_prediction_index(0, self.nobs-1)
+            yhat = pd.Series(yhat, index=index)
+            xhat = pd.DataFrame(xhat, index=index, columns=state_names)
         return yhat, xhat
-
-
 
 
 # TODO: Results class
@@ -649,18 +721,38 @@ class ETS(TimeSeriesModel):
 
 
 
+class ETSResults(base.StateSpaceMLEResults):
 
-class ETSResults(TimeSeriesModelResults):
-
-    def __init__(self, model, params, fittedvalues, ):
-        super().__init__(model, params, normalized_cov_params=None)
-        self.nobs_effective = model.nobs
-        self.df_model = model.k_params
+    def __init__(self, model, params):
+        super().__init__(model, params)
+        yhat, xhat = self.model.smooth(params)
+        self._fittedvalues = yhat
+        self._residuals = self.model._residuals(yhat)
+        self.states = xhat
+        self._llf = self.model.loglike(params)
 
     @cache_readonly
-    def aic(self):
-        return aic()
+    def nobs_effective(self):
+        return self.nobs
 
+    @cache_readonly
+    def df_model(self):
+        return self.model.k_params
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self._fittedvalues
+
+    @cache_readonly
+    def resid(self):
+        return self._residuals
+
+    @cache_readonly
+    def llf(self):
+        """
+        The value of the log-likelihood function evaluated at the fitted params.
+        """
+        return self._llf
 
     def predict(self, exog=None, **kwargs):
         ... # TODO
