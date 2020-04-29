@@ -23,7 +23,8 @@ cdef _initialize_hw_smooth(np.float_t [:] params, Py_ssize_t n):
     xhat = np.zeros((n, 3))
     xhat[n-1, 0] = l0
     xhat[n-1, 1] = b0
-    xhat[n-m:n, 2] = s0
+    # initial season is order s[-1], s[-2], ..., s[-m]
+    xhat[n-m:n, 2] = s0[::-1]
 
     return xhat, alpha, beta_star, gamma, phi, m
 
@@ -101,8 +102,8 @@ def _hw_smooth_mul_add(np.float_t [:] params, np.float_t [:] y):
 
     # smooth
     for i in range(n):
-        prev = (i-1) % n
-        prev_seas = (i-m) % n
+        prev = (n+i-1) % n
+        prev_seas = (n+i-m) % n
         yhat[i] = (xhat[prev, 0] * xhat[prev, 1]**phi) + xhat[prev_seas, 2]
         # l_t = a * (y_t - s_t-m) + (1-a) * (l_t-1 * b_t-1**phi)
         xhat[i, 0] = (alpha * (y[i] - xhat[prev_seas, 2])

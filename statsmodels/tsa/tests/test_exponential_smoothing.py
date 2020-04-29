@@ -117,7 +117,13 @@ def ets_austourists_fit_results_R():
 
 
 def fit_austourists_with_R_params(model, results_R, set_state=False):
-    """Fit the model with params as found by R's forecast package"""
+    """
+    Fit the model with params as found by R's forecast package
+
+    TODO: The original idea was to use this for testing the simulation
+    implementation, I'm not sure whether we still need this, because I aim to
+    reproduce the R code.
+    """
     fit = model.fit(
         smoothing_level=results_R["alpha"], smoothing_slope=results_R["beta"],
         smoothing_seasonal=results_R["gamma"], damping_slope=results_R["phi"],
@@ -152,7 +158,79 @@ def test_fit_model(error, trend, seasonal, damped, austourists, oildata):
         error=error, trend=trend, seasonal=seasonal, damped_trend=damped
     )
 
-    result = model.fit()
+    result = model.fit(disp=False, warn_convergence=False)
+
+@pytest.mark.parametrize(*ALL_MODELS)
+def test_smooth_vs_R(austourists, ets_austourists_fit_results_R,
+                       error, trend, seasonal, damped):
+    """
+    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults.simulate``.
+
+    The tests are using the implementation in the R package ``forecast`` as
+    reference, and example data is taken from ``fpp2`` (package and book).
+    """
+
+    model_name = short_model_name(error, trend, seasonal)
+    results = ets_austourists_fit_results_R[damped]
+    if model_name not in results:
+        pytest.skip(f"model {model_name} not implemented or not converging in R")
+
+    results_R = results[model_name]
+
+    model = ETSModel(
+        austourists, seasonal_periods=4,
+        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
+    )
+
+    # get params from R
+    params = [
+        results_R[name] for name in ['alpha', 'beta', 'gamma', 'phi']
+    ]
+    params[1] /= params[0]  # we are using beta star
+    # in R, initial states are order l[-1], b[-1], s[-1], s[-2], ..., s[-m]
+    params += list(results_R['initstate'])
+    params = list(filter(np.isfinite, params))
+
+    # smooth
+    yhat, xhat = model.smooth(params)
+
+    yhat_R = results_R['fitted']
+    if model._k_states > 1:
+        xhat_R = results_R['states'][1:, 0:model._k_states]
+        xhat = xhat.values
+    else:
+        xhat_R = results_R['states'][1:]
+        xhat = np.ravel(xhat.values)
+
+    assert_almost_equal(yhat, yhat_R, 2)
+    assert_almost_equal(xhat, xhat_R, 2)
+
+@pytest.mark.skip
+@pytest.mark.parametrize(*ALL_MODELS)
+def test_fit_vs_R(austourists, ets_austourists_fit_results_R,
+                       error, trend, seasonal, damped):
+    """
+    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults.simulate``.
+
+    The tests are using the implementation in the R package ``forecast`` as
+    reference, and example data is taken from ``fpp2`` (package and book).
+    """
+
+    model_name = short_model_name(error, trend, seasonal)
+    results = ets_austourists_fit_results_R[damped]
+    if model_name not in results:
+        pytest.skip(f"model {model_name} not implemented or not converging in R")
+
+    results_R = results[model_name]
+
+    model = ETSModel(
+        austourists, seasonal_periods=4,
+        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
+    )
+    fit = model.fit(disp=False)
+
+    assert 0
+
 
 
 ###############################################################################
@@ -179,7 +257,7 @@ def test_simulate_vs_R(austourists, ets_austourists_fit_results_R,
 
     model = ETSModel(
         austourists, seasonal_periods=4,
-        error=error, trend=trend, seasonal=seasonal, damped=damped
+        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
     )
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 

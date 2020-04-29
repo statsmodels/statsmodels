@@ -497,6 +497,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.damped_trend:
             bounds += [(0.8, 0.98)]
         if self.initialization_method == 'estimated':
+            # TODO: bounds when error is multiplicative
             n = (
                 1 + int(self.has_trend)
                 + int(self.has_seasonal) * self.seasonal_periods
@@ -654,11 +655,14 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         if not _internal_params:
             params = self._internal_params(params)
-        yhat, _ = self._smoothing_func(params, self.endog)
+        yhat = np.asarray(self._smoothing_func(params, self.endog)[0])
         res = self._residuals(yhat)
         logL =  - self.nobs/2 * (np.log(2*np.pi*np.mean(res**2)) + 1)
         if self.error == 'mul':
-            return logL - np.sum(np.log(yhat))
+            if np.any(yhat <= 0):
+                return np.inf
+            else:
+                return logL - np.sum(np.log(yhat))
         else:
             return logL
 
@@ -707,7 +711,7 @@ class ETSModel(base.StateSpaceMLEModel):
         # 1) Add something at the start, make everything invalid None
         # 2) Don't add this here, users can get this on their own
 
-        if isinstance(self.data, PandasData):
+        if self.use_pandas:
             _, _, _, index = self._get_prediction_index(0, self.nobs-1)
             yhat = pd.Series(yhat, index=index)
             xhat = pd.DataFrame(xhat, index=index, columns=state_names)
@@ -726,10 +730,37 @@ class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params):
         super().__init__(model, params)
         yhat, xhat = self.model.smooth(params)
-        self._fittedvalues = yhat
-        self._residuals = self.model._residuals(yhat)
-        self.states = xhat
         self._llf = self.model.loglike(params)
+        self._residuals = self.model._residuals(yhat)
+        self._fittedvalues = yhat
+
+        # get model definition
+        self.trend = self.model.trend
+        self.seasonal = self.model.seasonal
+        self.damped_trend = self.model.damped_trend
+        self.has_trend = self.model.has_trend
+        self.has_seasonal = self.model.has_seasonal
+
+        # get fitted states
+        self.states = xhat
+        if self.model.use_pandas:
+            states = self.states.iloc
+        else:
+            states = self.states
+        self.level = states[:, 0]
+        self.alpha = self.params[0]
+        idx = 1
+        if self.has_trend:
+            self.slope = states[:, idx]
+            self.beta = self.params[idx]
+            idx += 1
+        if self.has_seasonal:
+            self.seasonal = states[:, idx]
+            self.gamma = self.params[idx]
+            idx += 1
+        if self.damped_trend:
+            self.phi = self.params[idx]
+
 
     @cache_readonly
     def nobs_effective(self):

@@ -8,6 +8,7 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 
 
@@ -29,6 +30,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
         # Prepared the endog array: C-ordered, shape=(nobs x k_endog)
         self.endog, self.exog = self.prepare_data()
+        self.use_pandas = isinstance(self.data, PandasData)
 
         # Dimensions
         self.nobs = self.endog.shape[0]
