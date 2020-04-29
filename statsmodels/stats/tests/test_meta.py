@@ -24,7 +24,6 @@ from statsmodels.stats.meta_analysis import (
 from .results import results_meta
 
 
-
 class TestEffectsizeBinom(object):
 
     @classmethod
@@ -333,3 +332,15 @@ class TestMetaBinOR(object):
         ci = res1.conf_int(use_t=False)  # fe, re, fe_wls, re_wls
         assert_allclose(ci[0][0], res2.lower_fixed, rtol=1e-13)
         assert_allclose(ci[0][1], res2.upper_fixed, rtol=1e-13)
+
+        weights = 1 / self.var_eff
+        mod_glm = GLM(self.eff, np.ones(len(self.eff)),
+                      var_weights=weights)
+        res_glm = mod_glm.fit()
+        assert_allclose(res_glm.params, res2.TE_fixed, rtol=1e-13)
+
+        weights = 1 / (self.var_eff + res1.tau2)
+        mod_glm = GLM(self.eff, np.ones(len(self.eff)),
+                      var_weights=weights)
+        res_glm = mod_glm.fit()
+        assert_allclose(res_glm.params, res2.TE_random, rtol=1e-13)

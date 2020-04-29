@@ -260,7 +260,7 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
     ----------
     count1, nobs1, count2, nobs2 : array_like
         data for two samples
-    statistic : {"diff", "odds-ratio", "risk-ratio", "sin-diff", "arcsine"}
+    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}
         statistic for the comparison of two proportions
         Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
     zero_correction : None or float or ...
@@ -275,7 +275,8 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
         ... ? not yet
     zero_kwds : dict
         additional options to handle zero counts
-        ? not yet
+        "clip_bounds" tuple, default (1e-6, 1 - 1e-6) if zero_correction="clip"
+        other options not yet implemented
 
     Returns
     -------
@@ -371,9 +372,6 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
                     use_t=False, alpha=0.05, **kwds):
     """combining effect sizes for effect sizes using meta-analysis
 
-    This does not have option yet.
-    It uses standardized mean difference with bias correction as effect size.
-
     This currently does not use np.asarray, all computations are possible in
     pandas.
 
@@ -414,13 +412,13 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
     Scale estimate
     In fixed effects models and in random effects models without fully
     iterated random effects variance, the model will in general not account
-    for all residual variance. The traditional meta-analysis uses a fixed
+    for all residual variance. Traditional meta-analysis uses a fixed
     scale equal to 1, that might not produce test statistics and
     confidence intervals with the correct size. Estimating the scale to account
     for residual variance often improves the small sample properties of
     inference and confidence intervals.
     This adjustment to the standard errors is often referred to as HKSJ
-    method based attributed to Hartung and Knapp and Sidik and J...
+    method based attributed to Hartung and Knapp and Sidik and Jonkman.
     However, this is equivalent to estimating the scale in WLS.
     The results instance includes both, fixed scale and estimated scale
     versions of standard errors and confidence intervals.
@@ -494,9 +492,29 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
 def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     """Paule-Mandel iterative estimate of between random effect variance
 
-
     implementation follows DerSimonian and Kacker 2007 Appendix 8
     see also Kacker 2004
+
+    Parameters
+    ----------
+    eff : ndarray
+        effect sizes
+    var_eff : ndarray
+        variance of effect sizes
+    tau2_start : float
+        starting value for iteration
+    atol : float, default: 1e-5
+        convergence tolerance for absolute value of estimating equation
+    maxiter : int
+        maximum number of iterations
+
+    Returns
+    -------
+    tau2 : float
+        estimate of random effects variance tau squared
+    converged : bool
+        True if iteration has converged.
+
     """
     tau2 = tau2_start
     k = eff.shape[0]
@@ -523,10 +541,23 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
 
 
 def _fit_tau_mm(eff, var_eff, weights):
-    """method of moment estimate of between random effect variance
-
+    """one-step method of moment estimate of between random effect variance
 
     implementation follows Kacker 2004 and DerSimonian and Kacker 2007 eq. 6
+
+    Parameters
+    ----------
+    eff : ndarray
+        effect sizes
+    var_eff : ndarray
+        variance of effect sizes
+    weights : ndarray
+        weights for estimating overal weighted mean
+
+    Returns
+    -------
+    tau2 : float
+        estimate of random effects variance tau squared
 
     """
     w = weights
@@ -537,7 +568,7 @@ def _fit_tau_mm(eff, var_eff, weights):
     w_t = w.sum()
     expect = w.dot(var_eff) - (w**2).dot(var_eff) / w_t
     denom = w_t - (w**2).sum() / w_t
-    # estimating equation
+    # moment estimate from estimating equation
     tau2 = (q_w - expect) / denom
 
     return tau2
@@ -548,10 +579,31 @@ def _fit_tau_iter_mm(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
 
     This repeatedly estimates tau, updating weights in each iteration
     see two-step estimators in DerSimonian and Kacker 2007
+
+    Parameters
+    ----------
+    eff : ndarray
+        effect sizes
+    var_eff : ndarray
+        variance of effect sizes
+    tau2_start : float
+        starting value for iteration
+    atol : float, default: 1e-5
+        convergence tolerance for change in tau2 estimate between iterations
+    maxiter : int
+        maximum number of iterations
+
+    Returns
+    -------
+    tau2 : float
+        estimate of random effects variance tau squared
+    converged : bool
+        True if iteration has converged.
+
     """
     tau2 = tau2_start
     converged = False
-    for i in range(maxiter):
+    for _ in range(maxiter):
         w = 1 / (var_eff + tau2)
 
         tau2_new = _fit_tau_mm(eff, var_eff, w)
