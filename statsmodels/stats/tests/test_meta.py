@@ -112,6 +112,7 @@ class TestEffSmdMeta(object):
         # It's likely a small difference in bias correction
         assert_allclose(eff, yi, rtol=1e-5)
         assert_allclose(var_eff, vi_ub, rtol=1e-4)
+        assert_allclose(var_eff, vi_asy, rtol=2e-3)  # not the same definition
 
         # with unequal variance, not available yet
         # > r = escalc(measure="SMDH", m1i=m.t, sd1i=sd.t, n1i=n.t, m2i=m.c,
