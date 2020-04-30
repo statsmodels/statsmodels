@@ -258,7 +258,7 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
     kwargs.setdefault('min_method', 'BFGS')
 
     # prepare options dict for minimize
-    filter_opts = ['extra_fit_funcs', 'niter', 'min_method', 'tol']
+    filter_opts = ['extra_fit_funcs', 'niter', 'min_method', 'tol', 'bounds', 'constraints']
     options = dict((k,v) for k,v in kwargs.items() if k not in filter_opts)
     options['disp']    = disp
     options['maxiter'] = maxiter
@@ -271,8 +271,23 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
     if kwargs['min_method'] in no_jac:
         score = None
 
+    # Use bounds/constraints only if they're allowed by the method
+    has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    has_constraints = ['COBYLA', 'SLSQP' , 'trust-constr']
+
+    if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
+        bounds = kwargs['bounds']
+    else:
+        bounds = None
+
+    if 'constraints' in kwargs.keys() and kwargs['min_method'] in has_constraints:
+        constraints = kwargs['constraints']
+    else:
+        constraints = ()
+
     res = optimize.minimize(f, start_params, args=fargs, method=kwargs['min_method'],
-                            jac=score, hess=hess, callback=callback, options=options)
+                            jac=score, hess=hess, bounds=bounds, constraints=constraints,
+                            callback=callback, options=options)
 
     xopt    = res.x
     retvals = None
