@@ -28,8 +28,11 @@ class HolderTuple(Holder):
     def __getitem__(self, idx):
         return self.tuple[idx]
 
-    def __array__(self):
-        return np.asarray(list(self.tuple))
+    def __len__(self):
+        return len(self.tuple)
+
+    def __array__(self, dtype=None):
+        return np.asarray(list(self.tuple), dtype=dtype)
 
 
 class AllPairsResults(object):
