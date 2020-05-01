@@ -1158,7 +1158,7 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
             raise ValueError('method not recognized')
 
     elif compare == 'ratio':
-        ratio = p1 / p2
+        # ratio = p1 / p2
         if method in ['log', 'log-adjusted']:
             addhalf = 0.5 if method == 'log-adjusted' else 0
             count1_, nobs1_ = count1 + addhalf, nobs1 + addhalf
@@ -1174,18 +1174,19 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
 
         elif method == 'score':
             res = _confint_riskratio_koopman(count2, count1, nobs2, nobs1,
-                                             alpha=alpha, correction=correction)
+                                             alpha=alpha,
+                                             correction=correction)
             low, upp = res.confint
 
         else:
             raise ValueError('method not recognized')
 
     elif compare == 'odds-ratio':
-        odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
+        # odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
         if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
             if method in ['logit-smoothed']:
                 adjusted = _shrink_prob(count1, nobs1, count2, nobs2,
-                                       shrink_factor=2, return_corr=False)[0]
+                                        shrink_factor=2, return_corr=False)[0]
                 count1_, nobs1_, count2_, nobs2_ = adjusted
 
             else:
@@ -1211,7 +1212,8 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
     return low, upp
 
 
-def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
+def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2,
+                 return_corr=True):
     """shrink observed counts towards independence
 
     Helper function for 'logit-smoothed' inference for the odds-ratio of two
@@ -1237,7 +1239,8 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
         correction or corrected counts
     prob_indep :
         TODO/Warning : this will change most likely
-        probabilities under independence, only returned if return_corr is false.
+        probabilities under independence, only returned if return_corr is
+        false.
 
     """
     nobs_col = np.array([count1 + count2, nobs1 - count1 + nobs2 - count2])
@@ -1246,15 +1249,15 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
     prob_indep = (nobs_col * nobs_row[:, None]) / nobs**2
     corr = shrink_factor * prob_indep
     if return_corr:
-        return (corr[0,0], corr[0].sum(), corr[1,0], corr[1].sum())
+        return (corr[0, 0], corr[0].sum(), corr[1, 0], corr[1].sum())
     else:
-        return (count1 + corr[0,0], nobs1 + corr[0].sum(),
-                count2 + corr[1,0], nobs2 + corr[1].sum()), prob_indep
+        return (count1 + corr[0, 0], nobs1 + corr[0].sum(),
+                count2 + corr[1, 0], nobs2 + corr[1].sum()), prob_indep
 
 
 def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
-                                compare='diff', alternative='two-sided',
-                                correction=True, return_results=True):
+                                 compare='diff', alternative='two-sided',
+                                 correction=True, return_results=True):
     """score_test for two independent proportions
 
     This uses the constrained estimate of the proportions to compute
@@ -1330,8 +1333,10 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
             tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
             tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
             tmp0 = count0 * diff * (1 - diff)
-            q = (tmp2 / (3 * tmp3))**3 - tmp1 * tmp2 / (6 * tmp3**2) + tmp0 / (2 * tmp3)
-            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3))**2 - tmp1 / (3 * tmp3))
+            q = ((tmp2 / (3 * tmp3))**3 - tmp1 * tmp2 / (6 * tmp3**2) +
+                 tmp0 / (2 * tmp3))
+            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3))**2 -
+                                     tmp1 / (3 * tmp3))
             a = (np.pi + np.arccos(q / p**3)) / 3
 
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
@@ -1355,7 +1360,8 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
             prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
             prop1 = prop0 * ratio
 
-        var = prop1 * (1 - prop1) / nobs1 + ratio**2 * prop0 * (1 - prop0) / nobs0
+        var = (prop1 * (1 - prop1) / nobs1 +
+               ratio**2 * prop0 * (1 - prop0) / nobs0)
         if correction:
             var *= nobs / (nobs - 1)
 
@@ -1375,24 +1381,26 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
             prop0 = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
             prop1 = prop0 * oratio / (1 + prop0 * (oratio - 1))
 
-        var = 1 / (prop1 * (1 - prop1) * nobs1) + 1 / (prop0 * (1 - prop0) * nobs0)
+        var = (1 / (prop1 * (1 - prop1) * nobs1) +
+               1 / (prop0 * (1 - prop0) * nobs0))
         if correction:
             var *= nobs / (nobs - 1)
 
         diff_stat = ((p1 - prop1) / (prop1 * (1 - prop1)) -
                      (p0 - prop0) / (prop0 * (1 - prop0)))
 
-    statistic, pvalue = _zstat_generic2(diff_stat, np.sqrt(var), alternative=alternative)
+    statistic, pvalue = _zstat_generic2(diff_stat, np.sqrt(var),
+                                        alternative=alternative)
 
     if return_results:
-        res = Holder(statistic = statistic,
-                     pvalue = pvalue,
-                     compare = compare,
-                     method = 'score',
-                     variance = var,
-                     alternative = alternative,
-                     prop1_null = prop1,
-                     prop2_null = prop0,
+        res = Holder(statistic=statistic,
+                     pvalue=pvalue,
+                     compare=compare,
+                     method='score',
+                     variance=var,
+                     alternative=alternative,
+                     prop1_null=prop1,
+                     prop2_null=prop0,
                      )
         return res
     else:
@@ -1450,22 +1458,26 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
         ratio:
          - 'log': wald test using log transformation
-         - 'log-adjusted': wald test using log transformation, add 0.5 to counts
+         - 'log-adjusted': wald test using log transformation,
+            adds 0.5 to counts
          - 'score' if correction is True, then this uses the degrees of freedom
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
         odds-ratio:
          - 'logit': wald test using logit transformation
-         - 'logit-adjusted': : wald test using logit transformation, add 0.5 to counts
+         - 'logit-adjusted': : wald test using logit transformation,
+            adds 0.5 to counts
          - 'logit-smoothed': : wald test using logit transformation, biases
-           cell counts towards independence by adding two observations in total.
+            cell counts towards independence by adding two observations in
+            total.
          - 'score' if correction is True, then this uses the degrees of freedom
-           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
     compare : string in ['diff', 'ratio' 'odds-ratio']
-        If compare is `diff`, then the confidence interval is for diff = p1 - p2
-        If compare is `ratio`, then the confidence interval is for the risk ratio
-        defined by ratio = p1 / p2.
+        If compare is `diff`, then the confidence interval is for
+        diff = p1 - p2.
+        If compare is `ratio`, then the confidence interval is for the
+        risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
     alternative : string in ['two-sided', 'smaller', 'larger']
@@ -1537,19 +1549,21 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             distr = 'normal'
 
         elif method.startswith('newcomb'):
-            raise NotImplementedError('newcomb not available for hypothesis test')
+            msg = 'newcomb not available for hypothesis test'
+            raise NotImplementedError(msg)
 
         elif method == 'score':
             # Note score part is the same call for all compare
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                              value=None, compare=compare,
-                                              alternative=alternative,
-                                              correction=correction,
-                                              return_results=return_results)
+                                               value=None, compare=compare,
+                                               alternative=alternative,
+                                               correction=correction,
+                                               return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
-            # TODO/Note score_test_proportion_2samp returns statistic not diff_stat
+            # TODO/Note score_test_proportion_2samp returns statistic  and
+            #     not diff_stat
             diff_stat = None
         else:
             raise ValueError('method not recognized')
@@ -1569,10 +1583,10 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
         elif method == 'score':
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                              value=value, compare=compare,
-                                              alternative=alternative,
-                                              correction=correction,
-                                              return_results=return_results)
+                                               value=value, compare=compare,
+                                               alternative=alternative,
+                                               correction=correction,
+                                               return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1586,7 +1600,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
             if method in ['logit-smoothed']:
                 adjusted = _shrink_prob(count1, nobs1, count2, nobs2,
-                                       shrink_factor=2, return_corr=False)[0]
+                                        shrink_factor=2, return_corr=False)[0]
                 count1_, nobs1_, count2_, nobs2_ = adjusted
 
             else:
@@ -1605,10 +1619,10 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
         elif method == 'score':
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                              value=value, compare=compare,
-                                              alternative=alternative,
-                                              correction=correction,
-                                              return_results=return_results)
+                                               value=value, compare=compare,
+                                               alternative=alternative,
+                                               correction=correction,
+                                               return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1625,15 +1639,15 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     if return_results:
         if res is None:
-            res = Holder(statistic = statistic,
-                         pvalue = pvalue,
-                         compare = compare,
-                         method = method,
-                         diff = diff,
-                         ratio = ratio,
-                         odds_ratio = odds_ratio,
-                         variance = var,
-                         alternative = alternative,
+            res = Holder(statistic=statistic,
+                         pvalue=pvalue,
+                         compare=compare,
+                         method=method,
+                         diff=diff,
+                         ratio=ratio,
+                         odds_ratio=odds_ratio,
+                         variance=var,
+                         alternative=alternative,
                          )
         else:
             # we already have a return result from score test
@@ -1748,8 +1762,9 @@ def power_proportion_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
         return pow_
 
 
-def samplesize_proportion_2indep_onetail(diff, prop2, power, ratio=1, alpha=0.05,
-                                         value=0, alternative='two-sided'):
+def samplesize_proportion_2indep_onetail(diff, prop2, power, ratio=1,
+                                         alpha=0.05, value=0,
+                                         alternative='two-sided'):
     """required sample size assuming normal distribution based on one tail
 
     This uses an explicit computation for the sample size that is required
@@ -1786,10 +1801,10 @@ def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05, correction=True):
     if correction:
         # Mietinnen/Nurminen small sample correction
         z *= n / (n - 1)
-    #z = stats.chi2.isf(alpha, 1)
-    #equ 6 in Nam 1995
+    # z = stats.chi2.isf(alpha, 1)
+    # equ 6 in Nam 1995
     a1 = n0 * (n0 * n * x1 + n1 * (n0 + x1) * z)
-    a2 = - n0 * (n0 * n1 * x +  2 * n * x0 * x1 + n1 * (n0 + x0 + 2 * x1) * z)
+    a2 = - n0 * (n0 * n1 * x + 2 * n * x0 * x1 + n1 * (n0 + x0 + 2 * x1) * z)
     a3 = 2 * n0 * n1 * x0 * x + n * x0 * x0 * x1 + n0 * n1 * x * z
     a4 = - n1 * x0 * x0 * x
 
@@ -1797,7 +1812,7 @@ def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05, correction=True):
     p_roots = p_roots_[:2][::-1]
 
     # equ 5
-    ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots) ) / p_roots
+    ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
 
     res = Holder()
     res.confint = ci
@@ -1826,19 +1841,20 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
     status
     testing:
     compared to example in Nam 2009
-    internal polynomial coefficients in calculation correspond at around 4 decimals
+    internal polynomial coefficients in calculation correspond at around
+        4 decimals
     confidence interval agrees only at 2 decimals
 
     """
     x11, x10, x01, x00 = np.ravel(table)
-    n = np.sum(table)  #nobs
+    n = np.sum(table)  # nobs
     p10, p01 = x10 / n, x01 / n
     p1 = (x11 + x10) / n
     p0 = (x11 + x01) / n
     q00 = 1 - x00 / n
 
     z2 = stats.norm.isf(alpha / 2)**2
-    #z = stats.chi2.isf(alpha, 1)
+    # z = stats.chi2.isf(alpha, 1)
     # before equ 3 in Nam 2009
 
     g1 = (n * p0 + z2 / 2) * p0
@@ -1852,7 +1868,7 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
     a4 = g3**2 - (z2 * p1 / 2)**2
 
     p_roots = np.sort(np.roots([a0, a1, a2, a3, a4]))
-    #p_roots = np.sort(np.roots([1, a1 / a0, a2 / a0, a3 / a0, a4 / a0]))
+    # p_roots = np.sort(np.roots([1, a1 / a0, a2 / a0, a3 / a0, a4 / a0]))
 
     ci = [p_roots.min(), p_roots.max()]
     res = Holder()
