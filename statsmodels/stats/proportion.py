@@ -1089,8 +1089,8 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
          - 'log-adjusted' (default)
 
         odds-ratio:
-         - 'logistic'
-         - 'logistic-adjusted' (default)
+         - 'logit'
+         - 'logit-adjusted' (default)
 
     compare : string in ['diff', 'ratio' 'odds-ratio']
         If compare is diff, then the confidence interval is for diff = p1 - p2
@@ -1154,6 +1154,11 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
             low = diff - d_low
             upp = diff + d_upp
 
+        elif method == "score":
+            low, upp = score_confint_inversion(count1, nobs1, count2, nobs2,
+                                               compare=compare, alpha=alpha,
+                                               correction=correction)
+
         else:
             raise ValueError('method not recognized')
 
@@ -1202,6 +1207,11 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
             d_log = z * np.sqrt(var)
             low = np.exp(np.log(odds_ratio_) - d_log)
             upp = np.exp(np.log(odds_ratio_) + d_log)
+
+        elif method == "score":
+            low, upp = score_confint_inversion(count1, nobs1, count2, nobs2,
+                                               compare=compare, alpha=alpha,
+                                               correction=correction)
 
         else:
             raise ValueError('method not recognized')
@@ -1555,7 +1565,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         elif method == 'score':
             # Note score part is the same call for all compare
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               value=None, compare=compare,
+                                               value=value, compare=compare,
                                                alternative=alternative,
                                                correction=correction,
                                                return_results=return_results)
@@ -1785,6 +1795,48 @@ def samplesize_proportion_2indep_onetail(diff, prop2, power, ratio=1,
     nobs = normal_sample_size_one_tail(diff, power, alpha, std_null=std_null,
                                        std_alternative=std_alt)
     return nobs
+
+
+def score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
+                            alpha=0.05, correction=True):
+    def func(v):
+        r = test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    value=v, compare=compare, method='score',
+                                    correction=correction,
+                                    alternative="two-sided")
+        return r.pvalue - alpha
+
+    rt0 = test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                  value=0, compare=compare, method='score',
+                                  correction=correction,
+                                  alternative="two-sided")
+
+    # use default method to get starting values
+    # this will not work if score confint becomes default
+    # maybe use "wald" as alias that works for all compare statistics
+    use_method = {"diff": "wald", "ratio": "log", "odds-ratio": "logit"}
+    rci0 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                     method=use_method[compare],
+                                     compare=compare, alpha=alpha)
+
+    # Note diff might be negative
+    ub = rci0[1] + np.abs(rci0[1]) * 0.5
+    lb = rci0[0] - np.abs(rci0[0]) * 0.25
+    if compare == 'diff':
+        param = rt0.diff
+        # 1 might not be the correct upper bound because
+        #     rootfinding is for the `diff` and not for a probability.
+        ub = min(ub, 0.99999)
+    elif compare == 'ratio':
+        param = rt0.ratio
+        ub *= 2  # add more buffer
+    if compare == 'odds-ratio':
+        param = rt0.odds_ratio
+
+    # root finding for confint bounds
+    upp = optimize.brentq(func, param, ub)
+    low = optimize.brentq(func, lb, param)
+    return low, upp
 
 
 def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05, correction=True):

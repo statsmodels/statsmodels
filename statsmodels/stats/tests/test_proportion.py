@@ -630,6 +630,10 @@ def test_confint_2indep():
                                    method='agresti-caffo',
                                    compare='diff', alpha=0.05)
     assert_allclose(ci, [0.012, 0.322], atol=0.005)
+    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                   compare='diff',
+                                   method='score', correction=True)
+    assert_allclose(ci, [0.028, 0.343], rtol=0.03)
 
     # ratio
     ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
@@ -658,6 +662,11 @@ def test_confint_2indep():
                                    compare='or',
                                    method='logit-smoothed')
     assert_allclose(ci, [0.99, 60], rtol=0.01)
+    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                   compare='odds-ratio',
+                                   method='score', correction=True)
+    # regression test
+    assert_allclose(ci, [1.246622, 56.461576], rtol=0.01)
 
 
 def test_score_test_2indep():
@@ -762,7 +771,7 @@ def test_score_confint_koopman_nam():
     assert_allclose(res._p_roots, results_nam.p0_roots, atol=4)
     assert_allclose(res.confint, results_nam.conf_int, atol=3)
 
-    table = [67, 9, 7, 16] #[67, 7, 9, 16] #
+    table = [67, 9, 7, 16]  # [67, 7, 9, 16]
     resp = smprop._confint_riskratio_paired_nam(table, alpha=0.05)
     # TODO: currently regression test, need verified results
     ci_old = [0.917832,  1.154177]
