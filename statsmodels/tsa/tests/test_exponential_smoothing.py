@@ -177,23 +177,13 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
     implementation, I'm not sure whether we still need this, because I aim to
     reproduce the R code.
     """
-    fit = model.fit(
-        smoothing_level=results_R["alpha"], smoothing_slope=results_R["beta"],
-        smoothing_seasonal=results_R["gamma"], damping_slope=results_R["phi"],
-        optimized=False
-    )
+    params = get_params_from_R(results_R)
+    with model.fix_params(dict(zip(model.param_names, params))):
+        fit = model.fit(disp=False)
 
     if set_state:
-        states = results_R["states"]
-        if states.ndim == 1:
-            states = np.reshape(states, (len(states), 1))
-        fit.level[:] = states[1:, 0]
-        idx = 1
-        if not np.isnan(results_R["beta"]):
-            fit.slope[:] = states[1:, idx]
-            idx += 1
-        if not np.isnan(results_R["gamma"]):
-            fit.season[:] = states[1:, idx]
+        states_R = get_states_from_R(results_R, model._k_states)
+        fit.states = states_R
     return fit
 
 
@@ -323,36 +313,38 @@ def test_fit_vs_R(austourists, ets_austourists_fit_results_R,
 # SIMULATE TESTS
 ###############################################################################
 
-@pytest.mark.skip
-@pytest.mark.parametrize(*ALL_MODELS)
-def test_simulate_vs_R(austourists, ets_austourists_fit_results_R,
-                       error, trend, seasonal, damped):
-    """
-    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults.simulate``.
-
-    The tests are using the implementation in the R package ``forecast`` as
-    reference, and example data is taken from ``fpp2`` (package and book).
-    """
+@pytest.mark.parametrize(*ALL_MODELS_AND_DATA)
+def test_simulate_vs_R(error, trend, seasonal, damped, data,
+                       austourists, oildata,
+                       ets_austourists_fit_results_R,
+                       ets_oildata_fit_results_R):
+    if data == "austourists":
+        data = austourists
+        seasonal_periods = 4
+        results = ets_austourists_fit_results_R[damped]
+    else:
+        data = oildata
+        seasonal_periods = None
+        results = ets_oildata_fit_results_R[damped]
 
     model_name = short_model_name(error, trend, seasonal)
-    results = ets_austourists_fit_results_R[damped]
     if model_name not in results:
         pytest.skip(f"model {model_name} not implemented or not converging in R")
 
     results_R = results[model_name]
 
     model = ETSModel(
-        austourists, seasonal_periods=4,
+        data, seasonal_periods=seasonal_periods,
         error=error, trend=trend, seasonal=seasonal, damped_trend=damped
     )
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 
     innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
-    sim = fit.simulate(4, repetitions=1, error=error, random_errors=innov)
+    sim = fit.simulate(4, anchor='end', repetitions=1, random_errors=innov)
     expected = np.asarray(results_R["simulation"])
 
     # should be the same up to 4 decimals
-    assert_almost_equal(expected, sim.values, 4)
+    assert_almost_equal(expected, sim.values, 3)
 
 
 @pytest.mark.skip
@@ -392,22 +384,3 @@ def test_simulate_keywords(austourists):
         4, repetitions=10, random_state=np.random.RandomState(10)
     ).values
     assert np.all(res == res2)
-
-
-@pytest.mark.skip
-def test_simulate_boxcox(austourists):
-    """
-    Check if simulation results with boxcox fits are reasonable.
-
-    This test is related to issue #6629
-    """
-    fit = ETSModel(
-        austourists, seasonal_periods=4,
-        trend="add", seasonal="mul", damped=False
-    ).fit(use_boxcox=True)
-    expected = fit.forecast(4).values
-
-    res = fit.simulate(4, repetitions=10, random_state=0).values
-    mean = np.mean(res, axis=1)
-
-    assert np.all(np.abs(mean - expected) < 5)

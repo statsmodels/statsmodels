@@ -201,6 +201,19 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """
         raise NotImplementedError
 
+    def _wrap_data(self, data, start_idx, end_idx, names=None):
+        # TODO: check if this is reasonable for statespace
+        data = np.squeeze(data)
+        if self.use_pandas:
+            _, _, _, index = self._get_prediction_index(
+                start_idx, end_idx
+            )
+            if data.ndim < 2:
+                data = pd.Series(data, index=index, name=names)
+            else:
+                data = pd.DataFrame(data, index=index, names=names)
+        return data
+
 
 class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     r"""
@@ -442,6 +455,26 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         else:
             end = steps
         return self.predict(start=self.nobs, end=end, **kwargs)
+
+    def _get_simulation_start_index(self, anchor):
+        """Returns a valid numeric start index for simulations"""
+        # TODO: once this is the base class for statespace models, use this
+        # method in simulate
+        if anchor is None or anchor == 'start':
+            iloc = 0
+        elif anchor == 'end':
+            iloc = self.nobs
+        else:
+            iloc, _, _ = self.model._get_index_loc(anchor)
+            if isinstance(iloc, slice):
+                iloc = iloc.start
+
+        if iloc < 0:
+            iloc = self.nobs + iloc
+        if iloc > self.nobs:
+            raise ValueError('Cannot anchor simulation outside of the sample.')
+        return iloc
+
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
