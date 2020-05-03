@@ -15,11 +15,8 @@ from sys import float_info
 from statsmodels.stats.base import AllPairsResults
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.stats.weightstats import _zstat_generic2
-
-
-class Holder(object):
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+from statsmodels.stats.base import HolderTuple
+from statsmodels.tools.testing import Holder
 
 
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
@@ -1083,22 +1080,22 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
          - 'wald',
          - 'agresti-caffo'
          - 'newcomb' (default)
-
+         - 'score'
         ratio:
          - 'log'
          - 'log-adjusted' (default)
-
+         - 'score'
         odds-ratio:
          - 'logit'
          - 'logit-adjusted' (default)
+         - 'score'
 
     compare : string in ['diff', 'ratio' 'odds-ratio']
-        If compare is diff, then the confidence interval is for diff = p1 - p2
+        If compare is diff, then the confidence interval is for diff = p1 - p2.
         If compare is ratio, then the confidence interval is for the risk ratio
         defined by ratio = p1 / p2.
         If compare is odds-ratio, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-
     alpha : float
         significance leverl for the confidence interval, default is 0.05.
         The nominal coverage probability is 1 - alpha.
@@ -1110,7 +1107,7 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
     Notes
     -----
     Status: experimental, API and defaults might still change.
-        Insufficiently tested, more ``methods`` will be added.
+        more ``methods`` will be added.
 
     """
     method_default = {'diff': 'newcomb',
@@ -1282,16 +1279,13 @@ def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
     value : float
         diff, ratio or odds-ratio under the null hypothesis. If value is None,
         then equality of proportions under the Null is assumed,
-        i.e. value=0 for 'diff' or value=1 for either rate or odds-ratio..
+        i.e. value=0 for 'diff' or value=1 for either rate or odds-ratio.
     compare : string in ['diff', 'ratio' 'odds-ratio']
-        If compare is diff, then the confidence interval is for diff = p1 - p2
+        If compare is diff, then the confidence interval is for diff = p1 - p2.
         If compare is ratio, then the confidence interval is for the risk ratio
         defined by ratio = p1 / p2.
         If compare is odds-ratio, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-    alpha : float
-        significance leverl for the confidence interval, default is 0.05.
-        The nominal coverage probability is 1 - alpha.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise a tuple with statistic and pvalue is returned.
@@ -1403,15 +1397,15 @@ def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
                                         alternative=alternative)
 
     if return_results:
-        res = Holder(statistic=statistic,
-                     pvalue=pvalue,
-                     compare=compare,
-                     method='score',
-                     variance=var,
-                     alternative=alternative,
-                     prop1_null=prop1,
-                     prop2_null=prop0,
-                     )
+        res = HolderTuple(statistic=statistic,
+                          pvalue=pvalue,
+                          compare=compare,
+                          method='score',
+                          variance=var,
+                          alternative=alternative,
+                          prop1_null=prop1,
+                          prop2_null=prop0,
+                          )
         return res
     else:
         return statistic, pvalue
@@ -1496,7 +1490,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
     correction : bool
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
-        Applies only if method='score'
+        Applies only if method='score'.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise a tuple with statistic and pvalue is returned.
@@ -1519,7 +1513,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
     Notes
     -----
     Status: experimental, API and defaults might still change.
-        Insufficiently tested, more ``methods`` will be added.
+        More ``methods`` will be added.
 
     """
     method_default = {'diff': 'agresti-caffo',
@@ -1605,7 +1599,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         else:
             raise ValueError('method not recognized')
 
-    elif compare == 'odds-ratio':
+    elif compare == "odds-ratio":
 
         if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
             if method in ['logit-smoothed']:
@@ -1649,24 +1643,24 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     if return_results:
         if res is None:
-            res = Holder(statistic=statistic,
-                         pvalue=pvalue,
-                         compare=compare,
-                         method=method,
-                         diff=diff,
-                         ratio=ratio,
-                         odds_ratio=odds_ratio,
-                         variance=var,
-                         alternative=alternative,
-                         value=value,
-                         )
+            res = HolderTuple(statistic=statistic,
+                              pvalue=pvalue,
+                              compare=compare,
+                              method=method,
+                              diff=diff,
+                              ratio=ratio,
+                              odds_ratio=odds_ratio,
+                              variance=var,
+                              alternative=alternative,
+                              value=value,
+                              )
         else:
             # we already have a return result from score test
             # add missing attributes
             res.diff = diff
             res.ratio = ratio
             res.odds_ratio = odds_ratio
-            res.value=value
+            res.value = value
         return res
     else:
         return statistic, pvalue
@@ -1680,7 +1674,7 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
 
     This assumes that we have two independent binomial samples.
 
-    The Null and alternative hypothesis are
+    The Null and alternative hypothesis for equivalence testing are
 
     for compare = 'diff'
 
@@ -1716,14 +1710,14 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
          - 'wald',
          - 'agresti-caffo'
          - 'score' if correction is True, then this uses the degrees of freedom
-           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985.
 
         ratio:
          - 'log': wald test using log transformation
          - 'log-adjusted': wald test using log transformation,
             adds 0.5 to counts
          - 'score' if correction is True, then this uses the degrees of freedom
-           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985.
 
         odds-ratio:
          - 'logit': wald test using logit transformation
@@ -1741,37 +1735,27 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
         If compare is `ratio`, then the confidence interval is for the
         risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the confidence interval is for the
-        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-    alternative : string in ['two-sided', 'smaller', 'larger']
-        alternative hypothesis, which can be two-sided or either one of the
-        one-sided tests.
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
     correction : bool
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
-        Applies only if method='score'
+        Applies only if method='score'.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise a tuple with statistic and pvalue is returned.
 
     Returns
     -------
-    results : results instance or tuple
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-        If return_results is False, then only ``statistic`` and ``pvalue``
-        are returned.
-
-        statistic : float
-            test statistic asymptotically normal distributed N(0, 1)
-        pvalue : float
-            p-value based on normal distribution
-        other attributes :
-            additional information about the hypothesis test
+    pvalue : float
+        p-value is the max of the pvalues of the two one-sided tests
+    t1 : test results
+        results instance for one-sided hypothesis at the lower margin
+    t1 : test results
+        results instance for one-sided hypothesis at the upper margin
 
     Notes
     -----
     Status: experimental, API and defaults might still change.
-        Insufficiently tested, more ``methods`` will be added.
 
     """
 
@@ -1841,7 +1825,7 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
         currently only `value=0`, i.e. equality testing, is supported
     ratio : float
         ratio of the number of observations in sample 2 relative to
-        sample 1. see description of nobs1
+        sample 1, nobs2 = ration * nobs1. see description of nobs1.
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
@@ -1918,6 +1902,10 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
 
 def score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
                             alpha=0.05, correction=True):
+    """Compute score confidence interval by inverting score test
+
+    """
+
     def func(v):
         r = test_proportions_2indep(count1, nobs1, count2, nobs2,
                                     value=v, compare=compare, method='score',

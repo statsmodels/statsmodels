@@ -485,8 +485,9 @@ def test_power_ztost_prop():
         # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
         assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
+
 def test_ztost():
-    xfair = np.repeat([1,0], [228, 762-228])
+    xfair = np.repeat([1, 0], [228, 762-228])
 
     # comparing to SAS last output at
     # http://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_freq_sect028.htm
@@ -763,22 +764,26 @@ def test_test_2indep():
                                               compare=co, method=method,
                                               alpha=alpha, correction=False)
 
-        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
-                value=low, compare=co, method=method, correction=False)
+        res = smprop.test_proportions_2indep(
+                count1, nobs1, count2, nobs2, value=low, compare=co,
+                method=method, correction=False)
         assert_allclose(res.pvalue, alpha, atol=1e-10)
 
-        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
-                value=upp, compare=co, method=method, correction=False)
+        res = smprop.test_proportions_2indep(
+                count1, nobs1, count2, nobs2, value=upp, compare=co,
+                method=method, correction=False)
         assert_allclose(res.pvalue, alpha, atol=1e-10)
 
-        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
-                value=upp, compare=co, method=method, alternative='smaller',
-                correction=False, return_results=False)
+        _, pv = smprop.test_proportions_2indep(
+                    count1, nobs1, count2, nobs2, value=upp, compare=co,
+                    method=method, alternative='smaller',
+                    correction=False, return_results=False)
         assert_allclose(pv, alpha / 2, atol=1e-10)
 
-        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
-                value=low, compare=co, method=method, alternative='larger',
-                correction=False, return_results=False)
+        _, pv = smprop.test_proportions_2indep(
+                    count1, nobs1, count2, nobs2, value=low, compare=co,
+                    method=method, alternative='larger',
+                    correction=False, return_results=False)
         assert_allclose(pv, alpha / 2, atol=1e-10)
 
     # test Miettinen/Nurminen small sample correction
@@ -787,8 +792,9 @@ def test_test_2indep():
                                           compare=co, method=method,
                                           alpha=alpha, correction=True)
 
-    res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
-              value=low, compare=co, method=method, correction=True)
+    res = smprop.test_proportions_2indep(
+            count1, nobs1, count2, nobs2, value=low, compare=co,
+            method=method, correction=True)
     assert_allclose(res.pvalue, alpha, atol=1e-10)
 
 
@@ -816,10 +822,12 @@ def test_equivalence_2indep():
     for co, method in methods_both:
         low, upp = confint_proportions_2indep(count1, nobs1, count2, nobs2,
                                               compare=co, method=method,
-                                              alpha=2 * alpha, correction=False)
+                                              alpha=2 * alpha,
+                                              correction=False)
 
-        res = smprop.tost_proportions_2indep(count1, nobs1, count2, nobs2,
-                low, upp, compare=co, method=method, correction=False)
+        res = smprop.tost_proportions_2indep(
+                count1, nobs1, count2, nobs2, low, upp, compare=co,
+                method=method, correction=False)
         # assert_allclose(res.pvalue, alpha, atol=1e-10)
         assert_allclose(res[0], alpha, atol=1e-10)
 
