@@ -669,6 +669,47 @@ def test_confint_2indep():
     assert_allclose(ci, [1.246622, 56.461576], rtol=0.01)
 
 
+def test_confint_2indep_propcis():
+    # unit tests compared to R package PropCis
+    # alpha = 0.05
+    count1, nobs1 = 7, 34
+    count2, nobs2 = 1, 34
+
+    # > library(PropCIs)
+    # > diffscoreci(7, 34, 1, 34, 0.95)
+    ci = 0.0270416, 0.3452912
+    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                    compare="diff",
+                                    method="score", correction=False)
+    assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
+    # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
+    ci = 0.01161167, 0.32172166
+    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                    compare="diff",
+                                    method="agresti-caffo")
+    assert_allclose(ci1, ci, atol=6e-7)
+    # > wald2ci(7, 34, 1, 34, 0.95, adjust="Wald")
+    ci = 0.02916942, 0.32377176
+    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                    compare="diff",
+                                    method="wald", correction=False)
+    assert_allclose(ci1, ci, atol=6e-7)
+
+    # > orscoreci(7, 34, 1, 34, 0.95)
+    ci = 1.246309, 56.486130
+    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                    compare="odds-ratio",
+                                    method="score", correction=True)
+    assert_allclose(ci1, ci, rtol=5e-4)  # lower agreement (iterative)
+
+    # > riskscoreci(7, 34, 1, 34, 0.95)
+    ci = 1.220853, 42.575718
+    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                    compare="ratio",
+                                    method="score", correction=False)
+    assert_allclose(ci1, ci, atol=6e-7)
+
+
 def test_score_test_2indep():
     # this does not verify the statistic and pvalue yet
     count1, nobs1 = 7, 34
@@ -706,7 +747,7 @@ def test_test_2indep():
     methods_both = [
                     ('diff', 'agresti-caffo'),
                     # ('diff', 'newcomb'),  # only confint
-                    # ('diff', 'score'), # no confint yet
+                    ('diff', 'score'),
                     ('diff', 'wald'),
                     ('ratio', 'log'),
                     ('ratio', 'log-adjusted'),
@@ -714,7 +755,7 @@ def test_test_2indep():
                     ('odds-ratio', 'logit'),
                     ('odds-ratio', 'logit-adjusted'),
                     ('odds-ratio', 'logit-smoothed'),
-                    # ('odds-ratio', 'score'),  # no confint yet
+                    ('odds-ratio', 'score'),
                     ]
 
     for co, method in methods_both:
@@ -749,6 +790,38 @@ def test_test_2indep():
     res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
               value=low, compare=co, method=method, correction=True)
     assert_allclose(res.pvalue, alpha, atol=1e-10)
+
+
+def test_equivalence_2indep():
+    # this checks the pvalue of the equivalence test at value equal to the
+    # confidence limit
+    alpha = 0.05
+    count1, nobs1 = 7, 34
+    count2, nobs2 = 1, 34
+
+    methods_both = [
+                    ('diff', 'agresti-caffo'),
+                    # ('diff', 'newcomb'),  # only confint
+                    ('diff', 'score'),
+                    ('diff', 'wald'),
+                    ('ratio', 'log'),
+                    ('ratio', 'log-adjusted'),
+                    ('ratio', 'score'),
+                    ('odds-ratio', 'logit'),
+                    ('odds-ratio', 'logit-adjusted'),
+                    ('odds-ratio', 'logit-smoothed'),
+                    ('odds-ratio', 'score'),
+                    ]
+
+    for co, method in methods_both:
+        low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                             compare=co, method=method,
+                                             alpha=2 * alpha, correction=False)
+
+        res = smprop.tost_proportions_2indep(count1, nobs1, count2, nobs2,
+                low, upp, compare=co, method=method, correction=False)
+        # assert_allclose(res.pvalue, alpha, atol=1e-10)
+        assert_allclose(res[0], alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():

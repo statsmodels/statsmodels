@@ -1658,6 +1658,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
                          odds_ratio=odds_ratio,
                          variance=var,
                          alternative=alternative,
+                         value=value,
                          )
         else:
             # we already have a return result from score test
@@ -1665,9 +1666,127 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             res.diff = diff
             res.ratio = ratio
             res.odds_ratio = odds_ratio
+            res.value=value
         return res
     else:
         return statistic, pvalue
+
+
+def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
+                            method=None, compare='diff', correction=True,
+                            return_results=True):
+    """
+    Equivalence test based on two one-sided `test_proportions_2indep`
+
+    This assumes that we have two independent binomial samples.
+
+    The Null and alternative hypothesis are
+
+    for compare = 'diff'
+
+    H0: prop1 - prop2 <= low or upp <= prop1 - prop2
+    H1: low < prop1 - prop2 < upp
+
+    for compare = 'ratio'
+
+    H0: prop1 / prop2 <= low or upp <= prop1 / prop2
+    H1: low < prop1 / prop2 < upp
+
+
+    for compare = 'odds-ratio'
+
+    H0: or <= low or upp <= or
+    H1: low < or < upp
+
+    where odds-ratio or = prop1 / (1 - prop1) / (prop2 / (1 - prop2))
+
+    Parameters
+    ----------
+    count1, nobs1 :
+        count and sample size for first sample
+    count2, nobs2 :
+        count and sample size for the second sample
+    low, upp :
+        equivalence margin for diff, risk ratio or odds ratio
+    method : string
+        method for computing confidence interval. If method is None, then a
+        default method is used. The default might change as more methods are
+        added.
+        diff:
+         - 'wald',
+         - 'agresti-caffo'
+         - 'score' if correction is True, then this uses the degrees of freedom
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+
+        ratio:
+         - 'log': wald test using log transformation
+         - 'log-adjusted': wald test using log transformation,
+            adds 0.5 to counts
+         - 'score' if correction is True, then this uses the degrees of freedom
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+
+        odds-ratio:
+         - 'logit': wald test using logit transformation
+         - 'logit-adjusted': : wald test using logit transformation,
+            adds 0.5 to counts
+         - 'logit-smoothed': : wald test using logit transformation, biases
+            cell counts towards independence by adding two observations in
+            total.
+         - 'score' if correction is True, then this uses the degrees of freedom
+            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+
+    compare : string in ['diff', 'ratio' 'odds-ratio']
+        If compare is `diff`, then the confidence interval is for
+        diff = p1 - p2.
+        If compare is `ratio`, then the confidence interval is for the
+        risk ratio defined by ratio = p1 / p2.
+        If compare is `odds-ratio`, then the confidence interval is for the
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
+    alternative : string in ['two-sided', 'smaller', 'larger']
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
+    correction : bool
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+        Applies only if method='score'
+    return_results : bool
+        If true, then a results instance with extra information is returned,
+        otherwise a tuple with statistic and pvalue is returned.
+
+    Returns
+    -------
+    results : results instance or tuple
+        If return_results is True, then a results instance with the
+        information in attributes is returned.
+        If return_results is False, then only ``statistic`` and ``pvalue``
+        are returned.
+
+        statistic : float
+            test statistic asymptotically normal distributed N(0, 1)
+        pvalue : float
+            p-value based on normal distribution
+        other attributes :
+            additional information about the hypothesis test
+
+    Notes
+    -----
+    Status: experimental, API and defaults might still change.
+        Insufficiently tested, more ``methods`` will be added.
+
+    """
+
+    tt1 = test_proportions_2indep(count1, nobs1, count2, nobs2, value=low,
+                                  method=method, compare=compare,
+                                  alternative='larger',
+                                  correction=correction,
+                                  return_results=return_results)
+    tt2 = test_proportions_2indep(count1, nobs1, count2, nobs2, value=upp,
+                                  method=method, compare=compare,
+                                  alternative='smaller',
+                                  correction=correction,
+                                  return_results=return_results)
+
+    return np.maximum(tt1.pvalue, tt2.pvalue), tt1, tt2,
 
 
 def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
