@@ -1063,8 +1063,8 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
 
 
-def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
-                              compare='diff', alpha=0.05, correction=True):
+def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
+                               compare='diff', alpha=0.05, correction=True):
     """Confidence intervals for comparing two independent proportions
 
     This assumes that we have two independent binomial samples.
@@ -1265,9 +1265,9 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2,
                 count2 + corr[1, 0], nobs2 + corr[1].sum()), prob_indep
 
 
-def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
-                                 compare='diff', alternative='two-sided',
-                                 correction=True, return_results=True):
+def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
+                                  compare='diff', alternative='two-sided',
+                                  correction=True, return_results=True):
     """score_test for two independent proportions
 
     This uses the constrained estimate of the proportions to compute
@@ -1564,11 +1564,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
         elif method == 'score':
             # Note score part is the same call for all compare
-            res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               value=value, compare=compare,
-                                               alternative=alternative,
-                                               correction=correction,
-                                               return_results=return_results)
+            res = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                value=value, compare=compare,
+                                                alternative=alternative,
+                                                correction=correction,
+                                                return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1592,11 +1592,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             distr = 'normal'
 
         elif method == 'score':
-            res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               value=value, compare=compare,
-                                               alternative=alternative,
-                                               correction=correction,
-                                               return_results=return_results)
+            res = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                value=value, compare=compare,
+                                                alternative=alternative,
+                                                correction=correction,
+                                                return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1628,11 +1628,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             distr = 'normal'
 
         elif method == 'score':
-            res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               value=value, compare=compare,
-                                               alternative=alternative,
-                                               correction=correction,
-                                               return_results=return_results)
+            res = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                value=value, compare=compare,
+                                                alternative=alternative,
+                                                correction=correction,
+                                                return_results=return_results)
             if return_results is False:
                 statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1814,9 +1814,9 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
     return p_pooled, std_null, std_alt
 
 
-def power_proportion_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
-                            value=0, alternative='two-sided',
-                            return_results=True):
+def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
+                             value=0, alternative='two-sided',
+                             return_results=True):
     """power for ztest that two independent proportions are equal
 
     This assumes that the variance is based on the pooled proportion
@@ -1891,9 +1891,9 @@ def power_proportion_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
         return pow_
 
 
-def samplesize_proportion_2indep_onetail(diff, prop2, power, ratio=1,
-                                         alpha=0.05, value=0,
-                                         alternative='two-sided'):
+def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
+                                          alpha=0.05, value=0,
+                                          alternative='two-sided'):
     """required sample size assuming normal distribution based on one tail
 
     This uses an explicit computation for the sample size that is required
@@ -1934,9 +1934,9 @@ def score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
     # this will not work if score confint becomes default
     # maybe use "wald" as alias that works for all compare statistics
     use_method = {"diff": "wald", "ratio": "log", "odds-ratio": "logit"}
-    rci0 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                     method=use_method[compare],
-                                     compare=compare, alpha=alpha)
+    rci0 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                      method=use_method[compare],
+                                      compare=compare, alpha=alpha)
 
     # Note diff might be negative
     ub = rci0[1] + np.abs(rci0[1]) * 0.5

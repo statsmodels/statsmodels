@@ -14,11 +14,11 @@ from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_array_less, assert_raises, assert_allclose)
 
 from statsmodels.stats.proportion import (proportion_confint,
-                                          confint_proportion_2indep,
+                                          confint_proportions_2indep,
                                           multinomial_proportions_confint,
-                                          score_test_proportion_2indep,
-                                          power_proportion_2indep,
-                                          samplesize_proportion_2indep_onetail,
+                                          score_test_proportions_2indep,
+                                          power_proportions_2indep,
+                                          samplesize_proportions_2indep_onetail,
                                           )
 import statsmodels.stats.proportion as smprop
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
@@ -617,54 +617,54 @@ def test_confint_2indep():
     Baptista–Pike mid-p 1.33 99 4.31
     Agresti–Min exact unconditional 1.19 72 4.10
     '''  # pylint: disable=W0105
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   method='newcomb',
-                                   compare='diff', alpha=0.05)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    method='newcomb',
+                                    compare='diff', alpha=0.05)
     # one decimal to upp added from regression result
     assert_allclose(ci, [0.019, 0.340], atol=0.005)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   method='wald',
-                                   compare='diff', alpha=0.05)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    method='wald',
+                                    compare='diff', alpha=0.05)
     assert_allclose(ci, [0.029, 0.324], atol=0.005)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   method='agresti-caffo',
-                                   compare='diff', alpha=0.05)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    method='agresti-caffo',
+                                    compare='diff', alpha=0.05)
     assert_allclose(ci, [0.012, 0.322], atol=0.005)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='diff',
-                                   method='score', correction=True)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='diff',
+                                    method='score', correction=True)
     assert_allclose(ci, [0.028, 0.343], rtol=0.03)
 
     # ratio
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='ratio',
-                                   method='log')
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='ratio',
+                                    method='log')
     assert_allclose(ci, [0.91, 54], rtol=0.01)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='ratio',
-                                   method='log-adjusted')
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='ratio',
+                                    method='log-adjusted')
     assert_allclose(ci, [0.92, 27], rtol=0.01)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='ratio',
-                                   method='score', correction=False)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='ratio',
+                                    method='score', correction=False)
     assert_allclose(ci, [1.21, 43], rtol=0.01)
 
     # odds-ratio
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='or',
-                                   method='logit')
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='or',
+                                    method='logit')
     assert_allclose(ci, [0.99, 74], rtol=0.01)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='or',
-                                   method='logit-adjusted')
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='or',
+                                    method='logit-adjusted')
     assert_allclose(ci, [0.98, 38], rtol=0.01)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='or',
-                                   method='logit-smoothed')
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='or',
+                                    method='logit-smoothed')
     assert_allclose(ci, [0.99, 60], rtol=0.01)
-    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                   compare='odds-ratio',
-                                   method='score', correction=True)
+    ci = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                    compare='odds-ratio',
+                                    method='score', correction=True)
     # regression test
     assert_allclose(ci, [1.246622, 56.461576], rtol=0.01)
 
@@ -678,35 +678,35 @@ def test_confint_2indep_propcis():
     # > library(PropCIs)
     # > diffscoreci(7, 34, 1, 34, 0.95)
     ci = 0.0270416, 0.3452912
-    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                    compare="diff",
-                                    method="score", correction=False)
+    ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                     compare="diff",
+                                     method="score", correction=False)
     assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
     ci = 0.01161167, 0.32172166
-    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                    compare="diff",
-                                    method="agresti-caffo")
+    ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                     compare="diff",
+                                     method="agresti-caffo")
     assert_allclose(ci1, ci, atol=6e-7)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="Wald")
     ci = 0.02916942, 0.32377176
-    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                    compare="diff",
-                                    method="wald", correction=False)
+    ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                     compare="diff",
+                                     method="wald", correction=False)
     assert_allclose(ci1, ci, atol=6e-7)
 
     # > orscoreci(7, 34, 1, 34, 0.95)
     ci = 1.246309, 56.486130
-    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                    compare="odds-ratio",
-                                    method="score", correction=True)
+    ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                     compare="odds-ratio",
+                                     method="score", correction=True)
     assert_allclose(ci1, ci, rtol=5e-4)  # lower agreement (iterative)
 
     # > riskscoreci(7, 34, 1, 34, 0.95)
     ci = 1.220853, 42.575718
-    ci1 = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                    compare="ratio",
-                                    method="score", correction=False)
+    ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                     compare="ratio",
+                                     method="score", correction=False)
     assert_allclose(ci1, ci, atol=6e-7)
 
 
@@ -716,23 +716,23 @@ def test_score_test_2indep():
     count2, nobs2 = 1, 34
 
     for co in ['diff', 'ratio', 'or']:
-        res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                           compare=co)
+        res = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                            compare=co)
         assert_allclose(res.prop1_null, res.prop2_null, rtol=1e-10)
 
         # check that equality case is handled
         val = 0 if co == 'diff' else 1.
-        s0, pv0 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val,
-                                               return_results=False)[:2]
-        s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val + 1e-10,
-                                               return_results=False)[:2]
+        s0, pv0 = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                compare=co, value=val,
+                                                return_results=False)[:2]
+        s1, pv1 = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                compare=co, value=val + 1e-10,
+                                                return_results=False)[:2]
         assert_allclose(s0, s1, rtol=1e-8)
         assert_allclose(pv0, pv1, rtol=1e-8)
-        s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val - 1e-10,
-                                               return_results=False)[:2]
+        s1, pv1 = score_test_proportions_2indep(count1, nobs1, count2, nobs2,
+                                                compare=co, value=val - 1e-10,
+                                                return_results=False)[:2]
         assert_allclose(s0, s1, rtol=1e-8)
         assert_allclose(pv0, pv1, rtol=1e-8)
 
@@ -759,9 +759,9 @@ def test_test_2indep():
                     ]
 
     for co, method in methods_both:
-        low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                             compare=co, method=method,
-                                             alpha=alpha, correction=False)
+        low, upp = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                              compare=co, method=method,
+                                              alpha=alpha, correction=False)
 
         res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=low, compare=co, method=method, correction=False)
@@ -783,9 +783,9 @@ def test_test_2indep():
 
     # test Miettinen/Nurminen small sample correction
     co, method = 'ratio', 'score'
-    low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                         compare=co, method=method,
-                                         alpha=alpha, correction=True)
+    low, upp = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                          compare=co, method=method,
+                                          alpha=alpha, correction=True)
 
     res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
               value=low, compare=co, method=method, correction=True)
@@ -814,9 +814,9 @@ def test_equivalence_2indep():
                     ]
 
     for co, method in methods_both:
-        low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
-                                             compare=co, method=method,
-                                             alpha=2 * alpha, correction=False)
+        low, upp = confint_proportions_2indep(count1, nobs1, count2, nobs2,
+                                              compare=co, method=method,
+                                              alpha=2 * alpha, correction=False)
 
         res = smprop.tost_proportions_2indep(count1, nobs1, count2, nobs2,
                 low, upp, compare=co, method=method, correction=False)
@@ -853,42 +853,42 @@ def test_score_confint_koopman_nam():
 
 def test_power_2indep():
     # test against R
-    pow_ = power_proportion_2indep(-0.25, 0.75, 76.70692)
+    pow_ = power_proportions_2indep(-0.25, 0.75, 76.70692)
     assert_allclose(pow_.power, 0.9, atol=1e-8)
 
-    n = samplesize_proportion_2indep_onetail(-0.25, 0.75, 0.9, ratio=1,
-                                             alpha=0.05, value=0,
-                                             alternative='two-sided')
+    n = samplesize_proportions_2indep_onetail(-0.25, 0.75, 0.9, ratio=1,
+                                              alpha=0.05, value=0,
+                                              alternative='two-sided')
     assert_allclose(n, 76.70692, atol=1e-5)
 
-    power_proportion_2indep(-0.25, 0.75, 62.33551, alternative="smaller")
+    power_proportions_2indep(-0.25, 0.75, 62.33551, alternative="smaller")
     assert_allclose(pow_.power, 0.9, atol=1e-8)
 
-    pow_ = power_proportion_2indep(0.25, 0.5, 62.33551, alternative="smaller")
+    pow_ = power_proportions_2indep(0.25, 0.5, 62.33551, alternative="smaller")
     assert_array_less(pow_.power, 0.05)
 
-    pow_ = power_proportion_2indep(0.25, 0.5, 62.33551, alternative="larger",
-                                   return_results=False)
+    pow_ = power_proportions_2indep(0.25, 0.5, 62.33551, alternative="larger",
+                                    return_results=False)
     assert_allclose(pow_, 0.9, atol=1e-8)
 
-    pow_ = power_proportion_2indep(-0.15, 0.65, 83.4373, return_results=False)
+    pow_ = power_proportions_2indep(-0.15, 0.65, 83.4373, return_results=False)
     assert_allclose(pow_, 0.5, atol=1e-8)
 
-    n = samplesize_proportion_2indep_onetail(-0.15, 0.65, 0.5, ratio=1,
-                                             alpha=0.05, value=0,
-                                             alternative='two-sided')
+    n = samplesize_proportions_2indep_onetail(-0.15, 0.65, 0.5, ratio=1,
+                                              alpha=0.05, value=0,
+                                              alternative='two-sided')
 
     assert_allclose(n, 83.4373, atol=0.05)
 
     # Stata example
     from statsmodels.stats.power import normal_sample_size_one_tail
-    res = power_proportion_2indep(-0.014, 0.015, 550, ratio=1.)
+    res = power_proportions_2indep(-0.014, 0.015, 550, ratio=1.)
     assert_allclose(res.power, 0.7415600, atol=1e-7)
     n = normal_sample_size_one_tail(-0.014, 0.7415600, 0.05 / 2,
                                     std_null=res.std_null,
                                     std_alternative=res.std_alt)
     assert_allclose(n, 550, atol=0.05)
-    n2 = samplesize_proportion_2indep_onetail(-0.014, 0.015, 0.7415600,
-                                              ratio=1, alpha=0.05, value=0,
-                                              alternative='two-sided')
+    n2 = samplesize_proportions_2indep_onetail(-0.014, 0.015, 0.7415600,
+                                               ratio=1, alpha=0.05, value=0,
+                                               alternative='two-sided')
     assert_allclose(n2, n, rtol=1e-13)
