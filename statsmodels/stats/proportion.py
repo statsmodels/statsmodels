@@ -1175,7 +1175,7 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
             upp = np.exp(np.log(ratio_) + d_log)
 
         elif method == 'score':
-            res = _confint_riskratio_koopman(count2, count1, nobs2, nobs1,
+            res = _confint_riskratio_koopman(count1, nobs1, count2, nobs2,
                                              alpha=alpha,
                                              correction=correction)
             low, upp = res.confint
@@ -1946,14 +1946,17 @@ def score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
     return low, upp
 
 
-def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05, correction=True):
+def _confint_riskratio_koopman(count1, nobs1, count2, nobs2, alpha=0.05,
+                               correction=True):
     """score confidence interval for ratio or proportions, Koopman/Nam
 
-    current namings follows Nam, signature not consistent with other functions
+    , signature not consistent with other functions
 
     When correction is True, then the small sample correction nobs / (nobs - 1)
     by Miettinen/Nurminen is used.
     """
+    # The names below follow Nam
+    x0, x1, n0, n1 = count2, count1, nobs2, nobs1
     x = x0 + x1
     n = n0 + n1
     z = stats.norm.isf(alpha / 2)**2

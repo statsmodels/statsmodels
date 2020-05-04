@@ -847,7 +847,7 @@ def test_score_confint_koopman_nam():
     results_nam.p0_roots = [0.1278, 0.2939, 0.4876]
     results_nam.conf_int = [2.940, 7.152]
 
-    res = smprop._confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05)
+    res = smprop._confint_riskratio_koopman(x1, n1, x0, n0,  alpha=0.05)
 
     assert_allclose(res._p_roots, results_nam.p0_roots, atol=4)
     assert_allclose(res.confint, results_nam.conf_int, atol=3)
