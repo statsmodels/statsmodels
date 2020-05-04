@@ -111,9 +111,18 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         dist = 'binomial'
 
     if dist == 'normal':
-        return _zstat_generic2(stat, 1, alternative)
-    else:
-        return stat, pvalue
+        stat, pvalue = _zstat_generic2(stat, 1, alternative)
+
+    rates = (y1 / n1, y2 / n2)
+    ratio = rates[0] / rates[1]
+    res = HolderTuple(statistic=stat,
+                      pvalue=pvalue,
+                      distribution=dist,
+                      method=method,
+                      rates=rates,
+                      ratio=ratio,
+                      ratio_null=ratio_null)
+    return res
 
 
 def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
@@ -126,16 +135,18 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     r = ratio_null
     r_d = r / d
 
+    eps = 1e-20  # avoid zero division in stat_func
+
     if method in ['score']:
         def stat_func(x1, x2):
-            return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d)
+            return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
         rate1 = rate1_cmle
         rate2 = rate2_cmle
     elif method in ['wald']:
         def stat_func(x1, x2):
-            return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2)
+            return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
         rate2_mle = y2 / n2
         rate1_mle = y1 / n1
         rate1 = rate1_mle
@@ -176,4 +187,4 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         raise ValueError('invalid alternative')
 
     pvalue = ((pdf1[:, None] * pdf2[None, :])[mask]).sum()
-    return None, pvalue
+    return stat_sample, pvalue

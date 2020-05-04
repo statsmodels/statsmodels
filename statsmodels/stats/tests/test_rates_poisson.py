@@ -1,6 +1,5 @@
 
 
-import numpy as np
 from numpy.testing import assert_allclose
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
@@ -84,16 +83,15 @@ def test_twosample_poisson():
     pv2r = 0.000310
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    ste1, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
-                                      method='score',
-                                      ratio_null=1, alternative='larger')
+    _, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
+                                   method='score',
+                                   ratio_null=1, alternative='larger')
     pve1r = 0.000298
     assert_allclose(pve1, pve1r, rtol=0, atol=5e-4)
-    print('E-test score', pve1)
 
-    ste1, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
-                                      method='wald',
-                                      ratio_null=1, alternative='larger')
+    _, pve1 = etest_poisson_2indep(count1, n1, count2, n2,
+                                   method='wald',
+                                   ratio_null=1, alternative='larger')
     pve1r = 0.000298
     assert_allclose(pve1, pve1r, rtol=0, atol=5e-4)
 
@@ -122,7 +120,6 @@ def test_twosample_poisson():
                                       ratio_null=1.5, alternative='larger')
     pv2r = 0.2913
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
-    print('exact-cond', s2, pv2)   # one sided in the "right" direction
 
     s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
                                       method='cond-midp',
@@ -130,14 +127,14 @@ def test_twosample_poisson():
     pv2r = 0.2450
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    ste2, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
-                                      method='score',
-                                      ratio_null=1.5, alternative='larger')
+    _, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
+                                   method='score',
+                                   ratio_null=1.5, alternative='larger')
     pve2r = 0.2453
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
 
-    ste2, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
-                                      method='wald',
-                                      ratio_null=1.5, alternative='larger')
+    _, pve2 = etest_poisson_2indep(count1, n1, count2, n2,
+                                   method='wald',
+                                   ratio_null=1.5, alternative='larger')
     pve2r = 0.2453
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
