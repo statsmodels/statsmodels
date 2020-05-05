@@ -1,5 +1,6 @@
 
 
+import pytest
 from numpy.testing import assert_allclose, assert_equal
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
@@ -207,3 +208,40 @@ def test_tost_poisson():
         pv, _, _ = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
                                            method=meth)
         assert_allclose(pv, 0.025, atol=0.01)
+
+
+cases_alt = {
+    ("two-sided", "wald"): 0.07136366497984171,
+    ("two-sided", "score"): 0.0840167525117227,
+    ("two-sided", "sqrt"): 0.0804675114297235,
+    ("two-sided", "exact-cond"): 0.1301269270479679,
+    ("two-sided", "cond-midp"): 0.09324590196774807,
+    ("two-sided", "etest"): 0.09054824785458056,
+    ("two-sided", "etest-wald"): 0.06895289560607239,
+
+    ("larger", "wald"): 0.03568183248992086,
+    ("larger", "score"): 0.04200837625586135,
+    ("larger", "sqrt"): 0.04023375571486175,
+    ("larger", "exact-cond"): 0.08570447732927276,
+    ("larger", "cond-midp"): 0.04882345224905293,
+    ("larger", "etest"): 0.043751060642682936,
+    ("larger", "etest-wald"): 0.043751050280207024,
+
+    ("smaller", "wald"): 0.9643181675100791,
+    ("smaller", "score"): 0.9579916237441386,
+    ("smaller", "sqrt"): 0.9597662442851382,
+    ("smaller", "exact-cond"): 0.9880575728311669,
+    ("smaller", "cond-midp"): 0.9511765477509471,
+    ("smaller", "etest"): 0.9672396898656999,
+    ("smaller", "etest-wald"): 0.9672397002281757
+    }
+
+
+@pytest.mark.parametrize('case', list(cases_alt.keys()))
+def test_alternative(case):
+    # regression test numbers, but those are close to each other
+    alt, meth = case
+    count1, n1, count2, n2 = 6, 51., 1, 54.
+    _, pv = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
+                                    ratio_null=1.2, alternative=alt)
+    assert_allclose(pv, cases_alt[case], rtol=1e-13)
