@@ -14,7 +14,7 @@ from statsmodels.stats.base import HolderTuple
 
 
 def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
-                        method='score', alternative='2-sided'):
+                        method='score', alternative='two-sided'):
     '''test for ratio of two sample Poisson intensities
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is

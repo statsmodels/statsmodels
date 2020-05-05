@@ -1,6 +1,6 @@
 
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
 import statsmodels.stats.rates as smr
@@ -138,3 +138,23 @@ def test_twosample_poisson():
                                    ratio_null=1.5, alternative='larger')
     pve2r = 0.2453
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
+
+
+def test_twosample_poisson_r():
+    # testing against R package `exactci
+    from .results.results_rates import res_pexact_cond, res_pexact_cond_midp
+
+    # example 1 from Gu
+    count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
+
+    res2 = res_pexact_cond
+    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond')
+    assert_allclose(res1.pvalue, res2.p_value, rtol=1e-13)
+    assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
+    assert_equal(res1.ratio_null, res2.null_value)
+
+    res2 = res_pexact_cond_midp
+    res1 = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp')
+    assert_allclose(res1.pvalue, res2.p_value, rtol=0, atol=5e-6)
+    assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
+    assert_equal(res1.ratio_null, res2.null_value)
