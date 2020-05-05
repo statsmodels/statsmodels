@@ -205,7 +205,7 @@ class ETSModel(base.StateSpaceMLEModel):
         * 'known'
 
         If 'known' initialization is used, then `initial_level` must be
-        passed, as well as `initial_slope` and `initial_seasonal` if
+        passed, as well as `initial_trend` and `initial_seasonal` if
         applicable. Default is 'estimated'.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
@@ -326,14 +326,14 @@ class ETSModel(base.StateSpaceMLEModel):
         # ========
         if self.trend == "add" or self.trend is None:
             if self.seasonal == "add" or self.seasonal is None:
-                self._smoothing_func = smooth._hw_smooth_add_add
+                self._smoothing_func = smooth._ets_smooth_add_add
             else:
-                self._smoothing_func = smooth._hw_smooth_add_mul
+                self._smoothing_func = smooth._ets_smooth_add_mul
         else:
             if self.seasonal == "add" or self.seasonal is None:
-                self._smoothing_func = smooth._hw_smooth_mul_add
+                self._smoothing_func = smooth._ets_smooth_mul_add
             else:
-                self._smoothing_func = smooth._hw_smooth_mul_mul
+                self._smoothing_func = smooth._ets_smooth_mul_mul
 
 
         # PARAMETER HANDLING
@@ -735,19 +735,22 @@ class ETSModel(base.StateSpaceMLEModel):
         # 2) Don't add this here, users can get this on their own
         return states
 
-    def _get_internal_states(self, states):
+    def _get_internal_states(self, states, params):
         """
-        Converts a state matrix/dataframe to the (nobs, 3) matrix used
+        Converts a state matrix/dataframe to the (nobs, 2+m) matrix used
         internally
         """
+        internal_params = self._internal_params(params)
         if isinstance(states, (pd.Series, pd.DataFrame)):
             states = states.values
-        internal_states = np.zeros((self.nobs, 3))
+        internal_states = np.zeros((self.nobs, 2 + self.seasonal_periods))
         internal_states[:, 0] = states[:, 0]
         if self.has_trend:
             internal_states[:, 1] = states[:, 1]
         if self.has_seasonal:
-            internal_states[:, 2] = states[:, self._season_index]
+            for j in range(self.seasonal_periods):
+                internal_states[j:, 2+j] = states[0:self.nobs-j, self._season_index]
+                internal_states[0:j, 2+j] = internal_params[6:6+j][::-1]
         return internal_states
 
 
@@ -819,6 +822,24 @@ class ETSResults(base.StateSpaceMLEResults):
     def predict(self, exog=None, **kwargs):
         ... # TODO
 
+    def _get_prediction_params(self, start_idx):
+        """
+        Returns internal parameter representation of smoothing parameters and
+        "initial" states for prediction/simulation, that is the states just
+        before the first prediction/simulation step.
+        """
+        # TODO: add a test for this
+        internal_params = self.model._internal_params(self.params)
+        if start_idx == 0:
+            return internal_params
+        else:
+            internal_states = self.model._get_internal_states(
+                self.states, self.params
+            )
+            start_state = np.empty(6 + self.seasonal_periods)
+            start_state[0:4] = internal_params[0:4]
+            start_state[4:] = internal_states[start_idx - 1, :]
+            return start_state
 
     def summary(self):
         ... # TODO
@@ -993,45 +1014,24 @@ class ETSResults(base.StateSpaceMLEResults):
         """
 
         # Get the starting location
-        start_idx = self._get_simulation_start_index(anchor)
+        start_idx = self._get_prediction_start_index(anchor)
 
         # get model settings and parameters
         mul_seasonal = self.seasonal == "mul"
         mul_trend = self.trend == "mul"
         mul_error = self.error == "mul"
-        # internal parameters are:
-        # alpha, beta_star, gamma, phi, l[-1], b[-1], s[-1], ..., s[-m]
-        internal_params = self.model._internal_params(self.params)
-        internal_states = self.model._get_internal_states(self.states)
-        alpha, beta_star, gamma, phi = internal_params[0:4]
+
+        # set initial values and obtain parameters
+        start_params = self._get_prediction_params(start_idx)
+        x, alpha, beta_star, gamma, phi, m = smooth._initialize_ets_smooth(
+            start_params, nsimulations
+        )
         beta = alpha * beta_star
-        m = self.seasonal_periods
-
-
-        # set initial values
-        # (notation as in https://otexts.com/fpp2/ets.html)
+        # make x a 3 dimensional matrix: first dimension is nsimulations
+        # (number of steps), next is number of states, innermost is repetitions
+        nstates = x.shape[1]
+        x = np.tile(np.reshape(x, (nsimulations, nstates, 1)), repetitions)
         y = np.empty((nsimulations, repetitions))
-        # lvl instead of l because of E741
-        lvl = np.empty((nsimulations + 1, repetitions))
-        b = np.empty((nsimulations + 1, repetitions))
-        s = np.empty((nsimulations + m, repetitions))
-        # the following uses python's index wrapping
-        if start_idx == 0:
-            lvl[-1, :] = internal_params[4]
-            b[-1, :] = internal_params[5]
-        else:
-            lvl[-1, :] = internal_states[start_idx - 1, 0]
-            b[-1, :] = internal_states[start_idx - 1, 1]
-        if 0 <= start_idx and start_idx <= m:
-            initial_seasons = internal_params[6:]
-            _s = np.concatenate(
-                (initial_seasons[start_idx:], internal_states[:start_idx, 2],)
-            )
-            s[-m:, :] = np.tile(_s, (repetitions, 1)).T
-        else:
-            s[-m:, :] = np.tile(
-                internal_states[start_idx - m : start_idx, 2], (repetitions, 1),
-            ).T
 
         # get random error eps
         sigma = np.sqrt(np.sum(self.resid ** 2) / self.df_resid)
@@ -1080,33 +1080,40 @@ class ETSResults(base.StateSpaceMLEResults):
             op_s = np.add
 
 
+        # x translation:
+        # - x[t, 0, :] is level[t]
+        # - x[t, 1, :] is trend[t]
+        # - x[t, 2, :] is season[t]
+        # - x[t, 3, :] is season[t-1]
+        # - x[t, 2+j, :] is season[t-j]
+        # - similarly: x[t-1, 2+m-1, :] is season[t-m]
         for t in range(nsimulations):
-            B = op_d(b[t - 1, :], phi)
-            L = op_b(lvl[t - 1, :], B)
-            S = s[t - m, :]
+            B = op_d(x[t-1, 1, :], phi)
+            L = op_b(x[t-1, 0, :], B)
+            S = x[t-1, 2+m-1, :]
             Y = op_s(L, S)
             if self.error == "add":
                 eta = 1
                 kappa_l = 1 / S if mul_seasonal else 1
-                kappa_b = kappa_l / lvl[t - 1, :] if mul_trend else kappa_l
+                kappa_b = kappa_l / x[t-1, 0, :] if mul_trend else kappa_l
                 kappa_s = 1 / L if mul_seasonal else 1
             else:
                 eta = Y
                 kappa_l = 0 if mul_seasonal else S
                 kappa_b = (
-                    kappa_l / lvl[t - 1, :]
+                    kappa_l / x[t-1, 0, :]
                     if mul_trend
-                    else kappa_l + lvl[t - 1, :]
+                    else kappa_l + x[t-1, 0, :]
                 )
                 kappa_s = 0 if mul_seasonal else L
 
             y[t, :] = Y + eta * eps[t, :]
-            lvl[t, :] = L + alpha * (mul_error * L + kappa_l) * eps[t, :]
-            b[t, :] = B + beta * (mul_error * B + kappa_b) * eps[t, :]
-            s[t, :] = S + gamma * (mul_error * S + kappa_s) * eps[t, :]
+            x[t, 0, :] = L + alpha * (mul_error * L + kappa_l) * eps[t, :]
+            x[t, 1, :] = B + beta * (mul_error * B + kappa_b) * eps[t, :]
+            x[t, 2, :] = S + gamma * (mul_error * S + kappa_s) * eps[t, :]
+            # update seasons by shifting previous season right
+            x[t, 3:, :] = x[t-1, 2:-1, :]
 
-        # TODO: put this somewhere external, e.g. in base class method
-        # _wrap_data(data, start_idx, end_idx)
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
             names=["simulation.%d" % num for num in repetitions]

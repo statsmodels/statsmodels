@@ -456,8 +456,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             end = steps
         return self.predict(start=self.nobs, end=end, **kwargs)
 
-    def _get_simulation_start_index(self, anchor):
-        """Returns a valid numeric start index for simulations"""
+    def _get_prediction_start_index(self, anchor):
+        """Returns a valid numeric start index for predictions/simulations"""
         # TODO: once this is the base class for statespace models, use this
         # method in simulate
         if anchor is None or anchor == 'start':
