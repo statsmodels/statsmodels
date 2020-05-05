@@ -158,3 +158,52 @@ def test_twosample_poisson_r():
     assert_allclose(res1.pvalue, res2.p_value, rtol=0, atol=5e-6)
     assert_allclose(res1.ratio, res2.estimate, rtol=1e-13)
     assert_equal(res1.ratio_null, res2.null_value)
+
+    # one-sided
+    # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
+    #                      alternative="less", tsmethod="minlike", midp=TRUE)
+    # > pe$p.value
+    pv2 = 0.9949053964701466
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp',
+                                   ratio_null=1.2, alternative='smaller')
+    assert_allclose(rest.pvalue, pv2, rtol=1e-12)
+    # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
+    #           alternative="greater", tsmethod="minlike", midp=TRUE)
+    # > pe$p.value
+    pv2 = 0.005094603529853279
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='cond-midp',
+                                   ratio_null=1.2, alternative='larger')
+    assert_allclose(rest.pvalue, pv2, rtol=1e-12)
+    # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
+    #           alternative="greater", tsmethod="minlike", midp=FALSE)
+    # > pe$p.value
+    pv2 = 0.006651774552714537
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond',
+                                   ratio_null=1.2, alternative='larger')
+    assert_allclose(rest.pvalue, pv2, rtol=1e-12)
+    # > pe = poisson.exact(c(60, 30), c(51477.5, 54308.7), r=1.2,
+    #                      alternative="less", tsmethod="minlike", midp=FALSE)
+    # > pe$p.value
+    pv2 = 0.9964625674930079
+    rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond',
+                                   ratio_null=1.2, alternative='smaller')
+    assert_allclose(rest.pvalue, pv2, rtol=1e-12)
+
+
+def test_tost_poisson():
+
+    count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
+    # # central conf_int from R exactci
+    low, upp = 1.339735721772650, 3.388365573616252
+
+    pv, _, _ = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                       method="exact-cond")
+
+    assert_allclose(pv, 0.025, rtol=1e-12)
+    methods = ['wald', 'score', 'sqrt', 'exact-cond', 'cond-midp']
+
+    # test that we are in the correct range for other methods
+    for meth in methods:
+        pv, _, _ = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                           method=meth)
+        assert_allclose(pv, 0.025, atol=0.01)
