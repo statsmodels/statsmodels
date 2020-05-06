@@ -377,16 +377,16 @@ def isestimable(c, d):
     return True
 
 
-def pinv_extended(X, rcond=1e-15):
+def pinv_extended(x, rcond=1e-15):
     """
     Return the pinv of an array X as well as the singular values
     used in computation.
 
     Code adapted from numpy.
     """
-    X = np.asarray(X)
-    X = X.conjugate()
-    u, s, vt = np.linalg.svd(X, 0)
+    x = np.asarray(x)
+    x = x.conjugate()
+    u, s, vt = np.linalg.svd(x, False)
     s_orig = np.copy(s)
     m = u.shape[0]
     n = vt.shape[1]
