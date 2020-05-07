@@ -9,7 +9,12 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
+from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
+
+
+# shortcut function
+logdet = lambda x: np.linalg.slogdet(x)[1]  # noqa: E731
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
@@ -186,3 +191,136 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
         upp = values + ci_diff
 
     return low, upp, values  # , (f_critval, factor, quad_form, df)
+
+
+"""
+Created on Tue Nov  7 13:22:44 2017
+
+Author: Josef Perktold
+
+
+References
+----------
+Stata manual for mvtest covariances
+Rencher and Christensen 2012
+Bartlett 1954
+
+Stata refers to Rencher and Christensen for the formulas. Those correspond
+to the formula collection in Bartlett 1954 for several of them.
+
+
+"""  # pylint: disable=W0105
+
+
+def cov_test(cov, cov_null, nobs):
+    # using Stata formulas where cov_sample use nobs in denominator
+    # Bartlett 1954 has fewer terms
+
+    S = np.asarray(cov) * (nobs - 1) / nobs
+    S0 = np.asarray(cov_null)
+    k = cov.shape[0]
+    n = nobs
+
+    fact = nobs - 1.
+    fact *= 1 - (2 * k + 1 - 2 / (k + 1)) / (6 * (n - 1) - 1)
+    fact2 = logdet(S0) - logdet(n / (n - 1) * S)
+    fact2 += np.trace(n / (n - 1) * np.linalg.solve(S0, S)) - k
+    statistic = fact * fact2
+    df = k * (k + 1) / 2
+    pvalue = stats.chi2.sf(statistic, df)
+    return statistic, pvalue
+
+
+def cov_test_spherical(cov, nobs):
+    # unchanged Stata formula, but denom is cov cancels, AFAICS
+    # Bartlett 1954 correction factor in IIIc
+    cov = np.asarray(cov)
+    k = cov.shape[0]
+
+    statistic = nobs - 1 - (2 * k**2 + k + 2) / (6 * k)
+    statistic *= k * np.log(np.trace(cov)) - logdet(cov) - k * np.log(k)
+    df = k * (k + 1) / 2 - 1
+    pvalue = stats.chi2.sf(statistic, df)
+    return statistic, pvalue
+
+
+def cov_test_diagonal(cov, nobs):
+    cov = np.asarray(cov)
+    k = cov.shape[0]
+    R = cov2corr(cov)
+
+    statistic = -(nobs - 1 - (2 * k + 5) / 6) * logdet(R)
+    df = k * (k - 1) / 2
+    pvalue = stats.chi2.sf(statistic, df)
+    return statistic, pvalue
+
+
+def cov_test_blockdiagonal(cov, cov_blocks, nobs):
+    cov = np.asarray(cov)
+    cov_blocks = list(map(np.asarray, cov_blocks))
+    k = cov.shape[0]
+    k_blocks = [c.shape[0] for c in cov_blocks]
+    if k != sum(k_blocks):
+        msg = "sample covariances and blocks do not have matching shape"
+        raise ValueError(msg)
+    logdet_blocks = sum(logdet(c) for c in cov_blocks)
+    a2 = k**2 - sum(ki**2 for ki in k_blocks)
+    a3 = k**3 - sum(ki**3 for ki in k_blocks)
+
+    statistic = (nobs - 1 - (2 * a3 + 3 * a2) / (6. * a2))
+    statistic *= logdet_blocks - logdet(cov)
+
+    df = a2 / 2
+    pvalue = stats.chi2.sf(statistic, df)
+    return statistic, pvalue
+
+
+def cov_test_indep(cov_list, nobs_list):
+    """
+
+    approximations to distribution of test statistic is by Box
+
+    """
+    # TODO: name is misleading with independent cov structure
+    # Note stata uses nobs in cov, this uses nobs - 1
+    cov_list = list(map(np.asarray, cov_list))
+    m = len(cov_list)
+    nobs = sum(nobs_list)  # total number of observations
+    k = cov_list[0].shape[0]
+
+    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
+    cov_pooled /= (nobs - m)
+    stat0 = (nobs - m) * logdet(cov_pooled)
+    stat0 -= sum((n - 1) * logdet(c) for (n, c) in zip(nobs_list, cov_list))
+
+    # Box's chi2
+    c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)
+    c1 *= (2 * k*k + 3 * k - 1) / (6 * (k + 1) * (m - 1))
+    df_chi2 = (m - 1) * k * (k + 1) / 2
+    statistic_chi2 = (1 - c1) * stat0
+    pvalue_chi2 = stats.chi2.sf(statistic_chi2, df_chi2)
+
+    c2 = sum(1 / (n - 1)**2 for n in nobs_list) - 1 / (nobs - m)**2
+    c2 *= (k - 1) * (k + 2) / (6 * (m - 1))
+    a1 = df_chi2
+    a2 = (a1 + 2) / abs(c2 - c1**2)
+    b1 = (1 - c1 - a1 / a2) / a1
+    b2 = (1 - c1 + 2 / a2) / a2
+    if c2 > c1**2:
+        statistic_f = b1 * stat0
+    else:
+        tmp = b2 * stat0
+        statistic_f = a2 / a1 * tmp / (1 + tmp)
+    df_f = (a1, a2)
+    pvalue_f = stats.f.sf(statistic_f, *df_f)
+    return HolderTuple(statistic=statistic_f,  # name convention, using F here
+                       pvalue=pvalue_f,   # name convention, using F here
+                       statistic_base=stat0,
+                       statistic_chi2=statistic_chi2,
+                       pvalue_chi2=pvalue_chi2,
+                       df_chi2=df_chi2,
+                       distr_chi2='chi2',
+                       statistic_f=statistic_f,
+                       pvalue_f=pvalue_f,
+                       df_f=df_f,
+                       distr_f='F')
