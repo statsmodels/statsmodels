@@ -6,14 +6,13 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-
 import numpy as np
 from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
 
 
-def hotelling_1samp(data, mean_null=0, return_results=True):
+def test_mvmean(data, mean_null=0, return_results=True):
     """Hotellings test for multivariate mean in one sample
 
     Parameters
@@ -56,8 +55,10 @@ def hotelling_1samp(data, mean_null=0, return_results=True):
         return statistic, pvalue
 
 
-def mv_mean_conf_int_simult(data, lin_transf=None, alpha=0.5):
-    """simultaneous confidency interval for linear transformation
+def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
+    """Confidence interval for linear transformation of a multivariate mean
+
+    Either pointwise or simultaneous confidence intervals are returned.
 
     Parameters
     ----------
@@ -70,6 +71,12 @@ def mv_mean_conf_int_simult(data, lin_transf=None, alpha=0.5):
     alpha : float in (0, 1)
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
+    simult: bool
+        If ``simult`` is False (default), then the pointwise confidence
+        interval is returned.
+        Otherwise, a simultaneous confidence interval is returned.
+        Warning: additional simultaneous confidence intervals might be added
+        and the default for those might change.
 
     Returns
     -------
@@ -80,75 +87,102 @@ def mv_mean_conf_int_simult(data, lin_transf=None, alpha=0.5):
     values : ndarray
         mean or their linear transformation, center of the confidence region
 
+    Notes
+    -----
+    Pointwise confidence interval is based on Johnson and Wichern
+    equation (5-21) page 224.
 
-    Result 5.3 page 225
+    Simultaneous confidence interval is based on Johnson and Wichern
+    Result 5.3 page 225.
+    This looks like Sheffe simultaneous confidence intervals.
+
+    Bonferroni corrected simultaneous confidence interval might be added in
+    future
+
+    References
+    ----------
+    Johnson, Richard A., and Dean W. Wichern. 2007. Applied Multivariate
+    Statistical Analysis. 6th ed. Upper Saddle River, N.J: Pearson Prentice
+    Hall.
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
     if lin_transf is None:
         lin_transf = np.eye(k_vars)
     mean = x.mean(0)
-    cov = np.cov(x, rowvar=False, ddof=1)
+    cov = np.cov(x, rowvar=False, ddof=0)
 
-    ci = mv_mean_conf_int_simult_stat(mean, cov, nobs,
-                                      lin_transf=lin_transf, alpha=alpha)
+    ci = confint_mvmean_fromstats(mean, cov, nobs, lin_transf=lin_transf,
+                                  alpha=alpha, simult=simult)
     return ci
 
 
-def mv_mean_conf_int_simult_stat(mean, cov, nobs, lin_transf=None, alpha=0.05):
-    """simultaneous confidence interval for linear transformation
+def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
+                             simult=False):
+    """Confidence interval for linear transformation of a multivariate mean
 
-    based on summary statistic
+    Either pointwise or simultaneous conficence intervals are returned.
+    Data is provided in the form of summary statistics, mean, cov, nobs.
 
     Parameters
     ----------
-    mean
-    cov
-    nobs
+    mean : ndarray
+    cov : ndarray
+    nobs : int
+    lin_transf : array_like or None
+        The linear transformation or contrast matrix for transforming the
+        vector of means. If this is None, then the identity matrix is used
+        which specifies the means themselves.
+    alpha : float in (0, 1)
+        confidence level for the confidence interval, commonly used is
+        alpha=0.05.
+    simult: bool
+        If simult is False (default), then pointwise confidence interval is
+        returned.
+        Otherwise, a simultaneous confidence interval is returned.
+        Warning: additional simultaneous confidence intervals might be added
+        and the default for those might change.
 
-    Result 5.3 page 225
-    This looks like Sheffe simultaneous confidence intervals
+    Notes
+    -----
+    Pointwise confidence interval is based on Johnson and Wichern
+    equation (5-21) page 224.
+
+    Simultaneous confidence interval is based on Johnson and Wichern
+    Result 5.3 page 225.
+    This looks like Sheffe simultaneous confidence intervals.
+
+    Bonferroni corrected simultaneous confidence interval might be added in
+    future
+
+    References
+    ----------
+    Johnson, Richard A., and Dean W. Wichern. 2007. Applied Multivariate
+    Statistical Analysis. 6th ed. Upper Saddle River, N.J: Pearson Prentice
+    Hall.
+
     """
     mean = np.asarray(mean)
     cov = np.asarray(cov)
     c = np.atleast_2d(lin_transf)
     k_vars = len(mean)
 
-    values = c.dot(mean)
-    quad_form = (c * cov.dot(c.T).T).sum(1)
-    factor = (nobs - 1) * k_vars / (nobs - k_vars) / nobs
-    df = (k_vars, nobs - k_vars)
-    f_critval = stats.f.isf(alpha, df[0], df[1])
-    ci_diff = np.sqrt(factor * quad_form * f_critval)
-    low = values - ci_diff
-    upp = values + ci_diff
+    if simult is False:
+        values = c.dot(mean)
+        quad_form = (c * cov.dot(c.T).T).sum(1)
+        df = nobs - 1
+        t_critval = stats.t.isf(alpha / 2, df)
+        ci_diff = np.sqrt(quad_form / df) * t_critval
+        low = values - ci_diff
+        upp = values + ci_diff
+    else:
+        values = c.dot(mean)
+        quad_form = (c * cov.dot(c.T).T).sum(1)
+        factor = (nobs - 1) * k_vars / (nobs - k_vars) / nobs
+        df = (k_vars, nobs - k_vars)
+        f_critval = stats.f.isf(alpha, df[0], df[1])
+        ci_diff = np.sqrt(factor * quad_form * f_critval)
+        low = values - ci_diff
+        upp = values + ci_diff
+
     return low, upp, values  # , (f_critval, factor, quad_form, df)
-
-
-def mv_mean_conf_int_pointwise_stat(mean, cov, nobs, lin_transf=None,
-                                    alpha=0.05):
-    """pointwise confidence interval for linear transformation
-
-    based on summary statistic
-
-    Parameters
-    ----------
-    mean
-    cov
-    nobs
-
-    Result 5.3 page 224
-
-    """
-    mean = np.asarray(mean)
-    cov = np.asarray(cov)
-    c = np.atleast_2d(lin_transf)
-
-    values = c.dot(mean)
-    quad_form = (c * cov.dot(c.T).T).sum(1)
-    df = nobs - 1  # k_vars
-    t_critval = stats.t.isf(alpha / 2, df)
-    ci_diff = np.sqrt(quad_form / df) * t_critval
-    low = values - ci_diff
-    upp = values + ci_diff
-    return low, upp, values
