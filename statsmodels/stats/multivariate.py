@@ -212,7 +212,42 @@ to the formula collection in Bartlett 1954 for several of them.
 """  # pylint: disable=W0105
 
 
-def cov_test(cov, cov_null, nobs):
+def cov_test(cov, nobs, cov_null):
+    """One sample hypothesis test for covariance equal to null covariance
+
+    The Null hypothesis is that cov = cov_null, against the alternative that
+    it is not equal to cov_null
+
+    Parameters
+    ----------
+    cov : array_like
+        Covariance matrix of the data, estimated with denominator ``(N - 1)``,
+        i.e. `ddof=1`.
+    nobs : int
+        number of observations used in the estimation of the covariance
+    cov_null : nd_array
+        covariance under the null hypothesis
+
+    Returns
+    -------
+    res : instance of HolderTuple
+        results with ``statistic, pvalue`` and other attributes like ``df``
+
+    References
+    ----------
+    Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
+    Approximations.” Journal of the Royal Statistical Society. Series B
+    (Methodological) 16 (2): 296–98.
+
+    Rencher, Alvin C., and William F. Christensen. 2012. Methods of
+    Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
+    Statistics. Hoboken, NJ, USA: John Wiley & Sons, Inc.
+    https://doi.org/10.1002/9781118391686.
+
+    StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
+    Stata Press Publication.
+
+    """
     # using Stata formulas where cov_sample use nobs in denominator
     # Bartlett 1954 has fewer terms
 
@@ -228,10 +263,53 @@ def cov_test(cov, cov_null, nobs):
     statistic = fact * fact2
     df = k * (k + 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return statistic, pvalue
+    return HolderTuple(statistic=statistic,
+                       pvalue=pvalue,
+                       df=df,
+                       distr="chi2",
+                       null="equal value",
+                       cov_null=cov_null
+                       )
 
 
 def cov_test_spherical(cov, nobs):
+    r"""One sample hypothesis test that covariance matrix is spherical
+
+    The Null and alternative hypotheses are
+
+      $H0 : \Sigma = \sigma I \\
+      H1 : \Sigma \neq \sigma I$
+
+    where $\sigma$ is the common variances with unspecified value.
+
+    Parameters
+    ----------
+    cov : array_like
+        Covariance matrix of the data, estimated with denominator ``(N - 1)``,
+        i.e. `ddof=1`.
+    nobs : int
+        number of observations used in the estimation of the covariance
+
+    Returns
+    -------
+    res : instance of HolderTuple
+        results with ``statistic, pvalue`` and other attributes like ``df``
+
+    References
+    ----------
+    Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
+    Approximations.” Journal of the Royal Statistical Society. Series B
+    (Methodological) 16 (2): 296–98.
+
+    Rencher, Alvin C., and William F. Christensen. 2012. Methods of
+    Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
+    Statistics. Hoboken, NJ, USA: John Wiley & Sons, Inc.
+    https://doi.org/10.1002/9781118391686.
+
+    StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
+    Stata Press Publication.
+    """
+
     # unchanged Stata formula, but denom is cov cancels, AFAICS
     # Bartlett 1954 correction factor in IIIc
     cov = np.asarray(cov)
@@ -241,10 +319,47 @@ def cov_test_spherical(cov, nobs):
     statistic *= k * np.log(np.trace(cov)) - logdet(cov) - k * np.log(k)
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
-    return statistic, pvalue
+    return HolderTuple(statistic=statistic,
+                       pvalue=pvalue,
+                       df=df,
+                       distr="chi2",
+                       null="spherical"
+                       )
 
 
 def cov_test_diagonal(cov, nobs):
+    r"""One sample hypothesis test that covariance matrix is diagonal matrix.
+
+    The Null and alternative hypotheses are
+
+      $H0 : \Sigma = diag(\sigma_i) \\
+      H1 : \Sigma \neq diag(\sigma_i)$
+
+    where $\sigma_i$ are the variances with unspecified values.
+
+    Parameters
+    ----------
+    cov : array_like
+        Covariance matrix of the data, estimated with denominator ``(N - 1)``,
+        i.e. `ddof=1`.
+    nobs : int
+        number of observations used in the estimation of the covariance
+
+    Returns
+    -------
+    res : instance of HolderTuple
+        results with ``statistic, pvalue`` and other attributes like ``df``
+
+    References
+    ----------
+    Rencher, Alvin C., and William F. Christensen. 2012. Methods of
+    Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
+    Statistics. Hoboken, NJ, USA: John Wiley & Sons, Inc.
+    https://doi.org/10.1002/9781118391686.
+
+    StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
+    Stata Press Publication.
+    """
     cov = np.asarray(cov)
     k = cov.shape[0]
     R = cov2corr(cov)
@@ -252,12 +367,70 @@ def cov_test_diagonal(cov, nobs):
     statistic = -(nobs - 1 - (2 * k + 5) / 6) * logdet(R)
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return statistic, pvalue
+    return HolderTuple(statistic=statistic,
+                       pvalue=pvalue,
+                       df=df,
+                       distr="chi2",
+                       null="diagonal"
+                       )
 
 
-def cov_test_blockdiagonal(cov, cov_blocks, nobs):
+def _get_blocks(mat, block_len):
+    """get diagonal blocks from matrix
+    """
+    k = len(mat)
+    idx = np.cumsum(block_len)
+    if idx[-1] == k:
+        idx = idx[:-1]
+    elif idx[-1] > k:
+        raise ValueError("sum of block_len larger than shape of mat")
+    else:
+        # allow one missing block that is the remainder
+        pass
+    idx_blocks = np.split(np.arange(k), idx)
+    blocks = []
+    for ii in idx_blocks:
+        blocks.append(mat[ii[:, None], ii])
+    return blocks, idx_blocks
+
+
+def cov_test_blockdiagonal(cov, nobs, block_len):
+    r"""One sample hypothesis test that covariance is block diagonal.
+
+    The Null and alternative hypotheses are
+
+      $H0 : \Sigma = diag(\Sigma_i) \\
+      H1 : \Sigma \neq diag(\Sigma_i)$
+
+    where $\Sigma_i$ are covariance blocks with unspecified values.
+
+    Parameters
+    ----------
+    cov : array_like
+        Covariance matrix of the data, estimated with denominator ``(N - 1)``,
+        i.e. `ddof=1`.
+    nobs : int
+        number of observations used in the estimation of the covariance
+    block_len : list
+        list of length of each square block
+
+    Returns
+    -------
+    res : instance of HolderTuple
+        results with ``statistic, pvalue`` and other attributes like ``df``
+
+    References
+    ----------
+    Rencher, Alvin C., and William F. Christensen. 2012. Methods of
+    Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
+    Statistics. Hoboken, NJ, USA: John Wiley & Sons, Inc.
+    https://doi.org/10.1002/9781118391686.
+
+    StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
+    Stata Press Publication.
+    """
     cov = np.asarray(cov)
-    cov_blocks = list(map(np.asarray, cov_blocks))
+    cov_blocks = _get_blocks(cov, block_len)[0]
     k = cov.shape[0]
     k_blocks = [c.shape[0] for c in cov_blocks]
     if k != sum(k_blocks):
@@ -272,16 +445,57 @@ def cov_test_blockdiagonal(cov, cov_blocks, nobs):
 
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return statistic, pvalue
+    return HolderTuple(statistic=statistic,
+                       pvalue=pvalue,
+                       df=df,
+                       distr="chi2",
+                       null="block-diagonal"
+                       )
 
 
-def cov_test_indep(cov_list, nobs_list):
-    """
+def cov_test_oneway(cov_list, nobs_list):
+    r"""Multiple sample hypothesis test that covariance matrices are equal.
 
+    This is commonly known as Box-M test
+
+    The Null and alternative hypotheses are
+
+      $H0 : \Sigma_i = \Sigma_j  for all i and j \\
+      H1 : \Sigma_i \neq diag(\Sigma_j) for at least one i and j$
+
+    where $\Sigma_i$ is the covariance of sample $i$.
+
+    Parameters
+    ----------
+    cov_list : list of array_like
+        Covariance matrices of the sample, estimated with denominator
+        ``(N - 1)``, i.e. `ddof=1`.
+    nobs_list : list
+        List of the number of observations used in the estimation of the
+        covariance for each sample.
+
+    Returns
+    -------
+    res : instance of HolderTuple
+        Results contains test statistic and pvalues for both chisquare and F
+        distribution based tests, identified by the name ending "_chi2" and
+        "_f".
+        Attributes ``statistic, pvalue`` refer to the F-test version.
+
+    Notes
+    -----
     approximations to distribution of test statistic is by Box
 
+    References
+    ----------
+    Rencher, Alvin C., and William F. Christensen. 2012. Methods of
+    Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
+    Statistics. Hoboken, NJ, USA: John Wiley & Sons, Inc.
+    https://doi.org/10.1002/9781118391686.
+
+    StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
+    Stata Press Publication.
     """
-    # TODO: name is misleading with independent cov structure
     # Note stata uses nobs in cov, this uses nobs - 1
     cov_list = list(map(np.asarray, cov_list))
     m = len(cov_list)
@@ -311,6 +525,7 @@ def cov_test_indep(cov_list, nobs_list):
     else:
         tmp = b2 * stat0
         statistic_f = a2 / a1 * tmp / (1 + tmp)
+        print("in branch 2")
     df_f = (a1, a2)
     pvalue_f = stats.f.sf(statistic_f, *df_f)
     return HolderTuple(statistic=statistic_f,  # name convention, using F here
