@@ -21,10 +21,12 @@ Author: Josef Perktold
 
 import numpy as np
 
+
 def vec(x):
     """ravel matrix in fortran order (stacking columns)
     """
     return np.ravel(x, order='F')
+
 
 def vech(x):
     """ravel lower triangular part of matrix in fortran order (stacking columns)
@@ -33,13 +35,13 @@ def vech(x):
     """
     if x.ndim == 2:
         idx = np.triu_indices_from(x.T)
-        return x.T[idx[0], idx[1]] #, x[idx[1], idx[0]]
+        return x.T[idx[0], idx[1]]  # , x[idx[1], idx[0]]
     elif x.ndim > 2:
-        #try ravel last two indices
-        #idx = np.triu_indices(x.shape[-2::-1])
+        # try ravel last two indices
+        # idx = np.triu_indices(x.shape[-2::-1])
         n_rows, n_cols = x.shape[-2:]
         idr, idc = np.array([[i, j] for j in range(n_cols)
-                                    for i in range(j, n_rows)]).T
+                                    for i in range(j, n_rows)]).T  # noqa: E127
         return x[..., idr, idc]
 
 
@@ -51,7 +53,7 @@ def veclow(x):
     """
     if x.ndim == 2:
         idx = np.triu_indices_from(x.T, k=1)
-        return x.T[idx[0], idx[1]] #, x[idx[1], idx[0]]
+        return x.T[idx[0], idx[1]]  # , x[idx[1], idx[0]]
     else:
         raise ValueError('x needs to be 2-dimensional')
 
@@ -67,7 +69,7 @@ def vech_cross_product(x0, x1):
     """
     n_rows, n_cols = x0.shape[-1], x1.shape[-1]
     idr, idc = np.array([[i, j] for j in range(n_cols)
-                                for i in range(j, n_rows)]).T
+                                for i in range(j, n_rows)]).T  # noqa: E127
     return x0[..., idr] * x1[..., idc]
 
 
@@ -115,9 +117,11 @@ def K(n):
             for i in range(n) for j in range(n))
     return k
 
+
 def Ms(n):
     k = K(n)
     return (np.eye(*k.shape) + k) / 2.
+
 
 def u(i, n):
     """unit vector
@@ -132,14 +136,16 @@ def L(n):
     symmetric case
     """
     # they use 1-based indexing
-    # k = sum(u(int(round((j - 1)*n + i - 0.5* j*(j - 1) -1)), n*(n+1)//2)[:, None].dot(vec(E(i, j, n, n))[None, :])
-    k = sum(u(int(np.trunc((j)*n + i - 0.5* (j + 1)*(j))), n*(n+1)//2)[:, None].dot(vec(E(i, j, n, n))[None, :])
-            for i in range(n) for j in range(i+1))
+    # k = sum(u(int(round((j - 1)*n + i - 0.5* j*(j - 1) -1)), n*(n+1)//2
+    #           )[:, None].dot(vec(E(i, j, n, n))[None, :])
+    k = sum(u(int(np.trunc((j) * n + i - 0.5 * (j + 1) * (j))), n*(n + 1)//2
+              )[:, None].dot(vec(E(i, j, n, n))[None, :])
+            for i in range(n) for j in range(i + 1))
     return k
 
 
 def Md_0(n):
-    l = L(n)
+    l = L(n)  #noqa
     ltl = l.T.dot(l)
     k = K(n)
     md = ltl.dot(k).dot(ltl)
@@ -150,14 +156,14 @@ def Md(n):
     """symmetric case
     """
     md = sum(np.kron(E(i, i, n, n), E(i, i, n, n).T)
-            for i in range(n))
+             for i in range(n))
     return md
 
 
 def Dup(n):
     """duplication matrix
     """
-    l = L(n)
+    l = L(n)  #noqa
     ltl = l.T.dot(l)
     k = K(n)
     d = l.T + k.dot(l.T) - ltl.dot(k).dot(l.T)
@@ -208,7 +214,7 @@ def _cov_cov(cov, nobs, assume='elliptical', kurt=0, data=None):
 
     """
     cov = np.asarray(cov)
-    mom2 = cov # alias
+    mom2 = cov  # alias
     k_vars = cov.shape[0]
     if assume in ['general', 'g']:
         # distribution free
@@ -228,7 +234,7 @@ def _cov_cov(cov, nobs, assume='elliptical', kurt=0, data=None):
         # for 2 variables
 
         V_n = (np.eye(k_vars**2) + K(k_vars)).dot(np.kron(mom2, mom2)) / nobs
-        #cc1 = 2*(Ms(2)).dot(np.kron(mom2, mom2)) / nobs
+        # cc1 = 2*(Ms(2)).dot(np.kron(mom2, mom2)) / nobs
         return V_n
 
     elif assume in ['e', 'elliptical'] and kurt != 0:
@@ -286,7 +292,7 @@ def _cov_corr(cov, cov_cov, nobs):
     # Neudecker and Wesselman eq (4.8)
     std = np.sqrt(np.diag(cov))
     std_inv_mat = np.diag(1 / std)
-    corr = cov / std[:,None] / std[None, :]
+    corr = cov / std[:, None] / std[None, :]
     outer = np.eye(n**2) - Ms(n).dot(np.kron(np.eye(n), corr).dot(Md(n)))
     outer = outer.dot(np.kron(std_inv_mat, std_inv_mat))
 
@@ -351,7 +357,7 @@ def _gls_cov_vech(data, cov0=None, ddof=0):
     weights = _cov_cov_vech(cov0, nobs)
     # the following should impose restrictions and use residuals
     mom = vech_cross_product(data, data)
-    momcond = mom.mean(0)   # I think this is currently be just vech(cov_sample)
+    momcond = mom.mean(0)  # I think this is currently be just vech(cov_sample)
     gls_qf = momcond.dot(weights).dot(momcond)
     return gls_qf
 
@@ -401,7 +407,7 @@ def _mom4_normal(i, j, k, h, cov):
     explicit formula Steiger, Hakstian eq (4.1)
 
     """
-    P = cov # shortcut
+    P = cov  # shortcut
     Mijkh = P[i, j] * P[k, h] + P[i, k] * P[j, h] + P[i, h] * P[j, k]
     return Mijkh
 
@@ -432,9 +438,9 @@ def cov_corr_coef_normal(i, j, k, h, corr):
     Steiger
     coded from Steiger and Hakstian 1982 eq (4.2)
     """
-    P = corr # shorthand
-    c = 0.5 * P[i, j] * P[k, h] * (P[i, k]**2 + P[i,h]**2 + P[j, k]**2 +
-                                   P[j,h]**2)
+    P = corr  # shorthand
+    c = 0.5 * P[i, j] * P[k, h] * (P[i, k]**2 + P[i, h]**2 + P[j, k]**2 +
+                                   P[j, h]**2)
     c += P[i, k] * P[j, h] + P[i, h] * P[j, k]
     c -= P[i, j] * (P[j, k] * P[j, h] + P[i, k] * P[i, h])
     c -= P[k, h] * (P[j, k] * P[i, k] + P[j, h] * P[i, h])
@@ -453,11 +459,11 @@ def cov_corr_coef(i, j, k, h, corr, mom4):
 
     needs to be divided by nobs or df
     """
-    P = corr # shorthand
+    P = corr  # shorthand
     M = mom4
 
     c = M[i, j, k, h] + 0.25 * P[i, j] * P[k, h] * (
-            M[i, i, k, k] + M[j, j, k, k,] + M[i,i,h,h] + M[j, j, h, h] )
+            M[i, i, k, k] + M[j, j, k, k] + M[i, i, h, h] + M[j, j, h, h])
     c -= 0.5 * P[i, j] * (M[i, i, k, h] + M[j, j, k, h])
     c -= 0.5 * P[k, h] * (M[i, j, k, k] + M[i, j, h, h])
     return c

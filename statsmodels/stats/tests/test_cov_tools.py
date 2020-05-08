@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=W0611
 """
 symmetric matrix helper functions for use with covariance and correlation
 matrices
@@ -21,12 +22,14 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_equal, assert_allclose
-from statsmodels.stats._cov_tools import (Dup, E, K, L, Md, Md_0,
-    Ms, _cov_corr, _cov_cov, _cov_cov_mom4, _cov_cov_vech,
-    _gls_cov_vech, _mom4_normal, cov_corr_coef, cov_corr_coef_normal,
-    cov_cov_data, cov_cov_fisherz, dg, mom4, ravel_indices, unvec,
-    unvech, vec, vech, veclow, vech_cross_product)
+from statsmodels.stats._cov_tools import (
+    Dup, E, K, L, Md, Md_0, Ms, _cov_corr, _cov_cov, _cov_cov_mom4,
+    _cov_cov_vech, _gls_cov_vech, _mom4_normal, cov_corr_coef,
+    cov_corr_coef_normal, cov_cov_data, cov_cov_fisherz, dg, mom4,
+    ravel_indices, unvec, unvech, vec, vech, veclow, vech_cross_product)
+
 import statsmodels.stats._cov_tools as ct
+
 
 def test_matrix_tools():
     xf = np.arange(12).reshape(3, 4).T
@@ -37,12 +40,12 @@ def test_matrix_tools():
     assert_equal(vec(xf), res)
     assert_equal(unvec(vec(xf), *xf.shape), xf)
 
-    res = np.array([ 0,  1,  2,  3,  5,  6,  7, 10, 11])
+    res = np.array([0, 1, 2, 3, 5, 6, 7, 10, 11])
     assert_equal(vech(xf), res)
-    res = np.array([ 1,  2,  5])
+    res = np.array([1, 2, 5])
     assert_equal(veclow(xsf), res)
     # it works for non-square matrices, but that's not the usecase
-    res = np.array([ 1,  2,  3,  6,  7, 11])
+    res = np.array([1, 2, 3, 6, 7, 11])
     assert_equal(veclow(xf), res)
 
     assert_equal(dg(xsf), np.diag(np.diag(xsf)))
@@ -52,7 +55,7 @@ def test_matrix_tools():
 
     n = 3
     n2 = n**2
-    nh = n * (n + 1) //2
+    nh = n * (n + 1) // 2
     assert_equal(K(n).shape, (n2, n2))
     assert_equal(Ms(n).shape, (n2, n2))
     assert_equal(Md(n).shape, (n2, n2))
@@ -87,7 +90,8 @@ def test_matrix_tools():
 
 def test_cov_corr():
     # example from Steiger and Hakstian 1982
-    # I don't know whether they use rounded intermediate results in calculations
+    # I don't know whether they use rounded intermediate results in
+    #    calculations
 
     # standardized values, z-scores rounded as in table
     z0 = np.array([[-0.18, -0.835, -0.702],
@@ -144,19 +148,19 @@ def test_cov_corr():
         return statistic, pvalue
 
     corr = np.corrcoef(z, rowvar=0)
-    #corr = z0.dot(z0) / len(z0)
+    # corr = z0.dot(z0) / len(z0)
     # constrained correlation under corr_r[0, 1] = corr_r[0, 2]
     # estimate: replace by simple average (OLS)
     corr_r = corr.copy()
     corr_r[0, 1] = (corr[0, 1] + corr[0, 2]) / 2
-    corr_r[1, 0] = corr_r[0, 2] = corr_r[2,0] = corr_r[0, 1]
+    corr_r[1, 0] = corr_r[0, 2] = corr_r[2, 0] = corr_r[0, 1]
     diff = corr[0, 1] - corr[0, 2]
 
     # two cases under normality and with empirical mom4
     # using functions for individual correlation coefficients
 
     # without normality assumption for 4th moments
-    m4 = ct.mom4(z, ddof=1).reshape(3,3,3,3)
+    m4 = ct.mom4(z, ddof=1).reshape(3, 3, 3, 3)
 
     i, j, k, h = 0, 1, 0, 1
     g1 = cov_corr_coef(i, j, k, h, corr_r, m4)
@@ -164,19 +168,19 @@ def test_cov_corr():
     res = 0.2020
     assert_allclose(g1, res, atol=5e-4)
 
-    i, j, k, h = 0, 2, 0, 2;
+    i, j, k, h = 0, 2, 0, 2
     g2 = cov_corr_coef(i, j, k, h, corr_r, m4)
     0.10611046338328745
     res = 0.1062
     assert_allclose(g2, res, atol=5e-4)
 
-    i, j, k, h = 0, 1, 0, 2;
+    i, j, k, h = 0, 1, 0, 2
     g3 = cov_corr_coef(i, j, k, h, corr_r, m4)
     0.048605932563082987
     res = 0.0486
     assert_allclose(g3, res, atol=5e-4)
 
-    i, j, k, h = 1, 2, 1, 2;
+    i, j, k, h = 1, 2, 1, 2
     g4 = cov_corr_coef(i, j, k, h, corr_r, m4)
     0.051162679039107317
 
@@ -203,8 +207,8 @@ def test_cov_corr():
 
     # normal theory variance of correlation coefficient is
     cr0 = (1-corr_r**2)**2
-    assert_allclose(cr0[1,0], g1, rtol=1e-14)
-    assert_allclose(cr0[1,0], g2, rtol=1e-14)
+    assert_allclose(cr0[1, 0], g1, rtol=1e-14)
+    assert_allclose(cr0[1, 0], g2, rtol=1e-14)
 
     cr0low = ct.veclow((1-corr**2)**2)
     crn = [ct.cov_corr_coef_normal(0, 1, 0, 1, corr),
@@ -220,7 +224,8 @@ def test_cov_corr():
     # working with indices and masks, e.g. select lower from vec
     kv = 3
     order = 'F'
-    ravel_idx_mom4 = np.mgrid[:kv, :kv, :kv, :kv].reshape((4, -1), order=order).T
+    ravel_idx_mom4 = np.mgrid[:kv, :kv, :kv, :kv].reshape((4, -1),
+                                                          order=order).T
     mg2 = np.mgrid[:kv, :kv].reshape((2, -1), order=order).T
     mask_low = (np.diff(mg2, 1) < 0).squeeze()
     idx2_dict = dict((tuple(rii.tolist()), ii) for ii, rii in enumerate(mg2))
@@ -230,11 +235,11 @@ def test_cov_corr():
     # extract and individual covariance of correlation coefficients
     covcorr[idx2_dict[(1, 2)], idx2_dict[(1, 2)]]
 
-
     # add index or labels to DataFrame
     import pandas as pd
-    mdlabels = list(map(tuple, mg2[mask_low]))  #convert to list of tuples
-    pd.DataFrame(covcorr[mask_low][:, mask_low], index=mdlabels, columns=mdlabels)
+    mdlabels = list(map(tuple, mg2[mask_low]))  # convert to list of tuples
+    pd.DataFrame(covcorr[mask_low][:, mask_low], index=mdlabels,
+                 columns=mdlabels)
     """
               (0, 1)    (0, 2)    (1, 2)
     (0, 1)  0.170123  0.138327  0.028239
@@ -245,8 +250,10 @@ def test_cov_corr():
     cre = ct._cov_corr_elliptical_vech(corr_r, 1, kurt=0)
     dd = Dup(3)
     di = np.linalg.pinv(dd)
-    #(di.dot(cre).dot(di.T))[np.array([[1,2,4]]).T, np.array([[1,2,4]])] / covcorr[mask_low][:, mask_low]
-    #print(cre[np.array([[1,2,4]]).T, np.array([[1,2,4]])] / covcorr[mask_low][:, mask_low])
+    # ((di.dot(cre).dot(di.T))[np.array([[1,2,4]]).T, np.array([[1,2,4]])]
+    #     / covcorr[mask_low][:, mask_low])
+    # print(cre[np.array([[1,2,4]]).T,
+    #       np.array([[1,2,4]])] / covcorr[mask_low][:, mask_low])
     # Note create index arrays
 
     # selector masks vor vec, vech and veclow
@@ -254,12 +261,14 @@ def test_cov_corr():
     mg2vech = mg2[mask_vech]
     mask_vech2veclow = (np.diff(mg2vech, 1) < 0).squeeze()
     cr1 = cre[np.ix_(mask_vech2veclow, mask_vech2veclow)]
-    cr2 = di.dot(ct._cov_corr(corr_r, ct._cov_cov(corr_r, 1), 1)).dot(di.T)[np.ix_(mask_vech2veclow, mask_vech2veclow)]
-    vr1 = ((1 -vech(corr_r)**2)**2)[mask_vech2veclow]
+    cr2 = di.dot(ct._cov_corr(corr_r, ct._cov_cov(corr_r, 1), 1)).dot(di.T)
+    cr2 = cr2[np.ix_(mask_vech2veclow, mask_vech2veclow)]
+    vr1 = ((1 - vech(corr_r)**2)**2)[mask_vech2veclow]
     assert_allclose(cr1.diagonal(), vr1, rtol=1e-14)
     # same as
     # Note we need to set nobs=1 in call to _cov_cov  Bug or Definition?
-    cr3 = ct._cov_corr(corr_r, ct._cov_cov(corr_r, 1), 1)[np.ix_(mask_low, mask_low)]
+    cr3 = ct._cov_corr(corr_r, ct._cov_cov(corr_r, 1), 1)[np.ix_(mask_low,
+                                                                 mask_low)]
     # same as
     cr4 = ct._cov_corr_elliptical_vech(corr_r, 1, kurt=0, drop=True)
 
