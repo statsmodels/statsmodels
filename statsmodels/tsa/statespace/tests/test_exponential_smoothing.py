@@ -882,7 +882,8 @@ def test_invalid():
 def test_parameterless_model(reset_randomstate):
     # GH 6687
     x = np.cumsum(np.random.standard_normal(1000))
-    ses = ExponentialSmoothing(x, initial_level=x[0], initialization_method="known")
+    ses = ExponentialSmoothing(x, initial_level=x[0],
+                               initialization_method="known")
     with ses.fix_params({'smoothing_level': 0.5}):
         res = ses.fit()
     assert np.isnan(res.bse).all()
