@@ -146,7 +146,6 @@ from scipy.stats import (
     _distn_infrastructure, rv_continuous, rv_discrete
 )
 
-from statsmodels.base.data import PandasData
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
     array_like, bool_like, float_like, string_like, int_like
@@ -819,9 +818,6 @@ class ETSResults(base.StateSpaceMLEResults):
         """
         return self._llf
 
-    def predict(self, exog=None, **kwargs):
-        ... # TODO
-
     def _get_prediction_params(self, start_idx):
         """
         Returns internal parameter representation of smoothing parameters and
@@ -841,8 +837,6 @@ class ETSResults(base.StateSpaceMLEResults):
             start_state[4:] = internal_states[start_idx - 1, :]
             return start_state
 
-    def summary(self):
-        ... # TODO
 
     def simulate(self, nsimulations, anchor=None, repetitions=1,
                  random_errors=None, random_state=None):
@@ -1016,11 +1010,6 @@ class ETSResults(base.StateSpaceMLEResults):
         # Get the starting location
         start_idx = self._get_prediction_start_index(anchor)
 
-        # get model settings and parameters
-        mul_seasonal = self.seasonal == "mul"
-        mul_trend = self.trend == "mul"
-        mul_error = self.error == "mul"
-
         # set initial values and obtain parameters
         start_params = self._get_prediction_params(start_idx)
         x, alpha, beta_star, gamma, phi, m = smooth._initialize_ets_smooth(
@@ -1066,6 +1055,11 @@ class ETSResults(base.StateSpaceMLEResults):
             eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
             raise ValueError("Argument random_errors has unexpected value!")
+
+        # get model settings
+        mul_seasonal = self.seasonal == "mul"
+        mul_trend = self.trend == "mul"
+        mul_error = self.error == "mul"
 
         # define trend, damping and seasonality operations
         if mul_trend:
@@ -1123,10 +1117,149 @@ class ETSResults(base.StateSpaceMLEResults):
             y, start_idx, start_idx + nsimulations - 1, names=names
         )
 
+    def forecast(self, steps=1, anchor=None):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
+        anchor : int, str, or datetime, optional
+            First period for forecasting. The forecast will be conditional on
+            all existing datapoints prior to the `anchor`.  Type depends on the
+            index of the given `endog` in the model. Two special cases are the
+            strings 'start' and 'end'. `start` refers to beginning the
+            simulation at the first period of the sample, and `end` refers to
+            beginning the simulation at the first period after the sample.
+            Integer values can run from 0 to `nobs`, or can be negative to
+            apply negative indexing. Finally, if a date/time index was provided
+            to the model, then this argument can be a date string to parse or a
+            datetime type. Default is 'end'.
+
+        Returns
+        -------
+        forecast : ndarray
+            Array of out of sample forecasts. A (steps x k_endog) array.
+        """
+        if anchor is None:
+            anchor = 'end'
+        start_idx = self._get_prediction_start_index(anchor)
+
+        # set initial values and obtain parameters
+        start_params = self._get_prediction_params(start_idx)
+        x, _, _, _, phi, m = smooth._initialize_ets_smooth(
+            start_params, steps
+        )
+
+        y = np.empty(steps)
+
+        # get model settings and parameters
+        mul_seasonal = self.seasonal == "mul"
+        mul_trend = self.trend == "mul"
+        mul_error = self.error == "mul"
+
+        # define trend, damping and seasonality operations
+        if mul_trend:
+            op_b = np.multiply
+            op_d = np.power
+        else:
+            op_b = np.add
+            op_d = np.multiply
+        if mul_seasonal:
+            op_s = np.multiply
+        else:
+            op_s = np.add
 
 
+        # current level, trend, and season are at the end of the array
+        level = x[-1, 0]
+        trend = x[-1, 1]
+        # season is order s[t-1], ..., s[t-m]
+        season = x[-1, 2:]
+        for t in range(steps):
+            season_idx = (m - t) % m
+            y[t] = op_s(op_b(x[0, 0], op_d(trend, phi * t)), season[season_idx])
+
+        # Wrap data / squeeze where appropriate
+        return self.model._wrap_data(
+            y, start_idx, start_idx + steps - 1
+        )
+
+    def predict(self, start=None, end=None, dynamic=False, index=None):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        dynamic : bool, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        index : pd.Index, optional
+            Optionally an index to associate the predicted results to. If None,
+            an attempt is made to create an index for the predicted results
+            from the model's index or model's row labels.
+
+        Returns
+        -------
+        forecast : array_like or pd.Series.
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict,) array. If original data was a pd.Series
+            or DataFrame, a pd.Series is returned.
+        """
+        # TODO
+        if start is None:
+            start = 0
+
+        # Handle start, end, dynamic
+        start, end, out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index))
+        y = np.empty(start, end + out_of_sample)
+
+        # Handle `dynamic`
+        if isinstance(dynamic, (bytes, str)):
+            dynamic, _, _ = self.model._get_index_loc(dynamic)
+
+        start_smooth = start
+        end_smooth = min(dynamic, end + 1)
+        nsmooth = end_smooth - start_smooth
+        start_forecast = end_smooth
+        end_forecast = end + out_of_sample + 1
+        nforecast = end_forecast - start_forecast
+
+        # In sample nondynamic prediction: smoothing
+        y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth]
+
+        # Out of sample/dynamic prediction: forecast
+        y[nsmooth:] = self.forecast(steps=nforecast, anchor=start_forecast)
+
+        # Wrap data / squeeze where appropriate
+        return self.model._wrap_data(
+            y, start, end_forecast - 1
+        )
 
 
+    def summary(self):
+        ... # TODO
 
 
 
