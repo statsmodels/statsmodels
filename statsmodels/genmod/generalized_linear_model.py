@@ -29,6 +29,7 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
+from warnings import warn
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -270,12 +271,10 @@ class GLM(base.LikelihoodModel):
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
 
-            import warnings
-            warnings.warn(("The %s link function does not respect the domain "
-                           "of the %s family.") %
-                          (family.link.__class__.__name__,
-                           family.__class__.__name__),
-                          DomainWarning)
+            warn(("The %s link function does not respect the domain "
+                  "of the %s family.") %
+                  (family.link.__class__.__name__,
+                  family.__class__.__name__), DomainWarning)
 
         if exposure is not None:
             exposure = np.log(exposure)
@@ -1088,7 +1087,6 @@ class GLM(base.LikelihoodModel):
         try:
             cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
         except LinAlgError:
-            from warnings import warn
             warn('Inverting hessian failed, no bse or cov_params '
                  'available', HessianInversionWarning)
             cov_p = None
@@ -1255,7 +1253,8 @@ class GLM(base.LikelihoodModel):
             Must be in [0, 1].  The L1 penalty has weight L1_wt and the
             L2 penalty has weight 1 - L1_wt.
         cnvrg_tol : float
-            Convergence threshold for line searches
+            Convergence threshold for maximum parameter change after
+            one sweep through all coefficients.
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
@@ -1280,6 +1279,10 @@ class GLM(base.LikelihoodModel):
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)
+
+        if not result.converged:
+            msg = "Elastic net fitting did not converge"
+            warn(msg)
 
         return result
 
