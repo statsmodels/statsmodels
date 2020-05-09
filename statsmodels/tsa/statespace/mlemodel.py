@@ -2591,7 +2591,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             approx_complex_step=approx_complex_step,
             approx_centered=approx_centered)
 
-        if self._free_params_index is not None and len(self._free_params_index) == 0:
+        no_free_params = (self._free_params_index is not None and
+                          len(self._free_params_index) == 0)
+
+        if no_free_params:
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             singular_values = np.empty(0)
         elif len(self.fixed_params) > 0:
@@ -2604,7 +2607,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
-            if self._free_params_index is not None and len(self._free_params_index) == 0:
+            if no_free_params:
                 self._rank = 0
             else:
                 self._rank = np.linalg.matrix_rank(np.diag(singular_values))
