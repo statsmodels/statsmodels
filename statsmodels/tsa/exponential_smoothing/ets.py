@@ -30,13 +30,12 @@ latter are used to update the internal state.
     l_{t} &= \alpha (y_{t} \ominus_s s_{t-m})
              + (1 - \alpha) (l_{t-1} \circ_b (b_{t-1} \circ_d \phi))\\
     b_{t} &= \beta^* (l_{t} \ominus_b l_{t-1}) + (1 - \beta^*) b_{t-1}\\
-    s_{t} &= \gamma (y_t \ominus_s (l_{t-1} \circ_b (b_{t-1} \circ_d \phi)))
-             + (1 - \gamma) s_{t-m}
+    s_{t} &= \gamma^* (y_t \ominus_s l_{t}) + (1 - \gamma^*) s_{t-m}
 
 The notation here follows [1]_; :math:`l_t` denotes the level at time
 :math:`t`, `b_t` the trend, and `s_t` the seasonal component. :math:`m` is the
 number of seasonal periods, and :math:`\phi` a trend damping factor.
-The parameters :math:`\alpha, \beta^*, \gamma` are the smoothing parameters,
+The parameters :math:`\alpha, \beta^*, \gamma^*` are the smoothing parameters,
 which are called ``smoothing_level``, ``smoothing_trend``, and
 ``smoothing_seasonal``, respectively.
 
@@ -66,7 +65,7 @@ the ETS models:
    y_t &= Y_t + \eta \cdot e_t\\
    l_t &= L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
    b_t &= B_t + \alpha \beta^* \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
-   s_t &= S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
+   s_t &= S_t + (1 - \alpha) \gamma^* \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
 
 with
 
@@ -128,7 +127,7 @@ When using the multiplicative error model
                L_t\quad\text{else}
            \end{cases}
 
-When fitting an ETS model, the parameters :math:`\alpha, \beta^*`, \gamma,
+When fitting an ETS model, the parameters :math:`\alpha, \beta^*`, \gamma^*,
 \phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
 selected as maximizers of log likelihood.
 
@@ -461,24 +460,22 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # See https://github.com/robjhyndman/forecast/blob/master/R/ets.R
         # in function initparam
-        alpha = lb[0] + 0.2 * (ub[0] - lb[0])
-        if alpha > 1 or alpha < 0:
-            alpha = lb[0] + 2e-3
-        start_params = [alpha]
+        # this is the formula used for alpha, since we are using beta_star and
+        # gamma_star, which also are between 0 and 1, we are using the same
+        # formula for all smoothing parameters
+        def init_params(lb, ub):
+            p = lb + 0.2 * (ub - lb)
+            if p > 1 or p < 0:
+                p = lb + 2e-3
+            return p
+
+        start_params = [init_params(lb[0], ub[0])]
         idx = 1
         if self.trend:
-            # since this implementation uses beta_star instead of beta I use
-            # the same formula as for alpha
-            beta_star = lb[idx] + 0.2 * (ub[idx] - lb[idx])
-            if beta_star < 1 or beta_star < 0:
-                beta_star = lb[idx] + 2e-3
-            start_params += [beta_star]
+            start_params += [init_params(lb[idx], ub[idx])]
             idx += 1
         if self.seasonal:
-            gamma = lb[idx] + 0.05 * (ub[idx] - lb[idx])
-            if gamma < 0 or gamma > 1 - alpha:
-                gamma = 1 - alpha - 1e-3
-            start_params += [gamma]
+            start_params += [init_params(lb[idx], ub[idx])]
             idx += 1
         if self.damped_trend:
             phi = lb[idx] + 0.99 * (ub[idx] - lb[idx])
@@ -507,7 +504,7 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         Default lower and upper bounds for model parameters
         """
-        # traditional bounds: alpha, beta*, gamma in (0, 1), phi in [0.8, 0.98]
+        # traditional bounds: alpha, beta*, gamma* in (0, 1), phi in [0.8, 0.98]
         n = 1 + int(self.has_trend) + int(self.has_seasonal)
         bounds = [(1e-8, 1-1e-8)] * n
         if self.damped_trend:
@@ -549,7 +546,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Fit an ETS model by maximizing log-likelihood.
 
         Log-likelihood is a function of the model parameters :math:`\alpha,
-        \beta, \gamma, \phi` (depending on the chosen model), and, if
+        \beta^*, \gamma^*, \phi` (depending on the chosen model), and, if
         `initialization_method` was set to `'estimated'` in the constructor,
         also the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
 
@@ -566,7 +563,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             * `smoothing_level` (:math:`\alpha`)
             * `smoothing_trend` (:math:`\beta^*`)
-            * `smoothing_season` (:math:`\gamma`)
+            * `smoothing_season` (:math:`\gamma^*`)
             * `damping_slope` (:math:`\phi`)
 
             If ``initialization_method`` was set to ``'estimated'`` (the
@@ -646,7 +643,8 @@ class ETSModel(base.StateSpaceMLEModel):
         Parameters
         ----------
         params : np.ndarray of np.float
-            Model parameters: (alpha, beta, gamma, phi, l0, b0, s0, ..., s[-m])
+            Model parameters: (alpha, beta^*, gamma^*, phi, l[-1],
+            b[-1], s[-1], ..., s[-m])
 
         Notes
         -----
@@ -804,7 +802,7 @@ class ETSResults(base.StateSpaceMLEResults):
         if self.has_seasonal:
             self.season = states[:, self.model._season_index]
             self.initial_season = internal_params[6:]
-            self.gamma = self.params[self.model._season_index]
+            self.gamma = self.params[self.model._season_index] * (1 - self.alpha)
         if self.damped_trend:
             self.phi = internal_params[3]
 
@@ -960,8 +958,8 @@ class ETSResults(base.StateSpaceMLEResults):
 
            y_t = Y_t + \eta \cdot e_t\\
            l_t = L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
-           b_t = B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
-           s_t = S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
+           b_t = B_t + \alpha\beta^* \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
+           s_t = S_t + (1-\alpha)\gamma^* \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
 
         with
 
@@ -1026,10 +1024,11 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # set initial values and obtain parameters
         start_params = self._get_prediction_params(start_idx)
-        x, alpha, beta_star, gamma, phi, m = smooth._initialize_ets_smooth(
+        x, alpha, beta_star, gamma_star, phi, m = smooth._initialize_ets_smooth(
             start_params, nsimulations
         )
         beta = alpha * beta_star
+        gamma = (1 - alpha) * gamma_star
         # make x a 3 dimensional matrix: first dimension is nsimulations
         # (number of steps), next is number of states, innermost is repetitions
         nstates = x.shape[1]

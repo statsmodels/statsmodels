@@ -211,6 +211,7 @@ def get_params_from_R(results_R):
         results_R[name] for name in ['alpha', 'beta', 'gamma', 'phi']
     ]
     params[1] /= params[0]  # we are using beta star
+    params[2] /= (1 - params[0])  # we are using gamma_star
     # in R, initial states are order l[-1], b[-1], s[-1], s[-2], ..., s[-m]
     params += list(results_R['initstate'])
     params = list(filter(np.isfinite, params))
@@ -309,6 +310,7 @@ def test_fit_vs_R(setup_model):
 
     # check that we found a minimum that is at least almost as good as the one
     # with R
+    assert 0
     assert loglike <= loglike_R + 1e-4
 
     # compare parameters
