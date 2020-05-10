@@ -273,6 +273,18 @@ def test_loglike_vs_R(setup_model):
     assert_almost_equal(loglike, loglike_R, 2)
 
 
+def test_forecast_vs_R(setup_model):
+    model, params, results_R = setup_model
+
+    fit = fit_austourists_with_R_params(model, results_R, set_state=True)
+
+    fcast = fit.forecast(4)
+    expected = np.asarray(results_R["forecast"])
+
+    # should be the same up to 4 decimals
+    assert_almost_equal(expected, fcast.values, 1)
+
+
 def test_simulate_vs_R(setup_model):
     model, params, results_R = setup_model
 

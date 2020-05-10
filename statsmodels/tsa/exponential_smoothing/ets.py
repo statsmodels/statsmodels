@@ -1161,47 +1161,9 @@ class ETSResults(base.StateSpaceMLEResults):
         """
         if anchor is None:
             anchor = 'end'
-        start_idx = self._get_prediction_start_index(anchor)
-
-        # set initial values and obtain parameters
-        start_params = self._get_prediction_params(start_idx)
-        x, _, _, _, phi, m = smooth._initialize_ets_smooth(
-            start_params, steps
-        )
-
-        y = np.empty(steps)
-
-        # get model settings and parameters
-        mul_seasonal = self.seasonal == "mul"
-        mul_trend = self.trend == "mul"
-        mul_error = self.error == "mul"
-
-        # define trend, damping and seasonality operations
-        if mul_trend:
-            op_b = np.multiply
-            op_d = np.power
-        else:
-            op_b = np.add
-            op_d = np.multiply
-        if mul_seasonal:
-            op_s = np.multiply
-        else:
-            op_s = np.add
-
-
-        # current level, trend, and season are at the end of the array
-        level = x[-1, 0]
-        trend = x[-1, 1]
-        # season is order s[t-1], ..., s[t-m]
-        season = x[-1, 2:]
-        for t in range(steps):
-            season_idx = (m - t) % m
-            y[t] = op_s(op_b(x[0, 0], op_d(trend, phi * t)), season[season_idx])
-
-        # Wrap data / squeeze where appropriate
-        return self.model._wrap_data(
-            y, start_idx, start_idx + steps - 1
-        )
+        # forecast is the same as simulation without errors
+        return self.simulate(steps, anchor=anchor,
+                             random_errors=np.zeros((steps, 1)))
 
     def predict(self, start=None, end=None, dynamic=False, index=None):
         """
